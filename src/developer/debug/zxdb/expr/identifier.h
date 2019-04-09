@@ -125,6 +125,8 @@ class Identifier {
   std::vector<Component>& components() { return components_; }
   const std::vector<Component>& components() const { return components_; }
 
+  bool empty() const { return components_.empty(); }
+
   void AppendComponent(Component c);
   void AppendComponent(ExprToken separator, ExprToken name);
   void AppendComponent(ExprToken separator, ExprToken name,

@@ -304,6 +304,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
               // Fall through to "other" case for fallback.
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
+            case FoundName::kFunction:
             case FoundName::kNone:
               mode = kOtherName;
               break;
@@ -350,6 +351,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
               break;
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
+            case FoundName::kFunction:
             case FoundName::kNone:
               mode = kOtherName;
               break;

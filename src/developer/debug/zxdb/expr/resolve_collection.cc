@@ -34,12 +34,15 @@ Err FindMemberWithErr(const Collection* base, const Identifier& identifier,
                identifier.GetFullName().c_str());
   }
 
-  if (FoundName found =
-          FindMember(FindNameContext(), base, identifier, nullptr)) {
-    if (found.kind() == FoundName::kMemberVariable) {
-      *out = found.member();
-      return Err();
-    }
+  FindNameOptions options(FindNameOptions::kNoKinds);
+  options.find_vars = true;
+
+  std::vector<FoundName> found;
+  FindMember(FindNameContext(), options, base, identifier, nullptr, &found);
+  if (!found.empty()) {
+    FXL_DCHECK(found[0].kind() == FoundName::kMemberVariable);
+    *out = found[0].member();
+    return Err();
   }
 
   return Err("No member '%s' in %s '%s'.", identifier.GetFullName().c_str(),

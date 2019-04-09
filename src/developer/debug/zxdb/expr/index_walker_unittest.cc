@@ -140,11 +140,6 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_TRUE(walker.WalkInto(Identifier::Component(false, "Bar")));
   EXPECT_EQ(bar_node, walker.current());
 
-  // Walk to the root.
-  EXPECT_TRUE(walker.WalkUp());
-  EXPECT_TRUE(walker.WalkUp());
-  EXPECT_EQ(&root, walker.current());
-
   // Parse the Barf identifier for the following two tests. This one has a
   // toplevel scope.
   auto [err2, barf] = Identifier::FromString("::Foo::Barf<int>");
@@ -153,15 +148,9 @@ TEST(IndexWalker, WalkInto) {
   // Walk to the "Foo::Bar9<int>" with copying the walker.
   {
     IndexWalker nested_walker(walker);
-    auto [err2, bar9] = Identifier::FromString("Foo :: Bar9 < int >");
+    auto [err2, bar9] = Identifier::FromString(":: Foo :: Bar9 < int >");
     EXPECT_FALSE(err2.has_error()) << err2.msg();
     EXPECT_TRUE(nested_walker.WalkInto(bar9));
-    EXPECT_EQ(bar9_node, nested_walker.current());
-
-    // The IndexWalker doesn't do special handing of the "::" at the beginning,
-    // so searching for this fully-qualified name will fail when in a nested
-    // node.
-    EXPECT_FALSE(nested_walker.WalkInto(barf));
     EXPECT_EQ(bar9_node, nested_walker.current());
   }
 

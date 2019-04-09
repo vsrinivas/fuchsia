@@ -21,6 +21,9 @@ FoundName::FoundName(Kind kind) : kind_(kind) {
 FoundName::FoundName(const Variable* variable)
     : kind_(kVariable), variable_(const_cast<Variable*>(variable)) {}
 
+FoundName::FoundName(const Function* function)
+    : kind_(kFunction), function_(const_cast<Function*>(function)) {}
+
 FoundName::FoundName(const Variable* object_ptr, FoundMember member)
     : kind_(kMemberVariable),
       object_ptr_(const_cast<Variable*>(object_ptr)),

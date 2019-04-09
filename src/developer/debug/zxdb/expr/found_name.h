@@ -5,6 +5,7 @@
 #pragma once
 
 #include "src/developer/debug/zxdb/expr/found_member.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
@@ -26,6 +27,7 @@ class FoundName {
     kNamespace,       // Namespace name like "std".
     kTemplate,        // Template name without parameters like "std::vector".
     kType,            // Full type name like "std::string" or "int".
+    kFunction,
   };
 
   // Default constructor for a "not found" name.
@@ -34,8 +36,9 @@ class FoundName {
   // Constructor for templates and namespaces that have no extra data.
   explicit FoundName(Kind kind);
 
-  // Constructor for regular variables. Takes a reference to the object.
+  // Takes a reference to the object.
   explicit FoundName(const Variable* variable);
+  explicit FoundName(const Function* function);
 
   // Constructor for data member variables. The object_ptr may be null if this
   // represents a query on a type with no corresponding variable).
@@ -69,6 +72,10 @@ class FoundName {
   fxl::RefPtr<Type>& type() { return type_; }
   const fxl::RefPtr<Type>& type() const { return type_; }
 
+  // Valid when kind == kFunction.
+  fxl::RefPtr<Function>& function() { return function_; }
+  const fxl::RefPtr<Function>& function() const { return function_; }
+
  private:
   Kind kind_ = kNone;
 
@@ -90,6 +97,7 @@ class FoundName {
   FoundMember member_;
 
   fxl::RefPtr<Type> type_;
+  fxl::RefPtr<Function> function_;
 };
 
 }  // namespace zxdb

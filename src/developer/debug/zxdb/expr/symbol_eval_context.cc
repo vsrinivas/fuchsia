@@ -92,6 +92,8 @@ void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
       case FoundName::kType:
         cb(Err("Can not evaluate a type."), nullptr, ExprValue());
         return;
+      case FoundName::kFunction:
+        break;  // Function pointers not supported yet.
       case FoundName::kNone:
         break;  // Fall through to checking other stuff.
     }

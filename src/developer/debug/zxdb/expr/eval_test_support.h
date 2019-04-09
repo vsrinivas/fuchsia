@@ -18,7 +18,7 @@ namespace zxdb {
 //   };
 //
 //   struct Base2 {
-//     int32_t b = bK2Value;
+//     int32_t b = kB2Value;
 //   };
 //
 //   struct Derived : public Base1, public Base2 {

@@ -44,6 +44,8 @@ bool IndexWalker::WalkInto(const Identifier::Component& comp) {
   const ModuleSymbolIndexNode* node = path_.back();
 
   const std::string& comp_name = comp.name().value();
+  if (comp_name.empty())
+    return true;  // No-op.
 
   // This is complicated by templates which can't be string-compared for
   // equality without canonicalization. Search everything in the index with the
@@ -90,6 +92,9 @@ bool IndexWalker::WalkInto(const Identifier& ident) {
 }
 
 bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
+  if (ident.InGlobalNamespace())
+    path_.resize(1);  // Only keep the root.
+
   for (const auto& comp : ident.components()) {
     if (!WalkInto(comp))
       return false;  // This component not found.

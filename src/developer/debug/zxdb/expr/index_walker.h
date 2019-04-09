@@ -34,6 +34,10 @@ class IndexWalker {
   // Moves to a child of the current component that's an exact match of the
   // given component name. Returns true if there was a match, false if not (in
   // which case the location has not changed).
+  //
+  // This ignores the separator, so walking into "::foo" won't go back to the
+  // global namespace. This is because this will be called for each
+  // sub-component of an identifier, and many of them will have separators.
   bool WalkInto(const Identifier::Component& comp);
 
   // Moves to a child of the current component that matches the given

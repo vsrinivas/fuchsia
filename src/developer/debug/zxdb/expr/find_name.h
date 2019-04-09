@@ -6,11 +6,15 @@
 
 #include <string>
 
+#include "src/developer/debug/zxdb/symbols/visit_scopes.h"
+
 namespace zxdb {
 
 class CodeBlock;
 class Collection;
+class DataMember;
 class Identifier;
+class IndexWalker;
 class FoundMember;
 class FoundName;
 class Location;
@@ -61,21 +65,47 @@ struct FindNameContext {
   const CodeBlock* block = nullptr;
 };
 
+// By default this will find the first exact match of any kind.
+struct FindNameOptions {
+  // How to match the name.
+  //
+  // Note that prefix matching doesn't currently work for templates. Prefix
+  // matching is currently used for autocomplete where the full type name is
+  // desired, not just the base template name. And supporting this requires
+  // uniquifying names (since many template types could be the same underlying
+  // template) that's annoying to implement.
+  enum HowMatch { kPrefix, kExact };
+  HowMatch how = kExact;
+
+  // This constructor's argument indicates whether the caller wants to default
+  // to finding all or no types (presumably in the "no types" case, the caller
+  // will set one or more to true afterward).
+  enum InitialKinds : bool { kNoKinds = false, kAllKinds = true };
+  explicit FindNameOptions(InitialKinds initial)
+      : find_types(initial),
+        find_functions(initial),
+        find_vars(initial),
+        find_templates(initial),
+        find_namespaces(initial) {}
+
+  // The types of named things that will be matched.
+  bool find_types = true;
+  bool find_functions = true;  // Global and member functions.
+  bool find_vars = true;       // Local and "this" member vars.
+  bool find_templates = true;  // Templatized types without <...>.
+  bool find_namespaces = true;
+
+  size_t max_results = 1;
+};
+
 // Main variable and type name finding function. Searches the local, "this",
-// and global scopes for a variable with the given identifier name.
-//
-// The block identifies the scope to search from (the class and namespace of
-// the function will be searched). The block can be a null pointer in which
-// case only the global scope will be searched. If a block is given, the
-// block_symbol_context must also be given which identifies the module that
-// the block is from. This also allows prioritization of symbols from the
-// current process.
-//
-// The optional_process_symbols is used to search for global variables and
-// all type names (including local and |this| member types), it can be null in
-// which case only local variables will be searched.
+// and global scopes for one or more things with a matching name. The first
+// version finds the first exact match of any type, the second uses the
+// options to customize what and how many results are returned.
 FoundName FindName(const FindNameContext& context,
                    const Identifier& identifier);
+void FindName(const FindNameContext& context, const FindNameOptions& options,
+              const Identifier& looking_for, std::vector<FoundName>* results);
 
 // Type-specific finding -------------------------------------------------------
 
@@ -83,8 +113,16 @@ FoundName FindName(const FindNameContext& context,
 // blocks and function parameters, but does not go into the "this" class or any
 // non-function scopes like the current or global namespace (that's what the
 // later functions do).
-FoundName FindLocalVariable(const CodeBlock* block,
-                            const Identifier& identifier);
+//
+// The "visit" variant calls the callback for every variable in order of
+// priority for as long as the visitor reports "continue." The "find" variant
+// does an exact string search, the "prefix" variant does a prefix search.
+VisitResult VisitLocalVariables(
+    const CodeBlock* block,
+    const std::function<VisitResult(const Variable*)>& visitor);
+void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
+                       const Identifier& looking_for,
+                       std::vector<FoundName>* results);
 
 // Searches for the named variable or type on the given collection. This is the
 // lower-level function and assumes a valid object. The result can be either a
@@ -100,9 +138,10 @@ FoundName FindLocalVariable(const CodeBlock* block,
 // If the result is a member variable, the optional_object_ptr will be used to
 // construct the FoundName object. It can be null if the caller does not have
 // a variable for the object it's looking up (just doing a type query).
-FoundName FindMember(const FindNameContext& context, const Collection* object,
-                     const Identifier& identifier,
-                     const Variable* optional_object_ptr);
+void FindMember(const FindNameContext& context, const FindNameOptions& options,
+                const Collection* object, const Identifier& looking_for,
+                const Variable* optional_object_ptr,
+                std::vector<FoundName>* result);
 
 // Attempts the resolve the given named member variable or type on the "this"
 // pointer associated with the given code block. Fails if the function has no
@@ -114,40 +153,31 @@ FoundName FindMember(const FindNameContext& context, const Collection* object,
 //
 // The optional symbol context is the symbol context for the current code. it
 // will be used to prioritize symbol searching to the current module if given.
-FoundName FindMemberOnThis(const FindNameContext& context,
-                           const Identifier& identifier);
+void FindMemberOnThis(const FindNameContext& context,
+                      const FindNameOptions& options,
+                      const Identifier& looking_for,
+                      std::vector<FoundName>* result);
 
-// Attempts to resolve the named variable or type in the global namespace and
-// any other namespaces that the given block is in.
+// Attempts to resolve the named |looking_for| in the index.
 //
-// The symbol_context is used to prioritize the current module. It can be null
-// to search in a non-guaranteed order.
-FoundName FindGlobalName(const FindNameContext& context,
-                         const Identifier& current_scope,
-                         const Identifier& identifier);
+// The |current_scope| is the namespace to start looking in. If
+// |search_containing| is true, parent scopes of the |current_scope| are also
+// searched, otherwise only exact matches in that scope will be found.
+VisitResult FindIndexedName(const FindNameContext& context,
+                            const FindNameOptions& options,
+                            const Identifier& current_scope,
+                            const Identifier& looking_for,
+                            bool search_containing,
+                            std::vector<FoundName>* results);
 
 // Searches a specific index and current namespace for a global variable or
 // type of the given name. The current_scope would be the current namespace +
 // class from where to start the search.
-FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
-                                 const Identifier& current_scope,
-                                 const Identifier& identifier);
-
-// Searches the index for the exact identifier name. Unlike
-// FindGlobalName[InModule] it doesn't take into account the current scope: the
-// input name must be fully-qualified.
-//
-// This will resolve namespaces, types, and templates (type names before the
-// '<'). It is used as helper when traversing scopes to look for types that
-// might be in the current scope.
-//
-// The symbol_context is used to prioritize the current module. It can be null
-// to search in a non-guaranteed order.
-FoundName FindExactNameInIndex(const FindNameContext& context,
-                               const Identifier& identifier);
-
-// Per-module version of FindExactNameInIndex().
-FoundName FindExactNameInModuleIndex(const ModuleSymbols* module_symbols,
-                                     const Identifier& identifier);
+VisitResult FindIndexedNameInModule(const FindNameOptions& options,
+                                    const ModuleSymbols* module_symbols,
+                                    const Identifier& current_scope,
+                                    const Identifier& looking_for,
+                                    bool search_containing,
+                                    std::vector<FoundName>* results);
 
 }  // namespace zxdb
