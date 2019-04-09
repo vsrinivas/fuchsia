@@ -43,6 +43,7 @@ action("breakpad_symbols") {
   depfile = "${outputs[0]}.d"
 
   args = [
+           "-use-build-id",
            "-out-dir",
            rebase_path("$root_out_dir/breakpad_symbols"),
            "-dump-syms-path",
