@@ -95,6 +95,8 @@ sdk("ddk") {
 }
 
 sdk("images") {
+  id = sdk_id
+
   category = "partner"
 
   testonly = true
