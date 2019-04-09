@@ -5,16 +5,15 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{format_err, Error};
-use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_devicesettings::{
-    DeviceSettingsManagerMarker, DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream,
+    DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream,
     DeviceSettingsWatcherProxy, Status, ValueType,
 };
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use futures::{future, TryFutureExt, TryStreamExt};
+use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
@@ -89,10 +88,10 @@ fn config_state(state: &mut DeviceSettingsManagerServer, opt: Opt) -> Result<(),
 
 fn spawn_device_settings_server(
     state: Arc<Mutex<DeviceSettingsManagerServer>>,
-    chan: fasync::Channel,
+    stream: DeviceSettingsManagerRequestStream,
 ) {
     fasync::spawn(
-        DeviceSettingsManagerRequestStream::from_channel(chan)
+        stream
             .try_for_each(move |req| {
                 let mut state = state.lock().unwrap();
                 future::ready(match req {
@@ -185,13 +184,12 @@ async fn main() -> Result<(), Error> {
     let mut state = DeviceSettingsManagerServer { keys: HashMap::new(), watchers: HashMap::new() };
     let () = config_state(&mut state, opt)?;
     let state = Arc::new(Mutex::new(state));
-    let services = ServicesServer::new()
-        .add_service((DeviceSettingsManagerMarker::NAME, move |channel| {
-            spawn_device_settings_server(state.clone(), channel)
-        }))
-        .start()
-        .map_err(|e| e.context("error starting service server"))?;
-    await!(services)
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |stream| spawn_device_settings_server(state.clone(), stream));
+    fs.take_and_serve_directory_handle()?;
+    let () = await!(fs.collect());
+    Ok(())
 }
 
 #[cfg(test)]
@@ -201,7 +199,7 @@ mod test {
         DeviceSettingsManagerMarker, DeviceSettingsWatcherMarker, DeviceSettingsWatcherRequest,
         Status,
     };
-    use fuchsia_app::client;
+    use fuchsia_component::client;
     use fuchsia_async as fasync;
     use futures::{future, TryStreamExt};
 

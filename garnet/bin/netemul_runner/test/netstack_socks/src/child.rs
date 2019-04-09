@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
-    fuchsia_app::client,
+    fuchsia_component::client,
     futures::TryStreamExt,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},

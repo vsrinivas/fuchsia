@@ -18,7 +18,7 @@ use fidl_fuchsia_sys::{
     ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy, LaunchInfo,
     LauncherMarker, TerminationReason,
 };
-use fuchsia_app::client;
+use fuchsia_component::client;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;

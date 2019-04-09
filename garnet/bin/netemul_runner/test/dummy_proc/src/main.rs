@@ -7,7 +7,7 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
-    fuchsia_app::client,
+    fuchsia_component::client,
     fuchsia_async as fasync,
     futures::TryStreamExt,
     structopt::StructOpt,

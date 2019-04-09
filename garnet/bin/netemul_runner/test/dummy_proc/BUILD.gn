@@ -12,7 +12,7 @@ rustc_binary("dummy_proc") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:network-rustc",
     "//garnet/public/lib/netemul/fidl:sync-rustc",
-    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",

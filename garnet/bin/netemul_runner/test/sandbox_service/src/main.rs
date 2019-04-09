@@ -23,7 +23,7 @@ mod tests {
         },
         fidl_fuchsia_netemul_sandbox::{SandboxMarker, SandboxProxy},
         fidl_fuchsia_netstack::NetstackMarker,
-        fuchsia_app::client,
+        fuchsia_component::client,
         fuchsia_async as fasync, fuchsia_zircon as zx,
     };
 

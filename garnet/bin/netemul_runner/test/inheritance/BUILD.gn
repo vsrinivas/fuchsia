@@ -19,7 +19,7 @@ rustc_binary("inheritance") {
     ":counter-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
-    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",

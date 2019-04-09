@@ -11,7 +11,7 @@ use {
         DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
         NetworkContextMarker,
     },
-    fuchsia_app::client,
+    fuchsia_component::client,
     fuchsia_async as fasync,
     std::path::Path,
 };

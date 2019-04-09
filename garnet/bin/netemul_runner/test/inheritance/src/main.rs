@@ -6,16 +6,15 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_netemul_example::{CounterMarker, CounterRequest, CounterRequestStream},
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy,
         EnvironmentControllerMarker, EnvironmentMarker, EnvironmentOptions, EnvironmentProxy,
         LaunchInfo, LauncherMarker, TerminationReason,
     },
-    fuchsia_app::client,
-    fuchsia_app::server::ServicesServer,
     fuchsia_async as fasync,
+    fuchsia_component::client,
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     std::sync::Arc,
@@ -156,10 +155,9 @@ struct CounterData {
     value: u32,
 }
 
-fn spawn_counter_server(chan: fasync::Channel, data: Arc<Mutex<CounterData>>) {
+fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<CounterData>>) {
     fasync::spawn(
         async move {
-            let mut stream = CounterRequestStream::from_channel(chan);
             while let Some(CounterRequest::Increment { responder }) =
                 await!(stream.try_next()).context("error running counter server")?
             {
@@ -176,11 +174,11 @@ fn spawn_counter_server(chan: fasync::Channel, data: Arc<Mutex<CounterData>>) {
 
 async fn run_server() -> Result<(), Error> {
     let data = Arc::new(Mutex::new(CounterData { value: 0 }));
-    let fut = ServicesServer::new()
-        .add_service((CounterMarker::NAME, move |chan| spawn_counter_server(chan, data.clone())))
-        .start()
-        .context("Error starting counter server")?;
-    let () = await!(fut).context("failed to execute server future")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
+    fs.take_and_serve_directory_handle()?;
+    let () = await!(fs.collect());
     Ok(())
 }
 

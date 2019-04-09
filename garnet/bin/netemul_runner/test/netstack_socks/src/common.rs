@@ -5,7 +5,7 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, Event, SyncManagerMarker},
-    fuchsia_app::client,
+    fuchsia_component::client,
 };
 
 const BUS_NAME: &str = "evt_bus";
