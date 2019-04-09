@@ -9,7 +9,7 @@
 ##           [--dry-run] [--verbose] [--all]
 ##           [--files=FILES,[FILES ...]]
 ##           [--target=GN_TARGET]
-##           [--git]
+##           [--git] [-- PATTERN]
 ##
 ##   --dry-run Stops the program short of running the formatters
 ##   --all     Formats all code in the git repo under the current working
@@ -22,6 +22,9 @@
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
+##    -- PATTERN
+##             For --all or --git, passes along -- PATTERN to `git ls-files`
+##             to filter what files are affected.
 
 set -e
 
@@ -49,8 +52,8 @@ function get-diff-base() {
 }
 
 function format-cmd() {
-  if [ -f $1 ]; then
-    case $1 in
+  if [ -f "$1" ]; then
+    case "$1" in
       *.cc) printf "${CLANG_CMD}" ;;
       *.cmx) printf "${JSON_FMT_CMD}" ;;
       *.cpp) printf "${CLANG_CMD}" ;;
@@ -96,26 +99,41 @@ VERBOSE=
 
 fx-config-read
 
-for ARG in "$@"; do
-  case "${ARG}" in
+GET_FILES=get_git_files
+while [ $# -gt 0 ]; do
+  case "$1" in
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
-    --all) FILES=$(canonicalize "${PWD}" $(git ls-files)) ;;
-    --git) ;; # We'll figure this out later
-    --files=*) FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}")) ;;
-    --target=*) FILES=$(canonicalize "${FUCHSIA_DIR}" \
+    --all) GET_FILES=get_all_files ;;
+    --git) GET_FILES=get_git_files ;;
+    --files=*)
+      GET_FILES=:
+      FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
+      ;;
+    --target=*)
+      GET_FILES=:
+      FILES=$(canonicalize "${FUCHSIA_DIR}" \
         $(fx-buildtool-run gn desc \
             "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
             $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+    --) break ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
+  shift
 done
+GIT_FILTER=("$@")
 
-if [ -z "${FILES+x}" ]; then
+get_git_files() {
   FILES=$(canonicalize $(git rev-parse --show-toplevel) \
-    $(git diff-index --name-only $(get-diff-base)))
-fi
+    $(git diff-index --name-only $(get-diff-base) "${GIT_FILTER[@]}"))
+}
+
+get_all_files() {
+  FILES=$(canonicalize "${PWD}" $(git ls-files "${GIT_FILTER[@]}"))
+}
+
+$GET_FILES
 
 if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES}"
