@@ -9,6 +9,7 @@
 ##               [--release] [--build-dir BUILDDIR]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--with-base GNLABEL1,GNLABEL2,...]
+##               [--zircon-arg ARG]
 ##
 ## where PRODUCT is an entry from `//products` or `//vendor/*/products` and
 ## BOARD is an entry from `//boards` or `//vendor/*/boards`. Use the
@@ -92,6 +93,11 @@
 ##                         Multiple labels can be provided delimited by commas
 ##                         or the --with-base argument can be provided multiple
 ##                         times.
+##
+## Deprecated flags:
+##
+##   --zircon-arg ARG      Additional arguments to pass to build-zircon.sh.
+##                         Can be given multiple times.
 ##
 ## Example:
 ##
@@ -199,6 +205,15 @@ function main {
           return 1
         fi
         IFS=, universe+=("$2")
+        shift
+        ;;
+      --zircon-arg)
+        fx-warn "--zircon-arg is deprecated, common use case is no longer required"
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        zircon_args+=("$2")
         shift
         ;;
       --netboot)
