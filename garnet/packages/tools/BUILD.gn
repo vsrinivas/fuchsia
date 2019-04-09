@@ -28,10 +28,11 @@ group("audio") {
   ]
 }
 
-group("dockyard_host") {
+group("system_monitor") {
   testonly = true
   public_deps = [
     "//garnet/bin/system_monitor/dockyard_host:host_tools",
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
   ]
 }
 
@@ -51,7 +52,6 @@ group("all") {
     "//garnet/packages/tools:crashpad_database_util",
     "//garnet/packages/tools:cs",
     "//garnet/packages/tools:curl",
-    "//garnet/packages/tools:dockyard_host",
     "//garnet/packages/tools:fidlmerge",
     "//garnet/packages/tools:gidl",
     "//garnet/packages/tools:iperf",
@@ -63,6 +63,7 @@ group("all") {
     "//garnet/packages/tools:runmany",
     "//garnet/packages/tools:scenic",
     "//garnet/packages/tools:sl4f",
+    "//garnet/packages/tools:system_monitor",
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:zxdb",
     "//src/connectivity/wlan:tools",

@@ -3,11 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <chrono>
-#include <iostream>
-#include <string>
-#include <thread>
-
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <grpc++/grpc++.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,6 +10,11 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
+
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <thread>
 
 #include "dockyard_proxy.h"
 #include "dockyard_proxy_grpc.h"

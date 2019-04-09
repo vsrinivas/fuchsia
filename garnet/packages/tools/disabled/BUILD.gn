@@ -4,10 +4,3 @@
 #
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
-
-group("system_monitor") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
-  ]
-}

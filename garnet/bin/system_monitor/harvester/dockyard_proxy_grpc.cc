@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dockyard_proxy_grpc.h"
+
+#include <zircon/status.h>
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -9,7 +13,6 @@
 #include <zircon/status.h>
 
 #include "dockyard_proxy.h"
-#include "dockyard_proxy_grpc.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "src/lib/fxl/logging.h"
 
