@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 # Set manually to true to compile the zxdb_test_app.cc file for manual debugger
@@ -156,9 +157,7 @@ executable("unit_tests") {
   ]
 }
 
-package("debug_agent_tests") {
-  testonly = true
-
+test_package("debug_agent_tests") {
   package_name = "debug_agent_tests"
   deps = []
   binaries = []
@@ -176,11 +175,17 @@ package("debug_agent_tests") {
 
   # Integration tests ----------------------------------------------------------
 
+  # Integration tests do not run on QEMU because some of the low-level
+  # functionality is not implemented correctly.
+  integration_tests_env = [
+    nuc_env,
+    vim2_env,
+  ]
   deps += [ "//src/developer/debug/debug_agent/integration_tests" ]
   tests += [
     {
       name = "debug_agent_integration_tests"
-      environments = basic_envs
+      environments = integration_tests_env
     },
   ]
 
@@ -254,17 +259,4 @@ package("debug_agent_tests") {
       },
     ]
   }
-
-  # Component Meta Files -------------------------------------------------------
-
-  meta = [
-    {
-      path = "meta/debug_agent_unit_tests.cmx"
-      dest = "debug_agent_unit_tests.cmx"
-    },
-    {
-      path = "meta/debug_agent_integration_tests.cmx"
-      dest = "debug_agent_integration_tests.cmx"
-    },
-  ]
 }

@@ -181,7 +181,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 //               The tests will be re-enabled when there is way to express
 //               that these test must not run on QEMU.
 
-TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
+TEST(BreakpointIntegration, HWBreakpoint) {
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
