@@ -28,6 +28,7 @@ class Atom(object):
         self.category = json['category']
         self.deps = json['deps']
         self.files = [File(f) for f in json['files']]
+        self.type = json['type']
 
     def __str__(self):
         return str(self.id)

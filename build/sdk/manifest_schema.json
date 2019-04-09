@@ -74,8 +74,10 @@
         "category",
         "deps",
         "files",
+        "gn-label",
         "id",
-        "gn-label"
+        "meta",
+        "type"
       ],
       "additionalProperties": false
     },

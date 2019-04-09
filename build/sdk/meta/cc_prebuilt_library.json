@@ -8,10 +8,15 @@
     {
       "properties": {
         "type": {
-          "description": "Marker for this type of element",
-          "type": "string",
-          "enum": [
-            "cc_prebuilt_library"
+          "allOf": [
+            {
+              "$ref": "common.json#/definitions/type"
+            },
+            {
+              "enum": [
+                "cc_prebuilt_library"
+              ]
+            }
           ]
         },
         "name": {

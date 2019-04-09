@@ -39,9 +39,11 @@ def main():
                         help='Publication level',
                         required=True)
     parser.add_argument('--meta',
-                        help="Path to the atom's metadata file in the SDK",
-                        default='',
-                        required=False)
+                        help='Path to the atom\'s metadata file in the SDK',
+                        required=True)
+    parser.add_argument('--type',
+                        help='Type of the atom',
+                        required=True)
     args = parser.parse_args()
 
     # Gather the definitions of other atoms this atom depends on.
@@ -67,6 +69,7 @@ def main():
         'category': args.category,
         'deps': sorted(list(deps)),
         'files': files,
+        'type': args.type,
     })])
 
     if detect_collisions(atoms):

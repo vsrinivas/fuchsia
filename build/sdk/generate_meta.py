@@ -45,6 +45,10 @@ def main():
         },
         'id': args.id,
         'parts': sorted(filter(lambda m: m, [a.metadata for a in atoms])),
+        'new_parts': sorted([{
+            'meta': a.metadata,
+            'type': a.type,
+        } for a in atoms]),
         'schema_version': args.schema_version,
     }
 

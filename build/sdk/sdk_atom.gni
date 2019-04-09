@@ -321,6 +321,8 @@ template("sdk_atom") {
              category,
              "--meta",
              meta.dest,
+             "--type",
+             meta.schema,
              "--deps",
            ] + dep_manifests + file_args
 

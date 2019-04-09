@@ -8,10 +8,15 @@
     {
       "properties": {
         "type": {
-          "description": "Marker for this type of element",
-          "type": "string",
-          "enum": [
-            "sysroot"
+          "allOf": [
+            {
+              "$ref": "common.json#/definitions/type"
+            },
+            {
+              "enum": [
+                "sysroot"
+              ]
+            }
           ]
         },
         "name": {

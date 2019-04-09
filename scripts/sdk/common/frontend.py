@@ -70,14 +70,14 @@ class Frontend(object):
                 with open(self.source(*args), 'r') as meta_file:
                     return json.load(meta_file)
             manifest = load_metadata('meta', 'manifest.json')
-            atoms = [load_metadata(p) for p in manifest['parts']]
-            types = set([a['type'] for a in atoms])
+            types = set([p['type'] for p in manifest['new_parts']])
 
             self.prepare(manifest['arch'], types)
 
             # Process each SDK atom.
-            for atom in atoms:
-                type = atom['type']
+            for part in manifest['new_parts']:
+                type = part['type']
+                atom = load_metadata(part['meta'])
                 getattr(self, 'install_%s_atom' % type, self._handle_atom)(atom)
 
             self.finalize(manifest['arch'], types)

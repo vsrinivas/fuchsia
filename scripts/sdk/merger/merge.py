@@ -14,6 +14,24 @@ import tarfile
 import tempfile
 
 
+class Part(object):
+
+    def __init__(self, json):
+        self.meta = json['meta']
+        self.type = json['type']
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                self.meta == other.meta and
+                self.type == other.type)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.meta, self.type))
+
+
 @contextlib.contextmanager
 def _open_archive(archive, directory):
     '''Manages a directory in which an existing SDK is laid out.'''
@@ -237,13 +255,17 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
                                         set(manifest_two['arch']['target']))
 
     # Parts.
+    parts_one = set([Part(p) for p in manifest_one['new_parts']])
+    parts_two = set([Part(p) for p in manifest_two['new_parts']])
+    manifest['new_parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
     manifest['parts'] = sorted(set(manifest_one['parts']) |
                                set(manifest_two['parts']))
 
     manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
     _ensure_directory(manifest_path)
     with open(manifest_path, 'w') as manifest_file:
-        json.dump(manifest, manifest_file, indent=2, sort_keys=True)
+        json.dump(manifest, manifest_file, indent=2, sort_keys=True,
+                  separators=(',', ': '))
     return True
 
 
@@ -279,18 +301,21 @@ def main():
          _open_archive(args.second_archive, args.second_directory) as second_dir, \
          _open_output(args.output_archive, args.output_directory) as out_dir:
 
-        first_elements = set(_get_manifest(first_dir)['parts'])
-        second_elements = set(_get_manifest(second_dir)['parts'])
+        first_elements = set([Part(p)
+                              for p in _get_manifest(first_dir)['new_parts']])
+        second_elements = set([Part(p)
+                               for p in _get_manifest(second_dir)['new_parts']])
         common_elements = first_elements & second_elements
 
         # Copy elements that appear in a single SDK.
         for element in sorted(first_elements - common_elements):
-            _copy_element(element, first_dir, out_dir)
+            _copy_element(element.meta, first_dir, out_dir)
         for element in (second_elements - common_elements):
-            _copy_element(element, second_dir, out_dir)
+            _copy_element(element.meta, second_dir, out_dir)
 
         # Verify and merge elements which are common to both SDKs.
-        for element in sorted(common_elements):
+        for raw_element in sorted(common_elements):
+            element = raw_element.meta
             first_meta = _get_meta(element, first_dir)
             second_meta = _get_meta(element, second_dir)
             first_common, first_arch = _get_files(first_meta)

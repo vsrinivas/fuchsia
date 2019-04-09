@@ -4,13 +4,17 @@
       "description": "Path to a file from the root of the SDK",
       "type": "string"
     },
+    "type": {
+      "description": "Represents the type of an SDK element",
+      "type": "string"
+    },
     "sdk_element": {
       "description": "Base type for SDK elements",
       "type": "object",
       "properties": {
         "type": {
           "description": "The type of the element",
-          "type": "string"
+          "$ref": "#/definitions/type"
         },
         "name": {
           "description": "The name of the element",
