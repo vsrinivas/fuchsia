@@ -18,6 +18,7 @@
 #include <object/exception_dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/excp_port.h>
+#include <object/handle.h>
 #include <object/thread_state.h>
 #include <vm/vm_address_region.h>
 
@@ -72,8 +73,7 @@ public:
     };
 
     static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                              fbl::StringPiece name,
-                              fbl::RefPtr<Dispatcher>* out_dispatcher,
+                              fbl::StringPiece name, KernelHandle<ThreadDispatcher>* out_handle,
                               zx_rights_t* out_rights);
     ~ThreadDispatcher();
 

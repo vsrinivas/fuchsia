@@ -35,7 +35,7 @@ class ProcessDispatcher final
 public:
     static zx_status_t Create(
         fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
-        fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights,
+        KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
         fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
         zx_rights_t* root_vmar_rights);
 

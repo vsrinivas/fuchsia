@@ -127,12 +127,16 @@ static zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
 
 static zx_status_t get_job_handle(Handle** ptr) {
     zx_rights_t rights;
-    fbl::RefPtr<Dispatcher> dispatcher;
-    zx_status_t result = JobDispatcher::Create(
-        0u, GetRootJobDispatcher(), &dispatcher, &rights);
-    if (result == ZX_OK)
-        *ptr = Handle::Make(ktl::move(dispatcher), rights).release();
-    return result;
+    KernelHandle<JobDispatcher> handle;
+    zx_status_t result = JobDispatcher::Create(0u, GetRootJobDispatcher(), &handle, &rights);
+    if (result != ZX_OK)
+        return result;
+
+    HandleOwner handle_owner = Handle::Make(ktl::move(handle), rights);
+    if (!handle_owner)
+        return ZX_ERR_NO_MEMORY;
+    *ptr = handle_owner.release();
+    return ZX_OK;
 }
 
 static zx_status_t get_resource_handle(Handle** ptr) {
@@ -394,19 +398,20 @@ static zx_status_t attempt_userboot() {
         return status;
     }
 
-    fbl::RefPtr<Dispatcher> proc_disp;
+    KernelHandle<ProcessDispatcher> process_handle;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     zx_rights_t rights, vmar_rights;
     status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
-                                       &proc_disp, &rights,
+                                       &process_handle, &rights,
                                        &vmar, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
-    handles[BOOTSTRAP_PROC] = Handle::Make(proc_disp, rights).release();
-
-    auto proc = DownCastDispatcher<ProcessDispatcher>(&proc_disp);
-    ASSERT(proc);
+    auto proc = process_handle.dispatcher();
+    HandleOwner process_handle_owner = Handle::Make(ktl::move(process_handle), rights);
+    if (!process_handle_owner)
+        return ZX_ERR_NO_MEMORY;
+    handles[BOOTSTRAP_PROC] = process_handle_owner.release();
 
     handles[BOOTSTRAP_VMAR_ROOT] = Handle::Make(vmar, vmar_rights).release();
 
@@ -439,20 +444,24 @@ static zx_status_t attempt_userboot() {
     // Create the user thread and stash its handle for the bootstrap message.
     fbl::RefPtr<ThreadDispatcher> thread;
     {
-        fbl::RefPtr<Dispatcher> ut_disp;
-        // Make a copy of proc, as we need to a keep a copy for the
-        // bootstrap message.
-        status = ThreadDispatcher::Create(proc, 0, "userboot", &ut_disp, &rights);
+        KernelHandle<ThreadDispatcher> thread_handle;
+        // Make a copy of proc, as we need to a keep a copy to pass over
+        // the bootstrap channel below.
+        status = ThreadDispatcher::Create(proc, 0, "userboot", &thread_handle, &rights);
         if (status != ZX_OK)
             return status;
-        handles[BOOTSTRAP_THREAD] = Handle::Make(ut_disp, rights).release();
-        thread = DownCastDispatcher<ThreadDispatcher>(&ut_disp);
+
+        thread = thread_handle.dispatcher();
+        HandleOwner thread_handle_owner = Handle::Make(ktl::move(thread_handle), rights);
+        if (!thread_handle_owner)
+            return ZX_ERR_NO_MEMORY;
+        handles[BOOTSTRAP_THREAD] = thread_handle_owner.release();
     }
     DEBUG_ASSERT(thread);
 
     // All the handles are in place, so we can send the bootstrap message.
     zx_handle_t hv;
-    status = make_bootstrap_channel(proc, ktl::move(msg), &hv);
+    status = make_bootstrap_channel(ktl::move(proc), ktl::move(msg), &hv);
     if (status != ZX_OK)
         return status;
 

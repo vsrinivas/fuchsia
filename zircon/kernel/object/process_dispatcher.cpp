@@ -82,36 +82,33 @@ static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
 
 zx_status_t ProcessDispatcher::Create(
     fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
-    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights,
+    KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
     fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
     zx_rights_t* root_vmar_rights) {
     fbl::AllocChecker ac;
-    fbl::RefPtr<ProcessDispatcher> process =
-        fbl::AdoptRef(new (&ac) ProcessDispatcher(job, name, flags));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) ProcessDispatcher(job, name, flags)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    if (!job->AddChildProcess(process))
+    if (!job->AddChildProcess(new_handle.dispatcher()))
         return ZX_ERR_BAD_STATE;
 
-    zx_status_t result = process->Initialize();
+    zx_status_t result = new_handle.dispatcher()->Initialize();
     if (result != ZX_OK)
         return result;
 
-    fbl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
+    fbl::RefPtr<VmAddressRegion> vmar(new_handle.dispatcher()->aspace()->RootVmar());
 
     // Create a dispatcher for the root VMAR.
     fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
     result = VmAddressRegionDispatcher::Create(vmar, ARCH_MMU_FLAG_PERM_USER,
                                                &new_vmar_dispatcher,
                                                root_vmar_rights);
-    if (result != ZX_OK) {
-        process->aspace_->Destroy();
+    if (result != ZX_OK)
         return result;
-    }
 
     *rights = default_rights();
-    *dispatcher = ktl::move(process);
+    *handle = ktl::move(new_handle);
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);
 
@@ -450,8 +447,9 @@ void ProcessDispatcher::FinishDeadTransition() {
 
     LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 
-    // tear down the address space
-    aspace_->Destroy();
+    // Tear down the address space. It may not exist if Initialize() failed.
+    if (aspace_)
+        aspace_->Destroy();
 
     // signal waiter
     LTRACEF_LEVEL(2, "signaling waiters\n");

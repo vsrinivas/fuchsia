@@ -11,6 +11,7 @@
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/excp_port.h>
+#include <object/handle.h>
 #include <object/job_policy.h>
 #include <object/process_dispatcher.h>
 
@@ -77,7 +78,7 @@ public:
     static fbl::RefPtr<JobDispatcher> CreateRootJob();
     static zx_status_t Create(uint32_t flags,
                               fbl::RefPtr<JobDispatcher> parent,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
+                              KernelHandle<JobDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~JobDispatcher() final;

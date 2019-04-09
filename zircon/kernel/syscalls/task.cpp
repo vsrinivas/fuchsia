@@ -171,18 +171,18 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     uint32_t pid = (uint32_t)process->get_koid();
 
     // create the thread dispatcher
-    fbl::RefPtr<Dispatcher> thread_dispatcher;
+    KernelHandle<ThreadDispatcher> handle;
     zx_rights_t thread_rights;
     result = ThreadDispatcher::Create(ktl::move(process), options, sp,
-                                      &thread_dispatcher, &thread_rights);
+                                      &handle, &thread_rights);
     if (result != ZX_OK)
         return result;
 
-    uint32_t tid = (uint32_t)thread_dispatcher->get_koid();
+    uint32_t tid = (uint32_t)handle.dispatcher()->get_koid();
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    return out->make(ktl::move(thread_dispatcher), thread_rights);
+    return out->make(ktl::move(handle), thread_rights);
 }
 
 // zx_status_t zx_thread_start
@@ -361,23 +361,23 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     }
 
     // create a new process dispatcher
-    fbl::RefPtr<Dispatcher> proc_dispatcher;
+    KernelHandle<ProcessDispatcher> process_handle;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     zx_rights_t proc_rights, vmar_rights;
     result = ProcessDispatcher::Create(ktl::move(job), sp, options,
-                                       &proc_dispatcher, &proc_rights,
+                                       &process_handle, &proc_rights,
                                        &vmar_dispatcher, &vmar_rights);
     if (result != ZX_OK)
         return result;
 
-    uint32_t koid = (uint32_t)proc_dispatcher->get_koid();
+    uint32_t koid = (uint32_t)process_handle.dispatcher()->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
     // Give arch-specific tracing a chance to record process creation.
     arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
 
-    result = proc_handle->make(ktl::move(proc_dispatcher), proc_rights);
+    result = proc_handle->make(ktl::move(process_handle), proc_rights);
     if (result == ZX_OK)
         result = vmar_handle->make(ktl::move(vmar_dispatcher), vmar_rights);
     return result;
@@ -651,11 +651,11 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
         }
     }
 
-    fbl::RefPtr<Dispatcher> job;
+    KernelHandle<JobDispatcher> handle;
     zx_rights_t rights;
-    status = JobDispatcher::Create(options, ktl::move(parent), &job, &rights);
+    status = JobDispatcher::Create(options, ktl::move(parent), &handle, &rights);
     if (status == ZX_OK)
-        status = out->make(ktl::move(job), rights);
+        status = out->make(ktl::move(handle), rights);
     return status;
 }
 

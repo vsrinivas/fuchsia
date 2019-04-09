@@ -120,7 +120,7 @@ fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
 
 zx_status_t JobDispatcher::Create(uint32_t flags,
                                   fbl::RefPtr<JobDispatcher> parent,
-                                  fbl::RefPtr<Dispatcher>* dispatcher,
+                                  KernelHandle<JobDispatcher>* handle,
                                   zx_rights_t* rights) {
     if (parent != nullptr && parent->max_height() == 0) {
         // The parent job cannot have children.
@@ -128,17 +128,17 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
     }
 
     fbl::AllocChecker ac;
-    fbl::RefPtr<JobDispatcher> job =
-        fbl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) JobDispatcher(flags, parent,
+                                                                  parent->GetPolicy())));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    if (!parent->AddChildJob(job)) {
+    if (!parent->AddChildJob(new_handle.dispatcher())) {
         return ZX_ERR_BAD_STATE;
     }
 
     *rights = default_rights();
-    *dispatcher = ktl::move(job);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 

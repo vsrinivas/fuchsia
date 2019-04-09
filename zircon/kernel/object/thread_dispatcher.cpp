@@ -47,7 +47,7 @@ KCOUNTER(dispatcher_thread_destroy_count, "dispatcher.thread.destroy")
 // static
 zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
                                      fbl::StringPiece name,
-                                     fbl::RefPtr<Dispatcher>* out_dispatcher,
+                                     KernelHandle<ThreadDispatcher>* out_handle,
                                      zx_rights_t* out_rights) {
     // Make sure we contribute a FutexState object to our process's futex state
     // pool before allocating the thread.  If we cannot grow the pool, then we
@@ -57,7 +57,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
         return result;
 
     fbl::AllocChecker ac;
-    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, flags));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) ThreadDispatcher(process, flags)));
     if (!ac.check()) {
         // We grew the state pool, but failed to allocate the thread.  Go ahead
         // and shrink the pool back down to size.  Otherwise, the thread class
@@ -66,12 +66,12 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
         return ZX_ERR_NO_MEMORY;
     }
 
-    result = disp->Initialize(name.data(), name.length());
+    result = new_handle.dispatcher()->Initialize(name.data(), name.length());
     if (result != ZX_OK)
         return result;
 
     *out_rights = default_rights();
-    *out_dispatcher = ktl::move(disp);
+    *out_handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
