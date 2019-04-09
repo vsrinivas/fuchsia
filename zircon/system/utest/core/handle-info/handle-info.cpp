@@ -8,164 +8,164 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <unittest/unittest.h>
+#include <lib/zx/event.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+#include <zxtest/zxtest.h>
 
-static bool handle_replace_test(void) {
-    BEGIN_TEST;
+namespace {
 
-    zx_handle_t event = ZX_HANDLE_INVALID;
-    ASSERT_EQ(ZX_OK, zx_event_create(0u, &event), "");
+constexpr uint32_t kEventOption = 0u;
+constexpr uint32_t kSocketOption = 0u;
 
-    zx_handle_t replaced = ZX_HANDLE_INVALID;
-    ASSERT_EQ(ZX_OK, zx_handle_replace(event, ZX_RIGHTS_BASIC, &replaced), "");
-    ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(event), "");
+TEST(HandleInfoTest, ReplaceSuccessOrigInvalid) {
+    zx::event orig_event;
+    ASSERT_OK(zx::event::create(kEventOption, &orig_event));
 
-    zx_handle_t failed = ZX_HANDLE_INVALID;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_handle_replace(replaced, ZX_RIGHT_SIGNAL, &failed), "");
-    ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(replaced), "");
-    ASSERT_EQ(ZX_HANDLE_INVALID, failed, "");
-
-    END_TEST;
+    zx::event replaced_event;
+    ASSERT_OK(orig_event.replace(ZX_RIGHTS_BASIC, &replaced_event));
+    EXPECT_FALSE(orig_event.is_valid());
+    EXPECT_TRUE(replaced_event.is_valid());
 }
 
-static bool handle_info_test(void) {
-    BEGIN_TEST;
+TEST(HandleInfoTest, ReplaceFailureBothInvalid) {
+    zx::event orig_event;
+    ASSERT_OK(zx::event::create(kEventOption, &orig_event));
 
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "");
-    zx_handle_t duped;
-    zx_status_t status = zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &duped);
-    ASSERT_EQ(status, ZX_OK, "");
+    zx::event failed_event;
+    EXPECT_EQ(orig_event.replace(ZX_RIGHT_EXECUTE, &failed_event),
+              ZX_ERR_INVALID_ARGS);
+    // Even on failure, a replaced object is now invalid.
+    EXPECT_FALSE(orig_event.is_valid());
+    EXPECT_FALSE(failed_event.is_valid());
+}
 
-    ASSERT_EQ(zx_object_get_info(event, ZX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), ZX_OK,
-              "handle should be valid");
-    ASSERT_EQ(zx_handle_close(event), ZX_OK, "failed to close the handle");
-    ASSERT_EQ(zx_object_get_info(event, ZX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), ZX_ERR_BAD_HANDLE,
-              "handle should be valid");
+TEST(HandleInfoTest, DupAndInfoRights) {
+    zx::event orig_event;
+    ASSERT_OK(zx::event::create(kEventOption, &orig_event));
+    zx::event duped_event;
+    ASSERT_OK(orig_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &duped_event));
+
+    ASSERT_OK(orig_event.get_info(ZX_INFO_HANDLE_VALID, nullptr,
+              0u /*buffer_size*/, nullptr, nullptr));
+    orig_event.reset();
+    ASSERT_EQ(orig_event.get_info(ZX_INFO_HANDLE_VALID, nullptr,
+              0u /*buffer_size*/, nullptr, nullptr), ZX_ERR_BAD_HANDLE);
 
     zx_info_handle_basic_t info = {};
-    ASSERT_EQ(zx_object_get_info(duped, ZX_INFO_HANDLE_BASIC, &info, 4u, NULL, NULL),
-              ZX_ERR_BUFFER_TOO_SMALL, "bad struct size validation");
+    ASSERT_EQ(duped_event.get_info(ZX_INFO_HANDLE_BASIC, &info,
+              4u /*buffer_size*/, nullptr, nullptr),
+              ZX_ERR_BUFFER_TOO_SMALL);
 
-    status = zx_object_get_info(duped, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "handle should be valid");
+    ASSERT_OK(duped_event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+              nullptr, nullptr));
 
-    const zx_rights_t evr = ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL;
+    constexpr zx_rights_t evr = ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL;
 
     EXPECT_GT(info.koid, 0ULL, "object id should be positive");
-    EXPECT_EQ(info.type, (uint32_t)ZX_OBJ_TYPE_EVENT, "handle should be an event");
+    EXPECT_EQ(info.type, ZX_OBJ_TYPE_EVENT, "handle should be an event");
     EXPECT_EQ(info.rights, evr, "wrong set of rights");
-    EXPECT_EQ(info.props, (uint32_t)ZX_OBJ_PROP_WAITABLE, "");
+    EXPECT_EQ(info.props, ZX_OBJ_PROP_WAITABLE);
     EXPECT_EQ(info.related_koid, 0ULL, "events don't have associated koid");
-
-    zx_handle_close(event);
-    zx_handle_close(duped);
-
-    END_TEST;
 }
 
-static bool handle_related_koid_test(void) {
-    BEGIN_TEST;
+TEST(HandleInfoTest, RelatedKoid) {
+    zx_info_handle_basic_t info_job = {};
+    zx_info_handle_basic_t info_process = {};
 
-    zx_info_handle_basic_t info0 = {};
-    zx_info_handle_basic_t info1 = {};
+    ASSERT_OK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC,
+              &info_job, sizeof(info_job), nullptr, nullptr));
 
-    zx_status_t status = zx_object_get_info(
-        zx_job_default(), ZX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_OK(zx::process::self()->get_info(ZX_INFO_HANDLE_BASIC,
+              &info_process, sizeof(info_process), nullptr, nullptr));
 
-    status = zx_object_get_info(
-        zx_process_self(), ZX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(info_job.type, ZX_OBJ_TYPE_JOB);
+    EXPECT_EQ(info_process.type, ZX_OBJ_TYPE_PROCESS);
 
-    EXPECT_EQ(info0.type, (uint32_t)ZX_OBJ_TYPE_JOB, "");
-    EXPECT_EQ(info1.type, (uint32_t)ZX_OBJ_TYPE_PROCESS, "");
+    zx::thread thread;
 
-    zx_handle_t thread;
-    status = zx_thread_create(zx_process_self(), "hitr", 4, 0u, &thread);
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_OK(zx::thread::create(*zx::process::self(), "hitr", 4, 0u, &thread));
 
-    zx_info_handle_basic_t info2 = {};
+    zx_info_handle_basic_t info_thread = {};
 
-    status = zx_object_get_info(
-        thread, ZX_INFO_HANDLE_BASIC, &info2, sizeof(info2), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_OK(thread.get_info(ZX_INFO_HANDLE_BASIC, &info_thread,
+              sizeof(info_thread), nullptr, nullptr));
 
-    EXPECT_EQ(info2.type, (uint32_t)ZX_OBJ_TYPE_THREAD, "");
+    EXPECT_EQ(info_thread.type, ZX_OBJ_TYPE_THREAD);
 
     // The related koid of a process is its job and this test assumes that the
     // default job is in fact the parent job of this test. Equivalently, a thread's
     // associated koid is the process koid.
-    EXPECT_EQ(info1.related_koid, info0.koid, "");
-    EXPECT_EQ(info2.related_koid, info1.koid, "");
+    EXPECT_EQ(info_process.related_koid, info_job.koid);
+    EXPECT_EQ(info_thread.related_koid, info_process.koid);
 
-    zx_handle_close(thread);
+    thread.reset();
 
-    zx_handle_t sock0, sock1;
-    status = zx_socket_create(0u, &sock0, &sock1);
-    ASSERT_EQ(status, ZX_OK, "");
+    zx::socket socket_local, socket_remote;
+    ASSERT_OK(zx::socket::create(kSocketOption, &socket_local, &socket_remote));
 
-    status = zx_object_get_info(
-        sock0, ZX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    zx_info_handle_basic_t info_socket_local = {};
+    ASSERT_OK(socket_local.get_info(ZX_INFO_HANDLE_BASIC, &info_socket_local,
+              sizeof(info_socket_local), nullptr, nullptr));
 
-    status = zx_object_get_info(
-        sock1, ZX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    zx_info_handle_basic_t info_socket_remote = {};
+    ASSERT_OK(socket_remote.get_info(ZX_INFO_HANDLE_BASIC, &info_socket_remote,
+              sizeof(info_socket_remote), nullptr, nullptr));
 
-    EXPECT_EQ(info0.type, (uint32_t)ZX_OBJ_TYPE_SOCKET, "");
-    EXPECT_EQ(info1.type, (uint32_t)ZX_OBJ_TYPE_SOCKET, "");
+    EXPECT_EQ(info_socket_local.type, ZX_OBJ_TYPE_SOCKET);
+    EXPECT_EQ(info_socket_remote.type, ZX_OBJ_TYPE_SOCKET);
 
     // The related koid of a socket pair are each other koids.
-    EXPECT_EQ(info0.related_koid, info1.koid, "");
-    EXPECT_EQ(info1.related_koid, info0.koid, "");
-
-    zx_handle_close(sock0);
-    zx_handle_close(sock1);
-    END_TEST;
+    EXPECT_EQ(info_socket_local.related_koid, info_socket_remote.koid);
+    EXPECT_EQ(info_socket_remote.related_koid, info_socket_local.koid);
 }
 
-static bool handle_rights_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "");
-    zx_handle_t duped_ro, duped_ro2;
-    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_WAIT, &duped_ro), ZX_OK, "");
-    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_WAIT, &duped_ro2), ZX_OK, "");
+TEST(HandleInfoTest, DuplicateRights) {
+    zx::event orig_event;
+    ASSERT_OK(zx::event::create(kEventOption, &orig_event));
+    zx::event duped_ro1_event, duped_ro2_event;
+    ASSERT_OK(orig_event.duplicate(ZX_RIGHT_WAIT, &duped_ro1_event));
+    ASSERT_OK(orig_event.duplicate(ZX_RIGHT_WAIT, &duped_ro2_event));
 
     zx_info_handle_basic_t info = {};
-    zx_status_t status = zx_object_get_info(duped_ro, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "handle should be valid");
+    ASSERT_OK(duped_ro1_event.get_info(ZX_INFO_HANDLE_BASIC, &info,
+              sizeof(info), nullptr, nullptr));
 
-    ASSERT_EQ(info.rights, ZX_RIGHT_WAIT, "wrong set of rights");
+    EXPECT_EQ(info.rights, ZX_RIGHT_WAIT, "wrong set of rights");
 
-    zx_handle_t h;
-    status = zx_handle_duplicate(duped_ro, ZX_RIGHT_SAME_RIGHTS, &h);
-    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "should fail rights check");
+    zx::event duped_ro3_event;
+    // Duplicate right removed, so this fails.
+    ASSERT_EQ(duped_ro1_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &duped_ro3_event),
+              ZX_ERR_ACCESS_DENIED);
 
-    status = zx_handle_duplicate(event, ZX_RIGHT_EXECUTE | ZX_RIGHT_WAIT, &h);
-    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "cannot upgrade rights");
+    ASSERT_EQ(orig_event.duplicate(ZX_RIGHT_EXECUTE | ZX_RIGHT_WAIT,
+              &duped_ro3_event), ZX_ERR_INVALID_ARGS, "invalid right");
 
-    ASSERT_EQ(zx_handle_replace(duped_ro, ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT, &h), ZX_ERR_INVALID_ARGS,
-              "cannot upgrade rights");
-    // duped_ro1 should now be invalid.
-    ASSERT_EQ(zx_handle_close(duped_ro), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid on failure");
-
-    status = zx_handle_replace(duped_ro2, ZX_RIGHT_SAME_RIGHTS, &h);
-    ASSERT_EQ(status, ZX_OK, "should be able to replace handle");
-    // duped_ro2 should now be invalid.
-
-    ASSERT_EQ(zx_handle_close(event), ZX_OK, "failed to close original handle");
-    ASSERT_EQ(zx_handle_close(duped_ro2), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid on success");
-    ASSERT_EQ(zx_handle_close(h), ZX_OK, "failed to close replacement handle");
-
-    END_TEST;
+    EXPECT_TRUE(orig_event.is_valid(), "original handle should be valid");
+    EXPECT_TRUE(duped_ro1_event.is_valid(), "duped handle should be valid");
+    EXPECT_TRUE(duped_ro2_event.is_valid(), "duped handle should be valid");
+    EXPECT_FALSE(duped_ro3_event.is_valid(), "duped handle should be invalid");
 }
 
-BEGIN_TEST_CASE(handle_info_tests)
-RUN_TEST(handle_replace_test)
-RUN_TEST(handle_info_test)
-RUN_TEST(handle_related_koid_test)
-RUN_TEST(handle_rights_test)
-END_TEST_CASE(handle_info_tests)
+TEST(HandleInfoTest, ReplaceRights) {
+    zx::event event1, event2;
+    ASSERT_OK(zx::event::create(kEventOption, &event1));
+    ASSERT_OK(event1.replace(ZX_RIGHT_WAIT, &event2));
+
+    zx_info_handle_basic_t info = {};
+    ASSERT_OK(event2.get_info(ZX_INFO_HANDLE_BASIC, &info,
+              sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.rights, ZX_RIGHT_WAIT, "wrong set of rights");
+
+    EXPECT_FALSE(event1.is_valid(), "replaced event should be invalid");
+
+    EXPECT_EQ(event2.replace(ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT,
+              &event1), ZX_ERR_INVALID_ARGS, "cannot upgrade rights");
+    // event2 should also now be invalid.
+    EXPECT_FALSE(event2.is_valid(),
+                 "replaced event should be invalid on failure");
+}
+
+} // namespace
