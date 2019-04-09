@@ -377,6 +377,7 @@ group("all") {
     "//garnet/packages/tests:tiles",
     "//garnet/packages/tests:timezone",
     "//garnet/packages/tests:tracing",
+    "//garnet/packages/tests:unicode_utils",
     "//garnet/packages/tests:url",
     "//garnet/packages/tests:uuid",
     "//garnet/packages/tests:vfs_cpp",
@@ -1179,5 +1180,12 @@ group("setui_client") {
   public_deps = [
     "//garnet/bin/setui_client:setui_client_tests",
     "//garnet/packages/prod:setui_client",
+  ]
+}
+
+group("unicode_utils") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/intl/unicode_utils/char_collection:char_collection_tests",
   ]
 }

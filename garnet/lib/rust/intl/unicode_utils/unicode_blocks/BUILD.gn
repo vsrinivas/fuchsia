@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("unicode_blocks") {
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:unic-char-range",
+    "//third_party/rust_crates:unic-ucd-block",
+  ]
+  non_rust_deps = [ ":generate_unicode_blocks_source" ]
+  source_root = rebase_path("$target_gen_dir/unicode_blocks.rs")
+}
+
+compiled_action("generate_unicode_blocks_source") {
+  tool = ":unicode_block_generator"
+  output_path = "$target_gen_dir/unicode_blocks.rs"
+  outputs = [
+    output_path,
+  ]
+  args = [ rebase_path(output_path) ]
+}
+
+rustc_binary("unicode_block_generator") {
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:unic-ucd-block",
+  ]
+  source_root = "src/unicode_block_generator.rs"
+}
