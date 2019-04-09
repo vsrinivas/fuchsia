@@ -1,0 +1,198 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/config/fuchsia/zbi.gni")
+import("//build/config/fuchsia/zircon.gni")
+import("//build/images/collect_blob_manifest.gni")
+import("//build/images/fvm.gni")
+import("//build/images/shell_commands.gni")
+
+# Assembles a Fuchsia system.
+#
+# Given base, cache, and available packages, assembles a Fuchsia system
+# containing those packages.
+#
+# This template can be instantiated at most one in a given BUILD.gn file.
+#
+# Unfortunately, we still have some parts of the build that need build-global
+# names. The name of this target is used to disambiguate those names, which
+# means the target_name of this template instance must be unique among
+# instances of the template.
+#
+# Parameters
+#
+#   base_packages (required)
+#     [list of labels] The packages to include in the base package set.
+#
+#   netboot (default: false)
+#     [boolean] Whether the generated ZBI should contain the entire system.
+#
+template("assemble_system") {
+  base_packages = invoker.base_packages
+
+  # Must be unique among assembled systems.
+  image_name = target_name
+
+  netboot = false
+  if (defined(invoker.netboot)) {
+    netboot = invoker.netboot
+  }
+
+  group("base_packages") {
+    testonly = true
+    visibility = [ ":*" ]
+    deps = base_packages
+  }
+
+  meta_far_merkle_index = "$target_out_dir/meta_far_merkle_index"
+  package_metadata_list("meta_far_merkle_index") {
+    testonly = true
+    visibility = [ ":*" ]
+    outputs = [
+      meta_far_merkle_index,
+    ]
+    data_keys = [ "meta_far_merkle_index_entries" ]
+    deps = [
+      ":base_packages",
+    ]
+  }
+
+  action("pkgsvr_index") {
+    visibility = [ ":*" ]
+    testonly = true
+    inputs = [
+      meta_far_merkle_index,
+    ]
+    outputs = [
+      "$target_out_dir/$target_name",
+    ]
+    deps = [
+      ":meta_far_merkle_index",
+    ]
+    script = "//build/images/manifest_content_expand.sh"
+    args = rebase_path(inputs, root_build_dir) +
+           rebase_path(outputs, root_build_dir)
+  }
+
+  system_image_manifest_args = "$target_out_dir/system_image.manifest_args"
+  generated_file("system_image.manifest_args") {
+    visibility = [ ":*" ]
+    testonly = true
+    outputs = [
+      system_image_manifest_args,
+    ]
+    data_keys = [ "system_image_rsps" ]
+    walk_keys = [ "package_barrier" ]
+    deps = [
+      ":base_packages",
+    ]
+  }
+
+  boot_manifest = "$target_out_dir/boot.manifest"
+
+  generate_manifest("system_image.manifest") {
+    visibility = [ ":*" ]
+    testonly = true
+
+    bootfs_manifest = boot_manifest
+    bootfs_zircon_groups = "all"
+
+    deps = [
+      ":pkgsvr_index",
+      ":system_image.manifest_args",
+    ]
+    json = "//build/images/system_meta_package.json"
+    pkgsvr_index = get_target_outputs(":pkgsvr_index")
+
+    sources = [
+      json,
+      pkgsvr_index[0],
+      system_image_manifest_args,
+    ]
+    args = [
+      "@" + rebase_path(system_image_manifest_args, root_build_dir),
+      "--entry=meta/package=" + rebase_path(json, root_build_dir),
+      "--entry=data/static_packages=" +
+          rebase_path(pkgsvr_index[0], root_build_dir),
+    ]
+  }
+
+  system_manifest_outputs = get_target_outputs(":system_image.manifest")
+  assert(boot_manifest == system_manifest_outputs[2])
+
+  pm_build_package("system_image.meta") {
+    visibility = [ ":*" ]
+    testonly = true
+    manifest = ":system_image.manifest"
+    package_name = "system_image"
+  }
+
+  blob_manifest = "$root_build_dir/${image_name}_blob.manifest"
+  collect_blob_manifest("blob.manifest") {
+    testonly = true
+    visibility = [ ":*" ]
+    outputs = [
+      blob_manifest,
+    ]
+    deps = [
+      ":base_packages",
+      ":system_image.meta",
+    ]
+  }
+
+  zircon_tool_action("blob.blk") {
+    visibility = [ ":*" ]
+    testonly = true
+    deps = [
+      ":blob.manifest",
+    ]
+    blob_image_path = "$target_out_dir/$target_name"
+    outputs = [
+      blob_image_path,
+    ]
+    depfile = blob_image_path + ".d"
+    inputs = [
+      blob_manifest,
+    ]
+    tool = "blobfs"
+    args = [
+      "--depfile",
+      "--compress",
+      rebase_path(blob_image_path, root_build_dir),
+      "create",
+      "--manifest",
+      rebase_path(blob_manifest, root_build_dir),
+    ]
+  }
+
+  generate_fvm("fvm.blk") {
+    visibility = [ ":*" ]
+    testonly = true
+    output_name = "$target_out_dir/$target_name"
+    args = fvm_create_args
+    partitions = [
+      {
+        type = "blob"
+        dep = ":blob.blk"
+      },
+    ]
+  }
+
+  zbi(image_name) {
+    testonly = true
+    deps = [
+      ":fvm.blk",
+      ":system_image.manifest",
+    ]
+    inputs = [
+      boot_manifest,
+      zircon_kernel_zbi,
+    ]
+
+    if (netboot) {
+      ramdisk_inputs = get_target_outputs(":fvm.blk")
+    }
+  }
+}

@@ -94,19 +94,20 @@ template("generate_fvm") {
       deps += [ part.dep ]
       sources += get_target_outputs(part.dep)
       args += rebase_path(get_target_outputs(part.dep), root_build_dir)
-      if ("${part.minimum_inodes}" != "") {
+      if (defined(part.minimum_inodes) && "${part.minimum_inodes}" != "") {
         args += [
           "--minimum-inodes",
           "${part.minimum_inodes}",
         ]
       }
-      if ("${part.minimum_data_bytes}" != "") {
+      if (defined(part.minimum_data_bytes) &&
+          "${part.minimum_data_bytes}" != "") {
         args += [
           "--minimum-data-bytes",
           "${part.minimum_data_bytes}",
         ]
       }
-      if ("${part.maximum_bytes}" != "") {
+      if (defined(part.maximum_bytes) && "${part.maximum_bytes}" != "") {
         args += [
           "--maximum-bytes",
           "${part.maximum_bytes}",

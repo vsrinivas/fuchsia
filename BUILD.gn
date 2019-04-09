@@ -98,6 +98,12 @@ group("default") {
   }
 }
 
+group("recovery_image") {
+  deps = [
+    "build/images/recovery",
+  ]
+}
+
 group("host_tests") {
   visibility = [ ":*" ]
   public_deps = [
