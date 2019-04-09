@@ -5,6 +5,9 @@
 library fuchsia.intl;
 
 /// Typed identifier for a single Locale, which is a set of internationalization-related properties.
+///
+/// Most APIs that consume locales will probably want to accept a vector of locales to account for
+/// priority.
 struct LocaleId {
     /// Unicode BCP-47 Locale Identifier
     /// (http://www.unicode.org/reports/tr35/#BCP_47_Conformance).
@@ -37,9 +40,9 @@ struct CalendarId {
     string id;
 };
 
-/// Typed identifier for a timezone.
+/// Typed identifier for a time zone.
 struct TimeZoneId {
-    /// Timezone ID from tzdata, e.g. "America/New_York". See https://www.iana.org/time-zones.
+    /// Time zone ID from tzdata, e.g. "America/New_York". See https://www.iana.org/time-zones.
     string id;
 };
 
@@ -55,25 +58,25 @@ enum TemperatureUnit {
 /// settings, a synthesis of user settings and app-specific overrides, or anywhere else.
 ///
 /// Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
-/// first-day-of-week, timezone) are denormalized into the locale IDs in |locales|.
-struct Profile {
+/// first-day-of-week, time zone) are denormalized into the locale IDs in |locales|.
+table Profile {
     /// Ranked list of locales (in descending order).
-    vector<LocaleId> locales;
+    1: vector<LocaleId> locales;
 
     /// Ranked list of calendars (in descending order). The first entry is the primary calendar, and
     /// will be equal to the calendar indicated in |locales|.
     /// The list is intended for use by applications that can display multiple calendar systems.
-    vector<CalendarId> calendars;
+    2: vector<CalendarId> calendars;
 
-    /// Ranked list of timezones (in descending order). The first entry is the primary timezone,
+    /// Ranked list of time zones (in descending order). The first entry is the primary time zone,
     //// which should be used by default for formatting dates and times; it will be equal to the
     /// calendar indicated in |locales|.
-    /// The list is intended for use by applications that can display multiple timezones, e.g.
+    /// The list is intended for use by applications that can display multiple time zones, e.g.
     /// a world clock.
-    vector<TimeZoneId> time_zones;
+    3: vector<TimeZoneId> time_zones;
 
     /// Selected temperature unit.
-    TemperatureUnit temperature_unit;
+    4: TemperatureUnit temperature_unit;
 
     // TODO(CF-168): Other properties that don't fit into locale IDs. Examples:
     // - User date format overrides, like d/mmm/y

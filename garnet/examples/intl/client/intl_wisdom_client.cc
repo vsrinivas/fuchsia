@@ -89,7 +89,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
         "ar-AU-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
     locales.push_back(locale_id);
   }
-  intl_profile->locales = std::move(locales);
+  intl_profile->set_locales(std::move(locales));
 
   fidl::VectorPtr<CalendarId> calendars;
   {
@@ -107,7 +107,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
     calendar_id.id = "und-u-ca-islamic";
     calendars.push_back(calendar_id);
   }
-  intl_profile->calendars = std::move(calendars);
+  intl_profile->set_calendars(std::move(calendars));
 
   fidl::VectorPtr<TimeZoneId> time_zones;
   {
@@ -121,7 +121,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
     time_zone_id.id = id_utf8;
     time_zones.push_back(time_zone_id);
   }
-  intl_profile->time_zones = std::move(time_zones);
+  intl_profile->set_time_zones(std::move(time_zones));
 
   return intl_profile;
 }

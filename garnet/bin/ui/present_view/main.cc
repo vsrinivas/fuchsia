@@ -7,11 +7,11 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
-#include <lib/svc/cpp/services.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 using fuchsia::ui::views::ViewConfig;
 using scenic::ViewTokenPair;
@@ -28,12 +28,13 @@ ViewConfig BuildSampleViewConfig(
     const std::string& calendar_id = "gregorian") {
   ViewConfig view_config;
   fuchsia::intl::Profile* intl_profile = view_config.mutable_intl_profile();
-  intl_profile->locales.push_back(fuchsia::intl::LocaleId{.id = locale_id});
-  intl_profile->time_zones.push_back(
+  intl_profile->mutable_locales()->push_back(
+      fuchsia::intl::LocaleId{.id = locale_id});
+  intl_profile->mutable_time_zones()->push_back(
       fuchsia::intl::TimeZoneId{.id = timezone_id});
-  intl_profile->calendars.push_back(
+  intl_profile->mutable_calendars()->push_back(
       fuchsia::intl::CalendarId{.id = calendar_id});
-  intl_profile->temperature_unit = fuchsia::intl::TemperatureUnit::CELSIUS;
+  intl_profile->set_temperature_unit(fuchsia::intl::TemperatureUnit::CELSIUS);
   return view_config;
 }
 

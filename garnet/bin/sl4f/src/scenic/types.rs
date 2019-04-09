@@ -110,6 +110,50 @@ impl ScreenshotDataDef {
     }
 }
 
+// https://github.com/serde-rs/serde/issues/723
+macro_rules! remote_vec {
+    ($remote:ident with=$def:ident) => {
+        impl $def {
+            fn opt_vec<'de, D>(deserializer: D) -> Result<Option<Vec<$remote>>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                #[derive(Deserialize)]
+                struct Wrapper(#[serde(deserialize_with = "deserialize_element")] $remote);
+
+                fn deserialize_element<'de, D>(deserializer: D) -> Result<$remote, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    $def::deserialize(deserializer)
+                }
+
+                let o: Option<Vec<Wrapper>> = Deserialize::deserialize(deserializer)?;
+                Ok(o.map(|v| v.into_iter().map(|Wrapper(a)| a).collect()))
+            }
+        }
+    };
+}
+
+// https://github.com/serde-rs/serde/issues/723
+macro_rules! remote_optional {
+    ($remote:ident with=$def:ident) => {
+        impl $def {
+            fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<$remote>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                use $def as Def;
+                #[derive(Deserialize)]
+                struct Wrapper(#[serde(with = "Def")] $remote);
+
+                let v: Option<Wrapper> = Option::deserialize(deserializer)?;
+                Ok(v.map(|Wrapper(a)| a))
+            }
+        }
+    };
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(remote = "LocaleId")]
 pub struct LocaleIdDef {
@@ -135,46 +179,24 @@ pub enum TemperatureUnitDef {
     Fahrenheit = 1,
 }
 
-// https://github.com/serde-rs/serde/issues/723
-macro_rules! remote_vec {
-    ($remote:ident with=$def:ident) => {
-        impl $def {
-            fn vec<'de, D>(deserializer: D) -> Result<Vec<$remote>, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                #[derive(Deserialize)]
-                struct Wrapper(#[serde(deserialize_with = "deserialize_element")] $remote);
-
-                fn deserialize_element<'de, D>(deserializer: D) -> Result<$remote, D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    $def::deserialize(deserializer)
-                }
-
-                let v = Vec::deserialize(deserializer)?;
-                Ok(v.into_iter().map(|Wrapper(a)| a).collect())
-            }
-        }
-    };
-}
-
 remote_vec!(LocaleId with=LocaleIdDef);
 remote_vec!(CalendarId with=CalendarIdDef);
 remote_vec!(TimeZoneId with=TimeZoneIdDef);
 
+remote_optional!(TemperatureUnit with=TemperatureUnitDef);
+remote_optional!(ViewConfig with=ViewConfigDef);
+
 #[derive(Deserialize, Debug)]
 #[serde(remote = "Profile")]
 pub struct ProfileDef {
-    #[serde(default, deserialize_with = "LocaleIdDef::vec")]
-    pub locales: Vec<LocaleId>,
-    #[serde(default, deserialize_with = "CalendarIdDef::vec")]
-    pub calendars: Vec<CalendarId>,
-    #[serde(default, deserialize_with = "TimeZoneIdDef::vec")]
-    pub time_zones: Vec<TimeZoneId>,
-    #[serde(with = "TemperatureUnitDef")]
-    pub temperature_unit: TemperatureUnit,
+    #[serde(default, deserialize_with = "LocaleIdDef::opt_vec")]
+    pub locales: Option<Vec<LocaleId>>,
+    #[serde(default, deserialize_with = "CalendarIdDef::opt_vec")]
+    pub calendars: Option<Vec<CalendarId>>,
+    #[serde(default, deserialize_with = "TimeZoneIdDef::opt_vec")]
+    pub time_zones: Option<Vec<TimeZoneId>>,
+    #[serde(default, deserialize_with = "TemperatureUnitDef::deserialize_option")]
+    pub temperature_unit: Option<TemperatureUnit>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -184,21 +206,9 @@ pub struct ViewConfigDef {
     pub intl_profile: Profile,
 }
 
-// https://github.com/serde-rs/serde/issues/723
-fn option_view_config_def<'de, D>(deserializer: D) -> Result<Option<ViewConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrapper(#[serde(with = "ViewConfigDef")] ViewConfig);
-
-    let v = Option::deserialize(deserializer)?;
-    Ok(v.map(|Wrapper(a)| a))
-}
-
 #[derive(Deserialize, Debug)]
 pub struct PresentViewRequest {
     pub url: String,
-    #[serde(default, deserialize_with = "option_view_config_def")]
+    #[serde(default, deserialize_with = "ViewConfigDef::deserialize_option")]
     pub config: Option<ViewConfig>,
 }
