@@ -90,22 +90,24 @@ zx_status_t ProcessDispatcher::Create(
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    if (!job->AddChildProcess(new_handle.dispatcher()))
-        return ZX_ERR_BAD_STATE;
-
     zx_status_t result = new_handle.dispatcher()->Initialize();
     if (result != ZX_OK)
         return result;
 
-    fbl::RefPtr<VmAddressRegion> vmar(new_handle.dispatcher()->aspace()->RootVmar());
-
     // Create a dispatcher for the root VMAR.
     fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
-    result = VmAddressRegionDispatcher::Create(vmar, ARCH_MMU_FLAG_PERM_USER,
+    result = VmAddressRegionDispatcher::Create(new_handle.dispatcher()->aspace()->RootVmar(),
+                                               ARCH_MMU_FLAG_PERM_USER,
                                                &new_vmar_dispatcher,
                                                root_vmar_rights);
     if (result != ZX_OK)
         return result;
+
+    // Only now that the process has been fully created and initialized can we register it with its
+    // parent job. We don't want anyone to see it in a partially initalized state.
+    if (!job->AddChildProcess(new_handle.dispatcher())) {
+        return ZX_ERR_BAD_STATE;
+    }
 
     *rights = default_rights();
     *handle = ktl::move(new_handle);
@@ -147,6 +149,7 @@ ProcessDispatcher::~ProcessDispatcher() {
     DEBUG_ASSERT(handles_.is_empty());
     DEBUG_ASSERT(exception_port_ == nullptr);
     DEBUG_ASSERT(debugger_exception_port_ == nullptr);
+    DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
 
     kcounter_add(dispatcher_process_destroy_count, 1);
 
