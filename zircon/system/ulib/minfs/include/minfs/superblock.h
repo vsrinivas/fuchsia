@@ -16,6 +16,7 @@
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/block-txn.h>
+#include <minfs/minfs.h>
 
 namespace minfs {
 
@@ -35,7 +36,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
     static zx_status_t Create(Bcache* bc, const Superblock* info,
-                              fbl::unique_ptr<SuperblockManager>* out);
+                              fbl::unique_ptr<SuperblockManager>* out,
+                              IntegrityCheck checks);
 
     const Superblock& Info() const {
 #ifdef __Fuchsia__

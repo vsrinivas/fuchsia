@@ -166,7 +166,7 @@ public:
     ~Minfs();
 
     static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
-                              fbl::unique_ptr<Minfs>* out);
+                              fbl::unique_ptr<Minfs>* out, IntegrityCheck checks);
 
 #ifdef __Fuchsia__
     // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving

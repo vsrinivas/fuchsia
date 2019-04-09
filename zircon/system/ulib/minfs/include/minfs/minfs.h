@@ -25,6 +25,18 @@
 
 namespace minfs {
 
+// Controls the validation-checking performed by minfs when loading
+// structures from disk.
+enum class IntegrityCheck {
+    // Do not attempt to validate structures on load. This is useful
+    // for inspection tools, which do not depend on the correctness
+    // of on-disk structures.
+    kNone,
+    // Validate structures (locally) before usage. This is the
+    // recommended option for mounted filesystems.
+    kAll,
+};
+
 struct MountOptions {
     bool readonly;
     bool metrics;

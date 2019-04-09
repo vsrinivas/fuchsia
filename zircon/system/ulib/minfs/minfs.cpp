@@ -778,7 +778,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
 }
 
 zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
-                          fbl::unique_ptr<Minfs>* out) {
+                          fbl::unique_ptr<Minfs>* out, IntegrityCheck checks) {
 #ifndef __Fuchsia__
     if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != kExtentCount) {
         FS_TRACE_ERROR("minfs: invalid number of extents\n");
@@ -789,7 +789,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     fbl::unique_ptr<SuperblockManager> sb;
     zx_status_t status;
 
-    if ((status = SuperblockManager::Create(bc.get(), info, &sb)) != ZX_OK) {
+    if ((status = SuperblockManager::Create(bc.get(), info, &sb, checks)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize superblock: %d\n", status);
         return status;
     }
@@ -907,7 +907,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
     const Superblock* info = reinterpret_cast<Superblock*>(blk);
 
     fbl::unique_ptr<Minfs> fs;
-    if ((status = Minfs::Create(std::move(bc), info, &fs)) != ZX_OK) {
+    if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }

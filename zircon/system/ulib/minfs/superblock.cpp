@@ -34,11 +34,15 @@ SuperblockManager::SuperblockManager(const Superblock* info) {
 SuperblockManager::~SuperblockManager() = default;
 
 zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
-                                      fbl::unique_ptr<SuperblockManager>* out) {
-    zx_status_t status = CheckSuperblock(info, bc);
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
-        return status;
+                                      fbl::unique_ptr<SuperblockManager>* out,
+                                      IntegrityCheck checks) {
+    zx_status_t status = ZX_OK;
+    if (checks == IntegrityCheck::kAll) {
+        status = CheckSuperblock(info, bc);
+        if (status != ZX_OK) {
+            FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
+            return status;
+        }
     }
 
 #ifdef __Fuchsia__

@@ -624,7 +624,7 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
         return status;
     }
     fbl::unique_ptr<Minfs> fs;
-    if ((status = Minfs::Create(std::move(bc), info, &fs)) != ZX_OK) {
+    if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
         FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
         return status;
     }
