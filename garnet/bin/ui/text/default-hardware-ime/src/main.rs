@@ -33,7 +33,7 @@ const NUM_ENTER: u32 = 0x58;
 struct DefaultHardwareImeState {
     layout: Value,
     text_field: Option<txt::TextFieldProxy>,
-    last_selection: Option<txt::TextSelection>,
+    last_selection: Option<txt::Selection>,
     last_revision: Option<u64>,
     dead_key_state: Option<Value>,
     unicode_input_mode: bool,
@@ -85,7 +85,7 @@ impl DefaultHardwareIme {
 
 impl DefaultHardwareImeState {
     fn on_update(&mut self, state: txt::TextFieldState) {
-        self.last_selection = state.selection.map(|v| *v);
+        self.last_selection = Some(state.selection);
         self.last_revision = Some(state.revision);
     }
 
@@ -242,20 +242,20 @@ impl DefaultHardwareImeState {
         let field = self.text_field.as_ref().unwrap();
         let (anchor, mut focus) = clone_anchor_focus(self.last_selection.as_ref().unwrap());
         let revision = self.last_revision.unwrap();
-        let (focus, error) = await!(field.point_offset(&mut focus, distance, revision)).unwrap();
+        let (focus, error) = await!(field.position_offset(&mut focus, distance, revision)).unwrap();
         // TODO: By word, line, etc based on modifiers?
-        if error != txt::TextError::Ok {
-            fx_log_err!("DefaultHardwareIme received a TextError: {:#?}", error);
+        if error != txt::Error::Ok {
+            fx_log_err!("DefaultHardwareIme received a Error: {:#?}", error);
             return;
         }
         let range = if (modifiers & uii::MODIFIER_SHIFT) != 0 {
-            txt::TextRange { start: clone_point(&anchor), end: clone_point(&focus) }
+            txt::Range { start: clone_point(&anchor), end: clone_point(&focus) }
         } else {
-            txt::TextRange { start: clone_point(&focus), end: clone_point(&focus) }
+            txt::Range { start: clone_point(&focus), end: clone_point(&focus) }
         };
-        let mut selection = txt::TextSelection {
+        let mut selection = txt::Selection {
             range: range,
-            anchor: txt::TextSelectionAnchor::AnchoredAtStart,
+            anchor: txt::SelectionAnchor::AnchoredAtStart,
             affinity: self.last_selection.as_ref().unwrap().affinity,
         };
         field.begin_edit(revision).unwrap();
@@ -269,8 +269,8 @@ impl DefaultHardwareImeState {
         let mut range = clone_range(self.last_selection.as_ref().unwrap());
         let revision = self.last_revision.unwrap();
         let (dist, error) = await!(field.distance(&mut range, revision)).unwrap();
-        if error != txt::TextError::Ok {
-            fx_log_err!("DefaultHardwareIme received a TextError: {:#?}", error);
+        if error != txt::Error::Ok {
+            fx_log_err!("DefaultHardwareIme received a Error: {:#?}", error);
             return;
         }
         // If the selection is non-empty, simply delete it.
@@ -282,24 +282,24 @@ impl DefaultHardwareImeState {
         }
         // If the selection is empty, delete (distance) from the caret.
         let mut start = clone_start(self.last_selection.as_ref().unwrap());
-        let (end, error) = await!(field.point_offset(&mut start, distance, revision)).unwrap();
+        let (end, error) = await!(field.position_offset(&mut start, distance, revision)).unwrap();
         // TODO: By word, line, etc based on modifiers?
-        if error != txt::TextError::Ok {
-            fx_log_err!("DefaultHardwareIme received a TextError: {:#?}", error);
+        if error != txt::Error::Ok {
+            fx_log_err!("DefaultHardwareIme received a Error: {:#?}", error);
             return;
         }
-        range = txt::TextRange { start: start, end: end };
+        range = txt::Range { start: start, end: end };
         field.begin_edit(revision).unwrap();
         field.replace(&mut range, "").unwrap();
         on_commit_edit(await!(field.commit_edit()));
     }
 }
 
-fn on_commit_edit(error: Result<txt::TextError, fidl::Error>) {
+fn on_commit_edit(error: Result<txt::Error, fidl::Error>) {
     match error {
         Ok(e) => {
-            if e != txt::TextError::Ok {
-                fx_log_err!("DefaultHardwareIme received a TextError: {:#?}", e);
+            if e != txt::Error::Ok {
+                fx_log_err!("DefaultHardwareIme received a Error: {:#?}", e);
             }
         }
         Err(e) => {
@@ -339,33 +339,33 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn clone_range(selection: &txt::TextSelection) -> txt::TextRange {
-    txt::TextRange {
-        start: txt::TextPoint { id: selection.range.start.id },
-        end: txt::TextPoint { id: selection.range.end.id },
+fn clone_range(selection: &txt::Selection) -> txt::Range {
+    txt::Range {
+        start: txt::Position { id: selection.range.start.id },
+        end: txt::Position { id: selection.range.end.id },
     }
 }
 
-fn clone_anchor_focus(selection: &txt::TextSelection) -> (txt::TextPoint, txt::TextPoint) {
-    if selection.anchor == txt::TextSelectionAnchor::AnchoredAtStart {
+fn clone_anchor_focus(selection: &txt::Selection) -> (txt::Position, txt::Position) {
+    if selection.anchor == txt::SelectionAnchor::AnchoredAtStart {
         return (
-            txt::TextPoint { id: selection.range.start.id },
-            txt::TextPoint { id: selection.range.end.id },
+            txt::Position { id: selection.range.start.id },
+            txt::Position { id: selection.range.end.id },
         );
     } else {
         return (
-            txt::TextPoint { id: selection.range.end.id },
-            txt::TextPoint { id: selection.range.start.id },
+            txt::Position { id: selection.range.end.id },
+            txt::Position { id: selection.range.start.id },
         );
     }
 }
 
-fn clone_point(point: &txt::TextPoint) -> txt::TextPoint {
-    txt::TextPoint { id: point.id }
+fn clone_point(point: &txt::Position) -> txt::Position {
+    txt::Position { id: point.id }
 }
 
-fn clone_start(selection: &txt::TextSelection) -> txt::TextPoint {
-    txt::TextPoint { id: selection.range.start.id }
+fn clone_start(selection: &txt::Selection) -> txt::Position {
+    txt::Position { id: selection.range.start.id }
 }
 
 fn parse_code_point(s: &str) -> Option<char> {

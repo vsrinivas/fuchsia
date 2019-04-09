@@ -7,38 +7,38 @@ library fuchsia.ui.text;
 /// Indicates a character position in a text field, either between two grapheme clusters
 /// or at the very edge of the document.
 ///
-/// Any valid TextPoint is a place a typing caret could appear, and vice-versa.
-/// Instead of using absolute character indexes, each TextPoint has a
+/// Any valid Position is a place a typing caret could appear, and vice-versa.
+/// Instead of using absolute character indexes, each Position has a
 /// TextField-assigned ID; it's the TextField's responsibility to keep a mapping
-/// of point IDs to its internal representation of position.
+/// of position IDs to its internal representation of position.
 ///
-/// When the TextField's revision number increments, all existing TextPoints
-/// become invalid. TextField should take care never reuse point IDs, even across
+/// When the TextField's revision number increments, all existing Positions
+/// become invalid. TextField should take care never reuse position IDs, even across
 /// revisions.
-struct TextPoint {
+struct Position {
   uint64 id;
 };
 
 /// A selection is the current range of the text that is selected by the user,
 /// or the current position of the blinking input caret.
 ///
-/// A zero-length selection is a caret. TextAffinity only has an effect on carets.
+/// A zero-length selection is a caret. Affinity only has an effect on carets.
 ///
 /// Even in mixed RTL and LTR text situations, a selection is still just the
 /// string-wise slice between `focus` and `anchor` — graphical representations
 /// of selections flip directions when crossing the RTL/LTR boundary, but no
 /// special code is needed to handle crossing the boundary in the model.
-struct TextSelection {
-  TextRange range;
-  TextSelectionAnchor anchor;
-  TextAffinity affinity;
+struct Selection {
+  Range range;
+  SelectionAnchor anchor;
+  Affinity affinity;
 };
 
-/// Text orientation states which edge of the selection is the anchor, and which
+/// Selection anchor states which edge of the selection is the anchor, and which
 /// is the focus. While holding down shift and using the arrow keys, or while
 /// dragging across some text to select it, the anchor is the edge that stays in
 /// place, and the focus is the edge that moves around.
-enum TextSelectionAnchor {
+enum SelectionAnchor {
   ANCHORED_AT_START = 1;
   ANCHORED_AT_END = 2;
 };
@@ -47,18 +47,18 @@ enum TextSelectionAnchor {
 /// ranges to clients, TextField must ensure `start` is always upstream of
 /// `end`. However, when receiving ranges from clients, it should accept
 /// `start` and `end` in any order.
-struct TextRange {
-  TextPoint start;
-  TextPoint end;
+struct Range {
+  Position start;
+  Position end;
 };
 
-/// Whether a TextPoint is visually upstream or downstream when ambiguous.
+/// Whether a Position is visually upstream or downstream when ambiguous.
 ///
-/// For example, when a text position exists at a soft line break, a single offset has
+/// For example, when a position exists at a soft line break, a single offset has
 /// two visual positions, UPSTREAM (at the end of the first line) and DOWNSTREAM
 /// (at the start of the second line). A text affinity disambiguates between those
 /// cases. (Something similar happens with between runs of bidirectional text.)
-enum TextAffinity {
+enum Affinity {
   UPSTREAM = 0;
   DOWNSTREAM = 1;
 };

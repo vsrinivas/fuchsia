@@ -4,26 +4,26 @@
 
 library fuchsia.ui.text;
 
-/// Lists the TextPoints for selection and other related ranges, at a particular
-/// revision number. Any time the revision number is incremented, all these TextPoints
+/// Lists the Positions for selection and other related ranges, at a particular
+/// revision number. Any time the revision number is incremented, all these Positions
 /// become invalid, and a new TextFieldState is sent through OnUpdate.
 struct TextFieldState {
   /// The start and end of the entire text field.
-  TextRange document;
+  Range document;
 
   /// The currently selected range of text.
-  TextSelection? selection;
+  Selection selection;
 
   /// The range that indicates the text that is being composed, or currently
   /// receiving suggestions from the keyboard. It should be displayed in some
   /// distinct way, such as underlined.
-  TextRange? composition;
+  Range? composition;
 
   /// Some keyboards, notably Japanese, give the user buttons to highlight just a
   /// subset of the composition string for suggestions. It must be equal to or a subset
   /// of the composition range. If the composition range changes, the TextField may
   /// discard this and require the keyboard to create a new one.
-  TextRange? composition_highlight;
+  Range? composition_highlight;
 
   /// A dead key is a key combination you press before another key to add diacritical
   /// marks, accents, or other changes to the second key. After the first key, a
@@ -31,7 +31,7 @@ struct TextFieldState {
   /// range is that highlighted character. If the selection moves away from this
   /// highlight range, or if the contents of the highlight range change, the TextField
   /// may discard this and require the keyboard to create a new one.
-  TextRange? dead_key_highlight;
+  Range? dead_key_highlight;
 
   /// This number is increased any time content in the text field is changed, if the
   /// selection is changed, or if anything else about the state is changed.
@@ -39,9 +39,9 @@ struct TextFieldState {
 };
 
 /// Indicates errors that can occur with various TextField methods. Until FIDL supports
-/// result return types, if TextError has any value except OK, the client must ignore
+/// result return types, if Error has any value except OK, the client must ignore
 /// all other return data from that method.
-enum TextError {
+enum Error {
   // Once FIDL supports Result return types, this option can be removed.
   OK = 0;
 
@@ -52,14 +52,14 @@ enum TextError {
   /// to be made, like inserting number into a text field.
   INVALID_EDIT = 2;
 
-  /// Bad request entirely, like an unknown point that doesn't match the edits revision.
+  /// Bad request entirely, like an unknown position that doesn't match the edits revision.
   /// Indicates a bug with client code.
   BAD_REQUEST = 3;
 
-  /// For a contents() request, indicates there is no text between the two points that is known.
-  /// (If only a substring is known, it should be returned, with the `start` TextPoint set
+  /// For a contents() request, indicates there is no text between the two position that is known.
+  /// (If only a substring is known, it should be returned, with the `start` Position set
   /// appropriately). For a distance() request, indicates the number of characters between the
-  /// two points is unknowably large.
+  /// two position is unknowably large.
   UNKNOWABLE = 4;
 };
 
@@ -83,16 +83,16 @@ protocol TextField {
 
   // READ METHODS
 
-  /// Returns a new point that is `offset` unicode code points away from `oldPoint`
-  PointOffset(TextPoint old_point, int64 offset, uint64 revision) -> (TextPoint new_point, TextError error);
+  /// Returns a new position that is `offset` unicode code points away from `old_position`
+  PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, Error error);
 
-  /// Returns number of unicode code points between two points. If the point range.start is after
+  /// Returns number of unicode code points between two positions. If the position range.start is after
   /// range.end, then the range is considered `inverted` and distance will be negative.
-  /// For all points A and B, pointOffset(A, distance(A, B)) == B
-  Distance(TextRange range, uint64 revision) -> (int64 distance, TextError error);
+  /// For all positions A and B, PositionOffset(A, Distance(A, B)) == B
+  Distance(Range range, uint64 revision) -> (int64 distance, Error error);
 
-  /// Returns string of unicode code points between two points
-  Contents(TextRange range, uint64 revision) -> (string contents, TextPoint start, TextError error);
+  /// Returns string of unicode code points between two positions
+  Contents(Range range, uint64 revision) -> (string contents, Position start, Error error);
 
   // TRANSACTION METHODS
 
@@ -104,7 +104,7 @@ protocol TextField {
   /// If the transaction's revision number (from BeginEdit) is still current,
   /// runs all edit commands queued in this transaction. If not, returns
   /// BAD_REVISION.
-  CommitEdit() -> (TextError error);
+  CommitEdit() -> (Error error);
 
   /// Discards the current transaction.
   AbortEdit();
@@ -115,20 +115,20 @@ protocol TextField {
   /// responsibility to make sure new_text isn't too long for a FIDL message;
   /// if it is, the client should break up the string into separate replace
   /// calls.
-  Replace(TextRange range, string new_text);
+  Replace(Range range, string new_text);
 
   /// Sets the selection range.
-  SetSelection(TextSelection selection);
+  SetSelection(Selection selection);
 
   /// Sets the composition range and the composition highlight range. For more info,
   /// see TextState's comments.
-  SetComposition(TextRange composition_range, TextRange? highlight_range);
+  SetComposition(Range composition_range, Range? highlight_range);
 
   /// Clears both the composition range, and the composition highlight range.
   ClearComposition();
 
   /// Sets the dead key highlight range. For more info, see TextState's comments.
-  SetDeadKeyHighlight(TextRange range);
+  SetDeadKeyHighlight(Range range);
 
   /// Clears the dead key highlight range.
   ClearDeadKeyHighlight();

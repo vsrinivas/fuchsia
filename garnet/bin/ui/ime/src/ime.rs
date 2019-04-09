@@ -167,19 +167,17 @@ impl Ime {
     fn handle_text_field_msg(&mut self, msg: txt::TextFieldRequest) -> Result<(), fidl::Error> {
         let mut ime_state = self.0.lock();
         match msg {
-            txt::TextFieldRequest::PointOffset { old_point, offset, revision, responder } => {
+            txt::TextFieldRequest::PositionOffset { old_position, offset, revision, responder } => {
                 if revision != ime_state.revision {
-                    return responder
-                        .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRevision);
+                    return responder.send(&mut txt::Position { id: 0 }, txt::Error::BadRevision);
                 }
-                let old_char_index = if let Some(v) = get_point(&ime_state.text_points, &old_point)
-                    .and_then(|old_byte_index| {
+                let old_char_index = if let Some(v) =
+                    get_point(&ime_state.text_points, &old_position).and_then(|old_byte_index| {
                         idx::byte_to_char(&ime_state.text_state.text, old_byte_index)
                     }) {
                     v
                 } else {
-                    return responder
-                        .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
+                    return responder.send(&mut txt::Position { id: 0 }, txt::Error::BadRequest);
                 };
                 let new_char_index = (old_char_index as i64 + offset)
                     .max(0)
@@ -188,17 +186,17 @@ impl Ime {
                 let new_byte_index = idx::char_to_byte(&ime_state.text_state.text, new_char_index)
                     .expect("did not expect character to fail");
                 let mut new_point = ime_state.new_point(new_byte_index);
-                return responder.send(&mut new_point, txt::TextError::Ok);
+                return responder.send(&mut new_point, txt::Error::Ok);
             }
             txt::TextFieldRequest::Distance { range, revision, responder } => {
                 if revision != ime_state.revision {
-                    return responder.send(0, txt::TextError::BadRevision);
+                    return responder.send(0, txt::Error::BadRevision);
                 }
                 let (byte_start, byte_end) = match get_range(&ime_state.text_points, &range, false)
                 {
                     Some(v) => v,
                     None => {
-                        return responder.send(0, txt::TextError::BadRequest);
+                        return responder.send(0, txt::Error::BadRequest);
                     }
                 };
                 let (char_start, char_end) = match (
@@ -207,17 +205,17 @@ impl Ime {
                 ) {
                     (Some(a), Some(b)) => (a, b),
                     _ => {
-                        return responder.send(0, txt::TextError::BadRequest);
+                        return responder.send(0, txt::Error::BadRequest);
                     }
                 };
-                return responder.send(char_end as i64 - char_start as i64, txt::TextError::Ok);
+                return responder.send(char_end as i64 - char_start as i64, txt::Error::Ok);
             }
             txt::TextFieldRequest::Contents { range, revision, responder } => {
                 if revision != ime_state.revision {
                     return responder.send(
                         "",
-                        &mut txt::TextPoint { id: 0 },
-                        txt::TextError::BadRevision,
+                        &mut txt::Position { id: 0 },
+                        txt::Error::BadRevision,
                     );
                 }
                 match get_range(&ime_state.text_points, &range, true) {
@@ -225,17 +223,13 @@ impl Ime {
                         let mut start_point = ime_state.new_point(start);
                         match ime_state.text_state.text.get(start..end) {
                             Some(contents) => {
-                                return responder.send(
-                                    contents,
-                                    &mut start_point,
-                                    txt::TextError::Ok,
-                                );
+                                return responder.send(contents, &mut start_point, txt::Error::Ok);
                             }
                             None => {
                                 return responder.send(
                                     "",
-                                    &mut txt::TextPoint { id: 0 },
-                                    txt::TextError::BadRequest,
+                                    &mut txt::Position { id: 0 },
+                                    txt::Error::BadRequest,
                                 );
                             }
                         }
@@ -243,8 +237,8 @@ impl Ime {
                     None => {
                         return responder.send(
                             "",
-                            &mut txt::TextPoint { id: 0 },
-                            txt::TextError::BadRequest,
+                            &mut txt::Position { id: 0 },
+                            txt::Error::BadRequest,
                         );
                     }
                 }
@@ -256,13 +250,13 @@ impl Ime {
             }
             txt::TextFieldRequest::CommitEdit { responder, .. } => {
                 if ime_state.transaction_revision != Some(ime_state.revision) {
-                    return responder.send(txt::TextError::BadRevision);
+                    return responder.send(txt::Error::BadRevision);
                 }
                 let res = if ime_state.apply_transaction() {
                     ime_state.increment_revision(None, true);
-                    responder.send(txt::TextError::Ok)
+                    responder.send(txt::Error::Ok)
                 } else {
-                    responder.send(txt::TextError::BadRequest)
+                    responder.send(txt::Error::BadRequest)
                 };
                 ime_state.transaction_changes = Vec::new();
                 ime_state.transaction_revision = None;
@@ -401,7 +395,7 @@ enum GraphemeTraversal {
 /// `ImeState.text_points`, but in the middle of a transaction, we clone it to a temporary list
 /// so that we can mutate them without mutating the original list. That way, if the transaction
 /// gets rejected, the original list is left intact.
-fn get_point(point_list: &HashMap<u64, usize>, point: &txt::TextPoint) -> Option<usize> {
+fn get_point(point_list: &HashMap<u64, usize>, point: &txt::Position) -> Option<usize> {
     point_list.get(&point.id).cloned()
 }
 
@@ -411,7 +405,7 @@ fn get_point(point_list: &HashMap<u64, usize>, point: &txt::TextPoint) -> Option
 /// instance, returns a negative result if the range given was inverted.
 fn get_range(
     point_list: &HashMap<u64, usize>,
-    range: &txt::TextRange,
+    range: &txt::Range,
     fix_inversion: bool,
 ) -> Option<(usize, usize)> {
     match (get_point(point_list, &range.start), get_point(point_list, &range.end)) {
@@ -471,39 +465,34 @@ impl ImeState {
             let start = self.new_point(self.text_state.composing.start as usize);
             let end = self.new_point(self.text_state.composing.end as usize);
             let text_range = if self.text_state.composing.start < self.text_state.composing.end {
-                txt::TextRange { start, end }
+                txt::Range { start, end }
             } else {
-                txt::TextRange { start: end, end: start }
+                txt::Range { start: end, end: start }
             };
             Some(Box::new(text_range))
         };
-        let selection =
-            if self.text_state.selection.base < 0 || self.text_state.selection.extent < 0 {
-                None
+        let selection = txt::Selection {
+            range: txt::Range {
+                start: self.new_point(if anchor_first {
+                    self.text_state.selection.base as usize
+                } else {
+                    self.text_state.selection.extent as usize
+                }),
+                end: self.new_point(if anchor_first {
+                    self.text_state.selection.extent as usize
+                } else {
+                    self.text_state.selection.base as usize
+                }),
+            },
+            anchor: if anchor_first {
+                txt::SelectionAnchor::AnchoredAtStart
             } else {
-                Some(Box::new(txt::TextSelection {
-                    range: txt::TextRange {
-                        start: self.new_point(if anchor_first {
-                            self.text_state.selection.base as usize
-                        } else {
-                            self.text_state.selection.extent as usize
-                        }),
-                        end: self.new_point(if anchor_first {
-                            self.text_state.selection.extent as usize
-                        } else {
-                            self.text_state.selection.base as usize
-                        }),
-                    },
-                    anchor: if anchor_first {
-                        txt::TextSelectionAnchor::AnchoredAtStart
-                    } else {
-                        txt::TextSelectionAnchor::AnchoredAtEnd
-                    },
-                    affinity: txt::TextAffinity::Upstream,
-                }))
-            };
+                txt::SelectionAnchor::AnchoredAtEnd
+            },
+            affinity: txt::Affinity::Upstream,
+        };
         txt::TextFieldState {
-            document: txt::TextRange {
+            document: txt::Range {
                 start: self.new_point(0),
                 end: self.new_point(self.text_state.text.len()),
             },
@@ -517,11 +506,11 @@ impl ImeState {
     }
 
     /// Creates a new TextPoint corresponding to the byte index `index`.
-    fn new_point(&mut self, index: usize) -> txt::TextPoint {
+    fn new_point(&mut self, index: usize) -> txt::Position {
         let id = self.next_text_point_id;
         self.next_text_point_id += 1;
         self.text_points.insert(id, index);
-        txt::TextPoint { id }
+        txt::Position { id }
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist
@@ -603,7 +592,7 @@ impl ImeState {
                         None => return false,
                     };
 
-                    if selection.anchor == txt::TextSelectionAnchor::AnchoredAtStart {
+                    if selection.anchor == txt::SelectionAnchor::AnchoredAtStart {
                         new_state.selection.base = start as i64;
                         new_state.selection.extent = end as i64;
                     } else {

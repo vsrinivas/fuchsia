@@ -38,21 +38,19 @@ impl TextFieldWrapper {
     /// call `await!(text_field_wrapper.wait_for_update())` after you expect a new state update from
     /// the TextField.
     pub fn state(&self) -> txt::TextFieldState {
-        fn clone_range(range: &txt::TextRange) -> txt::TextRange {
-            txt::TextRange {
-                start: txt::TextPoint { id: range.start.id },
-                end: txt::TextPoint { id: range.end.id },
+        fn clone_range(range: &txt::Range) -> txt::Range {
+            txt::Range {
+                start: txt::Position { id: range.start.id },
+                end: txt::Position { id: range.end.id },
             }
         }
         txt::TextFieldState {
             document: clone_range(&self.last_state.document),
-            selection: self.last_state.selection.as_ref().map(|selection| {
-                Box::new(txt::TextSelection {
-                    range: clone_range(&selection.range),
-                    anchor: selection.anchor,
-                    affinity: selection.affinity,
-                })
-            }),
+            selection: txt::Selection {
+                range: clone_range(&self.last_state.selection.range),
+                anchor: self.last_state.selection.anchor,
+                affinity: self.last_state.selection.affinity,
+            },
             composition: self.last_state.composition.as_ref().map(|v| Box::new(clone_range(v))),
             composition_highlight: self
                 .last_state
@@ -109,12 +107,8 @@ impl TextFieldWrapper {
     pub async fn simple_insert<'a>(&mut self, contents: &'static str) -> Result<(), Error> {
         let rev = self.last_state.revision;
         self.proxy.begin_edit(rev)?;
-        let selection = match &mut self.last_state.selection {
-            Some(v) => v,
-            None => bail!("Expected state to contain a selection"),
-        };
-        self.proxy.replace(&mut selection.range, contents)?;
-        if await!(self.proxy.commit_edit())? != txt::TextError::Ok {
+        self.proxy.replace(&mut self.last_state.selection.range, contents)?;
+        if await!(self.proxy.commit_edit())? != txt::Error::Ok {
             bail!("Expected commit_edit to succeed");
         }
         await!(self.wait_for_update())?;
@@ -128,12 +122,12 @@ impl TextFieldWrapper {
     /// revision numbers.
     pub async fn point_offset<'a>(
         &'a mut self,
-        mut point: &'a mut txt::TextPoint,
+        mut point: &'a mut txt::Position,
         offset: i64,
-    ) -> Result<txt::TextPoint, Error> {
+    ) -> Result<txt::Position, Error> {
         let (new_point, err) =
-            await!(self.proxy.point_offset(&mut point, offset, self.last_state.revision))?;
-        if err != txt::TextError::Ok {
+            await!(self.proxy.position_offset(&mut point, offset, self.last_state.revision))?;
+        if err != txt::Error::Ok {
             bail!(format!("Expected point_offset request to succeed, returned {:?} instead", err));
         }
         self.current_point_ids.insert(new_point.id);
@@ -146,20 +140,20 @@ impl TextFieldWrapper {
     /// A convenience function that returns the string contents of a range.
     pub async fn contents<'a>(
         &'a mut self,
-        range: &'a mut txt::TextRange,
-    ) -> Result<(String, txt::TextPoint), Error> {
+        range: &'a mut txt::Range,
+    ) -> Result<(String, txt::Position), Error> {
         let (contents, actual_start, err) =
             await!(self.proxy.contents(range, self.last_state.revision))?;
-        if err != txt::TextError::Ok {
+        if err != txt::Error::Ok {
             bail!(format!("Expected contents request to succeed, returned {:?} instead", err));
         }
         Ok((contents, actual_start))
     }
 
     /// A convenience function that returns the distance of a range.
-    pub async fn distance<'a>(&'a mut self, range: &'a mut txt::TextRange) -> Result<i64, Error> {
+    pub async fn distance<'a>(&'a mut self, range: &'a mut txt::Range) -> Result<i64, Error> {
         let (length, err) = await!(self.proxy.distance(range, self.last_state.revision))?;
-        if err != txt::TextError::Ok {
+        if err != txt::Error::Ok {
             bail!(format!("Expected length request to succeed, returned {:?} instead", err));
         }
         Ok(length)
@@ -169,13 +163,13 @@ impl TextFieldWrapper {
     /// double checks that inverting the range correctly negates the returned distance.
     pub async fn validate_distance<'a>(
         &'a mut self,
-        range: &'a txt::TextRange,
+        range: &'a txt::Range,
         expected_result: i64,
     ) -> Result<(), Error> {
         // try forwards
-        let mut new_range = txt::TextRange {
-            start: txt::TextPoint { id: range.start.id },
-            end: txt::TextPoint { id: range.end.id },
+        let mut new_range = txt::Range {
+            start: txt::Position { id: range.start.id },
+            end: txt::Position { id: range.end.id },
         };
         let length = await!(self.distance(&mut new_range))?;
         if length != expected_result {
@@ -186,9 +180,9 @@ impl TextFieldWrapper {
         };
         // try backwards
         let inverted_expected_result = -expected_result;
-        let mut new_range = txt::TextRange {
-            start: txt::TextPoint { id: range.end.id },
-            end: txt::TextPoint { id: range.start.id },
+        let mut new_range = txt::Range {
+            start: txt::Position { id: range.end.id },
+            end: txt::Position { id: range.start.id },
         };
         let length = await!(self.distance(&mut new_range))?;
         if length != inverted_expected_result {
@@ -204,13 +198,13 @@ impl TextFieldWrapper {
     /// double checks that inverting the range correctly returns an identical string.
     pub async fn validate_contents<'a>(
         &'a mut self,
-        range: &'a txt::TextRange,
+        range: &'a txt::Range,
         expected_result: &'a str,
     ) -> Result<(), Error> {
         // try forwards
-        let mut new_range = txt::TextRange {
-            start: txt::TextPoint { id: range.start.id },
-            end: txt::TextPoint { id: range.end.id },
+        let mut new_range = txt::Range {
+            start: txt::Position { id: range.start.id },
+            end: txt::Position { id: range.end.id },
         };
         let (contents, _true_start_point) = await!(self.contents(&mut new_range))?;
         if contents != expected_result {
@@ -220,9 +214,9 @@ impl TextFieldWrapper {
             ))
         };
         // try backwards
-        let mut new_range = txt::TextRange {
-            start: txt::TextPoint { id: range.end.id },
-            end: txt::TextPoint { id: range.start.id },
+        let mut new_range = txt::Range {
+            start: txt::Position { id: range.end.id },
+            end: txt::Position { id: range.start.id },
         };
         let (contents, _true_start_point) = await!(self.contents(&mut new_range))?;
         if contents != expected_result {
@@ -249,11 +243,11 @@ async fn get_update(text_field: &txt::TextFieldProxy) -> Result<txt::TextFieldSt
 
 fn all_point_ids_for_state(state: &txt::TextFieldState) -> HashSet<u64> {
     let mut point_ids = HashSet::new();
-    let mut point_ids_for_range = |range: &txt::TextRange| {
+    let mut point_ids_for_range = |range: &txt::Range| {
         point_ids.insert(range.start.id);
         point_ids.insert(range.end.id);
     };
-    state.selection.as_ref().map(|selection| point_ids_for_range(&selection.range));
+    point_ids_for_range(&state.selection.range);
     state.composition.as_ref().map(|range| point_ids_for_range(&*range));
     state.composition_highlight.as_ref().map(|range| point_ids_for_range(&*range));
     state.dead_key_highlight.as_ref().map(|range| point_ids_for_range(&*range));
@@ -264,17 +258,17 @@ fn all_point_ids_for_state(state: &txt::TextFieldState) -> HashSet<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    fn default_range(n: u64) -> txt::TextRange {
-        txt::TextRange { start: txt::TextPoint { id: n }, end: txt::TextPoint { id: n + 1 } }
+    fn default_range(n: u64) -> txt::Range {
+        txt::Range { start: txt::Position { id: n }, end: txt::Position { id: n + 1 } }
     }
     fn default_state(n: u64) -> txt::TextFieldState {
         txt::TextFieldState {
             document: default_range(n),
-            selection: Some(Box::new(txt::TextSelection {
+            selection: txt::Selection {
                 range: default_range(n + 2),
-                anchor: txt::TextSelectionAnchor::AnchoredAtStart,
-                affinity: txt::TextAffinity::Upstream,
-            })),
+                anchor: txt::SelectionAnchor::AnchoredAtStart,
+                affinity: txt::Affinity::Upstream,
+            },
             composition: None,
             composition_highlight: None,
             dead_key_highlight: None,
