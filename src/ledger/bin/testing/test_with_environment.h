@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_TESTING_TEST_WITH_ENVIRONMENT_H_
 #define SRC_LEDGER_BIN_TESTING_TEST_WITH_ENVIRONMENT_H_
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/environment/environment.h"
 
@@ -23,7 +23,7 @@ class TestWithEnvironment : public gtest::TestLoopFixture {
   void RunInCoroutine(
       fit::function<void(coroutine::CoroutineHandler*)> run_test);
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  sys::testing::ComponentContextProvider component_context_provider_;
   Environment environment_;
 
  private:

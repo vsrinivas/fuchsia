@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_ENVIRONMENT_ENVIRONMENT_H_
 #define SRC_LEDGER_BIN_ENVIRONMENT_ENVIRONMENT_H_
 
-#include <memory>
-
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/timekeeper/clock.h>
+
+#include <memory>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -25,7 +25,7 @@ class Environment {
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
   Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
               async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
-              component::StartupContext* startup_context,
+              sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory,
               std::unique_ptr<timekeeper::Clock> clock,
@@ -44,8 +44,8 @@ class Environment {
 
   const std::string& firebase_api_key() const { return firebase_api_key_; };
 
-  component::StartupContext* startup_context() const {
-    return startup_context_;
+  sys::ComponentContext* component_context() const {
+    return component_context_;
   };
 
   coroutine::CoroutineService* coroutine_service() const {
@@ -69,7 +69,7 @@ class Environment {
   // The firebase API key.
   std::string firebase_api_key_;
 
-  component::StartupContext* startup_context_;
+  sys::ComponentContext* component_context_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
@@ -95,7 +95,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
   EnvironmentBuilder& SetFirebaseApiKey(std::string firebase_api_key);
   EnvironmentBuilder& SetStartupContext(
-      component::StartupContext* startup_context);
+      sys::ComponentContext* component_context);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
@@ -110,7 +110,7 @@ class EnvironmentBuilder {
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;
   std::string firebase_api_key_;
-  component::StartupContext* startup_context_ = nullptr;
+  sys::ComponentContext* component_context_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;

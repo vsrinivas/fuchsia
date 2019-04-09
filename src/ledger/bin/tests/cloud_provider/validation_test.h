@@ -7,9 +7,9 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 
@@ -26,7 +26,7 @@ class ValidationTest : public ::gtest::TestLoopFixture {
   CloudProviderSyncPtr cloud_provider_;
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };

@@ -7,11 +7,12 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
+#include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/rng/system_random.h"
@@ -47,7 +48,7 @@ class CloudProviderFactory {
   };
 
   CloudProviderFactory(
-      component::StartupContext* startup_context, rng::Random* random,
+      sys::ComponentContext* component_context, rng::Random* random,
       std::string api_key,
       std::unique_ptr<service_account::Credentials> credentials);
   ~CloudProviderFactory();
@@ -64,7 +65,7 @@ class CloudProviderFactory {
 
  private:
   class TokenManagerContainer;
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
   rng::Random* const random_;
   const std::string api_key_;
   std::unique_ptr<service_account::Credentials> credentials_;

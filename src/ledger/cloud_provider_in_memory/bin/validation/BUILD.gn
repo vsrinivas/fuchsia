@@ -16,6 +16,7 @@ executable("validation") {
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/tests/cloud_provider/launcher",
     "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

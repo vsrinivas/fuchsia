@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -77,7 +77,7 @@ void PrintUsage() {
 class SyncBenchmark : public PageWatcher {
  public:
   SyncBenchmark(async::Loop* loop,
-                std::unique_ptr<component::StartupContext> startup_context,
+                std::unique_ptr<sys::ComponentContext> component_context,
                 size_t change_count, size_t value_size,
                 size_t entries_per_change,
                 PageDataGenerator::ReferenceStrategy reference_strategy,
@@ -99,7 +99,7 @@ class SyncBenchmark : public PageWatcher {
   rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   const size_t change_count_;
   const size_t value_size_;
@@ -123,8 +123,7 @@ class SyncBenchmark : public PageWatcher {
 };
 
 SyncBenchmark::SyncBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t change_count, size_t value_size, size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     SyncParams sync_params)
@@ -132,8 +131,8 @@ SyncBenchmark::SyncBenchmark(
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
-      startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(), &random_,
+      component_context_(std::move(component_context)),
+      cloud_provider_factory_(component_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       change_count_(change_count),
@@ -166,7 +165,7 @@ void SyncBenchmark::Run() {
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_alpha.NewRequest());
   Status status = GetLedger(
-      startup_context_.get(), alpha_controller_.NewRequest(),
+      component_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), user_id_.user_id(), "sync",
       DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
   if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
@@ -177,7 +176,7 @@ void SyncBenchmark::Run() {
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_beta.NewRequest());
 
-  status = GetLedger(startup_context_.get(), beta_controller_.NewRequest(),
+  status = GetLedger(component_context_.get(), beta_controller_.NewRequest(),
                      std::move(cloud_provider_beta), user_id_.user_id(), "sync",
                      DetachedPath(beta_path), QuitLoopClosure(), &beta_);
   if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
@@ -256,7 +255,7 @@ fit::closure SyncBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string change_count_str;
   size_t change_count;
@@ -280,7 +279,7 @@ int Main(int argc, const char** argv) {
                                     &entries_per_change) ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                       &sync_params)) {
     PrintUsage();
     return -1;
@@ -298,8 +297,8 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  SyncBenchmark app(&loop, std::move(startup_context), change_count, value_size,
-                    entries_per_change, reference_strategy,
+  SyncBenchmark app(&loop, std::move(component_context), change_count,
+                    value_size, entries_per_change, reference_strategy,
                     std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

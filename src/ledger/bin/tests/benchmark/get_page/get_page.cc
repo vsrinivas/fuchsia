@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/trace_callback.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <vector>
 
 #include "garnet/public/lib/callback/waiter.h"
 #include "peridot/lib/rng/test_random.h"
@@ -69,7 +69,7 @@ void PrintUsage() {
 class GetPageBenchmark {
  public:
   GetPageBenchmark(async::Loop* loop,
-                   std::unique_ptr<component::StartupContext> startup_context,
+                   std::unique_ptr<sys::ComponentContext> component_context,
                    size_t requests_count, bool reuse, bool wait_for_cached_page,
                    bool clear_pages);
 
@@ -85,7 +85,7 @@ class GetPageBenchmark {
   rng::TestRandom random_;
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   const size_t requests_count_;
   const bool reuse_;
   const bool wait_for_cached_page_;
@@ -99,15 +99,14 @@ class GetPageBenchmark {
 };
 
 GetPageBenchmark::GetPageBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t requests_count, bool reuse, bool wait_for_cached_page,
     bool clear_pages)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
       generator_(&random_),
-      startup_context_(std::move(startup_context)),
+      component_context_(std::move(component_context)),
       requests_count_(requests_count),
       reuse_(reuse),
       wait_for_cached_page_(wait_for_cached_page),
@@ -119,7 +118,7 @@ GetPageBenchmark::GetPageBenchmark(
 
 void GetPageBenchmark::Run() {
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
+      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
 
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
@@ -197,7 +196,7 @@ fit::closure GetPageBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string requests_count_str;
   size_t requests_count;
@@ -212,8 +211,8 @@ int Main(int argc, const char** argv) {
   bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
   bool clear_pages = command_line.HasOption(kClearPagesFlag);
 
-  GetPageBenchmark app(&loop, std::move(startup_context), requests_count, reuse,
-                       wait_for_cached_page, clear_pages);
+  GetPageBenchmark app(&loop, std::move(component_context), requests_count,
+                       reuse, wait_for_cached_page, clear_pages);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

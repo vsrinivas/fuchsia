@@ -18,12 +18,12 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;
   Status status = GetLedger(
-      startup_context.get(), controller.NewRequest(), nullptr, "",
+      component_context.get(), controller.NewRequest(), nullptr, "",
       "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
       &ledger);
 
@@ -37,12 +37,12 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;
   Status status = GetLedger(
-      startup_context.get(), controller.NewRequest(), nullptr, "",
+      component_context.get(), controller.NewRequest(), nullptr, "",
       "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
       &ledger);
 

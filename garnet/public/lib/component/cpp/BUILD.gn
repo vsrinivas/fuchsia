@@ -114,7 +114,6 @@ source_set("cpp") {
     "//peridot/tests/maxwell_integration/*",
     "//peridot/tests/sessionctl/*",
     "//src/connectivity/overnet/*",
-    "//src/ledger/*",
 
     # TODO(SCN-1329): move playback to lib/sys.
     "//src/media/playback/*",

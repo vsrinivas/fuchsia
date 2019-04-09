@@ -40,7 +40,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/rapidjson_utils",
@@ -51,6 +50,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
@@ -124,12 +124,12 @@ source_set("get_ledger") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/filesystem",
     "//src/lib/fxl",

@@ -5,8 +5,6 @@
 #include "src/ledger/bin/testing/get_ledger.h"
 
 #include <fcntl.h>
-#include <utility>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -14,8 +12,10 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <src/lib/fxl/logging.h>
+
+#include <utility>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -38,7 +38,7 @@ Status ToLedgerStatus(zx_status_t status) {
 }
 }  // namespace
 
-Status GetLedger(component::StartupContext* context,
+Status GetLedger(sys::ComponentContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                      controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider,
@@ -60,8 +60,10 @@ Status GetLedger(component::StartupContext* context,
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
-  context->launcher()->CreateComponent(std::move(launch_info),
-                                       std::move(controller_request));
+  fuchsia::sys::LauncherPtr launcher;
+  context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info),
+                            std::move(controller_request));
   child_services.ConnectToService(repository_factory.NewRequest());
 
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;

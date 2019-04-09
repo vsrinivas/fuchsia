@@ -4,13 +4,12 @@
 
 #include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
-#include <utility>
-
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/cancellable_helper.h>
-#include <lib/cobalt/cpp/deprecated_cobalt_logger.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
+
+#include <utility>
 
 namespace firebase_auth {
 namespace {
@@ -46,7 +45,7 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config,
                                    async_dispatcher_t* dispatcher,
                                    rng::Random* random,
                                    fuchsia::auth::TokenManagerPtr token_manager,
-                                   component::StartupContext* startup_context)
+                                   sys::ComponentContext* component_context)
     : config_(std::move(config)),
       token_manager_(std::move(token_manager)),
       backoff_(std::make_unique<backoff::ExponentialBackoff>(
@@ -54,9 +53,9 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config,
       max_retries_(config_.max_retries),
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
-  if (startup_context) {
-    cobalt_logger_ = cobalt::DeprecatedNewCobaltLogger(
-        dispatcher, startup_context, kConfigBinProtoPath);
+  if (component_context) {
+    cobalt_logger_ = cobalt::NewCobaltLogger(dispatcher, component_context,
+                                             kConfigBinProtoPath);
   } else {
     cobalt_logger_ = nullptr;
   }

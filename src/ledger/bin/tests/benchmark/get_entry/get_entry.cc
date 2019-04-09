@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -59,7 +59,7 @@ void PrintUsage() {
 class GetEntryBenchmark {
  public:
   GetEntryBenchmark(async::Loop* loop,
-                    std::unique_ptr<component::StartupContext> startup_context,
+                    std::unique_ptr<sys::ComponentContext> component_context,
                     size_t entry_count, size_t key_size, size_t value_size,
                     bool get_inline);
 
@@ -79,7 +79,7 @@ class GetEntryBenchmark {
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   const size_t entry_count_;
   const size_t key_size_;
   const size_t value_size_;
@@ -94,15 +94,14 @@ class GetEntryBenchmark {
 };
 
 GetEntryBenchmark::GetEntryBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t entry_count, size_t key_size, size_t value_size, bool get_inline)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
       generator_(&random_),
       page_data_generator_(&random_),
-      startup_context_(std::move(startup_context)),
+      component_context_(std::move(component_context)),
       entry_count_(entry_count),
       key_size_(key_size),
       value_size_(value_size),
@@ -115,7 +114,7 @@ GetEntryBenchmark::GetEntryBenchmark(
 
 void GetEntryBenchmark::Run() {
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
+      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "get_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
@@ -228,7 +227,7 @@ fit::closure GetEntryBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string entry_count_str;
   size_t entry_count;
@@ -251,7 +250,7 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  GetEntryBenchmark app(&loop, std::move(startup_context), entry_count,
+  GetEntryBenchmark app(&loop, std::move(component_context), entry_count,
                         key_size, value_size, get_inline);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });

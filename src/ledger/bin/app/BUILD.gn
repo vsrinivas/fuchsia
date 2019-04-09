@@ -16,12 +16,12 @@ executable("app") {
   deps = [
     ":lib",
     "//garnet/public/lib/backoff",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/cobalt",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl",
@@ -136,11 +136,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.netconnector",
+    "//sdk/lib/sys/cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -183,7 +183,6 @@ source_set("unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/backoff/testing",
-    "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect:inspect",
     "//garnet/public/lib/inspect:reader",
@@ -192,6 +191,7 @@ source_set("unittests") {
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/cloud_sync/impl",
     "//src/ledger/bin/cloud_sync/testing",
     "//src/ledger/bin/encryption/fake",

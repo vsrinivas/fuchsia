@@ -4,10 +4,6 @@
 
 #include "src/ledger/bin/app/ledger_manager.h"
 
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <lib/callback/ensure_called.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -17,6 +13,11 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace/event.h>
 
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "lib/async/cpp/task.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_manager_container.h"

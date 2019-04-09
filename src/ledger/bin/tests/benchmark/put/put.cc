@@ -2,14 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-#include <set>
-
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -17,6 +13,10 @@
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
+#include <set>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -61,7 +61,7 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 class PutBenchmark : public PageWatcher {
  public:
   PutBenchmark(async::Loop* loop,
-               std::unique_ptr<component::StartupContext> startup_context,
+               std::unique_ptr<sys::ComponentContext> component_context,
                int entry_count, int transaction_size, int key_size,
                int value_size, bool update,
                PageDataGenerator::ReferenceStrategy reference_strategy,
@@ -96,7 +96,7 @@ class PutBenchmark : public PageWatcher {
   PageDataGenerator page_data_generator_;
 
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   const int entry_count_;
   const int transaction_size_;
   const int key_size_;
@@ -126,16 +126,16 @@ class PutBenchmark : public PageWatcher {
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
 PutBenchmark::PutBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context, int entry_count,
-    int transaction_size, int key_size, int value_size, bool update,
-    PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed)
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+    int entry_count, int transaction_size, int key_size, int value_size,
+    bool update, PageDataGenerator::ReferenceStrategy reference_strategy,
+    uint64_t seed)
     : loop_(loop),
       random_(seed),
       generator_(&random_),
       page_data_generator_(&random_),
       tmp_dir_(kStoragePath),
-      startup_context_(std::move(startup_context)),
+      component_context_(std::move(component_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -162,7 +162,7 @@ void PutBenchmark::Run() {
                         : kRefsOnFlag)
                 << (update_ ? fxl::Concatenate({" --", kUpdateFlag}) : "");
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
+      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
@@ -374,7 +374,7 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line,
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   int entry_count;
   std::string transaction_size_str;
@@ -421,7 +421,7 @@ int Main(int argc, const char** argv) {
     seed = 0;
   }
 
-  PutBenchmark app(&loop, std::move(startup_context), entry_count,
+  PutBenchmark app(&loop, std::move(component_context), entry_count,
                    transaction_size, key_size, value_size, update, ref_strategy,
                    seed);
 

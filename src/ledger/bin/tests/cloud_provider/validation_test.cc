@@ -7,11 +7,11 @@
 namespace cloud_provider {
 
 ValidationTest::ValidationTest()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
+    : component_context_(sys::ComponentContext::Create()) {}
 ValidationTest::~ValidationTest() {}
 
 void ValidationTest::SetUp() {
-  startup_context_->ConnectToEnvironmentService(cloud_provider_.NewRequest());
+  component_context_->svc()->Connect(cloud_provider_.NewRequest());
 }
 
 }  // namespace cloud_provider

@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-#include <set>
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/waiter.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
+#include <set>
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -68,11 +68,10 @@ constexpr size_t kKeySize = 100;
 //   --credentials-path=<file path> Firestore service account credentials
 class ConvergenceBenchmark : public PageWatcher {
  public:
-  ConvergenceBenchmark(
-      async::Loop* loop,
-      std::unique_ptr<component::StartupContext> startup_context,
-      int entry_count, int value_size, int device_count,
-      SyncParams sync_params);
+  ConvergenceBenchmark(async::Loop* loop,
+                       std::unique_ptr<sys::ComponentContext> component_context,
+                       int entry_count, int value_size, int device_count,
+                       SyncParams sync_params);
 
   void Run();
 
@@ -99,7 +98,7 @@ class ConvergenceBenchmark : public PageWatcher {
   async::Loop* const loop_;
   rng::TestRandom random_;
   DataGenerator generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   const int entry_count_;
   const int value_size_;
@@ -116,14 +115,13 @@ class ConvergenceBenchmark : public PageWatcher {
 };
 
 ConvergenceBenchmark::ConvergenceBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context, int entry_count,
-    int value_size, int device_count, SyncParams sync_params)
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+    int entry_count, int value_size, int device_count, SyncParams sync_params)
     : loop_(loop),
       random_(0),
       generator_(&random_),
-      startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(), &random_,
+      component_context_(std::move(component_context)),
+      cloud_provider_factory_(component_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       entry_count_(entry_count),
@@ -161,7 +159,7 @@ void ConvergenceBenchmark::Run() {
     cloud_provider_factory_.MakeCloudProvider(user_id_,
                                               cloud_provider.NewRequest());
 
-    Status status = GetLedger(startup_context_.get(),
+    Status status = GetLedger(component_context_.get(),
                               device_context->controller.NewRequest(),
                               std::move(cloud_provider), user_id_.user_id(),
                               "convergence", DetachedPath(synced_dir_path),
@@ -237,7 +235,7 @@ fit::closure ConvergenceBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string entry_count_str;
   int entry_count;
@@ -258,13 +256,13 @@ int Main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                       &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  ConvergenceBenchmark app(&loop, std::move(startup_context), entry_count,
+  ConvergenceBenchmark app(&loop, std::move(component_context), entry_count,
                            value_size, device_count, std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

@@ -5,17 +5,17 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
 
-#include <functional>
-#include <memory>
-#include <string>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/scoped_task_runner.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <functional>
+#include <memory>
+#include <string>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/firebase_auth/firebase_auth.h"
@@ -31,7 +31,7 @@ namespace firebase_auth {
 // the code to work without auth against public instances (e.g. for running
 // benchmarks).
 //
-// If configured with an empty |cobalt_client_name| or null |startup_context|,
+// If configured with an empty |cobalt_client_name| or null |component_context|,
 // disables statistics collection about failures.
 //
 // *Warning*: if |token_manager| disconnects, all requests in progress are
@@ -53,7 +53,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    rng::Random* random,
                    fuchsia::auth::TokenManagerPtr token_manager,
-                   component::StartupContext* startup_context);
+                   sys::ComponentContext* component_context);
   // For tests.
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::auth::TokenManagerPtr token_manager,

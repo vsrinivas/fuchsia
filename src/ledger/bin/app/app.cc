@@ -3,24 +3,25 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <unistd.h>
-#include <memory>
-#include <utility>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/inspect/inspect.h>
 #include <trace-provider/provider.h>
+#include <unistd.h>
 #include <zircon/device/vfs.h>
 
+#include <memory>
+#include <utility>
+
+#include "lib/component/cpp/object_dir.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
@@ -48,11 +49,11 @@ struct InspectObjects {
 
 fit::deferred_action<fit::closure> SetupCobalt(
     bool disable_statistics, async_dispatcher_t* dispatcher,
-    component::StartupContext* startup_context) {
+    sys::ComponentContext* component_context) {
   if (disable_statistics) {
     return fit::defer<fit::closure>([] {});
   }
-  return InitializeCobalt(dispatcher, startup_context);
+  return InitializeCobalt(dispatcher, component_context);
 };
 
 // App is the main entry point of the Ledger application.
@@ -68,11 +69,11 @@ class App : public ledger_internal::LedgerController {
         loop_(&kAsyncLoopConfigAttachToThread),
         io_loop_(&kAsyncLoopConfigNoAttachToThread),
         trace_provider_(loop_.dispatcher()),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()),
+        component_context_(sys::ComponentContext::Create()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.dispatcher(),
-                                    startup_context_.get())) {
-    FXL_DCHECK(startup_context_);
+                                    component_context_.get())) {
+    FXL_DCHECK(component_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
@@ -80,9 +81,14 @@ class App : public ledger_internal::LedgerController {
 
   bool Start() {
     io_loop_.StartThread("io thread");
+    auto objects = component::Object::Make("objects");
+    auto object_dir = component::ObjectDir(objects);
 
-    inspect_objects_.top_level_object =
-        inspect::Object(*startup_context_->outgoing().object_dir());
+    component_context_->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
+        fuchsia::inspect::Inspect::Name_,
+        std::make_unique<vfs::Service>(
+            inspect_bindings_.GetHandler(object_dir.object().get())));
+    inspect_objects_.top_level_object = inspect::Object(std::move(object_dir));
     inspect_objects_.statistic_gathering =
         inspect_objects_.top_level_object.CreateStringProperty(
             "statistic_gathering",
@@ -98,7 +104,7 @@ class App : public ledger_internal::LedgerController {
         builder.SetDisableStatistics(app_params_.disable_statistics)
             .SetAsync(loop_.dispatcher())
             .SetIOAsync(io_loop_.dispatcher())
-            .SetStartupContext(startup_context_.get())
+            .SetStartupContext(component_context_.get())
             .Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
@@ -109,15 +115,15 @@ class App : public ledger_internal::LedgerController {
         inspect_objects_.top_level_object.CreateChild(
             kRepositoriesInspectPathComponent));
 
-    startup_context_->outgoing()
-        .AddPublicService<ledger_internal::LedgerRepositoryFactory>(
+    component_context_->outgoing()
+        ->AddPublicService<ledger_internal::LedgerRepositoryFactory>(
             [this](
                 fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
                     request) {
               factory_bindings_.emplace(factory_impl_.get(),
                                         std::move(request));
             });
-    startup_context_->outgoing().AddPublicService<LedgerController>(
+    component_context_->outgoing()->AddPublicService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
         });
@@ -133,10 +139,11 @@ class App : public ledger_internal::LedgerController {
 
   const AppParams app_params_;
   InspectObjects inspect_objects_;
+  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   async::Loop loop_;
   async::Loop io_loop_;
   trace::TraceProvider trace_provider_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;

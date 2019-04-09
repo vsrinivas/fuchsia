@@ -16,12 +16,12 @@ constexpr char kValidationTestsUrl[] =
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(
-    component::StartupContext* startup_context,
+    sys::ComponentContext* component_context,
     fit::function<
         void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
         factory)
-    : startup_context_(startup_context), factory_(std::move(factory)) {
-  service_provider_impl_.AddService<fuchsia::ledger::cloud::CloudProvider>(
+    : component_context_(component_context), factory_(std::move(factory)) {
+  service_directory_provider_.AddService<fuchsia::ledger::cloud::CloudProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>
                  request) { factory_(std::move(request)); });
 }
@@ -33,14 +33,17 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
   launch_info.url = kValidationTestsUrl;
   fuchsia::sys::ServiceList service_list;
   service_list.names.push_back(fuchsia::ledger::cloud::CloudProvider::Name_);
-  service_provider_impl_.AddBinding(service_list.provider.NewRequest());
+  service_list.host_directory = service_directory_provider_.service_directory()
+                                    ->CloneChannel()
+                                    .TakeChannel();
   launch_info.additional_services = fidl::MakeOptional(std::move(service_list));
   for (const auto& argument : arguments) {
     launch_info.arguments.push_back(argument);
   }
-
-  startup_context_->launcher()->CreateComponent(
-      std::move(launch_info), validation_tests_controller_.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  component_context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info),
+                            validation_tests_controller_.NewRequest());
 
   validation_tests_controller_.events().OnTerminated =
       [this](int32_t return_code, fuchsia::sys::TerminationReason reason) {

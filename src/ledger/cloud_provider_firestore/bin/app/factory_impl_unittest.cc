@@ -19,7 +19,7 @@ class FactoryImplTest : public gtest::TestLoopFixture {
  public:
   FactoryImplTest()
       : random_(test_loop().initial_state()),
-        factory_impl_(dispatcher(), &random_, /*startup_context=*/nullptr,
+        factory_impl_(dispatcher(), &random_, /*component_context=*/nullptr,
                       /*cobalt_client_name=*/""),
         factory_binding_(&factory_impl_, factory_.NewRequest()),
         token_manager_(dispatcher()),

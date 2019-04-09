@@ -7,8 +7,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
 
-#include <lib/cobalt/cpp/deprecated_cobalt_logger.h>
-
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 namespace ledger {
@@ -21,12 +19,12 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 }  // namespace
 
 fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, component::StartupContext* context) {
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context) {
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
   FXL_DCHECK(!g_cobalt_logger);
 
-  cobalt_logger = cobalt::DeprecatedNewCobaltLogger(dispatcher, context,
-                                                    kConfigBinProtoPath);
+  cobalt_logger =
+      cobalt::NewCobaltLogger(dispatcher, context, kConfigBinProtoPath);
 
   g_cobalt_logger = cobalt_logger.get();
   return fit::defer<fit::closure>([cobalt_logger = std::move(cobalt_logger)] {

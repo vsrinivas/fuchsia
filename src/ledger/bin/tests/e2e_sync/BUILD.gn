@@ -19,11 +19,11 @@ executable("e2e_sync") {
   deps = [
     ":ledger_e2e_sync_credentials",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
     "//peridot/lib/rng:system",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/ledger/bin/testing:lib",

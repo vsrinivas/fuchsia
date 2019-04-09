@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
@@ -17,16 +18,15 @@ namespace {
 
 class App {
  public:
-  explicit App()
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
-    FXL_DCHECK(startup_context_);
+  explicit App() : component_context_(sys::ComponentContext::Create()) {
+    FXL_DCHECK(component_context_);
   }
   ~App() {}
 
   bool Start() {
     cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>();
 
-    startup_context_->outgoing().AddPublicService<CloudProvider>(
+    component_context_->outgoing()->AddPublicService<CloudProvider>(
         [this](fidl::InterfaceRequest<CloudProvider> request) {
           cloud_provider_bindings_.AddBinding(cloud_provider_impl_.get(),
                                               std::move(request));
@@ -36,7 +36,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<ledger::FakeCloudProvider> cloud_provider_impl_;
   fidl::BindingSet<CloudProvider> cloud_provider_bindings_;
 

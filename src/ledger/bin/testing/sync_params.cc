@@ -4,13 +4,12 @@
 
 #include "src/ledger/bin/testing/sync_params.h"
 
-#include <iostream>
-
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <openssl/sha.h>
-#include "src/lib/files/file.h"
+#include <src/lib/fxl/strings/string_view.h>
+
+#include <iostream>
 
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/convert/convert.h"
@@ -65,12 +64,12 @@ void WarnIncorrectSyncParams() {
 // blocks until credentials are retrieved. This is intended exclusively for
 // infra bots that will expose the credentials over the network when running
 // sync tests.
-bool FetchCredentials(component::StartupContext* startup_context,
+bool FetchCredentials(sys::ComponentContext* component_context,
                       std::string* credentials_path, std::string* credentials) {
   *credentials_path = kCredentialsFetchUrl.ToString();
 
   fidl::SynchronousInterfacePtr<http::HttpService> network_service;
-  startup_context->ConnectToEnvironmentService(network_service.NewRequest());
+  component_context->svc()->Connect(network_service.NewRequest());
   fidl::SynchronousInterfacePtr<http::URLLoader> url_loader;
 
   zx_status_t status =
@@ -116,7 +115,7 @@ bool FetchCredentials(component::StartupContext* startup_context,
 // If it cannot find the credentials, this function will return |false|, and
 // |credentials_path| will contain the path of the last tried location.
 bool GetCredentialsContent(const fxl::CommandLine& command_line,
-                           component::StartupContext* startup_context,
+                           sys::ComponentContext* component_context,
                            std::string* credentials_path,
                            std::string* credentials) {
   if (command_line.GetOptionValue(kCredentialsPathFlag.ToString(),
@@ -128,7 +127,7 @@ bool GetCredentialsContent(const fxl::CommandLine& command_line,
     return files::ReadFileToString(*credentials_path, credentials);
   }
 
-  return FetchCredentials(startup_context, credentials_path, credentials);
+  return FetchCredentials(component_context, credentials_path, credentials);
 }
 
 std::string Hash(fxl::StringView data) {
@@ -176,11 +175,11 @@ std::string ExtractJsonObject(const std::string& content) {
 }
 
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
-                                    component::StartupContext* startup_context,
+                                    sys::ComponentContext* component_context,
                                     SyncParams* sync_params) {
   std::string credentials;
   std::string credentials_path;
-  if (!GetCredentialsContent(command_line, startup_context, &credentials_path,
+  if (!GetCredentialsContent(command_line, component_context, &credentials_path,
                              &credentials)) {
     std::cerr << "Cannot access " << credentials_path << std::endl;
     WarnIncorrectSyncParams();

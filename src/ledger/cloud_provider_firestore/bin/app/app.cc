@@ -4,8 +4,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <trace-provider/provider.h>
@@ -27,20 +27,22 @@ class App : public fuchsia::modular::Lifecycle {
  public:
   explicit App(AppParams app_params)
       : loop_(&kAsyncLoopConfigAttachToThread),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()),
+        component_context_(sys::ComponentContext::Create()),
         trace_provider_(loop_.dispatcher()),
         factory_impl_(
-            loop_.dispatcher(), &random_, startup_context_.get(),
+            loop_.dispatcher(), &random_, component_context_.get(),
             app_params.disable_statistics ? "" : kCobaltClientName.ToString()) {
-    FXL_DCHECK(startup_context_);
+    FXL_DCHECK(component_context_);
   }
 
   void Run() {
-    startup_context_->outgoing().AddPublicService<fuchsia::modular::Lifecycle>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
-          lifecycle_bindings_.AddBinding(this, std::move(request));
-        });
-    startup_context_->outgoing().AddPublicService<Factory>(
+    component_context_->outgoing()
+        ->AddPublicService<fuchsia::modular::Lifecycle>(
+            [this](
+                fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
+              lifecycle_bindings_.AddBinding(this, std::move(request));
+            });
+    component_context_->outgoing()->AddPublicService<Factory>(
         [this](fidl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
@@ -54,7 +56,7 @@ class App : public fuchsia::modular::Lifecycle {
  private:
   async::Loop loop_;
   rng::SystemRandom random_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/waiter.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -89,7 +89,7 @@ void PrintUsage() {
 class BacklogBenchmark : public SyncWatcher {
  public:
   BacklogBenchmark(async::Loop* loop,
-                   std::unique_ptr<component::StartupContext> startup_context,
+                   std::unique_ptr<sys::ComponentContext> component_context,
                    size_t unique_key_count, size_t key_size, size_t value_size,
                    size_t commit_count,
                    PageDataGenerator::ReferenceStrategy reference_strategy,
@@ -124,7 +124,7 @@ class BacklogBenchmark : public SyncWatcher {
   rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   fidl::Binding<SyncWatcher> sync_watcher_binding_;
   const size_t unique_key_count_;
@@ -152,8 +152,7 @@ class BacklogBenchmark : public SyncWatcher {
 };
 
 BacklogBenchmark::BacklogBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t unique_key_count, size_t key_size, size_t value_size,
     size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
@@ -162,8 +161,8 @@ BacklogBenchmark::BacklogBenchmark(
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
-      startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(), &random_,
+      component_context_(std::move(component_context)),
+      cloud_provider_factory_(component_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
@@ -201,7 +200,7 @@ void BacklogBenchmark::ConnectWriter() {
   FXL_DCHECK(ret);
 
   Status status = GetLedger(
-      startup_context_.get(), writer_controller_.NewRequest(), nullptr, "",
+      component_context_.get(), writer_controller_.NewRequest(), nullptr, "",
       "backlog", DetachedPath(std::move(writer_path)),
 
       []() { FXL_LOG(INFO) << "Writer closed."; }, &writer_);
@@ -263,7 +262,7 @@ void BacklogBenchmark::ConnectUploader() {
   cloud_provider_factory_.MakeCloudProvider(
       user_id_, cloud_provider_uploader.NewRequest());
   Status status = GetLedger(
-      startup_context_.get(), uploader_controller_.NewRequest(),
+      component_context_.get(), uploader_controller_.NewRequest(),
       std::move(cloud_provider_uploader), user_id_.user_id(), "backlog",
       DetachedPath(std::move(uploader_path)), QuitLoopClosure(), &uploader_);
   if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
@@ -304,7 +303,7 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_reader.NewRequest());
   Status status = GetLedger(
-      startup_context_.get(), reader_controller_.NewRequest(),
+      component_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), user_id_.user_id(), "backlog",
       DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
@@ -408,7 +407,7 @@ fit::closure BacklogBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string unique_key_count_str;
   size_t unique_key_count;
@@ -436,7 +435,7 @@ int Main(int argc, const char** argv) {
       commit_count <= 0 ||
       !command_line.GetOptionValue(kRefsFlag.ToString(),
                                    &reference_strategy_str) ||
-      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                       &sync_params)) {
     PrintUsage();
     return -1;
@@ -454,7 +453,7 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  BacklogBenchmark app(&loop, std::move(startup_context), unique_key_count,
+  BacklogBenchmark app(&loop, std::move(component_context), unique_key_count,
                        key_size, value_size, commit_count, reference_strategy,
                        std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });

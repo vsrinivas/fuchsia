@@ -6,9 +6,9 @@
 #define SRC_LEDGER_BIN_COBALT_COBALT_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 
 namespace ledger {
@@ -27,7 +27,7 @@ enum class CobaltEvent : uint32_t {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, component::StartupContext* context);
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context);
 
 // Report an event to Cobalt. The callback returned by |InitializeCobalt|
 // must be live throughout every call to this function. This is

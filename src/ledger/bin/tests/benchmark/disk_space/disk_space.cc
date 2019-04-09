@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
 
 #include "garnet/public/lib/callback/waiter.h"
 #include "peridot/lib/rng/test_random.h"
@@ -81,7 +81,7 @@ void PrintUsage() {
 class DiskSpaceBenchmark {
  public:
   DiskSpaceBenchmark(async::Loop* loop,
-                     std::unique_ptr<component::StartupContext> startup_context,
+                     std::unique_ptr<sys::ComponentContext> component_context,
                      size_t page_count, size_t unique_key_count,
                      size_t commit_count, size_t key_size, size_t value_size);
 
@@ -97,7 +97,7 @@ class DiskSpaceBenchmark {
   files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   const size_t page_count_;
   const size_t unique_key_count_;
   const size_t commit_count_;
@@ -111,8 +111,7 @@ class DiskSpaceBenchmark {
 };
 
 DiskSpaceBenchmark::DiskSpaceBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t page_count, size_t unique_key_count, size_t commit_count,
     size_t key_size, size_t value_size)
     : loop_(loop),
@@ -120,7 +119,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
       tmp_dir_(kStoragePath),
       generator_(&random_),
       page_data_generator_(&random_),
-      startup_context_(std::move(startup_context)),
+      component_context_(std::move(component_context)),
       page_count_(page_count),
       unique_key_count_(unique_key_count),
       commit_count_(commit_count),
@@ -136,7 +135,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
 
 void DiskSpaceBenchmark::Run() {
   Status status = GetLedger(
-      startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
+      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
@@ -207,7 +206,7 @@ fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string page_count_str;
   size_t page_count;
@@ -238,7 +237,7 @@ int Main(int argc, const char** argv) {
     return -1;
   }
 
-  DiskSpaceBenchmark app(&loop, std::move(startup_context), page_count,
+  DiskSpaceBenchmark app(&loop, std::move(component_context), page_count,
                          unique_key_count, commit_count, key_size, value_size);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });

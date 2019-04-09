@@ -24,10 +24,10 @@ source_set("firebase_auth") {
   public_deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]

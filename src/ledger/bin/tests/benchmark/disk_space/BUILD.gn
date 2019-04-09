@@ -17,10 +17,10 @@ executable("ledger_benchmark_disk_space") {
 
   deps = [
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
     "//src/lib/fxl",

@@ -7,6 +7,7 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <src/lib/fxl/logging.h>
+#include <unistd.h>
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
@@ -29,8 +30,9 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   }
 
   fuchsia::netconnector::NetConnectorPtr net_connector =
-      environment_->startup_context()
-          ->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
+      environment_->component_context()
+          ->svc()
+          ->Connect<fuchsia::netconnector::NetConnector>();
 
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
       std::make_unique<p2p_provider::P2PProviderImpl>(

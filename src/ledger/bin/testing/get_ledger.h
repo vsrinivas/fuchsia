@@ -5,12 +5,13 @@
 #ifndef SRC_LEDGER_BIN_TESTING_GET_LEDGER_H_
 #define SRC_LEDGER_BIN_TESTING_GET_LEDGER_H_
 
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <functional>
 #include <string>
-
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/fit/function.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
@@ -20,7 +21,7 @@ namespace ledger {
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it. This method will call |Sync| on the Repository to ensure that the
 // Ledger is ready to be used for performance benchmark.
-Status GetLedger(component::StartupContext* context,
+Status GetLedger(sys::ComponentContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                      controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider,

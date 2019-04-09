@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include <iostream>
 
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/bin/testing/sync_params.h"
@@ -31,12 +31,12 @@ void PrintUsage(const char* executable_name) {
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::Create();
 
   ledger::SyncParams sync_params;
   if (!ledger::ParseSyncParamsFromCommandLine(
-          command_line, startup_context.get(), &sync_params)) {
+          command_line, component_context.get(), &sync_params)) {
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }
@@ -53,11 +53,11 @@ int main(int argc, char** argv) {
   rng::SystemRandom random;
 
   cloud_provider_firestore::CloudProviderFactory factory(
-      startup_context.get(), &random, sync_params.api_key,
+      component_context.get(), &random, sync_params.api_key,
       sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(
-      startup_context.get(), [&factory](auto request) {
+      component_context.get(), [&factory](auto request) {
         factory.MakeCloudProvider(
             cloud_provider_firestore::CloudProviderFactory::UserId::New(),
             std::move(request));

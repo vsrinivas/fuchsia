@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <string>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/component/cpp/testing/startup_context_for_test.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/socket/strings.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/timekeeper/test_loop_test_clock.h>
+
+#include <memory>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/rng/random.h"
@@ -60,12 +60,12 @@ class DelegatedRandom final : public rng::Random {
 Environment BuildEnvironment(async::TestLoop* loop,
                              async_dispatcher_t* dispatcher,
                              async_dispatcher_t* io_dispatcher,
-                             component::StartupContext* startup_context,
+                             sys::ComponentContext* component_context,
                              rng::Random* random) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
-      .SetStartupContext(startup_context)
+      .SetStartupContext(component_context)
       .SetBackoffFactory([random] {
         return std::make_unique<backoff::ExponentialBackoff>(
             kBackoffDuration, 1u, kBackoffDuration,
@@ -102,16 +102,16 @@ class LedgerAppInstanceImpl final
             request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory>
             user_communicator_factory)
-        : startup_context_(component::testing::StartupContextForTest::Create()),
-          environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
-                                        startup_context_.get(), random)),
+        : environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
+                                        component_context_provider_.context(),
+                                        random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
                         inspect::Object("unused_in_test_inspect_object")),
           binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
-    std::unique_ptr<component::StartupContext> startup_context_;
+    sys::testing::ComponentContextProvider component_context_provider_;
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     ErrorNotifierBinding<
@@ -194,10 +194,9 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                               NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
-        startup_context_(component::testing::StartupContextForTest::Create()),
-        environment_(BuildEnvironment(loop, services_dispatcher,
-                                      services_dispatcher,
-                                      startup_context_.get(), random)),
+        environment_(
+            BuildEnvironment(loop, services_dispatcher, services_dispatcher,
+                             component_context_provider_.context(), random)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
@@ -222,7 +221,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
 
  private:
   async_dispatcher_t* const services_dispatcher_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  sys::testing::ComponentContextProvider component_context_provider_;
   Environment environment_;
   NetConnectorFactory* const netconnector_factory_;
   std::string host_name_;

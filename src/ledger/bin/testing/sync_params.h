@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_BIN_TESTING_SYNC_PARAMS_H_
 #define SRC_LEDGER_BIN_TESTING_SYNC_PARAMS_H_
 
-#include <set>
-#include <string>
-
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include <set>
+#include <string>
 
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
 
@@ -38,7 +38,7 @@ std::string GetSyncParamsUsage();
 // Reads the sync parameters from the command-line. Prints a warning and returns
 // false if these parameters are missing or cannot be parsed.
 bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
-                                    component::StartupContext* startup_context,
+                                    sys::ComponentContext* component_context,
                                     SyncParams* sync_params);
 
 // Returns the names of the flags parsed from the command line by

@@ -15,12 +15,12 @@ executable("e2e_local") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/base64url:base64url",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/ledger/bin/app:serialization_version",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/filesystem",

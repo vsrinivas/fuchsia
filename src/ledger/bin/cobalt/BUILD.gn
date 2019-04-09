@@ -17,14 +17,14 @@ source_set("cobalt") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 

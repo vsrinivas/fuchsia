@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_view.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
+#include <iostream>
+
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 
 namespace {
@@ -22,18 +22,20 @@ constexpr fxl::StringView kCloudProviderUrl =
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
-
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::Create();
+  fuchsia::sys::LauncherPtr component_launcher;
+  component_context->svc()->Connect(component_launcher.NewRequest());
   cloud_provider::ValidationTestsLauncher launcher(
-      startup_context.get(), [&startup_context](auto request) {
-        component::Services cloud_provider_services;
+      component_context.get(),
+      [component_launcher = std::move(component_launcher)](auto request) {
         fuchsia::sys::LaunchInfo launch_info;
         launch_info.url = kCloudProviderUrl.ToString();
-        launch_info.directory_request = cloud_provider_services.NewRequest();
-        startup_context->launcher()->CreateComponent(std::move(launch_info),
-                                                     nullptr);
-        cloud_provider_services.ConnectToService(
+        auto cloud_provider_services = sys::ServiceDirectory::CreateWithRequest(
+            &launch_info.directory_request);
+
+        component_launcher->CreateComponent(std::move(launch_info), nullptr);
+        cloud_provider_services->Connect(
             std::move(request), fuchsia::ledger::cloud::CloudProvider::Name_);
       });
 

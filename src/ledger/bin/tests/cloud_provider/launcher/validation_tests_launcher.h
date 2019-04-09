@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_LAUNCHER_VALIDATION_TESTS_LAUNCHER_H_
 #define SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_LAUNCHER_VALIDATION_TESTS_LAUNCHER_H_
 
-#include <functional>
-#include <string>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
+
+#include <functional>
+#include <string>
 
 namespace cloud_provider {
 
@@ -22,7 +22,7 @@ class ValidationTestsLauncher {
   //
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
-      component::StartupContext* startup_context,
+      sys::ComponentContext* component_context,
       fit::function<
           void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
           factory);
@@ -36,11 +36,11 @@ class ValidationTestsLauncher {
            fit::function<void(int32_t)> callback);
 
  private:
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
   fit::function<void(
       fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
       factory_;
-  component::ServiceProviderImpl service_provider_impl_;
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
   fuchsia::sys::ComponentControllerPtr validation_tests_controller_;
   fit::function<void(int32_t)> callback_;
 };

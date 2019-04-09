@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/testing/test_with_environment.h"
 
-#include <lib/component/cpp/testing/startup_context_for_test.h>
 #include <lib/fit/function.h>
 #include <lib/timekeeper/test_loop_test_clock.h>
 
@@ -47,7 +46,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   coroutine::CoroutineHandler* delegate_;
   fit::closure quit_callback_;
   bool need_to_continue_ = false;
@@ -56,12 +55,11 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 }  // namespace
 
 TestWithEnvironment::TestWithEnvironment()
-    : startup_context_(component::testing::StartupContextForTest::Create()),
-      environment_(
+    : environment_(
           EnvironmentBuilder()
               .SetAsync(dispatcher())
               .SetIOAsync(dispatcher())
-              .SetStartupContext(startup_context_.get())
+              .SetStartupContext(component_context_provider_.context())
               .SetClock(
                   std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
               .SetRandom(std::make_unique<rng::TestRandom>(

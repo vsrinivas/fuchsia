@@ -4,13 +4,13 @@
 
 #include "src/ledger/bin/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 
-#include <utility>
-
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/svc/cpp/services.h>
+#include <src/lib/fxl/strings/string_view.h>
+
+#include <utility>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -41,7 +41,7 @@ class LedgerAppInstanceImpl final
   std::string GetUserId() override;
 
   SyncParams sync_params_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
 
   fuchsia::sys::ComponentControllerPtr controller_;
@@ -57,8 +57,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           loop_controller, convert::ToArray(kLedgerName),
           std::move(ledger_repository_factory)),
       sync_params_(sync_params),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      cloud_provider_factory_(startup_context_.get(), random,
+      component_context_(sys::ComponentContext::Create()),
+      cloud_provider_factory_(component_context_.get(), random,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       user_id_(std::move(user_id)) {}
@@ -74,9 +74,9 @@ void LedgerAppInstanceImpl::Init(
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
   launch_info.arguments.push_back("--firebase_api_key=" + sync_params_.api_key);
-
-  startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                controller_.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  component_context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   child_services.ConnectToService(std::move(repository_factory_request));
 }
 

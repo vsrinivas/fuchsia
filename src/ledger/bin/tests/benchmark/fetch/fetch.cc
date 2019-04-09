@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
@@ -67,7 +67,7 @@ void PrintUsage() {
 class FetchBenchmark : public SyncWatcher {
  public:
   FetchBenchmark(async::Loop* loop,
-                 std::unique_ptr<component::StartupContext> startup_context,
+                 std::unique_ptr<sys::ComponentContext> component_context,
                  size_t entry_count, size_t value_size, size_t part_size,
                  SyncParams sync_params);
 
@@ -93,7 +93,7 @@ class FetchBenchmark : public SyncWatcher {
   rng::TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
   fidl::Binding<SyncWatcher> sync_watcher_binding_;
   const size_t entry_count_;
@@ -116,16 +116,15 @@ class FetchBenchmark : public SyncWatcher {
 };
 
 FetchBenchmark::FetchBenchmark(
-    async::Loop* loop,
-    std::unique_ptr<component::StartupContext> startup_context,
+    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
     size_t entry_count, size_t value_size, size_t part_size,
     SyncParams sync_params)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
-      startup_context_(std::move(startup_context)),
-      cloud_provider_factory_(startup_context_.get(), &random_,
+      component_context_(std::move(component_context)),
+      cloud_provider_factory_(component_context_.get(), &random_,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
@@ -161,7 +160,7 @@ void FetchBenchmark::Run() {
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_writer.NewRequest());
   Status status = GetLedger(
-      startup_context_.get(), writer_controller_.NewRequest(),
+      component_context_.get(), writer_controller_.NewRequest(),
       std::move(cloud_provider_writer), user_id_.user_id(), "fetch",
       DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_);
   if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
@@ -221,7 +220,7 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider_factory_.MakeCloudProvider(user_id_,
                                             cloud_provider_reader.NewRequest());
   Status status = GetLedger(
-      startup_context_.get(), reader_controller_.NewRequest(),
+      component_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), user_id_.user_id(), "fetch",
       DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
@@ -308,7 +307,7 @@ fit::closure FetchBenchmark::QuitLoopClosure() {
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::string entry_count_str;
   size_t entry_count;
@@ -327,14 +326,14 @@ int Main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                       &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  FetchBenchmark app(&loop, std::move(startup_context), entry_count, value_size,
-                     part_size, std::move(sync_params));
+  FetchBenchmark app(&loop, std::move(component_context), entry_count,
+                     value_size, part_size, std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

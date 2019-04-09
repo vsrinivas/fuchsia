@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdlib>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <cstdlib>
+
 #include "lib/fsl/io/fd.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace {
 
@@ -26,8 +27,8 @@ constexpr fxl::StringView kLedgerName = "test ledger instance";
 // Exposes a public service that serves an in-memory Ledger.
 int main(int argc, char const *argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> context(
-      component::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<sys::ComponentContext> context(
+      sys::ComponentContext::Create());
 
   // Get a repository factory.
   component::Services services;
@@ -36,8 +37,9 @@ int main(int argc, char const *argv[]) {
   launch_info.directory_request = services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
   fuchsia::sys::ComponentControllerPtr controller;
-  context->launcher()->CreateComponent(std::move(launch_info),
-                                       controller.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr repository_factory;
   services.ConnectToService(repository_factory.NewRequest());
 
@@ -52,7 +54,7 @@ int main(int argc, char const *argv[]) {
                                     repository.NewRequest());
 
   // Serve the repository.
-  context->outgoing().AddPublicService<fuchsia::ledger::Ledger>(
+  context->outgoing()->AddPublicService<fuchsia::ledger::Ledger>(
       [&repository](fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
         repository->GetLedger(convert::ToArray(kLedgerName),
                               std::move(request));

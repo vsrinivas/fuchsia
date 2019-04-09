@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/callback/capture.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
@@ -15,6 +12,8 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/component_context.h>
+#include <string.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -77,8 +76,9 @@ fidl::VectorPtr<uint8_t> TestArray() {
 
 class LedgerEndToEndTest : public gtest::RealLoopFixture {
  public:
-  LedgerEndToEndTest()
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
+  LedgerEndToEndTest() : component_context_(sys::ComponentContext::Create()) {
+    component_context()->svc()->Connect(launcher_.NewRequest());
+  }
   ~LedgerEndToEndTest() override {}
 
  protected:
@@ -91,8 +91,8 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     for (auto& additional_arg : additional_args) {
       launch_info.arguments.push_back(additional_arg);
     }
-    startup_context()->launcher()->CreateComponent(
-        std::move(launch_info), ledger_controller_.NewRequest());
+    launcher_->CreateComponent(std::move(launch_info),
+                               ledger_controller_.NewRequest());
 
     ledger_controller_.set_error_handler([this](zx_status_t status) {
       for (const auto& callback : ledger_shutdown_callbacks_) {
@@ -113,14 +113,15 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
-  component::StartupContext* startup_context() {
-    return startup_context_.get();
+  sys::ComponentContext* component_context() {
+    return component_context_.get();
   }
 
  private:
   fuchsia::sys::ComponentControllerPtr ledger_controller_;
   std::vector<fit::function<void()>> ledger_shutdown_callbacks_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
+  fuchsia::sys::LauncherPtr launcher_;
 
  protected:
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;

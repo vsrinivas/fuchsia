@@ -22,7 +22,6 @@ executable("integration") {
   deps = [
     ":integration_lib",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/convert",
@@ -30,6 +29,7 @@ executable("integration") {
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:error_notifier",

@@ -5,8 +5,8 @@
 #include "src/ledger/bin/environment/environment.h"
 
 #include <lib/backoff/exponential_backoff.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/timekeeper/system_clock.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/rng/system_random.h"
@@ -17,7 +17,7 @@ namespace ledger {
 Environment::Environment(
     bool disable_statistics, async_dispatcher_t* dispatcher,
     async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
-    component::StartupContext* startup_context,
+    sys::ComponentContext* component_context,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
     BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
     std::unique_ptr<rng::Random> random)
@@ -25,14 +25,14 @@ Environment::Environment(
       dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
       firebase_api_key_(std::move(firebase_api_key)),
-      startup_context_(startup_context),
+      component_context_(component_context),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
       clock_(std::move(clock)),
       random_(std::move(random)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(io_dispatcher_);
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
@@ -48,14 +48,14 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   dispatcher_ = other.dispatcher_;
   io_dispatcher_ = other.io_dispatcher_;
   firebase_api_key_ = std::move(other.firebase_api_key_);
-  startup_context_ = other.startup_context_;
+  component_context_ = other.component_context_;
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
   clock_ = std::move(other.clock_);
   random_ = std::move(other.random_);
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(io_dispatcher_);
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   FXL_DCHECK(clock_);
@@ -99,8 +99,8 @@ EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(
 }
 
 EnvironmentBuilder& EnvironmentBuilder::SetStartupContext(
-    component::StartupContext* startup_context) {
-  startup_context_ = startup_context;
+    sys::ComponentContext* component_context) {
+  component_context_ = component_context;
   return *this;
 }
 
@@ -146,7 +146,7 @@ Environment EnvironmentBuilder::Build() {
     };
   }
   return Environment(disable_statistics_, dispatcher_, io_dispatcher_,
-                     std::move(firebase_api_key_), startup_context_,
+                     std::move(firebase_api_key_), component_context_,
                      std::move(coroutine_service_), std::move(backoff_factory_),
                      std::move(clock_), std::move(random_));
 }

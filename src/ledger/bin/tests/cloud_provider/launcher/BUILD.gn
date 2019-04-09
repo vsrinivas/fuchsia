@@ -11,8 +11,8 @@ source_set("launcher") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
   ]
 }

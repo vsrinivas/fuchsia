@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include <string>
 
 #include "src/ledger/bin/testing/loop_controller_real_loop.h"
 #include "src/ledger/bin/testing/sync_params.h"
@@ -32,9 +32,9 @@ int Main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto startup_context = component::StartupContext::CreateFromStartupInfo();
+    auto component_context = sys::ComponentContext::Create();
 
-    if (!ParseSyncParamsFromCommandLine(command_line, startup_context.get(),
+    if (!ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                         &sync_params)) {
       std::cerr << GetSyncParamsUsage();
       return -1;

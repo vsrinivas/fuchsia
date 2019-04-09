@@ -12,8 +12,8 @@ executable("ledger_test_instance_provider_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/fidl",
   ]
 
