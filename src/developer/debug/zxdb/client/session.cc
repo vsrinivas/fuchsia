@@ -631,10 +631,6 @@ void Session::DispatchProcessStarting(
 }
 
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
-  // TODO(donosoc): Ungate this.
-  if (!debug_ipc::IsDebugModeActive())
-    return;
-
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (!process) {
     SendSessionNotification(
