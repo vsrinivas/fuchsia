@@ -33,11 +33,6 @@ enum class Partition {
     kVbMetaA,
     kVbMetaB,
     kFuchsiaVolumeManager,
-    // The following are only valid for WipePartition.
-    kInstallType,
-    kSystem,
-    kBlob,
-    kData,
 };
 
 const char* PartitionName(Partition type);
@@ -73,8 +68,8 @@ public:
     // written.
     virtual zx_status_t FinalizePartition(Partition partition_type) = 0;
 
-    // Wipes Fuchsia specific partitions.
-    virtual zx_status_t WipePartitions() = 0;
+    // Wipes Fuchsia Volume Manager partition.
+    virtual zx_status_t WipeFvm() = 0;
 
     // Returns block size in bytes for specified device.
     virtual zx_status_t GetBlockSize(const fbl::unique_fd& device_fd,
@@ -120,7 +115,7 @@ public:
 
     // Wipes a specified partition from the GPT, and overwrites first 8KiB with
     // nonsense.
-    zx_status_t WipePartitions(FilterCallback filter);
+    zx_status_t WipeFvm();
 
 private:
     // Find and return the topological path of the GPT which we will pave.
@@ -157,7 +152,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions() override;
+    zx_status_t WipeFvm() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -184,7 +179,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override;
 
-    zx_status_t WipePartitions() override;
+    zx_status_t WipeFvm() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -214,7 +209,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions() override;
+    zx_status_t WipeFvm() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -245,7 +240,7 @@ public:
 
     zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
 
-    zx_status_t WipePartitions() override;
+    zx_status_t WipeFvm() override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 

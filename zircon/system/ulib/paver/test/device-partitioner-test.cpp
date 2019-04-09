@@ -358,13 +358,13 @@ bool AddPartitionTest() {
     END_TEST;
 }
 
-bool WipePartitionsTest() {
+bool WipeFvmTest() {
     BEGIN_TEST;
 
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
-    ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
+    ASSERT_EQ(partitioner->WipeFvm(), ZX_OK);
 
     END_TEST;
 }
@@ -460,7 +460,7 @@ BEGIN_TEST_CASE(FixedDevicePartitionerTests)
 RUN_TEST(fixed::IsCrosTest)
 RUN_TEST(fixed::UseBlockInterfaceTest)
 RUN_TEST(fixed::AddPartitionTest)
-RUN_TEST(fixed::WipePartitionsTest)
+RUN_TEST(fixed::WipeFvmTest)
 RUN_TEST(fixed::FinalizePartitionTest)
 RUN_TEST(fixed::FindPartitionTest)
 RUN_TEST(fixed::GetBlockSizeTest)
@@ -514,7 +514,7 @@ bool AddPartitionTest() {
     END_TEST;
 }
 
-bool WipePartitionsTest() {
+bool WipeFvmTest() {
     BEGIN_TEST;
 
     ASSERT_TRUE(Initialize());
@@ -524,7 +524,7 @@ bool WipePartitionsTest() {
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
               ZX_OK);
-    ASSERT_EQ(partitioner->WipePartitions(), ZX_OK);
+    ASSERT_EQ(partitioner->WipeFvm(), ZX_OK);
 
     END_TEST;
 }
@@ -624,7 +624,7 @@ BEGIN_TEST_CASE(SkipBlockDevicePartitionerTests)
 RUN_TEST(skipblock::IsCrosTest)
 RUN_TEST(skipblock::UseSkipBlockInterfaceTest)
 RUN_TEST(skipblock::AddPartitionTest)
-RUN_TEST(skipblock::WipePartitionsTest)
+RUN_TEST(skipblock::WipeFvmTest)
 RUN_TEST(skipblock::FinalizePartitionTest)
 RUN_TEST(skipblock::FindPartitionTest)
 RUN_TEST(skipblock::GetBlockSizeTest)

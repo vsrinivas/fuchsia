@@ -22,7 +22,7 @@ enum class Command {
     kInstallVbMetaB,
     kInstallDataFile,
     kInstallFvm,
-    kWipe,
+    kWipeFvm,
 };
 
 // Architecture of device being paved. Used for payload validation.

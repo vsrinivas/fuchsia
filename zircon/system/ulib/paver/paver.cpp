@@ -988,7 +988,7 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     if (partition_type == Partition::kFuchsiaVolumeManager) {
         if (partitioner->UseSkipBlockInterface()) {
             LOG("Attempting to format FTL...\n");
-            status = partitioner->WipePartitions();
+            status = partitioner->WipeFvm();
             if (status != ZX_OK) {
                 ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
             } else {
@@ -1210,8 +1210,8 @@ zx_status_t RealMain(Flags flags) {
     const bool is_cros_device = device_partitioner->IsCros();
 
     switch (flags.cmd) {
-    case Command::kWipe:
-        return device_partitioner->WipePartitions();
+    case Command::kWipeFvm:
+        return device_partitioner->WipeFvm();
     case Command::kInstallFvm:
     case Command::kInstallVbMetaA:
     case Command::kInstallVbMetaB:

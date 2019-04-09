@@ -36,7 +36,7 @@ void PrintUsage() {
     ERROR("  install-vbmetab    : Install a VBMETA-B partition to the device\n");
     ERROR("  install-fvm        : Install a sparse FVM to the device\n");
     ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
-    ERROR("  wipe               : Clean up the install disk\n");
+    ERROR("  wipe               : Remove the FVM partition\n");
     ERROR("Options:\n");
     ERROR("  --file <file>: Read from FILE instead of stdin\n");
     ERROR("  --force: Install partition even if inappropriate for the device\n");
@@ -78,7 +78,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     } else if (!strcmp(argv[0], "install-fvm")) {
         flags->cmd = Command::kInstallFvm;
     } else if (!strcmp(argv[0], "wipe")) {
-        flags->cmd = Command::kWipe;
+        flags->cmd = Command::kWipeFvm;
     } else {
         ERROR("Invalid command: %s\n", argv[0]);
         return false;

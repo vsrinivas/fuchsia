@@ -65,31 +65,6 @@ bool IsGigabootPartition(const gpt_partition_t& part) {
     return memcmp(part.type, efi_type, GPT_GUID_LEN) == 0 && gigaboot_efi;
 }
 
-bool WipeFilterCallback(const gpt_partition_t& part) {
-    const uint8_t efi_removable_types[][GPT_GUID_LEN] = {
-        GUID_FVM_VALUE,
-        GUID_INSTALL_VALUE,
-        GUID_SYSTEM_VALUE,
-        GUID_BLOB_VALUE,
-        GUID_DATA_VALUE,
-        GUID_ZIRCON_A_VALUE,
-        GUID_ZIRCON_B_VALUE,
-        GUID_ZIRCON_R_VALUE,
-    };
-
-    if (IsGigabootPartition(part)) {
-        return true;
-    }
-
-    for (const auto& type : efi_removable_types) {
-        if (memcmp(part.type, type, GPT_GUID_LEN) == 0) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
     constexpr size_t kReservedEntryBlocks = (16 * 1024);
     return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
@@ -287,14 +262,6 @@ const char* PartitionName(Partition type) {
         return "VBMeta B";
     case Partition::kFuchsiaVolumeManager:
         return "Fuchsia Volume Manager";
-    case Partition::kInstallType:
-        return "Install";
-    case Partition::kSystem:
-        return "System";
-    case Partition::kBlob:
-        return "Blob";
-    case Partition::kData:
-        return "Data";
     default:
         return "Unknown";
     }
@@ -634,14 +601,14 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
+zx_status_t GptDevicePartitioner::WipeFvm() {
     bool modify = false;
     for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
         const gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
             continue;
         }
-        if (!filter(*p)) {
+        if (!FvmFilterCallback(*p)) {
             continue;
         }
 
@@ -777,8 +744,8 @@ zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
     }
 }
 
-zx_status_t EfiDevicePartitioner::WipePartitions() {
-    return gpt_->WipePartitions(WipeFilterCallback);
+zx_status_t EfiDevicePartitioner::WipeFvm() {
+    return gpt_->WipeFvm();
 }
 
 zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
@@ -948,8 +915,8 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     return ZX_OK;
 }
 
-zx_status_t CrosDevicePartitioner::WipePartitions() {
-    return gpt_->WipePartitions(WipeFilterCallback);
+zx_status_t CrosDevicePartitioner::WipeFvm() {
+    return gpt_->WipeFvm();
 }
 
 zx_status_t CrosDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
@@ -1024,7 +991,7 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
     return OpenBlockPartition(devfs_root_, nullptr, type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t FixedDevicePartitioner::WipePartitions() {
+zx_status_t FixedDevicePartitioner::WipeFvm() {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
     if ((status = WipeBlockPartition(devfs_root_, nullptr, fvm_type)) != ZX_OK) {
@@ -1129,7 +1096,7 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     return OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
+zx_status_t SkipBlockDevicePartitioner::WipeFvm() {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
     fbl::unique_fd block_fd;
