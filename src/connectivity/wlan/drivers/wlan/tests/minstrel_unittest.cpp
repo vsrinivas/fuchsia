@@ -9,7 +9,7 @@
 
 #include <fbl/algorithm.h>
 #include <lib/timekeeper/test_clock.h>
-#include <test_timer.h>  // //garnet/lib/wlan/mlme/tests
+#include <test_timer.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/info.h>

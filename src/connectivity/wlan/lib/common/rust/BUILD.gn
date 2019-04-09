@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,41 +6,38 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("wlan-rsn") {
-  name = "wlan_rsn"
+rustc_library("wlan-common") {
+  name = "wlan_common"
   version = "0.1.0"
-  edition = "2018"
   with_unit_tests = true
+  edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/eapol",
-    "//garnet/lib/rust/wlan-common",
-    "//garnet/public/rust/mundane",
-    "//third_party/rust_crates:bitfield",
+    "//garnet/lib/wlan/fidl:sme-rustc",
+    "//garnet/public/rust/zerocopy",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:num",
-    "//third_party/rust_crates:num-bigint",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rust-crypto",
-    "//third_party/rust_crates:time",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
   ]
 }
 
-package("wlan-rsn-tests") {
+package("wlan-common-tests") {
   testonly = true
 
   deps = [
-    ":wlan-rsn",
+    ":wlan-common",
   ]
 
   tests = [
     {
-      name = "wlan_rsn_lib_test"
+      name = "wlan_common_lib_test"
       environments = basic_envs
     },
   ]

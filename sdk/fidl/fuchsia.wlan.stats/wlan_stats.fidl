@@ -50,7 +50,7 @@ struct ApMlmeStats {
     PacketCounter not_used;
 };
 
-// LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/stats.h)
+// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/stats.h)
 
 union MlmeStats {
     ClientMlmeStats client_mlme_stats;

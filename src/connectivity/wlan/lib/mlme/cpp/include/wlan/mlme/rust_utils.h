@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 
-#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
+#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 
 #include <memory>
 

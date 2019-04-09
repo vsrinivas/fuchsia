@@ -13,7 +13,7 @@ rustc_library("wlan-bitfield-wrapper") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/wlan-bitfield/",
+    "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
   ]
 }
 

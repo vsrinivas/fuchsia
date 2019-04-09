@@ -6,7 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CONVERT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
+#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/mac_frame.h>
 
 namespace wlan {

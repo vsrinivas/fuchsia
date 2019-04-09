@@ -19,10 +19,10 @@ driver_module("wlantap_driver") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl:wlantap",
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/lib",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",

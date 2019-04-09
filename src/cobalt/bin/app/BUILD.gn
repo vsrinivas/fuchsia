@@ -33,11 +33,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/wlan/mlme:mlme",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/network_wrapper",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:fuchsia_http_client",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl",
     "//third_party/cobalt/encoder",
     "//third_party/cobalt/logger",

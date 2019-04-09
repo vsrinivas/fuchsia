@@ -56,7 +56,7 @@ func ChanToStr(ch common.WlanChan) string {
 	return fmt.Sprintf("%3d%s", ch.Primary, CbwToStr(ch.Cbw))
 }
 
-// LINT.ThenChange(//garnet/lib/wlan/common/channel.cpp)
+// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/channel.cpp)
 
 func (a *ToolApp) Scan(seconds uint8) wlan_service.ErrCode {
 	expiry := 25 * time.Second

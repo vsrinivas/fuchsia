@@ -6,7 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
+#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>

@@ -41,15 +41,15 @@ source_set("test_main") {
   ]
 
   public_deps = [
-    "//garnet/lib/wlan/mlme",
     "//garnet/public/lib/timekeeper:testing",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
   ]
 
   deps = [
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("ap_mlme_tests") {
@@ -64,12 +64,12 @@ executable("ap_mlme_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/common",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
@@ -84,12 +84,12 @@ executable("client_mlme_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/common",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
@@ -124,11 +124,11 @@ executable("mac_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("mesh_tests") {
@@ -146,12 +146,12 @@ executable("mesh_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/common",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
@@ -166,11 +166,11 @@ executable("scanner_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("service_tests") {
@@ -184,12 +184,12 @@ executable("service_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("timer_manager_tests") {
@@ -203,13 +203,13 @@ executable("timer_manager_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/mlme",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("buffer_utils_tests") {
@@ -223,12 +223,12 @@ executable("buffer_utils_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/common",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 executable("common_tests") {
@@ -247,12 +247,12 @@ executable("common_tests") {
 
   deps = [
     ":test_main",
-    "//garnet/lib/wlan/common",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
 package("wlanphy-testdev-driver") {

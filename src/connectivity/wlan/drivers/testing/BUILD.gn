@@ -21,10 +21,10 @@ driver_module("wlanphy-testdev") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/lib",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/banjo/ddk-protocol-sdio",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

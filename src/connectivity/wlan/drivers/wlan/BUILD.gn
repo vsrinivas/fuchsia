@@ -25,10 +25,10 @@ driver_module("wlan_driver") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/mlme",
     "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/svc/cpp",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -56,16 +56,16 @@ executable("wlan_minstrel_unittest") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/common",
-    "//garnet/lib/wlan/mlme",
-    "//garnet/lib/wlan/mlme/tests:test_main",
     "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/timekeeper:testing",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
+    "//src/connectivity/wlan/lib/mlme/cpp/tests:test_main",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]
 
-  configs += [ "//garnet/lib/wlan/mlme/tests:wlan_mlme_tests_config" ]
+  configs += [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
 }
 
 test_package("wlan_drivers_tests") {

@@ -1415,8 +1415,9 @@ static zx_status_t ath10k_lookup_chan(uint8_t wlan_chan, const struct ath10k_cha
 // This is the original Linux's chan_to_phymode() plus the new center freq calculation.
 //
 // Note for the types of freq in this function. Actually uint16_t is large enough (see 'Mhz' in
-// garnet/lib/wlan/common/include/wlan/common/channel.h). However, wmi_channel_arg.band_center_freq1
-// is defined as uint32_t. So, |ptr_center_freq| is 'uint32_t*'.
+// src/connectivity/wlan/lib/common/cpp/include/wlan/common/channel.h).
+// However, wmi_channel_arg.band_center_freq1 is defined as uint32_t.
+// So, |ptr_center_freq| is 'uint32_t*'.
 static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chandef,
                                                       const struct ath10k_channel_freq* center_freq,
                                                       uint32_t* ptr_center_freq,

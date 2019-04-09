@@ -95,14 +95,14 @@ source_set("mlme") {
   ]
 
   public_deps = [
-    "//garnet/lib/rust/wlan-mlme-c",
-    "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/timekeeper",
     "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

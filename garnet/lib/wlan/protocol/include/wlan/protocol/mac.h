@@ -41,7 +41,7 @@ typedef int16_t wlan_dBh_t;
 #define WLAN_RSSI_DBM_INVALID (0)
 #define WLAN_RCPI_DBMH_INVALID (0)
 #define WLAN_RSNI_DBH_INVALID (0)
-// LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/energy.h)
+// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/energy.h)
 
 typedef struct wlan_rx_info {
     // Receive flags. These represent boolean flags as opposed to enums or value-based info which
@@ -89,7 +89,7 @@ enum {
     // Bits 5-31 reserved
 };
 
-// TxVector is defined in //garnet/lib/wlan/common/tx_vector.h
+// TxVector is defined in //src/connectivity/wlan/lib/common/cpp/tx_vector.h
 typedef uint16_t tx_vec_idx_t;
 
 typedef struct wlan_tx_info {

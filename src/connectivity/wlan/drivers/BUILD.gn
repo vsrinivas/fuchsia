@@ -13,6 +13,5 @@ group("drivers") {
     "wlan",
     "wlanif",
     "wlanphy",
-    "wlantap",
   ]
 }

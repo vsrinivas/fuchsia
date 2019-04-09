@@ -122,7 +122,8 @@ struct AmpduParams {
 // SupportedMcsSet
 // IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
 struct SupportedMcsSet {
-    // Names are deviated from //garnet/lib/wlan/common/include/wlan/common/element.h's class SupportedMcsSet
+    // Names are deviated from:
+    // //src/connectivity/wlan/lib/common/cpp/include/wlan/common/element.h's class SupportedMcsSet
     uint64 rx_mcs_set; // bitmask indicating MCS 0-63 support
     // MCS 64-76 not supported
     uint16 rx_highest_rate; // Mbps
