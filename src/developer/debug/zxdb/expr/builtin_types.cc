@@ -53,8 +53,18 @@ const BuiltinTypeInfo kBuiltinInfo[] = {
     { "int64_t",  BaseType::kBaseTypeSigned,       8 },
     { "uint64_t", BaseType::kBaseTypeUnsigned,     8 },
 
+    // Special Zircon types (see note below).
+    { "zx_status_t", BaseType::kBaseTypeSigned,    4 },
+
     // clang-format on
 };
+
+// Note on zx_status_t: Normally this will be declared in the program as a
+// typedef for an int32. Adding it here allows casting to it even if the
+// typedef is not currently in scope, which in turn will trigger the
+// special-cased pretty-printing to decode status values. This fallback doesn't
+// define it as a typedef for simplicit, that could be added in the future if
+// desired.
 
 using BuiltinTypeInfoMap = std::map<std::string_view, const BuiltinTypeInfo*>;
 
