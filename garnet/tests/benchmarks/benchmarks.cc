@@ -50,6 +50,9 @@ int main(int argc, const char** argv) {
 
   AddGraphicsBenchmarks(&benchmarks_runner);
 
+  // TODO(IN-1125): Storage performance tests are disabled because booting
+  // without paving on the bots got broken.
+#if 0
   // Test storage performance.
   if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
     constexpr const char* block_device =
@@ -94,6 +97,7 @@ int main(int argc, const char** argv) {
         << "' not recognized: please update benchmarks.cc in garnet.";
     exit(1);
   }
+#endif
 
   // List block devices.  This is for debugging purposes and to help with
   // enabling the storage tests above on new devices.  We do this at the end
