@@ -12,6 +12,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
@@ -29,6 +30,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::ClockProtocol<ComponentProxy>,
                        public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
+                       public ddk::I2cProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy> {
@@ -66,6 +68,10 @@ public:
     zx_status_t GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
     zx_status_t GpioReleaseInterrupt();
     zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
+    void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
+                     void* cookie);
+    zx_status_t I2cGetMaxTransferSize(size_t* out_size);
+    zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
     zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
     zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
     zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti);

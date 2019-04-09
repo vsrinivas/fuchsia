@@ -84,6 +84,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: eth_dev_metadata_t
 #define DEVICE_METADATA_ETH_PHY_DEVICE            0x59485045 // EPHY
 
+// type: array of i2c_channel_t
+#define DEVICE_METADATA_I2C_CHANNELS              0x43433249 // I2CC
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

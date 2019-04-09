@@ -5,6 +5,7 @@
 #include "component-proxy.h"
 
 #include <ddk/debug.h>
+#include <lib/sync/completion.h>
 
 #include <memory>
 
@@ -38,6 +39,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
         return ZX_OK;
     case ZX_PROTOCOL_GPIO:
         proto->ops = &gpio_protocol_ops_;
+        return ZX_OK;
+    case ZX_PROTOCOL_I2C:
+        proto->ops = &i2c_protocol_ops_;
         return ZX_OK;
     case ZX_PROTOCOL_PDEV:
         proto->ops = &pdev_protocol_ops_;
@@ -251,6 +255,112 @@ zx_status_t ComponentProxy::GpioWrite(uint8_t value) {
     req.value = value;
 
     return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+void ComponentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
+                                 i2c_transact_callback callback, void* cookie) {
+    size_t writes_length = 0;
+    size_t reads_length = 0;
+    for (size_t i = 0; i < op_count; ++i) {
+        if (op_list[i].is_read) {
+            reads_length += op_list[i].data_size;
+        } else {
+            writes_length += op_list[i].data_size;
+        }
+    }
+    if (!writes_length && !reads_length) {
+        callback(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
+        return;
+    }
+
+    size_t req_length = sizeof(I2cProxyRequest) + op_count * sizeof(I2cProxyOp) + writes_length;
+    if (req_length >= kProxyMaxTransferSize) {
+        return callback(cookie, ZX_ERR_BUFFER_TOO_SMALL, nullptr, 0);
+    }
+
+    uint8_t req_buffer[kProxyMaxTransferSize];
+    auto req = reinterpret_cast<I2cProxyRequest*>(req_buffer);
+    req->header.proto_id = ZX_PROTOCOL_I2C;
+    req->op = I2cOp::TRANSACT;
+    req->op_count = op_count;
+
+    auto rpc_ops = reinterpret_cast<I2cProxyOp*>(&req[1]);
+    ZX_ASSERT(op_count < I2C_MAX_RW_OPS);
+    for (size_t i = 0; i < op_count; ++i) {
+        rpc_ops[i].length = op_list[i].data_size;
+        rpc_ops[i].is_read = op_list[i].is_read;
+        rpc_ops[i].stop = op_list[i].stop;
+    }
+    uint8_t* p_writes = reinterpret_cast<uint8_t*>(rpc_ops) + op_count * sizeof(I2cProxyOp);
+    for (size_t i = 0; i < op_count; ++i) {
+        if (!op_list[i].is_read) {
+            memcpy(p_writes, op_list[i].data_buffer, op_list[i].data_size);
+            p_writes += op_list[i].data_size;
+        }
+    }
+
+    const size_t resp_length = sizeof(I2cProxyResponse) + reads_length;
+    if (resp_length >= kProxyMaxTransferSize) {
+        callback(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
+        return;
+    }
+    uint8_t resp_buffer[kProxyMaxTransferSize];
+    auto* rsp = reinterpret_cast<I2cProxyResponse*>(resp_buffer);
+    size_t actual;
+    auto status = Rpc(&req->header, static_cast<uint32_t>(req_length),
+                              &rsp->header, static_cast<uint32_t>(resp_length), nullptr, 0, nullptr,
+                              0, &actual);
+    if (status != ZX_OK) {
+        callback(cookie, status, nullptr, 0);
+        return;
+    }
+
+    // TODO(voydanoff) This proxying code actually implements i2c_transact synchronously
+    // due to the fact that it is unsafe to respond asynchronously on the devmgr rxrpc channel.
+    // In the future we may want to redo the plumbing to allow this to be truly asynchronous.
+
+    if (actual != resp_length) {
+        status = ZX_ERR_INTERNAL;
+    } else {
+        status = rsp->header.status;
+    }
+    i2c_op_t read_ops[I2C_MAX_RW_OPS];
+    size_t read_ops_cnt = 0;
+    uint8_t* p_reads = reinterpret_cast<uint8_t*>(rsp + 1);
+    for (size_t i = 0; i < op_count; ++i) {
+        if (op_list[i].is_read) {
+            read_ops[read_ops_cnt] = op_list[i];
+            read_ops[read_ops_cnt].data_buffer = p_reads;
+            read_ops_cnt++;
+            p_reads += op_list[i].data_size;
+        }
+    }
+    callback(cookie, status, read_ops, read_ops_cnt);
+}
+
+zx_status_t ComponentProxy::I2cGetMaxTransferSize(size_t* out_size) {
+    I2cProxyRequest req = {};
+    I2cProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_I2C;
+    req.op = I2cOp::GET_MAX_TRANSFER_SIZE;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_size = resp.size;
+    return ZX_OK;
+}
+
+zx_status_t ComponentProxy::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
+    I2cProxyRequest req = {};
+    I2cProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_I2C;
+    req.op = I2cOp::GET_INTERRUPT;
+    req.flags = flags;
+
+    return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
+               out_irq->reset_and_get_address(), 1, nullptr);
 }
 
 zx_status_t ComponentProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {

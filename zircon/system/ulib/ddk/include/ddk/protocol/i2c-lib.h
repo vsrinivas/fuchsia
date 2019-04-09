@@ -16,12 +16,6 @@
 
 __BEGIN_CDECLS
 
-typedef struct {
-    size_t length;
-    bool is_read;
-    bool stop;
-} __PACKED i2c_rpc_op_t;
-
 // Writes and reads data on an i2c channel. If both write_length and read_length
 // are greater than zero, this call will perform a write operation immediately followed
 // by a read operation with no other traffic occurring on the bus in between.

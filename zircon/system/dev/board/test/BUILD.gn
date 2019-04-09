@@ -17,6 +17,7 @@ group("test") {
     ":test-board",
     ":test-clock",
     ":test-gpio",
+    ":test-i2c",
   ]
   foreach(driver, simple_drivers) {
     deps += [ ":test-$driver" ]
@@ -28,6 +29,7 @@ driver("test-board") {
     "test-board.cpp",
     "test-clock.cpp",
     "test-gpio.cpp",
+    "test-i2c.cpp",
     "test.cpp",
   ]
   deps = [
@@ -77,6 +79,24 @@ driver("test-clock") {
   ]
 }
 
+driver("test-i2c") {
+  sources = [
+    "test/i2c.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-i2cimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
 foreach(driver, simple_drivers) {
   driver("test-$driver") {
     sources = [
@@ -88,6 +108,7 @@ foreach(driver, simple_drivers) {
       "$zx/system/banjo/ddk-protocol-gpio",
       "$zx/system/banjo/ddk-protocol-platform-device",
       "$zx/system/ulib/ddk",
+      "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",
     ]
   }

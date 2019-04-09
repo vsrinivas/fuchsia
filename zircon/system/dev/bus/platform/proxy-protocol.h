@@ -124,6 +124,12 @@ struct rpc_i2c_rsp_t {
     void* cookie;
 };
 
+typedef struct {
+    size_t length;
+    bool is_read;
+    bool stop;
+} __PACKED i2c_rpc_op_t;
+
 // ZX_PROTOCOL_CLOCK proxy support.
 enum {
     CLK_ENABLE,

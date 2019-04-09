@@ -17,6 +17,8 @@
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
+#include "proxy-protocol.h"
+
 namespace platform_bus {
 
 PlatformI2cBus::PlatformI2cBus(const i2c_impl_protocol_t* i2c, uint32_t bus_id)

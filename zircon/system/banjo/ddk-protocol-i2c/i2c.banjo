@@ -8,6 +8,7 @@ using zx;
 
 const uint32 I2C_10_BIT_ADDR_MASK = 0xF000;
 const uint32 I2C_MAX_RW_OPS = 8;
+const uint32 I2C_MAX_TOTAL_TRANSFER = 4096;
 
 /// See `Transact` below for usage.
 struct I2cOp {
@@ -18,10 +19,11 @@ struct I2cOp {
 
 [Layout = "ddk-protocol", HandleWrappers]
 protocol I2c {
-    /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in.
+    /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in
+    // with a maximum of I2C_MAX_TOTAL_TRANSFER total bytes transfered.
     /// For write ops, i2c_op_t.data points to data to write.  The data to write does not need to be
-    /// kept alive after this call.  For read ops, i2c_op_t.data is ignored.  Any combination of reads
-    /// and writes can be specified.  At least the last op must have the stop flag set.
+    /// kept alive after this call.  For read ops, i2c_op_t.data is ignored.  Any combination of
+    /// reads and writes can be specified.  At least the last op must have the stop flag set.
     /// The results of the operations are returned asynchronously via the transact_cb.
     /// The cookie parameter can be used to pass your own private data to the transact_cb callback.
     [Async]

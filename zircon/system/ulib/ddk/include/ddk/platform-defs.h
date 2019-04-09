@@ -195,6 +195,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_GPIO          5
 #define PDEV_DID_TEST_COMPOSITE     6
 #define PDEV_DID_TEST_CLOCK         7
+#define PDEV_DID_TEST_I2C           8
 
 // ARM
 #define PDEV_VID_ARM                18

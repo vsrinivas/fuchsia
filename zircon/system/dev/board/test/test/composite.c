@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -12,6 +13,8 @@
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <zircon/assert.h>
 
@@ -21,6 +24,7 @@ enum {
     COMPONENT_PDEV,
     COMPONENT_GPIO,
     COMPONENT_CLOCK,
+    COMPONENT_I2C,
     COMPONENT_COUNT,
 };
 
@@ -80,6 +84,38 @@ static zx_status_t test_clock(clock_protocol_t* clock) {
     return ZX_OK;
 }
 
+static zx_status_t test_i2c(i2c_protocol_t* i2c) {
+    size_t max_transfer;
+
+    // i2c test driver returns 1024 for max transfer size
+    zx_status_t status = i2c_get_max_transfer_size(i2c, &max_transfer);
+    if (status != ZX_OK || max_transfer != 1024) {
+        zxlogf(ERROR, "%s: i2c_get_max_transfer_size failed\n", DRIVER_NAME);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // i2c test driver reverses digits
+    const uint32_t write_digits[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    uint32_t read_digits[10];
+    memset(read_digits, 0, sizeof(read_digits));
+
+    status = i2c_write_read_sync(i2c, write_digits, sizeof(write_digits), read_digits,
+                                 sizeof(read_digits));
+    if (status != ZX_OK || max_transfer != 1024) {
+        zxlogf(ERROR, "%s: i2c_write_read_sync failed %d\n", DRIVER_NAME, status);
+        return status;
+    }
+
+    for (size_t i = 0; i < countof(read_digits); i++) {
+        if (read_digits[i] != write_digits[countof(read_digits) - i - 1]) {
+            zxlogf(ERROR, "%s: read_digits does not match reverse of write digits\n", DRIVER_NAME);
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     composite_protocol_t composite;
     zx_status_t status;
@@ -105,6 +141,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     pdev_protocol_t pdev;
     gpio_protocol_t gpio;
     clock_protocol_t clock;
+    i2c_protocol_t i2c;
 
     status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
@@ -121,6 +158,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
         return status;
     }
+    status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
+        return status;
+    }
 
     if ((status = test_gpio(&gpio)) != ZX_OK) {
         zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
@@ -129,6 +171,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
     if ((status = test_clock(&clock)) != ZX_OK) {
         zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+        return status;
+    }
+
+    if ((status = test_i2c(&i2c)) != ZX_OK) {
+        zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
         return status;
     }
 

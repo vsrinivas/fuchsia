@@ -21,6 +21,7 @@ Component::Component(zx_device_t* parent)
     device_get_protocol(parent, ZX_PROTOCOL_CLOCK, &clock_);
     device_get_protocol(parent, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
     device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
+    device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
     device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
     device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &sysmem_);
@@ -110,7 +111,7 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
         zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
         return ZX_ERR_INTERNAL;
     }
-    auto* resp = reinterpret_cast<GpioProxyResponse*>(resp_buf);
+    auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
     *out_resp_size = sizeof(*resp);
 
     switch (req->op) {
@@ -161,6 +162,85 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
         return gpio_set_polarity(&gpio_, req->polarity);
     default:
         zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INTERNAL;
+    }
+}
+
+void Component::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
+                                    size_t op_count) {
+    auto* ctx = static_cast<I2cTransactContext*>(cookie);
+    ctx->result = status;
+    if (status == ZX_OK && ctx->read_buf && ctx->read_length) {
+        memcpy(ctx->read_buf, op_list[0].data_buffer, ctx->read_length);
+    }
+
+    sync_completion_signal(&ctx->completion);
+}
+
+zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* resp_handle_count) {
+    if (i2c_.ops == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto* req = reinterpret_cast<const I2cProxyRequest*>(req_buf);
+    if (req_size < sizeof(*req)) {
+        zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+        return ZX_ERR_INTERNAL;
+    }
+    auto* resp = reinterpret_cast<I2cProxyResponse*>(resp_buf);
+    *out_resp_size = sizeof(*resp);
+
+    switch (req->op) {
+    case I2cOp::TRANSACT: {
+        i2c_op_t i2c_ops[I2C_MAX_RW_OPS];
+        auto* rpc_ops = reinterpret_cast<const I2cProxyOp*>(&req[1]);
+        auto op_count = req->op_count;
+        if (op_count > countof(i2c_ops)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        auto* write_buf = reinterpret_cast<const uint8_t*>(&rpc_ops[op_count]);
+        size_t read_length = 0;
+
+        for (size_t i = 0; i < op_count; i++) {
+            if (rpc_ops[i].is_read) {
+                i2c_ops[i].data_buffer = nullptr;
+                read_length += rpc_ops[i].length;
+            } else {
+                i2c_ops[i].data_buffer = write_buf;
+                write_buf += rpc_ops[i].length;
+            }
+            i2c_ops[i].data_size = rpc_ops[i].length;
+            i2c_ops[i].is_read = rpc_ops[i].is_read;
+            i2c_ops[i].stop = rpc_ops[i].stop;
+        }
+
+        I2cTransactContext ctx = {};
+        ctx.read_buf = &resp[1];
+        ctx.read_length = read_length;
+
+        i2c_transact(&i2c_, i2c_ops, op_count, I2cTransactCallback, &ctx);
+        auto status = sync_completion_wait(&ctx.completion, ZX_TIME_INFINITE);
+        if (status == ZX_OK) {
+            status = ctx.result;
+        }
+        if (status == ZX_OK) {
+            *out_resp_size = static_cast<uint32_t>(sizeof(*resp) + read_length);
+        }
+        return status;
+    }
+    case I2cOp::GET_MAX_TRANSFER_SIZE:
+        return i2c_get_max_transfer_size(&i2c_, &resp->size);
+    case I2cOp::GET_INTERRUPT: {
+        auto status = i2c_get_interrupt(&i2c_, req->flags, &resp_handles[0]);
+        if (status == ZX_OK) {
+            *resp_handle_count = 1;
+        }
+        return status;
+    }
+    default:
+        zxlogf(ERROR, "%s: unknown I2C op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
     }
 }
@@ -321,6 +401,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
         break;
     case ZX_PROTOCOL_GPIO:
         status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                         resp_handles, &resp_handle_count);
+        break;
+    case ZX_PROTOCOL_I2C:
+        status = RpcI2c(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                          resp_handles, &resp_handle_count);
         break;
     case ZX_PROTOCOL_PDEV:
