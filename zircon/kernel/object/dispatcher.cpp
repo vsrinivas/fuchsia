@@ -24,8 +24,9 @@ KCOUNTER(dispatcher_destroy_count, "dispatcher.destroy")
 // counts the number of times observers have been added to a kernel object.
 KCOUNTER(dispatcher_observe_count, "dispatcher.observer.add")
 // counts the number of times observers have been canceled.
-KCOUNTER(dispatcher_cancel_bh_count, "dispatcher.observer.cancel.byhandle")
-KCOUNTER(dispatcher_cancel_bk_count, "dispatcher.observer.cancel.bykey")
+KCOUNTER(dispatcher_cancel_count, "dispatcher.observer.cancel")
+KCOUNTER(dispatcher_cancel_bk_count, "dispatcher.observer.cancel.by_key.handled")
+KCOUNTER(dispatcher_cancel_bk_nh_count, "dispatcher.observer.cancel.by_key.not_handled")
 
 namespace {
 ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
@@ -108,6 +109,7 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
                 ++it;
                 observers->erase(to_remove);
                 to_remove->OnRemoved();
+                kcounter_add(dispatcher_cancel_count, 1);
             } else {
                 ++it;
             }
@@ -188,8 +190,6 @@ void Dispatcher::Cancel(const Handle* handle) {
     CancelWithFunc(&observers_, get_lock(), [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
-
-    kcounter_add(dispatcher_cancel_bh_count, 1);
 }
 
 bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
@@ -201,9 +201,13 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
         return obs->OnCancelByKey(handle, port, key);
     });
 
-    kcounter_add(dispatcher_cancel_bk_count, 1);
+    if (flags & StateObserver::kHandled) {
+        kcounter_add(dispatcher_cancel_bk_count, 1);
+        return true;
+    }
 
-    return flags & StateObserver::kHandled;
+    kcounter_add(dispatcher_cancel_bk_nh_count, 1);
+    return false;
 }
 
 // Since this conditionally takes the dispatcher's |lock_|, based on
