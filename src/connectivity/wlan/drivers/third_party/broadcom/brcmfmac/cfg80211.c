@@ -18,6 +18,7 @@
 
 #include "cfg80211.h"
 
+#include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
 #include <zircon/status.h>
 
@@ -35,7 +36,6 @@
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
-#include "ieee80211.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "p2p.h"

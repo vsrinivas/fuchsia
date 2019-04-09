@@ -19,13 +19,13 @@
 
 #include <stdlib.h>
 
+#include <wlan/protocol/ieee80211.h>
 #include <zircon/status.h>
 
 #include "core.h"
 #include "debug.h"
 #include "hif.h"
 #include "htt.h"
-#include "ieee80211.h"
 #include "macros.h"
 #include "testmode.h"
 #include "txrx.h"

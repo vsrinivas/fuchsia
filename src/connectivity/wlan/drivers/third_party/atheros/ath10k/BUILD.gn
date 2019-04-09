@@ -40,7 +40,6 @@ driver_module("ath10k_driver") {
     "htt_tx.c",
     "hw.c",
     "hw.h",
-    "ieee80211.h",
     "mac.c",
     "mac.h",
     "macros.h",

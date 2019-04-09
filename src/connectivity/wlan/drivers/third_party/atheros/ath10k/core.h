@@ -25,13 +25,13 @@
 
 #include <ddk/device.h>
 #include <lib/sync/completion.h>
+#include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
 #include "bitarr.h"
 #include "htc.h"
 #include "htt.h"
 #include "hw.h"
-#include "ieee80211.h"
 #include "macros.h"
 #include "msg_buf.h"
 #include "swap.h"

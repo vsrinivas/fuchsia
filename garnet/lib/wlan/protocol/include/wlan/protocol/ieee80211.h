@@ -1,25 +1,12 @@
-/*
- * Copyright 2019 The Fuchsia Authors.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_IEEE80211_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_IEEE80211_H_
-
-#include <stdint.h>
+#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
+#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
 
 #include <net/ethernet.h>
+#include <stdint.h>
 
 // clang-format off
 // IEEE Std 802.11-2016, 9.2.3
@@ -104,7 +91,7 @@ static inline bool ieee80211_pkt_is_protected(const struct ieee80211_frame_heade
 
 static inline uint8_t* ieee80211_get_mgmt_bssid(struct ieee80211_frame_header* fh) {
     if (ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT) {
-       return fh->addr3;
+        return fh->addr3;
     }
     return NULL;
 }
@@ -349,4 +336,4 @@ static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type
 }
 // clang-format on
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_IEEE80211_H_
+#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_

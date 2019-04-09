@@ -22,13 +22,13 @@
 #include "msg_buf.h"
 
 #include <ddk/driver.h>
+#include <wlan/protocol/ieee80211.h>
 
 #include "core.h"
 #include "debug.h"
 #include "hif.h"
 #include "htc.h"
 #include "hw.h"
-#include "ieee80211.h"
 #include "mac.h"
 #include "p2p.h"
 #include "testmode.h"

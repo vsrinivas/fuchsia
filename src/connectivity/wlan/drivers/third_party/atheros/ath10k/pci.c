@@ -27,6 +27,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
+#include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -38,7 +39,6 @@
 #include "debug.h"
 #include "hif.h"
 #include "htc.h"
-#include "ieee80211.h"
 #include "mac.h"
 #include "macros.h"
 #include "targaddrs.h"

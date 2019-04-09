@@ -19,10 +19,11 @@
 
 #include <assert.h>
 
+#include <wlan/protocol/ieee80211.h>
+
 #include "debug.h"
 #include "hif.h"
 #include "htt.h"
-#include "ieee80211.h"
 #include "mac.h"
 
 #if 0   // NEEDS PORTING
