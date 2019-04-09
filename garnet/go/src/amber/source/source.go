@@ -34,7 +34,6 @@ import (
 
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
-	"github.com/rjw57/oauth2device"
 	"golang.org/x/oauth2"
 )
 
@@ -324,7 +323,17 @@ func (f *Source) processTokenUpdate(clientId, token string) {
 		return
 	}
 
-	f.setAuthTokenLocked(&oauth2.Token{RefreshToken: token, TokenType: "Bearer", Expiry: time.Now()})
+	f.cfg.Oauth2Token = &oauth2.Token{RefreshToken: token, TokenType: "Bearer", Expiry: time.Now()}
+
+	if err := f.updateTUFClientLocked(); err != nil {
+		log.Printf("failed to update tuf client: %s", err)
+		return
+	}
+
+	if err := f.saveLocked(); err != nil {
+		log.Printf("failed to save config: %s", err)
+		return
+	}
 }
 
 func oauth2Config(c *amber.OAuth2Config) *oauth2.Config {
@@ -339,19 +348,6 @@ func oauth2Config(c *amber.OAuth2Config) *oauth2.Config {
 			TokenURL: c.TokenUrl,
 		},
 		Scopes: c.Scopes,
-	}
-}
-
-func oauth2deviceConfig(c *amber.OAuth2Config) *oauth2device.Config {
-	if c == nil {
-		return nil
-	}
-
-	return &oauth2device.Config{
-		Config: oauth2Config(c),
-		DeviceEndpoint: oauth2device.DeviceEndpoint{
-			CodeURL: c.DeviceCodeUrl,
-		},
 	}
 }
 
@@ -610,73 +606,6 @@ func (f *Source) refreshOauth2TokenLocked() error {
 		log.Printf("refreshed oauth2 token for: %s", f.cfg.Config.Id)
 		f.cfg.Oauth2Token = newToken
 		f.saveLocked()
-	}
-
-	return nil
-}
-
-func (f *Source) Login() (*amber.DeviceCode, error) {
-	log.Printf("logging into tuf source: %s", f.cfg.Config.Id)
-
-	c := oauth2deviceConfig(f.cfg.Config.Oauth2Config)
-	if c == nil {
-		log.Printf("source is not configured for oauth2")
-		return nil, fmt.Errorf("source is not configured for oauth2")
-	}
-
-	code, err := oauth2device.RequestDeviceCode(http.DefaultClient, c)
-	if err != nil {
-		log.Printf("failed to get device code: %s", err)
-		return nil, fmt.Errorf("failed to get device code: %s", err)
-	}
-
-	// Wait for the device authorization in a separate thread so we don't
-	// block the response. This thread will eventually time out if the user
-	// does not enter in the code.
-	go f.waitForDeviceAuthorization(c, code)
-
-	return &amber.DeviceCode{
-		VerificationUrl: code.VerificationURL,
-		UserCode:        code.UserCode,
-		ExpiresIn:       code.ExpiresIn,
-	}, nil
-}
-
-// Wait for the oauth2 server to authorize us to access the TUF repository. If
-// we are denied access, we will log the error, but otherwise do nothing.
-func (f *Source) waitForDeviceAuthorization(config *oauth2device.Config, code *oauth2device.DeviceCode) {
-	log.Printf("waiting for device authorization: %s", f.cfg.Config.Id)
-
-	token, err := oauth2device.WaitForDeviceAuthorization(http.DefaultClient, config, code)
-	if err != nil {
-		log.Printf("failed to get device authorization token: %s", err)
-		return
-	}
-
-	log.Printf("token received for remote store: %s", f.cfg.Config.Id)
-
-	// Now that we have a token, grab the lock, and update our client.
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if err := f.setAuthTokenLocked(token); err != nil {
-		return
-	}
-
-	log.Printf("remote store updated: %s", f.cfg.Config.Id)
-}
-
-func (f *Source) setAuthTokenLocked(token *oauth2.Token) error {
-	f.cfg.Oauth2Token = token
-
-	if err := f.updateTUFClientLocked(); err != nil {
-		log.Printf("failed to update tuf client: %s", err)
-		return err
-	}
-
-	if err := f.saveLocked(); err != nil {
-		log.Printf("failed to save config: %s", err)
-		return err
 	}
 
 	return nil

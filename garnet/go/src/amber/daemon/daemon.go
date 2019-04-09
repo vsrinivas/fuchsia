@@ -287,20 +287,6 @@ func (d *Daemon) getSourceLocked(srcID string) (*source.Source, error) {
 	return nil, os.ErrNotExist
 }
 
-func (d *Daemon) Login(srcId string) (*amber.DeviceCode, error) {
-	log.Printf("logging into %s", srcId)
-	d.muSrcs.Lock()
-	src, err := d.getSourceLocked(srcId)
-	d.muSrcs.Unlock()
-
-	if err != nil {
-		log.Printf("error getting source by ID: %s", err)
-		return nil, fmt.Errorf("unknown source: %s", err)
-	}
-
-	return src.Login()
-}
-
 func (d *Daemon) GetActiveSources() map[string]*source.Source {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()

@@ -377,13 +377,6 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 		} else {
 			fmt.Printf("system update is not configured\n")
 		}
-	case "login":
-		device, err := amberProxy.Login(*name)
-		if err != nil {
-			log.Printf("failed to login: %s", err)
-			return 1
-		}
-		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
 	case "enable_src":
 		if *name == "" {
 			log.Printf("Error enabling source: no source id provided")
