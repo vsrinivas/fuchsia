@@ -15,5 +15,6 @@ group("tests") {
 
   data_deps = [
     "//src/cobalt/bin:cobalt_tests",
+    "//third_party/cobalt:cobalt_core_tests",
   ]
 }

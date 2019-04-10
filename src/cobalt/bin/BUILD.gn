@@ -9,7 +9,6 @@ import("//third_party/protobuf/proto_library.gni")
 group("bin") {
   testonly = true
   deps = [
-    ":cobalt_encoder_unittests",
     ":cobalt_tests",
     "app",
     "system-metrics",
@@ -19,17 +18,8 @@ group("bin") {
   ]
 }
 
-executable("cobalt_encoder_unittests") {
-  testonly = true
-
-  deps = [
-    "//third_party/cobalt/encoder:unittests",
-  ]
-}
-
 test_package("cobalt_tests") {
   deps = [
-    ":cobalt_encoder_unittests",
     "app:app",
     "app:cobalt_app_unittests",
     "system-metrics:cobalt_system_metrics_unittests",
@@ -75,11 +65,6 @@ test_package("cobalt_tests") {
       name = "cobalt_utils_unittests"
 
       disabled = true
-      environments = basic_envs
-    },
-
-    {
-      name = "cobalt_encoder_unittests"
       environments = basic_envs
     },
 
