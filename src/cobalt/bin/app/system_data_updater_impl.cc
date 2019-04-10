@@ -26,4 +26,9 @@ void SystemDataUpdaterImpl::SetExperimentState(
   callback(Status::OK);
 }
 
+void SystemDataUpdaterImpl::SetChannel(::fidl::StringPtr current_channel, ::fidl::StringPtr target_channel, SetChannelCallback callback) {
+  // Not implemented.
+  callback(Status::INTERNAL_ERROR);
+}
+
 }  // namespace cobalt

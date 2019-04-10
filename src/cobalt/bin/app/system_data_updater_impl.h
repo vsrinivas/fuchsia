@@ -27,7 +27,9 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   // experiments the device can collect data for.
   void SetExperimentState(
       std::vector<fuchsia::cobalt::Experiment> experiments,
-      SetExperimentStateCallback callback);
+      SetExperimentStateCallback callback) override;
+
+  void SetChannel(::fidl::StringPtr current_channel, ::fidl::StringPtr target_channel, SetChannelCallback callback) override;
 
   encoder::SystemData* system_data_;  // Not owned.
 

@@ -678,6 +678,5 @@ protocol SystemDataUpdater {
     // chosen in the UI, SetChannel will be called immediately with
     // |target_channel| containing the newly selected value. |target_channel|
     // is omitted if the device is booted without any channels.
-    [Transitional="PKG-630"]
     SetChannel(string? current_channel, string? target_channel) -> (Status status);
 };
