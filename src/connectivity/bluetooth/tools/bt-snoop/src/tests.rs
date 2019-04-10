@@ -1,6 +1,10 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
-    fidl::Error as FidlError,
-    fidl_fuchsia_bluetooth_snoop::{SnoopProxy, SnoopRequestStream},
+    fidl::{endpoints::RequestStream, Error as FidlError},
+    fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopProxy, SnoopRequestStream},
     fuchsia_async::{Channel, Executor},
     fuchsia_zircon as zx,
     std::task::Poll,
@@ -37,12 +41,8 @@ fn test_register_new_client() {
     assert_eq!(requests.len(), 0);
 
     let (_tx, rx) = zx::Channel::create().unwrap();
-    let connection = Some(Channel::from_channel(rx).unwrap());
-    register_new_client(connection, &mut requests, ClientId(0));
-    assert_eq!(requests.len(), 1);
-
-    let connection = None;
-    register_new_client(connection, &mut requests, ClientId(0));
+    let stream = SnoopRequestStream::from_channel(Channel::from_channel(rx).unwrap());
+    register_new_client(stream, &mut requests, ClientId(0));
     assert_eq!(requests.len(), 1);
 }
 

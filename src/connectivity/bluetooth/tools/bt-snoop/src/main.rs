@@ -7,22 +7,17 @@
 
 use {
     failure::{err_msg, Error, ResultExt},
-    fidl::{
-        endpoints::{RequestStream, ServiceMarker},
-        Error as FidlError,
-    },
-    fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopPacket, SnoopRequest, SnoopRequestStream},
-    fuchsia_app::server::{FdioServer, ServicesServer},
-    fuchsia_async::{self as fasync, Channel},
+    fidl::Error as FidlError,
+    fidl_fuchsia_bluetooth_snoop::{SnoopPacket, SnoopRequest, SnoopRequestStream},
+    fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
-        channel::mpsc,
-        future::{ready, Join, Ready},
+        future::{ready, FutureExt, Join, Ready},
         select,
-        stream::{FuturesUnordered, StreamFuture},
-        FutureExt, StreamExt,
+        stream::{Fuse, FuturesUnordered, StreamExt, StreamFuture},
     },
     std::{
         fmt,
@@ -98,26 +93,10 @@ fn absolute_device_path<P: AsRef<Path>>(dev_name: &P) -> PathBuf {
     path
 }
 
-/// Return a future that will register a new service app and start the service server.
-/// Returns an error if the service server cannot be created.
-/// This service simply sends client channels on to the main task to be handled appropriately
-/// using the passed in `fdio_chan`.
-fn start_server(fdio_chan: mpsc::Sender<Channel>) -> Result<FdioServer, Error> {
-    ServicesServer::new()
-        .add_service((SnoopMarker::NAME, move |chan: Channel| {
-            let mut fdio_chan = fdio_chan.clone();
-            fx_vlog!(1, "Client attempting to connect to service");
-            if let Err(e) = fdio_chan.try_send(chan) {
-                fx_log_err!("Error registering new client: {}", e);
-            }
-        }))
-        .start()
-}
-
 /// Handle an event on the virtual filesystem in the HCI device directory. This should log or
 /// internally handle most errors that come from the stream of filesystem watch events. Only errors
 /// in the `Watcher` itself result in returning an Error to the caller.
-fn handle_fs_event(
+fn handle_hci_device_event(
     message: WatchMessage,
     snoopers: &mut ConcurrentSnooperPacketFutures,
     subscribers: &mut SubscriptionManager,
@@ -155,15 +134,12 @@ fn handle_fs_event(
 
 /// Register a new client.
 fn register_new_client(
-    channel: Option<Channel>,
+    stream: SnoopRequestStream,
     client_stream: &mut ConcurrentClientRequestFutures,
     client_id: ClientId,
 ) {
-    if let Some(chan) = channel {
-        let stream = SnoopRequestStream::from_channel(chan);
-        client_stream.push(ready(client_id).join(stream.into_future()));
-        fx_log_info!("New client connection: {}", client_id);
-    }
+    client_stream.push(ready(client_id).join(stream.into_future()));
+    fx_log_info!("New client connection: {}", client_id);
 }
 
 /// Handle a client request to dump the packet log, subscribe to future events or do both.
@@ -271,6 +247,16 @@ fn handle_packet(
     }
 }
 
+type FusedServiceStream = Fuse<ServiceFs<ServiceObj<'static, SnoopRequestStream>>>;
+
+/// Construct the Fused ServiceFs object to handle incoming service requests.
+fn setup_service_fs() -> Result<FusedServiceStream, Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(|stream: SnoopRequestStream| stream);
+    fs.take_and_serve_directory_handle()?;
+    Ok(fs.fuse())
+}
+
 /// Setup the main loop of execution in a Task and run it.
 fn start(
     log_size_bytes: usize,
@@ -281,43 +267,44 @@ fn start(
 ) -> Result<(), Error> {
     let mut exec = fasync::Executor::new().expect("Could not create executor");
 
-    let (fdio_chan, service_chan) = mpsc::channel(512);
-    let mut service_chan = service_chan.fuse();
-    let mut server = start_server(fdio_chan)?.fuse();
-    let mut fs_event_stream = Watcher::new(&hci_dir).context("Cannot create device watcher")?;
-    let mut snoopers = ConcurrentSnooperPacketFutures::new();
-    let mut packet_logs = PacketLogs::new(max_device_count, log_size_bytes, log_time);
+    let mut service_handler = setup_service_fs()?;
+    let mut id_gen = IdGenerator::new();
+    let mut hci_device_events = Watcher::new(&hci_dir).context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
-    let mut id_gen = IdGenerator::new();
+    let mut snoopers = ConcurrentSnooperPacketFutures::new();
+    let mut packet_logs = PacketLogs::new(max_device_count, log_size_bytes, log_time);
 
     let main_loop = async {
         fx_vlog!(1, "Capturing snoop packets...");
+
         loop {
             select! {
-                _ = server => {
-                    fx_log_err!("Fdio server has died. Exiting.");
-                    break Ok(());
-                },
-                fs_event = fs_event_stream.next() => {
-                    // extract message and handle vfs event for hci device directory
-                    let message = fs_event.ok_or(err_msg("Cannot reach watch server")).and_then(|r| Ok(r?));
+                // A new client has connected to one of the exposed services.
+                request_stream = service_handler.select_next_some() => {
+                    register_new_client(request_stream, &mut client_requests, id_gen.next());
+                }
+
+                // A new filesystem event in the hci device watch directory has been received.
+                event = hci_device_events.next() => {
+                    let message = event
+                        .ok_or(err_msg("Cannot reach watch server"))
+                        .and_then(|r| Ok(r?));
                     match message {
                         Ok(message) => {
-                            handle_fs_event(message, &mut snoopers, &mut subscribers,
+                            handle_hci_device_event(message, &mut snoopers, &mut subscribers,
                                 &mut packet_logs);
                         }
                         Err(e) => {
                             // Attempt to recreate watcher in the event of an error.
                             fx_log_warn!("VFS Watcher has died with error: {:?}", e);
-                            fs_event_stream = Watcher::new(&hci_dir)
+                            hci_device_events = Watcher::new(&hci_dir)
                                 .context("Cannot create device watcher")?;
                         }
                     }
                 },
-                connection = service_chan.next() => {
-                    register_new_client(connection, &mut client_requests, id_gen.next());
-                },
+
+                // A client has made a request to the server.
                 request = client_requests.select_next_some() => {
                     if let Err(e) = handle_client_request(request, &mut client_requests,
                         &mut subscribers, &mut packet_logs)
@@ -325,6 +312,8 @@ fn start(
                         fx_vlog!(1, "Unable to handle client request: {:?}", e);
                     }
                 },
+
+                // A new snoop packet has been received from an hci device.
                 (packet, snooper) = snoopers.select_next_some() => {
                     handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
                         &mut packet_logs, truncate_payload);
