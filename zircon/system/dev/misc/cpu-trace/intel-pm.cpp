@@ -133,8 +133,9 @@ static int PmuLookupMiscEvent(perfmon_event_id_t id) {
                 countof(misc_event_table_contents),
                 sizeof(id),
                 ComparePerfmonEventId));
-    if (!p)
+    if (!p) {
         return -1;
+    }
     ptrdiff_t result = p - misc_event_table;
     assert(result < NUM_MISC_EVENTS);
     return (int) result;
@@ -264,19 +265,24 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
     }
     // KISS: For now don't generate PMI's for counters that use
     // another as the timebase.
-    if (!uses_timebase0 || ii == 0)
+    if (!uses_timebase0 || ii == 0) {
         ocfg->fixed_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(counter);
+    }
     unsigned enable = 0;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS)
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS) {
         enable |= FIXED_CTR_ENABLE_OS;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER)
+    }
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER) {
         enable |= FIXED_CTR_ENABLE_USR;
+    }
     ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(counter);
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagTimebase0;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC)
+    }
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
+    }
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
@@ -352,29 +358,37 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
     uint64_t evtsel = 0;
     evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
     evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS)
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS) {
         evtsel |= IA32_PERFEVTSEL_OS_MASK;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER)
+    }
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER) {
         evtsel |= IA32_PERFEVTSEL_USR_MASK;
-    if (details->flags & IPM_REG_FLAG_EDG)
+    }
+    if (details->flags & IPM_REG_FLAG_EDG) {
         evtsel |= IA32_PERFEVTSEL_E_MASK;
-    if (details->flags & IPM_REG_FLAG_ANYT)
+    }
+    if (details->flags & IPM_REG_FLAG_ANYT) {
         evtsel |= IA32_PERFEVTSEL_ANY_MASK;
-    if (details->flags & IPM_REG_FLAG_INV)
+    }
+    if (details->flags & IPM_REG_FLAG_INV) {
         evtsel |= IA32_PERFEVTSEL_INV_MASK;
+    }
     evtsel |= (details->flags & IPM_REG_FLAG_CMSK_MASK) << IA32_PERFEVTSEL_CMASK_SHIFT;
     // KISS: For now don't generate PMI's for counters that use
     // another as the timebase. We still generate interrupts in
     // "counting mode" in case the counter overflows.
-    if (!uses_timebase0 || ii == 0)
+    if (!uses_timebase0 || ii == 0) {
         evtsel |= IA32_PERFEVTSEL_INT_MASK;
+    }
     evtsel |= IA32_PERFEVTSEL_EN_MASK;
     ocfg->programmable_events[ss->num_programmable] = evtsel;
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(ss->num_programmable);
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagTimebase0;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC)
+    }
+    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
+    }
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
@@ -437,11 +451,13 @@ static zx_status_t PmuStageMiscConfig(const perfmon_config_t* icfg,
 zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    if (active_)
+    if (active_) {
         return ZX_ERR_BAD_STATE;
+    }
     PmuPerTraceState* per_trace = per_trace_state_.get();
-    if (!per_trace)
+    if (!per_trace) {
         return ZX_ERR_BAD_STATE;
+    }
 
     // If we subsequently get an error, make sure any previous configuration
     // can't be used.
@@ -449,8 +465,9 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
 
     perfmon_config_t ioctl_config;
     perfmon_config_t* icfg = &ioctl_config;
-    if (cmdlen != sizeof(*icfg))
+    if (cmdlen != sizeof(*icfg)) {
         return ZX_ERR_INVALID_ARGS;
+    }
     memcpy(icfg, cmd, sizeof(*icfg));
 
     X86PmuConfig* ocfg = &per_trace->config;
@@ -475,10 +492,12 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
         (pmu_hw_properties_.programmable_counter_width < 64
          ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
          : ~0ul);
-    for (unsigned i = 0; i < countof(ss->have_fixed); ++i)
+    for (unsigned i = 0; i < countof(ss->have_fixed); ++i) {
         ss->have_fixed[i] = false;
-    for (unsigned i = 0; i < countof(ss->have_misc); ++i)
+    }
+    for (unsigned i = 0; i < countof(ss->have_misc); ++i) {
         ss->have_misc[i] = false;
+    }
     ss->have_timebase0_user = false;
 
     zx_status_t status;
@@ -486,8 +505,9 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     for (ii = 0; ii < countof(icfg->events); ++ii) {
         perfmon_event_id_t id = icfg->events[ii];
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
-        if (id == 0)
+        if (id == 0) {
             break;
+        }
         unsigned group = PERFMON_EVENT_ID_GROUP(id);
 
         if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
@@ -498,19 +518,22 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
         switch (group) {
         case PERFMON_GROUP_FIXED:
             status = PmuStageFixedConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return status;
+            }
             break;
         case PERFMON_GROUP_ARCH:
         case PERFMON_GROUP_MODEL:
             status = PmuStageProgrammableConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return status;
+            }
             break;
         case PERFMON_GROUP_MISC:
             status = PmuStageMiscConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return status;
+            }
             break;
         default:
             zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
@@ -518,8 +541,9 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
+        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
             ss->have_timebase0_user = true;
+        }
     }
     if (ii == 0) {
         zxlogf(ERROR, "%s: No events provided\n", __func__);

@@ -214,19 +214,22 @@ static zx_status_t pmu_stage_programmable_config(const perfmon_config_t* icfg,
 zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    if (active_)
+    if (active_) {
         return ZX_ERR_BAD_STATE;
+    }
     PmuPerTraceState* per_trace = per_trace_state_.get();
-    if (!per_trace)
+    if (!per_trace) {
         return ZX_ERR_BAD_STATE;
+    }
 
     // If we subsequently get an error, make sure any previous configuration
     // can't be used.
     per_trace->configured = false;
 
     perfmon_config_t* icfg = &per_trace->ioctl_config;
-    if (cmdlen != sizeof(*icfg))
+    if (cmdlen != sizeof(*icfg)) {
         return ZX_ERR_INVALID_ARGS;
+    }
     memcpy(icfg, cmd, sizeof(*icfg));
 
     Arm64PmuConfig* ocfg = &per_trace->config;
@@ -256,8 +259,9 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     for (ii = 0; ii < countof(icfg->events); ++ii) {
         perfmon_event_id_t id = icfg->events[ii];
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
-        if (id == 0)
+        if (id == 0) {
             break;
+        }
         unsigned group = PERFMON_EVENT_ID_GROUP(id);
 
         if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
@@ -268,13 +272,15 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
         switch (group) {
         case PERFMON_GROUP_FIXED:
             status = pmu_stage_fixed_config(icfg, ss, ii, ocfg);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return status;
+            }
             break;
         case PERFMON_GROUP_ARCH:
             status = pmu_stage_programmable_config(icfg, ss, ii, ocfg);
-            if (status != ZX_OK)
+            if (status != ZX_OK) {
                 return status;
+            }
             break;
         default:
             zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
@@ -282,8 +288,9 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
+        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
             ss->have_timebase0_user = true;
+        }
     }
     if (ii == 0) {
         zxlogf(ERROR, "%s: No events provided\n", __func__);
