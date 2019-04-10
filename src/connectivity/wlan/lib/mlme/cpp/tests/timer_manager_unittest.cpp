@@ -13,26 +13,32 @@
 namespace wlan {
 namespace {
 
-class MockedTimer : public Timer {
+class MockedTimerScheduler : public TimerScheduler {
    public:
-    MockedTimer() : Timer(0) {}
-
-    zx::time Now() const override { return clock.Now(); }
-
-    zx_status_t SetTimerImpl(zx::time d) override {
+    zx_status_t Schedule(Timer* timer, zx::time d) override {
         canceled = false;
         deadline = d;
-        return next_set_timer;
+        return ZX_OK;
     }
-    zx_status_t CancelTimerImpl() override {
+    zx_status_t Cancel(Timer* timer) override {
         canceled = true;
         return ZX_OK;
     }
 
-    zx_status_t next_set_timer = ZX_OK;
     bool canceled = false;
     zx::time deadline = zx::time(0);
+};
+
+class MockedTimer : public Timer {
+   public:
+    MockedTimer() : Timer(&scheduler_, 0) {}
+    zx::time Now() const override { return clock.Now(); }
+    zx::time deadline() const { return scheduler_.deadline; }
+    bool canceled() const { return scheduler_.canceled; }
+    void Reset() { scheduler_.deadline = zx::time(0); }
+
     timekeeper::TestClock clock;
+    MockedTimerScheduler scheduler_{};
 };
 
 struct TimerManagerTest : public ::testing::Test {
@@ -78,7 +84,7 @@ TEST_F(TimerManagerTest, HandleTimeout) {
     EXPECT_EQ(ids, std::vector<TimeoutId>({one, three}));
 
     // Expect the timer to be set to "five" since "four" has been canceled
-    EXPECT_EQ(zx::time(500), timer->deadline);
+    EXPECT_EQ(zx::time(500), timer->deadline());
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
@@ -86,13 +92,13 @@ TEST_F(TimerManagerTest, CancelNearestEvent) {
     TimeoutId foo, bar;
     timer_manager->Schedule(zx::time(100), "foo", &foo);
     timer_manager->Schedule(zx::time(200), "bar", &bar);
-    EXPECT_EQ(zx::time(100), timer->deadline);
+    EXPECT_EQ(zx::time(100), timer->deadline());
     EXPECT_EQ(2u, timer_manager->NumScheduled());
 
     timer_manager->Cancel(foo);
     // We don't expect Cancel() to reset the timer. Instead, the next HandleTimeout
     // should simply ignore the canceled event.
-    EXPECT_EQ(zx::time(100), timer->deadline);
+    EXPECT_EQ(zx::time(100), timer->deadline());
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 
     clock()->Set(zx::time(150));
@@ -100,39 +106,39 @@ TEST_F(TimerManagerTest, CancelNearestEvent) {
     timer_manager->HandleTimeout([&](auto now, auto event, auto id) { num_handled++; });
 
     EXPECT_EQ(0u, num_handled);
-    EXPECT_EQ(zx::time(200), timer->deadline);
+    EXPECT_EQ(zx::time(200), timer->deadline());
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
 TEST_F(TimerManagerTest, HandleLastTimeout) {
     timer_manager->Schedule(zx::time(100), "foo", nullptr);
-    EXPECT_EQ(zx::time(100), timer->deadline);
+    EXPECT_EQ(zx::time(100), timer->deadline());
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 
-    timer->deadline = zx::time(0);
+    timer->Reset();
     clock()->Set(zx::time(100));
     std::vector<std::string> events;
     timer_manager->HandleTimeout([&](auto now, auto event, auto id) { events.push_back(event); });
     EXPECT_EQ(events, std::vector<std::string>({"foo"}));
 
     // Make sure the timer has not been reset
-    EXPECT_EQ(timer->deadline, zx::time(0));
+    EXPECT_EQ(timer->deadline(), zx::time(0));
 }
 
 TEST_F(TimerManagerTest, SchedulingAtLaterTimeDoesNotResetTimer) {
     timer_manager->Schedule(zx::time(300), "foo", nullptr);
-    EXPECT_EQ(zx::time(300), timer->deadline);
+    EXPECT_EQ(zx::time(300), timer->deadline());
 
     timer_manager->Schedule(zx::time(400), "bar", nullptr);
-    EXPECT_EQ(zx::time(300), timer->deadline);
+    EXPECT_EQ(zx::time(300), timer->deadline());
 }
 
 TEST_F(TimerManagerTest, SchedulingAtEarlierTimeResetsTimer) {
     timer_manager->Schedule(zx::time(400), "foo", nullptr);
-    EXPECT_EQ(zx::time(400), timer->deadline);
+    EXPECT_EQ(zx::time(400), timer->deadline());
 
     timer_manager->Schedule(zx::time(300), "bar", nullptr);
-    EXPECT_EQ(zx::time(300), timer->deadline);
+    EXPECT_EQ(zx::time(300), timer->deadline());
 }
 
 TEST_F(TimerManagerTest, ScheduleAnotherTimeoutInCallback) {
@@ -154,7 +160,7 @@ TEST_F(TimerManagerTest, ScheduleAnotherTimeoutInCallback) {
     EXPECT_EQ(events, std::vector<std::string>({"foo", "bar"}));
 
     // The timer should be set to "baz"
-    EXPECT_EQ(zx::time(300), timer->deadline);
+    EXPECT_EQ(zx::time(300), timer->deadline());
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
@@ -180,12 +186,12 @@ TEST_F(TimerManagerTest, CancelAll) {
     TimeoutId foo, bar;
     timer_manager->Schedule(zx::time(100), "foo", &foo);
     timer_manager->Schedule(zx::time(200), "bar", &bar);
-    EXPECT_FALSE(timer->canceled);
-    EXPECT_EQ(zx::time(100), timer->deadline);
+    EXPECT_FALSE(timer->canceled());
+    EXPECT_EQ(zx::time(100), timer->deadline());
     EXPECT_EQ(2u, timer_manager->NumScheduled());
 
     timer_manager->CancelAll();
-    EXPECT_TRUE(timer->canceled);
+    EXPECT_TRUE(timer->canceled());
     EXPECT_EQ(0u, timer_manager->NumScheduled());
 }
 

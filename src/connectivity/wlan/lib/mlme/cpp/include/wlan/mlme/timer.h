@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_
-#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_H_
 
 #include <lib/timekeeper/system_clock.h>
 #include <lib/zx/time.h>
@@ -12,9 +12,16 @@
 
 namespace wlan {
 
+class Timer;
+
+struct TimerScheduler {
+    virtual zx_status_t Schedule(Timer* timer, zx::time deadline) = 0;
+    virtual zx_status_t Cancel(Timer* timer) = 0;
+};
+
 class Timer {
    public:
-    explicit Timer(uint64_t id);
+    explicit Timer(TimerScheduler* scheduler, uint64_t id);
     virtual ~Timer();
 
     virtual zx::time Now() const = 0;
@@ -26,24 +33,18 @@ class Timer {
     uint64_t id() const { return id_; }
     zx::time deadline() const { return deadline_; }
 
-   protected:
-    virtual zx_status_t SetTimerImpl(zx::time deadline) = 0;
-    virtual zx_status_t CancelTimerImpl() = 0;
-
    private:
+    TimerScheduler* scheduler_;
     uint64_t id_;
     zx::time deadline_;
 };
 
 class SystemTimer final : public Timer {
    public:
-    SystemTimer(uint64_t id, zx::timer timer);
+    SystemTimer(TimerScheduler* scheduler, uint64_t id, zx::timer timer);
 
     zx::time Now() const override { return clock_.Now(); }
-
-   protected:
-    zx_status_t SetTimerImpl(zx::time deadline) override;
-    zx_status_t CancelTimerImpl() override;
+    zx::timer* inner() { return &timer_; }
 
    private:
     timekeeper::SystemClock clock_;
@@ -52,4 +53,4 @@ class SystemTimer final : public Timer {
 
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_TIMER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_H_

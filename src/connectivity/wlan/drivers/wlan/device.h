@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
-#define GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
-
-#include "minstrel.h"
-#include "proxy_helpers.h"
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 
 #include <ddk/driver.h>
 #include <ddktl/protocol/ethernet.h>
@@ -14,27 +11,27 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/timer.h>
 #include <zircon/compiler.h>
-
-#include <fuchsia/wlan/minstrel/cpp/fidl.h>
 
 #include <mutex>
 #include <thread>
 #include <tuple>
 
 #include "lib/svc/cpp/services.h"
+#include "minstrel.h"
+#include "proxy_helpers.h"
 
 typedef struct zx_port_packet zx_port_packet_t;
 
 namespace wlan {
-
-class Timer;
 
 class Device : public DeviceInterface {
    public:
@@ -88,6 +85,14 @@ class Device : public DeviceInterface {
                                  ::fuchsia::wlan::minstrel::Peer* peer_fidl) override final;
 
    private:
+    struct TimerSchedulerImpl : public TimerScheduler {
+        Device* device_;
+
+        explicit TimerSchedulerImpl(Device* device) : device_(device) {}
+
+        zx_status_t Schedule(Timer* timer, zx::time deadline) override;
+        zx_status_t Cancel(Timer*) override;
+    };
     enum class DevicePacket : uint64_t {
         kShutdown,
         kPacketQueued,
@@ -111,7 +116,7 @@ class Device : public DeviceInterface {
 
     // Waits the main loop to finish and frees itself afterwards.
     void DestroySelf();
-    void MainLoop();    
+    void MainLoop();
     // Informs the message loop to shut down. Calling this function more than once has no effect.
     void ShutdownMainLoop();
     void ProcessChannelPacketLocked(uint64_t signal_count) __TA_REQUIRES(lock_);
@@ -153,10 +158,11 @@ class Device : public DeviceInterface {
     std::mutex packet_queue_lock_;
     PacketQueue packet_queue_ __TA_GUARDED(packet_queue_lock_);
     std::vector<uint8_t> fidl_msg_buf_ __TA_GUARDED(lock_);
+    TimerSchedulerImpl timer_scheduler_;
 };
 
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info);
 
 }  // namespace wlan
 
-#endif  // GARNET_DRIVERS_WLAN_WLAN_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_

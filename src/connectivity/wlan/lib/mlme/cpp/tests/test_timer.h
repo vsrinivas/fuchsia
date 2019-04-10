@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_
-#define GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_TIMER_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_TIMER_H_
 
 #include <lib/timekeeper/clock.h>
 #include <lib/timekeeper/test_clock.h>
@@ -14,20 +14,23 @@
 
 namespace wlan {
 
+struct TimerSchedulerImpl : public TimerScheduler {
+    zx_status_t Schedule(Timer* timer, zx::time deadline) override { return ZX_OK; }
+
+    zx_status_t Cancel(Timer* timer) override { return ZX_OK; }
+};
+
 class TestTimer final : public Timer {
    public:
-    TestTimer(uint64_t id, timekeeper::TestClock* clock) : Timer(id), clock_(clock) {}
+    TestTimer(uint64_t id, timekeeper::TestClock* clock) : Timer(&scheduler_, id), clock_(clock) {}
 
     zx::time Now() const override { return clock_->Now(); }
 
-   protected:
-    zx_status_t SetTimerImpl(zx::time deadline) override;
-    zx_status_t CancelTimerImpl() override;
-
    private:
     timekeeper::TestClock* clock_;
+    TimerSchedulerImpl scheduler_;
 };
 
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_MLME_TESTS_TEST_TIMER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_TIMER_H_

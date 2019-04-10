@@ -4,8 +4,6 @@
 
 #include "device.h"
 
-#include "probe_sequence.h"
-
 #include <ddk/device.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -35,6 +33,8 @@
 #include <cstring>
 #include <limits>
 #include <utility>
+
+#include "probe_sequence.h"
 
 namespace wlan {
 
@@ -102,7 +102,8 @@ Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
     : parent_(device),
       wlanmac_proxy_(wlanmac_proto),
       services_(services),
-      fidl_msg_buf_(ZX_CHANNEL_MAX_MSG_BYTES) {
+      fidl_msg_buf_(ZX_CHANNEL_MAX_MSG_BYTES),
+      timer_scheduler_(this) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -197,7 +198,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
             errorf("could not add wlan device: %s\n", zx_status_get_string(status));
         }
     }
-
 
     // Clean up if either device add failed.
     if (status != ZX_OK) {
@@ -477,7 +477,7 @@ zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
 
     status = t.wait_async(port_, id, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK) { return status; }
-    timer->reset(new SystemTimer(id, std::move(t)));
+    timer->reset(new SystemTimer(&timer_scheduler_, id, std::move(t)));
 
     return ZX_OK;
 }
@@ -726,7 +726,7 @@ void Device::MainLoop() {
                     if (peer == Packet::Peer::kEthernet) {
                         // ethernet driver somehow decided to send frame after itself is stopped,
                         // drop them as we cannot return the netbuf via CompleteTx.
-                        if (ethmac_proxy_ == nullptr ) { continue; }
+                        if (ethmac_proxy_ == nullptr) { continue; }
                         netbuf = packet->ext_data();
                         ZX_ASSERT(netbuf != nullptr);
                     }
@@ -926,6 +926,16 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
 void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     if (minstrel_ == nullptr) { return; }
     minstrel_->AddPeer(assoc_ctx);
+}
+
+zx_status_t Device::TimerSchedulerImpl::Schedule(Timer* timer, zx::time deadline) {
+    auto sys_timer = static_cast<SystemTimer*>(timer);
+    return sys_timer->inner()->set(deadline, zx::nsec(0));
+}
+
+zx_status_t Device::TimerSchedulerImpl::Cancel(Timer* timer) {
+    auto sys_timer = static_cast<SystemTimer*>(timer);
+    return sys_timer->inner()->cancel();
 }
 
 }  // namespace wlan
