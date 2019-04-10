@@ -44,11 +44,6 @@ var (
 const (
 	nodenameEnvVar = "FUCHSIA_NODENAME"
 	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
-	testOutdirEnvVar = "FUCHSIA_TEST_OUTDIR"
-
-	// An environment variable set by Swarming pointing to a particular directory from which
-	// all files within will be isolated upon completion of a task.
-	isolatedOutdirEnvVar = "ISOLATED_OUTDIR"
 )
 
 func usage() {
@@ -124,12 +119,7 @@ func execute(tests []testsharder.Test, output *Output, nodename, sshKeyFile stri
 
 	localTester := &SubprocessTester{
 		dir: localWD,
-		env: append(
-			os.Environ(),
-			// We redirect this environment variable so that tests need not take a dependency on
-			// LUCI infrastructure terms.
-			fmt.Sprintf("%s=%s", testOutdirEnvVar, os.Getenv(isolatedOutdirEnvVar)),
-		),
+		env: os.Environ(),
 	}
 
 	if err := runTests(linux, localTester.Test, output); err != nil {
