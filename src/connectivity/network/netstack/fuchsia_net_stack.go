@@ -29,16 +29,6 @@ type stackImpl struct {
 func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
-	// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
-	broadaddr := []byte(ifs.mu.nic.Addr)
-	if len(ifs.mu.nic.Netmask) != len(ifs.mu.nic.Addr) {
-		logger.Errorf("mismatched netmask and address length for nic: %+v", ifs.mu.nic)
-		return nil
-	}
-
-	for i := range broadaddr {
-		broadaddr[i] |= ^ifs.mu.nic.Netmask[i]
-	}
 
 	// TODO(tkilbourn): distinguish between enabled and link up
 	administrativeStatus := stack.AdministrativeStatusDisabled
