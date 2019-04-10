@@ -118,6 +118,14 @@ DECLARE_SINGLETON_MUTEX(PerfmonLock);
 
 static ktl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(PerfmonLock::Get());
 
+static inline void enable_counters(PerfmonState* state) {
+    __arm_wsr64("pmcr_el0", state->pmcr_el0);
+}
+
+static inline void disable_counters() {
+    __arm_wsr64("pmcr_el0", 0);
+}
+
 zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state) {
     fbl::AllocChecker ac;
     auto state = ktl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
@@ -603,7 +611,7 @@ static void arm64_perfmon_start_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
 
     // Enable counters as late as possible so that our setup doesn't contribute
     // to the data.
-    __arm_wsr64("pmcr_el0", state->pmcr_el0);
+    enable_counters(state);
 }
 
 // Begin collecting data.
@@ -737,7 +745,7 @@ static void arm64_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void arm64_perfmon_stop_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
     // Disable all counters ASAP.
-    __arm_wsr64("pmcr_el0", 0);
+    disable_counters();
     // TODO(ZX-3302): arm64_pmu_enable_our_irq(false); - needs irq support
 
     DEBUG_ASSERT(arch_ints_disabled());
@@ -841,10 +849,6 @@ zx_status_t arch_perfmon_fini() {
 // Returns true if success, false if buffer is full.
 
 static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* state) {
-    // This is done here instead of in the caller so that it is done *after*
-    // we disable the counters.
-    CPU_STATS_INC(perf_ints);
-
     uint cpu = arch_curr_cpu_num();
     auto data = &state->cpu_data[cpu];
 
@@ -980,9 +984,11 @@ void arm64_pmi_interrupt_handler(const iframe_short_t* frame) TA_NO_THREAD_SAFET
 
     // Turn all counters off as soon as possible so that the counters that
     // haven't overflowed yet stop counting while we're working.
-    __arm_wsr64("pmcr_el0", 0);
+    disable_counters();
 
     DEBUG_ASSERT(arch_ints_disabled());
+
+    CPU_STATS_INC(perf_ints);
 
     auto state = perfmon_state.get();
 
@@ -1007,6 +1013,6 @@ void arm64_pmi_interrupt_handler(const iframe_short_t* frame) TA_NO_THREAD_SAFET
     } else {
         // This is the last thing we do: Once we do this the counters
         // will start counting again.
-        __arm_wsr64("pmcr_el0", state->pmcr_el0);
+        enable_counters(state);
     }
 }

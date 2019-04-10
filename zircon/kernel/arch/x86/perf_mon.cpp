@@ -322,6 +322,14 @@ static inline bool x86_perfmon_lbr_is_supported() {
     return perfmon_lbr_stack_size > 0;
 }
 
+static inline void enable_counters(PerfmonState* state) {
+    write_msr(IA32_PERF_GLOBAL_CTRL, state->global_ctrl);
+}
+
+static inline void disable_counters() {
+    write_msr(IA32_PERF_GLOBAL_CTRL, 0);
+}
+
 zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state) {
     fbl::AllocChecker ac;
     auto state = ktl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
@@ -1479,7 +1487,7 @@ static void x86_perfmon_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_AN
 
     // Enable counters as late as possible so that our setup doesn't contribute
     // to the data.
-    write_msr(IA32_PERF_GLOBAL_CTRL, state->global_ctrl);
+    enable_counters(state);
 }
 
 // Begin collecting data.
@@ -1631,7 +1639,7 @@ static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void x86_perfmon_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
     // Disable all counters ASAP.
-    write_msr(IA32_PERF_GLOBAL_CTRL, 0);
+    disable_counters();
     apic_pmi_mask();
 
     DEBUG_ASSERT(arch_ints_disabled());
@@ -1689,7 +1697,7 @@ static void x86_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
     DEBUG_ASSERT(!atomic_load(&perfmon_active));
     DEBUG_ASSERT(!raw_context);
 
-    write_msr(IA32_PERF_GLOBAL_CTRL, 0);
+    disable_counters();
     apic_pmi_mask();
     x86_perfmon_clear_overflow_indicators();
 
@@ -1767,10 +1775,6 @@ static perfmon_record_header_t* x86_perfmon_write_last_branches(
 // Returns true if success, false if buffer is full.
 
 static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
-    // This is done here instead of in the caller so that it is done *after*
-    // we disable the counters.
-    CPU_STATS_INC(perf_ints);
-
     uint cpu = arch_curr_cpu_num();
     auto data = &state->cpu_data[cpu];
 
@@ -1983,10 +1987,12 @@ void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSI
     // Otherwise once we reset the counter that overflowed the other counters
     // will resume counting, and if we don't reset them too then CTR_FRZ
     // remains set and we'll get no more PMIs.
-    write_msr(IA32_PERF_GLOBAL_CTRL, 0);
+    disable_counters();
 #endif
 
     DEBUG_ASSERT(arch_ints_disabled());
+
+    CPU_STATS_INC(perf_ints);
 
     auto state = perfmon_state.get();
 
@@ -2012,7 +2018,7 @@ void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSI
     // If buffer is full leave everything turned off.
     if (!success) {
 #if TRY_FREEZE_ON_PMI
-        write_msr(IA32_PERF_GLOBAL_CTRL, 0);
+        disable_counters();
 #else
         // Don't restore GLOBAL_CTRL, leave everything turned off.
 #endif
@@ -2026,7 +2032,7 @@ void apic_pmi_interrupt_handler(x86_iframe_t *frame) TA_NO_THREAD_SAFETY_ANALYSI
 #if !TRY_FREEZE_ON_PMI
         // This is the last thing we do: Once we do this the counters
         // will start counting again.
-        write_msr(IA32_PERF_GLOBAL_CTRL, state->global_ctrl);
+        enable_counters(state);
 #endif
     }
 }
