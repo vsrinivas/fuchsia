@@ -1804,7 +1804,6 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
         auto next = data->buffer_next;
         bool saw_timebase = false;
-        bool request_lbr = false;
         // We can't record every event that requested LBR data.
         // It is unspecified which one we pick.
         PmuEventId lbr_id = PERFMON_EVENT_ID_NONE;
@@ -1835,7 +1834,6 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 next = arch_perfmon_write_tick_record(next, id);
             }
             if (state->programmable_flags[i] & perfmon::kPmuConfigFlagLastBranch) {
-                request_lbr = true;
                 lbr_id = id;
             }
             LTRACEF("cpu %u: resetting PMC %u to 0x%" PRIx64 "\n",
@@ -1863,7 +1861,6 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 next = arch_perfmon_write_tick_record(next, id);
             }
             if (state->fixed_flags[i] & perfmon::kPmuConfigFlagLastBranch) {
-                request_lbr = true;
                 lbr_id = id;
             }
             LTRACEF("cpu %u: resetting FIXED %u to 0x%" PRIx64 "\n",
@@ -1932,7 +1929,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             }
         }
 
-        if (request_lbr) {
+        if (lbr_id != PERFMON_EVENT_ID_NONE) {
             next = x86_perfmon_write_last_branches(state, cr3, next, lbr_id);
         }
 
