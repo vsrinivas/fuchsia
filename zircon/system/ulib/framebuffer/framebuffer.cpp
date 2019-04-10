@@ -41,6 +41,23 @@ static zx_handle_t vmo = ZX_HANDLE_INVALID;
 static bool inited = false;
 static bool in_single_buffer_mode;
 
+static zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t* id_out);
+static void fb_release_image(uint64_t id);
+
+// Imports an event handle to use for image synchronization. This function
+// always consumes |handle|. Id must be unique and not equal to FB_INVALID_ID.
+static zx_status_t fb_import_event(zx_handle_t handle, uint64_t id);
+static void fb_release_event(uint64_t id);
+
+// Presents the image identified by |image_id|.
+//
+// If |wait_event_id| corresponds to an imported event, then driver will wait for
+// for ZX_EVENT_SIGNALED before using the buffer. If |signal_event_id| corresponds
+// to an imported event, then the driver will signal ZX_EVENT_SIGNALED when it is
+// done with the image.
+static zx_status_t fb_present_image(uint64_t image_id,
+                                    uint64_t wait_event_id, uint64_t signal_event_id);
+
 static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width, uint32_t height,
                                     zx_pixel_format_t format, int32_t type) {
     fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
@@ -256,7 +273,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
             return status;
         }
 
-        if ((status = fb_present_image(image_id, INVALID_ID, INVALID_ID, INVALID_ID)) != ZX_OK) {
+        if ((status = fb_present_image(image_id, INVALID_ID, INVALID_ID)) != ZX_OK) {
             *err_msg_out = "Failed to present single_buffer mode framebuffer";
             return status;
         }
@@ -388,13 +405,8 @@ void fb_release_event(uint64_t id) {
     zx_channel_write(dc_handle, 0, &release_evt_msg, sizeof(release_evt_msg), NULL, 0);
 }
 
-zx_status_t fb_present_image2(uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id) {
-    return fb_present_image(image_id, wait_event_id, INVALID_ID, signal_event_id);
-}
-
 zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
-                             uint64_t present_event_id, uint64_t signal_event_id) {
-    ZX_ASSERT(present_event_id == INVALID_ID);
+                             uint64_t signal_event_id) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
@@ -415,35 +427,6 @@ zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
     apply_msg.hdr.txid = txid++;
     apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
     return zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), NULL, 0);
-}
-
-zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out) {
-    uint32_t size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-    fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
-    alloc_msg.hdr.txid = txid++;
-    alloc_msg.size = size;
-
-    fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
-    zx_channel_call_args_t call_args = {};
-    call_args.wr_bytes = &alloc_msg;
-    call_args.rd_bytes = &alloc_rsp;
-    call_args.rd_handles = vmo_out;
-    call_args.wr_num_bytes = sizeof(alloc_msg);
-    call_args.rd_num_bytes = sizeof(alloc_rsp);
-    call_args.rd_num_handles = 1;
-    uint32_t actual_bytes, actual_handles;
-    zx_status_t status;
-    if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles)) != ZX_OK) {
-        if (alloc_rsp.res != ZX_OK) {
-            status = alloc_rsp.res;
-        }
-        return status;
-    }
-    static const char kVmoName[] = "framebuffer";
-    zx_object_set_property(*vmo_out, ZX_PROP_NAME, kVmoName, sizeof(kVmoName));
-    return ZX_OK;
 }
 
 zx_status_t fb_enable_vsync(bool enable) {
