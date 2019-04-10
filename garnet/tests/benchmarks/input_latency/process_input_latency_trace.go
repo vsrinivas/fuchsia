@@ -159,6 +159,7 @@ func reportInputLatency(model benchmarking.Model, testSuite string, testResultsF
 		median := computePercentile(totalInputLatencyValues, 50)
 		max := computeMax(totalInputLatencyValues)
 
+		fmt.Printf("Computed %d total input latency values\n", len(totalInputLatencyValues))
 		fmt.Printf("Total input latency mean: %.4gms\n", mean)
 		fmt.Printf("Total input latency median: %.4gms\n", median)
 		fmt.Printf("Total input latency max: %.4gms\n", max)

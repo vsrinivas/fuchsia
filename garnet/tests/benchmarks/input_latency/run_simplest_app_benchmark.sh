@@ -38,18 +38,19 @@ killall set_root_view* || true
 echo "== $BENCHMARK_LABEL: Starting app..."
 /bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx
 
-sleep 5
+sleep 3
 
 # Start tracing.
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE
-trace record --categories=input,gfx,magma --duration=20 --buffer-size=12 --output-file=$TRACE_FILE &
+trace record --categories=input,gfx,magma --duration=5 --buffer-size=12 --output-file=$TRACE_FILE &
 
-for unused in `seq 1 10`
-do
-  /bin/input tap 500 500
-  sleep 1
-done
+sleep 1
+
+# Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps vsync
+# interval. 100 taps span the entire vsync interval 1 time at 100 equidistant
+# points.
+/bin/input --tap_event_count=100 --duration=3350 tap 500 500
 
 sleep 15
 
