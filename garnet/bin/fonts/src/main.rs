@@ -12,9 +12,8 @@ mod manifest;
 
 use self::font_service::FontService;
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_fonts::ProviderMarker as FontProviderMarker;
-use fuchsia_app::server::ServicesServer;
+use fuchsia_component::server::ServiceFs;
+use futures::StreamExt;
 use getopts;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -63,14 +62,10 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating async executor for Font service failed")?;
 
-    let fut = ServicesServer::new()
-        .add_service((FontProviderMarker::NAME, move |channel| {
-            font_service::spawn_server(service.clone(), channel)
-        }))
-        .start()
-        .context("Creating ServicesServer for Font service failed")?;
-    executor
-        .run_singlethreaded(fut)
-        .context("Attempt to start up Font service on async::Executor failed")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |stream| font_service::spawn_server(service.clone(), stream));
+    fs.take_and_serve_directory_handle()?;
+    let () = executor.run_singlethreaded(fs.collect());
     Ok(())
 }

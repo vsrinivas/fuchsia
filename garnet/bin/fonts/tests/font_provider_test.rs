@@ -9,8 +9,8 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_fonts as fonts;
-use fuchsia_app::client::{App, LaunchOptions, Launcher};
 use fuchsia_async as fasync;
+use fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 
@@ -57,9 +57,8 @@ async fn get_font_info_basic(
 }
 
 fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher
-        .launch("fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch(&launcher, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
         .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
@@ -125,17 +124,14 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
         std::fs::File::open("/pkg/data/testdata/test_fonts")?,
     )?;
 
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher
-        .launch_with_options(
-            "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(),
-            Some(vec![
-                "--font-manifest".to_string(),
-                "/test_fonts/manifest.json".to_string(),
-            ]),
-            launch_options,
-        )
-        .context("Failed to launch fonts::Provider")?;
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(),
+        Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
+        launch_options,
+    )
+    .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
         .connect_to_service(fonts::ProviderMarker)

@@ -138,6 +138,45 @@ pub mod client {
         url: String,
         arguments: Option<Vec<String>>,
     ) -> Result<App, Error> {
+        launch_with_options(launcher, url, arguments, LaunchOptions::new())
+    }
+
+    /// Options for the launcher when starting an applications.
+    pub struct LaunchOptions {
+        namespace: Option<Box<FlatNamespace>>
+    }
+
+    impl LaunchOptions {
+        /// Creates default launch options.
+        pub fn new() -> LaunchOptions {
+            LaunchOptions {
+                namespace: None
+            }
+        }
+
+        /// Adds a new directory to the namespace for the new process.
+        pub fn add_dir_to_namespace(
+            &mut self,
+            path: String,
+            dir: File
+        ) -> Result<&mut Self, Error> {
+            let handle = fdio::transfer_fd(dir)?;
+            let namespace = self.namespace.get_or_insert_with(||
+                  Box::new(FlatNamespace {paths: vec![], directories: vec![]}));
+            namespace.paths.push(path);
+            namespace.directories.push(zx::Channel::from(handle));
+
+            Ok(self)
+        }
+    }
+
+    /// Launch an application at the specified URL.
+    pub fn launch_with_options(
+        launcher: &LauncherProxy,
+        url: String,
+        arguments: Option<Vec<String>>,
+        options: LaunchOptions,
+    ) -> Result<App, Error> {
         let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
         let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
@@ -147,7 +186,7 @@ pub mod client {
             out: None,
             err: None,
             directory_request: Some(directory_server_chan),
-            flat_namespace: None,
+            flat_namespace: options.namespace,
             additional_services: None,
         };
 

@@ -16,8 +16,8 @@ rustc_binary("font_server") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//third_party/rust_crates:failure",
@@ -82,8 +82,8 @@ rustc_library("font_provider_test") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//third_party/rust_crates:failure",

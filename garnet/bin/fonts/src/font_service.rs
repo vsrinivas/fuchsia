@@ -9,7 +9,6 @@ use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl;
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::RequestStream;
 use fidl_fuchsia_fonts as fonts;
 use fidl_fuchsia_mem as mem;
 use fuchsia_async as fasync;
@@ -327,12 +326,12 @@ impl FontService {
     }
 }
 
-pub fn spawn_server(font_service: Arc<FontService>, chan: fasync::Channel) {
+pub fn spawn_server(font_service: Arc<FontService>, stream: fonts::ProviderRequestStream) {
     // TODO(sergeyu): Consider making handle_font_provider_request() and
     // load_asset_to_vmo() asynchronous and using try_for_each_concurrent()
     // instead of try_for_each() here. That would be useful only if clients can
     // send more than one concurrent request.
-    let stream_complete = fonts::ProviderRequestStream::from_channel(chan)
+    let stream_complete = stream
         .try_for_each(move |request| font_service.handle_font_provider_request(request))
         .map(|_| ());
     fasync::spawn(stream_complete);
