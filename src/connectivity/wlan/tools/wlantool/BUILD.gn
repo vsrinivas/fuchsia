@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:structopt",
   ]
 }

@@ -18,6 +18,7 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use hex::FromHex;
 use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -166,15 +167,16 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             sme.scan(&mut req, remote).context("error sending scan request")?;
             await!(handle_scan_transaction(local))
         }
-        opts::ClientCmd::Connect { iface_id, ssid, password, phy, cbw, scan_type } => {
+        opts::ClientCmd::Connect { iface_id, ssid, password, psk, phy, cbw, scan_type } => {
+            let credential = match make_credential(password, psk) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("credential error: {}", e);
+                    return Ok(())
+                }
+            };
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints::create_proxy()?;
-            let password = password.unwrap_or(String::new()).as_bytes().to_vec();
-            let credential = if password.is_empty() {
-                fidl_sme::Credential::None(fidl_sme::Empty)
-            } else {
-                fidl_sme::Credential::Password(password)
-            };
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
                 credential,
@@ -291,6 +293,20 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn make_credential(password: Option<String>, psk: Option<String>)
+                   -> Result<fidl_sme::Credential, failure::Error>
+{
+    match (password, psk) {
+        (Some(password), None) => Ok(fidl_sme::Credential::Password(password.as_bytes().to_vec())),
+        (None, Some(psk)) => {
+            let psk = Vec::from_hex(psk).map_err(|_| format_err!("PSK is invalid"))?;
+            Ok(fidl_sme::Credential::Psk(psk))
+        },
+        (None, None) => Ok(fidl_sme::Credential::None(fidl_sme::Empty)),
+        _ => bail!("cannot use password and PSK at once"),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -586,5 +602,28 @@ mod tests {
         assert!(MacAddr::from_str("01:02:03:ab:cd").is_err());
         assert!(MacAddr::from_str("01:02:03:04:05:06:07").is_err());
         assert!(MacAddr::from_str("01:02:gg:gg:gg:gg").is_err());
+    }
+
+    #[test]
+    fn make_credentials() {
+        let credential = make_credential(None, None).expect("credential is valid");
+        assert_eq!(credential, fidl_sme::Credential::None(fidl_sme::Empty));
+
+        let credential = make_credential(Some("hi".to_string()), None)
+            .expect("credential is valid");
+        assert_eq!(credential, fidl_sme::Credential::Password("hi".as_bytes().to_vec()));
+
+        let psk = "f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e";
+        let credential = make_credential(None, Some(psk.to_string()))
+            .expect("credential is valid");
+        assert_eq!(credential, fidl_sme::Credential::Psk(vec![
+            0xf4, 0x2c, 0x6f, 0xc5, 0x2d, 0xf0, 0xeb, 0xef,
+            0x9e, 0xbb, 0x4b, 0x90, 0xb3, 0x8a, 0x5f, 0x90,
+            0x2e, 0x83, 0xfe, 0x1b, 0x13, 0x5a, 0x70, 0xe2,
+            0x3a, 0xed, 0x76, 0x2e, 0x97, 0x10, 0xa1, 0x2e,
+        ]));
+
+        make_credential(Some("hi".to_string()), Some(psk.to_string()))
+            .expect_err("credential is invalid");
     }
 }

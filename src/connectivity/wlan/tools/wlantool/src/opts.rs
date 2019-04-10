@@ -196,6 +196,8 @@ pub enum ClientCmd {
         ssid: String,
         #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
         password: Option<String>,
+        #[structopt(short = "hash", long = "hash", help = "WPA2 PSK as hex string")]
+        psk: Option<String>,
         #[structopt(
             short = "y",
             long = "phy",
