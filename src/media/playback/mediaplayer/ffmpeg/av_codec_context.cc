@@ -102,6 +102,7 @@ const char* EncodingFromCodecId(AVCodecID from) {
 // Determines if codec_id represents an LPCM audio format.
 bool IsLpcm(AVCodecID codec_id) {
   switch (codec_id) {
+    case AV_CODEC_ID_PCM_F32LE:
     case AV_CODEC_ID_PCM_S16BE:
     case AV_CODEC_ID_PCM_S16LE:
     case AV_CODEC_ID_PCM_S24BE:
