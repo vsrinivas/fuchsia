@@ -90,11 +90,11 @@ pub fn get_rsna(
 ) -> Result<Option<Rsna>, failure::Error> {
     let a_rsne_bytes = match credential {
         fidl_sme::Credential::None(_) => {
-            ensure!(bss.rsn.is_none(), "password provided for open network, but none expected");
+            ensure!(bss.rsn.is_none(), "password required for secure network, but none provided");
             return Ok(None);
         },
         fidl_sme::Credential::Psk(_) | fidl_sme::Credential::Password(_) => {
-            ensure!(bss.rsn.is_some(), "password required for secure network, but none provided");
+            ensure!(bss.rsn.is_some(), "password provided for open network, but none expected");
             &bss.rsn.as_ref().unwrap()[..]
         },
         _ => bail!("unsupported credential type")
