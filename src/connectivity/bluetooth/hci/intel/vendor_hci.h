@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_
+
+#include <lib/zx/channel.h>
 
 #include <queue>
 
@@ -10,8 +13,6 @@
 #include "src/connectivity/bluetooth/core/bt-host/common/device_address.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
-
-#include <lib/zx/channel.h>
 
 namespace btintel {
 
@@ -86,7 +87,8 @@ struct SecureSendEventParams {
 } __PACKED;
 
 struct BootloaderVendorEventParams {
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(BootloaderVendorEventParams);
+  BootloaderVendorEventParams() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(BootloaderVendorEventParams);
 
   uint8_t vendor_event_code;
   uint8_t vendor_params[];
@@ -96,8 +98,8 @@ class VendorHci {
  public:
   explicit VendorHci(zx::channel* ctrl);
 
-  // When |acl| is not nullptr, WaitForEventPacket will wait on both control and ACL
-  // channels.
+  // When |acl| is not nullptr, WaitForEventPacket will wait on both control and
+  // ACL channels.
   void enable_events_on_bulk(zx::channel* acl) { acl_ = acl; }
 
   ReadVersionReturnParams SendReadVersion() const;
@@ -138,3 +140,5 @@ class VendorHci {
 };
 
 }  // namespace btintel
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_

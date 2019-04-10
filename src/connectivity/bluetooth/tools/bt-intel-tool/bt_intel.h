@@ -77,7 +77,8 @@ struct IntelSecureSendEventParams {
 } __PACKED;
 
 struct IntelBootloaderVendorEventParams {
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(IntelBootloaderVendorEventParams);
+  IntelBootloaderVendorEventParams() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(IntelBootloaderVendorEventParams);
 
   uint8_t vendor_event_code;
   uint8_t vendor_params[];

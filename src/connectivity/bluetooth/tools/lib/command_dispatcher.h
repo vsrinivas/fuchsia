@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_TOOLS_LIB_COMMAND_DISPATCHER_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_TOOLS_LIB_COMMAND_DISPATCHER_H_
 
-#include <map>
-
+#include <fbl/macros.h>
 #include <lib/fit/function.h>
 
+#include <map>
+
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
 
 namespace bluetooth_tools {
 
@@ -66,7 +66,7 @@ class CommandDispatcher final {
   };
   std::map<std::string, CommandHandlerData> handler_map_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(CommandDispatcher);
 };
 
 }  // namespace bluetooth_tools

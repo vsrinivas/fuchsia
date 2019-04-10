@@ -9,8 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/lib/fxl/macros.h"
-
 namespace bt_beacon_reader {
 
 class App final : public fuchsia::bluetooth::le::CentralDelegate {
@@ -34,7 +32,7 @@ class App final : public fuchsia::bluetooth::le::CentralDelegate {
 
   bool just_tilts_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(App);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(App);
 };
 
 }  // namespace bt_beacon_reader

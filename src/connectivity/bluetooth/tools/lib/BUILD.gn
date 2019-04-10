@@ -10,6 +10,7 @@ source_set("lib") {
 
   deps = [
     "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
   ]
 
   public_deps = [
