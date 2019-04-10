@@ -11,3 +11,5 @@ using paddr32 = uint32;
 using gpaddr = uint64;
 using off = uint64;
 using rights = uint32;
+using signals = uint32;
+using vm_option = uint32;

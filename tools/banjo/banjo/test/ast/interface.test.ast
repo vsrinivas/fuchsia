@@ -396,6 +396,26 @@ BanjoAst {
                     namespace: None,
                     name: "uint32"
                 }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "signals"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "vm_option"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
             )
         ]
     }
