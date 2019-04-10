@@ -432,8 +432,8 @@ func (ios *iostate) loopControl() error {
 							case obs&zx.SignalSocketPeerClosed != 0:
 								return nil
 							}
+							panic(err)
 						}
-						panic(err)
 					}
 				}
 				panic(err)
