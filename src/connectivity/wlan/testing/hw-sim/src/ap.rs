@@ -8,8 +8,9 @@ pub mod tests {
     use {
         fidl, fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as wlan_device,
         fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_sme as fidl_sme,
-        fidl_fuchsia_wlan_tap as wlantap, fuchsia_app as app,
+        fidl_fuchsia_wlan_tap as wlantap,
         fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
+        fuchsia_component as app,
         fuchsia_zircon::{self as zx, prelude::*},
         futures::channel::mpsc,
         futures::prelude::*,

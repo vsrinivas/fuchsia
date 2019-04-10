@@ -7,8 +7,10 @@
 #![recursion_limit = "128"]
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_device,
-    fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_device as fidl_device,
+    fidl_fuchsia_wlan_tap as wlantap,
+    fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::prelude::*,
     std::sync::{Arc, Mutex},
@@ -253,7 +255,9 @@ mod simulation_tests {
         super::*,
         crate::{ap, minstrel},
         failure::ensure,
-        fidl_fuchsia_wlan_service as fidl_wlan_service, fuchsia_app as app, fuchsia_zircon as zx,
+        fidl_fuchsia_wlan_service as fidl_wlan_service,
+        fuchsia_component as app,
+        fuchsia_zircon as zx,
         pin_utils::pin_mut,
         std::{
             fs::{self, File},
