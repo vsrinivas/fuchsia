@@ -5,6 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <usb/usb-request.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -27,6 +28,13 @@ enum {
 // IRQ indices
 enum {
     IRQ_USB3,
+};
+
+// Component indices
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_UMS,
+    COMPONENT_COUNT,
 };
 
 void dwc3_print_status(dwc3_t* dwc) {
@@ -126,7 +134,7 @@ static zx_status_t xhci_get_protocol(void* ctx, uint32_t proto_id, void* protoco
     auto* dwc = static_cast<dwc3_t*>(ctx);
     // XHCI uses same MMIO and IRQ as dwc3, so we can just share our pdev protoocl
     // with the XHCI driver
-    return device_get_protocol(dwc->parent, proto_id, protocol);
+    return device_get_protocol(dwc->pdev_dev, proto_id, protocol);
 }
 
 static void xhci_release(void* ctx) {
@@ -489,15 +497,30 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     }
     list_initialize(&dwc->pending_completions);
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dwc->pdev);
+    composite_protocol_t composite;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
     if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_COMPOSITE\n", __func__);
+        goto fail;
+    }
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
+    if (actual != COMPONENT_COUNT) {
+        zxlogf(ERROR, "%s: Could not get components\n", __func__);
         goto fail;
     }
 
-    // USB mode switch is optional, so ignore errors here.
-    status = device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
+    status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &dwc->pdev);
     if (status != ZX_OK) {
-        dwc->ums.ops = nullptr;
+        zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_PDEV\n", __func__);
+        goto fail;
+    }
+
+    status = device_get_protocol(components[COMPONENT_UMS], ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_USB_MODE_SWITCH\n", __func__);
+        goto fail;
     }
 
     status = pdev_get_bti(&dwc->pdev, 0, dwc->bti_handle.reset_and_get_address());
@@ -511,6 +534,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         list_initialize(&ep->queued_reqs);
     }
     dwc->parent = parent;
+    dwc->pdev_dev = components[COMPONENT_PDEV];
     dwc->usb_mode = USB_MODE_NONE;
 
     mmio_buffer_t mmio;
@@ -574,7 +598,8 @@ static zx_driver_ops_t dwc3_driver_ops = [](){
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(dwc3, dwc3_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(dwc3, dwc3_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC3),

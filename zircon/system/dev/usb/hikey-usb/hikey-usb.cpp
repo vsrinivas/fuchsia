@@ -62,17 +62,7 @@ zx_status_t HikeyUsb::Init() {
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC3},
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "dwc3";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.props = props;
-    args.prop_count = static_cast<uint32_t>(fbl::count_of(props));
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-
-    return pdev_device_add(&pdev, 0, &args, &zxdev_);
+    return DdkAdd("dwc3", 0, props, countof(props));
 }
 
 zx_status_t HikeyUsb::UsbModeSwitchSetMode(usb_mode_t mode) {

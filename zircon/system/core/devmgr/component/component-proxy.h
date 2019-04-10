@@ -16,6 +16,7 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
+#include <ddktl/protocol/usb/modeswitch.h>
 #include <lib/zx/channel.h>
 
 #include "proxy-protocol.h"
@@ -33,7 +34,8 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::I2cProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
-                       public ddk::SysmemProtocol<ComponentProxy> {
+                       public ddk::SysmemProtocol<ComponentProxy>,
+                       public ddk::UsbModeSwitchProtocol<ComponentProxy> {
 public:
     ComponentProxy(zx_device_t* parent, zx::channel rpc)
         : ComponentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -88,6 +90,9 @@ public:
     zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
     zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
     zx_status_t SysmemConnect(zx::channel allocator2_request);
+
+    // USB Mode Switch
+    zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
 
 private:
     zx::channel rpc_;

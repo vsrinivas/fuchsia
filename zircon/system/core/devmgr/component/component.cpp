@@ -25,6 +25,7 @@ Component::Component(zx_device_t* parent)
     device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
     device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &sysmem_);
+    device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &ums_);
 }
 
 zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
@@ -358,6 +359,30 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
     }
 }
 
+zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* resp_handle_count) {
+    if (ums_.ops == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto* req = reinterpret_cast<const UsbModeSwitchProxyRequest*>(req_buf);
+    if (req_size < sizeof(*req)) {
+        zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, req_size, sizeof(*req));
+        return ZX_ERR_INTERNAL;
+    }
+
+    auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
+    *out_resp_size = sizeof(*resp);
+    switch (req->op) {
+    case UsbModeSwitchOp::SET_MODE:
+        return usb_mode_switch_set_mode(&ums_, req->mode);
+    default:
+        zxlogf(ERROR, "%s: unknown USB Mode Switch op %u\n", __func__,
+               static_cast<uint32_t>(req->op));
+        return ZX_ERR_INTERNAL;
+    }
+}
 
 zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     zx::unowned_channel channel(raw_channel);
@@ -418,6 +443,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_SYSMEM:
         status = RpcSysmem(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                            resp_handles, &resp_handle_count);
+        break;
+    case ZX_PROTOCOL_USB_MODE_SWITCH:
+        status = RpcUms(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                        resp_handles, &resp_handle_count);
         break;
     default:
         zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);

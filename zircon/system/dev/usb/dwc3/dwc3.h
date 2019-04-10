@@ -83,6 +83,7 @@ typedef struct {
 
 typedef struct {
     zx_device_t* zxdev = nullptr;
+    zx_device_t* pdev_dev = nullptr;
     zx_device_t* xhci_dev = nullptr;
     zx_device_t* parent = nullptr;
     pdev_protocol_t pdev;

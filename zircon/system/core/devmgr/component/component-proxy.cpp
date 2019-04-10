@@ -52,6 +52,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_SYSMEM:
         proto->ops = &sysmem_protocol_ops_;
         return ZX_OK;
+    case ZX_PROTOCOL_USB_MODE_SWITCH:
+        proto->ops = &usb_mode_switch_protocol_ops_;
+        return ZX_OK;
     default:
         zxlogf(ERROR, "%s unsupported protocol \'%u\'\n", __func__, proto_id);
         return ZX_ERR_NOT_SUPPORTED;
@@ -475,7 +478,7 @@ zx_status_t ComponentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out
     req.header.proto_id = ZX_PROTOCOL_POWER;
     req.op = PowerOp::GET_STATUS;
 
-    auto status = Rpc(&req.header, sizeof(req), &resp.header,  sizeof(resp));
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
     if (status != ZX_OK) {
         return status;
     }
@@ -521,6 +524,16 @@ zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
     zx_handle_t handle = allocator2_request.release();
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
+}
+
+zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
+    UsbModeSwitchProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_USB_MODE_SWITCH;
+    req.op = UsbModeSwitchOp::SET_MODE;
+    req.mode = mode;
+
+    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }
 
 const zx_driver_ops_t driver_ops = []() {
