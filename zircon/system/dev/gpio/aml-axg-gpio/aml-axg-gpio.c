@@ -519,7 +519,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         .ctx = gpio,
         .ops = &gpio_device_proto,
         .proto_id = ZX_PROTOCOL_GPIO_IMPL,
-        .proto_ops = &gpio->gpio,
+        .proto_ops = &gpio_ops,
     };
 
     status = device_add(parent, &args, &gpio->zxdev);
