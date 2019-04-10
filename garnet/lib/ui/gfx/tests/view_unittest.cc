@@ -436,8 +436,6 @@ TEST_F(ViewTest, ViewNodePairedToView) {
   EXPECT_EQ(view->global_id(), view_node->GetView()->global_id());
   EXPECT_EQ(view->id(), view_node->GetView()->id());
   EXPECT_EQ(view->global_id(), view_node->FindOwningView()->global_id());
-  EXPECT_EQ(view->global_id(),
-            view_node->FindOwningViewOrImportNode()->global_id());
 }
 
 TEST_F(ViewTest, ViewNodeNotInResourceMap) {

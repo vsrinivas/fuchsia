@@ -6,13 +6,14 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
-#include "lib/ui/scenic/cpp/resources.h"
+#include <lib/component/cpp/startup_context.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <src/lib/fxl/macros.h>
 
 namespace shadertoy_client {
 

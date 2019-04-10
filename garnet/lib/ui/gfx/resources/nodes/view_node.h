@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_NODES_VIEW_NODE_H_
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -22,11 +23,10 @@ class ViewNode final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 
   // |Node|
-  ResourcePtr FindOwningView() const override;
-  ResourcePtr FindOwningViewOrImportNode() const override;
+  ViewPtr FindOwningView() const override;
 
   // Returns pointer to the View that owns this node.
-  View* GetView() const;
+  View* GetView() const { return FindOwningView().get(); }
 
  private:
   friend class View;

@@ -9,13 +9,13 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 
 #include <memory>
 #include <queue>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 

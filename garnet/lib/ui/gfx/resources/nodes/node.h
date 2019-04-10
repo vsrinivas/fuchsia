@@ -23,6 +23,7 @@ class Scene;
 class View;
 
 using NodePtr = fxl::RefPtr<Node>;
+using ViewPtr = fxl::RefPtr<View>;
 
 // Node is an abstract base class for all the concrete node types listed in
 // scene/services/nodes.fidl.
@@ -110,10 +111,7 @@ class Node : public Resource {
   // Walk up tree until we find the responsible View; otherwise return nullptr.
   // N.B. Typically the view and node are in the same session, but it's possible
   // to have them inhabit different sessions.
-  virtual ResourcePtr FindOwningView() const;
-
-  // TODO(SCN-1006): After v2 transition, remove this function.
-  virtual ResourcePtr FindOwningViewOrImportNode() const;
+  virtual ViewPtr FindOwningView() const;
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);

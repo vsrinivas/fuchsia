@@ -10,7 +10,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 // Sets up an ImagePipe (including scene graph aspects) such that FrameSink can

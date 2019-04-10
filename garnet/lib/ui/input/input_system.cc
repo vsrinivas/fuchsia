@@ -100,30 +100,11 @@ escher::vec2 TransformPointerEvent(const escher::ray4& ray,
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.
-glm::mat4 FindGlobalTransform(gfx::ResourcePtr view) {
-  glm::mat4 global_transform(1.f);  // Default is identity transform.
-  if (!view) {
-    return global_transform;
+glm::mat4 FindGlobalTransform(gfx::ViewPtr view) {
+  if (!view || !view->GetViewNode()) {
+    return glm::mat4(1.f);  // Default is identity transform.
   }
-
-  if (view->IsKindOf<gfx::View>()) {
-    gfx::ViewPtr v2view = view->As<gfx::View>();
-    if (v2view->view_holder() && v2view->view_holder()->parent()) {
-      global_transform = v2view->view_holder()->parent()->GetGlobalTransform();
-    }
-  } else {
-    // TODO(SCN-1006): After v2 transition, remove this clause.
-    FXL_DCHECK(view->IsKindOf<gfx::Import>());
-    if (gfx::ImportPtr import = view->As<gfx::Import>()) {
-      if (gfx::Resource* delegate = import->delegate()) {
-        FXL_DCHECK(delegate->IsKindOf<gfx::Node>());
-        if (gfx::NodePtr node = delegate->As<gfx::Node>()) {
-          global_transform = node->GetGlobalTransform();
-        }
-      }
-    }
-  }
-  return global_transform;
+  return view->GetViewNode()->GetGlobalTransform();
 }
 
 // The x and y values are in device (screen) coordinates.
@@ -179,14 +160,11 @@ PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x,
 // Helper for DispatchTouchCommand.
 // Ensure sessions get each event just once: stamp out duplicate
 // sessions in the rest of the hits. This assumes:
-// - there may be a ViewManager that interposes many Import nodes
-// - each client has at most one "view" (whether View or Import)
-// - each client receives at most one hit per view
-// which reflects the pre-v2 migration scene graph.
-// TODO(SCN-1006): Enable multiple Views per client.
+// - each session has at most one View
+// - each session receives at most one hit per View
 // TODO(SCN-935): Return full set of hits to each client.
 void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
-                               std::vector<gfx::ResourcePtr>* views) {
+                               std::vector<gfx::ViewPtr>* views) {
   FXL_DCHECK(views);
   for (size_t k = start_idx; k < views->size(); ++k) {
     if ((*views)[k] && ((*views)[k]->session()->id() == session_id)) {
@@ -196,34 +174,13 @@ void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.
-bool IsFocusChange(gfx::ResourcePtr view) {
+bool IsFocusChange(gfx::ViewPtr view) {
   FXL_DCHECK(view);
-  if (view->IsKindOf<gfx::View>()) {
-    gfx::ViewPtr view_ptr = view->As<gfx::View>();
-    if (view_ptr->connected()) {
-      return view_ptr->view_holder()->GetViewProperties().focus_change;
-    }
-  } else {
-    // TODO(SCN-1006): After v2 transition, remove this clause.
-    // We traverse up the scene graph to find the closest "ancestor" Import
-    // starting from a given Import. We assume the scene graph is set up by
-    // ViewManager in a very particular configuration for this traversal.
-    FXL_DCHECK(view->IsKindOf<gfx::Import>());
-    if (gfx::ImportPtr import = view->As<gfx::Import>()) {
-      if (gfx::Resource* imported = import->imported_resource()) {
-        if (imported->IsKindOf<gfx::EntityNode>()) {
-          gfx::NodePtr attach_point = imported->As<gfx::EntityNode>();
 
-          auto resource = attach_point->FindOwningView();
-
-          if (resource && resource->IsKindOf<gfx::View>()) {
-            gfx::ViewPtr view = resource->As<gfx::View>();
-            return view->view_holder()->GetViewProperties().focus_change;
-          }
-        }
-      }
-    }
+  if (view->connected()) {
+    return view->view_holder()->GetViewProperties().focus_change;
   }
+
   return true;  // Implicitly, all Views can receive focus.
 }
 }  // namespace
@@ -340,17 +297,17 @@ void InputCommandDispatcher::DispatchTouchCommand(
     ViewStack hit_views;
     {
       // Find the View for each hit. Don't hold on to these RefPtrs!
-      std::vector<gfx::ResourcePtr> views;
+      std::vector<gfx::ViewPtr> views;
       views.reserve(hits.size());
       for (const gfx::Hit& hit : hits) {
         FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-        views.push_back(hit.node->FindOwningViewOrImportNode());
+        views.push_back(hit.node->FindOwningView());
       }
       FXL_DCHECK(hits.size() == views.size());
 
       // Find the global transform for each hit, fill out hit_views.
       for (size_t i = 0; i < hits.size(); ++i) {
-        if (gfx::ResourcePtr view = views[i]) {
+        if (gfx::ViewPtr view = views[i]) {
           hit_views.stack.push_back(
               {view->global_id(), FindGlobalTransform(view)});
           if (/*TODO(SCN-919): view_id may mask input */ false) {
@@ -466,7 +423,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
     ViewStack hit_view;
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ResourcePtr view = hit.node->FindOwningViewOrImportNode()) {
+      if (gfx::ViewPtr view = hit.node->FindOwningView()) {
         hit_view.stack.push_back(
             {view->global_id(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
@@ -540,7 +497,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
     GlobalId view_id;
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ResourcePtr view = hit.node->FindOwningViewOrImportNode()) {
+      if (gfx::ViewPtr view = hit.node->FindOwningView()) {
         view_id = view->global_id();
 
         escher::ray4 screen_ray =

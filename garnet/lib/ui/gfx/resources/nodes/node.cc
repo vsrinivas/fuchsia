@@ -10,6 +10,7 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
 #include "lib/escher/geometry/types.h"
 #include "src/lib/fxl/logging.h"
 
@@ -421,23 +422,7 @@ void Node::RefreshScene(Scene* new_scene) {
       *this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
-// TODO(SCN-1006): After v2 transition, remove this function.
-ResourcePtr Node::FindOwningViewOrImportNode() const {
-  if (is_exported() &&         // Exported
-      imports().size() > 0 &&  // Imported
-      tag_value() > 0) {       // Used by ViewManager
-    FXL_DCHECK(imports().size() == 1);
-    return ImportPtr(imports()[0]);
-  }
-
-  if (parent()) {
-    return parent()->FindOwningViewOrImportNode();
-  }
-
-  return nullptr;
-}
-
-ResourcePtr Node::FindOwningView() const {
+ViewPtr Node::FindOwningView() const {
   if (parent()) {
     return parent()->FindOwningView();
   }

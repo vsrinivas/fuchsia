@@ -6,13 +6,13 @@
 #define GARNET_BIN_UI_SNAPSHOT_VIEW_H_
 
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 
 namespace snapshot {
 
