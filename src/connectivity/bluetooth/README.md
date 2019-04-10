@@ -60,10 +60,10 @@ available command line tools for testing/debugging.
 ### Running Tests
 
 Your build configuration may or may not include Bluetooth tests. Ensure
-Bluetooth tests are built and installed when paving or OTA'ing with `fx set`:
+Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](docs/development/workflows/fx.md#configure-a-build):
 
   ```
-  $ fx set x64 --preinstall="garnet/packages/tests/bluetooth"
+  $ fx set workstation.x64 --with-base="//bundles:tools,//src/connectivity/bluetooth"
   ```
 
 #### Tests
@@ -139,7 +139,7 @@ See the [Integration Test README](tests/integration/README.md)
 The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
 
   ```
-  fx set x64 --args="kernel_cmdline_files=[\"//local/kernel_cmdline.txt\"]"
+  fx set workstation.x64 --args="kernel_cmdline_files=[\"//local/kernel_cmdline.txt\"]"
   ```
 
 Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full logging for the USB transport, Intel HCI, and host drivers:
