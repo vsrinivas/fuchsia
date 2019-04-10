@@ -41,7 +41,6 @@
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"
-#include "vendor.h"
 #include "workqueue.h"
 
 #define BRCMF_SCAN_IE_LEN_MAX 2048
@@ -179,19 +178,6 @@ struct parsed_vndr_ies {
     uint32_t count;
     struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
-
-uint8_t nl80211_band_to_fwil(enum nl80211_band band) {
-    switch (band) {
-    case NL80211_BAND_2GHZ:
-        return WLC_BAND_2G;
-    case NL80211_BAND_5GHZ:
-        return WLC_BAND_5G;
-    default:
-        WARN_ON(1);
-        break;
-    }
-    return 0;
-}
 
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
     struct brcmu_chan ch_inf;
@@ -989,192 +975,6 @@ static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev, bool is_protecte
 
     return err;
 }
-#ifdef FIGURE_THIS_OUT_LATER
-static zx_status_t brcmf_set_key_mgmt(struct net_device* ndev,
-                                      struct cfg80211_connect_params* sme) {
-    struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    int32_t val;
-    zx_status_t err;
-    const struct brcmf_tlv* rsn_ie;
-    const uint8_t* ie;
-    uint32_t ie_len;
-    uint32_t offset;
-    uint16_t rsn_cap;
-    uint32_t mfp;
-    uint16_t count;
-
-    profile->use_fwsup = BRCMF_PROFILE_FWSUP_NONE;
-
-    if (!sme->crypto.n_akm_suites) {
-        return ZX_OK;
-    }
-
-    err = brcmf_fil_bsscfg_int_get(ndev_to_if(ndev), "wpa_auth", (uint32_t*)&val);
-    if (err != ZX_OK) {
-        brcmf_err("could not get wpa_auth (%d)\n", err);
-        return err;
-    }
-    if (val & (WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED)) {
-        switch (sme->crypto.akm_suites[0]) {
-        case WLAN_AKM_SUITE_8021X:
-            val = WPA_AUTH_UNSPECIFIED;
-            if (sme->want_1x) {
-                profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
-            }
-            break;
-        case WLAN_AKM_SUITE_PSK:
-            val = WPA_AUTH_PSK;
-            break;
-        default:
-            brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    } else if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED)) {
-        switch (sme->crypto.akm_suites[0]) {
-        case WLAN_AKM_SUITE_8021X:
-            val = WPA2_AUTH_UNSPECIFIED;
-            if (sme->want_1x) {
-                profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
-            }
-            break;
-        case WLAN_AKM_SUITE_8021X_SHA256:
-            val = WPA2_AUTH_1X_SHA256;
-            if (sme->want_1x) {
-                profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
-            }
-            break;
-        case WLAN_AKM_SUITE_PSK_SHA256:
-            val = WPA2_AUTH_PSK_SHA256;
-            break;
-        case WLAN_AKM_SUITE_PSK:
-            val = WPA2_AUTH_PSK;
-            break;
-        default:
-            brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    if (profile->use_fwsup == BRCMF_PROFILE_FWSUP_1X) {
-        brcmf_dbg(INFO, "using 1X offload\n");
-    }
-
-    if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
-        goto skip_mfp_config;
-    }
-    /* The MFP mode (1 or 2) needs to be determined, parse IEs. The
-     * IE will not be verified, just a quick search for MFP config
-     */
-    rsn_ie = brcmf_parse_tlvs((const uint8_t*)sme->ie, sme->ie_len, WLAN_IE_TYPE_RSNE);
-    if (!rsn_ie) {
-        goto skip_mfp_config;
-    }
-    ie = (const uint8_t*)rsn_ie;
-    ie_len = rsn_ie->len + TLV_HDR_LEN;
-    /* Skip unicast suite */
-    offset = TLV_HDR_LEN + WPA_IE_VERSION_LEN + WPA_IE_MIN_OUI_LEN;
-    if (offset + WPA_IE_SUITE_COUNT_LEN >= ie_len) {
-        goto skip_mfp_config;
-    }
-    /* Skip multicast suite */
-    count = ie[offset] + (ie[offset + 1] << 8);
-    offset += WPA_IE_SUITE_COUNT_LEN + (count * WPA_IE_MIN_OUI_LEN);
-    if (offset + WPA_IE_SUITE_COUNT_LEN >= ie_len) {
-        goto skip_mfp_config;
-    }
-    /* Skip auth key management suite(s) */
-    count = ie[offset] + (ie[offset + 1] << 8);
-    offset += WPA_IE_SUITE_COUNT_LEN + (count * WPA_IE_MIN_OUI_LEN);
-    if (offset + WPA_IE_SUITE_COUNT_LEN > ie_len) {
-        goto skip_mfp_config;
-    }
-    /* Ready to read capabilities */
-    mfp = BRCMF_MFP_NONE;
-    rsn_cap = ie[offset] + (ie[offset + 1] << 8);
-    if (rsn_cap & RSN_CAP_MFPR_MASK) {
-        mfp = BRCMF_MFP_REQUIRED;
-    } else if (rsn_cap & RSN_CAP_MFPC_MASK) {
-        mfp = BRCMF_MFP_CAPABLE;
-    }
-    brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "mfp", mfp);
-
-skip_mfp_config:
-    brcmf_dbg(CONN, "setting wpa_auth to %d\n", val);
-    err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wpa_auth", val);
-    if (err != ZX_OK) {
-        brcmf_err("could not set wpa_auth (%d)\n", err);
-        return err;
-    }
-
-    return err;
-}
-
-static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
-                                       struct cfg80211_connect_params* sme) {
-    struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
-    struct brcmf_cfg80211_security* sec;
-    struct brcmf_wsec_key key;
-    int32_t val;
-    zx_status_t err = ZX_OK;
-
-    brcmf_dbg(CONN, "key len (%d)\n", sme->key_len);
-
-    if (sme->key_len == 0) {
-        return ZX_OK;
-    }
-
-    sec = &profile->sec;
-    brcmf_dbg(CONN, "wpa_versions 0x%x cipher_pairwise 0x%x\n", sec->wpa_versions,
-              sec->cipher_pairwise);
-
-    if (sec->wpa_versions & (NL80211_WPA_VERSION_1 | NL80211_WPA_VERSION_2)) {
-        return ZX_OK;
-    }
-
-    if (!(sec->cipher_pairwise & (WPA_CIPHER_WEP_40 | WPA_CIPHER_WEP_104))) {
-        return ZX_OK;
-    }
-
-    memset(&key, 0, sizeof(key));
-    key.len = (uint32_t)sme->key_len;
-    key.index = (uint32_t)sme->key_idx;
-    if (key.len > sizeof(key.data)) {
-        brcmf_err("Too long key length (%u)\n", key.len);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(key.data, sme->key, key.len);
-    key.flags = BRCMF_PRIMARY_KEY;
-    switch (sec->cipher_pairwise) {
-    case WPA_CIPHER_WEP_40:
-        key.algo = CRYPTO_ALGO_WEP1;
-        break;
-    case WPA_CIPHER_WEP_104:
-        key.algo = CRYPTO_ALGO_WEP128;
-        break;
-    default:
-        brcmf_err("Invalid algorithm (%d)\n", sme->crypto.ciphers_pairwise[0]);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    /* Set the new key/index */
-    brcmf_dbg(CONN, "key length (%d) key index (%d) algo (%d)\n", key.len, key.index, key.algo);
-    brcmf_dbg(CONN, "key \"%s\"\n", key.data);
-    err = send_key_to_dongle(ndev_to_if(ndev), &key);
-    if (err != ZX_OK) {
-        return err;
-    }
-
-    if (sec->auth_type == NL80211_AUTHTYPE_SHARED_KEY) {
-        brcmf_dbg(CONN, "set auth_type to shared key\n");
-        val = WL_AUTH_SHARED_KEY; /* shared key */
-        err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "auth", val);
-        if (err != ZX_OK) {
-            brcmf_err("set auth failed (%d)\n", err);
-        }
-    }
-    return err;
-}
-#endif // FIGURE_THIS_OUT_LATER
 
 // Retrieve information about the station with the specified MAC address. Note that
 // association ID is only available when operating in AP mode (for our clients).
@@ -1677,7 +1477,6 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
 static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi) {
     struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    struct ieee80211_supported_band* band;
     struct brcmu_chan ch;
     uint16_t channel;
     uint16_t notify_capability;
@@ -1698,12 +1497,6 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
         bi->ctl_ch = ch.control_ch_num;
     }
     channel = bi->ctl_ch;
-
-    if (channel <= CH_MAX_2G_CHANNEL) {
-        band = wiphy->bands[NL80211_BAND_2GHZ];
-    } else {
-        band = wiphy->bands[NL80211_BAND_5GHZ];
-    }
 
     notify_capability = bi->capability;
     notify_interval = bi->beacon_period;

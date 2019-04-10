@@ -83,8 +83,6 @@ source_set("brcmfmac_srcs") {
     "usb.c",
     "usb.h",
     "utils.c",
-    "vendor.c",
-    "vendor.h",
     "workqueue.c",
     "workqueue.h",
   ]
