@@ -55,11 +55,6 @@ public:
     virtual magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                           std::unique_ptr<magma::PlatformBuffer>* buffer_out) = 0;
 
-    virtual magma_status_t
-    AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
-                    std::unique_ptr<magma::PlatformBuffer>* buffer_out,
-                    std::unique_ptr<PlatformBufferDescription>* buffer_description_out) = 0;
-
     virtual magma::Status CreateBufferCollectionToken(uint32_t* handle_out) = 0;
     virtual magma::Status
     ImportBufferCollection(uint32_t handle,

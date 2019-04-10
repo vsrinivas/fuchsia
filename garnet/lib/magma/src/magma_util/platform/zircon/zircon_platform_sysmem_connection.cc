@@ -155,7 +155,8 @@ public:
     Status Bind(const fuchsia::sysmem::AllocatorSyncPtr& allocator, uint32_t handle)
     {
         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token((zx::channel(handle)));
-        zx_status_t status = allocator->BindSharedCollection(std::move(token), collection_.NewRequest());
+        zx_status_t status =
+            allocator->BindSharedCollection(std::move(token), collection_.NewRequest());
         if (status != ZX_OK)
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
         return MAGMA_STATUS_OK;
@@ -267,95 +268,6 @@ public:
 
         if (!info.buffers[0].vmo) {
             return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-        }
-
-        *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());
-        if (!buffer_out) {
-            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "PlatformBuffer::Import failed");
-        }
-
-        return MAGMA_STATUS_OK;
-    }
-
-    magma_status_t
-    AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
-                    std::unique_ptr<magma::PlatformBuffer>* buffer_out,
-                    std::unique_ptr<PlatformBufferDescription>* buffer_description_out) override
-    {
-
-        if (format != MAGMA_FORMAT_R8G8B8A8) {
-            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
-                            static_cast<uint32_t>(format));
-        }
-        fuchsia::sysmem::BufferUsage usage;
-        usage.vulkan = fuchsia::sysmem::vulkanUsageTransientAttachment |
-                       fuchsia::sysmem::vulkanUsageStencilAttachment |
-                       fuchsia::sysmem::vulkanUsageInputAttachment |
-                       fuchsia::sysmem::vulkanUsageColorAttachment |
-                       fuchsia::sysmem::vulkanUsageTransferSrc |
-                       fuchsia::sysmem::vulkanUsageTransferDst |
-                       fuchsia::sysmem::vulkanUsageStorage | fuchsia::sysmem::vulkanUsageSampled;
-        if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
-            usage.video = fuchsia::sysmem::videoUsageHwProtected;
-        }
-        if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-            usage.display = fuchsia::sysmem::displayUsageLayer;
-        }
-        fuchsia::sysmem::BufferCollectionConstraints constraints;
-        constraints.usage = usage;
-        constraints.min_buffer_count_for_camping = 1;
-        constraints.has_buffer_memory_constraints = true;
-        if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
-            constraints.buffer_memory_constraints.secure_required = true;
-            constraints.buffer_memory_constraints.secure_permitted = true;
-        }
-        if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-            // For now, assume using amlogic display.
-            // TODO(ZX-3355) Send token to display connection.
-            constraints.buffer_memory_constraints.physically_contiguous_required = true;
-        }
-        constraints.image_format_constraints_count = 1;
-        auto& format_constraints = constraints.image_format_constraints[0];
-        format_constraints = fuchsia::sysmem::ImageFormatConstraints();
-        format_constraints.color_spaces_count = 1;
-        format_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
-        format_constraints.min_coded_width = width;
-        format_constraints.max_coded_width = width;
-        format_constraints.min_coded_height = height;
-        format_constraints.max_coded_height = height;
-        format_constraints.min_bytes_per_row = 0;
-        format_constraints.max_bytes_per_row = 0xffffffff;
-        if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-            // For now, assume using amlogic display
-            // TODO(ZX-3355) Send token to display connection.
-            format_constraints.bytes_per_row_divisor = 32;
-        }
-        format_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
-        format_constraints.layers = 1;
-        fuchsia::sysmem::BufferCollectionInfo_2 info;
-        magma_status_t result = AllocateBufferCollection(constraints, &info);
-        if (result != MAGMA_STATUS_OK)
-            return DRET(result);
-
-        if (info.buffer_count != 1) {
-            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-        }
-
-        if (!info.buffers[0].vmo) {
-            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-        }
-
-        if (buffer_description_out) {
-            if (!info.settings.has_image_format_constraints) {
-                return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-            }
-            *buffer_description_out = std::make_unique<PlatformBufferDescription>();
-            (*buffer_description_out)->count = 1u;
-            result = InitializeDescriptionFromSettings(info.settings, buffer_description_out->get())
-                         .get();
-            if (result != MAGMA_STATUS_OK) {
-                return DRET(result);
-            }
         }
 
         *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());

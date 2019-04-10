@@ -491,32 +491,6 @@ magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection
     return MAGMA_STATUS_OK;
 }
 
-magma_status_t
-magma_sysmem_allocate_texture(magma_sysmem_connection_t connection, uint32_t flags, uint32_t format,
-                              uint32_t width, uint32_t height, uint32_t* buffer_handle_out,
-                              magma_buffer_format_description_t* buffer_format_description_out)
-{
-    std::unique_ptr<magma::PlatformBuffer> buffer;
-    auto sysmem_connection = reinterpret_cast<magma_sysmem::PlatformSysmemConnection*>(connection);
-
-    *buffer_format_description_out = 0;
-    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
-    magma_status_t result;
-    result =
-        sysmem_connection->AllocateTexture(flags, format, width, height, &buffer, &description);
-    if (result != MAGMA_STATUS_OK) {
-        return DRET_MSG(result, "AllocateTexture failed: %d", result);
-    }
-
-    if (!buffer->duplicate_handle(buffer_handle_out)) {
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "duplicate_handle failed");
-    }
-
-    *buffer_format_description_out =
-        reinterpret_cast<magma_buffer_format_description_t>(description.release());
-    return MAGMA_STATUS_OK;
-}
-
 void magma_buffer_format_description_release(magma_buffer_format_description_t description)
 {
     delete reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);

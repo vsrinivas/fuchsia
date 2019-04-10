@@ -23,13 +23,6 @@ void magma_sysmem_connection_release(magma_sysmem_connection_t connection);
 magma_status_t magma_sysmem_allocate_buffer(magma_sysmem_connection_t connection, uint32_t flags,
                                             uint64_t size, uint32_t* buffer_handle_out);
 
-// Allocate a texture. |buffer_format_description_out| must later be released
-// using magma_buffer_format_description_release.
-magma_status_t
-magma_sysmem_allocate_texture(magma_sysmem_connection_t connection, uint32_t flags, uint32_t format,
-                              uint32_t width, uint32_t height, uint32_t* buffer_handle_out,
-                              magma_buffer_format_description_t* buffer_format_description_out);
-
 void magma_buffer_format_description_release(magma_buffer_format_description_t description);
 
 // |image_planes_out| must be an array with MAGMA_MAX_IMAGE_PLANES elements.
