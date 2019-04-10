@@ -341,9 +341,14 @@ fn start_connect_txn(
     password: &[u8],
 ) -> Result<fidl_sme::ConnectTransactionProxy, failure::Error> {
     let (connect_txn, remote) = create_proxy()?;
+    let credential = if password.is_empty() {
+        fidl_sme::Credential::None(fidl_sme::Empty)
+    } else {
+        fidl_sme::Credential::Password(password.to_vec())
+    };
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.to_vec(),
-        password: password.to_vec(),
+        credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
             phy: fidl_common::Phy::Ht,
@@ -1024,7 +1029,12 @@ mod tests {
         match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
-                assert_eq!(expected_password, &req.password[..]);
+                match &req.credential {
+                    fidl_sme::Credential::Password(password) => {
+                        assert_eq!(&expected_password[..], &password[..]);
+                    }
+                    _ => panic!("expected password")
+                }
                 txn.expect("expected a Connect transaction channel")
                     .into_stream()
                     .expect("failed to create a connect txn stream")

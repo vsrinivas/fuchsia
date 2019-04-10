@@ -26,7 +26,8 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, E
 }
 
 pub async fn get_iface_sme_proxy(
-    wlan_svc: &WlanService, iface_id: u16,
+    wlan_svc: &WlanService,
+    iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_client_sme(iface_id, sme_remote))
@@ -39,15 +40,18 @@ pub async fn get_iface_sme_proxy(
 }
 
 pub async fn connect_to_network(
-    iface_sme_proxy: &fidl_sme::ClientSmeProxy, target_ssid: Vec<u8>, target_pwd: Vec<u8>,
+    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
+    target_ssid: Vec<u8>,
+    target_pwd: Vec<u8>,
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
     let target_ssid_clone = target_ssid.clone();
 
     // create ConnectRequest holding network info
+    let credential = credential_from_password(target_pwd);
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid,
-        password: target_pwd,
+        credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
             phy: fidl_common::Phy::Ht,
@@ -187,6 +191,14 @@ async fn get_scan_results(
     bail!("ScanTransaction channel closed before scan finished");
 }
 
+fn credential_from_password(pwd: Vec<u8>) -> fidl_sme::Credential {
+    if pwd.is_empty() {
+        fidl_sme::Credential::None(fidl_sme::Empty)
+    } else {
+        fidl_sme::Credential::Password(pwd)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,10 +226,7 @@ mod tests {
         let iface_id_list: Vec<u16> = vec![0, 1, 35, 36];
         let mut iface_list_vec = vec![];
         for id in &iface_id_list {
-            iface_list_vec.push(IfaceListItem {
-                iface_id: *id,
-                path: "/foo/bar/".to_string(),
-            });
+            iface_list_vec.push(IfaceListItem { iface_id: *id, path: "/foo/bar/".to_string() });
         }
 
         let fut = get_iface_list(&wlan_service);
@@ -278,12 +287,11 @@ mod tests {
         exec: &mut fasync::Executor,
         next_device_service_req: &mut StreamFuture<DeviceServiceRequestStream>,
     ) -> Poll<DeviceServiceRequest> {
-        exec.run_until_stalled(next_device_service_req)
-            .map(|(req, stream)| {
-                *next_device_service_req = stream.into_future();
-                req.expect("did not expect the DeviceServiceRequestStream to end")
-                    .expect("error polling device service request stream")
-            })
+        exec.run_until_stalled(next_device_service_req).map(|(req, stream)| {
+            *next_device_service_req = stream.into_future();
+            req.expect("did not expect the DeviceServiceRequestStream to end")
+                .expect("error polling device service request stream")
+        })
     }
 
     fn send_iface_list_response(
@@ -298,9 +306,7 @@ mod tests {
         };
 
         // now send the response back
-        let _result = responder.send(&mut ListIfacesResponse {
-            ifaces: iface_list_vec,
-        });
+        let _result = responder.send(&mut ListIfacesResponse { ifaces: iface_list_vec });
     }
 
     #[test]
@@ -328,8 +334,7 @@ mod tests {
         status: zx::Status,
     ) {
         let responder = match poll_device_service_req(exec, server) {
-            Poll::Ready(DeviceServiceRequest::GetClientSme { responder, .. }) =>
-                responder,
+            Poll::Ready(DeviceServiceRequest::GetClientSme { responder, .. }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a GetClientSme request"),
         };
@@ -390,7 +395,10 @@ mod tests {
     }
 
     fn test_connect(
-        ssid: &str, password: &str, connected_to: &str, result_code: ConnectResultCode,
+        ssid: &str,
+        password: &str,
+        connected_to: &str,
+        result_code: ConnectResultCode,
     ) -> bool {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
@@ -408,7 +416,7 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            target_password,
+            credential_from_password(target_password.to_vec()),
             result_code,
         );
 
@@ -456,7 +464,7 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            target_password,
+            credential_from_password(target_password.to_vec()),
         );
     }
 
@@ -478,31 +486,36 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            target_password,
+            credential_from_password(vec![]),
         );
     }
 
     fn verify_connect_request_info(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8], expected_password: &[u8],
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<ClientSmeRequestStream>,
+        expected_ssid: &[u8],
+        expected_credential: fidl_sme::Credential,
     ) {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
-                assert_eq!(expected_password, &req.password[..]);
+                assert_eq_credentials(&req.credential, &expected_credential);
             }
             _ => panic!("expected a Connect request"),
         }
     }
 
     fn send_connect_request_response(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8], expected_password: &[u8], connect_result: ConnectResultCode,
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<ClientSmeRequestStream>,
+        expected_ssid: &[u8],
+        expected_credential: fidl_sme::Credential,
+        connect_result: ConnectResultCode,
     ) {
         let responder = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
-                assert_eq!(expected_password, &req.password[..]);
+                assert_eq_credentials(&req.credential, &expected_credential);
                 txn.expect("expected a Connect transaction channel")
             }
             Poll::Pending => panic!("expected a request to be available"),
@@ -518,31 +531,27 @@ mod tests {
     }
 
     fn poll_client_sme_request(
-        exec: &mut fasync::Executor, next_client_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_client_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) -> Poll<ClientSmeRequest> {
-        exec.run_until_stalled(next_client_sme_req)
-            .map(|(req, stream)| {
-                *next_client_sme_req = stream.into_future();
-                req.expect("did not expect the ClientSmeRequestStream to end")
-                    .expect("error polling client sme request stream")
-            })
+        exec.run_until_stalled(next_client_sme_req).map(|(req, stream)| {
+            *next_client_sme_req = stream.into_future();
+            req.expect("did not expect the ClientSmeRequestStream to end")
+                .expect("error polling client sme request stream")
+        })
     }
 
     fn create_client_sme_proxy() -> (fidl_sme::ClientSmeProxy, ClientSmeRequestStream) {
         let (proxy, server) = endpoints::create_proxy::<ClientSmeMarker>()
             .expect("failed to create sme client channel");
-        let server = server
-            .into_stream()
-            .expect("failed to create a client sme response stream");
+        let server = server.into_stream().expect("failed to create a client sme response stream");
         (proxy, server)
     }
 
     fn create_wlan_service_util() -> (DeviceServiceProxy, DeviceServiceRequestStream) {
         let (proxy, server) = endpoints::create_proxy::<DeviceServiceMarker>()
             .expect("failed to create a wlan_service channel for tests");
-        let server = server
-            .into_stream()
-            .expect("failed to create a wlan_service response stream");
+        let server = server.into_stream().expect("failed to create a wlan_service response stream");
         (proxy, server)
     }
 
@@ -605,7 +614,8 @@ mod tests {
     }
 
     fn send_disconnect_request_response(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,
@@ -633,8 +643,10 @@ mod tests {
     }
 
     fn send_status_response(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<ClientSmeRequestStream>,
-        connected_to: Vec<u8>, connecting_to_ssid: Vec<u8>,
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<ClientSmeRequestStream>,
+        connected_to: Vec<u8>,
+        connecting_to_ssid: Vec<u8>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
@@ -649,8 +661,7 @@ mod tests {
             connecting_to_ssid: connecting_to_ssid,
         };
 
-        rsp.send(&mut response)
-            .expect("Failed to send StatusResponse.");
+        rsp.send(&mut response).expect("Failed to send StatusResponse.");
     }
 
     #[test]
@@ -726,9 +737,7 @@ mod tests {
         transaction
             .send_on_result(&mut scan_results.into_iter())
             .expect("failed to send scan results");
-        transaction
-            .send_on_finished()
-            .expect("failed to send OnFinished to ScanTransaction");
+        transaction.send_on_finished().expect("failed to send OnFinished to ScanTransaction");
     }
 
     fn test_perform_scan_error() -> Result<(), Error> {
@@ -746,7 +755,8 @@ mod tests {
     }
 
     fn send_scan_error_response(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
     ) {
         let transaction = match poll_client_sme_request(exec, server) {
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
@@ -765,21 +775,36 @@ mod tests {
             .into_stream()
             .expect("failed to create a scan transaction stream")
             .control_handle();
-        transaction
-            .send_on_error(&mut scan_error)
-            .expect("failed to send ScanError");
+        transaction.send_on_error(&mut scan_error).expect("failed to send ScanError");
     }
 
     fn create_bss_info(
-        bssid: [u8; 6], ssid: Vec<u8>, rx_dbm: i8, channel: u8, protected: bool, compatible: bool,
+        bssid: [u8; 6],
+        ssid: Vec<u8>,
+        rx_dbm: i8,
+        channel: u8,
+        protected: bool,
+        compatible: bool,
     ) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo {
-            bssid,
-            ssid,
-            rx_dbm,
-            channel,
-            protected,
-            compatible,
+        fidl_sme::BssInfo { bssid, ssid, rx_dbm, channel, protected, compatible }
+    }
+
+    fn assert_eq_credentials(
+        actual_credential: &fidl_sme::Credential,
+        expected_credential: &fidl_sme::Credential,
+    ) {
+        match actual_credential {
+            fidl_sme::Credential::Password(password) => match expected_credential {
+                fidl_sme::Credential::Password(expected_password) => {
+                    assert_eq!(&expected_password[..], &password[..]);
+                }
+                expected => panic!("got password, expected: {:?}", expected),
+            },
+            fidl_sme::Credential::None(_) => match expected_credential {
+                fidl_sme::Credential::None(_) => (),
+                expected => panic!("got no password, expected: {:?}", expected),
+            },
+            unsupported => panic!("unsupported credential type: {:?}", unsupported),
         }
     }
 }

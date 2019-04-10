@@ -169,9 +169,15 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
         opts::ClientCmd::Connect { iface_id, ssid, password, phy, cbw, scan_type } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints::create_proxy()?;
+            let password = password.unwrap_or(String::new()).as_bytes().to_vec();
+            let credential = if password.is_empty() {
+                fidl_sme::Credential::None(fidl_sme::Empty)
+            } else {
+                fidl_sme::Credential::Password(password)
+            };
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
-                password: password.unwrap_or(String::new()).as_bytes().to_vec(),
+                credential,
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: phy.is_some(),
                     phy: phy.unwrap_or(PhyArg::Vht).into(),

@@ -2,6 +2,7 @@ use bytes::Bytes;
 use eapol;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
+use fidl_fuchsia_wlan_sme as fidl_sme;
 use std::boxed::Box;
 use wlan_common::ie::rsn::{
     akm, cipher,
@@ -84,28 +85,33 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
 
 pub fn get_rsna(
     device_info: &DeviceInfo,
-    password: &[u8],
+    credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Option<Rsna>, failure::Error> {
-    if bss.rsn.is_none() {
-        ensure!(password.is_empty(), "password provided for open network, but none expected");
-    } else {
-        ensure!(!password.is_empty(), "password required for secure network, but none provided");
-    }
-    let a_rsne_bytes = match &bss.rsn {
-        None => return Ok(None),
-        Some(x) => x,
+    let a_rsne_bytes = match credential {
+        fidl_sme::Credential::None(_) => {
+            ensure!(bss.rsn.is_none(), "password provided for open network, but none expected");
+            return Ok(None);
+        },
+        fidl_sme::Credential::Psk(_) | fidl_sme::Credential::Password(_) => {
+            ensure!(bss.rsn.is_some(), "password required for secure network, but none provided");
+            &bss.rsn.as_ref().unwrap()[..]
+        },
+        _ => bail!("unsupported credential type")
     };
-    let a_rsne = rsne::from_bytes(&a_rsne_bytes[..])
+
+    // Credentials supplied and BSS is protected.
+    let a_rsne = rsne::from_bytes(a_rsne_bytes)
         .to_full_result()
-        .map_err(|e| format_err!("invalid RSNE {:?}: {:?}", &a_rsne_bytes[..], e))?;
+        .map_err(|e| format_err!("invalid RSNE {:02x?}: {:?}", a_rsne_bytes, e))?;
     let s_rsne = derive_s_rsne(&a_rsne)?;
     let negotiated_rsne = NegotiatedRsne::from_rsne(&s_rsne)?;
+    let psk = compute_psk(credential, &bss.ssid[..])?;
     let supplicant = wlan_rsn::Supplicant::new_wpa2psk_ccmp128(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
         NonceReader::new(&device_info.addr[..])?,
-        psk::compute(&password[..], &bss.ssid[..])?,
+        psk,
         device_info.addr,
         s_rsne,
         bss.bssid,
@@ -113,6 +119,17 @@ pub fn get_rsna(
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
     Ok(Some(Rsna { negotiated_rsne, supplicant: Box::new(supplicant) }))
+}
+
+fn compute_psk(credential: &fidl_sme::Credential, ssid: &[u8]) -> Result<psk::Psk, failure::Error> {
+    match credential {
+        fidl_sme::Credential::Password(password) => psk::compute(&password[..], ssid),
+        fidl_sme::Credential::Psk(psk) => {
+            ensure!(psk.len() == 32, "PSK must be 32 octets but was {}", psk.len());
+            Ok(psk.clone().into_boxed_slice())
+        },
+        _ => bail!("unsupported credentials configuration"),
+    }
 }
 
 /// Constructs Supplicant's RSNE with:
@@ -244,14 +261,33 @@ mod tests {
     #[test]
     fn test_get_rsna_password_for_unprotected_network() {
         let bss = fake_unprotected_bss_description(b"foo_bss".to_vec());
-        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), "somepass".as_bytes(), &bss);
+        let credential = fidl_sme::Credential::Password("somepass".as_bytes().to_vec());
+        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss);
         assert!(rsna.is_err(), "expect error when password is supplied for unprotected network")
     }
 
     #[test]
     fn test_get_rsna_no_password_for_protected_network() {
         let bss = fake_protected_bss_description(b"foo_bss".to_vec());
-        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), "".as_bytes(), &bss);
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss);
         assert!(rsna.is_err(), "expect error when no password is supplied for protected network")
+    }
+
+    #[test]
+    fn test_get_rsna_psk() {
+        let bss = fake_protected_bss_description(b"foo_bss".to_vec());
+        let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
+        get_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
+            .expect("expected successful RSNA with valid PSK");
+    }
+
+    #[test]
+    fn test_get_rsna_invalid_psk() {
+        let bss = fake_protected_bss_description(b"foo_bss".to_vec());
+        // PSK too short
+        let credential = fidl_sme::Credential::Psk(vec![0xAA; 31]);
+        get_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
+            .expect_err("expected RSNA failure with invalid PSK");
     }
 }
