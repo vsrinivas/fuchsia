@@ -2,72 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::error;
-use std::fmt;
+use failure::Fail;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Fail)]
 pub enum ParseError {
+    #[fail(display = "invalid scheme")]
     InvalidScheme,
+
+    #[fail(display = "invalid host")]
     InvalidHost,
+
+    #[fail(display = "host must be empty to imply absolute path")]
     HostMustBeEmpty,
+
+    #[fail(display = "invalid path")]
     InvalidPath,
+
+    #[fail(display = "invalid name")]
     InvalidName,
+
+    #[fail(display = "invalid variant")]
     InvalidVariant,
+
+    #[fail(display = "invalid hash")]
     InvalidHash,
+
+    #[fail(display = "invalid resource path")]
     InvalidResourcePath,
+
+    #[fail(display = "extra path segments")]
     ExtraPathSegments,
+
+    #[fail(display = "extra query parameters")]
     ExtraQueryParameters,
+
+    #[fail(display = "cannot contain port")]
     CannotContainPort,
+
+    #[fail(display = "cannot contain username")]
     CannotContainUsername,
+
+    #[fail(display = "cannot contain password")]
     CannotContainPassword,
+
+    #[fail(display = "cannot contain query parameters")]
     CannotContainQueryParameters,
-    UrlParseError(url::ParseError),
-}
 
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ParseError::InvalidScheme => write!(f, "invalid scheme"),
-            ParseError::InvalidHost => write!(f, "invalid host"),
-            ParseError::HostMustBeEmpty => write!(f, "host must be empty to imply absolute path"),
-            ParseError::InvalidPath => write!(f, "invalid path"),
-            ParseError::InvalidName => write!(f, "invalid name"),
-            ParseError::InvalidVariant => write!(f, "invalid variant"),
-            ParseError::InvalidHash => write!(f, "invalid hash"),
-            ParseError::InvalidResourcePath => write!(f, "invalid resource path"),
-            ParseError::ExtraPathSegments => write!(f, "extra path segments"),
-            ParseError::ExtraQueryParameters => write!(f, "extra query parameters"),
-            ParseError::CannotContainPort => write!(f, "cannot contain port"),
-            ParseError::CannotContainUsername => write!(f, "cannot contain username"),
-            ParseError::CannotContainPassword => write!(f, "cannot contain password"),
-            ParseError::CannotContainQueryParameters => {
-                write!(f, "cannot contain query parameters")
-            }
-            ParseError::UrlParseError(err) => err.fmt(f),
-        }
-    }
-}
+    #[fail(display = "invalid repository URI")]
+    InvalidRepository,
 
-impl error::Error for ParseError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match *self {
-            ParseError::InvalidScheme => None,
-            ParseError::InvalidHost => None,
-            ParseError::HostMustBeEmpty => None,
-            ParseError::InvalidPath => None,
-            ParseError::InvalidName => None,
-            ParseError::InvalidVariant => None,
-            ParseError::InvalidHash => None,
-            ParseError::InvalidResourcePath => None,
-            ParseError::ExtraPathSegments => None,
-            ParseError::ExtraQueryParameters => None,
-            ParseError::CannotContainPort => None,
-            ParseError::CannotContainUsername => None,
-            ParseError::CannotContainPassword => None,
-            ParseError::CannotContainQueryParameters => None,
-            ParseError::UrlParseError(ref err) => err.source(),
-        }
-    }
+    #[fail(display = "parse error: {}", _0)]
+    UrlParseError(#[cause] url::ParseError),
 }
 
 impl From<url::ParseError> for ParseError {

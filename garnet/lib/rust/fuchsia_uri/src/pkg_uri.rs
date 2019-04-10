@@ -5,8 +5,8 @@
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, HASH_RE, NAME_RE};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_derive::Serialize;
 use std::convert::TryFrom;
-use std::error::Error;
 use std::fmt;
 use std::str;
 use url::percent_encoding::percent_decode;
@@ -124,6 +124,12 @@ impl FuchsiaPkgUri {
         self.resource.as_ref().map(|s| &**s)
     }
 
+    /// Returns true if this URI only contains a hostname, and no other parameters. For example,
+    /// fuchsia-pkg://fuchsia.com.
+    pub fn is_repository(&self) -> bool {
+        self.path == "/" && self.hash.is_none() && self.resource.is_none()
+    }
+
     /// Produce a new [FuchsiaPkgUri] with any resource fragment stripped off.
     pub fn root_uri(&self) -> FuchsiaPkgUri {
         FuchsiaPkgUri {
@@ -138,7 +144,13 @@ impl FuchsiaPkgUri {
         if host.is_empty() {
             return Err(ParseError::InvalidHost);
         }
-        Ok(FuchsiaPkgUri { host, path: "/".to_string(), hash: None, resource: None })
+
+        Ok(FuchsiaPkgUri {
+            host: host.to_string(),
+            path: "/".to_string(),
+            hash: None,
+            resource: None,
+        })
     }
 
     pub fn new_package(
@@ -235,7 +247,77 @@ impl<'de> Deserialize<'de> for FuchsiaPkgUri {
         D: Deserializer<'de>,
     {
         let uri = String::deserialize(de)?;
-        Ok(FuchsiaPkgUri::parse(&uri).map_err(|err| serde::de::Error::custom(err.description()))?)
+        Ok(FuchsiaPkgUri::parse(&uri).map_err(|err| serde::de::Error::custom(err))?)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct RepoUri {
+    uri: FuchsiaPkgUri,
+}
+
+impl RepoUri {
+    pub fn new(host: String) -> Result<Self, ParseError> {
+        Ok(RepoUri { uri: FuchsiaPkgUri::new_repository(host)? })
+    }
+
+    pub fn parse(input: &str) -> Result<Self, ParseError> {
+        let uri = FuchsiaPkgUri::parse(input)?;
+        RepoUri::try_from(uri)
+    }
+
+    pub fn host(&self) -> &str {
+        self.uri.host()
+    }
+}
+
+impl str::FromStr for RepoUri {
+    type Err = ParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        RepoUri::parse(value)
+    }
+}
+
+impl TryFrom<&str> for RepoUri {
+    type Error = ParseError;
+
+    fn try_from(uri: &str) -> Result<Self, Self::Error> {
+        RepoUri::parse(uri)
+    }
+}
+
+impl TryFrom<FuchsiaPkgUri> for RepoUri {
+    type Error = ParseError;
+
+    fn try_from(uri: FuchsiaPkgUri) -> Result<Self, Self::Error> {
+        if uri.is_repository() {
+            Ok(RepoUri { uri })
+        } else {
+            Err(ParseError::InvalidRepository)
+        }
+    }
+}
+
+impl From<RepoUri> for FuchsiaPkgUri {
+    fn from(uri: RepoUri) -> Self {
+        uri.uri
+    }
+}
+
+impl fmt::Display for RepoUri {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.uri.fmt(f)
+    }
+}
+
+// Implement a custom deserializer to make sure we restrict RepositoryConfig.repo_url to actually
+// be a repository URI.
+impl<'de> Deserialize<'de> for RepoUri {
+    fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let uri = FuchsiaPkgUri::deserialize(de)?;
+        Ok(RepoUri::try_from(uri).map_err(|err| serde::de::Error::custom(err))?)
     }
 }
 
@@ -296,6 +378,7 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse) -> Result<Option<String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryInto;
 
     macro_rules! test_parse_ok {
         (
@@ -823,5 +906,32 @@ mod tests {
             ),
             Err(ParseError::InvalidResourcePath)
         );
+    }
+
+    #[test]
+    fn test_repo_uri() {
+        let parsed_pkg_uri = FuchsiaPkgUri::new_repository("fuchsia.com".to_string()).unwrap();
+        let parsed_repo_uri = RepoUri::new("fuchsia.com".to_string()).unwrap();
+
+        let uris = &["fuchsia-pkg://fuchsia.com", "fuchsia-pkg://fuchsia.com/"];
+        for uri in uris {
+            let uri = RepoUri::parse(uri);
+            assert_eq!(uri.as_ref(), Ok(&parsed_repo_uri));
+
+            let uri = uri.unwrap();
+            assert_eq!(uri.host(), "fuchsia.com");
+
+            assert_eq!(uri.try_into().as_ref(), Ok(&parsed_pkg_uri));
+        }
+
+        let uris = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com/foo/0",
+            "fuchsia-pkg://fuchsia.com#bar",
+            "fuchsia-pkg://fuchsia.com?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+        for uri in uris {
+            assert_eq!(RepoUri::parse(uri), Err(ParseError::InvalidRepository));
+        }
     }
 }
