@@ -8,10 +8,9 @@ mod game;
 mod tennis_service;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_game_tennis::TennisServiceMarker;
-use fuchsia_app::server::ServicesServer;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_info, init_with_tags};
+use futures::StreamExt;
 
 fn main() -> Result<(), Error> {
     init_with_tags(&["tennis_service"]).expect("tennis syslog init should not fail");
@@ -19,14 +18,9 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating fuchsia_async executor for tennis service failed")?;
     let tennis = tennis_service::TennisService::new();
-    let done = ServicesServer::new()
-        .add_service((TennisServiceMarker::NAME, move |chan| {
-            tennis.bind(chan);
-        })).start()
-        .context("Creating ServicesServer for tennis service failed")?;
-    executor
-        .run_singlethreaded(done)
-        .context("Attempt to start up tennis services on async::Executor failed")?;
-
+    let mut fs = ServiceFs::new_local();
+    fs.dir("public").add_fidl_service(|stream| tennis.bind(stream));
+    fs.take_and_serve_directory_handle()?;
+    let () = executor.run_singlethreaded(fs.collect());
     Ok(())
 }

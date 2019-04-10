@@ -4,7 +4,6 @@
 
 use crate::game::{Game, PlayerState};
 use failure::ResultExt;
-use fidl::endpoints::RequestStream;
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -21,9 +20,8 @@ impl TennisService {
         TennisService(Arc::new(Mutex::new(Game::new())))
     }
 
-    pub fn bind(&self, chan: fuchsia_async::Channel) {
+    pub fn bind(&self, mut stream: fidl_tennis::TennisServiceRequestStream) {
         let self_clone = self.clone();
-        let mut stream = fidl_tennis::TennisServiceRequestStream::from_channel(chan);
         fuchsia_async::spawn(
             async move {
                 while let Some(msg) = await!(stream.try_next())

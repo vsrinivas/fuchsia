@@ -6,7 +6,7 @@
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};
-use fuchsia_app::client::connect_to_service;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_zircon::DurationNum;
 use std::io;
