@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "dockyard_proxy_local.h"
+
 #include "src/lib/fxl/logging.h"
 
 namespace harvester {

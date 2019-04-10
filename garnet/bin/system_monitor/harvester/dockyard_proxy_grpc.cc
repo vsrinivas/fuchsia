@@ -10,8 +10,6 @@
 #include <memory>
 #include <string>
 
-#include <zircon/status.h>
-
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "src/lib/fxl/logging.h"

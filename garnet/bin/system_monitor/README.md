@@ -1,14 +1,5 @@
 # System Monitor
 
-```
-This is not yet part of garnet/packages/all. If you'd like to see the
-work-in-progress version, please add system_monitor to your build packages with
-something like the following, which will explicitly add this to your build:
-
-$ fx set x64 --monolith \
-  garnet/packages/all,garnet/packages/tools/disabled/system_monitor
-```
-
 The System Monitor is a system for displaying the vital signs of a Fuchsia
 device and its processes. Samples are collected for global and per-process CPU,
 memory usage, and process list which are relayed to the Host computer for

@@ -6,6 +6,7 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_H_
 
 #include <zircon/types.h>
+
 #include <iostream>
 #include <string>
 

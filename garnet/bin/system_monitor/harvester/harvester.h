@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 
+#include <lib/async/default.h>
+#include <lib/zx/time.h>
 #include <zircon/types.h>
+
 #include <iostream>
 #include <string>
 
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
-
-#include <lib/async/default.h>
-#include <lib/zx/time.h>
 
 namespace harvester {
 
