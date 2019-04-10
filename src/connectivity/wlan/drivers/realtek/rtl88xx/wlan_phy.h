@@ -53,7 +53,7 @@ class WlanPhy {
 
     // wlanphy_impl_protocol_ops implementation.
     zx_status_t Query(wlanphy_info_t* info);
-    zx_status_t CreateIface(uint16_t role, uint16_t* iface_id);
+    zx_status_t CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id);
     zx_status_t DestroyIface(uint16_t id);
 
     std::unique_ptr<Device> device_;

@@ -131,8 +131,9 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
         return DEV(ctx)->PhyQuery(info);
     },
-    .create_iface = [](void* ctx, uint16_t mac_role, uint16_t* id) -> zx_status_t {
-        return DEV(ctx)->CreateIface(mac_role, id);
+    .create_iface = [](void* ctx, wlanphy_create_iface_req_t req, uint16_t* out_iface_id)
+            -> zx_status_t {
+        return DEV(ctx)->CreateIface(req, out_iface_id);
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
         return DEV(ctx)->DestroyIface(id);
@@ -3573,7 +3574,7 @@ zx_status_t Device::PhyQuery(wlanphy_info_t* info) {
     return Query(&info->wlan_info);
 }
 
-zx_status_t Device::CreateIface(uint16_t role, uint16_t* id) {
+zx_status_t Device::CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id) {
     debugfn();
 
     {
@@ -3594,8 +3595,8 @@ zx_status_t Device::CreateIface(uint16_t role, uint16_t* id) {
 
     {
         std::lock_guard<std::mutex> guard(lock_);
-        *id = iface_id_;
-        iface_role_ = role;
+        *out_iface_id = iface_id_;
+        iface_role_ = req.role;
         iface_state_ = IFC_RUNNING;
     }
 

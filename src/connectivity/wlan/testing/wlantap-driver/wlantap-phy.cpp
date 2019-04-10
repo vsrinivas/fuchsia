@@ -259,9 +259,9 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
         return std::find(v.cbegin(), v.cend(), t) != v.cend();
     }
 
-    zx_status_t CreateIface(uint16_t role, uint16_t* id) {
+    zx_status_t CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id) {
         zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
-        wlan_device::MacRole dev_role = ConvertMacRole(role);
+        wlan_device::MacRole dev_role = ConvertMacRole(req.role);
         if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
             zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
             return ZX_ERR_NOT_SUPPORTED;
@@ -271,7 +271,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
             [&](uint16_t id, WlantapMac** out_dev) {
                 return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this, out_dev);
             },
-            id);
+            out_iface_id);
         if (status != ZX_OK) {
             zxlogf(ERROR,
                    "wlantap phy: CreateIface: maximum number of interfaces already reached\n");
@@ -390,8 +390,9 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 #define DEV(c) static_cast<WlantapPhy*>(c)
 static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t { return DEV(ctx)->Query(info); },
-    .create_iface = [](void* ctx, uint16_t mac_role, uint16_t* id) -> zx_status_t {
-        return DEV(ctx)->CreateIface(mac_role, id);
+    .create_iface = [](void* ctx, wlanphy_create_iface_req_t req, uint16_t* out_iface_id)
+            -> zx_status_t {
+        return DEV(ctx)->CreateIface(req, out_iface_id);
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
         return DEV(ctx)->DestroyIface(id);

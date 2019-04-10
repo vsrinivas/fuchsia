@@ -2251,7 +2251,8 @@ static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_info_t* phy_info) {
     return ZX_OK;
 }
 
-static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16_t* id) {
+static zx_status_t ath10k_core_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
+                                            uint16_t* out_iface_id) {
     struct ath10k* ar = ctx;
     zx_status_t status = ZX_OK;
 
@@ -2271,7 +2272,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16
     // Currently we only support one interface, so that it is okay to save MAC role in *ar*.
     // We have to review this when we want to support mulitple interfaces.
     // TODO(WLAN-641): for support multiple.
-    ar->mac_role = mac_role;
+    ar->mac_role = req.role;
 
     // Add MAC interface
     device_add_args_t mac_args = {
@@ -2286,7 +2287,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16
     // Add this MAC device into the tree. The parent device is the PHY device.
     status = device_add(ar->zxdev, &mac_args, &ar->zxdev_mac);
     if (status == ZX_OK) {
-        *id = ar->iface_id;
+        *out_iface_id = ar->iface_id;
         ar->num_mac_ifaces++;
     }
 

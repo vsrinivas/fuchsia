@@ -83,6 +83,8 @@ struct QueryResponse {
 
 struct CreateIfaceRequest {
     MacRole role;
+    // TODO(WLAN-927): Make `sme_channel` mandatory once all drivers support the channel.
+    handle<channel>? sme_channel;
 };
 
 struct CreateIfaceResponse {

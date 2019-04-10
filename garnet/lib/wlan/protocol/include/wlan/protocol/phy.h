@@ -7,8 +7,14 @@
 
 #include <wlan/protocol/info.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
+
+typedef struct wlanphy_create_iface_req {
+    uint16_t role;
+    zx_handle_t sme_channel;
+} wlanphy_create_iface_req_t;
 
 typedef struct wlanphy_info {
     // Phy wlan capabilities information

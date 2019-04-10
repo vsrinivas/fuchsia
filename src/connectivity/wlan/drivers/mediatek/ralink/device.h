@@ -85,7 +85,7 @@ class Device {
 
     // ddk wlanphy_protocol_ops
     zx_status_t PhyQuery(wlanphy_info_t* info);
-    zx_status_t CreateIface(uint16_t role, uint16_t* id);
+    zx_status_t CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id);
     zx_status_t DestroyIface(uint16_t id);
 
     // ddk wlanmac_protocol_ops methods

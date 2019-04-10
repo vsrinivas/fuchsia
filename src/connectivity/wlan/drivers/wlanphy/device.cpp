@@ -13,6 +13,7 @@
 #include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
 
+#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include "src/lib/fxl/arraysize.h"
@@ -270,7 +271,10 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
 
     if (role != 0) {
         uint16_t iface_id;
-        resp.status = wlanphy_impl_.ops->create_iface(wlanphy_impl_.ctx, role, &iface_id);
+        resp.status = wlanphy_impl_.ops->create_iface(wlanphy_impl_.ctx, wlanphy_create_iface_req_t{
+                .role = role,
+                .sme_channel = req.sme_channel.release(),
+        }, &iface_id);
         resp.iface_id = iface_id;
     } else {
         resp.status = ZX_ERR_NOT_SUPPORTED;

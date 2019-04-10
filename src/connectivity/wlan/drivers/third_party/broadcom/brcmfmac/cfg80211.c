@@ -3626,7 +3626,8 @@ static zx_protocol_device_t if_impl_device_ops = {
     .release = brcmf_release_zx_if_device,
 };
 
-zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id) {
+zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
+                                   uint16_t* out_iface_id) {
     struct brcmf_if* ifp = ctx;
     struct net_device* ndev = ifp->ndev;
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
@@ -3652,9 +3653,9 @@ zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id)
     }
     brcmf_dbg(TEMP, "device_add() succeeded. Added iface hooks.");
 
-    *iface_id = 42;
+    *out_iface_id = 42;
 
-    wdev->iftype = role;
+    wdev->iftype = req.role;
 
     /* set appropriate operations */
     ndev->initialized_for_ap = true;

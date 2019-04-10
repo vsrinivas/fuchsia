@@ -161,7 +161,7 @@ async fn create_iface(
     req: fidl_svc::CreateIfaceRequest,
 ) -> Result<fidl_svc::CreateIfaceResponse, zx::Status> {
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
-    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role };
+    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel: None };
     let r = await!(phy.proxy.create_iface(&mut phy_req)).map_err(move |e| {
         error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
         zx::Status::INTERNAL
