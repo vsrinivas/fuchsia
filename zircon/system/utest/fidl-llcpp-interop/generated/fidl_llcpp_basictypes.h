@@ -5,7 +5,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/fidl/cpp/string_view.h>
-#include <lib/fidl/llcpp/array_wrapper.h>
+#include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -35,7 +35,7 @@ struct SimpleStruct {
 
   ::zx::eventpair ep{};
 
-  ::fidl::ArrayWrapper<::fidl::ArrayWrapper<::zx::eventpair, 4>, 5> arr{};
+  ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr{};
 };
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleUnionTable;

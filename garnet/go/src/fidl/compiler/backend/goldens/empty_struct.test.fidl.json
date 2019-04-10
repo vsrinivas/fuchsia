@@ -12,7 +12,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/empty_struct.test.fidl",
         "line": 3,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [],

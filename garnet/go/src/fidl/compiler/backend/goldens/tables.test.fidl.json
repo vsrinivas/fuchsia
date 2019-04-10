@@ -13,7 +13,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
         "line": 3,
-        "column": 6
+        "column": 7
       },
       "members": [],
       "size": 16,
@@ -26,7 +26,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
         "line": 6,
-        "column": 6
+        "column": 7
       },
       "members": [
         {
@@ -40,7 +40,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 7,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -70,7 +70,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 11,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -88,7 +88,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
         "line": 14,
-        "column": 6
+        "column": 7
       },
       "members": [
         {
@@ -102,7 +102,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 15,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -124,7 +124,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
         "line": 19,
-        "column": 6
+        "column": 7
       },
       "members": [
         {
@@ -138,7 +138,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 20,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -168,7 +168,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 24,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -186,7 +186,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 25,
-            "column": 13
+            "column": 14
           },
           "size": 8,
           "max_out_of_line": 0,

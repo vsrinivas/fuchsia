@@ -468,11 +468,11 @@ private:
 };
 
 template <size_t kNumDirents>
-fidl::ArrayWrapper<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name,
-                                                                char* seed_description) {
+fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name,
+                                                         char* seed_description) {
     Random random;
     sprintf(seed_description, "Seed: %d", random.seed());
-    fidl::ArrayWrapper<gen::DirEnt, kNumDirents> dirents;
+    fidl::Array<gen::DirEnt, kNumDirents> dirents;
     for (size_t i = 0; i < kNumDirents; i++) {
         int str_len = random.UpTo(gen::TEST_MAX_PATH) + 1;
         bool is_dir = random.UpTo(2) == 0;

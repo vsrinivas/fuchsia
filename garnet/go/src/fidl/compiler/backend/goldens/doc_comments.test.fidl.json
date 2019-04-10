@@ -9,7 +9,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 9,
-        "column": 12
+        "column": 13
       },
       "maybe_attributes": [
         {
@@ -37,7 +37,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 44,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -53,7 +53,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 48,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_attributes": [
@@ -76,7 +76,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 14,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "maybe_attributes": [
@@ -95,7 +95,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 18,
-            "column": 10
+            "column": 11
           },
           "maybe_attributes": [
             {
@@ -122,7 +122,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 34,
-        "column": 6
+        "column": 7
       },
       "maybe_attributes": [
         {
@@ -142,7 +142,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 38,
-            "column": 13
+            "column": 14
           },
           "maybe_attributes": [
             {
@@ -168,7 +168,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 24,
-        "column": 6
+        "column": 7
       },
       "maybe_attributes": [
         {
@@ -186,7 +186,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 28,
-            "column": 10
+            "column": 11
           },
           "maybe_attributes": [
             {

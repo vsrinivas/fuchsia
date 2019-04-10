@@ -505,9 +505,9 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
-		r.LLDecl = fmt.Sprintf("::fidl::ArrayWrapper<%s, %v>", t.LLDecl, *val.ElementCount)
+		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~Array")
-		r.LLDtor = fmt.Sprintf("~ArrayWrapper")
+		r.LLDtor = fmt.Sprintf("~Array")
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)

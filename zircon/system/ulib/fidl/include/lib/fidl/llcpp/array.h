@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_LLCPP_ARRAY_WRAPPER_H_
-#define LIB_FIDL_LLCPP_ARRAY_WRAPPER_H_
+#ifndef LIB_FIDL_LLCPP_ARRAY_H_
+#define LIB_FIDL_LLCPP_ARRAY_H_
 
 #include <zircon/fidl.h>
 
@@ -14,7 +14,7 @@ namespace fidl {
 // The standard does not guarantee that there are no trailing padding bytes in std::array.
 // When adding new functionalities to this struct, the data layout should not be changed.
 template <typename T, size_t N>
-struct ArrayWrapper final {
+struct Array final {
     static constexpr size_t size() { return N; }
 
     const T* data() const { return data_; }
@@ -37,9 +37,9 @@ struct ArrayWrapper final {
     // Keeping data_ public such that an aggregate initializer can be used.
     T data_[N];
 
-    static_assert(N > 0, "fidl::ArrayWrapper cannot have zero elements.");
+    static_assert(N > 0, "fidl::Array cannot have zero elements.");
 };
 
 } // namespace fidl
 
-#endif // LIB_FIDL_LLCPP_ARRAY_WRAPPER_H_
+#endif // LIB_FIDL_LLCPP_ARRAY_H_

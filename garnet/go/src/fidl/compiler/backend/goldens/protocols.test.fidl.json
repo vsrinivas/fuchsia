@@ -10,7 +10,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 14,
-        "column": 5
+        "column": 6
       },
       "type": "uint32",
       "members": [
@@ -19,7 +19,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 15,
-            "column": 4
+            "column": 5
           },
           "value": {
             "kind": "literal",
@@ -34,7 +34,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 16,
-            "column": 4
+            "column": 5
           },
           "value": {
             "kind": "literal",
@@ -53,7 +53,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 3,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -63,7 +63,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 4,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [],
@@ -78,7 +78,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 5,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [],
@@ -96,7 +96,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 6,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [],
@@ -113,7 +113,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 6,
-                "column": 39
+                "column": 40
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -132,7 +132,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 7,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -145,7 +145,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 7,
-                "column": 33
+                "column": 34
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -165,7 +165,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 8,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -178,7 +178,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 8,
-                "column": 36
+                "column": 37
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -201,7 +201,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 9,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -214,7 +214,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 9,
-                "column": 35
+                "column": 36
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -236,7 +236,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 9,
-                "column": 51
+                "column": 52
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -255,7 +255,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 10,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -270,7 +270,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 11,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -284,7 +284,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 11,
-                "column": 29
+                "column": 30
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -303,7 +303,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 19,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -313,7 +313,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 20,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [],
@@ -331,7 +331,7 @@
               "location": {
                 "filename": "generated",
                 "line": 18,
-                "column": 0
+                "column": 1
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -350,7 +350,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 21,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [],
@@ -368,7 +368,7 @@
               "location": {
                 "filename": "generated",
                 "line": 25,
-                "column": 0
+                "column": 1
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -387,7 +387,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 25,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -403,7 +403,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 26,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -416,7 +416,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 26,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -433,7 +433,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 26,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -453,7 +453,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 27,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -467,7 +467,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 27,
-                "column": 20
+                "column": 21
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -484,7 +484,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 27,
-                "column": 29
+                "column": 30
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -503,7 +503,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 28,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -516,7 +516,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 28,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -533,7 +533,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 28,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -555,7 +555,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 28,
-                "column": 40
+                "column": 41
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -574,7 +574,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 32,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -590,7 +590,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 33,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -603,7 +603,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 33,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -620,7 +620,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 33,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -640,7 +640,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 34,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -654,7 +654,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 34,
-                "column": 20
+                "column": 21
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -671,7 +671,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 34,
-                "column": 29
+                "column": 30
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -690,7 +690,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 35,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -703,7 +703,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 35,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -720,7 +720,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 35,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -742,7 +742,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 35,
-                "column": 40
+                "column": 41
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -761,7 +761,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 39,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -777,7 +777,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 40,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -790,7 +790,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 40,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -807,7 +807,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 40,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -827,7 +827,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 41,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -841,7 +841,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 41,
-                "column": 20
+                "column": 21
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -858,7 +858,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 41,
-                "column": 29
+                "column": 30
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -877,7 +877,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 42,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -890,7 +890,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 42,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -907,7 +907,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 42,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -929,7 +929,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 42,
-                "column": 40
+                "column": 41
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -948,7 +948,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 47,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -964,7 +964,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 48,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -977,7 +977,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 48,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -994,7 +994,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 48,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1014,7 +1014,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 49,
-            "column": 7
+            "column": 8
           },
           "has_request": false,
           "has_response": true,
@@ -1028,7 +1028,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 49,
-                "column": 20
+                "column": 21
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1045,7 +1045,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 49,
-                "column": 29
+                "column": 30
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1064,7 +1064,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
             "line": 50,
-            "column": 4
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -1077,7 +1077,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 50,
-                "column": 18
+                "column": 19
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1094,7 +1094,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 50,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1116,7 +1116,7 @@
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
                 "line": 50,
-                "column": 40
+                "column": 41
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -1137,7 +1137,7 @@
       "location": {
         "filename": "generated",
         "line": 14,
-        "column": 0
+        "column": 1
       },
       "anonymous": false,
       "members": [],
@@ -1151,7 +1151,7 @@
       "location": {
         "filename": "generated",
         "line": 21,
-        "column": 0
+        "column": 1
       },
       "anonymous": false,
       "members": [],
@@ -1168,7 +1168,7 @@
       "location": {
         "filename": "generated",
         "line": 17,
-        "column": 0
+        "column": 1
       },
       "maybe_attributes": [
         {
@@ -1187,7 +1187,7 @@
           "location": {
             "filename": "generated",
             "line": 15,
-            "column": 0
+            "column": 1
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -1203,7 +1203,7 @@
           "location": {
             "filename": "generated",
             "line": 16,
-            "column": 0
+            "column": 1
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -1221,7 +1221,7 @@
       "location": {
         "filename": "generated",
         "line": 24,
-        "column": 0
+        "column": 1
       },
       "maybe_attributes": [
         {
@@ -1240,7 +1240,7 @@
           "location": {
             "filename": "generated",
             "line": 22,
-            "column": 0
+            "column": 1
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -1257,7 +1257,7 @@
           "location": {
             "filename": "generated",
             "line": 23,
-            "column": 0
+            "column": 1
           },
           "size": 4,
           "max_out_of_line": 0,

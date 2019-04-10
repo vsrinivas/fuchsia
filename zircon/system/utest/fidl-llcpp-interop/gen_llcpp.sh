@@ -6,8 +6,8 @@ set -o pipefail
 LLCPP_TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="$( echo ${LLCPP_TEST_DIR} | sed -e 's,zircon/system/utest.*$,,' )"
 
-FIDLC=${FUCHSIA_DIR}out/x64/host_x64/fidlc
-FIDLGEN=${FUCHSIA_DIR}out/x64/host_x64/fidlgen
+FIDLC=${FUCHSIA_DIR}out/default/host_x64/fidlc
+FIDLGEN=${FUCHSIA_DIR}out/default/host_x64/fidlgen
 
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build x64?" 1>&2

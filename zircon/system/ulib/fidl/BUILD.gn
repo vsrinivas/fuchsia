@@ -60,7 +60,7 @@ library("fidl") {
 library("fidl-llcpp") {
   sdk = "source"
   sdk_headers = [
-    "lib/fidl/llcpp/array_wrapper.h",
+    "lib/fidl/llcpp/array.h",
     "lib/fidl/llcpp/coding.h",
     "lib/fidl/llcpp/decoded_message.h",
     "lib/fidl/llcpp/encoded_message.h",

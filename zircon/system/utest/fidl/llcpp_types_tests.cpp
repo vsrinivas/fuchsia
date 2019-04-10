@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/array_wrapper.h>
+#include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 
@@ -241,11 +241,10 @@ bool RoundTripTest() {
 bool ArrayLayoutTest() {
     BEGIN_TEST;
 
-    static_assert(sizeof(fidl::ArrayWrapper<uint8_t, 3>) == sizeof(uint8_t[3]));
-    static_assert(sizeof(fidl::ArrayWrapper<fidl::ArrayWrapper<uint8_t, 7>, 3>)
-                  == sizeof(uint8_t[3][7]));
+    static_assert(sizeof(fidl::Array<uint8_t, 3>) == sizeof(uint8_t[3]));
+    static_assert(sizeof(fidl::Array<fidl::Array<uint8_t, 7>, 3>) == sizeof(uint8_t[3][7]));
 
-    constexpr fidl::ArrayWrapper<uint8_t, 3> a = {1, 2, 3};
+    constexpr fidl::Array<uint8_t, 3> a = {1, 2, 3};
     constexpr uint8_t b[3] = {1, 2, 3};
     EXPECT_EQ((&a[2] - &a[0]), (&b[2] - &b[0]));
 
