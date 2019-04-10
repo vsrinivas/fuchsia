@@ -59,7 +59,7 @@ async fn provision_account_from_dev_auth_provider(
 // we verify all functionality in a single test case.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_account_functionality() -> Result<(), Error> {
-    let account_manager = fuchsia_app::client::connect_to_service::<AccountManagerMarker>()
+    let account_manager = fuchsia_component::client::connect_to_service::<AccountManagerMarker>()
         .expect("Failed to connect to account manager service");
 
     // Verify we initially have no accounts.

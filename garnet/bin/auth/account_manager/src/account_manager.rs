@@ -20,7 +20,7 @@ use fidl_fuchsia_auth_account::{
     AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
-use fuchsia_app::fuchsia_single_component_package_url;
+use fuchsia_component::fuchsia_single_component_package_url;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;

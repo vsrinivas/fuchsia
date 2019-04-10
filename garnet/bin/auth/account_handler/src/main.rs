@@ -20,12 +20,9 @@ mod test_util;
 
 use crate::account_handler::AccountHandler;
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fuchsia_auth_account_internal::{
-    AccountHandlerControlMarker, AccountHandlerControlRequestStream,
-};
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
+use futures::StreamExt;
 use log::{error, info};
 use std::sync::Arc;
 
@@ -40,23 +37,20 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let account_handler = Arc::new(AccountHandler::new(DATA_DIR.into()));
 
-    let fut = ServicesServer::new()
-        .add_service((AccountHandlerControlMarker::NAME, move |chan| {
-            let account_handler_clone = Arc::clone(&account_handler);
-            fasync::spawn(
-                async move {
-                    let stream = AccountHandlerControlRequestStream::from_channel(chan);
-                    await!(account_handler_clone.handle_requests_from_stream(stream))
-                        .unwrap_or_else(|e| {
-                            error!("Error handling AccountHandlerControl channel {:?}", e)
-                        })
-                },
-            );
-        }))
-        .start()
-        .context("Error starting AccountHandlerControl server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let account_handler_clone = Arc::clone(&account_handler);
+        fasync::spawn(
+            async move {
+                await!(account_handler_clone.handle_requests_from_stream(stream)).unwrap_or_else(
+                    |e| error!("Error handling AccountHandlerControl channel {:?}", e),
+                )
+            },
+        );
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fut).context("Failed to execute AccountHandlerControl future")?;
+    executor.run_singlethreaded(fs.collect::<()>());
 
     info!("Stopping account handler");
     Ok(())

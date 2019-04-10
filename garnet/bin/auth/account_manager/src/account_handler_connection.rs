@@ -12,9 +12,9 @@ use fidl_fuchsia_auth_account_internal::{
     AccountHandlerControlProxy,
 };
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fuchsia_app::client::App;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::client::App;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info, warn};
@@ -57,7 +57,8 @@ impl AccountHandlerConnection {
         // and stable per-account, which we achieve through using the local account id as
         // the environment name.
         let env_label = account_id.to_canonical_string();
-        let (server, env_controller, app) = ServicesServer::new()
+        let mut fs_for_account_handler = ServiceFs::new();
+        let (env_controller, app) = fs_for_account_handler
             .launch_component_in_nested_environment(
                 ACCOUNT_HANDLER_URL.to_string(),
                 None,
@@ -65,9 +66,7 @@ impl AccountHandlerConnection {
             )
             .context("Failed to start launcher")
             .account_manager_status(Status::IoError)?;
-        fasync::spawn(server.unwrap_or_else(|err| {
-            error!("AccountHandlerConnection terminated unexpectedly: {:?}", err);
-        }));
+        fasync::spawn(fs_for_account_handler.collect());
         let proxy = app
             .connect_to_service(AccountHandlerControlMarker)
             .context("Failed to connect to AccountHandlerControl")

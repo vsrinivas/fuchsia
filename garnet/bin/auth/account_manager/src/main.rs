@@ -22,13 +22,11 @@ mod stored_account_list;
 
 use crate::account_manager::AccountManager;
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_auth::AuthProviderConfig;
-use fidl_fuchsia_auth_account::{AccountManagerMarker, AccountManagerRequestStream};
-use fuchsia_app::fuchsia_single_component_package_url;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
-use getopts;
+use fuchsia_component::fuchsia_single_component_package_url;
+use fuchsia_component::server::ServiceFs;
+use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::{error, info};
 use std::path::PathBuf;
@@ -90,21 +88,19 @@ fn main() -> Result<(), Error> {
         })?;
     let account_manager = Arc::new(account_manager);
 
-    let fut = ServicesServer::new()
-        .add_service((AccountManagerMarker::NAME, move |chan| {
-            let account_manager_clone = Arc::clone(&account_manager);
-            fasync::spawn(
-                async move {
-                    let stream = AccountManagerRequestStream::from_channel(chan);
-                    await!(account_manager_clone.handle_requests_from_stream(stream))
-                        .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
-                },
-            );
-        }))
-        .start()
-        .context("Error starting AccountManager server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let account_manager_clone = Arc::clone(&account_manager);
+        fasync::spawn(
+            async move {
+                await!(account_manager_clone.handle_requests_from_stream(stream))
+                    .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
+            },
+        );
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fut).context("Failed to execute AccountManager future")?;
+    executor.run_singlethreaded(fs.collect::<()>());
     info!("Stopping account manager");
     Ok(())
 }

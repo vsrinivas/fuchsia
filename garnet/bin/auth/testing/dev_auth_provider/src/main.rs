@@ -10,10 +10,9 @@ mod dev_auth_provider_factory;
 
 use crate::dev_auth_provider_factory::AuthProviderFactory;
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_auth::AuthProviderFactoryMarker;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
+use futures::StreamExt;
 use log::info;
 
 fn main() -> Result<(), Error> {
@@ -22,14 +21,10 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let fut = ServicesServer::new()
-        .add_service((AuthProviderFactoryMarker::NAME, |chan| {
-            AuthProviderFactory::spawn(chan)
-        })).start()
-        .context("Error starting dev auth provider server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(AuthProviderFactory::spawn);
+    fs.take_and_serve_directory_handle()?;
 
-    executor
-        .run_singlethreaded(fut)
-        .context("Failed to execute dev auth provider future")?;
+    executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
 }

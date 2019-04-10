@@ -22,11 +22,9 @@ mod token_manager_factory;
 
 use crate::token_manager_factory::TokenManagerFactory;
 use failure::{Error, ResultExt};
-use fidl::endpoints::RequestStream;
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_auth::{TokenManagerFactoryMarker, TokenManagerFactoryRequestStream};
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
+use futures::StreamExt;
 use log::info;
 use std::sync::Arc;
 
@@ -38,20 +36,14 @@ fn main() -> Result<(), Error> {
     let token_manager_factory = Arc::new(TokenManagerFactory::new());
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let fut = ServicesServer::new()
-        .add_service((TokenManagerFactoryMarker::NAME, move |chan| {
-            let tmf_clone = Arc::clone(&token_manager_factory);
-            fasync::spawn(
-                async move {
-                    let stream = TokenManagerFactoryRequestStream::from_channel(chan);
-                    await!(tmf_clone.handle_requests_from_stream(stream))
-                },
-            );
-        }))
-        .start()
-        .context("Error starting token manager factory server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let tmf_clone = Arc::clone(&token_manager_factory);
+        fasync::spawn(async move { await!(tmf_clone.handle_requests_from_stream(stream)) });
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fut).context("Failed to execute token manager factory future")?;
+    executor.run_singlethreaded(fs.collect::<()>());
     info!("Stopping token manager factory");
     Ok(())
 }

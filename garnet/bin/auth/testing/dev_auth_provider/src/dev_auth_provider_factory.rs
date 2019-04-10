@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::dev_auth_provider::AuthProvider;
-use fidl::endpoints::RequestStream;
 use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderFactoryRequestStream,
                         AuthProviderStatus};
@@ -20,9 +19,9 @@ pub struct AuthProviderFactory;
 impl AuthProviderFactory {
     /// Spawn a new task of handling request from the `AuthProviderFactoryRequestStream`
     /// by calling the `handle_request` method.
-    pub fn spawn(chan: fasync::Channel) {
+    pub fn spawn(stream: AuthProviderFactoryRequestStream) {
         fasync::spawn(
-            AuthProviderFactoryRequestStream::from_channel(chan)
+            stream
                 .try_for_each(|r| future::ready(Self::handle_request(r)))
                 .unwrap_or_else(|e| warn!("Error running AuthProviderFactory {:?}", e)),
         )
