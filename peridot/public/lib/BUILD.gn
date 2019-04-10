@@ -40,6 +40,7 @@ executable("peridot_public_lib_unittests") {
   deps = [
     "async/cpp:unittests",
     "entity/cpp:unittests",
+    "modular_test_harness/cpp:unittests",
     "//third_party/googletest:gtest_main",
   ]
 }

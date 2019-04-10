@@ -122,7 +122,7 @@ table TestHarnessSpec {
     ///      |TestHarness.OnNewStoryShell| event is sent when the story shell
     ///      component is launched.
     ///  * Set |base_shell.component_url|:
-    ///      The specified component URL is used as the story shell. In this
+    ///      The specified component URL is used as the base shell. In this
     ///      case, an interception event is NOT sent.
     2: ShellSpec base_shell;
 
@@ -145,13 +145,14 @@ table TestHarnessSpec {
     /// All other fields are ignored, and must not be set.
     4: fuchsia.modular.internal.BasemgrConfig basemgr_config;
 
-    /// The test harness starts basemgr in a hermetic environment, which
-    /// does not allow accessing services outside of the environment, unless the
-    /// service names are specified in this list.
+    /// The test harness starts the modular runtime in a hermetic environment
+    /// which does not allow accessing services outside of the environment,
+    /// unless the service names are specified in this list.
     ///
     /// For example, adding "fuchsia.ui.policy.Presenter" to this list will
-    /// allow basemgr use the Presenter to display views; other
-    5: vector<string> basemgr_services_to_inherit;
+    /// allow the modular runtime use the Presenter to display views; otherwise,
+    /// UI exposed by test code will not be shown on screen.
+    5: vector<string> env_services_to_inherit;
 
     /// Configuration for sessionmgr. Only the following fields are processed:
     ///  * test (default = true)
