@@ -26,6 +26,7 @@ enum class Noun {
   kJob,
   kProcess,
   kGlobal,
+  kSymServer,
   kThread,
 
   // Adding a new one? Add to GetNouns().

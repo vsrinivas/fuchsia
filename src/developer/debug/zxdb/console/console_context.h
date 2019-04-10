@@ -44,11 +44,17 @@ class ConsoleContext : public ProcessObserver,
   int IdForThread(const Thread* thread) const;
   int IdForFrame(const Frame* frame) const;
   int IdForBreakpoint(const Breakpoint* breakpoint) const;
+  int IdForSymbolServer(const SymbolServer* symbol_server) const;
 
   // The active target will always exist except during setup and teardown.
   void SetActiveTarget(const Target* target);
   int GetActiveTargetId() const;
   Target* GetActiveTarget() const;
+
+  // The active symbol server may or may not exist.
+  void SetActiveSymbolServer(const SymbolServer* target);
+  int GetActiveSymbolServerId() const;
+  SymbolServer* GetActiveSymbolServer() const;
 
   // The active job context will always exist except during setup and teardown.
   void SetActiveJobContext(const JobContext* job_context);
@@ -135,6 +141,7 @@ class ConsoleContext : public ProcessObserver,
   void WillDestroyTarget(Target* target) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
+  void DidCreateSymbolServer(SymbolServer* symbol_server) override;
   void OnSymbolIndexingInformation(const std::string& msg) override;
 
   // TargetObserver implementation:
@@ -178,6 +185,7 @@ class ConsoleContext : public ProcessObserver,
                     ThreadRecord const** out_thread_record) const;
   Err FillOutFrame(Command* cmd, const ThreadRecord* thread_record) const;
   Err FillOutBreakpoint(Command* cmd) const;
+  Err FillOutSymbolServer(Command* cmd) const;
 
   // Generates a string describing the breakpoints that were hit.
   std::string DescribeHitBreakpoints(
@@ -198,9 +206,14 @@ class ConsoleContext : public ProcessObserver,
   std::map<const Breakpoint*, int> breakpoint_to_id_;
   int next_breakpoint_id_ = 1;
 
+  std::map<int, SymbolServer*> id_to_symbol_server_;
+  std::map<const SymbolServer*, int> symbol_server_to_id_;
+  int next_symbol_server_id_ = 1;
+
   int active_target_id_ = 0;
   int active_job_context_id_ = 0;
   int active_breakpoint_id_ = 0;
+  int active_symbol_server_id_ = 0;
 };
 
 }  // namespace zxdb

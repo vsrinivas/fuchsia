@@ -35,8 +35,7 @@ static const char* kPauseOnAttachDescription =
     R"(  Whether the process should be paused when zxdb attached to it.
   This will also affect when zxdb attached a process through a filter.)";
 
-const char* ClientSettings::System::kShowStdout =
-    "show-stdout";
+const char* ClientSettings::System::kShowStdout = "show-stdout";
 static const char* kShowStdoutDescription =
     R"(  Whether newly debugged process (either launched or attached) should
   output it's stdout/stderr to zxdb. This setting is global but can be overriden
@@ -45,6 +44,16 @@ static const char* kShowStdoutDescription =
 const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";
 static const char* kQuitAgentOnExitDescription =
     R"(  Whether the client will shutdown the connected agent upon exiting.")";
+
+const char* ClientSettings::System::kSymbolServers = "symbol-servers";
+static const char* kSymbolServersDescription =
+    R"(  List of symbol server URLs.)";
+
+const char* ClientSettings::System::kSymbolCache = "symbol-cache";
+static const char* kSymbolCacheDescription =
+    R"(  Path to a writable directory for symbol data. A subdirectory named
+  .build-id will be created under the given path, and downloaded symbols will
+  be stored there.)";
 
 namespace {
 
@@ -62,8 +71,12 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
                   kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit,
                   kQuitAgentOnExitDescription, false);
-  schema->AddBool(ClientSettings::System::kShowStdout,
-                  kShowStdoutDescription, true);
+  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription,
+                  true);
+  schema->AddList(ClientSettings::System::kSymbolServers,
+                  kSymbolServersDescription, {});
+  schema->AddString(ClientSettings::System::kSymbolCache,
+                    kSymbolCacheDescription, "");
 
   return schema;
 }

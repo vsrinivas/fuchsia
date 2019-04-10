@@ -43,6 +43,7 @@ class SystemImpl final : public System, public SettingStoreObserver {
   std::vector<Target*> GetTargets() const override;
   std::vector<JobContext*> GetJobContexts() const override;
   std::vector<Breakpoint*> GetBreakpoints() const override;
+  std::vector<SymbolServer*> GetSymbolServers() const override;
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
@@ -71,6 +72,7 @@ class SystemImpl final : public System, public SettingStoreObserver {
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
   void AddNewJobContext(std::unique_ptr<JobContextImpl> job_context);
 
+  std::vector<std::unique_ptr<SymbolServer>> symbol_servers_;
   std::vector<std::unique_ptr<TargetImpl>> targets_;
   std::vector<std::unique_ptr<JobContextImpl>> job_contexts_;
 

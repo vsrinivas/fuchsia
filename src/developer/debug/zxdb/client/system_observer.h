@@ -13,6 +13,7 @@ class Breakpoint;
 class Process;
 class Target;
 class JobContext;
+class SymbolServer;
 
 class SystemObserver {
  public:
@@ -22,6 +23,9 @@ class SystemObserver {
 
   // Called immediately after creation of a job context.
   virtual void DidCreateJobContext(JobContext* job_context) {}
+
+  // Called immediately after createion of a symbol server.
+  virtual void DidCreateSymbolServer(SymbolServer* server) {}
 
   // It can be common to want to watch for all Process creation and destruction
   // events. For convenience, these allow that without having to track each

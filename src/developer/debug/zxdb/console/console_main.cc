@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/console/console_main.h"
 
-#include <cstdlib>
-
 #include <cmdline/args_parser.h>
+
+#include <cstdlib>
+#include <filesystem>
 
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/debug.h"
@@ -147,6 +148,16 @@ int ConsoleMain(int argc, const char* argv[]) {
     // We add the options paths given paths.
     paths.insert(paths.end(), options.symbol_paths.begin(),
                  options.symbol_paths.end());
+
+    if (options.symbol_cache_path) {
+      session.system().settings().SetString(
+          ClientSettings::System::kSymbolCache, *options.symbol_cache_path);
+    }
+
+    if (!options.symbol_servers.empty()) {
+      session.system().settings().SetList(
+          ClientSettings::System::kSymbolServers, options.symbol_servers);
+    }
 
     // Adding it to the settings will trigger the loading of the symbols.
     // Redundant adds are ignored.

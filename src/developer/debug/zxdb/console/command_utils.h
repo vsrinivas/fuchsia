@@ -13,6 +13,7 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
@@ -27,6 +28,7 @@ class Frame;
 class Function;
 struct InputLocation;
 class Location;
+class SymbolServer;
 class Thread;
 
 // Ensures the target is currently running (it has a current Process associated
@@ -98,6 +100,9 @@ std::string DescribeTargetName(const Target* target);
 std::string DescribeJobContextName(const JobContext* job_context);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
+
+std::string DescribeSymbolServer(const ConsoleContext* context,
+                                 const SymbolServer* symbol_server);
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);

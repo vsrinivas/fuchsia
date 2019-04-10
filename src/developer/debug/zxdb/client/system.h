@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/setting_store.h"
 #include "src/developer/debug/zxdb/client/setting_store_observer.h"
+#include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/observer_list.h"
@@ -55,6 +56,11 @@ class System : public ClientObject {
   // returned pointers are managed by the System object and should not be cached
   // once you return to the message loop.
   virtual std::vector<Breakpoint*> GetBreakpoints() const = 0;
+
+  // Returns all symbol servers registered with this symbol instance. The
+  // returned pointers are managed by the System object and should not be
+  // cached once you return to the message loop.
+  virtual std::vector<SymbolServer*> GetSymbolServers() const = 0;
 
   // Returns the process (and hence Target) associated with the given live
   // koid. Returns 0 if not found.

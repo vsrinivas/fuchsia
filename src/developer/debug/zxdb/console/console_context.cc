@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -35,6 +36,9 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 
   for (JobContext* job_context : session->system().GetJobContexts())
     DidCreateJobContext(job_context);
+
+  for (SymbolServer* symbol_server : session->system().GetSymbolServers())
+    DidCreateSymbolServer(symbol_server);
 }
 
 ConsoleContext::~ConsoleContext() {
@@ -100,6 +104,15 @@ int ConsoleContext::IdForFrame(const Frame* frame) const {
   return 0;
 }
 
+int ConsoleContext::IdForSymbolServer(const SymbolServer* symbol_server) const {
+  const auto& found = symbol_server_to_id_.find(symbol_server);
+  if (found == symbol_server_to_id_.end()) {
+    FXL_NOTREACHED();
+    return 0;
+  }
+  return found->second;
+}
+
 int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
   FXL_DCHECK(!breakpoint->IsInternal())
       << "Should not be trying to get the ID of internal breakpoints. The "
@@ -149,6 +162,26 @@ Target* ConsoleContext::GetActiveTarget() const {
   if (found == id_to_target_.end())
     return nullptr;
   return found->second.target;
+}
+
+void ConsoleContext::SetActiveSymbolServer(const SymbolServer* symbol_server) {
+  auto found = symbol_server_to_id_.find(symbol_server);
+  if (found == symbol_server_to_id_.end()) {
+    FXL_NOTREACHED();
+    return;
+  }
+  active_symbol_server_id_ = found->second;
+}
+
+int ConsoleContext::GetActiveSymbolServerId() const {
+  return active_symbol_server_id_;
+}
+
+SymbolServer* ConsoleContext::GetActiveSymbolServer() const {
+  auto found = id_to_symbol_server_.find(active_symbol_server_id_);
+  if (found == id_to_symbol_server_.end())
+    return nullptr;
+  return found->second;
 }
 
 void ConsoleContext::SetActiveThreadForTarget(const Thread* thread) {
@@ -321,6 +354,11 @@ Err ConsoleContext::FillOutCommand(Command* cmd) const {
   if (result.has_error())
     return result;
 
+  // SymbolServer.
+  result = FillOutSymbolServer(cmd);
+  if (result.has_error())
+    return result;
+
   return Err();
 }
 
@@ -432,6 +470,18 @@ void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
 
   id_to_breakpoint_.erase(id);
   breakpoint_to_id_.erase(found_breakpoint);
+}
+
+void ConsoleContext::DidCreateSymbolServer(SymbolServer* symbol_server) {
+  int id = next_symbol_server_id_;
+  next_symbol_server_id_++;
+
+  id_to_symbol_server_[id] = symbol_server;
+  symbol_server_to_id_[symbol_server] = id;
+
+  if (active_symbol_server_id_ == 0) {
+    active_symbol_server_id_ = id;
+  }
 }
 
 void ConsoleContext::OnSymbolIndexingInformation(const std::string& msg) {
@@ -832,6 +882,25 @@ Err ConsoleContext::FillOutBreakpoint(Command* cmd) const {
                fxl::StringPrintf("There is no breakpoint %d.", breakpoint_id));
   }
   cmd->set_breakpoint(found_breakpoint->second);
+  return Err();
+}
+
+Err ConsoleContext::FillOutSymbolServer(Command* cmd) const {
+  int symbol_server_id = cmd->GetNounIndex(Noun::kSymServer);
+  if (symbol_server_id == Command::kNoIndex) {
+    // No index: use the active one (which may not exist).
+    cmd->set_sym_server(GetActiveSymbolServer());
+    return Err();
+  }
+
+  // Explicit index given, look it up.
+  auto found_symbol_server = id_to_symbol_server_.find(symbol_server_id);
+  if (found_symbol_server == id_to_symbol_server_.end()) {
+    return Err(
+        ErrType::kInput,
+        fxl::StringPrintf("There is no symbol server %d.", symbol_server_id));
+  }
+  cmd->set_sym_server(found_symbol_server->second);
   return Err();
 }
 

@@ -22,6 +22,7 @@ class Frame;
 class Target;
 class JobContext;
 class Thread;
+class SymbolServer;
 
 // Command ---------------------------------------------------------------------
 
@@ -86,6 +87,8 @@ class Command {
   void set_thread(Thread* t) { thread_ = t; }
   Breakpoint* breakpoint() const { return breakpoint_; }
   void set_breakpoint(Breakpoint* b) { breakpoint_ = b; }
+  SymbolServer* sym_server() const { return symbol_server_; }
+  void set_sym_server(SymbolServer* s) { symbol_server_ = s; }
 
  private:
   // The nouns specified for this command. If not present here, the noun
@@ -101,7 +104,8 @@ class Command {
   JobContext* job_context_ = nullptr;  // May be null.
   Thread* thread_ = nullptr;           // Will be null if not running.
   Frame* frame_ = nullptr;  // Will be null if no valid thread stopped.
-  Breakpoint* breakpoint_ = nullptr;  // May be null.
+  Breakpoint* breakpoint_ = nullptr;       // May be null.
+  SymbolServer* symbol_server_ = nullptr;  // May be null.
 
   Verb verb_ = Verb::kNone;
 

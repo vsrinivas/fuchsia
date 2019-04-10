@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/system_impl.h"
 
+#include <set>
+
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
@@ -38,7 +40,10 @@ SystemImpl::SystemImpl(Session* session)
   // We don't use SystemSymbols because they live in the symbols library
   // and we don't want it to have a client dependency.
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
+  settings_.AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -113,6 +118,15 @@ std::vector<Breakpoint*> SystemImpl::GetBreakpoints() const {
   for (const auto& pair : breakpoints_) {
     if (!pair.second->is_internal())
       result.push_back(pair.second.get());
+  }
+  return result;
+}
+
+std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
+  std::vector<SymbolServer*> result;
+  result.reserve(symbol_servers_.size());
+  for (const auto& item : symbol_servers_) {
+    result.push_back(item.get());
   }
   return result;
 }
@@ -262,6 +276,30 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
         build_id_index.AddBuildIDMappingFile(path);
       } else {
         build_id_index.AddSymbolSource(path);
+      }
+    }
+  } else if (setting_name == ClientSettings::System::kSymbolCache) {
+    auto path = store.GetString(setting_name);
+
+    if (!path.empty()) {
+      GetSymbols()->build_id_index().AddSymbolSource(path);
+    }
+  } else if (setting_name == ClientSettings::System::kSymbolServers) {
+    auto urls = store.GetList(setting_name);
+    std::set<std::string> existing;
+
+    for (const auto& symbol_server : symbol_servers_) {
+      existing.insert(symbol_server->name());
+    }
+
+    for (const auto& url : urls) {
+      if (existing.find(url) == existing.end()) {
+        symbol_servers_.push_back(
+            std::make_unique<SymbolServer>(session(), url));
+
+        for (auto& observer : observers()) {
+          observer.DidCreateSymbolServer(symbol_servers_.back().get());
+        }
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {

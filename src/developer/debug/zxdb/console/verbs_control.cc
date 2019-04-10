@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/verbs.h"
-
 #include <stdlib.h>
 
 #include <algorithm>
@@ -18,6 +16,7 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
 
@@ -96,6 +95,7 @@ std::string GetReference() {
 
   help += FormatGroupHelp("General", &groups[CommandGroup::kGeneral]);
   help += FormatGroupHelp("Process", &groups[CommandGroup::kProcess]);
+  help += FormatGroupHelp("Symbols", &groups[CommandGroup::kSymbols]);
   help += FormatGroupHelp("Assembly", &groups[CommandGroup::kAssembly]);
   help += FormatGroupHelp("Breakpoint", &groups[CommandGroup::kBreakpoint]);
   help += FormatGroupHelp("Query", &groups[CommandGroup::kQuery]);

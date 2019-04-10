@@ -17,6 +17,7 @@ enum class CommandGroup {
   kJob,
   kQuery,
   kStep,
+  kSymbols,
 };
 
 }  // namespace zxdb

@@ -5,11 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_LINE_OPTIONS_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_LINE_OPTIONS_H_
 
+#include <cmdline/status.h>
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <cmdline/status.h>
 
 namespace zxdb {
 
@@ -20,7 +20,9 @@ struct CommandLineOptions {
   std::optional<std::string> core;
   std::optional<std::string> run;
   std::optional<std::string> script_file;
+  std::optional<std::string> symbol_cache_path;
   std::vector<std::string> symbol_paths;
+  std::vector<std::string> symbol_servers;
 
   std::vector<std::string> symbol_repo_paths;
 };

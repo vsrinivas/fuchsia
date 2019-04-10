@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/nouns.h"
 
 #include <inttypes.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -585,6 +586,99 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
   return true;
 }
 
+// Symbol Servers --------------------------------------------------------------
+
+const char kSymServerShortHelp[] =
+    "sym-server / ss: Select or list symbol servers.";
+const char kSymServerHelp[] =
+    R"(sym-server [ <id> [ <command> ... ] ]
+
+  Selects or lists symbol servers.
+
+  By itself, "sym-server" or "ss" will list all symbol servers with their IDs.
+
+  With an ID following it ("sym-server 3"), selects that symbol server as the
+  current active symbol server. This symbol server will apply by default for
+  subsequent symbol server commands (like "auth" or "rm").
+
+  With an ID and another command following it ("sym-server 2 auth"), applys the
+  command to that symbol server.
+
+Examples
+
+  sym-server
+      Lists all symbol servers.
+
+  sym-server 2
+      Sets symbol server 2 as the active one.
+
+  sym-server 2 auth
+      Authenticates with symbol server 2.
+)";
+
+void ListSymbolServers(ConsoleContext* context) {
+  std::vector<SymbolServer*> symbol_servers =
+      context->session()->system().GetSymbolServers();
+  int active_symbol_server_id = context->GetActiveSymbolServerId();
+
+  // Sort by ID.
+  std::vector<std::pair<int, SymbolServer*>> id_symbol_servers;
+  for (SymbolServer* symbol_server : symbol_servers) {
+    id_symbol_servers.push_back(std::make_pair(
+        context->IdForSymbolServer(symbol_server), symbol_server));
+  }
+  std::sort(id_symbol_servers.begin(), id_symbol_servers.end());
+
+  std::vector<std::vector<std::string>> rows;
+  for (const auto& pair : id_symbol_servers) {
+    rows.emplace_back();
+    std::vector<std::string>& row = rows.back();
+
+    // "Current symbol_server" marker.
+    if (pair.first == active_symbol_server_id)
+      row.push_back(GetRightArrow());
+    else
+      row.emplace_back();
+
+    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(pair.second->name());
+  }
+
+  OutputBuffer out;
+  FormatTable({ColSpec(Align::kLeft),
+               ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+               ColSpec(Align::kLeft, 0, "URL")},
+              rows, &out);
+  Console::get()->Output(out);
+}
+
+bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd,
+                            Err* err) {
+  if (!cmd.HasNoun(Noun::kSymServer))
+    return false;
+
+  // sym-server only makes sense by itself. It doesn't make sense with any
+  // other nouns.
+  *err = cmd.ValidateNouns({Noun::kSymServer});
+  if (err->has_error())
+    return true;
+
+  if (cmd.GetNounIndex(Noun::kSymServer) == Command::kNoIndex) {
+    // Just "breakpoint", this lists available breakpoints.
+    ListSymbolServers(context);
+    return true;
+  }
+
+  // Explicit index provided, this switches the current context. The symbol
+  // server should be already resolved to a valid pointer if it was specified
+  // on the command line (otherwise the command would have been rejected before
+  // here).
+  FXL_DCHECK(cmd.sym_server());
+  context->SetActiveSymbolServer(cmd.sym_server());
+  Console::get()->Output(DescribeSymbolServer(context, cmd.sym_server()));
+  return true;
+}
+
 }  // namespace
 
 NounRecord::NounRecord() = default;
@@ -644,6 +738,8 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
     return result;
   if (HandleJobNoun(context, cmd, &result))
     return result;
+  if (HandleSymbolServerNoun(context, cmd, &result))
+    return result;
   if (HandleGlobalNoun(context, cmd, &result))
     return result;
 
@@ -667,6 +763,9 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
                                         kProcessHelp, CommandGroup::kProcess);
   (*nouns)[Noun::kGlobal] = NounRecord({"global", "gl"}, kGlobalShortHelp,
                                        kGlobalHelp, CommandGroup::kNone);
+  (*nouns)[Noun::kSymServer] =
+      NounRecord({"sym-server"}, kSymServerShortHelp, kSymServerHelp,
+                 CommandGroup::kSymbols);
   (*nouns)[Noun::kJob] =
       NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
 }
