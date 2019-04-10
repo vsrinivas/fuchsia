@@ -5,6 +5,8 @@
   "fidl/fuchsia.ui.input/input_event_constants.fidl": "70bf9747cd5d98cae29ff8e269533245",
   "fidl/fuchsia.ui.input/input_events.fidl": "e684d3daa43c94a436caa083e7dde53c",
   "fidl/fuchsia.ui.input/input_reports.fidl": "a96d40fdc18dda92a81133a665567ee6",
+  "fidl/fuchsia.ui.input/keys.fidl": "ce004eff8674e4db98d245472be6d4fd",
+  "fidl/fuchsia.ui.input/modifiers.fidl": "1545e8a3bdc8f59e12d483219a8751d1",
   "fidl/fuchsia.ui.input/text_editing.fidl": "b74c57aea4c32932c45dd038bc9647b9",
   "fidl/fuchsia.ui.input/text_input.fidl": "3eb489bd31c40258c7a4c8b0fd65cd69",
   "fidl/fuchsia.ui.input/usages.fidl": "8a329462bb86b15a09591f0d461c3d68"

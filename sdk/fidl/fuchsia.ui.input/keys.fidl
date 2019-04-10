@@ -1,0 +1,796 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input;
+
+/// A Fuchsia key represents a control that can be pressed or released
+/// such as a button on a keyboard.
+///
+/// Where applicable, the definition of each key is derived from one of the
+/// following sources albeit with a Fuchsia-specific numeric value:
+/// - USB HID usage codes for usage page 0x0007 (Keyboard/Keypad)
+/// - USB HID usage codes for usage page 0x000c (Consumer)
+/// - Common but non-standard keys (vendor defined)
+///
+/// The example key mappings included in this documentation assume a
+/// US English keyboard layout. Actual behavior varies by layout.
+enum Key : uint32 {
+    // Keyboard keys
+    // Reserved range: 0x00000001 - 0x000001ff
+
+    /// Keyboard a and A
+    /// Corresponds to USB HID page 0x0007 usage 0x0004
+    A = 0x00000001;
+
+    /// Keyboard b and B
+    /// Corresponds to USB HID page 0x0007 usage 0x0005
+    B = 0x00000002;
+
+    /// Keyboard c and C
+    /// Corresponds to USB HID page 0x0007 usage 0x0006
+    C = 0x00000003;
+
+    /// Keyboard d and D
+    /// Corresponds to USB HID page 0x0007 usage 0x0007
+    D = 0x00000004;
+
+    /// Keyboard e and E
+    /// Corresponds to USB HID page 0x0007 usage 0x0008
+    E = 0x00000005;
+
+    /// Keyboard f and F
+    /// Corresponds to USB HID page 0x0007 usage 0x0009
+    F = 0x00000006;
+
+    /// Keyboard g and G
+    /// Corresponds to USB HID page 0x0007 usage 0x000a
+    G = 0x00000007;
+
+    /// Keyboard h and H
+    /// Corresponds to USB HID page 0x0007 usage 0x000b
+    H = 0x00000008;
+
+    /// Keyboard i and I
+    /// Corresponds to USB HID page 0x0007 usage 0x000c
+    I = 0x00000009;
+
+    /// Keyboard j and J
+    /// Corresponds to USB HID page 0x0007 usage 0x000d
+    J = 0x0000000a;
+
+    /// Keyboard k and K
+    /// Corresponds to USB HID page 0x0007 usage 0x000e
+    K = 0x0000000b;
+
+    /// Keyboard l and L
+    /// Corresponds to USB HID page 0x0007 usage 0x000f
+    L = 0x0000000c;
+
+    /// Keyboard m and M
+    /// Corresponds to USB HID page 0x0007 usage 0x0010
+    M = 0x0000000d;
+
+    /// Keyboard n and N
+    /// Corresponds to USB HID page 0x0007 usage 0x0011
+    N = 0x0000000e;
+
+    /// Keyboard o and O
+    /// Corresponds to USB HID page 0x0007 usage 0x0012
+    O = 0x0000000f;
+
+    /// Keyboard p and P
+    /// Corresponds to USB HID page 0x0007 usage 0x0013
+    P = 0x00000010;
+
+    /// Keyboard q and Q
+    /// Corresponds to USB HID page 0x0007 usage 0x0014
+    Q = 0x00000011;
+
+    /// Keyboard r and R
+    /// Corresponds to USB HID page 0x0007 usage 0x0015
+    R = 0x00000012;
+
+    /// Keyboard s and S
+    /// Corresponds to USB HID page 0x0007 usage 0x0016
+    S = 0x00000013;
+
+    /// Keyboard t and T
+    /// Corresponds to USB HID page 0x0007 usage 0x0017
+    T = 0x00000014;
+
+    /// Keyboard u and U
+    /// Corresponds to USB HID page 0x0007 usage 0x0018
+    U = 0x00000015;
+
+    /// Keyboard v and V
+    /// Corresponds to USB HID page 0x0007 usage 0x0019
+    V = 0x00000016;
+
+    /// Keyboard w and W
+    /// Corresponds to USB HID page 0x0007 usage 0x001a
+    W = 0x00000017;
+
+    /// Keyboard x and X
+    /// Corresponds to USB HID page 0x0007 usage 0x001b
+    X = 0x00000018;
+
+    /// Keyboard y and Y
+    /// Corresponds to USB HID page 0x0007 usage 0x001c
+    Y = 0x00000019;
+
+    /// Keyboard z and Z
+    /// Corresponds to USB HID page 0x0007 usage 0x001d
+    Z = 0x0000001a;
+
+    /// Keyboard 1 and !
+    /// Corresponds to USB HID page 0x0007 usage 0x001e
+    KEY_1 = 0x0000001b;
+
+    /// Keyboard 2 and @
+    /// Corresponds to USB HID page 0x0007 usage 0x001f
+    KEY_2 = 0x0000001c;
+
+    /// Keyboard 3 and #
+    /// Corresponds to USB HID page 0x0007 usage 0x0020
+    KEY_3 = 0x0000001d;
+
+    /// Keyboard 4 and $
+    /// Corresponds to USB HID page 0x0007 usage 0x0021
+    KEY_4 = 0x0000001e;
+
+    /// Keyboard 5 and %
+    /// Corresponds to USB HID page 0x0007 usage 0x0022
+    KEY_5 = 0x0000001f;
+
+    /// Keyboard 6 and ^
+    /// Corresponds to USB HID page 0x0007 usage 0x0023
+    KEY_6 = 0x00000020;
+
+    /// Keyboard 7 and &
+    /// Corresponds to USB HID page 0x0007 usage 0x0024
+    KEY_7 = 0x00000021;
+
+    /// Keyboard 8 and *
+    /// Corresponds to USB HID page 0x0007 usage 0x0025
+    KEY_8 = 0x00000022;
+
+    /// Keyboard 9 and (
+    /// Corresponds to USB HID page 0x0007 usage 0x0026
+    KEY_9 = 0x00000023;
+
+    /// Keyboard 0 and )
+    /// Corresponds to USB HID page 0x0007 usage 0x0027
+    KEY_0 = 0x00000024;
+
+    /// Keyboard Enter (Return)
+    /// Corresponds to USB HID page 0x0007 usage 0x0028
+    ENTER = 0x00000025;
+
+    /// Keyboard Escape
+    /// Corresponds to USB HID page 0x0007 usage 0x0029
+    ESCAPE = 0x00000026;
+
+    /// Keyboard Backspace (Backward Delete)
+    /// Corresponds to USB HID page 0x0007 usage 0x002a
+    BACKSPACE = 0x00000027;
+
+    /// Keyboard Tab
+    /// Corresponds to USB HID page 0x0007 usage 0x002b
+    TAB = 0x00000028;
+
+    /// Keyboard Spacebar
+    /// Corresponds to USB HID page 0x0007 usage 0x002c
+    SPACE = 0x00000029;
+
+    /// Keyboard - and (underscore)
+    /// Corresponds to USB HID page 0x0007 usage 0x002d
+    MINUS = 0x0000002a;
+
+    /// Keyboard = and +
+    /// Corresponds to USB HID page 0x0007 usage 0x002e
+    EQUALS = 0x0000002b;
+
+    /// Keyboard [ and {
+    /// Corresponds to USB HID page 0x0007 usage 0x002f
+    LEFT_BRACE = 0x0000002c;
+
+    /// Keyboard ] and }
+    /// Corresponds to USB HID page 0x0007 usage 0x0030
+    RIGHT_BRACE = 0x0000002d;
+
+    /// Keyboard \ and |
+    /// Corresponds to USB HID page 0x0007 usage 0x0031
+    BACKSLASH = 0x0000002e;
+
+    /// Keyboard Non-US # and ~
+    /// Corresponds to USB HID page 0x0007 usage 0x0032
+    NON_US_HASH = 0x0000002f;
+
+    /// Keyboard ; and :
+    /// Corresponds to USB HID page 0x0007 usage 0x0033
+    SEMICOLON = 0x00000030;
+
+    /// Keyboard ' and "
+    /// Corresponds to USB HID page 0x0007 usage 0x0034
+    APOSTROPHE = 0x00000031;
+
+    /// Keyboard Grave Accent and Tilde
+    /// Corresponds to USB HID page 0x0007 usage 0x0035
+    GRAVE_ACCENT = 0x00000032;
+
+    /// Keyboard , and <
+    /// Corresponds to USB HID page 0x0007 usage 0x0036
+    COMMA = 0x00000033;
+
+    /// Keyboard . and >
+    /// Corresponds to USB HID page 0x0007 usage 0x0037
+    DOT = 0x00000034;
+
+    /// Keyboard / and ?
+    /// Corresponds to USB HID page 0x0007 usage 0x0038
+    SLASH = 0x00000035;
+
+    /// Keyboard Caps Lock
+    /// Corresponds to USB HID page 0x0007 usage 0x0039
+    CAPS_LOCK = 0x00000036;
+
+    /// Keyboard F1
+    /// Corresponds to USB HID page 0x0007 usage 0x003a
+    F1 = 0x00000037;
+
+    /// Keyboard F2
+    /// Corresponds to USB HID page 0x0007 usage 0x003b
+    F2 = 0x00000038;
+
+    /// Keyboard F3
+    /// Corresponds to USB HID page 0x0007 usage 0x003c
+    F3 = 0x00000039;
+
+    /// Keyboard F4
+    /// Corresponds to USB HID page 0x0007 usage 0x003d
+    F4 = 0x0000003a;
+
+    /// Keyboard F5
+    /// Corresponds to USB HID page 0x0007 usage 0x003e
+    F5 = 0x0000003b;
+
+    /// Keyboard F6
+    /// Corresponds to USB HID page 0x0007 usage 0x003f
+    F6 = 0x0000003c;
+
+    /// Keyboard F7
+    /// Corresponds to USB HID page 0x0007 usage 0x0040
+    F7 = 0x0000003d;
+
+    /// Keyboard F8
+    /// Corresponds to USB HID page 0x0007 usage 0x0041
+    F8 = 0x0000003e;
+
+    /// Keyboard F9
+    /// Corresponds to USB HID page 0x0007 usage 0x0042
+    F9 = 0x0000003f;
+
+    /// Keyboard F10
+    /// Corresponds to USB HID page 0x0007 usage 0x0043
+    F10 = 0x00000040;
+
+    /// Keyboard F11
+    /// Corresponds to USB HID page 0x0007 usage 0x0044
+    F11 = 0x00000041;
+
+    /// Keyboard F12
+    /// Corresponds to USB HID page 0x0007 usage 0x0045
+    F12 = 0x00000042;
+
+    /// Keyboard Print Screen
+    /// Corresponds to USB HID page 0x0007 usage 0x0046
+    PRINT_SCREEN = 0x00000043;
+
+    /// Keyboard Scroll Lock
+    /// Corresponds to USB HID page 0x0007 usage 0x0047
+    SCROLL_LOCK = 0x00000044;
+
+    /// Keyboard Pause
+    /// Corresponds to USB HID page 0x0007 usage 0x0048
+    PAUSE = 0x00000045;
+
+    /// Keyboard Insert
+    /// Corresponds to USB HID page 0x0007 usage 0x0049
+    INSERT = 0x00000046;
+
+    /// Keyboard Home
+    /// Corresponds to USB HID page 0x0007 usage 0x004a
+    HOME = 0x00000047;
+
+    /// Keyboard Page Up
+    /// Corresponds to USB HID page 0x0007 usage 0x004b
+    PAGE_UP = 0x00000048;
+
+    /// Keyboard Forward Delete
+    /// Corresponds to USB HID page 0x0007 usage 0x004c
+    DELETE = 0x00000049;
+
+    /// Keyboard End
+    /// Corresponds to USB HID page 0x0007 usage 0x004d
+    END = 0x0000004a;
+
+    /// Keyboard Page Down
+    /// Corresponds to USB HID page 0x0007 usage 0x004e
+    PAGE_DOWN = 0x0000004b;
+
+    /// Keyboard Right Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x004f
+    RIGHT = 0x0000004c;
+
+    /// Keyboard Left Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x0050
+    LEFT = 0x0000004d;
+
+    /// Keyboard Down Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x0051
+    DOWN = 0x0000004e;
+
+    /// Keyboard Up Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x0052
+    UP = 0x0000004f;
+
+    /// Keyboard Non-US \ and |
+    /// Corresponds to USB HID page 0x0007 usage 0x0064
+    NON_US_BACKSLASH = 0x00000050;
+
+    /// Keyboard Left Shift
+    /// Corresponds to USB HID page 0x0007 usage 0x00e1
+    LEFT_SHIFT = 0x00000051;
+
+    /// Keyboard Left Alt
+    /// Corresponds to USB HID page 0x0007 usage 0x00e2
+    LEFT_ALT = 0x00000052;
+
+    /// Keyboard Left GUI (Meta, Windows)
+    /// Corresponds to USB HID page 0x0007 usage 0x00e3
+    LEFT_META = 0x00000053;
+
+    /// Keyboard Right Control
+    /// Corresponds to USB HID page 0x0007 usage 0x00e4
+    RIGHT_CTRL = 0x00000054;
+
+    /// Keyboard Right Shift
+    /// Corresponds to USB HID page 0x0007 usage 0x00e5
+    RIGHT_SHIFT = 0x00000055;
+
+    /// Keyboard Right Alt
+    /// Corresponds to USB HID page 0x0007 usage 0x00e6
+    RIGHT_ALT = 0x00000056;
+
+    /// Keyboard Right GUI (Meta, Windows)
+    /// Corresponds to USB HID page 0x0007 usage 0x00e7
+    RIGHT_META = 0x00000057;
+
+
+    // Keypad keys
+    // Reserved range: 0x00000200 - 0x000002ff
+
+
+    /// Keypad Num Lock and Clear
+    /// Corresponds to USB HID page 0x0007 usage 0x0053
+    NUM_LOCK = 0x00000200;
+
+    /// Keypad /
+    /// Corresponds to USB HID page 0x0007 usage 0x0054
+    KEYPAD_SLASH = 0x00000201;
+
+    /// Keypad *
+    /// Corresponds to USB HID page 0x0007 usage 0x0055
+    KEYPAD_ASTERISK = 0x00000202;
+
+    /// Keypad -
+    /// Corresponds to USB HID page 0x0007 usage 0x0056
+    KEYPAD_MINUS = 0x00000203;
+
+    /// Keypad +
+    /// Corresponds to USB HID page 0x0007 usage 0x0057
+    KEYPAD_PLUS = 0x00000204;
+
+    /// Keypad ENTER
+    /// Corresponds to USB HID page 0x0007 usage 0x0058
+    KEYPAD_ENTER = 0x00000205;
+
+    /// Keypad 1 and End
+    /// Corresponds to USB HID page 0x0007 usage 0x0059
+    KEYPAD_1 = 0x00000206;
+
+    /// Keypad 2 and Down Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x005a
+    KEYPAD_2 = 0x00000207;
+
+    /// Keypad 3 and Page Down
+    /// Corresponds to USB HID page 0x0007 usage 0x005b
+    KEYPAD_3 = 0x00000208;
+
+    /// Keypad 4 and Left Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x005c
+    KEYPAD_4 = 0x00000209;
+
+    /// Keypad 5
+    /// Corresponds to USB HID page 0x0007 usage 0x005d
+    KEYPAD_5 = 0x0000020A;
+
+    /// Keypad 6 and Right Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x005e
+    KEYPAD_6 = 0x0000020B;
+
+    /// Keypad 7 and Home
+    /// Corresponds to USB HID page 0x0007 usage 0x005f
+    KEYPAD_7 = 0x0000020C;
+
+    /// Keypad 8 and Up Arrow
+    /// Corresponds to USB HID page 0x0007 usage 0x0060
+    KEYPAD_8 = 0x0000020D;
+
+    /// Keypad 9 and Page Up
+    /// Corresponds to USB HID page 0x0007 usage 0x0061
+    KEYPAD_9 = 0x0000020E;
+
+    /// Keypad 0 and Insert
+    /// Corresponds to USB HID page 0x0007 usage 0x0062
+    KEYPAD_0 = 0x0000020F;
+
+    /// Keypad . and Delete
+    /// Corresponds to USB HID page 0x0007 usage 0x0063
+    KEYPAD_DOT = 0x00000210;
+
+
+    // Media keys
+    // Reserved range: 0x00000300 - 0x000004ff
+
+
+    // Mute
+    // Corresponds to USB HID page 0x000c usage 0x00e2
+    MEDIA_MUTE = 0x00000300;
+
+    // Volume Increment
+    // Corresponds to USB HID page 0x000c usage 0x00e9
+    MEDIA_VOLUME_INCREMENT = 0x00000301;
+
+    // Volume Decrement
+    // Corresponds to USB HID page 0x000c usage 0x00ea
+    MEDIA_VOLUME_DECREMENT = 0x00000302;
+
+
+    // Next available range: 0x00000500
+
+
+    // TODO: Define additional USB HID keys as needed.
+    //
+    // Keyboard Application
+    // Corresponds to USB HID page 0x0007 usage 0x0065
+    //
+    // Keyboard Power (Not a physical key)
+    // Corresponds to USB HID page 0x0007 usage 0x0066
+    // Note: Reserved for typical keyboard status or keyboard errors.
+    // Sent as a member of the keyboard array.
+    //
+    // Keypad =
+    // Corresponds to USB HID page 0x0007 usage 0x0067
+    //
+    // Keyboard F13
+    // Corresponds to USB HID page 0x0007 usage 0x0068
+    //
+    // Keyboard F14
+    // Corresponds to USB HID page 0x0007 usage 0x0069
+    //
+    // Keyboard F15
+    // Corresponds to USB HID page 0x0007 usage 0x006a
+    //
+    // Keyboard F16
+    // Corresponds to USB HID page 0x0007 usage 0x006b
+    //
+    // Keyboard F17
+    // Corresponds to USB HID page 0x0007 usage 0x006c
+    //
+    // Keyboard F18
+    // Corresponds to USB HID page 0x0007 usage 0x006d
+    //
+    // Keyboard F19
+    // Corresponds to USB HID page 0x0007 usage 0x006e
+    //
+    // Keyboard F20
+    // Corresponds to USB HID page 0x0007 usage 0x006f
+    //
+    // Keyboard F21
+    // Corresponds to USB HID page 0x0007 usage 0x0070
+    //
+    // Keyboard F22
+    // Corresponds to USB HID page 0x0007 usage 0x0071
+    //
+    // Keyboard F23
+    // Corresponds to USB HID page 0x0007 usage 0x0072
+    //
+    // Keyboard F24
+    // Corresponds to USB HID page 0x0007 usage 0x0073
+    //
+    // Keyboard Execute
+    // Corresponds to USB HID page 0x0007 usage 0x0074
+    //
+    // Keyboard Help
+    // Corresponds to USB HID page 0x0007 usage 0x0075
+    //
+    // Keyboard Menu
+    // Corresponds to USB HID page 0x0007 usage 0x0076
+    //
+    // Keyboard Select
+    // Corresponds to USB HID page 0x0007 usage 0x0077
+    //
+    // Keyboard Stop
+    // Corresponds to USB HID page 0x0007 usage 0x0078
+    //
+    // Keyboard Again
+    // Corresponds to USB HID page 0x0007 usage 0x0079
+    //
+    // Keyboard Undo
+    // Corresponds to USB HID page 0x0007 usage 0x007a
+    //
+    // Keyboard Cut
+    // Corresponds to USB HID page 0x0007 usage 0x007b
+    //
+    // Keyboard Copy
+    // Corresponds to USB HID page 0x0007 usage 0x007c
+    //
+    // Keyboard Paste
+    // Corresponds to USB HID page 0x0007 usage 0x007d
+    //
+    // Keyboard Find
+    // Corresponds to USB HID page 0x0007 usage 0x007e
+    //
+    // Keyboard Volume Down
+    // Corresponds to USB HID page 0x0007 usage 0x0081
+    //
+    // Keyboard Volume Up
+    // Corresponds to USB HID page 0x0007 usage 0x0080
+    //
+    // Keyboard Locking Caps Lock
+    // Corresponds to USB HID page 0x0007 usage 0x0082
+    //
+    // Keyboard Locking Num Lock
+    // Corresponds to USB HID page 0x0007 usage 0x0083
+    //
+    // Keyboard Locking Scroll Lock
+    // Corresponds to USB HID page 0x0007 usage 0x0084
+    //
+    // Keypad Comma
+    // Corresponds to USB HID page 0x0007 usage 0x0085
+    //
+    // Keypad Equal Sign
+    // Corresponds to USB HID page 0x0007 usage 0x0086
+    //
+    // Keyboard International1
+    // Corresponds to USB HID page 0x0007 usage 0x0087
+    //
+    // Keyboard International2
+    // Corresponds to USB HID page 0x0007 usage 0x0088
+    //
+    // Keyboard International3
+    // Corresponds to USB HID page 0x0007 usage 0x0089
+    //
+    // Keyboard International4
+    // Corresponds to USB HID page 0x0007 usage 0x008a
+    //
+    // Keyboard International5
+    // Corresponds to USB HID page 0x0007 usage 0x008b
+    //
+    // Keyboard International6
+    // Corresponds to USB HID page 0x0007 usage 0x008c
+    //
+    // Keyboard International7
+    // Corresponds to USB HID page 0x0007 usage 0x008d
+    //
+    // Keyboard International8
+    // Corresponds to USB HID page 0x0007 usage 0x008e
+    //
+    // Keyboard International9
+    // Corresponds to USB HID page 0x0007 usage 0x008f
+    //
+    // Keyboard LANG1
+    // Corresponds to USB HID page 0x0007 usage 0x0090
+    //
+    // Keyboard LANG2
+    // Corresponds to USB HID page 0x0007 usage 0x0091
+    //
+    // Keyboard LANG3
+    // Corresponds to USB HID page 0x0007 usage 0x0092
+    //
+    // Keyboard LANG4
+    // Corresponds to USB HID page 0x0007 usage 0x0093
+    //
+    // Keyboard LANG5
+    // Corresponds to USB HID page 0x0007 usage 0x0094
+    //
+    // Keyboard LANG6
+    // Corresponds to USB HID page 0x0007 usage 0x0095
+    //
+    // Keyboard LANG7
+    // Corresponds to USB HID page 0x0007 usage 0x0096
+    //
+    // Keyboard LANG8
+    // Corresponds to USB HID page 0x0007 usage 0x0097
+    //
+    // Keyboard LANG9
+    // Corresponds to USB HID page 0x0007 usage 0x0098
+    //
+    // Keyboard Alternate Erase
+    // Corresponds to USB HID page 0x0007 usage 0x0099
+    //
+    // Keyboard SysReq/Attention
+    // Corresponds to USB HID page 0x0007 usage 0x009a
+    //
+    // Keyboard Cancel
+    // Corresponds to USB HID page 0x0007 usage 0x009b
+    //
+    // Keyboard Clear
+    // Corresponds to USB HID page 0x0007 usage 0x009c
+    //
+    // Keyboard Prior
+    // Corresponds to USB HID page 0x0007 usage 0x009d
+    //
+    // Keyboard Return
+    // Corresponds to USB HID page 0x0007 usage 0x009e
+    //
+    // Keyboard Separator
+    // Corresponds to USB HID page 0x0007 usage 0x009f
+    //
+    // Keyboard Out
+    // Corresponds to USB HID page 0x0007 usage 0x00a0
+    //
+    // Keyboard Oper
+    // Corresponds to USB HID page 0x0007 usage 0x00a1
+    //
+    // Keyboard Clear/Again
+    // Corresponds to USB HID page 0x0007 usage 0x00a2
+    //
+    // Keyboard CrSel/Props
+    // Corresponds to USB HID page 0x0007 usage 0x00a3
+    //
+    // Keyboard ExSel
+    // Corresponds to USB HID page 0x0007 usage 0x00a4
+    //
+    // Note: USB HID usage page 0x0007 reserves codes 0x00a5 - 0x00af
+    //
+    // Keypad 00
+    // Corresponds to USB HID page 0x0007 usage 0x00b0
+    //
+    // Keypad 000
+    // Corresponds to USB HID page 0x0007 usage 0x00b1
+    //
+    // Thousands Separator
+    // Corresponds to USB HID page 0x0007 usage 0x00b2
+    //
+    // Decimal Separator
+    // Corresponds to USB HID page 0x0007 usage 0x00b3
+    //
+    // Currency Unit
+    // Corresponds to USB HID page 0x0007 usage 0x00b4
+    //
+    // Currency Sub-unit
+    // Corresponds to USB HID page 0x0007 usage 0x00b5
+    //
+    // Keypad (
+    // Corresponds to USB HID page 0x0007 usage 0x00b6
+    //
+    // Keypad )
+    // Corresponds to USB HID page 0x0007 usage 0x00b7
+    //
+    // Keypad {
+    // Corresponds to USB HID page 0x0007 usage 0x00b8
+    //
+    // Keypad }
+    // Corresponds to USB HID page 0x0007 usage 0x00b9
+    //
+    // Keypad Tab
+    // Corresponds to USB HID page 0x0007 usage 0x00ba
+    //
+    // Keypad Backspace
+    // Corresponds to USB HID page 0x0007 usage 0x00bb
+    //
+    // Keypad A
+    // Corresponds to USB HID page 0x0007 usage 0x00bc
+    //
+    // Keypad B
+    // Corresponds to USB HID page 0x0007 usage 0x00bd
+    //
+    // Keypad C
+    // Corresponds to USB HID page 0x0007 usage 0x00be
+    //
+    // Keypad D
+    // Corresponds to USB HID page 0x0007 usage 0x00bf
+    //
+    // Keypad E
+    // Corresponds to USB HID page 0x0007 usage 0x00c0
+    //
+    // Keypad F
+    // Corresponds to USB HID page 0x0007 usage 0x00c1
+    //
+    // Keypad XOR
+    // Corresponds to USB HID page 0x0007 usage 0x00c2
+    //
+    // Keypad ^
+    // Corresponds to USB HID page 0x0007 usage 0x00c3
+    //
+    // Keypad %
+    // Corresponds to USB HID page 0x0007 usage 0x00c4
+    //
+    // Keypad <
+    // Corresponds to USB HID page 0x0007 usage 0x00c5
+    //
+    // Keypad >
+    // Corresponds to USB HID page 0x0007 usage 0x00c6
+    //
+    // Keypad &
+    // Corresponds to USB HID page 0x0007 usage 0x00c7
+    //
+    // Keypad &&
+    // Corresponds to USB HID page 0x0007 usage 0x00c8
+    //
+    // Keypad |
+    // Corresponds to USB HID page 0x0007 usage 0x00c9
+    //
+    // Keypad ||
+    // Corresponds to USB HID page 0x0007 usage 0x00ca
+    //
+    // Keypad :
+    // Corresponds to USB HID page 0x0007 usage 0x00cb
+    //
+    // Keypad #
+    // Corresponds to USB HID page 0x0007 usage 0x00cc
+    //
+    // Keypad Space
+    // Corresponds to USB HID page 0x0007 usage 0x00cd
+    //
+    // Keypad @
+    // Corresponds to USB HID page 0x0007 usage 0x00ce
+    //
+    // Keypad !
+    // Corresponds to USB HID page 0x0007 usage 0x00cf
+    //
+    // Keypad Memory Store
+    // Corresponds to USB HID page 0x0007 usage 0x00d0
+    //
+    // Keypad Memory Recall
+    // Corresponds to USB HID page 0x0007 usage 0x00d1
+    //
+    // Keypad Memory Clear
+    // Corresponds to USB HID page 0x0007 usage 0x00d2
+    //
+    // Keypad Memory Add
+    // Corresponds to USB HID page 0x0007 usage 0x00d3
+    //
+    // Keypad Memory Subtract
+    // Corresponds to USB HID page 0x0007 usage 0x00d4
+    //
+    // Keypad Memory Multiply
+    // Corresponds to USB HID page 0x0007 usage 0x00d5
+    //
+    // Keypad Memory Divide
+    // Corresponds to USB HID page 0x0007 usage 0x00d6
+    //
+    // Keypad +/-
+    // Corresponds to USB HID page 0x0007 usage 0x00d7
+    //
+    // Keypad Clear
+    // Corresponds to USB HID page 0x0007 usage 0x00d8
+    //
+    // Keypad Clear Entry
+    // Corresponds to USB HID page 0x0007 usage 0x00d9
+    //
+    // Keypad Binary
+    // Corresponds to USB HID page 0x0007 usage 0x00da
+    //
+    // Keypad Octal
+    // Corresponds to USB HID page 0x0007 usage 0x00db
+    //
+    // Keypad Decimal
+    // Corresponds to USB HID page 0x0007 usage 0x00dc
+    //
+    // Keypad Hexadecimal
+    // Corresponds to USB HID page 0x0007 usage 0x00dd
+};

@@ -1,0 +1,47 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input;
+
+/// Modifiers are special keys that modify the purpose or the function
+/// of other keys when used in combination with them.
+bits Modifiers : uint32 {
+    /// Applies when either the LEFT_SHIFT or RIGHT_SHIFT modifier is pressed.
+    SHIFT         = 0x00000001;
+    /// Applies when the LEFT_SHIFT modifier is pressed.
+    LEFT_SHIFT    = 0x00000002;
+    /// Applies when the RIGHT_SHIFT modifier is pressed.
+    RIGHT_SHIFT   = 0x00000004;
+
+    /// Applies when either the LEFT_CONTROL or RIGHT_CONTROL modifier is pressed.
+    CONTROL       = 0x00000008;
+    /// Applies when the LEFT_CONTROL modifier is pressed.
+    LEFT_CONTROL  = 0x00000010;
+    /// Applies when the RIGHT_CONTROL modifier is pressed.
+    RIGHT_CONTROL = 0x00000020;
+
+    /// Applies when either the LEFT_ALT or RIGHT_ALT modifier is pressed.
+    ALT           = 0x00000040;
+    /// Applies when the LEFT_ALT modifier is pressed.
+    LEFT_ALT      = 0x00000080;
+    /// Applies when the RIGHT_ALT modifier is pressed.
+    RIGHT_ALT     = 0x00000100;
+
+    /// Applies when either the LEFT_META or RIGHT_META modifier is pressed.
+    META          = 0x00000200;
+    /// Applies when the LEFT_META modifier is pressed.
+    LEFT_META     = 0x00000400;
+    /// Applies when the RIGHT_META modifier is pressed.
+    RIGHT_META    = 0x00000800;
+
+    /// Applies when the CAPS_LOCK modifier is locked.
+    CAPS_LOCK     = 0x00001000;
+    /// Applies when the NUM_LOCK modifier is locked.
+    NUM_LOCK      = 0x00002000;
+    /// Applies when the SCROLL_LOCK modifier is locked.
+    SCROLL_LOCK   = 0x00004000;
+
+    // TODO: Define additional modifiers as needed.
+    // ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
+};
