@@ -1,41 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <ddk/binding.h>
-#include <ddk/platform-defs.h>
-#include <fbl/auto_call.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/zx/pmt.h>
-#include <zircon/pixelformat.h>
-#include <hw/reg.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/gpio.h>
-#include "ddk-interface.h"
-#include "hi-display.h"
 
-extern "C" zx_status_t adv7533_init(display_t* display);
-extern "C" zx_status_t dsi_init(display_t* display);
-extern "C" void hdmi_init(display_t* display);
+#include "ddk-interface.h"
+#include <fuchsia/sysmem/c/fidl.h>
 
 namespace hi_display {
-#define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 // List of supported pixel formats
 zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
 
-// TODO: Update with hardware specific values
-constexpr uint32_t kWidth = 1024;
-constexpr uint32_t kHeight = 600;
-constexpr uint64_t kDisplayId = 1;
-constexpr uint32_t kRefreshRateFps = 60;
-constexpr uint32_t kMaxLayer = 1;
-
 void HiDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
     args->display_id = kDisplayId;
     args->edid_present = true;
-    args->panel.params.height = kHeight;
-    args->panel.params.width = kWidth;
+    args->panel.params.height = height_;
+    args->panel.params.width = width_;
     args->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
     args->pixel_format_list = kSupportedPixelFormats;
     args->pixel_format_count = countof(kSupportedPixelFormats);
@@ -53,7 +32,7 @@ void HiDisplay::DisplayControllerImplSetDisplayControllerInterface(
     dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
     added_display_args_t args;
     PopulateAddedDisplayArgs(&args);
-    dc_intf_.OnDisplaysChanged(&args, 1, NULL, 0, NULL, 0, NULL);
+    dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
 zx_status_t HiDisplay::DisplayControllerImplImportVmoImage(image_t* image,
@@ -93,18 +72,17 @@ uint32_t HiDisplay::DisplayControllerImplCheckConfiguration(
     } else {
         const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
-            .x_pos = 0, .y_pos = 0, .width = kWidth, .height = kHeight,
+            .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
         };
         success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY
                 && layer.transform_mode == FRAME_TRANSFORM_IDENTITY
-                && layer.image.width == kWidth
-                && layer.image.height == kHeight
+                && layer.image.width == width_
+                && layer.image.height == height_
                 && memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0
                 && memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0
                 && display_configs[0]->cc_flags == 0
                 && layer.alpha_mode == ALPHA_DISABLE;
     }
-
     if (!success) {
         layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
@@ -206,7 +184,36 @@ void HiDisplay::DdkRelease() {
 }
 
 zx_status_t HiDisplay::SetupDisplayInterface() {
+    zx_status_t status;
+    fbl::AllocChecker ac;
     fbl::AutoLock lock(&display_lock_);
+
+    adv7533_ = fbl::make_unique_checked<hi_display::Adv7533>(&ac);
+    if (!ac.check()) {
+        DISP_ERROR("Failed to create ADV7533 instance\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((status = adv7533_->Adv7533Init(&pdev_)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Error in ADV7533 Initialization %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    dsi_ = fbl::make_unique_checked<hi_display::HiDsi>(&ac);
+    if (!ac.check()) {
+        DISP_ERROR("Failed to create MIPI DSI instance\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((status = dsi_->DsiInit(parent_)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Error in MIPI DSI Initialization %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    if ((status = dsi_->GetDisplayResolution(width_, height_)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Panel not connected : %d\n", __FUNCTION__, status);
+        return status;
+    }
 
     current_image_valid_ = false;
 
@@ -216,7 +223,7 @@ zx_status_t HiDisplay::SetupDisplayInterface() {
         dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
     }
 
-    return ZX_OK;
+    return status;
 }
 
 int HiDisplay::VSyncThread() {
@@ -238,7 +245,11 @@ int HiDisplay::VSyncThread() {
 }
 
 zx_status_t HiDisplay::Bind() {
-    zx_status_t status;
+    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to obtain the display protocol\n");
+        return status;
+    }
 
     status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
     if (status != ZX_OK) {
@@ -266,98 +277,34 @@ zx_status_t HiDisplay::Bind() {
         return status;
     }
 
-    return ZX_OK;
+    return status;
 }
 
-} // namespace hi_display
-
-static void hdmi_gpio_init(display_t* display) {
-    gpio_protocol_t* gpios = display->hdmi_gpio.gpios;
-    gpio_config_out(&gpios[GPIO_MUX], 0);
-    gpio_config_out(&gpios[GPIO_PD], 0);
-    gpio_config_in(&gpios[GPIO_INT], GPIO_NO_PULL);
-    gpio_write(&gpios[GPIO_MUX], 0);
-}
-
-static zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
+// main bind function called from dev manager
+zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<hi_display::HiDisplay>(&ac, parent);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-
     auto status = dev->Bind();
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
         __UNUSED auto ptr = dev.release();
     }
-
-    display_t* display = (display_t *)calloc(1, sizeof(display_t));
-    if (!display) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &display->pdev);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    display->parent = parent;
-
-    status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &display->mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "display_bind: pdev_map_mmio_buffer failed\n");
-        goto fail;
-    }
-
-    /* Obtain the I2C devices */
-    size_t actual;
-    if ((status = pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 0, &display->i2c_dev.i2c_main,
-                          sizeof(display->i2c_dev.i2c_main), &actual)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
-        goto fail;
-    }
-    if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 1, &display->i2c_dev.i2c_cec,
-                          sizeof(display->i2c_dev.i2c_cec), &actual) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
-        goto fail;
-    }
-    if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 2, &display->i2c_dev.i2c_edid,
-                          sizeof(display->i2c_dev.i2c_edid), &actual) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
-        goto fail;
-    }
-
-    /* Obtain the GPIO devices */
-    for (uint32_t i = 0; i < countof(display->hdmi_gpio.gpios); i++) {
-        if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_GPIO, i, &display->hdmi_gpio.gpios[i],
-                              sizeof(display->hdmi_gpio.gpios[i]), &actual) != ZX_OK) {
-            zxlogf(ERROR, "%s: Could not obtain GPIO Protocol\n", __FUNCTION__);
-            goto fail;
-        }
-    }
-
-    hdmi_gpio_init(display);
-
-    if ( (status = adv7533_init(display)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Error in ADV7533 Initialization %d\n", __FUNCTION__, status);
-        goto fail;
-    }
-    dsi_init(display);
-fail:
     return status;
 }
 
-static zx_driver_ops_t hikey_display_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = hikey_display_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t hikey_display_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = hikey_display_bind;
+    return ops;
+}();
 
-ZIRCON_DRIVER_BEGIN(hikey_display, hikey_display_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+} // namespace hi_display
+
+ZIRCON_DRIVER_BEGIN(hikey_display, hi_display::hikey_display_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_96BOARDS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_HIKEY960),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HI_DISPLAY),

@@ -4,15 +4,16 @@
 
 driver("hikey-display") {
   sources = [
-    "adv7533.c",
     "ddk-interface.cpp",
-    "edid.c",
-    "hi3660-dsi.c",
+    "hi3660-dsi.cpp",
+    "adv7533.cpp",
+    "edid.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-display-controller",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-dsiimpl",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/fidl/fuchsia-sysmem:c",
@@ -24,5 +25,9 @@ driver("hikey-display") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/mipi-dsi",
+    "$zx/system/ulib/edid",
   ]
 }
