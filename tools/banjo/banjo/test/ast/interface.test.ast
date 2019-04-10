@@ -320,6 +320,16 @@ BanjoAst {
             Alias(
                 Ident {
                     namespace: None,
+                    name: "clock"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
                     name: "koid"
                 },
                 Ident {
@@ -375,6 +385,16 @@ BanjoAst {
                 Ident {
                     namespace: None,
                     name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "rights"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
                 }
             )
         ]
