@@ -59,6 +59,7 @@ static_library("client") {
     "breakpoint_location_impl.cc",
     "breakpoint_location_impl.h",
     "client_object.cc",
+    "curl.cc",
     "disassembler.cc",
     "finish_physical_frame_thread_controller.cc",
     "finish_thread_controller.cc",
@@ -135,6 +136,7 @@ static_library("client") {
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/third_party/mini_chromium:base",
     "//third_party/crashpad/util",
+    "//third_party/curl:libcurl",
   ]
 }
 
