@@ -290,6 +290,14 @@ struct PerfmonState : public PerfmonStateBase {
     // This is used to only look at fixed counters that are used.
     unsigned fixed_hw_map[IPM_MAX_FIXED_COUNTERS] = {};
 
+    // The ids for each of the in-use events, or zero if not used.
+    // These are passed in from the driver and then written to the buffer,
+    // but otherwise have no meaning to us.
+    // All in-use entries appear consecutively.
+    PmuEventId fixed_events[IPM_MAX_FIXED_COUNTERS] = {};
+    PmuEventId programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
+    PmuEventId misc_events[IPM_MAX_MISC_EVENTS] = {};
+
     // The counters are reset to this at the start.
     // And again for those that are reset on overflow.
     uint64_t fixed_initial_value[IPM_MAX_FIXED_COUNTERS] = {};
@@ -300,16 +308,8 @@ struct PerfmonState : public PerfmonStateBase {
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
     uint32_t misc_flags[IPM_MAX_MISC_EVENTS] = {};
 
-    // The ids for each of the in-use events, or zero if not used.
-    // These are passed in from the driver and then written to the buffer,
-    // but otherwise have no meaning to us.
-    // All in-use entries appear consecutively.
-    PmuEventId fixed_ids[IPM_MAX_FIXED_COUNTERS] = {};
-    PmuEventId programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
-    PmuEventId misc_ids[IPM_MAX_MISC_EVENTS] = {};
-
     // IA32_PERFEVTSEL_*
-    uint64_t events[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
+    uint64_t programmable_hw_events[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
 };
 
 namespace {
@@ -383,7 +383,7 @@ static void x86_perfmon_init_mchbar() {
         // See PCI spec 6.2.5.1.
         perfmon_mchbar_bar = bar & ~15u;
         perfmon_num_misc_events =
-            static_cast<uint32_t>(fbl::count_of(static_cast<ArchPmuConfig*>(nullptr)->misc_ids));
+            static_cast<uint32_t>(fbl::count_of(static_cast<ArchPmuConfig*>(nullptr)->misc_events));
     } else {
         TRACEF("perfmon: error %d reading mchbar\n", status);
     }
@@ -663,7 +663,7 @@ static zx_status_t x86_perfmon_verify_fixed_config(
     bool seen_last = false;
     unsigned num_used = perfmon_num_fixed_counters;
     for (unsigned i = 0; i < perfmon_num_fixed_counters; ++i) {
-        PmuEventId id = config->fixed_ids[i];
+        PmuEventId id = config->fixed_events[i];
         if (id != 0 && seen_last) {
             TRACEF("Active fixed events not front-filled\n");
             return ZX_ERR_INVALID_ARGS;
@@ -708,7 +708,7 @@ static zx_status_t x86_perfmon_verify_fixed_config(
             }
             unsigned hw_regnum = x86_perfmon_lookup_fixed_counter(id);
             if (hw_regnum == IPM_MAX_FIXED_COUNTERS) {
-                TRACEF("Invalid fixed counter id |fixed_ids[%u]|\n", i);
+                TRACEF("Invalid fixed counter id |fixed_events[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
         }
@@ -723,7 +723,7 @@ static zx_status_t x86_perfmon_verify_programmable_config(
     bool seen_last = false;
     unsigned num_used = perfmon_num_programmable_counters;
     for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
-        PmuEventId id = config->programmable_ids[i];
+        PmuEventId id = config->programmable_events[i];
         if (id != 0 && seen_last) {
             TRACEF("Active programmable events not front-filled\n");
             return ZX_ERR_INVALID_ARGS;
@@ -738,8 +738,8 @@ static zx_status_t x86_perfmon_verify_programmable_config(
             seen_last = true;
         }
         if (seen_last) {
-            if (config->programmable_events[i] != 0) {
-                TRACEF("Unused |programmable_events[%u]| not zero\n", i);
+            if (config->programmable_hw_events[i] != 0) {
+                TRACEF("Unused |programmable_hw_events[%u]| not zero\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             if (config->programmable_initial_value[i] != 0) {
@@ -751,8 +751,8 @@ static zx_status_t x86_perfmon_verify_programmable_config(
                 return ZX_ERR_INVALID_ARGS;
             }
         } else {
-            if (config->programmable_events[i] & ~kEventSelectWritableBits) {
-                TRACEF("Non writable bits set in |programmable_events[%u]|\n", i);
+            if (config->programmable_hw_events[i] & ~kEventSelectWritableBits) {
+                TRACEF("Non writable bits set in |programmable_hw_events[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             if (config->programmable_initial_value[i] > perfmon_max_programmable_counter_value) {
@@ -785,10 +785,10 @@ static zx_status_t x86_perfmon_verify_misc_config(
         const ArchPmuConfig* config,
         unsigned* out_num_used) {
     bool seen_last = false;
-    size_t max_num_used = fbl::count_of(config->misc_ids);
+    size_t max_num_used = fbl::count_of(config->misc_events);
     size_t num_used = max_num_used;
     for (size_t i = 0; i < max_num_used; ++i) {
-        PmuEventId id = config->misc_ids[i];
+        PmuEventId id = config->misc_events[i];
         if (id != 0 && seen_last) {
             TRACEF("Active misc events not front-filled\n");
             return ZX_ERR_INVALID_ARGS;
@@ -826,7 +826,7 @@ static zx_status_t x86_perfmon_verify_misc_config(
             case id: break;
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
             default:
-                TRACEF("Invalid misc event id |misc_ids[%zu]|\n", i);
+                TRACEF("Invalid misc event id |misc_events[%zu]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
         }
@@ -844,7 +844,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     }
 
     for (unsigned i = 0; i < num_fixed; ++i) {
-        if (config->fixed_ids[i] == config->timebase_event) {
+        if (config->fixed_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
             config->fixed_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
@@ -852,7 +852,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     }
 
     for (unsigned i = 0; i < num_programmable; ++i) {
-        if (config->programmable_ids[i] == config->timebase_event) {
+        if (config->programmable_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
             config->programmable_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
@@ -898,10 +898,10 @@ static zx_status_t x86_perfmon_verify_config(ArchPmuConfig* config,
 
 static void x86_perfmon_stage_fixed_config(const ArchPmuConfig* config,
                                            PerfmonState* state) {
-    static_assert(sizeof(state->fixed_ids) ==
-                  sizeof(config->fixed_ids), "");
-    memcpy(state->fixed_ids, config->fixed_ids,
-           sizeof(state->fixed_ids));
+    static_assert(sizeof(state->fixed_events) ==
+                  sizeof(config->fixed_events), "");
+    memcpy(state->fixed_events, config->fixed_events,
+           sizeof(state->fixed_events));
 
     static_assert(sizeof(state->fixed_initial_value) ==
                   sizeof(config->fixed_initial_value), "");
@@ -914,16 +914,16 @@ static void x86_perfmon_stage_fixed_config(const ArchPmuConfig* config,
            sizeof(state->fixed_flags));
 
     for (unsigned i = 0; i < fbl::count_of(state->fixed_hw_map); ++i) {
-        state->fixed_hw_map[i] = x86_perfmon_lookup_fixed_counter(config->fixed_ids[i]);
+        state->fixed_hw_map[i] = x86_perfmon_lookup_fixed_counter(config->fixed_events[i]);
     }
 }
 
 static void x86_perfmon_stage_programmable_config(
         const ArchPmuConfig* config, PerfmonState* state) {
-    static_assert(sizeof(state->programmable_ids) ==
-                  sizeof(config->programmable_ids), "");
-    memcpy(state->programmable_ids, config->programmable_ids,
-           sizeof(state->programmable_ids));
+    static_assert(sizeof(state->programmable_events) ==
+                  sizeof(config->programmable_events), "");
+    memcpy(state->programmable_events, config->programmable_events,
+           sizeof(state->programmable_events));
 
     static_assert(sizeof(state->programmable_initial_value) ==
                   sizeof(config->programmable_initial_value), "");
@@ -935,17 +935,18 @@ static void x86_perfmon_stage_programmable_config(
     memcpy(state->programmable_flags, config->programmable_flags,
            sizeof(state->programmable_flags));
 
-    static_assert(sizeof(state->events) ==
-                  sizeof(config->programmable_events), "");
-    memcpy(state->events, config->programmable_events, sizeof(state->events));
+    static_assert(sizeof(state->programmable_hw_events) ==
+                  sizeof(config->programmable_hw_events), "");
+    memcpy(state->programmable_hw_events, config->programmable_hw_events,
+           sizeof(state->programmable_hw_events));
 }
 
 static void x86_perfmon_stage_misc_config(const ArchPmuConfig* config,
                                           PerfmonState* state) {
-    static_assert(sizeof(state->misc_ids) ==
-                  sizeof(config->misc_ids), "");
-    memcpy(state->misc_ids, config->misc_ids,
-           sizeof(state->misc_ids));
+    static_assert(sizeof(state->misc_events) ==
+                  sizeof(config->misc_events), "");
+    memcpy(state->misc_events, config->misc_events,
+           sizeof(state->misc_events));
 
     static_assert(sizeof(state->misc_flags) ==
                   sizeof(config->misc_flags), "");
@@ -956,7 +957,7 @@ static void x86_perfmon_stage_misc_config(const ArchPmuConfig* config,
     for (unsigned i = 0; i < state->num_used_misc; ++i) {
         // All misc events currently come from MCHBAR.
         // When needed we can add a flag to the event to denote origin.
-        switch (PERFMON_EVENT_ID_EVENT(state->misc_ids[i])) {
+        switch (PERFMON_EVENT_ID_EVENT(state->misc_events[i])) {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
         case id:
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
@@ -1478,7 +1479,7 @@ static void x86_perfmon_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_AN
         write_msr(IA32_PERFEVTSEL_FIRST + i, 0);
         // The counter must be written before PERFEVTSEL.EN is set to 1.
         write_msr(IA32_PMC_FIRST + i, state->programmable_initial_value[i]);
-        write_msr(IA32_PERFEVTSEL_FIRST + i, state->events[i]);
+        write_msr(IA32_PERFEVTSEL_FIRST + i, state->programmable_hw_events[i]);
     }
 
     write_msr(IA32_DEBUGCTL, state->debug_ctrl);
@@ -1531,7 +1532,7 @@ zx_status_t arch_perfmon_start() {
         }
         for (unsigned i = 0; i < state->num_used_programmable; ++i) {
             LTRACEF("programmable[%u]: id 0x%x, initial 0x%" PRIx64 "\n",
-                    i, state->programmable_ids[i],
+                    i, state->programmable_events[i],
                     state->programmable_initial_value[i]);
         }
     }
@@ -1564,7 +1565,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
     // an overflowed value here, but that's what I'm seeing.
 
     for (unsigned i = 0; i < state->num_used_programmable; ++i) {
-        PmuEventId id = state->programmable_ids[i];
+        PmuEventId id = state->programmable_events[i];
         DEBUG_ASSERT(id != 0);
         uint64_t count = read_msr(IA32_PMC_FIRST + i);
         if (count >= state->programmable_initial_value[i]) {
@@ -1577,7 +1578,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
         next = arch_perfmon_write_count_record(next, id, count);
     }
     for (unsigned i = 0; i < state->num_used_fixed; ++i) {
-        PmuEventId id = state->fixed_ids[i];
+        PmuEventId id = state->fixed_events[i];
         DEBUG_ASSERT(id != 0);
         unsigned hw_num = state->fixed_hw_map[i];
         DEBUG_ASSERT(hw_num < perfmon_num_fixed_counters);
@@ -1595,7 +1596,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
     // Just report for cpu 0. See pmi_interrupt_handler.
     if (cpu == 0) {
         for (unsigned i = 0; i < state->num_used_misc; ++i) {
-            PmuEventId id = state->misc_ids[i];
+            PmuEventId id = state->misc_events[i];
             ReadMiscResult typed_value = read_misc_event(state, id);
             switch (typed_value.type) {
             case PERFMON_RECORD_COUNT:
@@ -1823,7 +1824,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
         for (unsigned i = 0; i < state->num_used_programmable; ++i) {
             if (!(status & IA32_PERF_GLOBAL_STATUS_PMC_OVF_MASK(i)))
                 continue;
-            PmuEventId id = state->programmable_ids[i];
+            PmuEventId id = state->programmable_events[i];
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
@@ -1850,7 +1851,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             DEBUG_ASSERT(hw_num < perfmon_num_fixed_counters);
             if (!(status & IA32_PERF_GLOBAL_STATUS_FIXED_OVF_MASK(hw_num)))
                 continue;
-            PmuEventId id = state->fixed_ids[i];
+            PmuEventId id = state->fixed_events[i];
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
@@ -1879,7 +1880,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             for (unsigned i = 0; i < state->num_used_programmable; ++i) {
                 if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0))
                     continue;
-                PmuEventId id = state->programmable_ids[i];
+                PmuEventId id = state->programmable_events[i];
                 uint64_t count = read_msr(IA32_PMC_FIRST + i);
                 next = arch_perfmon_write_count_record(next, id, count);
                 // We could leave the counter alone, but it could overflow.
@@ -1891,7 +1892,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             for (unsigned i = 0; i < state->num_used_fixed; ++i) {
                 if (!(state->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0))
                     continue;
-                PmuEventId id = state->fixed_ids[i];
+                PmuEventId id = state->fixed_events[i];
                 unsigned hw_num = state->fixed_hw_map[i];
                 DEBUG_ASSERT(hw_num < perfmon_num_fixed_counters);
                 uint64_t count = read_msr(IA32_FIXED_CTR0 + hw_num);
@@ -1917,7 +1918,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                         // counters, we don't assume this here.
                         continue;
                     }
-                    PmuEventId id = state->misc_ids[i];
+                    PmuEventId id = state->misc_events[i];
                     ReadMiscResult typed_value = read_misc_event(state, id);
                     switch (typed_value.type) {
                     case PERFMON_RECORD_COUNT:

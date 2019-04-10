@@ -374,10 +374,10 @@ struct X86PmuConfig {
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
-    PmuEventId fixed_ids[IPM_MAX_FIXED_COUNTERS];
-    PmuEventId programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    PmuEventId fixed_events[IPM_MAX_FIXED_COUNTERS];
+    PmuEventId programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
     // Ids of other h/w events to collect data for.
-    PmuEventId misc_ids[IPM_MAX_MISC_EVENTS];
+    PmuEventId misc_events[IPM_MAX_MISC_EVENTS];
 
     // Initial value of each counter.
     // The "misc" counters currently do not support initial values.
@@ -391,7 +391,7 @@ struct X86PmuConfig {
     uint32_t misc_flags[IPM_MAX_MISC_EVENTS];
 
     // IA32_PERFEVTSEL_*
-    uint64_t programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    uint64_t programmable_hw_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
 };
 
 } // namespace perfmon

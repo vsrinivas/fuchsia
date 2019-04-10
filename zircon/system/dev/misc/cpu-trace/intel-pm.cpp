@@ -241,7 +241,7 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
     unsigned counter = PmuFixedCounterNumber(id);
 
     if (counter == IPM_MAX_FIXED_COUNTERS ||
-            counter >= countof(ocfg->fixed_ids) ||
+            counter >= countof(ocfg->fixed_events) ||
             counter >= ss->max_num_fixed) {
         zxlogf(ERROR, "%s: Invalid fixed event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
@@ -252,7 +252,7 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
         return ZX_ERR_INVALID_ARGS;
     }
     ss->have_fixed[counter] = true;
-    ocfg->fixed_ids[ss->num_fixed] = id;
+    ocfg->fixed_events[ss->num_fixed] = id;
     if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
         ocfg->fixed_initial_value[ss->num_fixed] = 0;
     } else {
@@ -320,7 +320,7 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
                __func__);
         return ZX_ERR_INVALID_ARGS;
     }
-    ocfg->programmable_ids[ss->num_programmable] = id;
+    ocfg->programmable_events[ss->num_programmable] = id;
     if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
         ocfg->programmable_initial_value[ss->num_programmable] = 0;
     } else {
@@ -381,7 +381,7 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
         evtsel |= IA32_PERFEVTSEL_INT_MASK;
     }
     evtsel |= IA32_PERFEVTSEL_EN_MASK;
-    ocfg->programmable_events[ss->num_programmable] = evtsel;
+    ocfg->programmable_hw_events[ss->num_programmable] = evtsel;
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(ss->num_programmable);
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagTimebase0;
@@ -433,7 +433,7 @@ static zx_status_t PmuStageMiscConfig(const perfmon_config_t* icfg,
         return ZX_ERR_INVALID_ARGS;
     }
     ss->have_misc[event / 64] |= 1ul << (event % 64);
-    ocfg->misc_ids[ss->num_misc] = id;
+    ocfg->misc_events[ss->num_misc] = id;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->misc_flags[ss->num_misc] |= kPmuConfigFlagTimebase0;
     } else {
