@@ -53,6 +53,26 @@ impl MgmtSubtype {
     // 1111 reserved
 }
 
+// IEEE Std 802.11-2016, 9.2.4.1.3
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CtrlSubtype(u8);
+
+impl CtrlSubtype {
+    // 0000 - 0011 reserved
+    pub const BEAM_FORMING: Self = Self(0b0100);
+    pub const VHT_NDP_ANNOUNCE: Self = Self(0b0101);
+    pub const CTRL_EXT: Self = Self(0b0110);
+    pub const CTRL_WRAP: Self = Self(0b0111);
+    pub const BLOCK_ACK: Self = Self(0b1000);
+    pub const BLOCK_ACK_REQ: Self = Self(0b1001);
+    pub const PS_POLL: Self = Self(0b1010);
+    pub const RTS: Self = Self(0b1011);
+    pub const CTS: Self = Self(0b1100);
+    pub const ACK: Self = Self(0b1101);
+    pub const CF_END: Self = Self(0b1110);
+    pub const CF_END_ACK: Self = Self(0b1111);
+}
+
 // IEEE Std 802.11-2016, 9.2.4.1.1
 #[bitfield(
     0..=1   protocol_version,
@@ -61,6 +81,7 @@ impl MgmtSubtype {
                 frame_subtype,
                 mgmt_subtype as MgmtSubtype(u8),
                 data_subtype as DataSubtype(u8),
+                ctrl_subtype as CtrlSubtype(u8),
             },
     8       to_ds,
     9       from_ds,

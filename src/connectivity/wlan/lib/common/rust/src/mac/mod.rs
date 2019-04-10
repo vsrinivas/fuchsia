@@ -11,6 +11,10 @@ use {
 mod data;
 mod eth;
 mod fields;
+// Frame classes are not yet used.
+// Remove once they are being used.
+#[allow(dead_code)]
+mod frame_class;
 mod mgmt;
 
 pub use {data::*, eth::*, fields::*, mgmt::*};
