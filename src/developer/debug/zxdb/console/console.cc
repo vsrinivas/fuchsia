@@ -209,9 +209,15 @@ void Console::OnFDReadable(int fd) {
   char ch;
   while (read(STDIN_FILENO, &ch, 1) > 0) {
     if (line_input_.OnInput(ch)) {
+      // EOF (ctrl-d) should exit gracefully.
+      if (line_input_.eof()) {
+        line_input_.EnsureNoRawMode();
+        Output("\n");
+        debug_ipc::MessageLoop::Current()->QuitNow();
+        return;
+      }
+
       std::string line = line_input_.line();
-      if (line_input_.eof())
-        line = "quit";
       Result result = ProcessInputLine(line);
       if (result == Result::kQuit)
         return;

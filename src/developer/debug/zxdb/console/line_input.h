@@ -206,11 +206,11 @@ class LineInputStdout : public LineInputBase {
   LineInputStdout(const std::string& prompt);
   ~LineInputStdout() override;
 
- protected:
-  void Write(const std::string& str) override;
-
   void EnsureRawMode() override;
   void EnsureNoRawMode() override;
+
+ protected:
+  void Write(const std::string& str) override;
 
  private:
 #if !defined(__Fuchsia__)
