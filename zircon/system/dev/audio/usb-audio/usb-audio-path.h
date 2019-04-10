@@ -54,7 +54,7 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
     }
 
   private:
-    friend class fbl::unique_ptr<AudioPath>;
+    friend class std::default_delete<AudioPath>;
     friend class UsbAudioControlInterface;
 
     // Methods use by the audio control interface class to build audio paths

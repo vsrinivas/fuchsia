@@ -12,6 +12,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "garnet/bin/media/audio_core/utils.h"
 #include "src/lib/fxl/logging.h"
 
@@ -68,7 +70,7 @@ class AudioPacketRef
  protected:
   friend class fbl::RefPtr<AudioPacketRef>;
   friend class fbl::Recyclable<AudioPacketRef>;
-  friend class fbl::unique_ptr<AudioPacketRef>;
+  friend class std::default_delete<AudioPacketRef>;
 
   ~AudioPacketRef() = default;
 

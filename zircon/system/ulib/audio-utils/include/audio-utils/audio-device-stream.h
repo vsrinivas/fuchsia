@@ -55,7 +55,7 @@ public:
     uint64_t    external_delay_nsec()  const { return external_delay_nsec_; }
 
 protected:
-    friend class fbl::unique_ptr<AudioDeviceStream>;
+    friend class std::default_delete<AudioDeviceStream>;
 
     static bool IsChannelConnected(const zx::channel& ch);
     zx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,

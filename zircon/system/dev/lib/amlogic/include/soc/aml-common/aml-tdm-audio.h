@@ -86,7 +86,7 @@ private:
     const zx_off_t frddr_base_;    // base offset of frddr ch used by this instance
     const zx_off_t tdm_base_;      // base offset of our tdmout block
     const ddk::MmioBuffer mmio_;
-    friend class fbl::unique_ptr<AmlTdmDevice>;
+    friend class std::default_delete<AmlTdmDevice>;
 
     AmlTdmDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src,
         aml_tdm_out_t tdm, aml_frddr_t frddr, aml_tdm_mclk_t mclk,

@@ -11,6 +11,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
+#include <memory>
+
 namespace media::audio {
 
 class AudioCoreImpl;
@@ -31,7 +33,7 @@ class PendingFlushToken
  private:
   friend class fbl::RefPtr<PendingFlushToken>;
   friend class fbl::Recyclable<PendingFlushToken>;
-  friend class fbl::unique_ptr<PendingFlushToken>;
+  friend class std::default_delete<PendingFlushToken>;
 
   PendingFlushToken(
       AudioCoreImpl* const service,

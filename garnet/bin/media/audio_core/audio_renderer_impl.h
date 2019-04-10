@@ -9,6 +9,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 
+#include <memory>
+
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_object.h"
 #include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
@@ -117,7 +119,7 @@ class AudioRendererImpl
     void SetMute(bool muted) final;
 
    private:
-    friend class fbl::unique_ptr<GainControlBinding>;
+    friend class std::default_delete<GainControlBinding>;
 
     GainControlBinding(AudioRendererImpl* owner) : owner_(owner) {}
     ~GainControlBinding() override {}

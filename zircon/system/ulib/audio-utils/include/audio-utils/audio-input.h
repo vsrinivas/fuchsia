@@ -19,7 +19,7 @@ public:
     zx_status_t Record(AudioSink& sink, float duration_seconds);
 
 private:
-    friend class fbl::unique_ptr<AudioInput>;
+    friend class std::default_delete<AudioInput>;
     friend class AudioDeviceStream;
 
     explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) { }

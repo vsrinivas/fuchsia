@@ -43,7 +43,7 @@ public:
     zx_status_t ExitStandby();
 
 private:
-    friend class fbl::unique_ptr<Tas27xx>;
+    friend class std::default_delete<Tas27xx>;
     static constexpr float kMaxGain = 0;
     static constexpr float kMinGain = -100.0;
     static constexpr float kGainStep = 0.5;

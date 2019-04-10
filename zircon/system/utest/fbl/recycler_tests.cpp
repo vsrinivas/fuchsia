@@ -5,18 +5,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace {
 
 template <typename T> struct PtrTraits;
-
-template <typename T>
-struct PtrTraits<fbl::unique_ptr<T>> {
-    using ObjType = std::remove_cv_t<T>;
-    static fbl::unique_ptr<T> MakePointer(T* raw) { return fbl::unique_ptr<T>(raw); }
-};
 
 template <typename T>
 struct PtrTraits<fbl::RefPtr<T>> {
@@ -109,22 +102,6 @@ static bool do_test() {
 }  // anon namespace
 
 BEGIN_TEST_CASE(fbl_recycle)
-RUN_NAMED_TEST("public unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<TestPublicRecycle>>)
-RUN_NAMED_TEST("public const unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<const TestPublicRecycle>>)
-RUN_NAMED_TEST("public volatile unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<volatile TestPublicRecycle>>)
-RUN_NAMED_TEST("public const volatile unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<const volatile TestPublicRecycle>>)
-RUN_NAMED_TEST("private unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<TestPrivateRecycle>>)
-RUN_NAMED_TEST("private const unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<const TestPrivateRecycle>>)
-RUN_NAMED_TEST("private volatile unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<volatile TestPrivateRecycle>>)
-RUN_NAMED_TEST("private const volatile unique_ptr fbl_recycle()",
-               do_test<fbl::unique_ptr<const volatile TestPrivateRecycle>>)
 RUN_NAMED_TEST("public RefPtr fbl_recycle()",
                do_test<fbl::RefPtr<RefedTestPublicRecycle>>)
 RUN_NAMED_TEST("private RefPtr fbl_recycle()",
@@ -144,17 +121,5 @@ RUN_NAMED_TEST("private volatile RefPtr fbl_recycle()",
                do_test<fbl::RefPtr<volatile RefedTestPrivateRecycle>>)
 RUN_NAMED_TEST("private const volatile RefPtr fbl_recycle()",
                do_test<fbl::RefPtr<const volatile RefedTestPrivateRecycle>>)
-#endif
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("FailNoMethod", do_test<fbl::unique_ptr<FailNoMethod>>);
-#endif
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("FailBadRet",   do_test<fbl::unique_ptr<FailBadRet>>);
-#endif
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("FailBadArg",   do_test<fbl::unique_ptr<FailBadArg>>);
-#endif
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("FailNotVis",   do_test<fbl::unique_ptr<FailBadArg>>);
 #endif
 END_TEST_CASE(fbl_recycle)

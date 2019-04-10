@@ -268,8 +268,7 @@ private:
     static void operator delete(void* ptr) {
         // Deliberate no-op
     }
-    friend class fbl::unique_ptr<BalanceTestObj[]>;
-    friend class fbl::unique_ptr<BalanceTestObj>;
+    friend class std::default_delete<BalanceTestObj>;
 
     BalanceTestKeyType key_;
     BalanceTestObj* erase_deck_ptr_;

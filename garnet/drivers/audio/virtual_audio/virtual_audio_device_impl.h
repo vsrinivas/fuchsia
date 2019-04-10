@@ -10,6 +10,8 @@
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
 
+#include <memory>
+
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_control_impl.h"
 
 namespace virtual_audio {
@@ -147,7 +149,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
 
  protected:
   friend class VirtualAudioStream;
-  friend class fbl::unique_ptr<VirtualAudioDeviceImpl>;
+  friend class std::default_delete<VirtualAudioDeviceImpl>;
 
   VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner, bool is_input);
   virtual ~VirtualAudioDeviceImpl();

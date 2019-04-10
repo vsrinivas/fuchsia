@@ -27,7 +27,7 @@ public:
     static ControllerTree& controllers() { return controllers_; }
 
 private:
-    friend class fbl::unique_ptr<IntelHDAController>;
+    friend class std::default_delete<IntelHDAController>;
 
     IntelHDAController(uint32_t id, const char* const dev_name)
         : IntelHDADevice(dev_name, Type::Controller),

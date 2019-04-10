@@ -19,7 +19,7 @@ public:
     zx_status_t Play(AudioSource& source);
 
 private:
-    friend class fbl::unique_ptr<AudioOutput>;
+    friend class std::default_delete<AudioOutput>;
     friend class AudioDeviceStream;
 
     explicit AudioOutput(uint32_t dev_id) : AudioDeviceStream(false, dev_id) { }

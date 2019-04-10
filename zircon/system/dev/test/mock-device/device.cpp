@@ -119,7 +119,7 @@ MockDevice::MockDevice(zx_device_t* device, zx::channel controller)
 }
 
 int MockDevice::ThreadFunc(void* raw_arg) {
-    auto arg = fbl::unique_ptr(static_cast<ThreadFuncArg*>(raw_arg));
+    auto arg = fbl::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
 
     while (true) {
         fbl::Array<const fuchsia_device_mock_Action> actions;

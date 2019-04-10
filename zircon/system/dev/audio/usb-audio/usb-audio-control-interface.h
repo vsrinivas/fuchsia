@@ -43,7 +43,7 @@ class UsbAudioControlInterface {
 
 
   private:
-    friend class fbl::unique_ptr<UsbAudioControlInterface>;
+    friend class std::default_delete<UsbAudioControlInterface>;
     using UnitMap = fbl::WAVLTree<uint32_t, fbl::RefPtr<AudioUnit>>;
 
     UsbAudioControlInterface(UsbAudioDevice* parent);

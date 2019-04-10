@@ -13,6 +13,7 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
+#include <memory>
 #include <utility>
 
 namespace audio {
@@ -37,9 +38,10 @@ public:
 
 private:
     // Only our slab allocators is allowed to construct us, and only the
-    // unique_ptrs it hands out are allowed to destroy us.
+    // unique_ptrs it hands out are allowed to destroy us (via their
+    // default_deleters).
     friend CodecCmdJobAllocator;
-    friend fbl::unique_ptr<CodecCmdJob>;
+    friend std::default_delete<CodecCmdJob>;
 
     CodecCmdJob(CodecCommand cmd) : cmd_(cmd) { }
     CodecCmdJob(fbl::RefPtr<dispatcher::Channel>&& response_channel,

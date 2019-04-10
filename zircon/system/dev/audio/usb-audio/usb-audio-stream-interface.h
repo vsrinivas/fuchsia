@@ -116,7 +116,7 @@ class UsbAudioStreamInterface :
     const char* log_prefix() const;
 
   private:
-    friend class fbl::unique_ptr<UsbAudioStreamInterface>;
+    friend class std::default_delete<UsbAudioStreamInterface>;
 
     // An internal helper class which contains all of the information we need to
     // support an alternate interface setting which supports a given format.
@@ -166,7 +166,7 @@ class UsbAudioStreamInterface :
         zx_status_t Init(DescriptorListMemory::Iterator* iter);
 
       private:
-        friend class fbl::unique_ptr<Format>;
+        friend class std::default_delete<Format>;
         ~Format() = default;
 
         // Packing format described in section 2.2.5 of USB Device Class

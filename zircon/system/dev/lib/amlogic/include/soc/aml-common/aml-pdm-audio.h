@@ -63,7 +63,7 @@ public:
     void ConfigPdmIn(uint8_t mask);
 
 private:
-    friend class fbl::unique_ptr<AmlPdmDevice>;
+    friend class std::default_delete<AmlPdmDevice>;
 
     AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
                  ee_audio_mclk_src_t clk_src, uint32_t sysclk_div, uint32_t dclk_div,

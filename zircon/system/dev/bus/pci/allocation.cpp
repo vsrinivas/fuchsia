@@ -46,8 +46,9 @@ zx_status_t PciRootAllocator::GetRegion(zx_paddr_t in_base,
     auto cleanup = fbl::MakeAutoCall([&]() { pciroot_.FreeAddressSpace(out_base, size, type_); });
 
     fbl::AllocChecker ac;
-    *alloc = fbl::unique_ptr(new (&ac) PciRootAllocation(pciroot_, type_, std::move(res), out_base,
-                                                         size));
+    *alloc = fbl::unique_ptr<PciRootAllocation>(new (&ac) PciRootAllocation(pciroot_, type_,
+                                                                            std::move(res),
+                                                                            out_base, size));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -91,8 +92,9 @@ zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
     pci_tracef("bridge: assigned [ %#lx-%#lx ] to downstream\n", region_uptr->base,
                region_uptr->base + size);
     fbl::AllocChecker ac;
-    *alloc = fbl::unique_ptr(new (&ac) PciRegionAllocation(std::move(out_resource),
-                                                           std::move(region_uptr)));
+    *alloc =
+        fbl::unique_ptr<PciRegionAllocation>(new (&ac) PciRegionAllocation(std::move(out_resource),
+                                                                           std::move(region_uptr)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
