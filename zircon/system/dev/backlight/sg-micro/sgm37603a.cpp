@@ -7,13 +7,19 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
+#include <ddk/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
 namespace {
 
 constexpr int64_t kEnableSleepTimeMs = 20;
+
+enum {
+    COMPONENT_I2C,
+    COMPONENT_GPIO,
+    COMPONENT_COUNT,
+};
 
 }  // namespace
 
@@ -42,32 +48,44 @@ constexpr uint8_t kDefaultRegValues[][2] = {
 namespace backlight {
 
 zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
-    ddk::PDev pdev(parent);
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get pdev\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+    composite_protocol_t composite;
+
+    auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE\n", __FILE__);
+        return status;
     }
 
-    ddk::I2cChannel i2c = pdev.GetI2c(0);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
+    if (actual != COMPONENT_COUNT) {
+        zxlogf(ERROR, "%s: could not get our components\n", __FILE__);
+        return ZX_ERR_INTERNAL;
     }
 
-    ddk::GpioProtocolClient reset_gpio = pdev.GetGpio(0);
-    if (!reset_gpio.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get GPIO\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+    i2c_protocol_t i2c;
+    status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", __FILE__);
+        return status;
+    }
+
+    gpio_protocol_t reset_gpio;
+    status = device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", __FILE__);
+        return status;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, i2c, reset_gpio));
+    fbl::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, &i2c, &reset_gpio));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Sgm37603a alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device->SetBacklightState(true, 255);
+    status = device->SetBacklightState(true, 255);
     if (status != ZX_OK) {
         return status;
     }
@@ -177,7 +195,7 @@ static zx_driver_ops_t sgm37603a_driver_ops = []() {
 }();
 
 ZIRCON_DRIVER_BEGIN(sgm37603a, sgm37603a_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SG_MICRO_SGM37603A),
 ZIRCON_DRIVER_END(sgm37603a)

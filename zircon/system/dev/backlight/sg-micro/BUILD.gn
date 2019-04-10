@@ -7,10 +7,9 @@ driver("sg-micro") {
     "sgm37603a.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-backlight:c",
     "$zx/system/ulib/ddk",
@@ -31,6 +30,7 @@ test("sgm37603a-test") {
     "sgm37603a.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/dev/lib/mock-i2c",
     "$zx/system/fidl/fuchsia-hardware-backlight:c",
     "$zx/system/ulib/ddk",

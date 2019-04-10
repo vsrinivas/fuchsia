@@ -88,8 +88,16 @@ zx_status_t Mt8167::I2cInit() {
             .pid = PDEV_PID_GENERIC,
             .did = PDEV_DID_BOSCH_BMA253,
         },
+        // For backlight driver
+        {
+            .bus_id = 2,
+            .address = 0x36,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
     };
-    
+
     const pbus_metadata_t cleo_i2c_metadata[] = {
         {
             .type = DEVICE_METADATA_I2C_CHANNELS,

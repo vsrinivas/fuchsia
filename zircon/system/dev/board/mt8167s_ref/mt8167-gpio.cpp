@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/mt8167/mt8167-hw.h>
@@ -36,6 +38,19 @@ zx_status_t Mt8167::GpioInit() {
         },
     };
 
+    const gpio_pin_t cleo_gpio_pins[] = {
+        // For backlight driver
+        { MT8167_CLEO_GPIO_LCM_EN },
+    };
+
+    const pbus_metadata_t cleo_gpio_metadata[] = {
+        {
+            .type = DEVICE_METADATA_GPIO_PINS,
+            .data_buffer = &cleo_gpio_pins,
+            .data_size = sizeof(cleo_gpio_pins),
+        }
+    };
+
     pbus_dev_t gpio_dev = {};
     gpio_dev.name = "gpio";
     gpio_dev.vid = PDEV_VID_MEDIATEK;
@@ -44,6 +59,10 @@ zx_status_t Mt8167::GpioInit() {
     gpio_dev.mmio_count = countof(gpio_mmios);
     gpio_dev.irq_list = gpio_irqs;
     gpio_dev.irq_count = countof(gpio_irqs);
+    if (board_info_.vid == PDEV_VID_GOOGLE || board_info_.pid == PDEV_PID_CLEO) {
+        gpio_dev.metadata_list = cleo_gpio_metadata;
+        gpio_dev.metadata_count = countof(cleo_gpio_metadata);
+    }
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
