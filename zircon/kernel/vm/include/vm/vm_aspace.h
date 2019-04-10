@@ -189,9 +189,9 @@ private:
     fbl::Canary<fbl::magic("VMAS")> canary_;
 
     // members
-    vaddr_t base_;
-    size_t size_;
-    uint32_t flags_;
+    const vaddr_t base_;
+    const size_t size_;
+    const uint32_t flags_;
     char name_[32];
     bool aspace_destroyed_ = false;
     bool aslr_enabled_ = false;
