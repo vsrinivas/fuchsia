@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package resultstore_test
+package resultstore
 
 import (
 	"context"
@@ -10,10 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/tools/resultstore"
 	"fuchsia.googlesource.com/tools/resultstore/mocks"
 	"github.com/golang/mock/gomock"
-
 	api "google.golang.org/genproto/googleapis/devtools/resultstore/v2"
 	"google.golang.org/genproto/protobuf/field_mask"
 )
@@ -37,7 +35,7 @@ const (
 )
 
 type tester struct {
-	client *resultstore.UploadClient
+	client *UploadClient
 	mock   *mocks.MockResultStoreUploadClient
 }
 
@@ -58,13 +56,13 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "CreateConfiguration",
 			description: "should rmake an RPC to create a Configuration",
-			output: &resultstore.Configuration{
+			output: &Configuration{
 				Name:         "resultstore_configuration_name",
 				ID:           "configuration_id",
 				InvocationID: "invocation_id",
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.Configuration{
+				input := &Configuration{
 					ID:           "configuration_id",
 					InvocationID: "invocation_id",
 					Properties:   map[string]string{"key": "value"},
@@ -94,24 +92,24 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "CreateConfiguredTarget",
 			description: "should make an RPC to create a ConfiguredTarget",
-			output: &resultstore.ConfiguredTarget{
+			output: &ConfiguredTarget{
 				Name: "resultstore_configured_target_name",
-				ID: &resultstore.ConfiguredTargetID{
+				ID: &ConfiguredTargetID{
 					InvocationID: "invocation_id",
 					ConfigID:     "configuration_id",
 					TargetID:     "target_id",
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.ConfiguredTarget{
-					ID: &resultstore.ConfiguredTargetID{
+				input := &ConfiguredTarget{
+					ID: &ConfiguredTargetID{
 						InvocationID: "invocation_id",
 						TargetID:     "target_id",
 						ConfigID:     "configuration_id",
 					},
 					Properties: map[string]string{"key": "value"},
 					StartTime:  may18_1993,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.ConfiguredTarget{
@@ -139,12 +137,12 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "CreateInvocation",
 			description: "should make an RPC to create an Invocation",
-			output: &resultstore.Invocation{
+			output: &Invocation{
 				Name: "resultstore_invocation_name",
 				ID:   "invocation_id",
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.Invocation{
+				input := &Invocation{
 					ProjectID:  "123456789",
 					ID:         "invocation_id",
 					Users:      []string{"user"},
@@ -152,7 +150,7 @@ func TestUploadClient(t *testing.T) {
 					Properties: map[string]string{"key": "value"},
 					LogURL:     "http://test.log",
 					StartTime:  may18_1993,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Invocation{
@@ -177,21 +175,21 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "CreateTarget",
 			description: "should make an RPC to create a Target",
-			output: &resultstore.Target{
+			output: &Target{
 				Name: "resultstore_target_name",
-				ID: &resultstore.TargetID{
+				ID: &TargetID{
 					ID:           "target_id",
 					InvocationID: "invocation_id",
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.Target{
-					ID: &resultstore.TargetID{
+				input := &Target{
+					ID: &TargetID{
 						ID: "target_id",
 					},
 					Properties: map[string]string{"key": "value"},
 					StartTime:  may18_1993,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Target{
@@ -218,17 +216,17 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "CreateTestAction",
 			description: "should make an RPC to create a Test Action",
-			output: &resultstore.TestAction{
+			output: &TestAction{
 				Name: "resultstore_action_name",
-				ID: &resultstore.TestActionID{
+				ID: &TestActionID{
 					InvocationID: "invocation_id",
 					ConfigID:     "configuration_id",
 					TargetID:     "target_id",
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.TestAction{
-					ID: &resultstore.TestActionID{
+				input := &TestAction{
+					ID: &TestActionID{
 						ID:           "test",
 						InvocationID: "invocation_id",
 						TargetID:     "target_id",
@@ -237,7 +235,7 @@ func TestUploadClient(t *testing.T) {
 					TestSuite:  "test_suite",
 					TestLogURI: "http://test.log",
 					StartTime:  may18_1993,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Action{
@@ -308,23 +306,23 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "UpdateConfiguredTarget",
 			description: "should make an RPC to update a ConfiguredTarget",
-			output: &resultstore.ConfiguredTarget{
+			output: &ConfiguredTarget{
 				Name: "resultstore_configured_target_name",
-				ID: &resultstore.ConfiguredTargetID{
+				ID: &ConfiguredTargetID{
 					InvocationID: "invocation_id",
 					ConfigID:     "configuration_id",
 					TargetID:     "target_id",
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.ConfiguredTarget{
-					ID: &resultstore.ConfiguredTargetID{
+				input := &ConfiguredTarget{
+					ID: &ConfiguredTargetID{
 						InvocationID: "invocation_id",
 						TargetID:     "target_id",
 						ConfigID:     "configuration_id",
 					},
 					Properties: map[string]string{"key": "value"},
-					Status:     resultstore.Passed,
+					Status:     Passed,
 					StartTime:  may18_1993,
 					Duration:   time.Hour,
 				}
@@ -354,12 +352,12 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "UpdateInvocation",
 			description: "should make an RPC to update an Invocation",
-			output: &resultstore.Invocation{
+			output: &Invocation{
 				Name: "resultstore_invocation_name",
 				ID:   "invocation_id",
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.Invocation{
+				input := &Invocation{
 					ID:         "invocation_id",
 					Properties: map[string]string{"key": "value"},
 					ProjectID:  "project_id",
@@ -368,7 +366,7 @@ func TestUploadClient(t *testing.T) {
 					Users:      []string{"users"},
 					Labels:     []string{"label"},
 					LogURL:     "url",
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Invocation{
@@ -394,23 +392,23 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "UpdateTarget",
 			description: "should make an RPC to update a Target",
-			output: &resultstore.Target{
+			output: &Target{
 				Name: "resultstore_target_name",
-				ID: &resultstore.TargetID{
+				ID: &TargetID{
 					ID:           "target_id",
 					InvocationID: "invocation_id",
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.Target{
-					ID: &resultstore.TargetID{
+				input := &Target{
+					ID: &TargetID{
 						ID:           "target_id",
 						InvocationID: "invocation_id",
 					},
 					Properties: map[string]string{"key": "value"},
 					StartTime:  may18_1993,
 					Duration:   time.Hour,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Target{
@@ -437,9 +435,9 @@ func TestUploadClient(t *testing.T) {
 		{
 			method:      "UpdateTestAction",
 			description: "should make an RPC to update a Test Action",
-			output: &resultstore.TestAction{
+			output: &TestAction{
 				Name: "resultstore_action_name",
-				ID: &resultstore.TestActionID{
+				ID: &TestActionID{
 					ID:           "action_id",
 					InvocationID: "invocation_id",
 					ConfigID:     "configuration_id",
@@ -447,8 +445,8 @@ func TestUploadClient(t *testing.T) {
 				},
 			},
 			execute: func(ctx context.Context, tester *tester) (interface{}, error) {
-				input := &resultstore.TestAction{
-					ID: &resultstore.TestActionID{
+				input := &TestAction{
+					ID: &TestActionID{
 						ID:           "test",
 						InvocationID: "invocation_id",
 						TargetID:     "target_id",
@@ -458,7 +456,7 @@ func TestUploadClient(t *testing.T) {
 					TestLogURI: "http://test.log",
 					StartTime:  may18_1993,
 					Duration:   time.Hour,
-					Status:     resultstore.Passed,
+					Status:     Passed,
 				}
 
 				response := &api.Action{
@@ -486,20 +484,20 @@ func TestUploadClient(t *testing.T) {
 		},
 	}
 
-	setup := func(t *testing.T) (context.Context, *resultstore.UploadClient, *mocks.MockResultStoreUploadClient, *gomock.Controller) {
-		ctx, err := resultstore.SetTestUUID(context.Background(), testUUID)
+	setup := func(t *testing.T) (context.Context, *UploadClient, *mocks.MockResultStoreUploadClient, *gomock.Controller) {
+		ctx, err := SetTestUUID(context.Background(), testUUID)
 		if err != nil {
 			t.Fatalf("failed to set test uuid: %v", err)
 		}
 
-		ctx, err = resultstore.SetAuthToken(ctx, testAuthToken)
+		ctx, err = SetAuthToken(ctx, testAuthToken)
 		if err != nil {
 			t.Fatalf("failed to set test auth token: %v", err)
 		}
 
 		controller := gomock.NewController(t)
 		mock := mocks.NewMockResultStoreUploadClient(controller)
-		client := resultstore.NewUploadClient(mock)
+		client := &UploadClient{client: mock}
 		return ctx, client, mock, controller
 	}
 

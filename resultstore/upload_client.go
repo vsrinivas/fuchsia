@@ -6,16 +6,107 @@ package resultstore
 
 import (
 	"context"
+	"crypto/x509"
+	"flag"
+	"fmt"
 	"log"
 
 	"github.com/google/uuid"
+	"go.chromium.org/luci/auth"
+	"go.chromium.org/luci/auth/client/authcli"
+	"go.chromium.org/luci/hardcoded/chromeinfra"
 	api "google.golang.org/genproto/googleapis/devtools/resultstore/v2"
 	"google.golang.org/genproto/protobuf/field_mask"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
-// NewUploadClient creates a new UploadClient. This is visible for testing; Use `Connect` instead.
-func NewUploadClient(client api.ResultStoreUploadClient) *UploadClient {
-	return &UploadClient{client: client}
+// Returns the list of Google Cloud API scopes required to use the ResultStore Upload API.
+func requiredScopes() []string {
+	return []string{"https://www.googleapis.com/auth/cloud-platform"}
+}
+
+// UploadClientFlags are used to parse commnad-line options for creating a new ResultStore
+// UploadClient. The options are, in turn, used to generate UploadClientOptions. Example:
+//
+//  var cf UploadClientFlags
+//
+//  func init() {
+//    cf.Register(flag.CommandLine)
+//  }
+//
+//  func Main(ctx context.Background()) {
+//    flag.Parse()
+//    opts, err := cf.Options(ctx)
+//    // check err ...
+//    client, err := NewClient(ctx, opts)
+//    // check err ...
+//  }
+type UploadClientFlags struct {
+	authFlags authcli.Flags
+	environ   Environment
+}
+
+// Register sets these UploadClient flags on the given flag.FlagSet.
+func (f *UploadClientFlags) Register(in *flag.FlagSet) {
+	// LUCI auth flags
+	defaultAuthOpts := chromeinfra.DefaultAuthOptions()
+	defaultAuthOpts.Scopes = append(defaultAuthOpts.Scopes, requiredScopes()...)
+	f.authFlags.Register(in, defaultAuthOpts)
+
+	// ResultStore flags.
+	environs := []Environment{Production, Staging}
+	in.Var(&f.environ, "environment", fmt.Sprintf("ResultStore environment: %v", environs))
+}
+
+// Options returns UploadClientOptions created from this UploadClientFlags' inputs.
+func (f *UploadClientFlags) Options() (*UploadClientOptions, error) {
+	authOpts, err := f.authFlags.Options()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create LUCI auth options: %v", err)
+	}
+	return &UploadClientOptions{
+		Environ:  f.environ,
+		AuthOpts: authOpts,
+	}, nil
+}
+
+// UploadClientOptions are used to create new UploadClients. See UploadClientFlags for
+// example usage.
+type UploadClientOptions struct {
+	Environ  Environment
+	AuthOpts auth.Options
+}
+
+// NewClient returns a new UploadClient connected to a ResultStore backend.
+func NewClient(ctx context.Context, opts UploadClientOptions) (*UploadClient, error) {
+	// Generate transport credentials.
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cert pool: %v", err)
+	}
+	tcreds, err := credentials.NewClientTLSFromCert(pool, ""), nil
+	if err != nil {
+		return nil, err
+	}
+	// Generate per RPC credentials.
+	authenticator := auth.NewAuthenticator(ctx, auth.SilentLogin, opts.AuthOpts)
+	pcreds, err := authenticator.PerRPCCredentials()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.Dial(
+		opts.Environ.GRPCServiceAddress(),
+		grpc.WithTransportCredentials(tcreds),
+		grpc.WithPerRPCCredentials(pcreds),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &UploadClient{
+		client: api.NewResultStoreUploadClient(conn),
+		conn:   conn,
+	}, nil
 }
 
 // UploadClient wraps the ResultStoreUpload client libraries.
@@ -24,10 +115,18 @@ func NewUploadClient(client api.ResultStoreUploadClient) *UploadClient {
 // Context object contains a non-empty string value for TestUUIDKey, that value is
 // used instead. This is done by calling `SetTestUUID(ctx, "uuid")`.
 //
-// UploadClient requires an Invocation's authorization token to be set in the provided Context.
-// This can be done by calling: `SetAuthToken(ctx, "auth-token")`.
+// UploadClient requires an Invocation's authorization token to be set in the provided
+// Context. This can be done by calling: `SetAuthToken(ctx, "auth-token")`.
+//
+// The user should Close() the client when finished.
 type UploadClient struct {
 	client api.ResultStoreUploadClient
+	conn   *grpc.ClientConn
+}
+
+// Close closes this UploadClient's connection to ResultStore.
+func (c *UploadClient) Close() error {
+	return c.conn.Close()
 }
 
 // CreateInvocation creates an Invocation in ResultStore. This must be called before

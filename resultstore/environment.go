@@ -4,42 +4,7 @@
 
 package resultstore
 
-import (
-	"context"
-	"crypto/x509"
-	"fmt"
-
-	api "google.golang.org/genproto/googleapis/devtools/resultstore/v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-)
-
-var (
-	// Google Cloud API scope required to use ResultStore Upload API.
-	RequiredScopes = []string{
-		"https://www.googleapis.com/auth/cloud-platform",
-	}
-)
-
-// Connect returns a new UploadClient connected to the ResultStore backend at the given host.
-func Connect(ctx context.Context, environment Environment, creds credentials.PerRPCCredentials) (*UploadClient, error) {
-	pool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cert pool: %v", err)
-	}
-
-	transportCreds := credentials.NewClientTLSFromCert(pool, "")
-
-	conn, err := grpc.Dial(
-		environment.GRPCServiceAddress(),
-		grpc.WithTransportCredentials(transportCreds),
-		grpc.WithPerRPCCredentials(creds),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return NewUploadClient(api.NewResultStoreUploadClient(conn)), nil
-}
+import "fmt"
 
 // Environment describes which ResultStore environment to use.
 type Environment string
