@@ -3232,9 +3232,21 @@ mod test {
 
     #[test]
     fn array_of_arrays() {
-        let mut blah = &mut [&mut [1, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
+        let mut input = &mut [&mut [1u32, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        assert!(Encoder::encode(bytes, handles, &mut blah).is_ok());
+        assert!(Encoder::encode(bytes, handles, &mut input).is_ok());
+
+        let mut output = <[[u32; 5]; 2]>::new_empty();
+        Decoder::decode_into(bytes, handles, &mut output).expect(
+            format!(
+                "Array decoding failed\n\
+                 bytes: {:X?}",
+                bytes
+            )
+            .as_str(),
+        );
+
+        assert_eq!(input, output.iter_mut().map(|v| v.as_mut()).collect::<Vec<_>>().as_mut_slice());
     }
 
     #[test]
@@ -3249,8 +3261,6 @@ mod test {
             ],
         }
 
-        identities![
-            XUnion::Variant(vec![1, 2, 3]),
-        ];
+        identities![XUnion::Variant(vec![1, 2, 3]),];
     }
 }
