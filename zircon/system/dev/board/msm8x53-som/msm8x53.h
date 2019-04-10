@@ -14,6 +14,7 @@ namespace board_msm8x53 {
 // BTI IDs
 enum {
     BTI_SDC1,
+    BTI_PIL,
 };
 
 class Msm8x53;

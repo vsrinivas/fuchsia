@@ -11,8 +11,11 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/metadata/fw.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/platform/device.h>
+#include <fbl/array.h>
+#include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
 namespace qcom_pil {
@@ -20,11 +23,12 @@ namespace qcom_pil {
 enum class TzService : uint8_t {
     Boot = 1,
     Pil,
+    Info = 6,
 };
 
 enum class PasId : uint64_t {
     Modem,
-    Q6,
+    Q6, // adsp.
     Dsps,
     Tzapps,
     ModemSw,
@@ -32,9 +36,11 @@ enum class PasId : uint64_t {
     Wcnss,
     Secapp,
     Gss,
-    Vidc,
+    Vidc, // venus.
     Vpu,
     Bcss,
+    Unknown,
+    Gpu, // a506_zap.
 };
 
 enum class ArgType : uint64_t {
@@ -44,12 +50,16 @@ enum class ArgType : uint64_t {
     Bufval,
 };
 
-enum class Cmd : uint8_t {
+enum class PilCmd : uint8_t {
     InitImage = 1,
     MemSetup,
     AuthAndReset = 5,
     Shutdown,
     QuerySupport,
+};
+
+enum class InfoCmd : uint8_t {
+    CallAvailable = 1,
 };
 
 // Not class for integer usage below.
@@ -73,6 +83,13 @@ enum Service : uint8_t {
     kTrustedOsServiceEnd = 0x3F,
 };
 
+enum SmcArgType : uint32_t {
+    kValue, // e.g. an id.
+    kBufferReadOnly,
+    kBufferReadWrite, // e.g. the physical address of a buffer.
+    kBufferValue,
+};
+
 constexpr uint8_t kCallTypeMask = 0x01;
 constexpr uint8_t kCallTypeShift = 31;
 constexpr uint8_t kCallConvMask = 0x01;
@@ -83,6 +100,10 @@ constexpr uint8_t kTzServiceMask = 0xFF;
 constexpr uint8_t kTzServiceShift = 8;
 constexpr uint8_t kCallMask = 0xFF;
 constexpr uint8_t kCallShift = 0;
+
+constexpr uint64_t kSmcInterrupted = 1;
+constexpr uint64_t kSmcOk = 0;
+constexpr uint64_t kSmcBusy = -13;
 
 static constexpr uint32_t CreateFunctionId(CallType call_type,
                                            CallConvention call_conv,
@@ -96,27 +117,32 @@ static constexpr uint32_t CreateFunctionId(CallType call_type,
             ((call & kCallMask) << kCallShift));
 }
 
-static constexpr uint32_t CreatePilFunctionId(Cmd cmd) {
+static constexpr uint32_t CreatePilFunctionId(PilCmd cmd) {
     return CreateFunctionId(kYieldingCall, kSmc32CallConv, kSipService,
                             static_cast<uint8_t>(TzService::Pil),
                             static_cast<uint8_t>(cmd));
 }
 
-static constexpr uint64_t CreateScmArgs(uint32_t n_args, uint32_t arg0 = 0, uint32_t arg1 = 0,
-                                        uint32_t arg2 = 0, uint32_t arg3 = 0, uint32_t arg4 = 0,
-                                        uint32_t arg5 = 0, uint32_t arg6 = 0, uint32_t arg7 = 0,
-                                        uint32_t arg8 = 0, uint32_t arg9 = 0) {
+static constexpr uint64_t CreateSmcArgs(uint32_t n_args, SmcArgType arg0 = SmcArgType::kValue,
+                                        SmcArgType arg1 = SmcArgType::kValue,
+                                        SmcArgType arg2 = SmcArgType::kValue,
+                                        SmcArgType arg3 = SmcArgType::kValue,
+                                        SmcArgType arg4 = SmcArgType::kValue,
+                                        SmcArgType arg5 = SmcArgType::kValue,
+                                        SmcArgType arg6 = SmcArgType::kValue,
+                                        SmcArgType arg7 = SmcArgType::kValue,
+                                        SmcArgType arg8 = SmcArgType::kValue,
+                                        SmcArgType arg9 = SmcArgType::kValue) {
     return n_args | (arg0 << 4) | (arg1 << 6) | (arg2 << 8) | (arg3 << 10) | (arg4 << 12) |
            (arg5 << 14) | (arg6 << 16) | (arg7 << 18) | (arg8 << 20) | (arg9 << 22);
 }
 
-static constexpr zx_smc_parameters_t CreatePilSmcParams(Cmd cmd, uint64_t args, PasId pas_id,
+static constexpr zx_smc_parameters_t CreatePilSmcParams(PilCmd cmd, uint64_t args, uint64_t pas_id,
                                                         uint64_t arg3 = 0, uint64_t arg4 = 0,
                                                         uint64_t arg5 = 0, uint64_t arg6 = 0,
                                                         uint16_t client_id = 0,
                                                         uint16_t secure_os_id = 0) {
-    return {CreatePilFunctionId(cmd), args,
-            static_cast<uint64_t>(pas_id), arg3, arg4, arg5, arg6, client_id, secure_os_id};
+    return {CreatePilFunctionId(cmd), args, pas_id, arg3, arg4, arg5, arg6, client_id, secure_os_id};
 }
 
 class PilDevice;
@@ -138,8 +164,16 @@ public:
 
 private:
     void ShutDown();
+    zx_status_t SmcCall(zx_smc_parameters_t* params, zx_smc_result_t* result);
+    int PilThread();
+    zx_status_t LoadAuthFirmware(size_t fw_n);
 
     ddk::PDev pdev_;
     zx::resource smc_;
+    zx::bti bti_;
+    ddk::ClockProtocolClient clk_;
+    thrd_t pil_thread_;
+    fbl::Array<metadata::Firmware> fw_;
+    fbl::Array<std::optional<ddk::MmioBuffer>> mmios_;
 };
 } // namespace qcom_pil

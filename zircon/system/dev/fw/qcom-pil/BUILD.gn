@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/firmware.gni")
+
 driver("qcom-pil") {
   sources = [
     "binding.cpp",
@@ -12,7 +14,35 @@ driver("qcom-pil") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/elfload",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",
+  ]
+  data_deps = [
+    ":firmware",
+  ]
+}
+
+firmware("firmware") {
+  sources = [
+    # TODO(andresoportus): remove files below, these are only included in testing builds until we
+    # load FW from non-volatile memory.
+    # "$firmware_dir/adsp.mdt",
+    # "$firmware_dir/adsp.b00",
+    # "$firmware_dir/adsp.b01",
+    # "$firmware_dir/adsp.b02",
+    # "$firmware_dir/adsp.b03",
+    # "$firmware_dir/adsp.b04",
+    # "$firmware_dir/adsp.b05",
+    # "$firmware_dir/adsp.b06",
+    # "$firmware_dir/adsp.b07",
+    # "$firmware_dir/adsp.b08",
+    # "$firmware_dir/adsp.b09",
+    # "$firmware_dir/adsp.b10",
+    # "$firmware_dir/adsp.b11",
+    # "$firmware_dir/adsp.b12",
+    # "$firmware_dir/adsp.b13",
+    # "$firmware_dir/adsp.b14",
   ]
 }
