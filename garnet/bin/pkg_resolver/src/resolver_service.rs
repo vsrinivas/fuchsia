@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy};
 use fidl_fuchsia_io::{self, DirectoryMarker};
 use fidl_fuchsia_pkg::{
     PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
 };
 use fidl_fuchsia_pkg_ext::BlobId;
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_uri::pkg_uri::FuchsiaPkgUri;
 use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
@@ -34,10 +34,8 @@ lazy_static! {
 pub async fn run_resolver_service(
     mut amber: AmberProxy,
     cache: PackageCacheProxy,
-    chan: fasync::Channel,
+    mut stream: PackageResolverRequestStream,
 ) -> Result<(), Error> {
-    let mut stream = PackageResolverRequestStream::from_channel(chan);
-
     let mut should_reconnect = false;
 
     while let Some(event) = await!(stream.try_next())? {
@@ -194,7 +192,7 @@ async fn wait_for_update_to_complete(chan: Channel, uri: &FuchsiaPkgUri) -> Resu
 mod tests {
     use super::*;
     use failure::Error;
-    use fidl::endpoints::ServerEnd;
+    use fidl::endpoints::{RequestStream, ServerEnd};
     use fidl_fuchsia_amber::{ControlRequest, ControlRequestStream};
     use fidl_fuchsia_io::DirectoryProxy;
     use fidl_fuchsia_pkg::{

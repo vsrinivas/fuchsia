@@ -6,14 +6,13 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_amber::ControlMarker as AmberMarker;
-use fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker};
-use fuchsia_app::client::connect_to_service;
-use fuchsia_app::server::ServicesServer;
+use fidl_fuchsia_pkg::PackageCacheMarker;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
-use futures::TryFutureExt;
+use futures::{StreamExt, TryFutureExt};
 
 mod resolver_service;
 
@@ -29,17 +28,16 @@ fn main() -> Result<(), Error> {
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
-    let server = ServicesServer::new()
-        .add_service((PackageResolverMarker::NAME, move |chan| {
-            fx_log_info!("spawning resolver service");
-            fasync::spawn(
-                resolver_service::run_resolver_service(amber.clone(), cache.clone(), chan)
-                    .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
-            )
-        }))
-        .start()
-        .context("error starting package resolver server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        fx_log_info!("spawning resolver service");
+        fasync::spawn(
+            resolver_service::run_resolver_service(amber.clone(), cache.clone(), stream)
+                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+        )
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run(server, SERVER_THREADS).context("failed to execute package resolver future")?;
+    let () = executor.run(fs.collect(), SERVER_THREADS);
     Ok(())
 }
