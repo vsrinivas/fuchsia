@@ -314,6 +314,20 @@ typedef uint32_t fidl_union_tag_t;
 //                                                   union_foo, or else
 //                                                   FIDL_ALLOC_ABSENT.
 
+// Tables.
+
+// Tables are 'flexible structs', where all members are optional, and new
+// members can be added, or old members removed while preserving ABI
+// compatibility. Each table member is referenced by ordinal, sequentially
+// assigned from 1 onward, with no gaps. Each member content is stored
+// out-of-line in an envelope, and a table is simply a vector of these envelopes
+// with the requirement that the last envelope must be present in order
+// to guarantee a canonical representation.
+
+typedef struct {
+    fidl_vector_t envelopes;
+} fidl_table_t;
+
 // Extensible unions.
 
 // Extensible unions, or "xunions" (colloquially pronounced "zoo-nions") are

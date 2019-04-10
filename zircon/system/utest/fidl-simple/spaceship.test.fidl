@@ -70,3 +70,15 @@ protocol SpaceShip {
     ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
     ActivateShields(Shields shields);
 };
+
+// Captain Kirk can do many things, possibly all at once.
+table CaptainKirkWhereabouts {
+    1: bool is_exploring_new_worlds;
+    2: bool is_exploring_new_civilizations;
+    3: bool is_boldly_going_where_no_man_has_gone_before;
+};
+
+/// The USS Enterprise is far from simple.
+protocol UssEnterprise {
+    WhereIsCaptainKirk() -> (CaptainKirkWhereabouts whereabouts);
+};

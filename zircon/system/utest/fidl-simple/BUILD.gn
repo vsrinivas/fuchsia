@@ -39,13 +39,13 @@ if (is_fuchsia) {
 fidl_library("fidl.test.spaceship") {
   visibility = [ ":*" ]
   sources = [
-    "spaceship.fidl",
+    "spaceship.test.fidl",
   ]
 }
 
 fidl_library("fidl.test.fakesocket") {
   visibility = [ ":*" ]
   sources = [
-    "fakesocket.fidl",
+    "fakesocket.test.fidl",
   ]
 }

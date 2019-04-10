@@ -402,21 +402,19 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             case flat::Decl::Kind::kConst:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kStruct:
-            case flat::Decl::Kind::kTable:
-            case flat::Decl::Kind::kUnion:
-            case flat::Decl::Kind::kXUnion: {
+            case flat::Decl::Kind::kUnion: {
                 std::string name = NameName(identifier_type->name, "_", "_");
                 if (identifier_type->nullability == types::Nullability::kNullable) {
                     name.push_back('*');
                 }
                 return name;
             }
-            case flat::Decl::Kind::kInterface: {
+            case flat::Decl::Kind::kTable:
+                return "fidl_table_t";
+            case flat::Decl::Kind::kXUnion:
+                return "fidl_xunion_t";
+            case flat::Decl::Kind::kInterface:
                 return "zx_handle_t";
-            }
-            default: {
-                abort();
-            }
             }
         }
         }
