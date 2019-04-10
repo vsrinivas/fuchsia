@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.media.playback.Player"
         ]

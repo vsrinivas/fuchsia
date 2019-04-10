@@ -6,20 +6,34 @@
 #![recursion_limit = "256"]
 
 use {
-    bt_avdtp as avdtp,
+    bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::AUDIO_ENCODING_SBC,
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_cobalt as cobalt,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
         select, FutureExt, StreamExt,
     },
+    lazy_static::lazy_static,
     parking_lot::RwLock,
     std::{collections::hash_map::Entry, collections::HashMap, string::String, sync::Arc},
 };
+
+lazy_static! {
+    /// COBALT_SENDER must only be accessed from within an async context;
+    static ref COBALT_SENDER: cobalt::CobaltSender = {
+        let (sender, reporter) = cobalt::serve_with_project_name(100, "bluetooth");
+        fasync::spawn(reporter);
+        sender
+    };
+}
+
+fn get_cobalt_logger() -> cobalt::CobaltSender {
+    COBALT_SENDER.clone()
+}
 
 mod player;
 
@@ -102,7 +116,7 @@ impl Stream {
         }
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
-        fuchsia_async::spawn(decode_media_stream(
+        fuchsia_async::spawn_local(decode_media_stream(
             self.endpoint.take_transport(),
             self.encoding.clone(),
             receive,
@@ -401,12 +415,15 @@ async fn decode_media_stream(
             return;
         }
     };
+
+    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+
     loop {
         select! {
             item = stream.next().fuse() => {
                 if item.is_none() {
                     fx_log_info!("Media transport closed");
-                    return;
+                    break;
                 }
                 match item.unwrap() {
                     Ok(pkt) => {
@@ -425,13 +442,13 @@ async fn decode_media_stream(
                             eprint!(
                                 "Media Packet received: +{} bytes = {} \r",
                                 pkt.len(),
-                                total_bytes
+                                total_bytes,
                                 );
                         }
                     }
                     Err(e) => {
                         fx_log_info!("Error in media stream: {:?}", e);
-                        return;
+                        break;
                     }
                 }
             },
@@ -444,17 +461,24 @@ async fn decode_media_stream(
                         Ok(v) => v,
                         Err(e) => {
                             fx_log_info!("Can't rebuild player: {:?}", e);
-                            return;
+                            break;
                         }
                     };
                 }
             }
             _ = end_signal.next().fuse() => {
                 fx_log_info!("Stream ending on end signal");
-                return;
+                break;
             }
         }
     }
+    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+    // TODO (BT-818): determine codec metric dimension from encoding instead of hard-coding to sbc
+    get_cobalt_logger().log_event_count(
+        metrics::A2DP_NUMBER_OF_SECONDS_STREAMED_METRIC_ID,
+        metrics::A2dpNumberOfSecondsStreamedMetricDimensionCodec::Sbc as u32,
+        (end_time - start_time).seconds(),
+    );
 }
 
 #[fasync::run_singlethreaded]

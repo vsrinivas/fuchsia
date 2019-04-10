@@ -6,6 +6,14 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+metrics_registry("bt_a2dp_sink_metrics") {
+  project_name = "bluetooth"
+  generate_rust = true
+  generate_binarypb = false
+}
 
 rustc_binary("bin") {
   name = "bt_a2dp_sink"
@@ -13,29 +21,36 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":bt_a2dp_sink_metrics_rustlib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-cobalt",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
+    "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
+    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 
 package("bt-a2dp-sink") {
   deps = [
     ":bin",
+    ":bt_a2dp_sink_metrics",
   ]
 
   binary = "rust_crates/bt_a2dp_sink"
