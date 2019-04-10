@@ -936,5 +936,9 @@ RUN_TEST(WakeOwnershipTest<OpType::kRequeue>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kStandard>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kRequeue>);
 RUN_TEST(RequeueOwnershipTest);
+// TODO(johngro): Re-enable this test once the root cause of FLK-153 has been
+// tracked down and squashed.
+#if 0
 RUN_TEST(OwnerExitTest);
+#endif
 END_TEST_CASE(futex_ownership_tests)
