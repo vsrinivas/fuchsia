@@ -6,12 +6,11 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
+use fidl_fuchsia_power::{BatteryStatus, PowerManagerRequest,
                          PowerManagerRequestStream, PowerManagerWatcherProxy,
                          Status as power_status};
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_vlog};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon as zx;
@@ -229,9 +228,8 @@ async fn watch_power_device(bsh: Arc<Mutex<BatteryStatusHelper>>) -> Result<(), 
     Ok(())
 }
 
-fn spawn_power_manager(pm: PowerManagerServer, chan: fasync::Channel) {
+fn spawn_power_manager(pm: PowerManagerServer, mut stream: PowerManagerRequestStream) {
     fasync::spawn(async move {
-        let mut stream = PowerManagerRequestStream::from_channel(chan);
         while let Some(req) = await!(stream.try_next())? {
             match req {
                 PowerManagerRequest::GetBatteryStatus { responder, .. } => {
@@ -278,15 +276,15 @@ fn main_pm() -> Result<(), Error> {
         fx_log_err!("watch_power_device failed {:?}", e);
     }));
 
-    let server_fut = ServicesServer::new()
-        .add_service((PowerManagerMarker::NAME, move |chan| {
-            let pm = PowerManagerServer {
-                battery_status_helper: bsh.clone(),
-            };
-            spawn_power_manager(pm, chan);
-        })).start()
-        .map_err(|e| e.context("starting service server"))?;
-    Ok(executor.run(server_fut, 2).context("running server")?) // 2 threads
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let pm = PowerManagerServer {
+            battery_status_helper: bsh.clone(),
+        };
+        spawn_power_manager(pm, stream);
+    });
+    fs.take_and_serve_directory_handle()?;
+    Ok(executor.run(fs.collect(), 2)) // 2 threads
 }
 
 #[cfg(test)]
