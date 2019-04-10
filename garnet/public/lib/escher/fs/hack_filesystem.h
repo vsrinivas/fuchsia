@@ -5,20 +5,17 @@
 #ifndef LIB_ESCHER_FS_HACK_FILESYSTEM_H_
 #define LIB_ESCHER_FS_HACK_FILESYSTEM_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include <lib/fit/function.h>
-
 #include "src/lib/fxl/memory/ref_counted.h"
 
 #ifdef __Fuchsia__
-#include <fbl/ref_ptr.h>
-namespace fs {
-class PseudoDir;
-}  // namespace fs
+#include <lib/vfs/cpp/pseudo_dir.h>
 #endif
 
 namespace escher {
@@ -37,7 +34,7 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
   // Create a platform-appropriate HackFileSystem (e.g. for Fuchsia or Linux).
   static HackFilesystemPtr New();
 #ifdef __Fuchsia__
-  static HackFilesystemPtr New(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+  static HackFilesystemPtr New(const std::shared_ptr<vfs::PseudoDir>& root_dir);
 #endif
   virtual ~HackFilesystem();
 

@@ -6,16 +6,17 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 
 #include <fbl/ref_ptr.h>
+#include <lib/escher/escher.h>
+#include <lib/escher/flib/release_fence_signaller.h>
+#include <lib/escher/renderer/batch_gpu_uploader.h>
+#include <lib/escher/resources/resource_recycler.h>
+#include <lib/escher/shape/rounded_rect_factory.h>
+#include <lib/escher/vk/image_factory.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <set>
 #include <vector>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/flib/release_fence_signaller.h"
-#include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/shape/rounded_rect_factory.h"
-#include "lib/escher/vk/image_factory.h"
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine_renderer.h"
@@ -30,7 +31,6 @@
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -71,7 +71,7 @@ class CommandContext {
 // which belong to different engines to communicate with one another.
 class Engine : public SessionUpdater, public FrameRenderer {
  public:
-  Engine(component::StartupContext* startup_context,
+  Engine(sys::ComponentContext* component_context,
          std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager, escher::EscherWeakPtr escher);
 
@@ -152,7 +152,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(component::StartupContext* startup_context,
+  Engine(sys::ComponentContext* component_context,
          std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,

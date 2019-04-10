@@ -6,13 +6,13 @@
 #define GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 
 #include <lib/async-testutils/test_loop.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/scenic/cpp/session.h>
 
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/scenic/cpp/session.h"
 
 namespace scenic_impl {
 namespace test {
@@ -57,7 +57,7 @@ class ScenicTest : public ::gtest::TestLoopFixture,
     }
   }
 
-  static std::unique_ptr<component::StartupContext> app_context_;
+  static std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
   std::vector<fuchsia::ui::scenic::Event> events_;

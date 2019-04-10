@@ -27,9 +27,9 @@ void SessionHandlerTest::TearDown() {
 }
 
 void SessionHandlerTest::InitializeScenic() {
-  // TODO(SCN-720): Wrap CreateFromStartupInfo using ::gtest::Environment
+  // TODO(SCN-720): Wrap Create using ::gtest::Environment
   // instead of this hack.  This code has the chance to break non-ScenicTests.
-  app_context_ = component::StartupContext::CreateFromStartupInfo();
+  app_context_ = sys::ComponentContext::Create();
   scenic_ = std::make_unique<Scenic>(app_context_.get(), [] {});
 }
 

@@ -77,12 +77,12 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
       error_reporter_ ? error_reporter_ : error_reporter);
 }
 
-EngineForTest::EngineForTest(component::StartupContext* startup_context,
+EngineForTest::EngineForTest(sys::ComponentContext* component_context,
                              DisplayManager* display_manager,
                              std::unique_ptr<escher::ReleaseFenceSignaller> r,
                              EventReporter* event_reporter,
                              ErrorReporter* error_reporter)
-    : Engine(startup_context,
+    : Engine(component_context,
              std::make_unique<DefaultFrameScheduler>(
                  display_manager->default_display()),
              display_manager, std::move(r),

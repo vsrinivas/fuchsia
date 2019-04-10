@@ -98,7 +98,7 @@ class SessionManagerForTest : public SessionManager {
 
 class EngineForTest : public Engine {
  public:
-  EngineForTest(component::StartupContext* startup_context,
+  EngineForTest(sys::ComponentContext* component_context,
                 DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
                 EventReporter* event_reporter = nullptr,

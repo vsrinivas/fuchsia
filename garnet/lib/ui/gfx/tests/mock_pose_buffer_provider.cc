@@ -5,13 +5,13 @@
 #include "mock_pose_buffer_provider.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 namespace mock_pose_buffer_provider {
 
 MockPoseBufferProviderApp::MockPoseBufferProviderApp()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+    : context_(sys::ComponentContext::Create()) {
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void MockPoseBufferProviderApp::SetPoseBuffer(::zx::vmo buffer,

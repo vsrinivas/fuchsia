@@ -4,19 +4,19 @@
 
 #include "garnet/lib/ui/input/input_system.h"
 
-#include <memory>
-
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/escher/geometry/types.h>
 #include <lib/escher/util/type_utils.h>
 #include <lib/fidl/cpp/clone.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_point.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/geometry/cpp/formatting.h>
 #include <lib/ui/input/cpp/formatting.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
 #include <trace/event.h>
+
+#include <memory>
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
@@ -235,9 +235,8 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
   gfx_system_->AddInitClosure([this]() {
     SetToInitialized();
 
-    text_sync_service_ = this->context()
-                             ->app_context()
-                             ->ConnectToEnvironmentService<ImeService>();
+    text_sync_service_ =
+        this->context()->app_context()->svc()->Connect<ImeService>();
     text_sync_service_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Scenic lost connection to TextSync";
     });

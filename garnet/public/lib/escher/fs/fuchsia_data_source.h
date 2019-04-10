@@ -5,15 +5,17 @@
 #ifndef LIB_ESCHER_FS_FUCHSIA_DATA_SOURCE_H_
 #define LIB_ESCHER_FS_FUCHSIA_DATA_SOURCE_H_
 
-#include <fbl/ref_ptr.h>
-#include "lib/escher/fs/hack_filesystem.h"
+#include <lib/escher/fs/hack_filesystem.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+
+#include <memory>
 
 namespace escher {
 
 // The data source from Fuchsia filesystem.
 class FuchsiaDataSource : public HackFilesystem {
  public:
-  FuchsiaDataSource(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+  FuchsiaDataSource(const std::shared_ptr<vfs::PseudoDir>& root_dir);
   FuchsiaDataSource();
 
   // |HackFilesystem|
@@ -21,7 +23,7 @@ class FuchsiaDataSource : public HackFilesystem {
                                const char* root) override;
 
  private:
-  fbl::RefPtr<fs::PseudoDir> root_dir_;
+  std::shared_ptr<vfs::PseudoDir> root_dir_;
 };
 
 }  // namespace escher

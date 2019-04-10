@@ -22,9 +22,9 @@ source_set("testing_deps") {
     ":mocks",
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]

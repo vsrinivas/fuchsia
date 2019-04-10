@@ -29,7 +29,7 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class EngineForTest : public gfx::Engine {
  public:
-  EngineForTest(component::StartupContext* startup_context,
+  EngineForTest(sys::ComponentContext* component_context,
                 gfx::DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
                 escher::EscherWeakPtr escher = escher::EscherWeakPtr());

@@ -12,7 +12,7 @@
 #include "lib/escher/fs/fuchsia_data_source.h"
 namespace escher {
 HackFilesystemPtr HackFilesystem::New(
-    const fbl::RefPtr<fs::PseudoDir>& root_dir) {
+    const std::shared_ptr<vfs::PseudoDir>& root_dir) {
   return fxl::MakeRefCounted<FuchsiaDataSource>(root_dir);
 }
 HackFilesystemPtr HackFilesystem::New() {

@@ -5,13 +5,12 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_SESSION_HANDLER_TEST_H_
 #define GARNET_LIB_UI_GFX_TESTS_SESSION_HANDLER_TEST_H_
 
-#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
-
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
@@ -44,7 +43,7 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter {
     return static_cast<SessionHandler*>(command_dispatcher_.get());
   }
 
-  std::unique_ptr<component::StartupContext> app_context_;
+  std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<escher::impl::CommandBufferSequencer>
       command_buffer_sequencer_;

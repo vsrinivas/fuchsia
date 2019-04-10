@@ -4,18 +4,18 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 
-#include <fs/pseudo-file.h>
+#include <lib/escher/escher_process_init.h>
+#include <lib/escher/fs/hack_filesystem.h>
+#include <lib/escher/util/check_vulkan_support.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/logger.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/escher/escher_process_init.h"
-#include "lib/escher/fs/hack_filesystem.h"
-#include "lib/escher/util/check_vulkan_support.h"
-#include "public/lib/syslog/cpp/logger.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -130,8 +130,9 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   }
 
   // Provide a PseudoDir where the gfx system can register debugging services.
-  fbl::RefPtr<fs::PseudoDir> debug_dir(fbl::AdoptRef(new fs::PseudoDir()));
-  context()->app_context()->outgoing().debug_dir()->AddEntry("gfx", debug_dir);
+  auto debug_dir = std::make_shared<vfs::PseudoDir>();
+  context()->app_context()->outgoing()->debug_dir()->AddSharedEntry("gfx",
+                                                                    debug_dir);
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
     bool success = shader_fs->InitializeWithRealFiles(
@@ -195,12 +196,14 @@ void GfxSystem::Initialize() {
   engine_ = InitializeEngine();
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
-  context()->app_context()->outgoing().debug_dir()->AddEntry(
-      "dump-scenes",
-      fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
-        *out = engine_->DumpScenes();
-        return ZX_OK;
-      })));
+  context()->app_context()->outgoing()->debug_dir()->AddEntry(
+      "dump-scenes", std::make_unique<vfs::BufferedPseudoFile>(
+                         [this](std::vector<uint8_t>* output) {
+                           auto out = engine_->DumpScenes();
+                           output->resize(out.length());
+                           std::copy(out.begin(), out.end(), output->begin());
+                           return ZX_OK;
+                         }));
 
   SetToInitialized();
 };

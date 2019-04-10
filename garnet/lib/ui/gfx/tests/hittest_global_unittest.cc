@@ -7,6 +7,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <memory>
 #include <string>
@@ -23,14 +24,13 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 #include "lib/escher/forward_declarations.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
+#include "src/lib/fxl/logging.h"
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -74,10 +74,10 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
-  auto startup_context = component::testing::StartupContextForTest::Create();
-  std::unique_ptr<Engine> engine =
-      std::make_unique<EngineForTest>(startup_context.get(), &display_manager,
-                                      /*release fence signaller*/ nullptr);
+  sys::testing::ComponentContextProvider context_provider_;
+  std::unique_ptr<Engine> engine = std::make_unique<EngineForTest>(
+      context_provider_.context(), &display_manager,
+      /*release fence signaller*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::NewViewTokenPair();

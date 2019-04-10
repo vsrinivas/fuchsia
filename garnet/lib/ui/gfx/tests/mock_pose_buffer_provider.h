@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_UI_GFX_TESTS_MOCK_POSE_BUFFER_PROVIDER_H_
+#define GARNET_LIB_UI_GFX_TESTS_MOCK_POSE_BUFFER_PROVIDER_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include "lib/component/cpp/startup_context.h"
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 
 namespace mock_pose_buffer_provider {
 
@@ -22,7 +24,7 @@ class MockPoseBufferProviderApp : public fuchsia::ui::gfx::PoseBufferProvider {
   MockPoseBufferProviderApp& operator=(const MockPoseBufferProviderApp&) =
       delete;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<PoseBufferProvider> bindings_;
 
   ::zx::vmo buffer_;
@@ -32,3 +34,5 @@ class MockPoseBufferProviderApp : public fuchsia::ui::gfx::PoseBufferProvider {
 };
 
 }  // namespace mock_pose_buffer_provider
+
+#endif  // GARNET_LIB_UI_GFX_TESTS_MOCK_POSE_BUFFER_PROVIDER_H_

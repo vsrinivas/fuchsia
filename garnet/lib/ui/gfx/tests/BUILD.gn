@@ -39,7 +39,6 @@ source_set("testing_deps") {
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
     "//garnet/lib/ui/util:glm_workaround",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
@@ -48,6 +47,7 @@ source_set("testing_deps") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/zx",
   ]
@@ -180,9 +180,9 @@ executable("mock_pose_buffer_provider_cc") {
 
   deps = [
     "//garnet/lib/ui/util:glm_workaround",
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

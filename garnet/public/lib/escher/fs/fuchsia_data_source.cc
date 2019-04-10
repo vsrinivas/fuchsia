@@ -4,9 +4,11 @@
 
 #include "lib/escher/fs/fuchsia_data_source.h"
 
-#include <fs/pseudo-dir.h>
-#include <fs/pseudo-file.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/errors.h>
+
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -31,11 +33,12 @@ std::vector<std::string> StrSplit(const std::string& str,
 
 }  // namespace
 
-FuchsiaDataSource::FuchsiaDataSource(const fbl::RefPtr<fs::PseudoDir>& root_dir)
+FuchsiaDataSource::FuchsiaDataSource(
+    const std::shared_ptr<vfs::PseudoDir>& root_dir)
     : root_dir_(root_dir) {}
 
 FuchsiaDataSource::FuchsiaDataSource()
-    : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()) {}
+    : root_dir_(std::make_shared<vfs::PseudoDir>()) {}
 
 bool FuchsiaDataSource::InitializeWithRealFiles(
     const std::vector<HackFilePath>& paths, const char* root) {
@@ -46,32 +49,42 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
 
     auto segs = StrSplit(path, "/");
     FXL_DCHECK(segs.size() > 0);
-    auto dir = root_dir_;
+    auto dir = root_dir_.get();
     for (size_t i = 0; i + 1 < segs.size(); ++i) {
       const auto& seg = segs[i];
-      fbl::RefPtr<fs::Vnode> subdir;
-      if (ZX_OK != dir->Lookup(&subdir, seg)) {
-        subdir = fbl::MakeRefCounted<fs::PseudoDir>();
-        FXL_DCHECK(ZX_OK == dir->AddEntry(seg, subdir));
+      vfs::Node* subdir;
+      if (ZX_OK != dir->Lookup(seg, &subdir)) {
+        auto node = std::make_unique<vfs::PseudoDir>();
+        subdir = node.get();
+        auto status = dir->AddEntry(seg, std::move(node));
+        FXL_DCHECK(ZX_OK == status);
+        if (status != ZX_OK) {
+          return false;  // don't hang the system
+        }
       }
-      dir = fbl::RefPtr<fs::PseudoDir>::Downcast(std::move(subdir));
+      dir = static_cast<vfs::PseudoDir*>(subdir);
     }
     zx_status_t status = dir->AddEntry(
         segs[segs.size() - 1],
-        fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(
+        std::make_unique<vfs::BufferedPseudoFile>(
             /* read_handler= */
-            [this, path](fbl::String* output) {
-              *output = ReadFile(path);
+            [this, path](std::vector<uint8_t>* output) {
+              auto out = ReadFile(path);
+              output->resize(out.length());
+              std::copy(out.begin(), out.end(), output->begin());
               return ZX_OK;
             },
             /* write_handler= */
-            [this, path](fbl::StringPiece input) {
+            [this, path](std::vector<uint8_t> input) {
               // TODO(ES-98): The file is successfully updated, but the
               // terminal would complain "truncate: Invalid argument".
+              HackFileContents content(input.size(), 0);
+              std::copy(input.begin(), input.begin() + input.size(),
+                        content.begin());
               FXL_LOG(INFO) << "Updated file: " << path;
-              WriteFile(path, HackFileContents(input.data(), input.size()));
-              return ZX_OK;
-            }));
+              WriteFile(path, std::move(content));
+            },
+            200 * 1024 * 1024 /* max file size, 200 MB */));
 
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
       FXL_LOG(WARNING) << "Failed to AddEntry(): " << status;

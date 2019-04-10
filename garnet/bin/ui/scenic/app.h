@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_UI_SCENIC_APP_H_
 #define GARNET_BIN_UI_SCENIC_APP_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
@@ -15,8 +15,7 @@ namespace scenic_impl {
 
 class App {
  public:
-  explicit App(component::StartupContext* app_context,
-               fit::closure quit_callback);
+  explicit App(sys::ComponentContext* app_context, fit::closure quit_callback);
 
  private:
   std::unique_ptr<Scenic> scenic_;

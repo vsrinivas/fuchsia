@@ -5,13 +5,12 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 
 #include <fbl/string.h>
-#include <fs/pseudo-dir.h>
-#include <set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
+
+#include <set>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -42,14 +41,14 @@ void CommandContext::Flush() {
   }
 }
 
-Engine::Engine(component::StartupContext* startup_context,
+Engine::Engine(sys::ComponentContext* component_context,
                std::unique_ptr<FrameScheduler> frame_scheduler,
                DisplayManager* display_manager,
                escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
-      event_timestamper_(startup_context),
+      event_timestamper_(component_context),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(
           escher()->gpu_allocator(), escher()->resource_recycler())),
       rounded_rect_factory_(
@@ -71,7 +70,7 @@ Engine::Engine(component::StartupContext* startup_context,
 }
 
 Engine::Engine(
-    component::StartupContext* startup_context,
+    sys::ComponentContext* component_context,
     std::unique_ptr<FrameScheduler> frame_scheduler,
     DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
@@ -79,7 +78,7 @@ Engine::Engine(
     escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
-      event_timestamper_(startup_context),
+      event_timestamper_(component_context),
       release_fence_signaller_(std::move(release_fence_signaller)),
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),

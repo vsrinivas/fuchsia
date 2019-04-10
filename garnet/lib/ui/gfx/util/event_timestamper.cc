@@ -11,12 +11,13 @@
 namespace scenic_impl {
 namespace gfx {
 
-EventTimestamper::EventTimestamper(component::StartupContext* startup_context)
+EventTimestamper::EventTimestamper(sys::ComponentContext* component_context)
     : main_dispatcher_(async_get_default_dispatcher()),
       background_loop_(&kAsyncLoopConfigNoAttachToThread),
-      task_([startup_context] {
-        auto profile_provider = startup_context->ConnectToEnvironmentService<
-            fuchsia::scheduler::ProfileProvider>();
+      task_([component_context] {
+        auto profile_provider =
+            component_context->svc()
+                ->Connect<fuchsia::scheduler::ProfileProvider>();
         profile_provider->GetProfile(
             24 /* HIGH_PRIORITY in LK */,
             "garnet/lib/ui/gfx/util/event_timestamper",

@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
-
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/scenic/tests/mocks.h"
+#include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 
 namespace scenic_impl {
 namespace test {
 
-std::unique_ptr<component::StartupContext> ScenicTest::app_context_;
+std::unique_ptr<sys::ComponentContext> ScenicTest::app_context_;
 
 void ScenicTest::SetUp() {
-  // TODO(SCN-720): Wrap CreateFromStartupInfo using ::gtest::Environment
+  // TODO(SCN-720): Wrap Create using ::gtest::Environment
   // instead of this hack.  This code has the chance to break non-ScenicTests.
   if (app_context_.get() == nullptr) {
-    app_context_ = component::StartupContext::CreateFromStartupInfo();
+    app_context_ = sys::ComponentContext::Create();
   }
   scenic_ =
       std::make_unique<Scenic>(app_context_.get(), [this] { QuitLoop(); });

@@ -9,8 +9,11 @@
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
+#include <memory>
+
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/vfs/cpp/pseudo_dir.h"
 
 namespace {
 
@@ -88,11 +91,12 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop,
       owned_loop_(loop_ ? nullptr
                         : new async::Loop(&kAsyncLoopConfigAttachToThread)),
       trace_provider_((loop_ ? loop_ : owned_loop_.get())->dispatcher()),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      component_context_(sys::ComponentContext::Create()),
       input_reader_(this) {
   // Provide a PseudoDir where the demo can register debugging services.
-  fbl::RefPtr<fs::PseudoDir> debug_dir(fbl::AdoptRef(new fs::PseudoDir));
-  startup_context()->outgoing().debug_dir()->AddEntry("demo", debug_dir);
+  auto debug_dir = std::make_shared<vfs::PseudoDir>();
+  component_context()->outgoing()->debug_dir()->AddSharedEntry("demo",
+                                                               debug_dir);
   filesystem_ = escher::HackFilesystem::New(debug_dir);
 
   if (!loop_) {

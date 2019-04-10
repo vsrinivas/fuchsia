@@ -9,9 +9,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/event.h>
 
-#include "lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
@@ -31,7 +31,7 @@ class EventTimestamper {
  public:
   using Callback = fit::function<void(zx_time_t timestamp)>;
 
-  explicit EventTimestamper(component::StartupContext* startup_context);
+  explicit EventTimestamper(sys::ComponentContext* component_context);
   ~EventTimestamper();
 
   // When the Start() method is called, a Watch object begins to watch its event

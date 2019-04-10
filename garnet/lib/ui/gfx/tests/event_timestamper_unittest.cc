@@ -2,23 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/ui/gfx/util/event_timestamper.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <math.h>
+
 #include <chrono>
 #include <thread>
 
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
-#include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-using EventTimestamperTest = ::component::testing::TestWithContext;
+using EventTimestamperTest = gtest::TestLoopFixture;
 
 TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
+  sys::testing::ComponentContextProvider context_provider_;
   constexpr size_t kEventCount = 3;
   std::vector<zx::event> events;
   std::vector<EventTimestamper::Watch> watches;
@@ -28,7 +31,7 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   watches.reserve(kEventCount);
   target_callback_times.resize(kEventCount);
 
-  auto app_context = TakeContext();
+  auto app_context = context_provider_.TakeContext();
   auto timestamper = std::make_unique<EventTimestamper>(app_context.get());
 
   for (size_t i = 0; i < kEventCount; ++i) {

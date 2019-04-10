@@ -20,11 +20,11 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
 }
 
 EngineForTest::EngineForTest(
-    component::StartupContext* startup_context,
+    sys::ComponentContext* component_context,
     gfx::DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
     escher::EscherWeakPtr escher)
-    : gfx::Engine(startup_context,
+    : gfx::Engine(component_context,
                   std::make_unique<gfx::DefaultFrameScheduler>(
                       display_manager->default_display()),
                   display_manager, std::move(release_signaler),

@@ -13,9 +13,9 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
-namespace component {
-class StartupContext;
-}  // namespace component
+namespace sys {
+class ComponentContext;
+}  // namespace sys
 
 namespace scenic_impl {
 
@@ -26,17 +26,17 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(component::StartupContext* app_context,
+  explicit SystemContext(sys::ComponentContext* app_context,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
-  component::StartupContext* app_context() const { return app_context_; }
+  sys::ComponentContext* app_context() const { return app_context_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
 
  private:
-  component::StartupContext* const app_context_;
+  sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
 };
 

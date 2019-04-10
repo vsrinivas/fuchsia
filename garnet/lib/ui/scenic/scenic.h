@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+
 #include <set>
 
 #include "garnet/lib/ui/scenic/session.h"
@@ -23,7 +24,7 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
-  explicit Scenic(component::StartupContext* app_context,
+  explicit Scenic(sys::ComponentContext* app_context,
                   fit::closure quit_callback);
   ~Scenic();
 
@@ -41,7 +42,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
       override;
 
-  component::StartupContext* app_context() const { return app_context_; }
+  sys::ComponentContext* app_context() const { return app_context_; }
 
   size_t num_sessions() {
     int num_sessions = 0;
@@ -71,7 +72,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
       override;
 
-  component::StartupContext* const app_context_;
+  sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,

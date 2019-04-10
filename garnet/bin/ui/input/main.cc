@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid/usages.h>
-#include <iostream>
-#include <memory>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <hid/usages.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/zx/time.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+
+#include <iostream>
+#include <memory>
 
 #include "garnet/bin/ui/input/inverse_keymap.h"
 #include "src/lib/fxl/command_line.h"
@@ -37,10 +36,9 @@ namespace input {
 class InputApp {
  public:
   InputApp(async::Loop* loop)
-      : loop_(loop),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()) {
-    registry_ = startup_context_->ConnectToEnvironmentService<
-        fuchsia::ui::input::InputDeviceRegistry>();
+      : loop_(loop), component_context_(sys::ComponentContext::Create()) {
+    registry_ = component_context_->svc()
+                    ->Connect<fuchsia::ui::input::InputDeviceRegistry>();
   }
 
   ~InputApp() {}
@@ -522,7 +520,7 @@ For further details, see README.md.
   }
 
   async::Loop* const loop_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::ui::input::InputDeviceRegistry> registry_;
 };
 }  // namespace input
