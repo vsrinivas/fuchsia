@@ -11,14 +11,16 @@ mod service_provider_server;
 
 use {
     crate::device::TeeDeviceConnection,
-    crate::device_server::DeviceServer,
-    failure::{format_err, Error, ResultExt},
-    fuchsia_app::server::ServicesServer,
+    crate::device_server::serve_passthrough,
+    failure::{format_err, Error},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_tee::DeviceMarker,
     fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::fx_log_err,
     fuchsia_vfs_watcher as vfs,
     futures::{
-        future::{AbortHandle, Abortable},
+        future::{abortable, Aborted},
         prelude::*,
     },
     std::{fs::File, path::PathBuf},
@@ -67,18 +69,19 @@ async fn main() -> Result<(), Error> {
     }
 
     let dev_connection = device_list.pop().unwrap();
-    let (abort_handle, abort_registration) = AbortHandle::new_pair();
-    let fidl_server = Abortable::new(
-        ServicesServer::new()
-            .add_service(DeviceServer::factory(dev_connection.clone()))
-            .start()
-            .context("Failed to start TEE Manager ServicesServer")?,
-        abort_registration,
-    )
-    .unwrap_or_else(|_| Ok(()));
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_service_at(DeviceMarker::NAME, |channel| {
+        fasync::spawn(
+            serve_passthrough(dev_connection.clone(), channel)
+                .unwrap_or_else(|e| fx_log_err!("{:?}", e)),
+        );
+        None
+    });
+    fs.take_and_serve_directory_handle()?;
+    let (fidl_server, abort_handle) = abortable(fs.collect());
     await!(dev_connection.register_abort_handle_on_closed(abort_handle));
 
-    await!(fidl_server)?;
+    let _: Result<(), Aborted> = await!(fidl_server);
 
     Ok(())
 }
