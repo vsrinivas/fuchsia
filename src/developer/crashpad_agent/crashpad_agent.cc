@@ -13,6 +13,7 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -225,30 +226,15 @@ std::string GetPackageName(const zx::process& process) {
   return std::string("unknown-package");
 }
 
-// Returns the filename the VMO was written to, empty in case of failure.
-std::string WriteVmoToFile(const fuchsia::mem::Buffer& vmo) {
-  // mkstemp will fill the XXXXXX with random characters.
-  std::string filename = "/data/tmp_file.XXXXXX";
-  fxl::UniqueFD fd(mkstemp(filename.data()));
-  if (!fd.is_valid()) {
-    FX_LOGS(ERROR) << "could not create temp file for VMO";
-    return std::string();
+std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(
+    Data* feedback_data) {
+  std::map<std::string, fuchsia::mem::Buffer> attachments;
+  if (feedback_data->has_attachments()) {
+    for (auto& attachment : *feedback_data->mutable_attachments()) {
+      attachments[attachment.key] = std::move(attachment.value);
+    }
   }
-
-  auto data = std::make_unique<uint8_t[]>(vmo.size);
-  const zx_status_t read_status =
-      vmo.vmo.read(data.get(), /*offset=*/0u, vmo.size);
-  if (read_status != ZX_OK) {
-    FX_LOGS(ERROR) << "could not read VMO: " << read_status << " ("
-                   << zx_status_get_string(read_status) << ")";
-    return std::string();
-  }
-  if (write(fd.get(), data.get(), vmo.size) != static_cast<ssize_t>(vmo.size)) {
-    FX_LOGS(ERROR) << "could not write VMO to temp file";
-    return std::string();
-  }
-
-  return filename;
+  return attachments;
 }
 
 }  // namespace
@@ -261,28 +247,11 @@ zx_status_t CrashpadAgent::OnNativeException(zx::process process,
                 << package_name;
 
   // Prepare annotations and attachments.
-  const Data feedback_data = GetFeedbackData();
+  Data feedback_data = GetFeedbackData();
   const std::map<std::string, std::string> annotations =
       MakeDefaultAnnotations(feedback_data, package_name);
-  // The Crashpad exception handler expects filepaths for the passed
-  // attachments, not file objects, but we need the underlying files
-  // to still be there so we wrap the filepaths in ScopedUnlink objects.
-  //
-  // TODO(frousseau): switch Crashpad to use VMOs instead of filepaths to avoid
-  // these temporary files.
-  std::map<std::string, base::FilePath> attachments;
-  std::vector<ScopedUnlink> attachment_files;
-  if (feedback_data.has_attachments()) {
-    for (const auto& attachment : feedback_data.attachments()) {
-      attachment_files.emplace_back(WriteVmoToFile(attachment.value));
-      const ScopedUnlink& tmp_file = attachment_files.back();
-      if (tmp_file.is_valid()) {
-        attachments[attachment.key] = base::FilePath(tmp_file.get());
-      } else {
-        FX_LOGS(WARNING) << "skipping attachment " << attachment.key;
-      }
-    }
-  }
+  const std::map<std::string, fuchsia::mem::Buffer> attachments =
+      MakeAttachments(&feedback_data);
 
   // Set minidump and create local crash report.
   //   * The annotations will be stored in the minidump of the report and
