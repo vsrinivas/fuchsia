@@ -116,5 +116,9 @@ async fn handler(
             let mut resp = await!(hd.set_name(name))?;
             responder.send(&mut resp)
         }
+        ControlRequest::SetDeviceClass { device_class, responder } => {
+            let mut resp = await!(hd.set_device_class(device_class))?;
+            responder.send(&mut resp)
+        }
     }
 }
