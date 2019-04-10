@@ -13,6 +13,15 @@ namespace {
 
 constexpr int kNumImages = 3;
 
+// TODO(SCN-1278): Remove this.
+// Turns two floats (high bits, low bits) into a 64-bit uint.
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
+}
+
 }  // namespace
 
 using ::fuchsia::ui::input::InputEvent;
@@ -50,6 +59,10 @@ void YuvInputView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       switch (pointer.phase) {
         case PointerEventPhase::DOWN: {
           if (focused_) {
+            const auto& pointer = event.pointer();
+            trace_flow_id_t trace_id =
+                PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+            TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
             const auto next_image_id_ = GetNextImageId();
             PaintImage(next_image_id_, GetNextPixelMultiplier());
             PresentImage(next_image_id_);

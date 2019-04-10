@@ -7,6 +7,7 @@
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <src/lib/fxl/log_level.h>
+#include <trace/event.h>
 
 #include <iostream>
 
@@ -93,10 +94,12 @@ void YuvBaseView::PaintImage(uint32_t image_id, uint8_t pixel_multiplier) {
 
 void YuvBaseView::PresentImage(uint32_t image_id) {
   FXL_CHECK(image_vmos_.count(image_id));
+  TRACE_DURATION("gfx", "YuvBaseView::PresentImage");
 
   ::std::vector<::zx::event> acquire_fences;
   ::std::vector<::zx::event> release_fences;
   uint64_t now_ns = zx_clock_get_monotonic();
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", image_id);
   image_pipe_->PresentImage(
       image_id, now_ns, std::move(acquire_fences), std::move(release_fences),
       [this](fuchsia::images::PresentationInfo presentation_info) {

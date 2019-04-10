@@ -160,8 +160,6 @@ ImagePipeUpdateResults ImagePipe::Update(
     escher::ReleaseFenceSignaller* release_fence_signaller,
     uint64_t presentation_time) {
   FXL_DCHECK(release_fence_signaller);
-  TRACE_DURATION("gfx", "ImagePipe::Update", "session_id", session()->id(),
-                 "id", id(), "time", presentation_time);
 
   ImagePipeUpdateResults results{.image_updated = false};
 
