@@ -90,8 +90,8 @@ bool parse_push_pop() {
     EXPECT_EQ(fields[4].attr.bit_sz, 8);
     EXPECT_EQ(fields[4].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[4].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[4].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[4].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[4].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[4].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
 
     // Next comes 'Y' field, same as 'X'.
@@ -100,8 +100,8 @@ bool parse_push_pop() {
     EXPECT_EQ(fields[5].attr.bit_sz, 8);
     EXPECT_EQ(fields[5].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[5].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[5].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[5].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[5].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[5].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
 
     // Next comes 'X' and 'Y' field again
@@ -111,16 +111,16 @@ bool parse_push_pop() {
     EXPECT_EQ(fields[6].attr.bit_sz, 8);
     EXPECT_EQ(fields[6].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[6].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[6].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[6].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[6].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[6].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[6].flags, expected_flags);
     EXPECT_EQ(fields[7].attr.usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(fields[7].attr.usage.usage, 0);
     EXPECT_EQ(fields[7].attr.bit_sz, 8);
     EXPECT_EQ(fields[7].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[7].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[7].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[7].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[7].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[7].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[7].flags, expected_flags);
 
     // Next is the popped padding field

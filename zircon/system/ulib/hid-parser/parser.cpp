@@ -349,6 +349,13 @@ public:
                 flags,
                 curr_col};
 
+            // If physical min/max are zero they should be set to logical values.
+            if (field.attr.phys_mm.min == 0 &&
+                field.attr.phys_mm.max == 0) {
+                field.attr.phys_mm.min = field.attr.logc_mm.min;
+                field.attr.phys_mm.max = field.attr.logc_mm.max;
+            }
+
             fbl::AllocChecker ac;
             fields_.push_back(field, &ac);
             if (!ac.check())

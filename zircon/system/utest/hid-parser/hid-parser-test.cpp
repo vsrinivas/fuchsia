@@ -137,8 +137,8 @@ static bool parse_boot_mouse() {
     EXPECT_EQ(fields[4].attr.offset, 8);
     EXPECT_EQ(fields[4].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[4].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[4].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[4].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[4].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[4].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
 
     // Last comes 'Y' field, same as 'X'.
@@ -148,8 +148,8 @@ static bool parse_boot_mouse() {
     EXPECT_EQ(fields[5].attr.offset, 16);
     EXPECT_EQ(fields[5].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[5].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[5].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[5].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[5].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[5].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[4].flags, expected_flags);
 
     // Now test the collections.
@@ -222,8 +222,8 @@ static bool parse_hp_mouse() {
     EXPECT_EQ(fields[8].attr.bit_sz, 8);
     EXPECT_EQ(fields[8].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[8].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[8].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[8].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[8].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[8].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[8].flags, expected_flags);
 
     // Next comes 'Y' field, same as 'X'.
@@ -232,8 +232,8 @@ static bool parse_hp_mouse() {
     EXPECT_EQ(fields[9].attr.bit_sz, 8);
     EXPECT_EQ(fields[9].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[9].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[9].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[9].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[9].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[9].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[9].flags, expected_flags);
 
     // Last comes 'Wheel' field.
@@ -242,8 +242,8 @@ static bool parse_hp_mouse() {
     EXPECT_EQ(fields[10].attr.bit_sz, 8);
     EXPECT_EQ(fields[10].attr.logc_mm.min, -127);
     EXPECT_EQ(fields[10].attr.logc_mm.max, 127);
-    EXPECT_EQ(fields[10].attr.phys_mm.min, 0);
-    EXPECT_EQ(fields[10].attr.phys_mm.max, 0);
+    EXPECT_EQ(fields[10].attr.phys_mm.min, -127);
+    EXPECT_EQ(fields[10].attr.phys_mm.max, 127);
     EXPECT_EQ(expected_flags & fields[10].flags, expected_flags);
 
     // Now test the collections.
