@@ -3,8 +3,8 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_setui::*,
-    fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     structopt::StructOpt,
 };
