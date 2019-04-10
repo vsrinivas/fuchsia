@@ -36,8 +36,8 @@ public:
 
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
     // Reserve the space required for the Primary.
-    PrimaryBase = reinterpret_cast<uptr>(
-        map(nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, PlatformData));
+    PrimaryBase = reinterpret_cast<uptr>(map(
+        nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, &PlatformData));
 
     RegionInfoArray = reinterpret_cast<RegionInfo *>(
         map(nullptr, sizeof(RegionInfo) * NumClasses, "scudo:regioninfo"));
@@ -192,14 +192,14 @@ private:
     uptr RegionBeg;
     uptr MappedUser;    // Bytes mapped for user memory.
     uptr AllocatedUser; // Bytes allocated for user memory.
-    uptr PlatformData[4];
+    OpaquePlatformData PlatformData;
     ReleaseToOsInfo ReleaseInfo;
   };
   COMPILER_CHECK(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0);
 
   uptr PrimaryBase;
   RegionInfo *RegionInfoArray;
-  uptr PlatformData[4];
+  OpaquePlatformData PlatformData;
   s32 ReleaseToOsIntervalMs;
 
   RegionInfo *getRegionInfo(uptr ClassId) const {
@@ -256,10 +256,10 @@ private:
         return nullptr;
       }
       if (MappedUser == 0)
-        memcpy(Region->PlatformData, PlatformData, sizeof(PlatformData));
+        memcpy(&Region->PlatformData, &PlatformData, sizeof(PlatformData));
       if (UNLIKELY(!map(reinterpret_cast<void *>(RegionBeg + MappedUser),
                         UserMapSize, "scudo:primary",
-                        MAP_ALLOWNOMEM | MAP_RESIZABLE, Region->PlatformData)))
+                        MAP_ALLOWNOMEM | MAP_RESIZABLE, &Region->PlatformData)))
         return nullptr;
       Region->MappedUser += UserMapSize;
       Stat->add(StatMapped, UserMapSize);
@@ -326,7 +326,7 @@ private:
       }
     }
 
-    MemoryMapper Mapper(Region->RegionBeg, Region->PlatformData);
+    MemoryMapper Mapper(Region->RegionBeg, &Region->PlatformData);
     releaseFreeMemoryToOS(&Region->FreeList, Region->RegionBeg,
                           roundUpTo(Region->AllocatedUser, PageSize) / PageSize,
                           BlockSize, &Mapper);

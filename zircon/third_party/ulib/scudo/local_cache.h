@@ -70,7 +70,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (C->Count == 0) {
       if (UNLIKELY(!refill(C, Allocator, ClassId)))
         return nullptr;
-      CHECK_GT(C->Count, 0);
+      DCHECK_GT(C->Count, 0);
     }
     const uptr ClassSize = C->ClassSize;
     void *P = C->Chunks[--C->Count];

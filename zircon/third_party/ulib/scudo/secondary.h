@@ -22,7 +22,9 @@ struct Header {
   LargeBlock::Header *Prev;
   LargeBlock::Header *Next;
   uptr BlockEnd;
-  uptr PlatformData[4];
+  uptr MapBase;
+  uptr MapSize;
+  OpaquePlatformData PlatformData;
 };
 
 constexpr uptr getHeaderSize() {
@@ -53,14 +55,15 @@ public:
 
   // The alignment parameter serves a hint to be able unmap spurious memory when
   // dealing with larger alignments.
-  void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr) {
+  NOINLINE void *allocate(uptr Size, uptr AlignmentHint = 0,
+                          uptr *BlockEnd = nullptr) {
     const uptr PageSize = getPageSizeCached();
     const uptr MapSize =
         roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize) + 2 * PageSize;
-    uptr PlatformData[4] = {};
+    OpaquePlatformData PlatformData = {};
     uptr MapBase = reinterpret_cast<uptr>(
         map(nullptr, MapSize, "scudo:secondary", MAP_NOACCESS | MAP_ALLOWNOMEM,
-            PlatformData));
+            &PlatformData));
     if (UNLIKELY(!MapBase))
       return nullptr;
     uptr CommitBase = MapBase + PageSize;
@@ -74,14 +77,16 @@ public:
       DCHECK_GE(NewMapBase, MapBase);
       // We only trim the extra memory on 32-bit platforms.
       if (SCUDO_WORDSIZE == 32U && NewMapBase != MapBase) {
-        unmap((void *)MapBase, NewMapBase - MapBase, 0, PlatformData);
+        unmap(reinterpret_cast<void *>(MapBase), NewMapBase - MapBase, 0,
+              &PlatformData);
         MapBase = NewMapBase;
       }
       const uptr NewMapEnd =
           roundUpTo(MapBase + 2 * PageSize + Size, PageSize) + PageSize;
       DCHECK_LE(NewMapEnd, MapEnd);
       if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
-        unmap((void *)NewMapEnd, MapEnd - NewMapEnd, 0, PlatformData);
+        unmap(reinterpret_cast<void *>(NewMapEnd), MapEnd - NewMapEnd, 0,
+              &PlatformData);
         MapEnd = NewMapEnd;
       }
     }
@@ -89,10 +94,12 @@ public:
     const uptr CommitSize = MapEnd - PageSize - CommitBase;
     const uptr Ptr = reinterpret_cast<uptr>(
         map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
-            0, PlatformData));
+            0, &PlatformData));
     LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(Ptr);
+    H->MapBase = MapBase;
+    H->MapSize = MapEnd - MapBase;
     H->BlockEnd = CommitBase + CommitSize;
-    memcpy(H->PlatformData, PlatformData, sizeof(PlatformData));
+    memcpy(&H->PlatformData, &PlatformData, sizeof(PlatformData));
     {
       SpinMutexLock L(&Mutex);
       if (!Tail) {
@@ -114,11 +121,8 @@ public:
     return reinterpret_cast<void *>(Ptr + LargeBlock::getHeaderSize());
   }
 
-  void deallocate(void *Ptr) {
-    uptr PlatformData[4];
+  NOINLINE void deallocate(void *Ptr) {
     LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
-    memcpy(PlatformData, H->PlatformData, sizeof(PlatformData));
-    const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
     {
       SpinMutexLock L(&Mutex);
       LargeBlock::Header *Prev = H->Prev;
@@ -137,12 +141,17 @@ public:
       } else {
         CHECK(Next);
       }
+      const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
       FreedBytes += CommitSize;
       NumberOfFrees++;
       Stats.sub(StatAllocated, CommitSize);
       Stats.sub(StatMapped, CommitSize);
     }
-    unmap(reinterpret_cast<void *>(H), CommitSize, UNMAP_ALL, PlatformData);
+    void *Addr = reinterpret_cast<void *>(H->MapBase);
+    const uptr Size = H->MapSize;
+    OpaquePlatformData PlatformData;
+    memcpy(&PlatformData, &H->PlatformData, sizeof(PlatformData));
+    unmap(Addr, Size, UNMAP_ALL, &PlatformData);
   }
 
   static uptr getBlockEnd(void *Ptr) {

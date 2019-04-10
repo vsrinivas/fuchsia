@@ -24,7 +24,6 @@ enum class FlagType : u8 {
 
 class FlagParser {
 public:
-  FlagParser() : NumberOfFlags(0), Buffer(nullptr), Pos(0) {}
   void registerFlag(const char *Name, const char *Desc, FlagType Type,
                     void *Var);
   void parseString(const char *S);
@@ -38,13 +37,12 @@ private:
     FlagType Type;
     void *Var;
   } Flags[MaxFlags];
-  u32 NumberOfFlags;
 
-  const char *Buffer;
-  uptr Pos;
+  u32 NumberOfFlags = 0;
+  const char *Buffer = nullptr;
+  uptr Pos = 0;
 
   void reportFatalError(const char *Error);
-  bool isSpace(char C);
   void skipWhitespace();
   void parseFlags();
   void parseFlag();

@@ -45,19 +45,21 @@ void FlagParser::printFlagDescriptions() {
     Printf("\t%s\n\t\t- %s\n", Flags[I].Name, Flags[I].Desc);
 }
 
-bool FlagParser::isSpace(char C) {
+static bool isSeparator(char C) {
   return C == ' ' || C == ',' || C == ':' || C == '\n' || C == '\t' ||
          C == '\r';
 }
 
+static bool isSeparatorOrNull(char C) { return !C || isSeparator(C); }
+
 void FlagParser::skipWhitespace() {
-  while (isSpace(Buffer[Pos]))
+  while (isSeparator(Buffer[Pos]))
     ++Pos;
 }
 
 void FlagParser::parseFlag() {
   const uptr NameStart = Pos;
-  while (Buffer[Pos] != 0 && Buffer[Pos] != '=' && !isSpace(Buffer[Pos]))
+  while (Buffer[Pos] != '=' && !isSeparatorOrNull(Buffer[Pos]))
     ++Pos;
   if (Buffer[Pos] != '=')
     reportError("expected '='");
@@ -73,10 +75,8 @@ void FlagParser::parseFlag() {
     Value = Buffer + ValueStart + 1;
     ++Pos; // consume the closing quote
   } else {
-    while (Buffer[Pos] != 0 && !isSpace(Buffer[Pos]))
+    while (!isSeparatorOrNull(Buffer[Pos]))
       ++Pos;
-    if (Buffer[Pos] != 0 && !isSpace(Buffer[Pos]))
-      reportError("expected separator or eol");
     Value = Buffer + ValueStart;
   }
   if (!runHandler(Name, Value))
@@ -124,28 +124,26 @@ INLINE bool parseBool(const char *Value, bool *b) {
 bool FlagParser::runHandler(const char *Name, const char *Value) {
   for (u32 I = 0; I < NumberOfFlags; ++I) {
     const uptr Len = strlen(Flags[I].Name);
-    if (strncmp(Name, Flags[I].Name, Len) == 0 && Name[Len] == '=') {
-      bool Ok = false;
-      switch (Flags[I].Type) {
-      case FlagType::FT_bool:
-        Ok = parseBool(Value, reinterpret_cast<bool *>(Flags[I].Var));
-        if (!Ok)
-          reportInvalidFlag("bool", Value);
-        break;
-      case FlagType::FT_int:
-        char *ValueEnd;
-        *reinterpret_cast<int *>(Flags[I].Var) =
-            static_cast<int>(strtol(Value, &ValueEnd, 10));
-        Ok = *ValueEnd == 0 || *ValueEnd == '"' || *ValueEnd == '\'' ||
-             isSpace(*ValueEnd);
-        if (!Ok)
-          reportInvalidFlag("int", Value);
-        break;
-      default:
-        reportError("unknown flag type");
-      }
-      return Ok;
+    if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != '=')
+      continue;
+    bool Ok = false;
+    switch (Flags[I].Type) {
+    case FlagType::FT_bool:
+      Ok = parseBool(Value, reinterpret_cast<bool *>(Flags[I].Var));
+      if (!Ok)
+        reportInvalidFlag("bool", Value);
+      break;
+    case FlagType::FT_int:
+      char *ValueEnd;
+      *reinterpret_cast<int *>(Flags[I].Var) =
+          static_cast<int>(strtol(Value, &ValueEnd, 10));
+      Ok =
+          *ValueEnd == '"' || *ValueEnd == '\'' || isSeparatorOrNull(*ValueEnd);
+      if (!Ok)
+        reportInvalidFlag("int", Value);
+      break;
     }
+    return Ok;
   }
   // Unrecognized flag. This is not a fatal error, we may print a warning later.
   UnknownFlags.add(Name);

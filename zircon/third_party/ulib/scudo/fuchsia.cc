@@ -41,7 +41,7 @@ struct MapInfo {
   uintptr_t VmarBase;
   uint64_t VmoSize;
 };
-COMPILER_CHECK(sizeof(MapInfo) <= 4 * sizeof(uptr));
+COMPILER_CHECK(sizeof(MapInfo) <= sizeof(OpaquePlatformData));
 
 static void *allocateVmar(uptr Size, MapInfo *Info, bool AllowNoMem) {
   // Only scenario so far.
@@ -60,7 +60,8 @@ static void *allocateVmar(uptr Size, MapInfo *Info, bool AllowNoMem) {
   return reinterpret_cast<void *>(Info->VmarBase);
 }
 
-void *map(void *Addr, uptr Size, const char *Name, uptr Flags, uptr *Extra) {
+void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
+          OpaquePlatformData *Extra) {
   DCHECK_EQ(Size % PAGE_SIZE, 0);
   const bool AllowNoMem = !!(Flags & MAP_ALLOWNOMEM);
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
@@ -124,7 +125,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags, uptr *Extra) {
   return reinterpret_cast<void *>(P);
 }
 
-void unmap(void *Addr, uptr Size, uptr Flags, uptr *Extra) {
+void unmap(void *Addr, uptr Size, uptr Flags, OpaquePlatformData *Extra) {
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
   if (Flags & UNMAP_ALL) {
     DCHECK_NE(Info, nullptr);
@@ -148,7 +149,7 @@ void unmap(void *Addr, uptr Size, uptr Flags, uptr *Extra) {
 }
 
 void releasePagesToOS(UNUSED uptr BaseAddress, uptr Offset, uptr Size,
-                      uptr *Extra) {
+                      OpaquePlatformData *Extra) {
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
   DCHECK(Info);
   DCHECK_NE(Info->Vmar, ZX_HANDLE_INVALID);

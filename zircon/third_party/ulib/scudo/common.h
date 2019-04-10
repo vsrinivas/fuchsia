@@ -135,6 +135,10 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 
 // Platform memory mapping functions.
 
+typedef struct OpaquePlatformData {
+  uptr _[3];
+} OpaquePlatformData;
+
 #define MAP_ALLOWNOMEM (1U << 0)
 #define MAP_NOACCESS (1U << 1)
 #define MAP_RESIZABLE (1U << 2)
@@ -148,16 +152,17 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 // platform specific data to the function.
 // Returns nullptr on error or dies if MAP_ALLOWNOMEM is not specified.
 void *map(void *Addr, uptr Size, const char *Name, uptr Flags = 0,
-          uptr *Extra = nullptr);
+          OpaquePlatformData *Extra = nullptr);
 
 // Indicates that we are getting rid of the whole mapping, which might have
 // further consequences on Extra, depending on the platform.
 #define UNMAP_ALL (1U << 0)
 
-void unmap(void *Addr, uptr Size, uptr Flags = 0, uptr *Extra = nullptr);
+void unmap(void *Addr, uptr Size, uptr Flags = 0,
+           OpaquePlatformData *Extra = nullptr);
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
-                      uptr *Extra = nullptr);
+                      OpaquePlatformData *Extra = nullptr);
 
 // Internal map & unmap fatal error. This must not call map().
 void NORETURN dieOnMapUnmapError(bool OutOfMemory = false);

@@ -4,7 +4,8 @@
 
 source_set("scudo") {
   deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
+    "$zx/system/ulib/runtime",
+    "$zx/system/ulib/zircon",
   ]
   sources = [
     "checksum.cc",

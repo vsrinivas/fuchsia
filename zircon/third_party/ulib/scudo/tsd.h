@@ -70,7 +70,7 @@ enum ThreadState : u8 {
 template <class Allocator> void teardownThread(void *Ptr);
 
 template <class Allocator> struct TSDRegistryExT {
-  void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
+  ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
     if (LIKELY(State != ThreadNotInitialized))
       return;
     initThread(Instance, MinimalInit);
@@ -86,7 +86,7 @@ template <class Allocator> struct TSDRegistryExT {
   }
 
 private:
-  void initOnce(Allocator *Instance) {
+  NOINLINE void initOnce(Allocator *Instance) {
     BlockingMutexLock L(&Mutex);
     if (OnceDone)
       return;
@@ -147,7 +147,8 @@ template <class Allocator> void teardownThread(void *Ptr) {
 // TODO(kostyak): split?
 
 template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
-  void initThreadMaybe(Allocator *Instance, UNUSED bool MinimalInit) {
+  ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
+                                     UNUSED bool MinimalInit) {
     if (LIKELY(getCurrentTSD()))
       return;
     initThread(Instance);
@@ -165,7 +166,7 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
   }
 
 private:
-  void initOnce(Allocator *Instance) {
+  NOINLINE void initOnce(Allocator *Instance) {
     BlockingMutexLock L(&Mutex);
     if (OnceDone)
       return;
@@ -219,7 +220,7 @@ private:
     setCurrentTSD(&TSDs[Index % NumberOfTSDs]);
   }
 
-  TSD<Allocator> *getTSDAndLockSlow(TSD<Allocator> *CurrentTSD) {
+  NOINLINE TSD<Allocator> *getTSDAndLockSlow(TSD<Allocator> *CurrentTSD) {
     if (NumberOfTSDs > 1U) {
       // Use the Precedence of the current TSD as our random seed. Since we are
       // in the slow path, it means that tryLock failed, and as a result it's

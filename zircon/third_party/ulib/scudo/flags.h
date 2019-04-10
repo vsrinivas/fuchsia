@@ -22,6 +22,8 @@ struct Flags {
 
 Flags *getFlags();
 void initFlags();
+class FlagParser;
+void registerFlags(FlagParser *Parser, Flags *F);
 
 } // namespace scudo
 

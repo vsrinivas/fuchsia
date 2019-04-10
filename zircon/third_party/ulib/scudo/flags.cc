@@ -13,9 +13,10 @@
 
 namespace scudo {
 
-static Flags FlagsDoNotUse; // Use via getFlags().
-
-Flags *getFlags() { return &FlagsDoNotUse; }
+Flags *getFlags() {
+  static Flags F;
+  return &F;
+}
 
 void Flags::setDefaults() {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
@@ -23,7 +24,7 @@ void Flags::setDefaults() {
 #undef SCUDO_FLAG
 }
 
-static void registerFlags(FlagParser *Parser, Flags *F) {
+void registerFlags(FlagParser *Parser, Flags *F) {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description)                      \
   Parser->registerFlag(#Name, Description, FlagType::FT_##Type,                \
                        reinterpret_cast<void *>(&F->Name));

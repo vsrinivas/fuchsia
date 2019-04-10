@@ -149,8 +149,9 @@ public:
     TSD->Cache.destroy(&Primary, &Stats);
   }
 
-  void *allocate(uptr Size, AllocType Type, uptr Alignment = MinAlignment,
-                 bool ZeroContents = false) {
+  NOINLINE void *allocate(uptr Size, AllocType Type,
+                          uptr Alignment = MinAlignment,
+                          bool ZeroContents = false) {
     initThreadMaybe();
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
