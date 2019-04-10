@@ -131,7 +131,7 @@ async fn find_capability_source(
         let current_realm_mutex = await!(model.look_up_realm(&s.moniker))?;
         let current_realm = await!(current_realm_mutex.lock());
         // This unwrap is safe because look_up_realm populates this field
-        let decl = current_realm.instance.decl.as_ref().unwrap();
+        let decl = current_realm.instance.decl.as_ref().expect("missing offer decl");
 
         if let Some(offer) = decl.find_offer_source(&s.path, &type_, &s.name.unwrap().name()) {
             match &offer.source {
@@ -175,7 +175,7 @@ async fn find_capability_source(
         let current_realm_mutex = await!(model.look_up_realm(&s.moniker))?;
         let current_realm = await!(current_realm_mutex.lock());
         // This unwrap is safe because look_up_realm populates this field
-        let decl = current_realm.instance.decl.as_ref().unwrap();
+        let decl = current_realm.instance.decl.as_ref().expect("missing expose decl");
 
         if let Some(expose) = decl.find_expose_source(&s.path, &type_) {
             match &expose.source {

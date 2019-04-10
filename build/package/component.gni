@@ -113,8 +113,6 @@ template("fuchsia_component") {
         }
       }
 
-      # remove this check once we support dart and flutter
-      assert(defined(binary), "Component $component_label should define binary")
       if (!defined(deps)) {
         deps = []
       }
@@ -197,19 +195,21 @@ template("fuchsia_component") {
       ]
     }
 
-    if (!defined(component.binary_dest)) {
+    if (defined(component.binary) && !defined(component.binary_dest)) {
       bin_dir = "bin/"
       if (component.test) {
         bin_dir = "test/"
       }
       component.binary_dest = bin_dir + get_path_info(component.binary, "file")
     }
-    component_manifest += [
-      {
-        dest = component.binary_dest
-        source = rebase_path(component.binary, "", root_out_dir)
-      },
-    ]
+    if (defined(component.binary_dest)) {
+      component_manifest += [
+        {
+          dest = component.binary_dest
+          source = rebase_path(component.binary, "", root_out_dir)
+        },
+      ]
+    }
     foreach(module, component.loadable_modules) {
       component_manifest += [
         {

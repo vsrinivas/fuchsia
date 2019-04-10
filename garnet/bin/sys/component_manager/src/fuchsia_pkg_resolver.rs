@@ -40,6 +40,7 @@ impl FuchsiaPkgResolver {
         fuchsia_pkg_uri
             .resource()
             .ok_or(ResolverError::uri_missing_resource_error(component_uri))?;
+        let package_uri = fuchsia_pkg_uri.root_uri().to_string();
         let cm_path: PathBuf = fuchsia_pkg_uri.resource().unwrap().into();
 
         // Resolve package.
@@ -48,7 +49,7 @@ impl FuchsiaPkgResolver {
         let selectors: [&str; 0] = [];
         let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
         let status = await!(self.pkg_resolver.resolve(
-            component_uri,
+            &package_uri,
             &mut selectors.iter().map(|s| *s),
             &mut update_policy,
             ServerEnd::new(package_dir_s)
@@ -76,7 +77,7 @@ impl FuchsiaPkgResolver {
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
         let package = fsys::Package {
-            package_uri: Some(format!("{}", fuchsia_pkg_uri.root_uri())),
+            package_uri: Some(package_uri),
             package_dir: Some(package_dir),
         };
         Ok(fsys::Component {

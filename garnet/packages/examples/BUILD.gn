@@ -12,6 +12,7 @@ group("components") {
     "//garnet/examples/components:component_hello_world",
     "//garnet/examples/components:component_hello_world_tests",
     "//garnet/examples/components/v2:hello_world_hippo",
+    "//src/sys/examples/topology:topology_example",
   ]
 }
 
