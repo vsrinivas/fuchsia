@@ -108,10 +108,6 @@ static int aml_start_thread(void* arg) {
         zxlogf(ERROR, "astro_touch_init failed: %d\n", status);
     }
 
-    if ((status = astro_backlight_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "astro_backlight_init failed: %d\n", status);
-    }
-
     if ((status = aml_display_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_display_init failed: %d\n", status);
     }

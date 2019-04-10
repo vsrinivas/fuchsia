@@ -58,9 +58,6 @@ zx_status_t aml_usb_init(aml_bus_t* bus);
 // astro-display.c
 zx_status_t aml_display_init(aml_bus_t* bus);
 
-// astro-backlight.c
-zx_status_t astro_backlight_init(aml_bus_t* bus);
-
 // These should match the mmio table defined in astro-i2c.c
 enum {
     ASTRO_I2C_A0_0,

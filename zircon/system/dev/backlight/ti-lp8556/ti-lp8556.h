@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fuchsia/hardware/backlight/c/fidl.h>
@@ -38,7 +37,6 @@ public:
     zx_status_t SetBacklightState(bool power, uint8_t brightness);
 
 private:
-    pdev_protocol_t pdev_ = {};
     i2c_protocol_t i2c_ = {};
     // brightness is set to maximum from bootloader.
     uint8_t brightness_ = 0xFF;

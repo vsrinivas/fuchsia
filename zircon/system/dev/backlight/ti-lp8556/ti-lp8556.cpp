@@ -7,7 +7,6 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform/bus.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
@@ -25,14 +24,8 @@ constexpr uint8_t kCfg2Default = 0x20;
 } // namespace
 
 zx_status_t Lp8556Device::Bind() {
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
-    if (status != ZX_OK) {
-        LOG_ERROR("Could not get parent protocol\n");
-        return status;
-    }
-
     // Obtain I2C protocol needed to control backlight
-    status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
+    auto status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
     if (status != ZX_OK) {
         LOG_ERROR("Could not obtain I2C protocol\n");
         return status;
@@ -117,7 +110,7 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
     }
 
     auto status = dev->Bind();
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
         // devmgr is now in charge of memory for dev
         __UNUSED auto ptr = dev.release();
     }

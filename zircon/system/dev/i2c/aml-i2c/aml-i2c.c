@@ -403,7 +403,8 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-i2c",
         .ctx = i2c,
         .ops = &i2c_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
+        .proto_id = ZX_PROTOCOL_I2C_IMPL,
+        .proto_ops = &i2c_ops,
     };
 
     status = device_add(parent, &args, &i2c->zxdev);

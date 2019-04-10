@@ -6,7 +6,6 @@ driver("sherlock") {
   sources = [
     "bind.c",
     "sherlock-audio.cpp",
-    "sherlock-backlight.cpp",
     "sherlock-bluetooth.cpp",
     "sherlock-board.cpp",
     "sherlock-buttons.cpp",

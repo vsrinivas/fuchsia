@@ -88,7 +88,6 @@ private:
     zx_status_t CameraInit();
     zx_status_t MaliInit();
     zx_status_t VideoInit();
-    zx_status_t BacklightInit();
     zx_status_t ButtonsInit();
     zx_status_t DisplayInit();
     zx_status_t AudioInit();

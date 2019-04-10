@@ -17,8 +17,7 @@ namespace i2c {
 class I2cDevice;
 using I2cDeviceType = ddk::Device<I2cDevice, ddk::Unbindable>;
 
-class I2cDevice : public I2cDeviceType,
-                  public ddk::EmptyProtocol<ZX_PROTOCOL_I2C_IMPL> {
+class I2cDevice : public I2cDeviceType {
 public:
     I2cDevice(zx_device_t* parent, const i2c_impl_protocol_t* i2c)
         : I2cDeviceType(parent), i2c_(i2c) {}

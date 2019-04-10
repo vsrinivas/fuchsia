@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -42,6 +44,25 @@ static const pbus_irq_t i2c_irqs[] = {
     },
 };
 
+static const i2c_channel_t i2c_channels[] = {
+    // Backlight I2C
+    {
+        .bus_id = ASTRO_I2C_3,
+        .address = I2C_BACKLIGHT_ADDR,
+        .vid = PDEV_VID_TI,
+        .pid = PDEV_PID_TI_LP8556,
+        .did = PDEV_DID_TI_BACKLIGHT,
+    },
+};
+
+static const pbus_metadata_t i2c_metadata[] = {
+    {
+        .type = DEVICE_METADATA_I2C_CHANNELS,
+        .data_buffer = &i2c_channels,
+        .data_size = sizeof(i2c_channels),
+    }
+};
+
 static const pbus_dev_t i2c_dev = {
     .name = "i2c",
     .vid = PDEV_VID_AMLOGIC,
@@ -51,6 +72,8 @@ static const pbus_dev_t i2c_dev = {
     .mmio_count = countof(i2c_mmios),
     .irq_list = i2c_irqs,
     .irq_count = countof(i2c_irqs),
+    .metadata_list = i2c_metadata,
+    .metadata_count = countof(i2c_metadata),
 };
 
 zx_status_t aml_i2c_init(aml_bus_t* bus) {

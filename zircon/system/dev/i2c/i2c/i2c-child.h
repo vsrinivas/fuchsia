@@ -23,7 +23,7 @@ class I2cChild : public I2cChildType,
 public:
     I2cChild(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, fbl::RefPtr<I2cBus> bus,
              const i2c_channel_t* channel)
-        : I2cChildType(parent), i2c_(i2c), bus_(bus), address_(channel->address) {}
+        : I2cChildType(parent), bus_(bus), address_(channel->address) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -36,7 +36,6 @@ public:
     zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
 
 private:
-    const ddk::I2cImplProtocolClient i2c_;
     fbl::RefPtr<I2cBus> bus_;
     const uint16_t address_;
 };

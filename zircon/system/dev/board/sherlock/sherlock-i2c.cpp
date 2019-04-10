@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/protocol/gpioimpl.h>
@@ -45,6 +47,25 @@ static const pbus_irq_t i2c_irqs[] = {
     },
 };
 
+static const i2c_channel_t i2c_channels[] = {
+    // Backlight I2C
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x2C,
+        .vid = PDEV_VID_TI,
+        .pid = PDEV_PID_TI_LP8556,
+        .did = PDEV_DID_TI_BACKLIGHT,
+    },
+};
+
+static const pbus_metadata_t i2c_metadata[] = {
+    {
+        .type = DEVICE_METADATA_I2C_CHANNELS,
+        .data_buffer = &i2c_channels,
+        .data_size = sizeof(i2c_channels),
+    }
+};
+
 static pbus_dev_t i2c_dev = []() {
     pbus_dev_t dev;
     dev.name = "gpio";
@@ -55,6 +76,8 @@ static pbus_dev_t i2c_dev = []() {
     dev.mmio_count = countof(i2c_mmios);
     dev.irq_list = i2c_irqs;
     dev.irq_count = countof(i2c_irqs);
+    dev.metadata_list = i2c_metadata;
+    dev.metadata_count = countof(i2c_metadata);
     return dev;
 }();
 
