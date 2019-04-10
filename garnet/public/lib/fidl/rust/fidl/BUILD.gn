@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("fidl") {
@@ -12,6 +12,7 @@ rustc_library("fidl") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
@@ -29,15 +30,21 @@ fidl("fidl.rust.test.compilation") {
   ]
 }
 
-package("rust_fidl_tests") {
-  testonly = true
+test_package("rust_fidl_tests") {
   deps = [
     ":fidl",
     ":fidl.rust.test.compilation-rustc",
+    "//garnet/public/lib/fidl/rust/fidl_tests",
   ]
   tests = [
     {
       name = "fidl_lib_test"
+      dest = "fidl_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_tests_lib_test"
+      dest = "fidl_external_tests"
       environments = basic_envs
     },
   ]

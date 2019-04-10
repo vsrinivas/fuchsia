@@ -6,8 +6,12 @@
 
 use {
     crate::{Error, ServeInner},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    std::marker::PhantomData,
+    fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
+    futures::{self, Future, FutureExt, Stream, TryFutureExt, TryStream, TryStreamExt},
+    std::convert::From,
+    std::marker::{PhantomData, Unpin},
     std::sync::Arc,
 };
 
@@ -18,28 +22,28 @@ use {
 pub trait ServiceMarker: Sized + Send + Sync + 'static {
     /// The type of the structure against which FIDL requests are made.
     /// Queries made against the proxy are sent to the paired `ServerEnd`.
-    type Proxy: Proxy;
+    type Proxy: Proxy<Service = Self>;
 
     /// The type of the stream of requests coming into a server.
-    type RequestStream: RequestStream;
+    type RequestStream: RequestStream<Service = Self>;
 
     /// The name of the service (to be used for service lookup and discovery).
     const NAME: &'static str;
 }
 
 /// A type which allows querying a remote FIDL server over a channel.
-pub trait Proxy: Sized {
+pub trait Proxy: Sized + Send + Sync {
     /// The service which this `Proxy` controls.
-    type Service: ServiceMarker;
+    type Service: ServiceMarker<Proxy = Self>;
 
     /// Create a proxy over the given channel.
     fn from_channel(inner: fasync::Channel) -> Self;
 }
 
 /// A stream of requests coming into a FIDL server over a channel.
-pub trait RequestStream: Sized {
+pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error> + Unpin {
     /// The service which this `RequestStream` serves.
-    type Service: ServiceMarker;
+    type Service: ServiceMarker<RequestStream = Self>;
 
     /// A type that can be used to send events and shut down the request stream.
     type ControlHandle;
@@ -62,6 +66,46 @@ pub trait RequestStream: Sized {
         let inner = self.into_inner();
         T::from_inner(inner.0, inner.1)
     }
+}
+
+/// The Request type associated with a Marker.
+pub type Request<Marker> = <<Marker as ServiceMarker>::RequestStream as futures::TryStream>::Ok;
+
+/// Utility that spawns a new task to handle requests of a particular type, requiring a
+/// singlethreaded executor. The requests are handled one at a time.
+pub fn spawn_local_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
+where
+    P: Proxy,
+    F: FnMut(Request<P::Service>) -> Fut + 'static,
+    Fut: Future<Output = ()> + 'static,
+{
+    let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
+    fasync::spawn_local(for_each_or_log(stream, f));
+    Ok(proxy)
+}
+
+/// Utility that spawns a new task to handle requests of a particular type. The request handler
+/// must be threadsafe. The requests are handled one at a time.
+pub fn spawn_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
+where
+    P: Proxy,
+    F: FnMut(Request<P::Service>) -> Fut + 'static + Send,
+    Fut: Future<Output = ()> + 'static + Send,
+{
+    let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
+    fasync::spawn(for_each_or_log(stream, f));
+    Ok(proxy)
+}
+
+fn for_each_or_log<St, F, Fut>(stream: St, mut f: F) -> impl Future<Output = ()>
+where
+    St: RequestStream,
+    F: FnMut(St::Ok) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    stream
+        .try_for_each(move |r| f(r).map(Ok))
+        .unwrap_or_else(|e| fx_log_err!("FIDL stream handler failed: {}", e))
 }
 
 /// The `Client` end of a FIDL connection.
@@ -225,4 +269,13 @@ pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::Req
 {
     let (client, server) = create_endpoints()?;
     Ok((client, server.into_stream()?))
+}
+
+/// Create a request stream and proxy connected to one another.
+///
+/// Useful for testing where both the request stream and proxy are
+/// used in the same process.
+pub fn create_proxy_and_stream<T: ServiceMarker>() -> Result<(T::Proxy, T::RequestStream), Error> {
+    let (client, server) = create_endpoints::<T>()?;
+    Ok((client.into_proxy()?, server.into_stream()?))
 }
