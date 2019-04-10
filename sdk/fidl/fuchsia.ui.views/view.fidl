@@ -104,3 +104,6 @@ protocol View {
     [Transitional]
     SetConfig(ViewConfig config);
 };
+
+// TODO: Use a real ViewRef once it's ready.
+struct ViewRef {};
