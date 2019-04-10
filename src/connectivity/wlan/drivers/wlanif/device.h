@@ -110,8 +110,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     bool eth_started_ __TA_GUARDED(lock_) = false;
     ethmac_ifc_protocol_t ethmac_ifc_ __TA_GUARDED(lock_);
 
-    bool have_query_info_ __TA_GUARDED(lock_) = false;
-    wlanif_query_info query_info_ __TA_GUARDED(lock_);
+    wlanif_query_info query_info_;
 
     async::Loop loop_;
     fidl::Binding<::fuchsia::wlan::mlme::MLME> binding_ __TA_GUARDED(lock_);

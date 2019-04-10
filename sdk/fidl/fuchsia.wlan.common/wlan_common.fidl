@@ -58,4 +58,7 @@ enum DriverFeature {
     SYNTH = 2;
     TX_STATUS_REPORT = 3;
     DFS = 4;
+    // Temporary feature flag for incrementally transitioning drivers to use
+    // SME channel on iface creation.
+    TEMP_DIRECT_SME_CHANNEL = 3141592;
 };

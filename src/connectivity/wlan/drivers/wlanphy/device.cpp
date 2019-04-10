@@ -141,6 +141,9 @@ static void ConvertPhyDriverFeaturesInfo(
     if (driver_features_mask & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
         DriverFeatures->push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
     }
+    if (driver_features_mask & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        DriverFeatures->push_back(wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL);
+    }
 }
 
 static void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,

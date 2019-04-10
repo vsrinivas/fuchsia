@@ -172,6 +172,9 @@ zx_status_t Device::Bind() {
         return status;
     }
 
+    // Query the device.
+    wlanif_impl_.ops->query(wlanif_impl_.ctx, &query_info_);
+
     status = loop_.StartThread("wlanif-loop");
     if (status != ZX_OK) {
         errorf("wlanif: unable to start async loop: %s\n", zx_status_get_string(status));
@@ -533,11 +536,6 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
 
 void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
     std::lock_guard<std::mutex> lock(lock_);
-
-    if (!have_query_info_) {
-        wlanif_impl_.ops->query(wlanif_impl_.ctx, &query_info_);
-        have_query_info_ = true;
-    }
 
     if (!binding_.is_bound()) {
         return;
@@ -952,11 +950,6 @@ void Device::EthStop() {
 
 zx_status_t Device::EthQuery(uint32_t options, ethmac_info_t* info) {
     std::lock_guard<std::mutex> lock(lock_);
-
-    if (!have_query_info_) {
-        wlanif_impl_.ops->query(wlanif_impl_.ctx, &query_info_);
-        have_query_info_ = true;
-    }
 
     std::memset(info, 0, sizeof(*info));
 

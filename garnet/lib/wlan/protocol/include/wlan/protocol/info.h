@@ -112,6 +112,9 @@ enum {
     // channels correctly in an active scan (e.g. it makes sure DFS channel is safe to transmit
     // before doing so).
     WLAN_DRIVER_FEATURE_DFS = (1 << 4),
+    // Temporary feature flag for incrementally transitioning drivers to use
+    // SME channel on iface creation.
+    WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL = (1 << 30),
 };
 
 // Mac roles: a device may support multiple roles, but an interface is instantiated with
