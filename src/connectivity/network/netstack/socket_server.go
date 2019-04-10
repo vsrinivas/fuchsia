@@ -69,6 +69,7 @@ func (ios *iostate) loopWrite() error {
 		zx.SignalSocketPeerClosed | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
+	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 	defer ios.wq.EventUnregister(&waitEntry)
 	for {
 		// TODO: obviously allocating for each read is silly.
@@ -135,7 +136,6 @@ func (ios *iostate) loopWrite() error {
 			v = v[C.FDIO_SOCKET_MSG_HEADER_SIZE:]
 		}
 
-		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), opts)
 			if resCh != nil {
@@ -173,7 +173,6 @@ func (ios *iostate) loopWrite() error {
 				break
 			}
 		}
-		ios.wq.EventUnregister(&waitEntry)
 	}
 }
 
@@ -186,7 +185,14 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 	connected := ios.transProto != tcp.ProtocolNumber
 	if !connected {
 		ios.wq.EventRegister(&outEntry, waiter.EventOut)
-		defer ios.wq.EventUnregister(&outEntry)
+		defer func() {
+			if !connected {
+				// If connected became true then we must have already unregistered
+				// below.  We must never unregister the same entry twice because that
+				// can corrupt the waiter queue.
+				ios.wq.EventUnregister(&outEntry)
+			}
+		}()
 	}
 
 	var sender tcpip.FullAddress
@@ -208,8 +214,9 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					return nil
 				case <-inCh:
 					// We got an incoming connection; we must be a listening socket.
-					ios.wq.EventUnregister(&outEntry)
-
+					// Because we are a listening socket, we don't expect anymore outbound
+					// events so there's no harm in letting outEntry remain registered
+					// until the end of the function.
 					ios.incomingAssertedMu.Lock()
 					err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
 					ios.incomingAssertedMu.Unlock()
@@ -470,6 +477,8 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		closing:       make(chan struct{}),
 	}
 
+	// This must be registered before loopControl starts to prevent a race
+	// condition.
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 
