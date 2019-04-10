@@ -7,8 +7,8 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
-    fuchsia_component::client,
     fuchsia_async as fasync,
+    fuchsia_component::client,
     fuchsia_syslog::fx_log_info,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},

@@ -26,8 +26,8 @@ use fidl_fuchsia_sys::{
     LaunchInfo, LauncherMarker, TerminationReason,
 };
 
-use fuchsia_component::client;
 use fuchsia_async as fasync;
+use fuchsia_component::client;
 use futures::TryStreamExt;
 use structopt::StructOpt;
 

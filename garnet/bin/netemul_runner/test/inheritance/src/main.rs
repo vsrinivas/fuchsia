@@ -175,8 +175,7 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
 async fn run_server() -> Result<(), Error> {
     let data = Arc::new(Mutex::new(CounterData { value: 0 }));
     let mut fs = ServiceFs::new();
-    fs.dir("public")
-        .add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
+    fs.dir("public").add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
     fs.take_and_serve_directory_handle()?;
     let () = await!(fs.collect());
     Ok(())

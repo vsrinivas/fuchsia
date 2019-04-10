@@ -7,8 +7,8 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
-    fuchsia_component::client,
     fuchsia_async as fasync,
+    fuchsia_component::client,
     futures::TryStreamExt,
     structopt::StructOpt,
 };
@@ -52,29 +52,28 @@ impl BusConnection {
     }
 
     pub async fn wait_for_event(&self, code: i32) -> Result<(), Error> {
-        let mut stream = self
-            .bus
-            .take_event_stream()
-            .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
-                    Some(rcv_code) => {
-                        if rcv_code == code {
-                            futures::future::ok(Some(()))
-                        } else {
-                            futures::future::ok(None)
-                        }
+        let mut stream = self.bus.take_event_stream().try_filter_map(|event| match event {
+            fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
+                Some(rcv_code) => {
+                    if rcv_code == code {
+                        futures::future::ok(Some(()))
+                    } else {
+                        futures::future::ok(None)
                     }
-                    None => futures::future::ok(None),
-                },
-                _ => futures::future::ok(None),
-            });
+                }
+                None => futures::future::ok(None),
+            },
+            _ => futures::future::ok(None),
+        });
         await!(stream.try_next())?;
         Ok(())
     }
 }
 
 async fn perform_bus_ops(
-    publish: Option<i32>, wait: Option<i32>, name: String,
+    publish: Option<i32>,
+    wait: Option<i32>,
+    name: String,
 ) -> Result<(), Error> {
     let bus = BusConnection::new(&name)?;
     if let Some(code) = wait {

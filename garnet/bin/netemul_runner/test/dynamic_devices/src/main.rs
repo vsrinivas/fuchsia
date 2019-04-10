@@ -11,8 +11,8 @@ use {
         DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
         NetworkContextMarker,
     },
-    fuchsia_component::client,
     fuchsia_async as fasync,
+    fuchsia_component::client,
     std::path::Path,
 };
 
@@ -46,10 +46,7 @@ fn device_present(path: &str) -> bool {
 
 fn check_device_absent(path: &str) -> Result<(), Error> {
     if device_present(path) {
-        Err(format_err!(
-            "Device {} present, expected it to be absent",
-            path
-        ))
+        Err(format_err!("Device {} present, expected it to be absent", path))
     } else {
         Ok(())
     }
@@ -59,10 +56,7 @@ fn check_device_present(path: &str) -> Result<(), Error> {
     if device_present(path) {
         Ok(())
     } else {
-        Err(format_err!(
-            "Device {} not present, expected it to be present",
-            path
-        ))
+        Err(format_err!("Device {} not present, expected it to be present", path))
     }
 }
 

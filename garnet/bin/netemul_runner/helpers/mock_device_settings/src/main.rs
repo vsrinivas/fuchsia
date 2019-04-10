@@ -6,8 +6,8 @@
 
 use failure::{format_err, Error};
 use fidl_fuchsia_devicesettings::{
-    DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream,
-    DeviceSettingsWatcherProxy, Status, ValueType,
+    DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
+    Status, ValueType,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -199,8 +199,8 @@ mod test {
         DeviceSettingsManagerMarker, DeviceSettingsWatcherMarker, DeviceSettingsWatcherRequest,
         Status,
     };
-    use fuchsia_component::client;
     use fuchsia_async as fasync;
+    use fuchsia_component::client;
     use futures::{future, TryStreamExt};
 
     #[fasync::run_singlethreaded]

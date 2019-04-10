@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-executable("bin") {
+executable("netstack_intermediary") {
   output_name = "guest_netstack_intermediary"
 
   sources = [
