@@ -68,27 +68,22 @@ zx_status_t Bma253::GetInputReport(bma253_input_rpt_t* report) {
 }
 
 zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
-    ddk::PDev pdev(parent);
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get pdev\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    ddk::I2cChannel i2c = pdev.GetI2c(0);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+    i2c_protocol_t i2c;
+    auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C\n", __FILE__);
+        return status;
     }
 
     zx::port port;
-    zx_status_t status = zx::port::create(0, &port);
+    status = zx::port::create(0, &port);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
         return status;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Bma253> device(new (&ac) Bma253(parent, i2c, std::move(port)));
+    fbl::unique_ptr<Bma253> device(new (&ac) Bma253(parent, &i2c, std::move(port)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Bma253 alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
@@ -216,7 +211,7 @@ static zx_driver_ops_t bma253_driver_ops = []() {
 }();
 
 ZIRCON_DRIVER_BEGIN(bma253, bma253_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BOSCH_BMA253),
 ZIRCON_DRIVER_END(bma253)

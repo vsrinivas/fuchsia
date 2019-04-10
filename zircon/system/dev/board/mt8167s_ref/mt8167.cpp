@@ -118,9 +118,6 @@ int Mt8167::Thread() {
     if (ThermalInit() != ZX_OK) {
         zxlogf(ERROR, "ThermalInit() failed\n");
     }
-    if (SensorsInit() != ZX_OK) {
-        zxlogf(ERROR, "SensorsInit() failed\n");
-    }
     if (BacklightInit() != ZX_OK) {
         zxlogf(ERROR, "BacklightInit() failed\n");
     }

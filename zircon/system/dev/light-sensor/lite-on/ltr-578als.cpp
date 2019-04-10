@@ -4,7 +4,6 @@
 
 #include "ltr-578als.h"
 
-#include <ddktl/pdev.h>
 #include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -86,27 +85,22 @@ zx_status_t Ltr578Als::GetInputReport(ltr_578als_input_rpt_t* report) {
 }
 
 zx_status_t Ltr578Als::Create(zx_device_t* parent) {
-    ddk::PDev pdev(parent);
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get pdev\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    ddk::I2cChannel i2c = pdev.GetI2c(0);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+    i2c_protocol_t i2c;
+    auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C\n", __FILE__);
+        return status;
     }
 
     zx::port port;
-    zx_status_t status = zx::port::create(0, &port);
+    status = zx::port::create(0, &port);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
         return status;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, i2c, std::move(port)));
+    fbl::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, &i2c, std::move(port)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Ltr578Als alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;

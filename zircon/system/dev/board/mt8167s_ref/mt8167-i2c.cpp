@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
@@ -71,6 +73,31 @@ zx_status_t Mt8167::I2cInit() {
         },
     };
 
+    constexpr i2c_channel_t cleo_i2c_channels[] = {
+        {
+            .bus_id = 0,
+            .address = 0x53,
+            .vid = PDEV_VID_GENERIC,
+            .pid = PDEV_PID_GENERIC,
+            .did = PDEV_DID_LITE_ON_ALS,
+        },
+        {
+            .bus_id = 0,
+            .address = 0x18,
+            .vid = PDEV_VID_GENERIC,
+            .pid = PDEV_PID_GENERIC,
+            .did = PDEV_DID_BOSCH_BMA253,
+        },
+    };
+    
+    const pbus_metadata_t cleo_i2c_metadata[] = {
+        {
+            .type = DEVICE_METADATA_I2C_CHANNELS,
+            .data_buffer = &cleo_i2c_channels,
+            .data_size = sizeof(cleo_i2c_channels),
+        },
+    };
+
     pbus_dev_t i2c_dev = {};
     i2c_dev.name = "i2c0";
     i2c_dev.vid = PDEV_VID_MEDIATEK;
@@ -79,6 +106,11 @@ zx_status_t Mt8167::I2cInit() {
     i2c_dev.mmio_count = countof(i2c_mmios);
     i2c_dev.irq_list = i2c_irqs;
     i2c_dev.irq_count = countof(i2c_irqs);
+
+    if (board_info_.vid == PDEV_VID_GOOGLE || board_info_.pid == PDEV_PID_CLEO) {
+        i2c_dev.metadata_list = cleo_i2c_metadata;
+        i2c_dev.metadata_count = countof(cleo_i2c_metadata);
+    }
 
     status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
     if (status != ZX_OK) {

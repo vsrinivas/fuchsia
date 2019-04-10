@@ -16,7 +16,6 @@ driver("mt8167s_ref") {
     "mt8167-msdc1.cpp",
     "mt8167-msdc2.cpp",
     "mt8167-power.cpp",
-    "mt8167-sensors.cpp",
     "mt8167-soc.cpp",
     "mt8167-sysmem.cpp",
     "mt8167-thermal.cpp",

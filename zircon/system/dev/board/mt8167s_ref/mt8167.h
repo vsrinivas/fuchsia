@@ -66,7 +66,6 @@ private:
     zx_status_t UsbInit();
     zx_status_t ThermalInit();
     zx_status_t TouchInit();
-    zx_status_t SensorsInit();
     zx_status_t BacklightInit();
     zx_status_t AudioInit();
     int Thread();
