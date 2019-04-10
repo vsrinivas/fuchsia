@@ -46,8 +46,8 @@ public:
     FairScheduler& operator=(const FairScheduler&) = delete;
 
     // Accessors for total weight and number of runnable tasks.
-    SchedWeight GetTotalWeight() TA_EXCL(thread_lock);
-    size_t GetRunnableTasks() TA_EXCL(thread_lock);
+    SchedWeight GetTotalWeight() const TA_EXCL(thread_lock);
+    size_t GetRunnableTasks() const TA_EXCL(thread_lock);
 
     // Dumps the state of the runqueue to the debug log.
     void Dump() TA_REQ(thread_lock);

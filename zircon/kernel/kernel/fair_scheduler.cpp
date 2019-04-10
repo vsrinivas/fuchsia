@@ -150,12 +150,12 @@ void FairScheduler::Dump() {
     }
 }
 
-SchedWeight FairScheduler::GetTotalWeight() {
+SchedWeight FairScheduler::GetTotalWeight() const {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
     return weight_total_;
 }
 
-size_t FairScheduler::GetRunnableTasks() {
+size_t FairScheduler::GetRunnableTasks() const {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
     return static_cast<size_t>(runnable_task_count_);
 }
