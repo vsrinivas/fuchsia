@@ -111,6 +111,9 @@ if (current_toolchain == default_toolchain) {
       rebase_path(outputs[0], root_build_dir),
       rebase_path(depfile, root_build_dir),
     ]
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 
   link_output_rspfile("gen-vdso-syms-header-rspfile") {

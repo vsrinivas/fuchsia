@@ -41,5 +41,9 @@ template("abigen") {
       "$zx/system/public/zircon/syscalls.abigen",
     ]
     args += rebase_path(sources, root_build_dir)
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }

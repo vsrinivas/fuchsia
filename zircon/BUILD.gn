@@ -438,6 +438,22 @@ build_api_module("images") {
   }
 }
 
+# This describes all the generated source files in the build.
+#
+# The intent is that telling Ninja to build all these individual files
+# will be the minimal work sufficient for source code analysis of all
+# the files described in the compilation database to be viable.
+#
+# Type: list(path relative to $root_build_dir)
+#
+build_api_module("generated_sources") {
+  testonly = true
+  deps = [
+    ":default",
+  ]
+  data_keys = [ "generated_sources" ]
+}
+
 # TODO(TC-303): ids.txt is deprecated and will be removed.
 if (current_toolchain == default_toolchain) {
   action("ids") {

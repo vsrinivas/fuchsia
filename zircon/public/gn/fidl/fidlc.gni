@@ -97,6 +97,10 @@ template("fidlc") {
       ]
       depfile = fidlc_depfile
       args = [ "@" + rebase_path(fidlc_rspfile, root_build_dir) ]
+
+      metadata = {
+        generated_sources = rebase_path(outputs, root_build_dir)
+      }
     }
   } else {
     group(target_name) {
