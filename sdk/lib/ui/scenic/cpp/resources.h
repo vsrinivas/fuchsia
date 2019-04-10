@@ -201,13 +201,13 @@ class Node : public Resource {
 
   void SetTranslation(uint32_t variable_id);
 
-  // Temporary placeholders to soften handedness transistion
-  // TODO(SCN-1054) These methods are temporary, remove them.
-  // SetTranslationRH will be marked deprecated soon, please do not use it.
+
+  [[deprecated("(SCN-1054) Please move back to Node::SetTranslation().")]]
   void SetTranslationRH(float tx, float ty, float tz) {
     SetTranslation((float[3]){tx, ty, tz});
   }
 
+  [[deprecated("(SCN-1054) Please move back to Node::SetTranslation().")]]
   void SetTranslationRH(const float translation[3]) {
     SetTranslation(translation);
   }
