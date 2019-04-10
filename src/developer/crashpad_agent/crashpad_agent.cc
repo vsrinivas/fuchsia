@@ -52,8 +52,7 @@ namespace {
 using fuchsia::feedback::Data;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
-const char kOverrideConfigPath[] =
-    "/config/data/crashpad_agent/override_config.json";
+const char kOverrideConfigPath[] = "/config/data/override_config.json";
 
 }  // namespace
 

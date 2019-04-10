@@ -13,7 +13,7 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
-constexpr char kConfigDataDir[] = "/config/data/sysmgr/";
+constexpr char kConfigDataDir[] = "/config/data/";
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

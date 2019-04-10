@@ -92,7 +92,7 @@ void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::
     if (feature == "config-data") {
       FXL_LOG(INFO) << "config-data for " << pkg_name;
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + pkg_name,
-                              "/config/data/" + pkg_name);
+                              "/config/data");
     }
   }
 }
