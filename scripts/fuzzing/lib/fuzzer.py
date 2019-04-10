@@ -236,13 +236,18 @@ class Fuzzer(object):
     if self.measure_corpus() == (0, 0):
       return (0, 0)
     self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+    self.device.ssh(['mkdir', '-p', self.data_path('corpus.prev')])
     self.device.ssh(
-        ['mv', self.data_path('corpus'),
+        ['mv', self.data_path('corpus/*'),
          self.data_path('corpus.prev')])
     self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+    # Save mergefile in case we are interrupted
     fuzzer_args = ['-merge=1', '-merge_control_file=data/.mergefile'
                   ] + fuzzer_args
     fuzzer_args.append('data/corpus')
     fuzzer_args.append('data/corpus.prev')
     self.run(fuzzer_args)
+    # Cleanup
+    self.device.ssh(['rm', self.data_path('.mergefile')])
+    self.device.ssh(['rm', '-r', self.data_path('corpus.prev')])
     return self.measure_corpus()
