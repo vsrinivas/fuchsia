@@ -91,14 +91,16 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void EthCompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status);
 
    private:
+    // Stops the message loop from accepting incoming FIDL requests and removes the given device.
+    void StopMessageLoop(zx_device_t* dev);
     zx_status_t AddWlanDevice();
-    zx_status_t AddEthDevice();
+    zx_status_t AddEthDevice(zx_device* parent);
 
     std::mutex lock_;
 
-    zx_device_t* parent_;
-    zx_device_t* zxdev_;   // WLANIF
-    zx_device_t* ethdev_;  // ETHERNET_IMPL
+    zx_device_t* parent_ = nullptr;
+    zx_device_t* zxdev_ = nullptr;   // WLANIF
+    zx_device_t* ethdev_ = nullptr;  // ETHERNET_IMPL
 
     wlanif_impl_protocol_t wlanif_impl_;
 

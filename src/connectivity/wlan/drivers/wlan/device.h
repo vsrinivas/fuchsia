@@ -96,7 +96,7 @@ class Device : public DeviceInterface {
     };
 
     zx_status_t AddWlanDevice();
-    zx_status_t AddEthDevice();
+    zx_status_t AddEthDevice(zx_device* parent);
 
     fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
     template <typename T>
@@ -109,7 +109,11 @@ class Device : public DeviceInterface {
 
     zx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
-    void MainLoop();
+    // Waits the main loop to finish and frees itself afterwards.
+    void DestroySelf();
+    void MainLoop();    
+    // Informs the message loop to shut down. Calling this function more than once has no effect.
+    void ShutdownMainLoop();
     void ProcessChannelPacketLocked(uint64_t signal_count) __TA_REQUIRES(lock_);
     zx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
     // Queue a packet that does not contain user data, either there is no user data or user data is
@@ -123,9 +127,9 @@ class Device : public DeviceInterface {
     zx_status_t CreateMinstrel(uint32_t features);
     void AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx);
 
-    zx_device_t* parent_;
-    zx_device_t* zxdev_;
-    zx_device_t* ethdev_;
+    zx_device_t* parent_ = nullptr;
+    zx_device_t* zxdev_ = nullptr;
+    zx_device_t* ethdev_ = nullptr;
 
     WlanmacProxy wlanmac_proxy_;
     fbl::unique_ptr<ddk::EthmacIfcProtocolClient> ethmac_proxy_;

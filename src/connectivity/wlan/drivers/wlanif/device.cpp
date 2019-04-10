@@ -120,7 +120,7 @@ zx_status_t Device::AddWlanDevice() {
     return device_add(parent_, &args, &zxdev_);
 }
 
-zx_status_t Device::AddEthDevice() {
+zx_status_t Device::AddEthDevice(zx_device* parent) {
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "wlan-ethernet";
@@ -128,7 +128,7 @@ zx_status_t Device::AddEthDevice() {
     args.ops = &eth_device_ops;
     args.proto_id = ZX_PROTOCOL_ETHMAC;
     args.proto_ops = &ethmac_ops;
-    return device_add(zxdev_, &args, &ethdev_);
+    return device_add(parent, &args, &ethdev_);
 }
 
 #define VERIFY_PROTO_OP(fn)                                                  \
@@ -181,19 +181,31 @@ zx_status_t Device::Bind() {
         return status;
     }
 
-    status = AddWlanDevice();
-    if (status != ZX_OK) {
-        errorf("wlanif: could not add wlanif device: %s\n", zx_status_get_string(status));
-        loop_.Shutdown();
-        return status;
+
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        infof("iface supports SME channel; not adding wlanif device\n");
+        status = AddEthDevice(parent_);
+        if (status != ZX_OK) {
+            errorf("wlanif: could not add ethernet_impl device: %s\n",
+                   zx_status_get_string(status));
+        }
+    } else {
+        status = AddWlanDevice();
+        if (status == ZX_OK) {
+            status = AddEthDevice(zxdev_);
+            if (status != ZX_OK) {
+                // TODO(hahnr): WLAN device should be removed if adding ethernet device failed.
+                errorf("wlanif: could not add ethernet_impl device: %s\n",
+                       zx_status_get_string(status));
+            }
+        } else {
+            errorf("wlanif: could not add wlanif device: %s\n", zx_status_get_string(status));
+        }
     }
 
-    status = AddEthDevice();
     if (status != ZX_OK) {
-        errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
         loop_.Shutdown();
     }
-
     return status;
 }
 #undef VERIFY_PROTO_OP
@@ -229,21 +241,7 @@ zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
     }
 }
 
-void Device::EthUnbind() {
-    debugfn();
-    device_remove(ethdev_);
-}
-
-void Device::EthRelease() {
-    debugfn();
-    // NOTE: we reuse the same ctx for the wlanif and the ethmac, so we do NOT free the memory here.
-    // Since ethdev_ is a child of zxdev_, this release will be called first, followed by
-    // Release. There's nothing else to clean up here.
-}
-
-void Device::Unbind() {
-    debugfn();
-
+void Device::StopMessageLoop(zx_device_t* dev) {
     // Stop accepting new FIDL requests.
     std::lock_guard<std::mutex> lock(lock_);
     if (binding_.is_bound()) {
@@ -252,7 +250,32 @@ void Device::Unbind() {
 
     // Ensure that all FIDL messages have been processed before removing the device
     auto dispatcher = loop_.dispatcher();
-    ::async::PostTask(dispatcher, [this] { device_remove(zxdev_); });
+    ::async::PostTask(dispatcher, [dev] { device_remove(dev); });
+}
+
+void Device::EthUnbind() {
+    debugfn();
+
+    // Do proper clean-up if |zxdev_| wasn't added. Otherwise, simply remove |ethdev_|.
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        StopMessageLoop(ethdev_);
+    } else {
+        device_remove(ethdev_);
+    }
+}
+
+void Device::EthRelease() {
+    debugfn();
+    // Free memory if |zxdev_| wasn't added, otherwise, |zxdev_|'s `Release()` will 
+    // take care of that.
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        delete this;
+    }
+}
+
+void Device::Unbind() {
+    debugfn();
+    StopMessageLoop(zxdev_);
 }
 
 void Device::Release() {

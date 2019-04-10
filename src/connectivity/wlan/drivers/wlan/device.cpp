@@ -178,25 +178,34 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    bool wlan_added = false;
-
-    status = AddWlanDevice();
-    if (status == ZX_OK) {
-        wlan_added = true;
-        status = AddEthDevice();
+    if (wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        infof("iface supports SME channel; not adding wlanif device\n");
+        status = AddEthDevice(parent_);
+        if (status != ZX_OK) {
+            errorf("could not add eth device: %s\n", zx_status_get_string(status));
+        }
+    } else {
+        status = AddWlanDevice();
+        if (status == ZX_OK) {
+            status = AddEthDevice(zxdev_);
+            if (status != ZX_OK) {
+                // Remove the wlan device.
+                device_remove(zxdev_);
+                errorf("could not add eth device: %s\n", zx_status_get_string(status));
+            }
+        } else {
+            errorf("could not add wlan device: %s\n", zx_status_get_string(status));
+        }
     }
+
 
     // Clean up if either device add failed.
     if (status != ZX_OK) {
-        errorf("could not add device err=%d\n", status);
         zx_status_t shutdown_status = QueueDevicePortPacket(DevicePacket::kShutdown);
         if (shutdown_status != ZX_OK) {
             ZX_PANIC("wlan: could not send shutdown loop message: %d\n", shutdown_status);
         }
         if (work_thread_.joinable()) { work_thread_.join(); }
-
-        // Remove the wlan device if it was successfully added.
-        if (wlan_added) { device_remove(zxdev_); }
     } else {
         debugf("device added\n");
     }
@@ -214,7 +223,7 @@ zx_status_t Device::AddWlanDevice() {
     return device_add(parent_, &args, &zxdev_);
 }
 
-zx_status_t Device::AddEthDevice() {
+zx_status_t Device::AddEthDevice(zx_device* parent) {
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "wlan-ethernet";
@@ -222,7 +231,7 @@ zx_status_t Device::AddEthDevice() {
     args.ops = &eth_device_ops;
     args.proto_id = ZX_PROTOCOL_ETHMAC;
     args.proto_ops = &ethmac_ops;
-    return device_add(zxdev_, &args, &ethdev_);
+    return device_add(parent, &args, &ethdev_);
 }
 
 fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, Packet::Peer peer) {
@@ -259,26 +268,33 @@ zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
     return ZX_OK;
 }
 
-void Device::WlanUnbind() {
-    debugfn();
-    {
-        std::lock_guard<std::mutex> lock(lock_);
-        channel_.reset();
-        dead_ = true;
-        if (port_.is_valid()) {
-            zx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
-            if (status != ZX_OK) {
-                ZX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
-            }
+void Device::DestroySelf() {
+    if (work_thread_.joinable()) { work_thread_.join(); }
+    delete this;
+}
+
+void Device::ShutdownMainLoop() {
+    std::lock_guard<std::mutex> lock(lock_);
+    if (dead_) { return; }
+    channel_.reset();
+    dead_ = true;
+    if (port_.is_valid()) {
+        zx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
+        if (status != ZX_OK) {
+            ZX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
         }
     }
+}
+
+void Device::WlanUnbind() {
+    debugfn();
+    ShutdownMainLoop();
     device_remove(zxdev_);
 }
 
 void Device::WlanRelease() {
     debugfn();
-    if (work_thread_.joinable()) { work_thread_.join(); }
-    delete this;
+    DestroySelf();
 }
 
 zx_status_t Device::WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
@@ -303,14 +319,17 @@ zx_status_t Device::WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, vo
 
 void Device::EthUnbind() {
     debugfn();
+    ShutdownMainLoop();
     device_remove(ethdev_);
 }
 
 void Device::EthRelease() {
     debugfn();
-    // NOTE: we reuse the same ctx for the wlanif and the ethmac, so we do NOT free the memory here.
-    // Since ethdev_ is a child of zxdev_, this release will be called first, followed by
-    // WlanRelease. There's nothing else to clean up here.
+    // If no wlanif device was added we need to clean-up memory here. Otherwise WlanRelease() will
+    // do the clean-up as |ethdev_| is a child of |zxdev_|.
+    if (wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+        DestroySelf();
+    }
 }
 
 zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
