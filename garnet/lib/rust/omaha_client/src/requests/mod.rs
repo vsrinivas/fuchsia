@@ -183,6 +183,7 @@ impl<'a> RequestBuilder<'a> {
 
         Request {
             protocol_version: PROTOCOL_V3.to_string(),
+            updater: self.config.updater.name.clone(),
             updater_version: self.config.updater.version.to_string(),
             install_source: self.params.source.clone(),
             is_machine: true,
@@ -236,6 +237,7 @@ mod tests {
 
         // Assert that all the request fields are accurate (this is in their order of declaration)
         assert_eq!(request.protocol_version, "3.0");
+        assert_eq!(request.updater, config.updater.name);
         assert_eq!(request.updater_version, config.updater.version.to_string());
         assert_eq!(request.install_source, InstallSource::OnDemand);
         assert_eq!(request.is_machine, true);
@@ -309,6 +311,7 @@ mod tests {
                 event_type: EventType::UpdateDownloadStarted,
                 event_result: EventResult::Success,
                 errorcode: Some(26598),
+                ..Event::default()
             },
         )
         .build();
@@ -349,6 +352,7 @@ mod tests {
                 event_type: EventType::UpdateDownloadStarted,
                 event_result: EventResult::Success,
                 errorcode: Some(26598),
+                ..Event::default()
             },
         )
         .add_event(
@@ -358,6 +362,7 @@ mod tests {
                 event_type: EventType::UpdateDownloadFinished,
                 event_result: EventResult::Error,
                 errorcode: Some(988456),
+                ..Event::default()
             },
         )
         .build();
@@ -537,6 +542,7 @@ mod tests {
                 event_type: EventType::UpdateDownloadFinished,
                 event_result: EventResult::Success,
                 errorcode: Some(2456),
+                ..Event::default()
             },
         )
         .build();
@@ -598,6 +604,7 @@ mod tests {
                 event_type: EventType::UpdateDownloadFinished,
                 event_result: EventResult::Success,
                 errorcode: Some(2456),
+                ..Event::default()
             },
         );
 

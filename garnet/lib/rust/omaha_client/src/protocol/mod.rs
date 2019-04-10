@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 pub mod request;
 pub mod response;
@@ -21,16 +21,19 @@ pub const PROTOCOL_V3: &str = "3.0";
 /// of the Request.App object at:
 ///
 /// https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#app-request
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Cohort {
     /// This is the cohort id itself.
     #[serde(rename = "cohort")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 
     #[serde(rename = "cohorthint")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
 
     #[serde(rename = "cohortname")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 

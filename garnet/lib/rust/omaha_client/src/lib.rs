@@ -6,6 +6,7 @@
 //! This is for Omaha client binaries written in Rust.
 
 #![feature(async_await, await_macro, futures_api)]
+#![recursion_limit = "128"]
 
 pub mod common;
 pub mod configuration;
