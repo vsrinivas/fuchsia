@@ -2,6 +2,10 @@
 " Use of this source code is governed by a BSD-style license that can be
 " found in the LICENSE file.
 
+" Use `fx full-build` to build when you type :make
+" Helper to clean up quickfix list in make.vim
+let &makeprg="fx full-build"
+
 " Look for the fuchsia root containing the current directory by looking for a
 " .jiri_manifest file
 let jiri_manifest = findfile(".jiri_manifest", ".;")
@@ -65,10 +69,6 @@ if jiri_manifest != ""
     if extension == "dart"
       set filetype=dart
     endif
-
-    " Use `fx full-build` to build when you type :make
-    " Helper to clean up quickfix list in make.vim
-    let &makeprg="fx full-build"
 
     " The Buf* autocmds sometimes run before and sometimes after FileType.
     if &filetype == "cpp"
