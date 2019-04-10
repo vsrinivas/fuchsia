@@ -15,8 +15,8 @@ use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use futures::lock::Mutex;
 use futures::prelude::*;
-use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
@@ -58,23 +58,23 @@ impl Ime {
     }
 
     pub fn bind_text_field(&self, mut stream: txt::TextFieldRequestStream) {
-        let control_handle = stream.control_handle();
-        {
-            let mut state = self.0.lock();
-            let res = control_handle.send_on_update(&mut state.as_text_field_state());
-            if let Err(e) = res {
-                fx_log_err!("{}", e);
-            } else {
-                state.input_method = Some(control_handle);
-            }
-        }
         let mut self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
+                let control_handle = stream.control_handle();
+                {
+                    let mut state = await!(self_clone.0.lock());
+                    let res = control_handle.send_on_update(&mut state.as_text_field_state());
+                    if let Err(e) = res {
+                        fx_log_err!("{}", e);
+                    } else {
+                        state.input_method = Some(control_handle);
+                    }
+                }
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from text field request stream")?
                 {
-                    if let Err(e) = self_clone.handle_text_field_msg(msg) {
+                    if let Err(e) = await!(self_clone.handle_text_field_msg(msg)) {
                         fx_log_err!("error when replying to TextFieldRequest: {}", e);
                     }
                 }
@@ -93,7 +93,7 @@ impl Ime {
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from IME request stream")?
                 {
-                    self_clone.handle_ime_message(msg);
+                    await!(self_clone.handle_ime_message(msg));
                 }
                 Ok(())
             }
@@ -101,15 +101,18 @@ impl Ime {
                 .then(async move |()| {
                     // this runs when IME stream closes
                     // clone to ensure we only hold one lock at a time
-                    let ime_service = self_clone_2.0.lock().ime_service.clone();
-                    ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false);
+                    let ime_service = await!(self_clone_2.0.lock()).ime_service.clone();
+                    await!(ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false));
                 }),
         );
     }
 
     /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.
-    fn handle_text_field_msg(&mut self, msg: txt::TextFieldRequest) -> Result<(), fidl::Error> {
-        let mut ime_state = self.0.lock();
+    async fn handle_text_field_msg(
+        &mut self,
+        msg: txt::TextFieldRequest,
+    ) -> Result<(), fidl::Error> {
+        let mut ime_state = await!(self.0.lock());
         match msg {
             txt::TextFieldRequest::PositionOffset { old_position, offset, revision, responder } => {
                 if revision != ime_state.revision {
@@ -226,42 +229,42 @@ impl Ime {
     }
 
     /// Handles a request from the legancy IME API, an InputMethodEditorRequest.
-    fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) {
+    async fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) {
         match msg {
             ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                let mut state = self.0.lock();
+                let mut state = await!(self.0.lock());
                 state.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                self.set_state(idx::text_state_codeunit_to_byte(state));
+                await!(self.set_state(idx::text_state_codeunit_to_byte(state)));
             }
             ImeReq::InjectInput { event, .. } => {
-                self.inject_input(event);
+                await!(self.inject_input(event));
             }
             ImeReq::Show { .. } => {
                 // clone to ensure we only hold one lock at a time
-                let ime_service = self.0.lock().ime_service.clone();
-                ime_service.show_keyboard();
+                let ime_service = await!(self.0.lock()).ime_service.clone();
+                await!(ime_service.show_keyboard());
             }
             ImeReq::Hide { .. } => {
                 // clone to ensure we only hold one lock at a time
-                let ime_service = self.0.lock().ime_service.clone();
-                ime_service.hide_keyboard();
+                let ime_service = await!(self.0.lock()).ime_service.clone();
+                await!(ime_service.hide_keyboard());
             }
         }
     }
 
     /// Sets the internal state. Expects input_state to use codeunits; automatically
     /// converts to byte indices before storing.
-    pub fn set_state(&self, input_state: uii::TextInputState) {
-        let mut state = self.0.lock();
+    pub async fn set_state(&self, input_state: uii::TextInputState) {
+        let mut state = await!(self.0.lock());
         state.text_state = idx::text_state_codeunit_to_byte(input_state);
         // the old C++ IME implementation didn't call did_update_state here, so this second argument is false.
         state.increment_revision(None, false);
     }
 
-    pub fn inject_input(&self, event: uii::InputEvent) {
-        let mut state = self.0.lock();
+    pub async fn inject_input(&self, event: uii::InputEvent) {
+        let mut state = await!(self.0.lock());
         let keyboard_event = match event {
             uii::InputEvent::Keyboard(e) => e,
             _ => return,

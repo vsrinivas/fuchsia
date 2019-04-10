@@ -9,8 +9,8 @@ use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_syslog::fx_log_err;
+use futures::lock::Mutex;
 use futures::prelude::*;
-use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 
 pub struct ImeServiceState {
@@ -55,12 +55,12 @@ impl ImeService {
     }
 
     /// Only updates the keyboard visibility if IME passed in is active
-    pub fn update_keyboard_visibility_from_ime(
-        &self,
-        check_ime: &Arc<Mutex<ImeState>>,
+    pub async fn update_keyboard_visibility_from_ime<'a>(
+        &'a self,
+        check_ime: &'a Arc<Mutex<ImeState>>,
         visible: bool,
     ) {
-        let mut state = self.0.lock();
+        let mut state = await!(self.0.lock());
         let active_ime_weak = match &state.active_ime {
             Some(val) => val,
             None => return,
@@ -74,7 +74,7 @@ impl ImeService {
         }
     }
 
-    pub fn get_input_method_editor(
+    pub async fn get_input_method_editor(
         &mut self,
         keyboard_type: uii::KeyboardType,
         action: uii::InputMethodAction,
@@ -87,7 +87,7 @@ impl ImeService {
             Err(_) => return,
         };
         let ime = Ime::new(keyboard_type, action, initial_state, client_proxy, self.clone());
-        let mut state = self.0.lock();
+        let mut state = await!(self.0.lock());
         state.active_ime = Some(ime.downgrade());
         if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
             ime.bind_ime(chan);
@@ -98,19 +98,19 @@ impl ImeService {
         });
     }
 
-    pub fn show_keyboard(&self) {
-        self.0.lock().update_keyboard_visibility(true);
+    pub async fn show_keyboard(&self) {
+        await!(self.0.lock()).update_keyboard_visibility(true);
     }
 
-    pub fn hide_keyboard(&self) {
-        self.0.lock().update_keyboard_visibility(false);
+    pub async fn hide_keyboard(&self) {
+        await!(self.0.lock()).update_keyboard_visibility(false);
     }
 
     /// This is called by the operating system when input from the physical keyboard comes in.
     /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
-    fn inject_input(&mut self, mut event: uii::InputEvent) {
+    async fn inject_input(&mut self, mut event: uii::InputEvent) {
+        let mut state = await!(self.0.lock());
         let ime = {
-            let state = self.0.lock();
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
                 None => return, // no currently active IME
@@ -120,14 +120,14 @@ impl ImeService {
                 None => return, // IME no longer exists
             }
         };
-        self.0.lock().text_input_context_clients.retain(|listener| {
+        state.text_input_context_clients.retain(|listener| {
             // drop listeners if they error on send
             listener.send_on_input_event(&mut event).is_ok()
         });
         // only use the default text input handler in ime.rs if there are no text_input_context_clients
         // attached to handle it
-        if self.0.lock().text_input_context_clients.len() == 0 {
-            ime.inject_input(event);
+        if state.text_input_context_clients.len() == 0 {
+            await!(ime.inject_input(event));
         }
     }
 
@@ -148,22 +148,22 @@ impl ImeService {
                             editor,
                             ..
                         } => {
-                            self_clone.get_input_method_editor(
+                            await!(self_clone.get_input_method_editor(
                                 keyboard_type,
                                 action,
                                 initial_state,
                                 client,
                                 editor,
-                            );
+                            ));
                         }
                         uii::ImeServiceRequest::ShowKeyboard { .. } => {
-                            self_clone.show_keyboard();
+                            await!(self_clone.show_keyboard());
                         }
                         uii::ImeServiceRequest::HideKeyboard { .. } => {
-                            self_clone.hide_keyboard();
+                            await!(self_clone.hide_keyboard());
                         }
                         uii::ImeServiceRequest::InjectInput { event, .. } => {
-                            self_clone.inject_input(event);
+                            await!(self_clone.inject_input(event));
                         }
                     }
                 }
@@ -179,7 +179,7 @@ impl ImeService {
             async move {
                 let stream = uii::ImeVisibilityServiceRequestStream::from_channel(chan);
                 let control_handle = stream.control_handle();
-                let mut state = self_clone.0.lock();
+                let mut state = await!(self_clone.0.lock());
                 if control_handle
                     .send_on_keyboard_visibility_changed(state.keyboard_visible)
                     .is_ok()
@@ -199,7 +199,7 @@ impl ImeService {
                 let mut stream = txt::TextInputContextRequestStream::from_channel(chan);
                 let control_handle = stream.control_handle();
                 {
-                    let mut state = self_clone.0.lock();
+                    let mut state = await!(self_clone.0.lock());
 
                     let active_ime_opt = match state.active_ime {
                         Some(ref weak) => Ime::upgrade(weak),
@@ -218,7 +218,7 @@ impl ImeService {
                 {
                     match msg {
                         txt::TextInputContextRequest::HideKeyboard { .. } => {
-                            self_clone.hide_keyboard();
+                            await!(self_clone.hide_keyboard());
                         }
                     }
                 }

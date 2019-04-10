@@ -100,13 +100,13 @@ mod test {
         let chan = fuchsia_async::Channel::from_channel(server_end.into_channel())
             .expect("Failed to create channel");
         ime_service.bind_text_input_context(chan);
-        ime_service.get_input_method_editor(
+        await!(ime_service.get_input_method_editor(
             uii::KeyboardType::Text,
             uii::InputMethodAction::Done,
             crate::fidl_helpers::default_state(),
             imec_client,
             ime_server,
-        );
+        ));
         let mut stream = text_proxy.take_event_stream();
         let msg = await!(stream.try_next())
             .expect("Failed to get event.")
