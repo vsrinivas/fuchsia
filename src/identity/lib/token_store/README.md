@@ -1,10 +1,10 @@
-# Store
+# Token Store
 
 ## Overview
 
-Store provides an on-disk database for long-lived authentication tokens such
-as OAuth refresh tokens and credential keys. It is used by the Token Manager
-library.
+Token Store provides an on-disk database for long-lived authentication tokens
+such as OAuth refresh tokens and credential keys. It is used by the
+Token Manager library.
 
 
 ## Key Dependencies

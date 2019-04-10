@@ -5,12 +5,24 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
-package("auth_lib_unittests") {
+group("lib") {
   testonly = true
-
   deps = [
-    "cache:cache",
-    "store:store",
+    ":identity_lib_unittests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  data_deps = [
+    ":identity_lib_unittests",
+  ]
+}
+
+package("identity_lib_unittests") {
+  deps = [
+    "token_store:token_store",
+    "//garnet/lib/auth/cache:cache",
   ]
 
   tests = [
@@ -19,7 +31,7 @@ package("auth_lib_unittests") {
       environments = basic_envs
     },
     {
-      name = "auth_store_lib_test"
+      name = "identity_token_store_lib_test"
       environments = basic_envs
     },
   ]

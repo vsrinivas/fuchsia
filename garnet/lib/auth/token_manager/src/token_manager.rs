@@ -4,8 +4,6 @@
 
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
-use auth_store::file::AuthDbFile;
-use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;
@@ -21,6 +19,8 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
+use identity_token_store::file::AuthDbFile;
+use identity_token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use log::{error, info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;

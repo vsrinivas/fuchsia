@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use auth_cache::AuthCacheError;
-use auth_store::AuthDbError;
 use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
+use identity_token_store::AuthDbError;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// TokenManagerErrors.

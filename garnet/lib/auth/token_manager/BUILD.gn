@@ -9,11 +9,11 @@ rustc_library("token_manager") {
 
   deps = [
     "//garnet/lib/auth/cache",
-    "//garnet/lib/auth/store",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//src/identity/lib/token_store",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",

@@ -4,8 +4,8 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("store") {
-  name = "auth_store"
+rustc_library("token_store") {
+  name = "identity_token_store"
   edition = "2018"
   with_unit_tests = true
 

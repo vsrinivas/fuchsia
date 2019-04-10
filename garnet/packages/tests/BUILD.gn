@@ -181,7 +181,6 @@ group("auth") {
     "//garnet/bin/auth/testing:dev_auth_providers",
     "//garnet/bin/auth/tests/account_manager_integration:account_manager_integration_test_pkg",
     "//garnet/bin/auth/tests/token_manager_integration:token_manager_integration_tests",
-    "//garnet/lib/auth:auth_lib_unittests",
     "//garnet/packages/prod:auth",
   ]
 }

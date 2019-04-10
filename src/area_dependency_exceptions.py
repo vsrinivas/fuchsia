@@ -21,6 +21,10 @@ exceptions = {
          '//garnet/lib/process:process',
          '//garnet/third_party/libunwindstack:libunwindstack',
     ],
+    '//src/identity': [
+        '//garnet/bin/auth',
+        '//garnet/lib/auth',
+    ],
     '//src/ledger': [
         '//peridot/lib',
         '//peridot/third_party/modp_b64:modp_b64',
