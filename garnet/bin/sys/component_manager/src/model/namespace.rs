@@ -9,7 +9,9 @@ use {
     cm_rust::{self, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_syslog::macros::fx_log_err,
+    fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, FutureObj},
@@ -140,13 +142,15 @@ impl IncomingNamespace {
                 fasync::OnSignals::new(&server_end_chan, zx::Signals::CHANNEL_READABLE);
             await!(on_signal_fut).unwrap();
             // Route this capability to the right component
-            await!(route_directory(
+            let res = await!(route_directory(
                 &model,
                 source_path.clone(),
                 abs_moniker,
                 server_end_chan.into_zx_channel()
-            ))
-            .expect("failed to route directory");
+            ));
+            if let Err(e) = res {
+                fx_log_err!("failed to route directory: {:?}", e);
+            }
         };
 
         waiters.push(FutureObj::new(Box::new(route_on_usage)));
@@ -195,13 +199,15 @@ impl IncomingNamespace {
             let abs_moniker = abs_moniker.clone();
             fasync::spawn(
                 async move {
-                    await!(route_service(
+                    let res = await!(route_service(
                         &model,
                         source_path,
                         abs_moniker,
                         server_end.into_channel()
-                    ))
-                    .expect("failed to route service");
+                    ));
+                    if let Err(e) = res {
+                        fx_log_err!("failed to route service: {:?}", e);
+                    }
                 },
             );
         });

@@ -76,10 +76,8 @@ impl FuchsiaPkgResolver {
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
-        let package = fsys::Package {
-            package_uri: Some(package_uri),
-            package_dir: Some(package_dir),
-        };
+        let package =
+            fsys::Package { package_uri: Some(package_uri), package_dir: Some(package_dir) };
         Ok(fsys::Component {
             resolved_uri: Some(component_uri.to_string()),
             decl: Some(component_decl),

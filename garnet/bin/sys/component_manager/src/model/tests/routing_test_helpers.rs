@@ -157,11 +157,20 @@ fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
 pub async fn read_data_hippo_hippo(
     resolved_uri: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    should_succeed: bool,
 ) {
     let dir_proxy = await!(get_dir("/data/hippo", resolved_uri, namespaces));
     let path = PathBuf::from("hippo");
     let file_proxy = io_util::open_file(&dir_proxy, &path).expect("failed to open file");
-    assert_eq!("hippo", await!(io_util::read_file(&file_proxy)).expect("failed to read file"));
+    let res = await!(io_util::read_file(&file_proxy));
+
+    match should_succeed {
+        true => assert_eq!("hippo", res.expect("failed to read file")),
+        false => {
+            let err = res.expect_err("read file successfully when it should fail");
+            assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
+        }
+    }
 }
 
 /// Looks up `resolved_uri` in the namespace, and attempts to use /svc/hippo. Expects the service
@@ -169,14 +178,26 @@ pub async fn read_data_hippo_hippo(
 async fn call_svc_hippo(
     resolved_uri: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    should_succeed: bool,
 ) {
     let dir_proxy = await!(get_dir("/svc", resolved_uri, namespaces));
     let path = PathBuf::from("hippo");
     let node_proxy = io_util::open_node(&dir_proxy, &path, MODE_TYPE_SERVICE)
         .expect("failed to open echo service");
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-    let res = await!(echo_proxy.echo_string(Some("hippos"))).expect("failed to use echo service");
-    assert_eq!(res, Some("hippos".to_string()));
+    let res = await!(echo_proxy.echo_string(Some("hippos")));
+
+    match should_succeed {
+        true => assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string())),
+        false => {
+            let err = res.expect_err("used echo service successfully when it should fail");
+            if let fidl::Error::ClientRead(status) = err {
+                assert_eq!(status, zx::Status::PEER_CLOSED);
+            } else {
+                panic!("unexpected error value: {}", err);
+            }
+        }
+    }
 }
 
 // Installs a new directory at /hippo in our namespace. Does nothing if this directory already
@@ -244,8 +265,8 @@ pub struct TestInputs<'a> {
     pub root_component: &'a str,
     /// The use decls on a component which should be checked. Service capabilities are assumed to
     /// be installed at `/svc/hippo` and directory capabilities are assumed to be installed at
-    /// `/data/hippo`.
-    pub users_to_check: Vec<(AbsoluteMoniker, fsys::CapabilityType)>,
+    /// `/data/hippo`. The bool marks if this usage is expected to succeed or not.
+    pub users_to_check: Vec<(AbsoluteMoniker, fsys::CapabilityType, bool)>,
     /// The component declarations that comprise the component tree
     pub components: Vec<(&'a str, ComponentDecl)>,
 }
@@ -291,7 +312,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    for (moniker, type_) in test.users_to_check {
+    for (moniker, type_, should_succeed) in test.users_to_check {
         assert!(await!(model.look_up_and_bind_instance(moniker.clone())).is_ok());
         let component_name =
             moniker.path().last().expect("didn't expect a root component").name().to_string();
@@ -299,11 +320,13 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
         match type_ {
             fsys::CapabilityType::Service => {
-                await!(call_svc_hippo(component_resolved_url, namespaces.clone()))
+                await!(call_svc_hippo(component_resolved_url, namespaces.clone(), should_succeed))
             }
-            fsys::CapabilityType::Directory => {
-                await!(read_data_hippo_hippo(component_resolved_url, namespaces.clone()))
-            }
+            fsys::CapabilityType::Directory => await!(read_data_hippo_hippo(
+                component_resolved_url,
+                namespaces.clone(),
+                should_succeed
+            )),
         };
     }
 }

@@ -26,8 +26,8 @@ async fn use_from_parent() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -100,8 +100,8 @@ async fn use_from_grandparent() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -202,8 +202,8 @@ async fn use_from_sibling_no_root() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -309,8 +309,8 @@ async fn use_from_sibling_root() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -408,8 +408,8 @@ async fn use_from_niece() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -534,10 +534,10 @@ async fn use_kitchen_sink() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "e"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["b", "e"]), fsys::CapabilityType::Service),
-            (AbsoluteMoniker::new(vec!["c", "f"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["c", "f"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["b", "e"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["b", "e"]), fsys::CapabilityType::Service, true),
+            (AbsoluteMoniker::new(vec!["c", "f"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["c", "f"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -760,8 +760,8 @@ async fn use_from_component_manager_namespace() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory),
-            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory, true),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service, true),
         ],
         components: vec![
             (
@@ -808,6 +808,367 @@ async fn use_from_component_manager_namespace() {
                         UseDecl {
                             type_: fsys::CapabilityType::Service,
                             source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///
+/// b: uses directory /data/hippo as /data/hippo, but it's not in its realm
+/// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_not_offered() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory, false),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service, false),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    program: None,
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        uri: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        UseDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///  / \
+/// b   c
+///
+/// a: offers directory /data/hippo from b as /data/hippo, but it's not exposed by b
+/// a: offers service /svc/hippo from b as /svc/hippo, but it's not exposed by b
+/// c: uses directory /data/hippo as /data/hippo
+/// c: uses service /svc/hippo as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_offer_source_not_exposed() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Directory, false),
+            (AbsoluteMoniker::new(vec!["c"]), fsys::CapabilityType::Service, false),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    program: None,
+                    offers: vec![
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: RelativeId::Child("b".to_string()),
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                child_name: "c".to_string(),
+                            }],
+                        },
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source: RelativeId::Child("b".to_string()),
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                child_name: "c".to_string(),
+                            }],
+                        },
+                    ],
+                    children: vec![
+                        ChildDecl {
+                            name: "b".to_string(),
+                            uri: "test:///b".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                        },
+                        ChildDecl {
+                            name: "c".to_string(),
+                            uri: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            ("b", default_component_decl()),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        UseDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// b: offers directory /data/hippo from its realm as /data/hippo, but it's not offered by a
+/// b: offers service /svc/hippo from its realm as /svc/hippo, but it's not offfered by a
+/// c: uses directory /data/hippo as /data/hippo
+/// c: uses service /svc/hippo as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_offer_source_not_offered() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Directory, false),
+            (AbsoluteMoniker::new(vec!["b", "c"]), fsys::CapabilityType::Service, false),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        uri: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    program: None,
+                    offers: vec![
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: RelativeId::Realm,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                child_name: "c".to_string(),
+                            }],
+                        },
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source: RelativeId::Realm,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                child_name: "c".to_string(),
+                            }],
+                        },
+                    ],
+                    children: vec![ChildDecl {
+                        name: "c".to_string(),
+                        uri: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        UseDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// b: uses directory /data/hippo as /data/hippo, but it's exposed to it, not offered
+/// b: uses service /svc/hippo as /svc/hippo, but it's exposed to it, not offered
+/// c: exposes /data/hippo
+/// c: exposes /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_expose() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory, false),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service, false),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    program: None,
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        uri: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        UseDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        },
+                    ],
+                    children: vec![ChildDecl {
+                        name: "c".to_string(),
+                        uri: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    exposes: vec![
+                        ExposeDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: RelativeId::Myself,
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        ExposeDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source: RelativeId::Myself,
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        }
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///
+/// a: offers directory /data/hippo to b, but a is not executable
+/// a: offers service /svc/hippo to b, but a is not executable
+/// b: uses directory /data/hippo as /data/hippo, but it's not in its realm
+/// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
+#[fuchsia_async::run_singlethreaded(test)]
+async fn offer_from_non_executable() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Directory, false),
+            (AbsoluteMoniker::new(vec!["b"]), fsys::CapabilityType::Service, false),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    program: None,
+                    offers: vec![
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: RelativeId::Myself,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                child_name: "b".to_string(),
+                            }],
+                        },
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source: RelativeId::Myself,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                child_name: "b".to_string(),
+                            }],
+                        },
+                    ],
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        uri: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        },
+                        UseDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         },
                     ],
