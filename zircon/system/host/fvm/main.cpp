@@ -4,6 +4,8 @@
 
 #include <unistd.h>
 
+#include <string>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <fvm-host/container.h>
@@ -11,10 +13,17 @@
 #include <fvm/sparse-reader.h>
 #include <safemath/checked_math.h>
 
+#include "mtd.h"
+
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
 constexpr char kMinimumInodes[] = "--minimum-inodes";
 constexpr char kMinimumData[] = "--minimum-data-bytes";
 constexpr char kMaximumBytes[] = "--maximum-bytes";
+
+enum class DiskType {
+    File = 0,
+    Mtd = 1,
+};
 
 int usage(void) {
     fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <flags>* ] [ <input_paths>* ]\n");
@@ -41,6 +50,8 @@ int usage(void) {
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
     fprintf(stderr, " --disk [bytes] - Size of target disk (valid for size command only)\n");
+    fprintf(stderr, " --disk-type [file OR mtd] - Type of target disk (pave only)\n");
+    fprintf(stderr, " --max-bad-blocks [number] - Max bad blocks for FTL (pave on mtd only)\n");
     fprintf(stderr, "Input options:\n");
     fprintf(stderr, " --blob [path] [reserve options] - Add path as blob type (must be blobfs)\n");
     fprintf(stderr, " --data [path] [reserve options] - Add path as encrypted data type (must"
@@ -170,6 +181,19 @@ size_t get_disk_size(const char* path, size_t offset) {
     return 0;
 }
 
+zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
+    if (!strcmp(type_str, "file")) {
+        *out = DiskType::File;
+        return ZX_OK;
+    } else if (!strcmp(type_str, "mtd")) {
+        *out = DiskType::Mtd;
+        return ZX_OK;
+    }
+
+    fprintf(stderr, "Unknown disk type: '%s'. Expected 'file' or 'mtd'.\n", type_str);
+    return ZX_ERR_INVALID_ARGS;
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
         usage();
@@ -183,8 +207,14 @@ int main(int argc, char** argv) {
     size_t offset = 0;
     size_t slice_size = DEFAULT_SLICE_SIZE;
     size_t disk_size = 0;
+
+    size_t max_bad_blocks = 0;
+    bool is_max_bad_blocks_set = false;
+    DiskType disk_type = DiskType::File;
+
     bool should_unlink = true;
     uint32_t flags = 0;
+
     while (i < argc) {
         if (!strcmp(argv[i], "--slice") && i + 1 < argc) {
             if (parse_size(argv[++i], &slice_size) < 0) {
@@ -213,6 +243,13 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "Invalid compression type\n");
                 return -1;
             }
+        } else if (!strcmp(argv[i], "--disk-type")) {
+            if (ParseDiskType(argv[++i], &disk_type) != ZX_OK) {
+                return -1;
+            }
+        } else if (!strcmp(argv[i], "--max-bad-blocks")) {
+            max_bad_blocks = std::stoul(argv[++i], nullptr, 10);
+            is_max_bad_blocks_set = true;
         } else if (!strcmp(argv[i], "--disk")) {
             if (parse_size(argv[++i], &disk_size) < 0) {
                 return -1;
@@ -228,9 +265,23 @@ int main(int argc, char** argv) {
         unlink(path);
     }
 
-    // If length was not specified, use remainder of file after offset
-    if (length == 0) {
+    // If length was not specified, use remainder of file after offset.
+    // get_disk_size may return 0 due to MTD behavior with fstat.
+    // This scenario is checked in the pave section below.
+    if (length == 0 && disk_type != DiskType::Mtd) {
         length = get_disk_size(path, offset);
+    }
+
+    if (disk_type == DiskType::Mtd) {
+        if (strcmp(command, "pave")) {
+            fprintf(stderr, "Only the pave command is supported for MTD.\n");
+            return -1;
+        }
+
+        if (!is_max_bad_blocks_set) {
+            fprintf(stderr, "--max-bad-blocks is required when paving to MTD.\n");
+            return -1;
+        }
     }
 
     if (!strcmp(command, "create")) {
@@ -356,9 +407,35 @@ int main(int argc, char** argv) {
         }
 
         SparseContainer sparseData(input_path, slice_size, flags);
-        fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+        fbl::unique_ptr<fvm::host::FileWrapper> wrapper;
 
-        if (fvm::host::UniqueFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644, &wrapper) != ZX_OK) {
+        if (disk_type == DiskType::File) {
+            fbl::unique_ptr<fvm::host::UniqueFdWrapper> unique_fd_wrapper;
+            if (fvm::host::UniqueFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644,
+                                                 &unique_fd_wrapper) != ZX_OK) {
+                return -1;
+            }
+
+            wrapper = std::move(unique_fd_wrapper);
+        } else if (disk_type == DiskType::Mtd) {
+            zx_status_t status = CreateFileWrapperFromMtd(
+                path, safemath::saturated_cast<uint32_t>(offset),
+                safemath::saturated_cast<uint32_t>(max_bad_blocks), &wrapper);
+
+            if (status != ZX_OK) {
+                return -1;
+            }
+
+            // The byte offset into the output file is handled by CreateFileWrapperFromMtd.
+            offset = 0;
+
+            // Length may be 0 at this point if the user did not specify a size.
+            // Use all of the space reported by the FTL in this case.
+            if (length == 0) {
+                length = wrapper->Size();
+            }
+        } else {
+            fprintf(stderr, "Unknown disk type\n");
             return -1;
         }
 

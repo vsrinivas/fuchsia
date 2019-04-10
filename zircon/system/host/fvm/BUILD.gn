@@ -12,4 +12,14 @@ host_tool("fvm") {
     "$zx/system/ulib/fvm-host",
     "$zx/third_party/ulib/safemath",
   ]
+
+  if (current_os == "linux") {
+    sources += [ "mtd.cpp" ]
+    deps += [
+      "$zx/system/ulib/ftl-mtd",
+      "$zx/system/ulib/mtd",
+    ]
+  } else {
+    sources += [ "mtd-stub.cpp" ]
+  }
 }

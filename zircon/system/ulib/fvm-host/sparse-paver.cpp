@@ -65,6 +65,7 @@ zx_status_t SparsePaver::Commit() {
 
     // Move pointer to the end of the designated partition size to prevent any further edits.
     disk_ptr_ = disk_offset_ + disk_size_ + 1;
+    file_->Sync();
     return ZX_OK;
 }
 

@@ -27,6 +27,19 @@ using namespace std::placeholders;
 zx_status_t NandVolumeDriver::Create(uint32_t block_offset, uint32_t max_bad_blocks,
                                      std::unique_ptr<mtd::NandInterface> interface,
                                      std::unique_ptr<NandVolumeDriver>* out) {
+    uint32_t block_count = interface->Size() / interface->BlockSize();
+    if (block_offset >= block_count) {
+        fprintf(stderr, "Block offset must be less than block count of %u.\n", block_count);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint32_t usable_block_count = block_count - block_offset;
+    if (max_bad_blocks >= usable_block_count) {
+        fprintf(stderr, "Max bad blocks must be less than block count of %u.\n",
+                usable_block_count);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     uint32_t page_multiplier = 1;
     while (page_multiplier * interface->OobSize() < kMinimumOobSize) {
         page_multiplier *= 2;
