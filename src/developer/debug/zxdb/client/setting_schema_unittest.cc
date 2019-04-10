@@ -21,7 +21,7 @@ TEST(SettingSchema, Bool) {
   SettingSchemaItem item(kName, kDescription, value);
 
   ASSERT_TRUE(item.value().is_bool());
-  EXPECT_TRUE(item.value().GetBool());
+  EXPECT_TRUE(item.value().get_bool());
 
   schema->AddSetting(kKey, item);
 
@@ -46,7 +46,7 @@ TEST(SettingSchema, Int) {
   int value = 10;
   SettingSchemaItem item(kName, kDescription, value);
   ASSERT_TRUE(item.value().is_int());
-  EXPECT_EQ(item.value().GetInt(), value);
+  EXPECT_EQ(item.value().get_int(), value);
 
   schema->AddSetting(kKey, item);
 
@@ -71,7 +71,7 @@ TEST(SettingSchema, String) {
   std::string value = "test";
   SettingSchemaItem item(kName, kDescription, value);
   ASSERT_TRUE(item.value().is_string());
-  EXPECT_EQ(item.value().GetString(), value);
+  EXPECT_EQ(item.value().get_string(), value);
 
   schema->AddSetting(kKey, item);
 
@@ -100,7 +100,7 @@ TEST(SettingSchema, StringWithOptions) {
   SettingSchemaItem item = SettingSchemaItem::StringWithOptions(
       kName, kDescription, value, valid_values);
   ASSERT_TRUE(item.value().is_string());
-  EXPECT_EQ(item.value().GetString(), value);
+  EXPECT_EQ(item.value().get_string(), value);
 
   // Not within options should fail.
   item = SettingSchemaItem::StringWithOptions(kName, kDescription, "invalid",
@@ -114,7 +114,7 @@ TEST(SettingSchema, List) {
   std::vector<std::string> value = {"test", "vector"};
   SettingSchemaItem item(kName, kDescription, value);
   ASSERT_TRUE(item.value().is_list());
-  EXPECT_EQ(item.value().GetList(), value);
+  EXPECT_EQ(item.value().get_list(), value);
 
   schema->AddSetting(kKey, item);
 

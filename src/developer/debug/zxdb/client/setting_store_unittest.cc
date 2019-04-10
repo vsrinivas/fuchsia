@@ -73,22 +73,22 @@ TEST(SettingStore, Defaults) {
 
   auto setting = store.GetSetting("bool");
   ASSERT_TRUE(setting.value.is_bool());
-  EXPECT_TRUE(setting.value.GetBool());
+  EXPECT_TRUE(setting.value.get_bool());
   EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("int");
   ASSERT_TRUE(setting.value.is_int());
-  EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
+  EXPECT_EQ(setting.value.get_int(), kDefaultInt);
   EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("string");
   ASSERT_TRUE(setting.value.is_string());
-  EXPECT_EQ(setting.value.GetString(), kDefaultString);
+  EXPECT_EQ(setting.value.get_string(), kDefaultString);
   EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   setting = store.GetSetting("list");
   ASSERT_TRUE(setting.value.is_list());
-  EXPECT_EQ(setting.value.GetList(), DefaultList());
+  EXPECT_EQ(setting.value.get_list(), DefaultList());
   EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   // Not found.
@@ -141,25 +141,25 @@ TEST(SettingStore, Fallback) {
   // Should get default for not overridden.
   auto setting = store.GetSetting("int");
   ASSERT_TRUE(setting.value.is_int());
-  EXPECT_EQ(setting.value.GetInt(), kDefaultInt);
+  EXPECT_EQ(setting.value.get_int(), kDefaultInt);
   EXPECT_EQ(setting.level, SettingSchema::Level::kDefault);
 
   // Should get local level.
   setting = store.GetSetting("bool");
   ASSERT_TRUE(setting.value.is_bool());
-  EXPECT_FALSE(setting.value.GetBool());
+  EXPECT_FALSE(setting.value.get_bool());
   EXPECT_EQ(setting.level, SettingSchema::Level::kThread);
 
   // Should get one override hop.
   setting = store.GetSetting("string");
   ASSERT_TRUE(setting.value.is_string());
-  EXPECT_EQ(setting.value.GetString(), new_string);
+  EXPECT_EQ(setting.value.get_string(), new_string);
   EXPECT_EQ(setting.level, SettingSchema::Level::kTarget);
 
   // Should fallback through the chain.
   setting = store.GetSetting("list");
   ASSERT_TRUE(setting.value.is_list());
-  EXPECT_EQ(setting.value.GetList(), new_list);
+  EXPECT_EQ(setting.value.get_list(), new_list);
   EXPECT_EQ(setting.level, SettingSchema::Level::kSystem);
 }
 
@@ -194,7 +194,7 @@ TEST(SettingStore, Notifications) {
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "int");
   ASSERT_TRUE(record.new_value.is_int());
-  EXPECT_EQ(record.new_value.GetInt(), kNewInt);
+  EXPECT_EQ(record.new_value.get_int(), kNewInt);
 
   // List should also call.
   std::vector<std::string> new_list = {"new", "list"};
@@ -206,7 +206,7 @@ TEST(SettingStore, Notifications) {
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "list");
   ASSERT_TRUE(record.new_value.is_list());
-  EXPECT_EQ(record.new_value.GetList(), new_list);
+  EXPECT_EQ(record.new_value.get_list(), new_list);
 
   // Removing an observer should not make to stop notifying.
   store.RemoveObserver("int", &observer);
@@ -224,7 +224,7 @@ TEST(SettingStore, Notifications) {
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "list");
   ASSERT_TRUE(record.new_value.is_list());
-  EXPECT_EQ(record.new_value.GetList(), new_list);
+  EXPECT_EQ(record.new_value.get_list(), new_list);
 
   // Adding another observer should notify twice.
   SettingObserver observer2;
@@ -238,14 +238,14 @@ TEST(SettingStore, Notifications) {
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "list");
   ASSERT_TRUE(record.new_value.is_list());
-  EXPECT_EQ(record.new_value.GetList(), new_list);
+  EXPECT_EQ(record.new_value.get_list(), new_list);
 
   ASSERT_EQ(observer2.notifications().size(), 1u);
   record = observer2.notifications().back();
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "list");
   ASSERT_TRUE(record.new_value.is_list());
-  EXPECT_EQ(record.new_value.GetList(), new_list);
+  EXPECT_EQ(record.new_value.get_list(), new_list);
 
   // Removing the first one should still notify the second.
   store.RemoveObserver("list", &observer);
@@ -260,7 +260,7 @@ TEST(SettingStore, Notifications) {
   EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.setting_name, "list");
   ASSERT_TRUE(record.new_value.is_list());
-  EXPECT_EQ(record.new_value.GetList(), new_list);
+  EXPECT_EQ(record.new_value.get_list(), new_list);
 
   // Removing all observers should not notify.
   store.RemoveObserver("list", &observer2);

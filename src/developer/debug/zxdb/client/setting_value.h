@@ -17,52 +17,40 @@ enum class SettingType : uint32_t {
   kList,
   kNull,
 };
-
-// Helper for clearer errors.
 const char* SettingTypeToString(SettingType);
 
-// SettingValues hold a variant value an interface to query/modify them.
-class SettingValue {
- public:
-  // Will have type none. Will assert on any getter.
-  SettingValue();
+struct SettingValue {
+  SettingValue();   // Creates a kNull type.
   explicit SettingValue(bool);
   explicit SettingValue(int);
   explicit SettingValue(const char*);
   explicit SettingValue(std::string);
   explicit SettingValue(std::vector<std::string>);
 
-  SettingType type() const { return type_; }
-  bool is_bool() const { return type_ == SettingType::kBoolean; }
-  bool is_int() const { return type_ == SettingType::kInteger; }
-  bool is_string() const { return type_ == SettingType::kString; }
-  bool is_list() const { return type_ == SettingType::kList; }
-  bool is_null() const { return type_ == SettingType::kNull; }
+  bool is_bool() const { return type == SettingType::kBoolean; }
+  bool is_int() const { return type == SettingType::kInteger; }
+  bool is_string() const { return type == SettingType::kString; }
+  bool is_list() const { return type == SettingType::kList; }
+  bool is_null() const { return type == SettingType::kNull; }
 
-  bool valid() const { return type_ != SettingType::kNull; }
+  const auto& get_bool() const { return std::get<bool>(value); }
+  const auto& get_int() const { return std::get<int>(value); }
+  const auto& get_string() const { return std::get<std::string>(value); }
+  const auto& get_list() const {
+    return std::get<std::vector<std::string>>(value);
+  }
 
-  // IMPORTANT: getters will assert if the wrong type is used.
-  //            This will help catch bugs earlier.
-  bool& GetBool();
-  bool GetBool() const;
+  void set_bool(bool v) { value = v; }
+  void set_int(int v) { value = v; }
+  void set_string(std::string v) { value = std::move(v); }
+  void set_list(std::vector<std::string> v) { value = std::move(v); }
 
-  int& GetInt();
-  int GetInt() const;
-
-  std::string& GetString();
-  const std::string& GetString() const;
-
-  std::vector<std::string>& GetList();
-  const std::vector<std::string>& GetList() const;
-
- private:
-  void Init();
 
   using VariantValue =
       std::variant<bool, int, std::string, std::vector<std::string>>;
 
-  SettingType type_ = SettingType::kNull;
-  VariantValue value_;
+  SettingType type = SettingType::kNull;
+  VariantValue value;
 };
 
 }  // namespace zxdb

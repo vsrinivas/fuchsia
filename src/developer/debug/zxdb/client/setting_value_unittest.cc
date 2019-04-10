@@ -10,35 +10,28 @@ namespace zxdb {
 
 TEST(SettingValue, Boolean) {
   SettingValue setting(false);
-  ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_bool());
-  EXPECT_FALSE(setting.GetBool());
+  EXPECT_FALSE(setting.get_bool());
 
   setting = SettingValue(true);
-  EXPECT_TRUE(setting.GetBool());
+  EXPECT_TRUE(setting.get_bool());
 
-  setting.GetBool() = false;
-  EXPECT_FALSE(setting.GetBool());
+  setting.set_bool(false);
+  EXPECT_FALSE(setting.get_bool());
 }
 
 TEST(SettingValue, Int) {
   SettingValue setting(0);
-  ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_int());
-  EXPECT_EQ(setting.GetInt(), 0);
+  EXPECT_EQ(setting.get_int(), 0);
 
   constexpr int kTestInt = 43;
   setting = SettingValue(kTestInt);
-  EXPECT_EQ(setting.GetInt(), kTestInt);
+  EXPECT_EQ(setting.get_int(), kTestInt);
 
   constexpr int kTestInt2 = 10;
-  setting.GetInt() = kTestInt2;
-  EXPECT_EQ(setting.GetInt(), kTestInt2);
-
-  setting.GetInt()++;
-  setting.GetInt() += 2;
-  setting.GetInt() *= 2;
-  EXPECT_EQ(setting.GetInt(), (kTestInt2 + 3) * 2);
+  setting.set_int(kTestInt2);
+  EXPECT_EQ(setting.get_int(), kTestInt2);
 }
 
 const char kTestString[] = "test_string";
@@ -47,47 +40,34 @@ const char kTestString3[] = "test_string3";
 
 TEST(SettingValue, String) {
   SettingValue setting(std::string{});
-  ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_string());
-  EXPECT_TRUE(setting.GetString().empty());
+  EXPECT_TRUE(setting.get_string().empty());
 
   setting = SettingValue(kTestString);
-  EXPECT_EQ(setting.GetString(), kTestString);
+  EXPECT_EQ(setting.get_string(), kTestString);
 
   setting = SettingValue(std::string(kTestString2));
-  EXPECT_EQ(setting.GetString(), kTestString2);
+  EXPECT_EQ(setting.get_string(), kTestString2);
 
-  setting.GetString() = kTestString3;
-  EXPECT_EQ(setting.GetString(), kTestString3);
-
-  setting.GetString().append(kTestString3);
-  EXPECT_EQ(setting.GetString(), std::string(kTestString3) + kTestString3);
+  setting.set_string(kTestString3);
+  EXPECT_EQ(setting.get_string(), kTestString3);
 }
 
 TEST(SettingValue, List) {
   SettingValue setting(std::vector<std::string>{});
-  ASSERT_TRUE(setting.valid());
   ASSERT_TRUE(setting.is_list());
-  EXPECT_TRUE(setting.GetList().empty());
+  EXPECT_TRUE(setting.get_list().empty());
 
   setting = SettingValue(std::vector<std::string>{kTestString});
-  ASSERT_EQ(setting.GetList().size(), 1u);
+  ASSERT_EQ(setting.get_list().size(), 1u);
 
-  setting.GetList() = {kTestString, kTestString2};
-  ASSERT_EQ(setting.GetList().size(), 2u);
+  setting.set_list({kTestString, kTestString2});
+  ASSERT_EQ(setting.get_list().size(), 2u);
 
-  setting.GetList().pop_back();
-  setting.GetList().push_back(kTestString3);
-  setting.GetList().push_back(kTestString2);
-  ASSERT_EQ(setting.GetList().size(), 3u);
-
-  EXPECT_EQ(setting.GetList()[1], kTestString3);
-
-  auto it = setting.GetList().begin();
+  auto it = setting.get_list().begin();
   EXPECT_EQ(*it++, kTestString);
-  EXPECT_EQ(*it++, kTestString3);
   EXPECT_EQ(*it++, kTestString2);
-  EXPECT_EQ(it, setting.GetList().end());
+  EXPECT_EQ(it, setting.get_list().end());
 }
 
 }  // namespace zxdb

@@ -92,14 +92,15 @@ Err SettingSchema::ValidateSetting(const std::string& key,
     return Err("Setting \"%s\" not found in the given context.", key.data());
 
   auto& schema_item = it->second;
-  if (schema_item.type() != value.type())
+  if (schema_item.type() != value.type) {
     return Err(
         "Setting \"%s\" expects a different type (expected: %s, given: %s).",
-        key.data(), SettingTypeToString(value.type()),
+        key.data(), SettingTypeToString(value.type),
         SettingTypeToString(schema_item.type()));
+  }
 
   if (value.is_string() &&
-      !StringWithinOptions(value.GetString(), schema_item.valid_values()))
+      !StringWithinOptions(value.get_string(), schema_item.valid_values()))
     return StringNotWithinOptionsError(key, schema_item.valid_values());
 
   return Err();

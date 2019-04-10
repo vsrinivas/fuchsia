@@ -51,25 +51,25 @@ void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
 bool SettingStore::GetBool(const std::string& key) const {
   auto setting = GetSetting(key);
   FXL_DCHECK(setting.value.is_bool());
-  return setting.value.GetBool();
+  return setting.value.get_bool();
 }
 
 int SettingStore::GetInt(const std::string& key) const {
   auto setting = GetSetting(key);
   FXL_DCHECK(setting.value.is_int());
-  return setting.value.GetInt();
+  return setting.value.get_int();
 }
 
 std::string SettingStore::GetString(const std::string& key) const {
   auto setting = GetSetting(key);
   FXL_DCHECK(setting.value.is_string());
-  return setting.value.GetString();
+  return setting.value.get_string();
 }
 
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   auto setting = GetSetting(key);
   FXL_DCHECK(setting.value.is_list());
-  return setting.value.GetList();
+  return setting.value.get_list();
 }
 
 StoredSetting SettingStore::GetSetting(const std::string& key,

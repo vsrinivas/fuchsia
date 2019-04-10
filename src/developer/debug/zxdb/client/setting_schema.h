@@ -109,9 +109,8 @@ class SettingSchemaItem {
   const std::string& description() const { return description_; }
   bool overriden() const { return overriden_; }
   void set_overriden(bool overriden) { overriden_ = overriden; }
-  bool valid() const { return default_value_.valid(); }
 
-  SettingType type() const { return default_value_.type(); }
+  SettingType type() const { return default_value_.type; }
   const SettingValue& value() const { return default_value_; }
 
   const std::vector<std::string>& valid_values() const { return valid_values_; }

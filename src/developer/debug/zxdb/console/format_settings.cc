@@ -23,20 +23,20 @@ namespace zxdb {
 namespace {
 
 std::string SettingValueToString(const SettingValue& value) {
-  switch (value.type()) {
+  switch (value.type) {
     case SettingType::kBoolean:
-      return value.GetBool() ? "true" : "false";
+      return value.get_bool() ? "true" : "false";
     case SettingType::kInteger:
-      return fxl::StringPrintf("%d", value.GetInt());
+      return fxl::StringPrintf("%d", value.get_int());
     case SettingType::kString: {
-      auto string = value.GetString();
+      auto string = value.get_string();
       return string.empty() ? "<empty>" : string;
     }
     case SettingType::kList:
       // Lists are formatted as a colon separated string.
       // Example
       //    list = {"first", "second", "third"} -> "first:second:third"
-      return fxl::JoinStrings(value.GetList(), ":");
+      return fxl::JoinStrings(value.get_list(), ":");
     case SettingType::kNull:
       return "<null>";
   }
@@ -69,7 +69,7 @@ void AddSettingToTable(const StoredSetting& setting,
     // List get special treatment so that we can show them as bullet lists.
     // This make reading them much easier when the elements of the lists
     // are long (eg. paths).
-    auto bullet_list = ListToBullet(setting.value.GetList());
+    auto bullet_list = ListToBullet(setting.value.get_list());
     // Special case for empty list.
     if (bullet_list.empty()) {
       auto& row = rows->emplace_back();

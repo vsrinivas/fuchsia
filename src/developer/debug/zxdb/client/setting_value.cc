@@ -30,56 +30,18 @@ const char* SettingTypeToString(SettingType type) {
 SettingValue::SettingValue() = default;
 
 SettingValue::SettingValue(bool val)
-    : type_(SettingType::kBoolean), value_(val) {}
+    : type(SettingType::kBoolean), value(val) {}
 
 SettingValue::SettingValue(int val)
-    : type_(SettingType::kInteger), value_(val) {}
+    : type(SettingType::kInteger), value(val) {}
 
 SettingValue::SettingValue(const char* val)
-    : type_(SettingType::kString), value_(std::string(val)) {}
+    : type(SettingType::kString), value(std::string(val)) {}
 
 SettingValue::SettingValue(std::string val)
-    : type_(SettingType::kString), value_(val) {}
+    : type(SettingType::kString), value(val) {}
 
 SettingValue::SettingValue(std::vector<std::string> val)
-    : type_(SettingType::kList), value_(std::move(val)) {}
-
-bool& SettingValue::GetBool() {
-  FXL_DCHECK(type_ == SettingType::kBoolean);
-  return std::get<bool>(value_);
-}
-
-bool SettingValue::GetBool() const {
-  return const_cast<SettingValue*>(this)->GetBool();
-}
-
-int& SettingValue::GetInt() {
-  FXL_DCHECK(type_ == SettingType::kInteger);
-  return std::get<int>(value_);
-}
-
-int SettingValue::GetInt() const {
-  return const_cast<SettingValue*>(this)->GetInt();
-}
-
-std::string& SettingValue::GetString() {
-  FXL_DCHECK(type_ == SettingType::kString);
-  return std::get<std::string>(value_);
-}
-
-const std::string& SettingValue::GetString() const {
-  FXL_DCHECK(type_ == SettingType::kString);
-  return std::get<std::string>(value_);
-}
-
-std::vector<std::string>& SettingValue::GetList() {
-  FXL_DCHECK(type_ == SettingType::kList);
-  return std::get<std::vector<std::string>>(value_);
-}
-
-const std::vector<std::string>& SettingValue::GetList() const {
-  FXL_DCHECK(type_ == SettingType::kList);
-  return std::get<std::vector<std::string>>(value_);
-}
+    : type(SettingType::kList), value(std::move(val)) {}
 
 }  // namespace zxdb
