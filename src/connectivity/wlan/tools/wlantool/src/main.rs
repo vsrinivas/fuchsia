@@ -14,8 +14,8 @@ use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
     self as fidl_sme, ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent,
 };
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use hex::FromHex;
