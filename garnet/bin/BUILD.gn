@@ -87,7 +87,6 @@ group("bin") {
     "vsock_service",
     "vulkan_loader",
     "wayland",
-    "wlan",
     "xi_core",
     "zircon_benchmarks",
   ]

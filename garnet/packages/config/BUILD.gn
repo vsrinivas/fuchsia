@@ -77,7 +77,7 @@ group("router") {
 group("wlan") {
   testonly = true
   public_deps = [
-    "//garnet/bin/wlan/wlancfg:config",
+    "//src/connectivity/wlan/wlancfg:config",
   ]
 }
 

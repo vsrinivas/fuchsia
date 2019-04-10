@@ -947,14 +947,14 @@ group("stash") {
 group("wlanstack") {
   testonly = true
   public_deps = [
-    "//garnet/bin/wlan/wlanstack:wlanstack2",
+    "//src/connectivity/wlan/wlanstack:wlanstack2",
   ]
 }
 
 group("wlancfg") {
   testonly = true
   public_deps = [
-    "//garnet/bin/wlan/wlancfg",
+    "//src/connectivity/wlan/wlancfg",
   ]
 }
 

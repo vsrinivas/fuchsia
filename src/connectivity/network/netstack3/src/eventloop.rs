@@ -687,9 +687,9 @@ impl EventDispatcher for EventLoopInner {
     //    future!
     //
     // The fix to this should be to have the event loop drain the queue without yielding, thus
-    // ensuring that the timer future cannot fire until the main queue is empty. See
-    // `GroupAvailable` in `garnet/bin/wlan/wlanstack/src/future_util.rs` for an example of how to
-    // do this.
+    // ensuring that the timer future cannot fire until the main queue is empty.
+    // See `GroupAvailable` in `src/connectivity/wlan/wlanstack/src/future_util.rs`
+    // for an example of how to do this.
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
         let index =
             self.timers.iter().enumerate().find_map(
