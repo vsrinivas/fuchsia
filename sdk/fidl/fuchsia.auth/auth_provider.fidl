@@ -148,8 +148,11 @@ protocol AuthenticationUIContext {
     // Requests base shell to display |view_owner| for authentication. Another
     // call to StartOverlay() will not be made until StopOverlay() has been
     // called.
-    // DEPRECATED
-    // TODO(SCN-1018): Replace this with a ViewHolderToken-based method.
+    //
+    // This method is deprecated in favor of the eventpair-based one below.
+    // TODO(SCN-1018): Remove this.
+    StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
+
     [Transitional]
     StartOverlay2(handle<eventpair> view_owner_token);
 
