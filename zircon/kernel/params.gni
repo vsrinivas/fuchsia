@@ -35,9 +35,9 @@ declare_args() {
   enable_lock_dep = false
 
   # Enable fair scheduler.
-  # ZX-3798: Disable fair scheduler on both arches for baseline testing.
+  # ZX-3855: Enable fair scheduler on arm64 by default for smoke testing.
   if (current_cpu == "arm64") {
-    enable_fair_scheduler = false
+    enable_fair_scheduler = true
   } else if (current_cpu == "x64") {
     enable_fair_scheduler = false
   }
