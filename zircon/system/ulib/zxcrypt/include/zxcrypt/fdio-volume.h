@@ -27,6 +27,13 @@ public:
     zx_status_t Unseal(const uint8_t* key, size_t key_len, uint8_t slot);
 
     // Request that the volume provided by the manager represented by |chan| be
+    // unsealed with an product-defined device key associated with the specified
+    // slot.  The caller must have access to /boot/config/zxcrypt in its
+    // namespace to use this function.  If successful, the driver will create a
+    // child device named |unsealed| which exposes a block interface.
+    zx_status_t UnsealWithDeviceKey(uint8_t slot);
+
+    // Request that the volume provided by the manager represented by |chan| be
     // sealed.  After calling this method, it is an error to make any further
     // calls with this FdioVolumeManager.
     zx_status_t Seal();
@@ -46,15 +53,30 @@ public:
 
     // Creates a new zxcrypt volume associated with the given file descriptor, |fd| and returns it
     // via |out|, if provided.  This will format the block device as zxcrypt using the given |key|,
-    // which will be associated with key slot 0. This method takes ownership of |fd|.
+    // which will be associated with key slot 0. This method takes ownership of |fd|.  Note that
+    // |key| is not strengthened and MUST have cryptographic key length of at least 128 bits.
     static zx_status_t Create(fbl::unique_fd fd, const crypto::Secret& key,
                               fbl::unique_ptr<FdioVolume>* out = nullptr);
 
+    // Does the same as |Create| but with the key provided by a product-defined
+    // source.  The caller must have access to /boot/config/zxcrypt in its
+    // namespace to use this function.
+    static zx_status_t CreateWithDeviceKey(fbl::unique_fd&& fd,
+                                           fbl::unique_ptr<FdioVolume>* out);
+
     // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
     // given key |slot|.  The |fd| parameter means this method can be used from libzxcrypt. This
-    // method takes ownership of |fd|.
+    // method takes ownership of |fd|.  Note that |key| is not strengthened and MUST have
+    // cryptographic key length of at least 128 bits.
     static zx_status_t Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
                               fbl::unique_ptr<FdioVolume>* out);
+
+    // Opens a zxcrypt volume on the block device described by |fd| using a key
+    // from a product-defined source with the specified |slot|.  The caller must
+    // have access to /boot/config/zxcrypt in their namespace to use this
+    // function.  This method takes ownership of |fd|.
+    static zx_status_t UnlockWithDeviceKey(fbl::unique_fd fd, key_slot_t slot,
+                                           fbl::unique_ptr<FdioVolume>* out);
 
     // Returns a new volume object corresponding to the block device given by |fd| and populated
     // with the block and FVM information.

@@ -531,15 +531,9 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     }
     // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
     // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
-    crypto::Secret key;
-    uint8_t* tmp;
-    if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
-        return status;
-    }
-    memset(tmp, 0, key.len());
 
     fbl::unique_ptr<zxcrypt::FdioVolume> volume;
-    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK) {
+    if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(part->new_part), &volume)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;
     }
@@ -548,11 +542,10 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
         ERROR("Could not open zxcrypt volume manager\n");
         return status;
     }
-    // TODO(security): ZX-2670. Pass this channel to another binary that bears
-    // responsibility for keying the partition.
+
     zxcrypt::FdioVolumeManager zxcrypt_manager(std::move(zxcrypt_manager_chan));
     uint8_t slot = 0;
-    if ((status = zxcrypt_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
+    if ((status = zxcrypt_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
         ERROR("Could not unseal zxcrypt volume\n");
         return status;
     }
@@ -1087,19 +1080,14 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         break;
 
     case DISK_FORMAT_ZXCRYPT: {
-        crypto::Secret key;
-        uint8_t* tmp;
-        if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
-            return status;
-        }
-        memset(tmp, 0, key.len());
-        zxcrypt::key_slot_t key_slot = 0;
-
         fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
-        if ((status = zxcrypt::FdioVolume::Unlock(std::move(part_fd), key,
-                                                  key_slot, &zxc_volume)) != ZX_OK) {
-            ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
-            return status;
+        uint8_t slot = 0;
+        if ((status =
+             zxcrypt::FdioVolume::UnlockWithDeviceKey(std::move(part_fd),
+                                                      static_cast<zxcrypt::key_slot_t>(slot),
+                                                      &zxc_volume)) != ZX_OK) {
+          ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
+          return status;
         }
 
         // Most of the time we'll expect the volume to actually already be
@@ -1120,12 +1108,10 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         }
 
         // Unseal.
-        // TODO(security): ZX-2670 call an external binary to unseal the volume instead
-        uint8_t slot = 0;
-        zxcrypt::FdioVolumeManager zxc_volume_manager(std::move(zxc_manager_chan));
-        if ((status = zxc_volume_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
-            ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
-            return status;
+        zxcrypt::FdioVolumeManager zxc_manager(std::move(zxc_manager_chan));
+        if ((status = zxc_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
+          ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
+          return status;
         }
 
         // Wait for the device to appear, and open it.

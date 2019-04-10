@@ -13,6 +13,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/zxcrypt/c/fidl.h>
+#include <kms-stateless/kms-stateless.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
@@ -32,6 +33,81 @@ namespace zxcrypt {
 // The zxcrypt driver
 const char* kDriverLib = "/boot/driver/zxcrypt.so";
 
+namespace {
+
+// Null key should be 32 bytes.
+const size_t kKeyLength = 32;
+const char kHardwareKeyInfo[] = "zxcrypt";
+
+// How many bytes to read from /boot/config/zxcrypt?
+const size_t kMaxKeySourceLength = 16;
+const char kZxcryptConfigFile[] = "/boot/config/zxcrypt";
+
+enum KeySource {
+    NullSource,
+    TeeSource,
+    // someday: TpmSource
+};
+
+zx_status_t SelectKeySource(KeySource* out) {
+    fbl::unique_fd fd(open(kZxcryptConfigFile, O_RDONLY));
+    if (!fd) {
+        xprintf("zxcrypt: couldn't open %s\n", kZxcryptConfigFile);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    char key_source_buf[kMaxKeySourceLength + 1];
+    ssize_t len = read(fd.get(), key_source_buf, sizeof(key_source_buf)-1);
+    if (len < 0) {
+        xprintf("zxcrypt: couldn't read %s\n", kZxcryptConfigFile);
+        return ZX_ERR_IO;
+    } else {
+        // add null terminator
+        key_source_buf[len] = '\0';
+        // Dispatch if recognized
+        if (strcmp(key_source_buf, "tee") == 0) {
+            *out = TeeSource;
+            return ZX_OK;
+        }
+        if (strcmp(key_source_buf, "null") == 0) {
+            *out = NullSource;
+            return ZX_OK;
+        }
+        return ZX_ERR_BAD_STATE;
+    }
+}
+
+zx_status_t DoWithHardwareKey(fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t>, size_t)>
+                              callback) {
+    KeySource source;
+    zx_status_t rc;
+    rc = SelectKeySource(&source);
+    if (rc != ZX_OK) {
+        return rc;
+    }
+    switch(source) {
+        case TeeSource: {
+            // key info is |kHardwareKeyInfo| padded with 0.
+            uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = {0};
+            memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
+            return kms_stateless::GetHardwareDerivedKey([&](
+                    fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+                return callback(std::move(key_buffer), key_size);
+            }, key_info);
+        }
+        case NullSource: {
+            // If we don't have secure storage for the root key, just use the null key
+            fbl::unique_ptr<uint8_t> key_buffer(new uint8_t[kKeyLength]);
+            memset(key_buffer.get(), 0, kKeyLength);
+            return callback(std::move(key_buffer), kKeyLength);
+        }
+    }
+    // unreachable, but the compiler seems unable to infer this
+    return ZX_OK;
+}
+
+} // namespace
+
 FdioVolumeManager::FdioVolumeManager(zx::channel&& chan) : chan_(std::move(chan)) {}
 
 zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_t slot) {
@@ -46,6 +122,12 @@ zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_
         xprintf("failed to Unseal: %s\n", zx_status_get_string(call_status));
     }
     return call_status;
+}
+
+zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+        return Unseal(key_buffer.release(), key_size, slot);
+    });
 }
 
 zx_status_t FdioVolumeManager::Seal() {
@@ -115,6 +197,23 @@ zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
     return ZX_OK;
 }
 
+zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& fd,
+                                            fbl::unique_ptr<FdioVolume>* out) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+        crypto::Secret secret;
+        zx_status_t rc;
+        uint8_t* inner;
+        rc = secret.Allocate(key_size, &inner);
+        if (rc != ZX_OK) {
+            xprintf("zxcrypt: couldn't allocate secret\n");
+            return rc;
+        }
+        memcpy(inner, key_buffer.get(), key_size);
+        rc = FdioVolume::Create(std::move(fd), secret, out);
+        return rc;
+    });
+}
+
 zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
                                    fbl::unique_ptr<FdioVolume>* out) {
     zx_status_t rc;
@@ -131,6 +230,24 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key
 
     *out = std::move(volume);
     return ZX_OK;
+}
+
+zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd fd,
+                                            key_slot_t slot,
+                                            fbl::unique_ptr<FdioVolume>* out) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+        crypto::Secret secret;
+        zx_status_t rc;
+        uint8_t* inner;
+        rc = secret.Allocate(key_size, &inner);
+        if (rc != ZX_OK) {
+            xprintf("FdioVolume::UnlockWithDeviceKey: couldn't allocate secret\n");
+            return rc;
+        }
+        memcpy(inner, key_buffer.get(), key_size);
+        rc = FdioVolume::Unlock(std::move(fd), secret, slot, out);
+        return rc;
+    });
 }
 
 zx_status_t FdioVolume::Unlock(const crypto::Secret& key, key_slot_t slot) {
@@ -392,8 +509,8 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
     fbl::String path_base;
 
     if ((rc = TopologicalPath(caller, &path_base)) != ZX_OK) {
-      xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
-      return rc;
+        xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
+        return rc;
     }
     fbl::String path_manager = fbl::String::Concat({path_base, "/zxcrypt"});
 

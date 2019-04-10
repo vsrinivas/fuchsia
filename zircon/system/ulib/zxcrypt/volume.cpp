@@ -247,8 +247,21 @@ zx_status_t Volume::DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot) {
 
     crypto::HKDF hkdf;
     char label[kMaxLabelLen];
-    if ((rc = hkdf.Init(digest_, key, guid_)) != ZX_OK) {
-        xprintf("failed to init HKDF: %s\n", zx_status_get_string(rc));
+
+    // We tolerate 128-bit keys here because some hardware we wish to operate on
+    // only has 128-bits of random keys in hardware.  We believe that this
+    // entropy is sufficient for our purposes.
+    size_t key_len = key.len();
+    if (key_len == 16) {
+        rc = hkdf.Init(digest_, key, guid_, crypto::HKDF::ALLOW_WEAK_KEY);
+    } else if (key_len == 32) {
+        rc = hkdf.Init(digest_, key, guid_);
+    } else {
+        xprintf("invalid key length %lu (acceptable values are 16, 32)\n", key_len);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (rc != ZX_OK) {
+        xprintf("hkdf.Init failed %s\n", zx_status_get_string(rc));
         return rc;
     }
     snprintf(label, kMaxLabelLen, kWrapKeyLabel, slot);

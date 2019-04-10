@@ -480,12 +480,8 @@ int unseal_zxcrypt_threadfunc(void* arg) {
     }
 
     zxcrypt::FdioVolumeManager zxcrypt_volume_manager(std::move(zxcrypt_volume_manager_chan));
-    // TODO(security): ZX-2670 we should call a separate binary to
-    // key this with a real key
-    uint8_t null_key[zxcrypt::kZx1130KeyLen];
-    memset(null_key, 0, zxcrypt::kZx1130KeyLen);
     uint8_t slot = 0;
-    if ((rc = zxcrypt_volume_manager.Unseal(null_key, zxcrypt::kZx1130KeyLen, slot)) != ZX_OK) {
+    if ((rc = zxcrypt_volume_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
         printf("fshost: couldn't unseal zxcrypt manager device");
         return 0;
     }

@@ -31,6 +31,7 @@ library("zxcrypt") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/kms-stateless",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/ramdevice-client:static",
     "$zx/system/ulib/sync",
