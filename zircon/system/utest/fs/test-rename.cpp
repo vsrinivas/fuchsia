@@ -12,12 +12,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/handle.h>
 #include <zircon/compiler.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
-bool test_rename_basic(void) {
+bool TestRenameBasic() {
     BEGIN_TEST;
     // Cannot rename when src does not exist
     ASSERT_EQ(rename("::alpha", "::bravo"), -1, "");
@@ -89,7 +93,7 @@ bool test_rename_basic(void) {
     END_TEST;
 }
 
-bool test_rename_with_children(void) {
+bool TestRenameWithChildren() {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::dir_before_move", 0755), 0, "");
@@ -138,7 +142,7 @@ bool test_rename_with_children(void) {
     END_TEST;
 }
 
-bool test_rename_absolute_relative(void) {
+bool TestRenameAbsoluteRelative() {
     BEGIN_TEST;
 
     char cwd[PATH_MAX];
@@ -184,7 +188,7 @@ bool test_rename_absolute_relative(void) {
     END_TEST;
 }
 
-bool test_rename_at(void) {
+bool TestRenameAt() {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::foo", 0755), 0, "");
@@ -247,9 +251,44 @@ bool test_rename_at(void) {
     END_TEST;
 }
 
+// Rename using the raw FIDL interface.
+bool TestRenameRaw() {
+    BEGIN_TEST;
+
+    ASSERT_EQ(mkdir("::alpha", 0755), 0, "");
+    ASSERT_EQ(mkdir("::alpha/bravo", 0755), 0, "");
+    ASSERT_EQ(mkdir("::alpha/bravo/charlie", 0755), 0, "");
+
+    fbl::unique_fd fd(open("::alpha", O_RDONLY | O_DIRECTORY, 0644));
+    ASSERT_TRUE(fd);
+    fzl::FdioCaller caller(std::move(fd));
+
+    zx_status_t status;
+    zx::handle token;
+    ASSERT_EQ(fuchsia_io_DirectoryGetToken(caller.borrow_channel(), &status,
+                                           token.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Pass a path, instead of a name, to rename.
+    // Observe that paths are rejected.
+    constexpr char src[] = "bravo/charlie";
+    constexpr char dst[] = "bravo/delta";
+    ASSERT_EQ(fuchsia_io_DirectoryRename(caller.borrow_channel(), src, strlen(src),
+                                         token.release(), dst, strlen(dst), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+
+    // Clean up
+    ASSERT_EQ(unlink("::alpha/bravo/charlie"), 0, "");
+    ASSERT_EQ(unlink("::alpha/bravo"), 0, "");
+    ASSERT_EQ(unlink("::alpha"), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(rename_tests,
-    RUN_TEST_MEDIUM(test_rename_basic)
-    RUN_TEST_MEDIUM(test_rename_with_children)
-    RUN_TEST_MEDIUM(test_rename_absolute_relative)
-    RUN_TEST_MEDIUM(test_rename_at)
+    RUN_TEST_MEDIUM(TestRenameBasic)
+    RUN_TEST_MEDIUM(TestRenameWithChildren)
+    RUN_TEST_MEDIUM(TestRenameAbsoluteRelative)
+    RUN_TEST_MEDIUM(TestRenameAt)
+    RUN_TEST_MEDIUM(TestRenameRaw)
 )

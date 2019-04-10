@@ -510,11 +510,22 @@ protocol Directory {
 
     /// Renames an object named src to the name dst, in a directory represented by token.
     ///
+    /// |src/dst| must be resolved object names. Including "/" in any position
+    /// other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    /// Returning "/" at the end of either string implies that it must be a
+    /// directory, or else ZX_ERR_NOT_DIR should be returned.
+    ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
+    ///
+    /// |src| must be a resolved object name. Including "/" in the string will
+    /// return ZX_ERR_INVALID_ARGS.
+    ///
+    /// |dst| must be a resolved object name. Including "/" in the string will
+    /// return ZX_ERR_INVALID_ARGS.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);

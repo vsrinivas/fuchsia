@@ -26,7 +26,7 @@ test("fs") {
     "test-persist.cpp",
     "test-random-op.c",
     "test-realpath.cpp",
-    "test-rename.c",
+    "test-rename.cpp",
     "test-resize.cpp",
     "test-rw-workers.c",
     "test-rw.cpp",

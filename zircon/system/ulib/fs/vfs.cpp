@@ -42,11 +42,15 @@ zx_status_t TrimName(fbl::StringPiece name, fbl::StringPiece* name_out, bool* di
         is_dir = true;
     }
 
-    // 'name' should not contain paths consisting of exclusively '/' characters.
     if (len == 0) {
+        // 'name' should not contain paths consisting of exclusively '/' characters.
         return ZX_ERR_INVALID_ARGS;
     } else if (len > NAME_MAX) {
+        // Name must be less than the maximum-expected length.
         return ZX_ERR_BAD_PATH;
+    } else if (memchr(name.data(), '/', len) != nullptr) {
+        // Name must not contain '/' characters after being trimmed.
+        return ZX_ERR_INVALID_ARGS;
     }
 
     name_out->set(name.data(), len);
