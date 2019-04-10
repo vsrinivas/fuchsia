@@ -14,10 +14,10 @@ import sys
 import threading
 
 
-def gn_describe(out, path):
-    gn = os.path.join(paths.FUCHSIA_ROOT, 'buildtools', 'gn')
+def gn_describe(path):
+    gn = os.path.join(paths.FUCHSIA_DIR, 'buildtools', 'gn')
     data = subprocess.check_output(
-        [gn, 'desc', out, path, '--format=json'], cwd=paths.FUCHSIA_ROOT)
+        [gn, 'desc', paths.FUCHSIA_BUILD_DIR, path, '--format=json'], cwd=paths.FUCHSIA_DIR)
     return json.loads(data)
 
 
@@ -58,10 +58,6 @@ def main():
 targets. Extra flags will be passed to the supporting Dart tool if applicable.
 ''')
     parser.add_argument(
-        '--out',
-        help='Path to the base output directory, e.g. out/debug-x64',
-        required=True)
-    parser.add_argument(
         '--tree',
         help='Restrict analysis to a source subtree, e.g. //topaz/shell/*',
         default='*')
@@ -80,17 +76,13 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
         choices=('analyze', 'test', 'target-test'))
     args, extras = parser.parse_known_args()
 
-    if not os.path.isdir(os.path.join(paths.FUCHSIA_ROOT, args.out)):
-        print 'Invalid output directory: %s' % args.out
-        return 1
-
     tree = args.tree
     if args.action == 'analyze':
         tree = '%s(//build/dart:dartlang)' % tree
 
     # Ask gn about all the dart analyzer scripts.
     scripts = []
-    targets = gn_describe(args.out, tree)
+    targets = gn_describe(tree)
     if not targets:
         print 'No targets found...'
         exit(1)
@@ -121,7 +113,7 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
             continue
         script_path = properties['outputs'][0]
         script_path = script_path[2:]  # Remove the leading //
-        scripts.append(os.path.join(paths.FUCHSIA_ROOT, script_path))
+        scripts.append(os.path.join(paths.FUCHSIA_DIR, script_path))
 
     # Put all the analyzer scripts in a queue that workers will work from
     script_queue = Queue.Queue()

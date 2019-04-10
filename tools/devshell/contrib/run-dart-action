@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Run Dart actions (analysis, test, target-test)
+## Run Dart actions (analysis, test, target-test)
+##
+## Extra flags will be passed to the supporting Dart tool if applicable.
+## See --help for flag documentation.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+python "${FUCHSIA_DIR}/tools/devshell/contrib/lib/dart/run-dart-action.py" "$@"

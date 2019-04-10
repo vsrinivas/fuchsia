@@ -13,6 +13,7 @@ per-file gce=raggi@google.com
 per-file gen-cargo=cramertj@google.com
 per-file go=raggi@google.com
 per-file make-fuchsia-vol=raggi@google.com
+per-file run-dart-action=zra@google.com
 per-file run-recovery=abarth@google.com
 per-file rustdoc=cramertj@google.com
 per-file rustfmt=cramertj@google.com
