@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TESTING_FAKE_LOGGER_H_
-#define GARNET_BIN_COBALT_TESTING_FAKE_LOGGER_H_
+#ifndef SRC_COBALT_BIN_TESTING_FAKE_LOGGER_H_
+#define SRC_COBALT_BIN_TESTING_FAKE_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
@@ -18,6 +18,7 @@ enum LogMethod {
   kLogMemoryUsage = 5,
   kLogString = 6,
   kLogCustomEvent = 7,
+  kLogCobaltEvents = 8,
 };
 
 class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
@@ -92,4 +93,4 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TESTING_FAKE_LOGGER_H_
+#endif  // SRC_COBALT_BIN_TESTING_FAKE_LOGGER_H_

@@ -4,10 +4,10 @@
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
-#include <future>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <future>
 
 #include "gtest/gtest.h"
 #include "src/cobalt/bin/system-metrics/fake_memory_stats_fetcher.h"
@@ -403,7 +403,5 @@ TEST_F(SystemMetricsDaemonTest, LogMemoryUsage) {
   // When LogMemoryUsage() is invoked it should log 10 events
   // for each of the memory breakdowns and return 1 minute.
   EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  CheckValues(cobalt::kLogMemoryUsage, 10,
-              fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId,
-              FuchsiaMemoryExperimentalEventCode::OtherBytes);
+  CheckValues(cobalt::kLogCobaltEvents, 2, -1, -1);
 }

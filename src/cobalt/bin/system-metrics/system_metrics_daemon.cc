@@ -7,10 +7,6 @@
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
 #include <fcntl.h>
-#include <chrono>
-#include <memory>
-#include <thread>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
@@ -21,6 +17,10 @@
 #include <trace/event.h>
 #include <zircon/status.h>
 
+#include <chrono>
+#include <memory>
+#include <thread>
+
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -28,8 +28,13 @@
 #include "src/lib/fxl/logging.h"
 
 using cobalt::StatusToString;
+using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::Logger_Sync;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsEventCode;
+using fuchsia_system_metrics::
+    FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown;
+using fuchsia_system_metrics::
+    FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using fuchsia_system_metrics::FuchsiaMemoryExperimentalEventCode;
 using fuchsia_system_metrics::FuchsiaUpPingEventCode;
 using std::chrono::steady_clock;
@@ -79,14 +84,17 @@ void SystemMetricsDaemon::RepeatedlyLogMemoryUsage() {
   return;
 }
 
-std::chrono::seconds SystemMetricsDaemon::LogUpTimeAndLifeTimeEvents() {
-  auto now = clock_->Now();
+std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
   // Note(rudominer) We are using the startime of the SystemMetricsDaemon
   // as a proxy for the system start time. This is fine as long as we don't
   // start seeing systematic restarts of the SystemMetricsDaemon. If that
   // starts happening we should look into how to capture actual boot time.
-  auto uptime =
-      std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
+  auto now = clock_->Now();
+  return std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
+}
+
+std::chrono::seconds SystemMetricsDaemon::LogUpTimeAndLifeTimeEvents() {
+  std::chrono::seconds uptime = GetUpTime();
   return std::min(LogFuchsiaUpPing(uptime), LogFuchsiaLifetimeEvents());
 }
 
@@ -233,45 +241,141 @@ std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
   if (!memory_stats_fetcher_->FetchMemoryStats(&stats)) {
     return std::chrono::minutes(5);
   }
-
-  int64_t used_bytes = stats.total_bytes - stats.free_bytes;
-
-  // TODO(gracelaw@) Change to a single FIDL call when Cobalt supports that.
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::TotalBytes,
-                    stats.total_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::UsedBytes, used_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::FreeBytes,
-                    stats.free_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::VmoBytes,
-                    stats.vmo_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::KernelFreeHeapBytes,
-                    stats.free_heap_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::MmuBytes,
-                    stats.mmu_overhead_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::IpcBytes,
-                    stats.ipc_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::KernelTotalHeapBytes,
-                    stats.total_heap_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::WiredBytes,
-                    stats.wired_bytes);
-  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::OtherBytes,
-                    stats.other_bytes);
+  LogMemoryUsageToCobalt(stats);
+  auto uptime = GetUpTime();
+  LogMemoryUsageToCobalt(stats, uptime);
   return std::chrono::minutes(1);
 }
 
-void SystemMetricsDaemon::LogOneMemoryUsage(
-    FuchsiaMemoryExperimentalEventCode memory_breakdown, int64_t value) {
+void SystemMetricsDaemon::LogMemoryUsageToCobalt(
+    const zx_info_kmem_stats_t& stats, const std::chrono::seconds& uptime) {
+  auto time_since_boot_event_code = GetUpTimeEventCode(uptime);
+  std::vector<CobaltEvent> events;
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::TotalBytes,
+      std::move(time_since_boot_event_code), stats.total_bytes, &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::UsedBytes,
+      std::move(time_since_boot_event_code),
+      stats.total_bytes - stats.free_bytes, &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::FreeBytes,
+      std::move(time_since_boot_event_code), stats.free_bytes, &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::VmoBytes,
+      std::move(time_since_boot_event_code), stats.vmo_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::
+                     KernelFreeHeapBytes,
+                 std::move(time_since_boot_event_code), stats.free_heap_bytes,
+                 &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::MmuBytes,
+      std::move(time_since_boot_event_code), stats.mmu_overhead_bytes, &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::IpcBytes,
+      std::move(time_since_boot_event_code), stats.ipc_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::
+                     KernelTotalHeapBytes,
+                 std::move(time_since_boot_event_code), stats.total_heap_bytes,
+                 &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::WiredBytes,
+      std::move(time_since_boot_event_code), stats.wired_bytes, &events);
+  AddCobaltEvent(
+      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::OtherBytes,
+      std::move(time_since_boot_event_code), stats.other_bytes, &events);
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  logger_->LogMemoryUsage(
-      fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId,
-      memory_breakdown,
-      "",  // component
-      value, &status);
+  logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogMemoryUsage() "
                       "returned status="
                    << StatusToString(status);
   }
+  return;
+}
+
+FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot
+SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
+  if (uptime < std::chrono::minutes(1)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::Up;
+  } else if (uptime < std::chrono::minutes(30)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneMinute;
+  } else if (uptime < std::chrono::hours(1)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::
+        UpThirtyMinutes;
+  } else if (uptime < std::chrono::hours(6)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneHour;
+  } else if (uptime < std::chrono::hours(12)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixHours;
+  } else if (uptime < std::chrono::hours(24)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::
+        UpTwelveHours;
+  } else if (uptime < std::chrono::hours(48)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneDay;
+  } else if (uptime < std::chrono::hours(72)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwoDays;
+  } else {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::
+        UpThreeDaysOrMore;
+  }
+}
+
+void SystemMetricsDaemon::AddCobaltEvent(
+    const FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown&
+        memory_breakdown,
+    const FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot&
+        time_since_boot,
+    const int64_t& value, std::vector<CobaltEvent>* events) {
+  CobaltEvent event;
+  event.metric_id = fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId;
+  event.event_codes.push_back(memory_breakdown);
+  event.event_codes.push_back(time_since_boot);
+  event.payload.set_memory_bytes_used(value);
+  events->push_back(std::move(event));
+  return;
+}
+
+void SystemMetricsDaemon::LogMemoryUsageToCobalt(
+    const zx_info_kmem_stats_t& stats) {
+  std::vector<CobaltEvent> events;
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::TotalBytes,
+                 stats.total_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::UsedBytes,
+                 stats.total_bytes - stats.free_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::FreeBytes,
+                 stats.free_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::VmoBytes, stats.vmo_bytes,
+                 &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::KernelFreeHeapBytes,
+                 stats.free_heap_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::MmuBytes,
+                 stats.mmu_overhead_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::IpcBytes, stats.ipc_bytes,
+                 &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::KernelTotalHeapBytes,
+                 stats.total_heap_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::WiredBytes,
+                 stats.wired_bytes, &events);
+  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::OtherBytes,
+                 stats.other_bytes, &events);
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_->LogCobaltEvents(std::move(events), &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogMemoryUsage() "
+                      "returned status="
+                   << StatusToString(status);
+  }
+  return;
+}
+
+void SystemMetricsDaemon::AddCobaltEvent(
+    const FuchsiaMemoryExperimentalEventCode& memory_breakdown,
+    const int64_t& value, std::vector<CobaltEvent>* events) {
+  CobaltEvent event;
+  event.metric_id = fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId;
+  event.event_codes.push_back(memory_breakdown);
+  event.payload.set_memory_bytes_used(value);
+  events->push_back(std::move(event));
   return;
 }
 

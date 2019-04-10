@@ -8,13 +8,13 @@
 #ifndef SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 #define SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 
-#include <chrono>
-#include <memory>
-#include <thread>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <chrono>
+#include <memory>
+#include <thread>
 
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -69,6 +69,9 @@ class SystemMetricsDaemon {
   // the next round.
   void RepeatedlyLogMemoryUsage();
 
+  // Returns the amount of time since SystemMetricsDaemon started.
+  std::chrono::seconds GetUpTime();
+
   // Calls LogFuchsiaUpPing and LogFuchsiaLifetimeEvents.
   //
   // Returns the amount of time before this method needs to be invoked again.
@@ -102,11 +105,39 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   std::chrono::seconds LogMemoryUsage();
 
-  // Helper function to call Cobalt logger's logMemoryUsage to log one data.
-  void LogOneMemoryUsage(
-      fuchsia_system_metrics::FuchsiaMemoryExperimentalEventCode
+  // Helper function to call Cobalt logger's LogCobaltEvent to log
+  // information in one zx_info_kmem_stats_t stats data point.
+  void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats,
+                              const std::chrono::seconds& uptime);
+
+  // Helper function to translate uptime in seconds to
+  // corresponding cobalt event code.
+  fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot
+  GetUpTimeEventCode(const std::chrono::seconds& uptime);
+
+  // Helper function to add a CobaltEvent instance into events vector.
+  void AddCobaltEvent(
+      const fuchsia_system_metrics::
+          FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown&
+              memory_breakdown,
+      const fuchsia_system_metrics::
+          FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot&
+              time_since_boot,
+      const int64_t& value, std::vector<fuchsia::cobalt::CobaltEvent>* events);
+
+  // TODO(PT-128) To be removed after we start populating
+  // fuchsia_memory_experimental_2.
+  // Helper function to call Cobalt logger's LogCobaltEvent to log
+  // information in one zx_info_kmem_stats_t stats data point.
+  void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats);
+
+  // TODO(PT-128) To be removed after we start populating
+  // fuchsia_memory_experimental_2.
+  // Helper function to add a CobaltEvent instance into events vector.
+  void AddCobaltEvent(
+      const fuchsia_system_metrics::FuchsiaMemoryExperimentalEventCode&
           memory_breakdown,
-      int64_t value);
+      const int64_t& value, std::vector<fuchsia::cobalt::CobaltEvent>* events);
 
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;

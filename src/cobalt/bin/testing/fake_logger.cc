@@ -115,6 +115,7 @@ zx_status_t FakeLogger_Sync::LogCobaltEvent(CobaltEvent event,
 zx_status_t FakeLogger_Sync::LogCobaltEvents(::std::vector<CobaltEvent> events,
                                              Status* out_status) {
   call_count_++;
+  last_log_method_invoked_ = kLogCobaltEvents;
   *out_status = Status::OK;
   return ZX_OK;
 }
