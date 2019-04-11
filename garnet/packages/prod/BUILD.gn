@@ -244,6 +244,7 @@ group("all") {
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mtk",
     "//garnet/packages/prod:magma-intel-gen",
+    "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:media",
@@ -1093,6 +1094,14 @@ group("magma-img-rgx-mtk") {
   testonly = true
   public_deps = [
     "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-img-rgx-mtk",
+  ]
+}
+
+group("magma-qcom-adreno") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-qcom-adreno",
+    "//garnet/packages/prod:sysmem_connector",
   ]
 }
 
