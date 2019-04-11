@@ -4,7 +4,33 @@
 
 #include "lib/inspect/hierarchy.h"
 
+#include <assert.h>
+
 namespace inspect {
+
+namespace hierarchy {
+Node::Node(std::string name) : name_(std::move(name)) {}
+
+Node::Node(std::string name, std::vector<Property> properties,
+           std::vector<Metric> metrics)
+    : name_(std::move(name)),
+      properties_(std::move(properties)),
+      metrics_(std::move(metrics)) {}
+
+void Node::Sort() {
+  std::sort(
+      properties_.begin(), properties_.end(),
+      [](const Property& a, const Property& b) { return a.name() < b.name(); });
+  std::sort(
+      metrics_.begin(), metrics_.end(),
+      [](const Metric& a, const Metric& b) { return a.name() < b.name(); });
+}
+
+}  // namespace hierarchy
+
+ObjectHierarchy::ObjectHierarchy(hierarchy::Node node,
+                                 std::vector<ObjectHierarchy> children)
+    : node_(std::move(node)), children_(std::move(children)) {}
 
 const ObjectHierarchy* ObjectHierarchy::GetByPath(
     std::vector<std::string> path) const {
@@ -14,7 +40,7 @@ const ObjectHierarchy* ObjectHierarchy::GetByPath(
   while (current && path_it != path.end()) {
     const ObjectHierarchy* next = nullptr;
     for (const auto& obj : current->children_) {
-      if (obj.object().name == *path_it) {
+      if (obj.node().name() == *path_it) {
         next = &obj;
         break;
       }
@@ -26,18 +52,11 @@ const ObjectHierarchy* ObjectHierarchy::GetByPath(
 }
 
 void ObjectHierarchy::Sort() {
-  std::sort(object_.metrics->begin(), object_.metrics->end(),
-            [](const fuchsia::inspect::Metric& a,
-               const fuchsia::inspect::Metric& b) { return a.key < b.key; });
-
-  std::sort(object_.properties->begin(), object_.properties->end(),
-            [](const fuchsia::inspect::Property& a,
-               const fuchsia::inspect::Property& b) { return a.key < b.key; });
-
+  node_.Sort();
   std::sort(
       children_.begin(), children_.end(),
       [](const inspect::ObjectHierarchy& a, const inspect::ObjectHierarchy& b) {
-        return a.object().name < b.object().name;
+        return a.node().name() < b.node().name();
       });
 }
 

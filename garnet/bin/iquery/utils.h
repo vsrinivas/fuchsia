@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_IQUERY_UTILS_H_
 #define GARNET_BIN_IQUERY_UTILS_H_
 
-#include <string>
-
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <lib/inspect/hierarchy.h>
 #include <src/lib/fxl/macros.h>
+
+#include <string>
 
 #include "garnet/bin/iquery/options.h"
 
@@ -31,7 +31,7 @@ std::string FormatStringBase64Fallback(fxl::StringView val);
 
 // Metric values have a lot of representations (int, uint, etc.).
 // This functions returns a string representing the correct value.
-std::string FormatMetricValue(const fuchsia::inspect::Metric& metric);
+std::string FormatMetricValue(const inspect::hierarchy::Metric& metric);
 
 bool IsStringPrintable(fxl::StringView input);
 

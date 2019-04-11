@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/reader.h>
-
 #include <gtest/gtest.h>
 #include <lib/inspect-vmo/inspect.h>
 #include <lib/inspect-vmo/snapshot.h>
 #include <lib/inspect-vmo/state.h>
+#include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 #include <zircon/types.h>
 
@@ -56,13 +55,13 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
     EXPECT_THAT(
         root.value(),
         AllOf(
-            ObjectMatches(AllOf(
+            NodeMatches(AllOf(
                 NameMatches("objects"),
                 PropertyList(UnorderedElementsAre(
                     StringPropertyIs("version", "1.0beta2"))),
                 MetricList(UnorderedElementsAre(DoubleMetricIs("volume", 0.75),
                                                 IntMetricIs("assets", -100))))),
-            ChildrenMatch(UnorderedElementsAre(ObjectMatches(AllOf(
+            ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                 NameMatches("requests"),
                 PropertyList(UnorderedElementsAre(ByteVectorPropertyIs(
                     "dump",

@@ -5,6 +5,7 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/component/cpp/expose.h>
 #include <lib/inspect/testing/inspect.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -14,7 +15,82 @@ using component::Metric;
 using component::Object;
 using component::Property;
 using testing::UnorderedElementsAre;
-using namespace inspect::testing;
+
+// These matchers are temporarily copied here to verify low-level operations on
+// the FIDL Inspect API.
+// TODO(crjohns): Delete this file when FIDL Inspect is removed.
+
+::testing::Matcher<const fuchsia::inspect::Property&> StringPropertyIs(
+    const std::string& name, const std::string& value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::Property::key,
+                       ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::Property::value,
+          ::testing::Property(&fuchsia::inspect::PropertyValue::is_str,
+                              ::testing::IsTrue())),
+      ::testing::Field(
+          &fuchsia::inspect::Property::value,
+          ::testing::Property(&fuchsia::inspect::PropertyValue::str,
+                              ::testing::StrEq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::Property&> ByteVectorPropertyIs(
+    const std::string& name, const inspect::VectorValue& value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::Property::key,
+                       ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::Property::value,
+          ::testing::Property(&fuchsia::inspect::PropertyValue::is_bytes,
+                              ::testing::IsTrue())),
+      ::testing::Field(
+          &fuchsia::inspect::Property::value,
+          ::testing::Property(&fuchsia::inspect::PropertyValue::bytes,
+                              ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::Metric&> IntMetricIs(
+    const std::string& name, int64_t value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::is_int_value,
+                              ::testing::IsTrue())),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::int_value,
+                              ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::Metric&> UIntMetricIs(
+    const std::string& name, uint64_t value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::is_uint_value,
+                              ::testing::IsTrue())),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::uint_value,
+                              ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::Metric&> DoubleMetricIs(
+    const std::string& name, double value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::is_double_value,
+                              ::testing::IsTrue())),
+      ::testing::Field(
+          &fuchsia::inspect::Metric::value,
+          ::testing::Property(&fuchsia::inspect::MetricValue::double_value,
+                              ::testing::Eq(value))));
+}
 
 TEST(Property, StringValue) {
   Property a("test");
@@ -135,13 +211,14 @@ TEST(Object, ReadData) {
   fuchsia::inspect::Object obj;
   object->ReadData(
       [&obj](fuchsia::inspect::Object val) { obj = std::move(val); });
-  EXPECT_THAT(obj, AllOf(NameMatches("test"),
-                         PropertyList(UnorderedElementsAre(
-                             StringPropertyIs("property", "value"))),
-                         MetricList(UnorderedElementsAre(
-                             IntMetricIs("int metric", -10),
-                             UIntMetricIs("uint metric", 0xFF),
-                             DoubleMetricIs("double metric", 0.25)))));
+
+  EXPECT_THAT(obj.name, ::testing::Eq("test"));
+  EXPECT_THAT(*obj.properties,
+              UnorderedElementsAre(StringPropertyIs("property", "value")));
+  EXPECT_THAT(*obj.metrics,
+              UnorderedElementsAre(IntMetricIs("int metric", -10),
+                                   UIntMetricIs("uint metric", 0xFF),
+                                   DoubleMetricIs("double metric", 0.25)));
 }
 
 component::Object::StringOutputVector ListChildren(

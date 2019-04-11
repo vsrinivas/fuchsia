@@ -2,15 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/public/lib/inspect/discovery/object_source.h"
+
 #include <dirent.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-
-#include <iostream>
-#include <regex>
-#include <stack>
-#include <thread>
-
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -22,10 +17,15 @@
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <sys/stat.h>
+
+#include <iostream>
+#include <regex>
+#include <stack>
+#include <thread>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-
-#include "garnet/public/lib/inspect/discovery/object_source.h"
 
 using namespace std::chrono_literals;
 
@@ -219,7 +219,7 @@ fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation root_location,
           auto child = std::find_if(
               hierarchy->children().begin(), hierarchy->children().end(),
               [&path_component](inspect::ObjectHierarchy& obj) {
-                return obj.object().name == path_component;
+                return obj.node().name() == path_component;
               });
           if (child == hierarchy->children().end()) {
             FXL_LOG(ERROR) << "Could not find child named " << path_component;
@@ -287,7 +287,7 @@ void ObjectSource::VisitObjectsInHierarchyRecursively(
   visitor(*path, current);
 
   for (const auto& child : current.children()) {
-    path->push_back(child.object().name);
+    path->push_back(child.node().name());
     VisitObjectsInHierarchyRecursively(visitor, child, path);
     path->pop_back();
   }

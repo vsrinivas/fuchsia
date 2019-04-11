@@ -7,19 +7,58 @@
 #include <lib/inspect-vmo/block.h>
 #include <lib/inspect-vmo/scanner.h>
 #include <lib/inspect-vmo/snapshot.h>
-#include "lib/fit/bridge.h"
 
 #include <stack>
 #include <unordered_map>
 
+#include "fuchsia/inspect/cpp/fidl.h"
+#include "lib/fit/bridge.h"
+#include "lib/inspect/hierarchy.h"
+
 namespace inspect {
 
 namespace {
+
+hierarchy::Node FidlObjectToNode(fuchsia::inspect::Object obj) {
+  std::vector<hierarchy::Property> properties;
+  std::vector<hierarchy::Metric> metrics;
+
+  for (auto& metric : *obj.metrics) {
+    if (metric.value.is_uint_value()) {
+      metrics.push_back(
+          hierarchy::Metric(std::move(metric.key),
+                            hierarchy::UIntMetric(metric.value.uint_value())));
+    } else if (metric.value.is_int_value()) {
+      metrics.push_back(
+          hierarchy::Metric(std::move(metric.key),
+                            hierarchy::IntMetric(metric.value.int_value())));
+    } else if (metric.value.is_double_value()) {
+      metrics.push_back(hierarchy::Metric(
+          std::move(metric.key),
+          hierarchy::DoubleMetric(metric.value.double_value())));
+    }
+  }
+
+  for (auto& property : *obj.properties) {
+    if (property.value.is_str()) {
+      properties.push_back(hierarchy::Property(
+          std::move(property.key),
+          hierarchy::StringProperty(std::move(property.value.str()))));
+    } else if (property.value.is_bytes()) {
+      properties.push_back(hierarchy::Property(
+          std::move(property.key),
+          hierarchy::ByteVectorProperty(std::move(property.value.bytes()))));
+    }
+  }
+
+  return hierarchy::Node(std::move(obj.name), std::move(properties),
+                         std::move(metrics));
+}
+
 ObjectHierarchy Read(std::shared_ptr<component::Object> object_root,
                      int depth) {
-  auto obj = object_root->ToFidl();
   if (depth == 0) {
-    return ObjectHierarchy(std::move(obj), {});
+    return ObjectHierarchy(FidlObjectToNode(object_root->ToFidl()), {});
   } else {
     std::vector<ObjectHierarchy> children;
     auto child_names = object_root->GetChildren();
@@ -29,7 +68,8 @@ ObjectHierarchy Read(std::shared_ptr<component::Object> object_root,
         children.emplace_back(Read(child_obj, depth - 1));
       }
     }
-    return ObjectHierarchy(std::move(obj), std::move(children));
+    return ObjectHierarchy(FidlObjectToNode(object_root->ToFidl()),
+                           std::move(children));
   }
 }
 
@@ -98,15 +138,11 @@ fit::promise<std::vector<ObjectReader>> ObjectReader::OpenChildren() const {
       });
 }
 
-ObjectHierarchy::ObjectHierarchy(fuchsia::inspect::Object object,
-                                 std::vector<ObjectHierarchy> children)
-    : object_(std::move(object)), children_(std::move(children)) {}
-
 fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
   auto reader_promise = reader.Read();
   if (depth == 0) {
     return reader_promise.and_then([reader](fuchsia::inspect::Object& obj) {
-      return fit::ok(ObjectHierarchy(std::move(obj), {}));
+      return fit::ok(ObjectHierarchy(FidlObjectToNode(std::move(obj)), {}));
     });
   } else {
     auto children_promise =
@@ -141,8 +177,9 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
           if (!std::get<0>(result).is_ok() || !std::get<0>(result).is_ok()) {
             return fit::error();
           }
-          return fit::ok(ObjectHierarchy(std::get<0>(result).take_value(),
-                                         std::get<1>(result).take_value()));
+          return fit::ok(ObjectHierarchy(
+              FidlObjectToNode(std::get<0>(result).take_value()),
+              std::get<1>(result).take_value()));
         });
   }
 }
@@ -174,7 +211,7 @@ struct ParsedObject {
 
   // Initializes the stored object with the given name and parent.
   void InitializeObject(std::string name, BlockIndex parent) {
-    hierarchy.object().name = std::move(name);
+    hierarchy.node().name() = std::move(name);
     this->parent = parent;
     initialized_ = true;
   }
@@ -350,24 +387,25 @@ void Reader::InnerParseMetric(ParsedObject* parent, const Block* block) {
     return;
   }
 
-  fuchsia::inspect::Metric metric;
-  metric.key = std::move(name);
+  auto& parent_metrics = parent->hierarchy.node().metrics();
 
   BlockType type = GetType(block);
   switch (type) {
     case BlockType::kIntValue:
-      metric.value.set_int_value(block->payload.i64);
-      break;
+      parent_metrics.emplace_back(hierarchy::Metric(
+          std::move(name), hierarchy::IntMetric(block->payload.i64)));
+      return;
     case BlockType::kUintValue:
-      metric.value.set_uint_value(block->payload.u64);
-      break;
+      parent_metrics.emplace_back(hierarchy::Metric(
+          std::move(name), hierarchy::UIntMetric(block->payload.u64)));
+      return;
     case BlockType::kDoubleValue:
-      metric.value.set_double_value(block->payload.f64);
-      break;
+      parent_metrics.emplace_back(hierarchy::Metric(
+          std::move(name), hierarchy::DoubleMetric(block->payload.f64)));
+      return;
     default:
       return;
   }
-  parent->hierarchy.object().metrics->emplace_back(std::move(metric));
 }
 
 void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
@@ -399,15 +437,17 @@ void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
         ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header));
   }
 
-  fuchsia::inspect::Property property;
-  property.key = std::move(name);
+  auto& parent_properties = parent->hierarchy.node().properties();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
       static_cast<uint8_t>(inspect::vmo::PropertyFormat::kBinary)) {
-    property.value.bytes() = std::vector<uint8_t>(buf, buf + total_length);
+    parent_properties.emplace_back(inspect::hierarchy::Property(
+        std::move(name), inspect::hierarchy::ByteVectorProperty(
+                             std::vector<uint8_t>(buf, buf + total_length))));
   } else {
-    property.value.str() = std::string(buf, total_length);
+    parent_properties.emplace_back(inspect::hierarchy::Property(
+        std::move(name),
+        inspect::hierarchy::StringProperty(std::string(buf, total_length))));
   }
-  parent->hierarchy.object().properties->emplace_back(std::move(property));
 }
 
 void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
@@ -440,6 +480,10 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo) {
     return fit::error();
   }
   return ReadFromSnapshot(std::move(snapshot));
+}
+
+ObjectHierarchy ReadFromFidlObject(fuchsia::inspect::Object object) {
+  return ObjectHierarchy(FidlObjectToNode(std::move(object)), {});
 }
 
 }  // namespace inspect

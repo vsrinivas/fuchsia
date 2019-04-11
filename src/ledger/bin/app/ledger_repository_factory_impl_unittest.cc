@@ -8,10 +8,10 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,7 +27,7 @@ namespace {
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::MetricList;
 using ::inspect::testing::NameMatches;
-using ::inspect::testing::ObjectMatches;
+using ::inspect::testing::NodeMatches;
 using ::inspect::testing::PropertyList;
 using ::inspect::testing::UIntMetricIs;
 using ::testing::AllOf;
@@ -104,12 +104,12 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
   auto hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
-  EXPECT_THAT(hierarchy,
-              AllOf(ObjectMatches(AllOf(NameMatches(kObjectsName),
-                                        MetricList(IsEmpty()),
-                                        PropertyList(IsEmpty()))),
-                    ChildrenMatch(UnorderedElementsAre(ObjectMatches(AllOf(
-                        NameMatches(kRepositoriesInspectPathComponent)))))));
+  EXPECT_THAT(
+      hierarchy,
+      AllOf(NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
+                              PropertyList(IsEmpty()))),
+            ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                AllOf(NameMatches(kRepositoriesInspectPathComponent)))))));
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest,
@@ -140,16 +140,16 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
   auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
-  auto lone_repository_match = ObjectMatches(
+  auto lone_repository_match = NodeMatches(
       MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
   auto first_inspection_repositories_match =
-      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
             ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
   auto first_inspection_top_level_match =
       ChildrenMatch(UnorderedElementsAre(first_inspection_repositories_match));
   EXPECT_THAT(top_hierarchy, first_inspection_top_level_match);
   first_repository_name =
-      top_hierarchy.children()[0].children()[0].object().name;
+      top_hierarchy.children()[0].children()[0].node().name();
   EXPECT_THAT(first_repository_name, Not(IsEmpty()));
 
   // Request a second repository, then query the "repositories" Inspect object
@@ -160,13 +160,13 @@ TEST_F(LedgerRepositoryFactoryImplTest,
       CallGetRepository(second_directory, &second_ledger_repository_ptr));
   top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
-      ObjectMatches(AllOf(NameMatches(first_repository_name),
-                          MetricList(Contains(UIntMetricIs(
-                              kRequestsInspectPathComponent, 1UL))))),
-      ObjectMatches(MetricList(
+      NodeMatches(AllOf(NameMatches(first_repository_name),
+                        MetricList(Contains(UIntMetricIs(
+                            kRequestsInspectPathComponent, 1UL))))),
+      NodeMatches(MetricList(
           Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL)))));
   auto second_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
             ChildrenMatch(second_inspection_two_repositories_match)));
   auto second_inspection_top_level_match =
       ChildrenMatch(second_inspection_repositories_match);
@@ -176,11 +176,11 @@ TEST_F(LedgerRepositoryFactoryImplTest,
                   top_hierarchy.children()[0].children().end(),
                   [&first_repository_name](
                       const inspect::ObjectHierarchy& repository_hierarchy) {
-                    return repository_hierarchy.object().name ==
+                    return repository_hierarchy.node().name() ==
                            first_repository_name;
                   })
-          ->object()
-          .name;
+          ->node()
+          .name();
   EXPECT_THAT(second_repository_name, Not(IsEmpty()));
 
   // Request the first repository a second time, then query the "repositories"
@@ -191,14 +191,14 @@ TEST_F(LedgerRepositoryFactoryImplTest,
       CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
   top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
-      ObjectMatches(AllOf(NameMatches(first_repository_name),
-                          MetricList(Contains(UIntMetricIs(
-                              kRequestsInspectPathComponent, 2UL))))),
-      ObjectMatches(AllOf(NameMatches(second_repository_name),
-                          MetricList(Contains(UIntMetricIs(
-                              kRequestsInspectPathComponent, 1UL))))));
+      NodeMatches(AllOf(NameMatches(first_repository_name),
+                        MetricList(Contains(UIntMetricIs(
+                            kRequestsInspectPathComponent, 2UL))))),
+      NodeMatches(AllOf(NameMatches(second_repository_name),
+                        MetricList(Contains(UIntMetricIs(
+                            kRequestsInspectPathComponent, 1UL))))));
   auto third_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
             ChildrenMatch(third_inspection_two_repositories_match)));
   auto third_inspection_top_level_match =
       ChildrenMatch(third_inspection_repositories_match);

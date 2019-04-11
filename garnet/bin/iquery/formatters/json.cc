@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/iquery/formatters/json.h"
+
 #include <rapidjson/prettywriter.h>
 
-#include "garnet/bin/iquery/formatters/json.h"
 #include "garnet/bin/iquery/utils.h"
-
+#include "lib/inspect/hierarchy.h"
 #include "third_party/cobalt/util/crypto_util/base64.h"
 
 namespace iquery {
@@ -45,7 +46,7 @@ std::string FormatFind(const Options& options,
             const inspect::ObjectHierarchy& hierarchy) {
           writer->String(FormatPath(options.path_format,
                                     entry_point.FormatRelativePath(path),
-                                    hierarchy.object().name));
+                                    hierarchy.node().name()));
         });
   }
   writer->EndArray();
@@ -66,8 +67,8 @@ std::string FormatLs(const Options& options,
     for (const auto& child : hierarchy.children()) {
       writer->String(
           FormatPath(options.path_format,
-                     entry_point.FormatRelativePath({child.object().name}),
-                     child.object().name));
+                     entry_point.FormatRelativePath({child.node().name()}),
+                     child.node().name()));
     }
   }
   writer->EndArray();
@@ -85,25 +86,36 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
   writer->StartObject();
 
   // Properties.
-  for (const auto& property : *root.object().properties) {
-    writer->String(FormatStringBase64Fallback(property.key));
-    if (property.value.is_str()) {
-      writer->String(FormatStringBase64Fallback(property.value.str()));
-    } else {
-      auto& val = property.value.bytes();
-      writer->String(
-          FormatStringBase64Fallback({(char*)val.data(), val.size()}));
+  for (const auto& property : root.node().properties()) {
+    writer->String(FormatStringBase64Fallback(property.name()));
+    switch (property.format()) {
+      case inspect::hierarchy::PropertyFormat::STRING:
+        writer->String(FormatStringBase64Fallback(
+            property.Get<inspect::hierarchy::StringProperty>().value()));
+        break;
+      case inspect::hierarchy::PropertyFormat::BYTES: {
+        auto& val =
+            property.Get<inspect::hierarchy::ByteVectorProperty>().value();
+        writer->String(FormatStringBase64Fallback(
+            {reinterpret_cast<const char*>(val.data()), val.size()}));
+        break;
+      }
+      default:
+        FXL_LOG(WARNING) << "Failed to format unknown type for "
+                         << property.name();
+        writer->String("<Unknown type, format failed>");
+        break;
     }
   }
 
   // Metrics.
-  for (const auto& metric : *root.object().metrics) {
-    writer->String(FormatStringBase64Fallback(metric.key));
+  for (const auto& metric : root.node().metrics()) {
+    writer->String(FormatStringBase64Fallback(metric.name()));
     writer->String(FormatMetricValue(metric));
   }
 
   for (const auto& child : root.children()) {
-    writer->String(child.object().name);
+    writer->String(child.node().name());
     RecursiveFormatCat(writer, options, entry_point, child);
   }
 
@@ -125,7 +137,7 @@ std::string FormatCat(const Options& options,
                               entry_point.FormatRelativePath()));
     writer->String("contents");
     writer->StartObject();
-    writer->String(entry_point.GetRootHierarchy().object().name);
+    writer->String(entry_point.GetRootHierarchy().node().name());
     RecursiveFormatCat(writer.get(), options, entry_point,
                        entry_point.GetRootHierarchy());
     writer->EndObject();

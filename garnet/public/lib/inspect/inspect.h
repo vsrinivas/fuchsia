@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include "lib/inspect-vmo/types.h"
+
 namespace inspect {
 
 class Object;

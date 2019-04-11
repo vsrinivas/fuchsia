@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <sstream>
+#include "garnet/bin/iquery/formatters/text.h"
 
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include "garnet/bin/iquery/formatters/text.h"
+#include <cstdio>
+#include <sstream>
+
 #include "garnet/bin/iquery/options.h"
 #include "garnet/public/lib/inspect/discovery/object_source.h"
+#include "lib/inspect/hierarchy.h"
 
 namespace iquery {
 
@@ -34,31 +36,36 @@ std::string RecursiveFormatCat(const Options& options,
   // it's not intended for easier parsing.
   std::ostringstream ss;
   size_t indent = path->size() + 1;
-  const auto& object = root.object();
-  for (const auto& property : *object.properties) {
-    ss << Indent(indent) << FormatStringHexFallback(property.key) << " = ";
+  for (const auto& property : root.node().properties()) {
+    ss << Indent(indent) << FormatStringHexFallback(property.name()) << " = ";
 
-    if (property.value.is_str()) {
-      ss << FormatStringHexFallback(property.value.str()) << std::endl;
-    } else {
-      auto& val = property.value.bytes();
-      ss << FormatStringHexFallback({(char*)val.data(), val.size()})
+    if (property.Contains<inspect::hierarchy::StringProperty>()) {
+      ss << FormatStringHexFallback(
+                property.Get<inspect::hierarchy::StringProperty>().value())
          << std::endl;
+    } else if (property.Contains<inspect::hierarchy::ByteVectorProperty>()) {
+      auto& val =
+          property.Get<inspect::hierarchy::ByteVectorProperty>().value();
+      ss << FormatStringHexFallback(
+                {reinterpret_cast<const char*>(val.data()), val.size()})
+         << std::endl;
+    } else {
+      ss << "<Unknown metric format>" << std::endl;
     }
   }
 
-  for (const auto& metric : *object.metrics) {
-    ss << Indent(indent) << FormatStringHexFallback(metric.key) << " = "
+  for (const auto& metric : root.node().metrics()) {
+    ss << Indent(indent) << FormatStringHexFallback(metric.name()) << " = "
        << FormatMetricValue(metric) << std::endl;
   }
 
   // We print recursively. The recursive nature of the cat called is already
   // taken care of by now.
   for (const auto& child : root.children()) {
-    path->push_back(child.object().name);
+    path->push_back(child.node().name());
     ss << Indent(indent)
        << FormatPath(options.path_format, entry_point.FormatRelativePath(*path),
-                     child.object().name)
+                     child.node().name())
        << ":" << std::endl;
     ss << RecursiveFormatCat(options, entry_point, child, path);
     path->pop_back();
@@ -76,7 +83,7 @@ std::string FormatFind(const Options& options,
             const inspect::ObjectHierarchy& hierarchy) {
           ss << FormatPath(options.path_format,
                            entry_point.FormatRelativePath(path),
-                           hierarchy.object().name)
+                           hierarchy.node().name())
              << std::endl;
         });
   }
@@ -90,8 +97,8 @@ std::string FormatLs(const Options& options,
     const auto& hierarchy = entry_point.GetRootHierarchy();
     for (const auto& child : hierarchy.children()) {
       ss << FormatPath(options.path_format,
-                       entry_point.FormatRelativePath({child.object().name}),
-                       child.object().name)
+                       entry_point.FormatRelativePath({child.node().name()}),
+                       child.node().name())
          << std::endl;
     }
   }
@@ -104,7 +111,7 @@ std::string FormatCat(const Options& options,
   for (const auto& entry_point : results) {
     const auto& hierarchy = entry_point.GetRootHierarchy();
     ss << FormatPath(options.path_format, entry_point.FormatRelativePath(),
-                     hierarchy.object().name)
+                     hierarchy.node().name())
        << ":" << std::endl;
     std::vector<std::string> path_holder;
     ss << RecursiveFormatCat(options, entry_point, hierarchy, &path_holder);

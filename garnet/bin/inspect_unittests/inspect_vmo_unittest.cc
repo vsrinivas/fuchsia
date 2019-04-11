@@ -6,6 +6,7 @@
 #include <lib/fit/defer.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/testing/inspect.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -35,8 +36,8 @@ ObjectHierarchy GetHierarchy(const inspect::Tree& tree) {
 TEST(InspectVmo, Object) {
   auto tree = inspect::Inspector().CreateTree("test");
   EXPECT_THAT(GetHierarchy(tree),
-              ObjectMatches(AllOf(NameMatches("test"), PropertyList(IsEmpty()),
-                                  MetricList(IsEmpty()))));
+              NodeMatches(AllOf(NameMatches("test"), PropertyList(IsEmpty()),
+                                MetricList(IsEmpty()))));
 }
 
 class ValueWrapper {
@@ -56,19 +57,20 @@ TEST(InspectVmo, Child) {
   {
     // Create a child and check it exists.
     auto obj = root.CreateChild("child");
-    EXPECT_THAT(GetHierarchy(tree), ChildrenMatch(UnorderedElementsAre(
-                                        ObjectMatches(NameMatches("child")))));
+    EXPECT_THAT(
+        GetHierarchy(tree),
+        ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("child")))));
 
     auto obj2 = root.CreateChild("child2");
     EXPECT_THAT(GetHierarchy(tree), ChildrenMatch(UnorderedElementsAre(
-                                        ObjectMatches(NameMatches("child")),
-                                        ObjectMatches(NameMatches("child2")))));
+                                        NodeMatches(NameMatches("child")),
+                                        NodeMatches(NameMatches("child2")))));
 
     // Check assignment removes the old object.
     obj = root.CreateChild("newchild");
     EXPECT_THAT(GetHierarchy(tree), ChildrenMatch(UnorderedElementsAre(
-                                        ObjectMatches(NameMatches("newchild")),
-                                        ObjectMatches(NameMatches("child2")))));
+                                        NodeMatches(NameMatches("newchild")),
+                                        NodeMatches(NameMatches("child2")))));
   }
   // Check that the child is removed when it goes out of scope.
   EXPECT_THAT(GetHierarchy(tree), ChildrenMatch(IsEmpty()));
@@ -81,7 +83,7 @@ TEST(InspectVmo, ChildChaining) {
     ValueWrapper v(root.CreateChild("child"), 100);
     EXPECT_THAT(
         GetHierarchy(tree),
-        ChildrenMatch(UnorderedElementsAre(ObjectMatches(AllOf(
+        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
             NameMatches("child"),
             MetricList(UnorderedElementsAre(IntMetricIs("value", 100))))))));
   }
@@ -116,13 +118,13 @@ TEST(InspectVmo, Metrics) {
     metric_double.Subtract(0.5);
     EXPECT_THAT(
         GetHierarchy(tree),
-        ObjectMatches(AllOf(NameMatches("root"),
-                            MetricList(UnorderedElementsAre(
-                                IntMetricIs("int", -9), UIntMetricIs("uint", 9),
-                                DoubleMetricIs("double", 0.75))))));
+        NodeMatches(AllOf(NameMatches("root"),
+                          MetricList(UnorderedElementsAre(
+                              IntMetricIs("int", -9), UIntMetricIs("uint", 9),
+                              DoubleMetricIs("double", 0.75))))));
   }
   // Check that the metrics are removed when they goes out of scope.
-  EXPECT_THAT(GetHierarchy(tree), ObjectMatches(MetricList(IsEmpty())));
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(MetricList(IsEmpty())));
 }
 
 TEST(InspectVmo, Properties) {
@@ -136,14 +138,14 @@ TEST(InspectVmo, Properties) {
     property_vector.Set(inspect::VectorValue(3, 'b'));
     EXPECT_THAT(
         GetHierarchy(tree),
-        ObjectMatches(AllOf(
+        NodeMatches(AllOf(
             NameMatches("root"),
             PropertyList(UnorderedElementsAre(
                 StringPropertyIs("str", "valid"),
                 ByteVectorPropertyIs("vec", inspect::VectorValue(3, 'b')))))));
   }
   // Check that the properties are removed when they goes out of scope.
-  EXPECT_THAT(GetHierarchy(tree), ObjectMatches(PropertyList(IsEmpty())));
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(PropertyList(IsEmpty())));
 }
 
 TEST(InspectVmo, NestedValues) {
@@ -164,26 +166,26 @@ TEST(InspectVmo, NestedValues) {
 
     EXPECT_THAT(
         GetHierarchy(tree),
-        AllOf(ObjectMatches(
-                  AllOf(NameMatches("root"),
-                        PropertyList(UnorderedElementsAre(
-                            StringPropertyIs("str", "valid"),
-                            ByteVectorPropertyIs(
-                                "vec", inspect::VectorValue(3, 'a')))))),
-              ChildrenMatch(UnorderedElementsAre(
-                  AllOf(ObjectMatches(AllOf(NameMatches("child_a"),
-                                            MetricList(UnorderedElementsAre(
-                                                IntMetricIs("value", -10))))),
-                        ChildrenMatch(UnorderedElementsAre(AllOf(ObjectMatches(
-                            AllOf(NameMatches("child_a_c"),
-                                  MetricList(UnorderedElementsAre(
-                                      DoubleMetricIs("volume", 0.25))))))))),
-                  ObjectMatches(
-                      AllOf(NameMatches("child_b"),
-                            PropertyList(UnorderedElementsAre(
-                                StringPropertyIs("version", "1.0")))))))));
+        AllOf(
+            NodeMatches(AllOf(NameMatches("root"),
+                              PropertyList(UnorderedElementsAre(
+                                  StringPropertyIs("str", "valid"),
+                                  ByteVectorPropertyIs(
+                                      "vec", inspect::VectorValue(3, 'a')))))),
+            ChildrenMatch(UnorderedElementsAre(
+                AllOf(NodeMatches(AllOf(NameMatches("child_a"),
+                                        MetricList(UnorderedElementsAre(
+                                            IntMetricIs("value", -10))))),
+                      ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(
+                          AllOf(NameMatches("child_a_c"),
+                                MetricList(UnorderedElementsAre(
+                                    DoubleMetricIs("volume", 0.25))))))))),
+                NodeMatches(
+                    AllOf(NameMatches("child_b"),
+                          PropertyList(UnorderedElementsAre(
+                              StringPropertyIs("version", "1.0")))))))));
   }
   // Check that the properties are removed when they goes out of scope.
-  EXPECT_THAT(GetHierarchy(tree), ObjectMatches(PropertyList(IsEmpty())));
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(PropertyList(IsEmpty())));
 }
 }  // namespace

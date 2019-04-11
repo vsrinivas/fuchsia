@@ -4,52 +4,54 @@
 
 #include "inspect.h"
 
-namespace fuchsia {
+#include "lib/inspect/hierarchy.h"
+
+using inspect::hierarchy::Metric;
+using inspect::hierarchy::Node;
+using inspect::hierarchy::Property;
+
 namespace inspect {
 
-void PrintTo(const ::fuchsia::inspect::Metric& metric, std::ostream* os) {
-  if (metric.value.is_int_value())
+namespace hierarchy {
+void PrintTo(const Metric& metric, std::ostream* os) {
+  if (metric.format() == MetricFormat::INT)
     *os << "Int";
-  if (metric.value.is_uint_value())
+  if (metric.format() == MetricFormat::UINT)
     *os << "UInt";
-  if (metric.value.is_double_value())
+  if (metric.format() == MetricFormat::DOUBLE)
     *os << "Double";
-  *os << "Metric(" << ::testing::PrintToString(metric.key) << ", ";
-  if (metric.value.is_int_value())
-    *os << ::testing::PrintToString(metric.value.int_value());
-  if (metric.value.is_uint_value())
-    *os << ::testing::PrintToString(metric.value.uint_value());
-  if (metric.value.is_double_value())
-    *os << ::testing::PrintToString(metric.value.double_value());
+  *os << "Metric(" << ::testing::PrintToString(metric.name()) << ", ";
+  if (metric.format() == MetricFormat::INT)
+    *os << ::testing::PrintToString(metric.Get<IntMetric>().value());
+  if (metric.format() == MetricFormat::UINT)
+    *os << ::testing::PrintToString(metric.Get<UIntMetric>().value());
+  if (metric.format() == MetricFormat::DOUBLE)
+    *os << ::testing::PrintToString(metric.Get<DoubleMetric>().value());
   *os << ")";
 }
 
-void PrintTo(const ::fuchsia::inspect::Property& property, std::ostream* os) {
-  if (property.value.is_str())
+void PrintTo(const Property& property, std::ostream* os) {
+  if (property.format() == PropertyFormat::STRING)
     *os << "String";
-  if (property.value.is_bytes())
+  if (property.format() == PropertyFormat::BYTES)
     *os << "ByteVector";
-  *os << "Property(" << ::testing::PrintToString(property.key) << ", ";
-  if (property.value.is_str())
-    *os << ::testing::PrintToString(property.value.str());
-  if (property.value.is_bytes())
-    *os << ::testing::PrintToString(property.value.bytes());
+  *os << "Property(" << ::testing::PrintToString(property.name()) << ", ";
+  if (property.format() == PropertyFormat::STRING)
+    *os << ::testing::PrintToString(property.Get<StringProperty>().value());
+  if (property.format() == PropertyFormat::BYTES)
+    *os << ::testing::PrintToString(property.Get<ByteVectorProperty>().value());
   *os << ")";
 }
 
-void PrintTo(const ::fuchsia::inspect::Object& object, std::ostream* os) {
-  *os << "Object(" << ::testing::PrintToString(object.name) << ", "
-      << ::testing::PrintToString(object.metrics->size()) << " metrics, "
-      << ::testing::PrintToString(object.properties->size()) << " properties)";
+void PrintTo(const Node& node, std::ostream* os) {
+  *os << "Node(" << ::testing::PrintToString(node.name()) << ", "
+      << ::testing::PrintToString(node.metrics().size()) << " metrics, "
+      << ::testing::PrintToString(node.properties().size()) << " properties)";
 }
-
-}  // namespace inspect
-}  // namespace fuchsia
-
-namespace inspect {
+}  // namespace hierarchy
 
 void PrintTo(const ::inspect::ObjectHierarchy& hierarchy, std::ostream* os) {
-  *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.object())
+  *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.node())
       << ", " << ::testing::PrintToString(hierarchy.children().size())
       << " children)";
 }
@@ -60,10 +62,9 @@ internal::NameMatchesMatcher::NameMatchesMatcher(std::string name)
     : name_(std::move(name)) {}
 
 bool internal::NameMatchesMatcher::MatchAndExplain(
-    const ::fuchsia::inspect::Object& obj,
-    ::testing::MatchResultListener* listener) const {
-  if (obj.name != name_) {
-    *listener << "expected name \"" << name_ << "\" but found \"" << obj.name
+    const Node& node, ::testing::MatchResultListener* listener) const {
+  if (node.name() != name_) {
+    *listener << "expected name \"" << name_ << "\" but found \"" << node.name()
               << "\"";
     return false;
   }
@@ -83,9 +84,8 @@ internal::MetricListMatcher::MetricListMatcher(MetricsMatcher matcher)
     : matcher_(std::move(matcher)) {}
 
 bool internal::MetricListMatcher::MatchAndExplain(
-    const ::fuchsia::inspect::Object& obj,
-    ::testing::MatchResultListener* listener) const {
-  return ::testing::ExplainMatchResult(matcher_, *obj.metrics, listener);
+    const Node& node, ::testing::MatchResultListener* listener) const {
+  return ::testing::ExplainMatchResult(matcher_, node.metrics(), listener);
 }
 
 void internal::MetricListMatcher::DescribeTo(::std::ostream* os) const {
@@ -102,9 +102,8 @@ internal::PropertyListMatcher::PropertyListMatcher(PropertiesMatcher matcher)
     : matcher_(std::move(matcher)) {}
 
 bool internal::PropertyListMatcher::MatchAndExplain(
-    const ::fuchsia::inspect::Object& obj,
-    ::testing::MatchResultListener* listener) const {
-  return ::testing::ExplainMatchResult(matcher_, *obj.properties, listener);
+    const Node& node, ::testing::MatchResultListener* listener) const {
+  return ::testing::ExplainMatchResult(matcher_, node.properties(), listener);
 }
 
 void internal::PropertyListMatcher::DescribeTo(::std::ostream* os) const {
@@ -118,99 +117,78 @@ void internal::PropertyListMatcher::DescribeNegationTo(
   matcher_.DescribeNegationTo(os);
 }
 
-::testing::Matcher<const fuchsia::inspect::Object&> NameMatches(
-    std::string name) {
+::testing::Matcher<const Node&> NameMatches(std::string name) {
   return ::testing::MakeMatcher(
       new internal::NameMatchesMatcher(std::move(name)));
 }
 
-::testing::Matcher<const fuchsia::inspect::Object&> MetricList(
-    MetricsMatcher matcher) {
+::testing::Matcher<const Node&> MetricList(MetricsMatcher matcher) {
   return ::testing::MakeMatcher(
       new internal::MetricListMatcher(std::move(matcher)));
 }
 
-::testing::Matcher<const fuchsia::inspect::Object&> PropertyList(
-    PropertiesMatcher matcher) {
+::testing::Matcher<const Node&> PropertyList(PropertiesMatcher matcher) {
   return ::testing::MakeMatcher(
       new internal::PropertyListMatcher(std::move(matcher)));
 }
 
-::testing::Matcher<const fuchsia::inspect::Property&> StringPropertyIs(
-    const std::string& name, const std::string& value) {
+::testing::Matcher<const Property&> StringPropertyIs(const std::string& name,
+                                                     const std::string& value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Property::key,
-                       ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::is_str,
-                              ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::str,
-                              ::testing::StrEq(value))));
+      ::testing::Property(&Property::name, ::testing::StrEq(name)),
+      ::testing::Property(&Property::format, hierarchy::PropertyFormat::STRING),
+      ::testing::Property(&Property::Get<hierarchy::StringProperty>,
+                          ::testing::Property(&hierarchy::StringProperty::value,
+                                              ::testing::StrEq(value))));
 }
 
-::testing::Matcher<const fuchsia::inspect::Property&> ByteVectorPropertyIs(
+::testing::Matcher<const Property&> ByteVectorPropertyIs(
     const std::string& name, const VectorValue& value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Property::key,
-                       ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::is_bytes,
-                              ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::bytes,
+      ::testing::Property(&Property::name, ::testing::StrEq(name)),
+      ::testing::Property(&Property::format, hierarchy::PropertyFormat::BYTES),
+      ::testing::Property(
+          &Property::Get<hierarchy::ByteVectorProperty>,
+          ::testing::Property(&hierarchy::ByteVectorProperty::value,
                               ::testing::Eq(value))));
 }
 
-::testing::Matcher<const fuchsia::inspect::Metric&> IntMetricIs(
-    const std::string& name, int64_t value) {
+::testing::Matcher<const Metric&> IntMetricIs(const std::string& name,
+                                              int64_t value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::is_int_value,
-                              ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::int_value,
-                              ::testing::Eq(value))));
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format, hierarchy::MetricFormat::INT),
+      ::testing::Property(&Metric::Get<hierarchy::IntMetric>,
+                          ::testing::Property(&hierarchy::IntMetric::value,
+                                              ::testing::Eq(value))));
 }
 
-::testing::Matcher<const fuchsia::inspect::Metric&> UIntMetricIs(
-    const std::string& name, uint64_t value) {
+::testing::Matcher<const Metric&> UIntMetricIs(const std::string& name,
+                                               uint64_t value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::is_uint_value,
-                              ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::uint_value,
-                              ::testing::Eq(value))));
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format, hierarchy::MetricFormat::UINT),
+      ::testing::Property(&Metric::Get<hierarchy::UIntMetric>,
+                          ::testing::Property(&hierarchy::UIntMetric::value,
+                                              ::testing::Eq(value))));
 }
 
-::testing::Matcher<const fuchsia::inspect::Metric&> DoubleMetricIs(
-    const std::string& name, double value) {
+::testing::Matcher<const Metric&> DoubleMetricIs(const std::string& name,
+                                                 double value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::is_double_value,
-                              ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::double_value,
-                              ::testing::Eq(value))));
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format, hierarchy::MetricFormat::DOUBLE),
+      ::testing::Property(&Metric::Get<hierarchy::DoubleMetric>,
+                          ::testing::Property(&hierarchy::DoubleMetric::value,
+                                              ::testing::Eq(value))));
 }
 
-::testing::Matcher<const ObjectHierarchy&> ObjectMatches(
-    ObjectMatcher matcher) {
-  return ::testing::Property(&ObjectHierarchy::object, std::move(matcher));
+::testing::Matcher<const ObjectHierarchy&> NodeMatches(NodeMatcher matcher) {
+  return ::testing::Property(&ObjectHierarchy::node, std::move(matcher));
+}
+
+::testing::Matcher<const ObjectHierarchy&> ObjectMatches(NodeMatcher matcher) {
+  return NodeMatches(std::move(matcher));
 }
 
 ::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(

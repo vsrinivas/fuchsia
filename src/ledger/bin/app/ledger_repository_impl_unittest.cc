@@ -10,13 +10,13 @@
 #include <lib/component/cpp/expose.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/hierarchy.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -36,7 +36,7 @@ constexpr char kObjectsName[] = "test objects";
 
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::MetricList;
-using ::inspect::testing::ObjectMatches;
+using ::inspect::testing::NodeMatches;
 using ::inspect::testing::UIntMetricIs;
 using ::testing::Contains;
 
@@ -102,7 +102,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // is present and is zero.
   auto zeroth_hierarchy = inspect::ReadFromObject(inspect_object_);
   EXPECT_THAT(zeroth_hierarchy,
-              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 0UL)))))));
 
   // When one binding has been made to the repository, check that the "requests"
@@ -111,7 +111,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
   auto first_hierarchy = inspect::ReadFromObject(inspect_object_);
   EXPECT_THAT(first_hierarchy,
-              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 1UL)))))));
 
   // When two bindings have been made to the repository, check that the
@@ -120,7 +120,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
   auto second_hierarchy = inspect::ReadFromObject(inspect_object_);
   EXPECT_THAT(second_hierarchy,
-              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 2UL)))))));
 }
 

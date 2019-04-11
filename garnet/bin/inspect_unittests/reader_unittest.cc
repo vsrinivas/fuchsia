@@ -11,10 +11,11 @@
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 
 #include <thread>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace {
 
@@ -77,9 +78,10 @@ TEST_F(TestReader, Empty) {
       }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
-  EXPECT_THAT(result.value(),
-              AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
-                    PropertyList(IsEmpty())));
+  EXPECT_THAT(
+      inspect::ReadFromFidlObject(result.take_value()),
+      NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
+                        PropertyList(IsEmpty()))));
 }
 
 TEST_F(TestReader, Values) {
@@ -100,14 +102,16 @@ TEST_F(TestReader, Values) {
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
   EXPECT_THAT(
-      result.take_value(),
-      AllOf(NameMatches(kObjectsName),
-            PropertyList(UnorderedElementsAre(
-                StringPropertyIs("string", "value"),
-                ByteVectorPropertyIs("bytes", inspect::VectorValue(3, 'a')))),
-            MetricList(UnorderedElementsAre(IntMetricIs("int", -10),
-                                            UIntMetricIs("uint", 10),
-                                            DoubleMetricIs("double", 1.25)))));
+      inspect::ReadFromFidlObject(result.take_value()),
+      NodeMatches(AllOf(
+
+          NameMatches(kObjectsName),
+          PropertyList(UnorderedElementsAre(
+              StringPropertyIs("string", "value"),
+              ByteVectorPropertyIs("bytes", inspect::VectorValue(3, 'a')))),
+          MetricList(UnorderedElementsAre(IntMetricIs("int", -10),
+                                          UIntMetricIs("uint", 10),
+                                          DoubleMetricIs("double", 1.25))))));
 }
 
 TEST_F(TestReader, ListChildren) {
@@ -144,10 +148,10 @@ TEST_F(TestReader, OpenChild) {
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
-  auto child_value = result.take_value();
-  EXPECT_THAT(child_value,
-              AllOf(NameMatches("child a"),
-                    MetricList(UnorderedElementsAre(IntMetricIs("value", 1)))));
+  EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
+              NodeMatches(AllOf(
+                  NameMatches("child a"),
+                  MetricList(UnorderedElementsAre(IntMetricIs("value", 1))))));
 }
 
 TEST_F(TestReader, OpenChildren) {
@@ -181,9 +185,11 @@ TEST_F(TestReader, OpenChildren) {
   std::vector<std::string> names;
   for (size_t i = 0; i < result.size(); i++) {
     ASSERT_TRUE(result[i].is_ok());
-    auto obj = result[i].take_value();
-    EXPECT_THAT(obj, MetricList(UnorderedElementsAre(IntMetricIs("value", 1))));
-    names.push_back(obj.name);
+    auto obj = inspect::ReadFromFidlObject(result[i].take_value());
+    EXPECT_THAT(
+        obj,
+        NodeMatches(MetricList(UnorderedElementsAre(IntMetricIs("value", 1)))));
+    names.push_back(obj.node().name());
   }
   EXPECT_THAT(names, UnorderedElementsAre("child a", "child b"));
 }
@@ -209,21 +215,21 @@ class TestHierarchy : public TestReader {
   }
 
   void ExpectHierarchy(const inspect::ObjectHierarchy& hierarchy) {
-    EXPECT_THAT(hierarchy.object(), AllOf(NameMatches(kObjectsName)));
+    EXPECT_THAT(hierarchy.node(), AllOf(NameMatches(kObjectsName)));
     EXPECT_THAT(
         hierarchy.children(),
         UnorderedElementsAre(
-            AllOf(ObjectMatches(AllOf(NameMatches("child a"),
-                                      MetricList(UnorderedElementsAre(
-                                          IntMetricIs("value", 1))))),
+            AllOf(NodeMatches(AllOf(NameMatches("child a"),
+                                    MetricList(UnorderedElementsAre(
+                                        IntMetricIs("value", 1))))),
                   ChildrenMatch(IsEmpty())),
-            AllOf(ObjectMatches(AllOf(NameMatches("child b"),
-                                      MetricList(UnorderedElementsAre(
-                                          UIntMetricIs("value", 2))))),
+            AllOf(NodeMatches(AllOf(NameMatches("child b"),
+                                    MetricList(UnorderedElementsAre(
+                                        UIntMetricIs("value", 2))))),
                   ChildrenMatch(UnorderedElementsAre(AllOf(
-                      ObjectMatches(AllOf(NameMatches("child c"),
-                                          MetricList(UnorderedElementsAre(
-                                              DoubleMetricIs("value", 3))))),
+                      NodeMatches(AllOf(NameMatches("child c"),
+                                        MetricList(UnorderedElementsAre(
+                                            DoubleMetricIs("value", 3))))),
                       ChildrenMatch(IsEmpty())))))));
     auto* hierarchy_c = hierarchy.GetByPath({"child b", "child c"});
     ASSERT_THAT(hierarchy_c, ::testing::NotNull());
@@ -238,10 +244,11 @@ class TestHierarchy : public TestReader {
 
 TEST_F(TestHierarchy, ObjectHierarchy) {
   fit::result<inspect::ObjectHierarchy> result;
-  SchedulePromise(inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)))
-                      .then([&](fit::result<inspect::ObjectHierarchy>& res) {
-                        result = std::move(res);
-                      }));
+  SchedulePromise(
+      inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)))
+          .then([&](fit::result<inspect::ObjectHierarchy>& res) {
+            result = std::move(res);
+          }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
@@ -252,19 +259,19 @@ TEST_F(TestHierarchy, ObjectHierarchy) {
 
 TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
   fit::result<inspect::ObjectHierarchy> result;
-  SchedulePromise(
-      inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)), /*depth=*/1)
-          .then([&](fit::result<inspect::ObjectHierarchy>& res) {
-            result = std::move(res);
-          }));
+  SchedulePromise(inspect::ReadFromFidl(
+                      inspect::ObjectReader(std::move(client_)), /*depth=*/1)
+                      .then([&](fit::result<inspect::ObjectHierarchy>& res) {
+                        result = std::move(res);
+                      }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
   auto hierarchy = result.take_value();
 
   EXPECT_THAT(hierarchy, ChildrenMatch(UnorderedElementsAre(
-                             ObjectMatches(AllOf(NameMatches("child a"))),
-                             ObjectMatches(AllOf(NameMatches("child b"))))));
+                             NodeMatches(AllOf(NameMatches("child a"))),
+                             NodeMatches(AllOf(NameMatches("child b"))))));
 
   auto* hierarchy_b = hierarchy.GetByPath({"child b"});
   ASSERT_THAT(hierarchy_b, ::testing::NotNull());
@@ -281,8 +288,8 @@ TEST_F(TestHierarchy, ObjectHierarchyDirectLimitDepth) {
   auto hierarchy = inspect::ReadFromObject(root_object_, /*depth=*/1);
 
   EXPECT_THAT(hierarchy, ChildrenMatch(UnorderedElementsAre(
-                             ObjectMatches(AllOf(NameMatches("child a"))),
-                             ObjectMatches(AllOf(NameMatches("child b"))))));
+                             NodeMatches(AllOf(NameMatches("child a"))),
+                             NodeMatches(AllOf(NameMatches("child b"))))));
 
   auto* hierarchy_b = hierarchy.GetByPath({"child b"});
   ASSERT_THAT(hierarchy_b, ::testing::NotNull());

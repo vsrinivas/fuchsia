@@ -2,19 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/iquery/utils.h"
+
 #include <lib/fostr/hex_dump.h>
-#include "src/lib/files/path.h"
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/strings/utf_codecs.h>
 #include <third_party/cobalt/util/crypto_util/base64.h>
 
-#include "garnet/bin/iquery/options.h"
-#include "garnet/bin/iquery/utils.h"
-
 #include <iostream>
 
+#include "garnet/bin/iquery/options.h"
+#include "lib/inspect/hierarchy.h"
+#include "src/lib/files/path.h"
+
 using cobalt::crypto::Base64Encode;
+using inspect::hierarchy::DoubleMetric;
+using inspect::hierarchy::IntMetric;
+using inspect::hierarchy::Metric;
+using inspect::hierarchy::UIntMetric;
 
 namespace iquery {
 
@@ -64,19 +70,18 @@ std::string FormatStringBase64Fallback(fxl::StringView val) {
   }
 }
 
-std::string FormatMetricValue(const fuchsia::inspect::Metric& metric) {
-  std::string out;
-  if (metric.value.is_int_value()) {
-    out = fxl::StringPrintf("%ld", metric.value.int_value());
-  } else if (metric.value.is_uint_value()) {
-    out = fxl::StringPrintf("%lu", metric.value.uint_value());
-  } else if (metric.value.is_double_value()) {
-    out = fxl::StringPrintf("%f", metric.value.double_value());
-  } else {
-    // We already know which object we're outputting at this point.
-    FXL_LOG(WARNING) << "Unknown metric type";
+std::string FormatMetricValue(const Metric& metric) {
+  switch (metric.format()) {
+    case inspect::hierarchy::MetricFormat::INT:
+      return fxl::StringPrintf("%ld", metric.Get<IntMetric>().value());
+    case inspect::hierarchy::MetricFormat::UINT:
+      return fxl::StringPrintf("%lu", metric.Get<UIntMetric>().value());
+    case inspect::hierarchy::MetricFormat::DOUBLE:
+      return fxl::StringPrintf("%f", metric.Get<DoubleMetric>().value());
+    default:
+      FXL_LOG(WARNING) << "Unknown metric type";
+      return "";
   }
-  return out;
 }
 
 bool IsStringPrintable(fxl::StringView input) {
