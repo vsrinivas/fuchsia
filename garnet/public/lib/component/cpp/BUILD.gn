@@ -58,7 +58,6 @@ source_set("cpp") {
     "//garnet/bin/ui/root_presenter:*",
     "//garnet/bin/ui/snapshot:*",
     "//garnet/bin/ui/tests/performance/vulkan_is_supported/*",
-    "//garnet/bin/ui/view_manager/*",
     "//garnet/bin/vulkan_loader/*",
     "//garnet/bin/zircon_benchmarks/*",
     "//garnet/drivers/usb_video/*",

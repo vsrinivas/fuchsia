@@ -16,7 +16,6 @@ group("ui") {
     ":scenic",
     ":scenic_tests",
     ":set_renderer_params",
-    ":view_manager",
     "benchmarks",
     "gltf_export",
     "ime",
@@ -34,7 +33,6 @@ group("ui") {
     "snapshot",
     "tests",
     "text",
-    "view_manager",
   ]
 }
 
@@ -50,7 +48,6 @@ package("scenic_tests") {
     "input/tests",
     "input_reader/tests",
     "presentation_mode/tests",
-    "view_manager/tests",
     "//garnet/lib/ui/gfx/tests",
     "//garnet/lib/ui/input/tests",
     "//garnet/lib/ui/scenic/tests",
@@ -102,10 +99,6 @@ package("scenic_tests") {
       name = "scenic_unittests"
       environments = basic_envs
     },
-    {
-      name = "view_manager_apptests"
-      environments = basic_envs
-    },
   ]
 
   meta = [
@@ -136,10 +129,6 @@ package("scenic_tests") {
     {
       path = rebase_path("meta/scenic_unittests.cmx")
       dest = "scenic_unittests.cmx"
-    },
-    {
-      path = rebase_path("meta/view_manager_apptests.cmx")
-      dest = "view_manager_apptests.cmx"
     },
   ]
 
@@ -204,25 +193,6 @@ test_package("ime_service_tests") {
       name = "ime_service_bin_test"
       dest = "ime_service_unittests"
       environments = basic_envs
-    },
-  ]
-}
-
-package("view_manager") {
-  deps = [
-    "view_manager",
-  ]
-
-  binaries = [
-    {
-      name = "view_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("view_manager/meta/view_manager.cmx")
-      dest = "view_manager.cmx"
     },
   ]
 }
