@@ -17,6 +17,7 @@ driver("mt8167s-display") {
     "ovl.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-display-controller",
     "$zx/system/banjo/ddk-protocol-dsiimpl",
     "$zx/system/banjo/ddk-protocol-platform-device",

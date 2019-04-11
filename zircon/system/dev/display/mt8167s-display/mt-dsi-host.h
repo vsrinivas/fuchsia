@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/gpio.h>
 #include <lib/mmio/mmio.h>
 #include <hwreg/mmio.h>
 #include <fbl/unique_ptr.h>
@@ -31,12 +32,12 @@ namespace mt8167s_display {
 
 class MtDsiHost {
 public:
-    MtDsiHost(uint32_t height, uint32_t width, uint8_t panel_type)
-        : height_(height), width_(width), panel_type_(panel_type) {
+    MtDsiHost(const pdev_protocol_t* pdev, uint32_t height, uint32_t width, uint8_t panel_type)
+        : pdev_(*pdev), height_(height), width_(width), panel_type_(panel_type) {
         ZX_ASSERT(height_ < kMaxHeight);
         ZX_ASSERT(width_ < kMaxWidth);
     }
-    zx_status_t Init(zx_device_t* parent);
+    zx_status_t Init(const ddk::DsiImplProtocolClient* dsi, const ddk::GpioProtocolClient* gpio);
     zx_status_t Config(const display_setting_t& disp_setting);
     zx_status_t Start();
     zx_status_t Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg);
@@ -46,10 +47,10 @@ private:
     void ConfigMipiPll(uint32_t pll_clock, uint32_t lane_num);
     void PowerOffMipiTx();
 
+    const pdev_protocol_t pdev_;
     uint32_t height_; // display height
     uint32_t width_; // display width
     fbl::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
-    pdev_protocol_t pdev_ = {nullptr, nullptr};
     zx::bti bti_;
     ddk::DsiImplProtocolClient dsiimpl_;
     fbl::unique_ptr<Lcd> lcd_;

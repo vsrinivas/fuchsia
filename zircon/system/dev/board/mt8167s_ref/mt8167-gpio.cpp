@@ -41,6 +41,8 @@ zx_status_t Mt8167::GpioInit() {
     const gpio_pin_t cleo_gpio_pins[] = {
         // For backlight driver
         { MT8167_CLEO_GPIO_LCM_EN },
+        // For display driver
+        { MT8167_GPIO_LCD_RST },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -82,12 +83,6 @@ constexpr pbus_mmio_t display_mmios[] = {
     },
 };
 
-constexpr pbus_gpio_t display_gpios[] = {
-    {
-        .gpio = MT8167_GPIO_LCD_RST
-    },
-};
-
 constexpr display_driver_t display_driver_info[] = {
     {
         .vid = PDEV_VID_MEDIATEK,
@@ -98,7 +93,7 @@ constexpr display_driver_t display_driver_info[] = {
 
 constexpr pbus_metadata_t display_metadata[] = {
     {
-        .type = DEVICE_METADATA_PRIVATE,
+        .type = DEVICE_METADATA_DISPLAY_DEVICE,
         .data_buffer = &display_driver_info,
         .data_size = sizeof(display_driver_t),
     },
@@ -128,8 +123,6 @@ static pbus_dev_t display_dev = []() {
     dev.bti_count = countof(display_btis);
     dev.irq_list = display_irqs;
     dev.irq_count = countof(display_irqs);
-    dev.gpio_list = display_gpios;
-    dev.gpio_count = countof(display_gpios);
     return dev;
 }();
 
@@ -141,11 +134,45 @@ static pbus_dev_t dsi_dev = []() {
     dev.metadata_list = display_metadata;
     dev.metadata_count = countof(display_metadata);
     dev.mmio_list = dsi_mmios;
-    dev.mmio_count =countof(dsi_mmios);
-    dev.child_list = &display_dev;
-    dev.child_count = 1;
+    dev.mmio_count = countof(dsi_mmios);
     return dev;
 }();
+
+// Composite binding rules for display driver.
+constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t lcd_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_LCD_RST),
+};
+constexpr zx_bind_inst_t sysmem_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+};
+constexpr zx_bind_inst_t dsi_impl_match[]  = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
+};
+static const device_component_part_t lcd_gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(lcd_gpio_match), lcd_gpio_match },
+};
+constexpr device_component_part_t sysmem_component[] = {
+    { countof(root_match), root_match },
+    { countof(sysmem_match), sysmem_match },
+};
+constexpr device_component_part_t dsi_impl_component[] = {
+    { countof(root_match), root_match },
+    { countof(dsi_impl_match), dsi_impl_match },
+};
+constexpr device_component_t components[] = {
+    { countof(lcd_gpio_component), lcd_gpio_component },
+    { countof(sysmem_component), sysmem_component },
+    { countof(dsi_impl_component), dsi_impl_component },
+};
+
 } // namespace
 
 // TODO(payamm): Remove PMIC access once PMIC driver is ready
@@ -168,7 +195,6 @@ public:
 };
 
 zx_status_t Mt8167::DisplayInit() {
-
     if (board_info_.pid != PDEV_PID_CLEO && board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF) {
         zxlogf(ERROR, "Unsupported product\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -220,6 +246,14 @@ zx_status_t Mt8167::DisplayInit() {
         zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
+
+    // Load display driver in same devhost as DSI driver.
+    status = pbus_.CompositeDeviceAdd(&display_dev, components, fbl::count_of(components), 3);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+        return status;
+    }
+
     return ZX_OK;
 }
 

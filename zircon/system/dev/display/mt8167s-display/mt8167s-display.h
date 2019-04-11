@@ -16,6 +16,7 @@
 #include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/gpio.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
@@ -113,6 +114,7 @@ private:
 
     // Protocol handles
     pdev_protocol_t pdev_ = {};
+    zx_device_t* pdev_device_;
     sysmem_protocol_t sysmem_ = {};
 
     // Board Info
@@ -151,6 +153,7 @@ private:
     bool hasDsi_ = false;
     ddk::DsiImplProtocolClient dsiimpl_;
 
+    ddk::GpioProtocolClient gpio_;
 
     // Objects
     fbl::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;

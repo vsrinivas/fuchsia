@@ -19,22 +19,18 @@ constexpr uint32_t kDsiStartOffset = 0;
 constexpr uint32_t kDsiStartEn = 1;
 } // namespace
 
-zx_status_t MtDsiHost::Init(zx_device_t* parent) {
+zx_status_t MtDsiHost::Init(const ddk::DsiImplProtocolClient* dsi,
+                            const ddk::GpioProtocolClient* gpio) {
     if (initialized_) {
         return ZX_OK;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    dsiimpl_ = parent;
+    dsiimpl_ = *dsi;
 
     // Map MIPI TX
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_MIPITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &mmio);
+    auto status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_MIPITX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &mmio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map MIPI TX mmio\n");
         return status;
@@ -54,13 +50,13 @@ zx_status_t MtDsiHost::Init(zx_device_t* parent) {
     }
 
     // Load LCD Init values while in command mode
-    lcd_ = fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, panel_type_);
+    lcd_ = fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, dsi, gpio, panel_type_);
     if (!ac.check()) {
         DISP_ERROR("Failed to create LCD object\n");
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = lcd_->Init(parent);
+    status = lcd_->Init();
     if (status != ZX_OK) {
         DISP_ERROR("Error during LCD Initialization! %d\n", status);
         return status;
