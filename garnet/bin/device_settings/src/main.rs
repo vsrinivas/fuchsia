@@ -18,9 +18,10 @@ use std::io::prelude::*;
 use std::sync::Arc;
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
-use fidl_fuchsia_devicesettings::{DeviceSettingsManagerRequest,
-                                  DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
-                                  Status, ValueType};
+use fidl_fuchsia_devicesettings::{
+    DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
+    Status, ValueType,
+};
 
 type Watchers = Arc<Mutex<HashMap<String, Vec<DeviceSettingsWatcherProxy>>>>;
 
@@ -83,7 +84,10 @@ fn read_file(file: &str) -> io::Result<String> {
     Ok(contents)
 }
 
-fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: DeviceSettingsManagerRequestStream) {
+fn spawn_device_settings_server(
+    state: DeviceSettingsManagerServer,
+    stream: DeviceSettingsManagerRequestStream,
+) {
     let state = Arc::new(Mutex::new(state));
     fasync::spawn(
         stream
@@ -95,8 +99,7 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: Devi
                         let file = if let Some(f) = state.setting_file_map.get(&key) {
                             f
                         } else {
-                            return future::ready(
-                                responder.send(0, Status::ErrInvalidSetting));
+                            return future::ready(responder.send(0, Status::ErrInvalidSetting));
                         };
                         match read_file(file) {
                             Err(e) => {
@@ -117,8 +120,7 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: Devi
                         let file = if let Some(f) = state.setting_file_map.get(&key) {
                             f
                         } else {
-                            return future::ready(
-                                responder.send("", Status::ErrInvalidSetting));
+                            return future::ready(responder.send("", Status::ErrInvalidSetting));
                         };
                         match read_file(file) {
                             Err(e) => {
@@ -132,22 +134,16 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: Devi
                             Ok(s) => responder.send(&*s, Status::Ok),
                         }
                     }
-                    DeviceSettingsManagerRequest::SetInteger {
-                        key,
-                        val,
-                        responder,
-                    } => match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
-                        Ok(r) => responder.send(r),
-                        Err(e) => {
-                            fx_log_err!("setting integer: {:?}", e);
-                            responder.send(false)
+                    DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
+                        match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
+                            Ok(r) => responder.send(r),
+                            Err(e) => {
+                                fx_log_err!("setting integer: {:?}", e);
+                                responder.send(false)
+                            }
                         }
-                    },
-                    DeviceSettingsManagerRequest::SetString {
-                        key,
-                        val,
-                        responder,
-                    } => {
+                    }
+                    DeviceSettingsManagerRequest::SetString { key, val, responder } => {
                         fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
                         match state.set_key(&key, val.as_bytes(), ValueType::Text) {
                             Ok(r) => responder.send(r),
@@ -157,14 +153,9 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: Devi
                             }
                         }
                     }
-                    DeviceSettingsManagerRequest::Watch {
-                        key,
-                        watcher,
-                        responder,
-                    } => {
+                    DeviceSettingsManagerRequest::Watch { key, watcher, responder } => {
                         if !state.setting_file_map.contains_key(&key) {
-                            return future::ready(
-                                responder.send(Status::ErrInvalidSetting));
+                            return future::ready(responder.send(Status::ErrInvalidSetting));
                         }
                         match watcher.into_proxy() {
                             Err(e) => {
@@ -180,7 +171,8 @@ fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: Devi
                         }
                     }
                 })
-            }).map_ok(|_| ())
+            })
+            .map_ok(|_| ())
             .unwrap_or_else(|e| eprintln!("error running device settings server: {:?}", e)),
     )
 }
@@ -208,13 +200,7 @@ fn main_ds() -> Result<(), Error> {
 
         d.initialize_keys(
             DATA_DIR,
-            &[
-                "DeviceName",
-                "TestSetting",
-                "Display.Brightness",
-                "Audio",
-                "FactoryReset",
-            ],
+            &["DeviceName", "TestSetting", "Display.Brightness", "Audio", "FactoryReset"],
         );
 
         spawn_device_settings_server(d, stream)
@@ -241,8 +227,7 @@ mod tests {
 
         let test_fut = f(device_settings);
 
-        exec.run_singlethreaded(test_fut)
-            .expect("executor run failed");
+        exec.run_singlethreaded(test_fut).expect("executor run failed");
     }
 
     fn setup(keys: &[&str]) -> Result<(fasync::Executor, DeviceSettingsManagerProxy, TempDir), ()> {
