@@ -111,8 +111,8 @@ pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
     /// during this process apply to the `server_end` connection and should be sent in the `OnOpen`
     /// event over this connection, if requested.  This method is triggered by either `Open` or
     /// `Clone` io.fidl methods, and they have no return value.  So the only way to report an error
-    /// duing the `open` operation is to close the connection that have received the `Open` or
-    /// `Clone` calls.  This is too much, as the conneciton might still be in a good shape.
+    /// during the `open` operation is to close the connection that have received the `Open` or
+    /// `Clone` calls.  This is too much, as the connection might still be in a good shape.
     fn open(
         &mut self,
         flags: u32,

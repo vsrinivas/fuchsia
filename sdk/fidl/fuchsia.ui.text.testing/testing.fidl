@@ -9,6 +9,7 @@ using fuchsia.ui.text;
 /// If you maintain a TextField implementation, you should ensure to spin up the
 /// text_test_suite package and call RunTest in your integration tests. Each call to
 /// RunTest should contain a fresh TextField handle that points to an empty text field.
+[Discoverable]
 protocol TextFieldTestSuite {
   RunTest(fuchsia.ui.text.TextField field, uint64 test_id) -> (bool passed, string message);
   ListTests() -> (vector<TestInfo> results);

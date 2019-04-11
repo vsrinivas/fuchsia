@@ -535,7 +535,7 @@ TEST_F(PseudoDirConnection, ServeOnValidFlags) {
 
 TEST_F(PseudoDirConnection, OpenSelf) {
   std::string paths[] = {
-      "",       ".",     "./",
+      ".",      "./",
       ".//",    "././",  "././/.",
       "././//", "././/", "././././/././././////./././//././/./././/././."};
   auto subdir = std::make_shared<vfs::PseudoDir>();
@@ -552,6 +552,13 @@ TEST_F(PseudoDirConnection, OpenSelf) {
     // assert correct directory was opened
     AssertReadDirents(new_ptr, 1024, expected_dirents);
   }
+}
+
+TEST_F(PseudoDirConnection, OpenEmptyPath) {
+  auto ptr = dir_.Serve();
+  fuchsia::io::DirectorySyncPtr new_ptr;
+  AssertOpenPath(ptr, "", new_ptr, fuchsia::io::OPEN_RIGHT_READABLE, 0,
+                 ZX_ERR_BAD_PATH);
 }
 
 TEST_F(PseudoDirConnection, OpenSubDir) {

@@ -839,7 +839,7 @@ zx_status_t Connection::DirectoryOpen(uint32_t open_flags, uint32_t mode, const 
         return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
     }
     if ((path_size < 1) || (path_size > PATH_MAX)) {
-        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
+        return write_error(std::move(channel), ZX_ERR_BAD_PATH);
     }
 
     // Check for directory rights inheritance

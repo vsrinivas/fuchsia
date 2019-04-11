@@ -217,8 +217,8 @@ impl<'entries> Simple<'entries> {
         path: &str,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        if path == "/" {
-            send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+        if path == "/" || path == "" {
+            send_on_open_with_error(flags, server_end, Status::BAD_PATH);
             return;
         }
 
@@ -861,6 +861,20 @@ mod tests {
             open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
             open_as_file_assert_err!(&root, flags, "dir/dir/file10", Status::NOT_FOUND);
             open_as_file_assert_err!(&root, flags, "dir/dir/file1", Status::NOT_FOUND);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn open_empty_path() {
+        let root = pseudo_directory! {
+            "file_foo" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
 
             assert_close!(root);
         });

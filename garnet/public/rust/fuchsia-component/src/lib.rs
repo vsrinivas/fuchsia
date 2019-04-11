@@ -891,12 +891,18 @@ pub mod server {
                 }
             }
 
+            macro_rules! maybe_send_error {
+                ($object:ident, $flags:expr, $error:expr) => {
+                    if ($flags & OPEN_FLAG_DESCRIBE) != 0 {
+                        self.send_failed_on_open($object, $error)?;
+                    }
+                }
+            }
+
             macro_rules! handle_potentially_unsupported_flags {
                 ($object:ident, $flags:expr, $supported_flags_bitmask:expr) => {
                     if has_unsupported_flags($flags, $supported_flags_bitmask) {
-                        if ($flags & OPEN_FLAG_DESCRIBE) != 0 {
-                            self.send_failed_on_open($object, zx::sys::ZX_ERR_NOT_SUPPORTED)?;
-                        }
+                        maybe_send_error!($object, $flags, zx::sys::ZX_ERR_NOT_SUPPORTED);
                         bail!("flags contains unsupported flags: {}", $flags);
                     }
                 }
@@ -925,6 +931,9 @@ pub mod server {
                             eprintln!("ServiceFS failed to open '.': {:?}", e);
                         }
                         return Ok((None, ConnectionState::Open));
+                    } else if path == "" {
+                        maybe_send_error!(object, flags, zx::sys::ZX_ERR_BAD_PATH);
+                        return Ok((None, ConnectionState::Open));
                     }
 
                     let mut segments = path.rsplitn(2, "/");
@@ -934,9 +943,7 @@ pub mod server {
                         Ok(children) => children,
                         Err(e) => {
                             eprintln!("invalid path {} - {}", path, e);
-                            if flags & OPEN_FLAG_DESCRIBE != 0 {
-                                self.send_failed_on_open(object, zx::sys::ZX_ERR_BAD_PATH)?;
-                            }
+                            maybe_send_error!(object, flags, zx::sys::ZX_ERR_BAD_PATH);
                             return Ok((None, ConnectionState::Open));
                         }
                     };
@@ -975,6 +982,9 @@ pub mod server {
                                            ConnectionState::Open));
                             }
                         }
+                    } else {
+                        maybe_send_error!(object, flags, zx::sys::ZX_ERR_NOT_FOUND);
+                        return Ok((None, ConnectionState::Open));
                     }
                 }
                 DirectoryRequest::Describe { responder } => {

@@ -170,6 +170,11 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags,
                                  ZX_ERR_ACCESS_DENIED);
     return;
   }
+  if ((path_len < 1) || (path_len > PATH_MAX)) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request),
+                                 ZX_ERR_BAD_PATH);
+    return;
+  }
 
   Node* n = nullptr;
   bool path_is_dir = false;

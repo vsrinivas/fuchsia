@@ -422,7 +422,10 @@ protocol Directory {
 
     /// Opens a new object relative to this directory object.
     ///
-    /// Flags may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    /// |path| may contain multiple segments, separated by "/" characters,
+    /// and should never be empty i.e. "" is an invalid path.
+    ///
+    /// |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
     /// The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
     /// on the |object| handle, indicating the type of object opened.
     ///

@@ -31,6 +31,7 @@ struct NetworkSettings {
 };
 
 /// The Standard Fuchsia RIL (FRIL)
+[Discoverable]
 protocol RadioInterfaceLayer {
     /// Hand a transport |channel| to the RIL service connecting it to the modem. Most
     /// modems will require this to be the first method called, since they are dependent
