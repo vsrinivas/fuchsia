@@ -5,19 +5,19 @@
 #![feature(futures_api)]
 #![deny(warnings)]
 
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use failure::{Error, ResultExt};
-use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
-use futures::{TryFutureExt, TryStreamExt};
+use fidl::endpoints::ClientEnd;
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
 use std::sync::Arc;
 
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogListenerMarker, LogListenerProxy,
-                          LogMarker, LogMessage, LogRequest, LogRequestStream, LogSinkMarker,
+                          LogMessage, LogRequest, LogRequestStream,
                           LogSinkRequest, LogSinkRequestStream};
 
 mod klogger;
@@ -245,10 +245,10 @@ fn log_manager_helper(
     }
 }
 
-fn spawn_log_manager(state: LogManager, chan: fasync::Channel) {
+fn spawn_log_manager(state: LogManager, stream: LogRequestStream) {
     let state = Arc::new(state);
     fasync::spawn(
-        LogRequestStream::from_channel(chan)
+       stream
             .map_ok(move |req| {
                 let state = state.clone();
                 match req {
@@ -275,10 +275,10 @@ fn process_log(shared_members: Arc<Mutex<LogManagerShared>>, mut log_msg: LogMes
     shared_members.log_msg_buffer.push(log_msg, size);
 }
 
-fn spawn_log_sink(state: LogManager, chan: fasync::Channel) {
+fn spawn_log_sink(state: LogManager, stream: LogSinkRequestStream) {
     let state = Arc::new(state);
     fasync::spawn(
-        LogSinkRequestStream::from_channel(chan)
+        stream
             .map_ok(move |req| {
                 let state = state.clone();
                 let LogSinkRequest::Connect { socket, .. } = req;
@@ -324,26 +324,23 @@ fn main_wrapper() -> Result<(), Error> {
     klogger::add_listener(move |log_msg, size| {
         process_log(shared_members_clone2.clone(), log_msg, size);
     }).context("failed to read kernel logs")?;
-    let server_fut = ServicesServer::new()
-        .add_service((LogMarker::NAME, move |chan| {
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
             let ls = LogManager {
                 shared_members: shared_members.clone(),
             };
-            spawn_log_manager(ls, chan);
-        }))
-        .add_service((LogSinkMarker::NAME, move |chan| {
+            spawn_log_manager(ls, stream);
+        })
+        .add_fidl_service(move |stream| {
             let ls = LogManager {
                 shared_members: shared_members_clone.clone(),
             };
-            spawn_log_sink(ls, chan)
-        }))
-        .start()
-        .map_err(|e| e.context("error starting service server"))?;
+            spawn_log_sink(ls, stream)
+        });
+    fs.take_and_serve_directory_handle()?;
 
-    Ok(executor
-        .run(server_fut, 3)
-        .context("running server")
-        .map(|_| ())?) // 3 threads
+    Ok(executor.run(fs.collect(), 3)) // 3 threads
 }
 
 #[cfg(test)]
@@ -356,7 +353,7 @@ mod tests {
 
     use fidl::encoding::OutOfLine;
     use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerRequest,
-                              LogListenerRequestStream, LogProxy, LogSinkProxy};
+                              LogListenerRequestStream, LogProxy, LogMarker, LogSinkProxy, LogSinkMarker};
     use crate::logger::fx_log_packet_t;
     use fuchsia_zircon::prelude::*;
 
@@ -452,10 +449,10 @@ mod tests {
             .for_each(|x| *x = value);
     }
 
-    fn spawn_log_listener(ll: LogListenerState, chan: fasync::Channel) {
+    fn spawn_log_listener(ll: LogListenerState, stream: LogListenerRequestStream) {
         let state = Arc::new(Mutex::new(ll));
         fasync::spawn(
-            LogListenerRequestStream::from_channel(chan)
+            stream
                 .map_ok(move |req| {
                     let state = state.clone();
                     let mut state = state.lock();
@@ -489,18 +486,16 @@ mod tests {
         ll: LogListenerState, lp: LogProxy, filter_options: Option<&mut LogFilterOptions>,
         dump_logs: bool,
     ) {
-        let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
-        let remote_ptr = fidl::endpoints::ClientEnd::<LogListenerMarker>::new(remote);
-        let local = fasync::Channel::from_channel(local).expect("failed to make async channel");
-        spawn_log_listener(ll, local);
+        let (client_end, stream) = fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
+        spawn_log_listener(ll, stream);
 
         let filter_options = filter_options.map(OutOfLine);
 
         if dump_logs {
-            lp.dump_logs(remote_ptr, filter_options)
+            lp.dump_logs(client_end, filter_options)
                 .expect("failed to register listener");
         } else {
-            lp.listen(remote_ptr, filter_options)
+            lp.listen(client_end, filter_options)
                 .expect("failed to register listener");
         }
     }
@@ -523,17 +518,13 @@ mod tests {
             shared_members: shared_members,
         };
 
-        let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
-        let log_proxy = LogProxy::new(client_end);
-        let server_end = fasync::Channel::from_channel(server_end).expect("unable to asyncify");
-        spawn_log_manager(lm.clone(), server_end);
+        let (log_proxy, log_stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
+        spawn_log_manager(lm.clone(), log_stream);
 
-        let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let client_end = fasync::Channel::from_channel(client_end).unwrap();
-        let log_sink_proxy = LogSinkProxy::new(client_end);
-        let server_end = fasync::Channel::from_channel(server_end).expect("unable to asyncify");
-        spawn_log_sink(lm.clone(), server_end);
+        let (log_sink_proxy, log_sink_stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+        spawn_log_sink(lm.clone(), log_sink_stream);
 
         (executor, log_proxy, log_sink_proxy, sin, sout)
     }
