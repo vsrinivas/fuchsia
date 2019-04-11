@@ -23,8 +23,8 @@ class ModularConfigReader {
   fuchsia::modular::internal::SessionmgrConfig GetSessionmgrConfig();
 
  private:
-  // Reads startup.config into a string if the file exists. Returns an empty
-  // string otherwise.
+  // Reads startup.config into a string if the file exists. Otherwise, returns a
+  // string containing two quotes, representing an empty JSON structure.
   std::string GetConfigAsString(const std::string& config_name);
 };
 

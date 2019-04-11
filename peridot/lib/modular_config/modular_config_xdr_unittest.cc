@@ -36,7 +36,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
     "session_shells":[
       {
         "url":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
-        "display_usage":0,
+        "display_usage":"unknown",
         "screen_height":0.0,
         "screen_width":0.0
       }
@@ -89,7 +89,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   XdrWrite(&write_json, &write_config, XdrSessionmgrConfig);
 
   std::string expected_json = R"({
-      "cloud_provider":1,
+      "cloud_provider":"LET_LEDGER_DECIDE",
       "enable_cobalt":true,
       "enable_story_shell_preload":true,
       "use_memfs_for_ledger":false,

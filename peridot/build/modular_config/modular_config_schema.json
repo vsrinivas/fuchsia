@@ -11,9 +11,14 @@
         "use_minfs": { "type": "boolean", "default": true },
         "use_session_shell_for_story_shell_factory": { "type": "boolean", "default": false },
         "base_shell": { "$ref": "#definitions/base_shell" },
-        "session_shells": { 
+        "session_shells": {
           "type": "array",
           "items": { "$ref": "#/definitions/session_shell" }
+        },
+        "story_shell_url": {
+          "type": "string",
+          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "default": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
         }
       },
       "additionalProperties": false,
@@ -73,11 +78,6 @@
             "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
            },
           "uniqueItems": true
-        },
-        "story_shell_url": {
-          "type": "string",
-          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
-          "default": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
         }
       },
       "additionalProperties": false

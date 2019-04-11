@@ -42,8 +42,7 @@ ModularConfigReader::GetSessionmgrConfig() {
 
   // Parse with xdr
   fuchsia::modular::internal::SessionmgrConfig sessionmgr_config;
-  if (!sessionmgr_config_str.empty() &&
-      !XdrRead(sessionmgr_config_str, &sessionmgr_config,
+  if (!XdrRead(sessionmgr_config_str, &sessionmgr_config,
                XdrSessionmgrConfig)) {
     FXL_LOG(ERROR) << "Unable to parse startup.json";
   }
@@ -56,13 +55,13 @@ std::string ModularConfigReader::GetConfigAsString(
   // Check that config file exists
   if (!files::IsFile(kStartupConfigPath)) {
     FXL_LOG(ERROR) << kStartupConfigPath << " does not exist.";
-    return "";
+    return "\"\"";
   }
 
   std::string json;
   if (!files::ReadFileToString(kStartupConfigPath, &json)) {
     FXL_LOG(ERROR) << "Unable to read " << kStartupConfigPath;
-    return "";
+    return "\"\"";
   }
 
   json::JSONParser json_parser;
@@ -70,7 +69,7 @@ std::string ModularConfigReader::GetConfigAsString(
   if (json_parser.HasError()) {
     FXL_LOG(ERROR) << "Error while parsing " << kStartupConfigPath
                    << " to string. Error: " << json_parser.error_str();
-    return "";
+    return "\"\"";
   }
 
   // Get |config_name| section from file
@@ -79,7 +78,7 @@ std::string ModularConfigReader::GetConfigAsString(
     // |config_name| was not found
     FXL_LOG(ERROR) << config_name << " configurations were not found in "
                    << kStartupConfigPath;
-    return "";
+    return "\"\"";
   }
 
   return modular::JsonValueToString(config_json->value);

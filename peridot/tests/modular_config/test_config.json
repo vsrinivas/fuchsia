@@ -13,7 +13,8 @@
         "screen_height": 50,
         "screen_width": 100
       }
-    ]
+    ],
+    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
   },
   "sessionmgr": {
     "use_memfs_for_ledger": true,
@@ -25,7 +26,6 @@
     ],
     "session_agents": [
       "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
-    ],
-    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+    ]
   }
 }

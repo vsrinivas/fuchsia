@@ -56,11 +56,19 @@ modular_config() target in the product's monolith packages.
             * The fuchsia component url for which session shell to use.
         - `display_usage`: **string** *(optional)*
             * The display usage policy for this session shell.
-            * **Examples**: handheld, close, near, midrange, far
+            * Options:
+                - `handheld`: the display is used well within arm's reach.
+                - `close`: the display is used at arm's reach.
+                - `near`: the display is used beyond arm's reach.
+                - `midrange`: the display is used beyond arm's reach.
+                - `far`: the display is used well beyond arm's reach.
         - `screen_height`: **float** *(optional)*
             * The screen height in millimeters for the session shell's display.
         - `screen_width`: **float** *(optional)*
             * The screen width in millimeters for the session shell's display.
+* `story_shell_url`: **string** *(optional)*
+    - The fuchsia component url for which story shell to use.
+    - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`
 * `enable_cobalt`: **boolean** *(optional)*
     - When set to false, Cobalt statistics are disabled.
     - **default**: `true`
@@ -107,6 +115,3 @@ modular_config() target in the product's monolith packages.
 * `session_agents`: **string[]** *(optional)*
     - A list of fuchsia component urls that specify which agents to launch at
       startup with PuppetMaster and FocusProvider services.
-* `story_shell_url`: **string** *(optional)*
-    - The fuchsia component url for which story shell to use.
-    - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`

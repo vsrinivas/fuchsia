@@ -33,6 +33,40 @@ void XdrBaseShellConfig(
                         has_keep_alive_after_login, false);
 }
 
+fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string usage) {
+  if (usage == "handheld") {
+    return fuchsia::ui::policy::DisplayUsage::kHandheld;
+  } else if (usage == "close") {
+    return fuchsia::ui::policy::DisplayUsage::kClose;
+  } else if (usage == "near") {
+    return fuchsia::ui::policy::DisplayUsage::kNear;
+  } else if (usage == "midrange") {
+    return fuchsia::ui::policy::DisplayUsage::kMidrange;
+  } else if (usage == "far") {
+    return fuchsia::ui::policy::DisplayUsage::kFar;
+  }
+
+  FXL_LOG(WARNING) << "Unknown display usage string: " << usage;
+  return fuchsia::ui::policy::DisplayUsage::kUnknown;
+}
+
+std::string GetDisplayUsageAsString(fuchsia::ui::policy::DisplayUsage usage) {
+  switch (usage) {
+    case fuchsia::ui::policy::DisplayUsage::kUnknown:
+      return "unknown";
+    case fuchsia::ui::policy::DisplayUsage::kHandheld:
+      return "handheld";
+    case fuchsia::ui::policy::DisplayUsage::kClose:
+      return "close";
+    case fuchsia::ui::policy::DisplayUsage::kNear:
+      return "near";
+    case fuchsia::ui::policy::DisplayUsage::kMidrange:
+      return "midrange";
+    case fuchsia::ui::policy::DisplayUsage::kFar:
+      return "far";
+  }
+}
+
 void XdrSessionShellMapEntry(
     XdrContext* const xdr,
     fuchsia::modular::internal::SessionShellMapEntry* const data) {
@@ -52,9 +86,24 @@ void XdrSessionShellMapEntry(
     has_screen_width = data->config().has_screen_width();
   }
 
-  xdr->FieldWithDefault(
-      "display_usage", data->mutable_config()->mutable_display_usage(),
-      has_display_usage, fuchsia::ui::policy::DisplayUsage::kUnknown);
+  std::string display_usage_str = "unknown";
+  if (has_display_usage) {
+    display_usage_str = GetDisplayUsageAsString(data->config().display_usage());
+  }
+
+  // We need to manually parse any field in JSON that is a represented as a fidl
+  // enum because XDR expects a number, rather than a string, for enums.
+  // If writing, this will set the value of "display_usage" in JSON as the
+  // value of |display_usage|. If reading, this will read the value of
+  // "display_usage" into |display_usage|.
+  std::string display_usage;
+  xdr->FieldWithDefault("display_usage", &display_usage, false,
+                        display_usage_str);
+
+  // This is only used when reading. We want to set the value read into
+  // |display_usage| into |data|.
+  auto display_usage_fidl = GetDisplayUsageFromString(display_usage);
+  data->mutable_config()->set_display_usage(display_usage_fidl);
 
   xdr->FieldWithDefault("screen_height",
                         data->mutable_config()->mutable_screen_height(),
@@ -92,6 +141,29 @@ fuchsia::modular::internal::BaseShellConfig GetDefaultBaseShellConfig() {
   base_shell_config.set_keep_alive_after_login(false);
 
   return base_shell_config;
+}
+
+fuchsia::modular::internal::CloudProvider GetCloudProviderFromString(
+    std::string provider) {
+  if (provider == "FROM_ENVIRONMENT") {
+    return fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT;
+  } else if (provider == "NONE") {
+    return fuchsia::modular::internal::CloudProvider::NONE;
+  }
+
+  return fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE;
+}
+
+std::string GetCloudProviderAsString(
+    fuchsia::modular::internal::CloudProvider provider) {
+  switch (provider) {
+    case fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE:
+      return "LET_LEDGER_DECIDE";
+    case fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT:
+      return "FROM_ENVIRONMENT";
+    case fuchsia::modular::internal::CloudProvider::NONE:
+      return "NONE";
+  }
 }
 
 }  // namespace
@@ -158,9 +230,25 @@ void XdrSessionmgrConfig_v1(
     XdrContext* const xdr,
     fuchsia::modular::internal::SessionmgrConfig* const data) {
   bool has_cloud_provider = data->has_cloud_provider();
-  xdr->FieldWithDefault(
-      "cloud_provider", data->mutable_cloud_provider(), has_cloud_provider,
-      fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE);
+
+  std::string cloud_provider_str = "LET_LEDGER_DECIDE";
+  if (has_cloud_provider) {
+    cloud_provider_str = GetCloudProviderAsString(data->cloud_provider());
+  }
+
+  // We need to manually parse any field in JSON that is a represented as a
+  // fidl enum because XDR expects a number, rather than a string, for enums.
+  // If writing, this will set the value of "cloud_provider" in JSON as the
+  // value of |cloud_provider|. If reading, this will read the value of
+  // "cloud_provider" into |cloud_provider|.
+  std::string cloud_provider;
+  xdr->FieldWithDefault("cloud_provider", &cloud_provider, has_cloud_provider,
+                        cloud_provider_str);
+
+  // This is only used when reading. We want to set the value read into
+  // |cloud_provider| into |data|.
+  auto cloud_provider_fidl = GetCloudProviderFromString(cloud_provider);
+  data->set_cloud_provider(cloud_provider_fidl);
 
   bool has_enable_cobalt = data->has_enable_cobalt();
   xdr->FieldWithDefault("enable_cobalt", data->mutable_enable_cobalt(),
