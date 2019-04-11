@@ -4,6 +4,7 @@
 
 executable("netsvc") {
   sources = [
+    "board-name.cpp",
     "debuglog.cpp",
     "device_id.cpp",
     "netboot.cpp",
@@ -13,15 +14,22 @@ executable("netsvc") {
     "zbi.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/gpt",
     "$zx/system/ulib/inet6",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/tftp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
   ]
   data_deps = [
     # netsvc launches /boot/bin/install-disk-image under --netboot.

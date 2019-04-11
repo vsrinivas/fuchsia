@@ -23,6 +23,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
+#include "board-name.h"
 #include "netsvc.h"
 
 #define SCRATCHSZ 2048
@@ -37,6 +38,8 @@
 enum netfile_type_t {
     netboot, // A bootfs file
     paver,   // A disk image which should be paved to disk
+    board_name,  // A file containing the board name.
+                 // Expected to return error if it doesn't match the current board name.
 };
 
 struct file_info_t {
@@ -232,7 +235,11 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     // paving an image to disk
     const char* argv[] = {"/boot/bin/install-disk-image", NULL, NULL, NULL, NULL};
 
-    if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
+    if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOARD_NAME_HOST_FILENAME)) {
+        printf("netsvc: Running board name validation\n");
+        file_info->type = board_name;
+        return TFTP_NO_ERROR;
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
         printf("netsvc: Running FVM Paver\n");
         argv[1] = "install-fvm";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOOTLOADER_HOST_FILENAME)) {
@@ -420,6 +427,10 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
         // Wake the paver thread, if it is waiting for data
         sync_completion_signal(&file_info->paver.data_ready);
         return TFTP_NO_ERROR;
+    } else if (file_info->type == board_name) {
+        return check_board_name((const char*)data, *length)
+                   ? TFTP_NO_ERROR
+                   : TFTP_ERR_BAD_STATE;
     } else {
         ssize_t write_result =
             netfile_offset_write(reinterpret_cast<const char*>(data), offset, *length);

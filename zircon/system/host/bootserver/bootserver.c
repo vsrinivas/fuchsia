@@ -201,6 +201,7 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
+            "  --board_name <name>      name of the board files are meant for\n"
             "  --boot <file>            use the supplied file as a kernel\n"
             "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
             "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
@@ -297,6 +298,9 @@ int main(int argc, char** argv) {
     char* nodename = NULL;
     int s = 1;
     size_t num_fvms = 0;
+    char board_name_template[] = "/tmp/board_name.XXXXXX";
+    const char* board_name = NULL;
+    const char* board_name_file = NULL;
     const char* bootloader_image = NULL;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
@@ -494,6 +498,14 @@ int main(int argc, char** argv) {
             use_tftp = true;
         } else if (!strcmp(argv[1], "--nocolor")) {
             use_color = false;
+        } else if (!strcmp(argv[1], "--board_name")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'--board_name' option requires a valid board name\n");
+                return -1;
+            }
+            board_name = argv[2];
+            argc--;
+            argv++;
         } else if (!strcmp(argv[1], "--")) {
             while (argc > 2) {
                 size_t len = strlen(argv[2]);
@@ -525,6 +537,14 @@ int main(int argc, char** argv) {
     }
     if (nodename) {
         fprintf(stderr, "[%s] Will only boot nodename '%s'\n", appname, nodename);
+    }
+
+    if (board_name) {
+        log("Board name set to %s", board_name);
+        board_name_file = mktemp(board_name_template);
+        int fd = open(board_name_file, O_WRONLY | O_CREAT);
+        write(fd, board_name, strlen(board_name));
+        close(fd);
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -627,10 +647,17 @@ int main(int argc, char** argv) {
         }
 
         log("Transfer starts");
-        if (cmdline[0]) {
+        status = 0;
+        // This needs to be first as it validates that the other images are
+        // correct.
+        if (status == 0 && board_name_file) {
+            status = xfer(&ra, board_name_file, NB_BOARD_NAME_FILENAME);
+            if (status != 0) {
+                log("Invalid board name. Check fx set parameter?");
+            }
+        }
+        if (status == 0 && cmdline[0]) {
             status = xfer(&ra, "(cmdline)", cmdline);
-        } else {
-            status = 0;
         }
         if (status == 0) {
             if (ramdisk_fn) {
