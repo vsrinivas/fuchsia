@@ -141,7 +141,7 @@ fidl("fidl_test") {
   testonly = true
 
   sources = [
-    "fidl_test.fidl",
+    "fidl_test.test.fidl",
   ]
 }
 

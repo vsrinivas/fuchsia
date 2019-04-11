@@ -40,4 +40,13 @@ struct CodingTraits<::test::name::MyBits> {
 inline zx_status_t Clone(::test::name::MyBits value,
                          ::test::name::MyBits* result) {
   return ::test::name::Clone(value, result);
-}}  // namespace fidl
+}
+
+template<>
+struct Equality<::test::name::MyBits> {
+  static inline bool Equals(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) {
+    uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
+    uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
+    return Equality<uint32_t>::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};}  // namespace fidl

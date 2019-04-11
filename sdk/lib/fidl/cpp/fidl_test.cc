@@ -35,6 +35,13 @@ template <typename A>
   return ::testing::AssertionSuccess();
 }
 
+TEST(FidlTest, BitsComparison) {
+  std::vector<Uint32Bits> bits;
+  bits.push_back(Uint32Bits::ONE);
+  bits.push_back(Uint32Bits::TWO);
+  EXPECT_TRUE(CheckComparison(bits));
+}
+
 TEST(FidlTest, SimpleStructComparison) {
   // Create a vector of structs.
   std::vector<Int64Struct> structs;

@@ -38,5 +38,14 @@ inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
                          {{ .Namespace }}::{{ .Name }}* result) {
   return {{ .Namespace }}::Clone(value, result);
 }
+
+template<>
+struct Equality<{{ .Namespace }}::{{ .Name }}> {
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    {{ .Type }} _lhs_underlying = static_cast<{{ .Type }}>(_lhs);
+    {{ .Type }} _rhs_underlying = static_cast<{{ .Type }}>(_rhs);
+    return Equality<{{ .Type }}>::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
 {{- end }}
 `

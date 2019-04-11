@@ -4,6 +4,11 @@
 
 library fidl.test.misc;
 
+bits Uint32Bits : uint32 {
+  ONE = 0x1;
+  TWO = 0x2;
+};
+
 struct Int64Struct {
     int64 x;
 };
