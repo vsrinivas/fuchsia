@@ -5,8 +5,11 @@
 #ifndef FBL_ALLOC_CHECKER_H_
 #define FBL_ALLOC_CHECKER_H_
 
+#include <memory>
 #include <new>
+#include <utility>
 #include <stddef.h>
+#include <zircon/assert.h>
 
 namespace fbl {
 
@@ -32,7 +35,28 @@ private:
     unsigned state_;
 };
 
+namespace internal {
+
+template <typename T>
+struct unique_type {
+    using single = std::unique_ptr<T>;
+};
+
+template <typename T>
+struct unique_type<T[]> {
+    using incomplete_array = std::unique_ptr<T[]>;
+};
+
+} // namespace internal
+
+template <typename T, typename... Args>
+typename internal::unique_type<T>::single
+make_unique_checked(AllocChecker* ac, Args&&... args) {
+    return std::unique_ptr<T>(new (ac) T(std::forward<Args>(args)...));
+}
+
 } // namespace fbl
+
 void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;
 void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;
 

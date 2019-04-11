@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 
+#include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
