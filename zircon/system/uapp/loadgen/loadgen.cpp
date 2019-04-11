@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     }
 
     // Parse the PRNG seed, if present.
-    unsigned int seed = static_cast<unsigned int>(zx_clock_get(CLOCK_MONOTONIC));
+    unsigned int seed = static_cast<unsigned int>(zx_clock_get_monotonic());
     if (argc >= 7) {
         if (sscanf(argv[6], "%u", &seed) != 1) return -1;
     }
