@@ -13,6 +13,7 @@ rustc_library("fidl_fuchsia_pkg_ext") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/fuchsia_uri",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
