@@ -11,6 +11,7 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 
+#include <type_traits>
 #include <zircon/types.h>
 
 namespace inspect {
@@ -27,12 +28,38 @@ enum class BlockType {
     kPropertyValue = 7,
     kExtent = 8,
     kName = 9,
-    kTombstone = 10
+    kTombstone = 10,
+    kArrayValue = 11
 };
 
 enum class PropertyFormat {
+    // The property is a UTF-8 string.
     kUtf8 = 0,
+
+    // The property is a binary string of uint8_t.
     kBinary = 1
+};
+
+enum class ArrayFormat {
+    // The array stores N raw values in N slots.
+    kDefault = 0,
+
+    // The array is a linear histogram with N buckets and N+4 slots, which are:
+    // - param_floor_value
+    // - param_step_size
+    // - underflow_bucket
+    // - ...N buckets...
+    // - overflow_bucket
+    kLinearHistogram = 1,
+
+    // The array is an exponential histogram with N buckets and N+5 slots, which are:
+    // - param_floor_value
+    // - param_initial_step
+    // - param_step_multiplier
+    // - underflow_bucket
+    // - ...N buckets...
+    // - overflow_bucket
+    kExponentialHistogram = 2
 };
 
 namespace internal {
@@ -117,6 +144,13 @@ struct PropertyBlockPayload {
     using Flags = Field<60, 63>;
 };
 
+// Describes the fields for ARRAY_VALUE payloads.
+struct ArrayBlockPayload {
+    using EntryType = Field<0, 3>;
+    using Flags = Field<4, 7>;
+    using Count = Field<8, 15>;
+};
+
 struct ExtentBlockFields : public BlockFields {
     using NextExtentIndex = Field<8, 35>;
 };
@@ -137,8 +171,24 @@ constexpr size_t PayloadCapacity(BlockOrder order) {
     return OrderToSize(order) - sizeof(Block::header);
 }
 
+constexpr size_t ArrayCapacity(BlockOrder order) {
+    return (OrderToSize(order) - sizeof(Block::header) - sizeof(Block::payload)) / sizeof(uint64_t);
+}
+
 constexpr size_t BlockSizeForPayload(size_t payload_size) {
     return fbl::max(payload_size + sizeof(Block::header), kMinOrderSize);
+}
+
+// For array types, get a pointer to a specific slot in the array.
+// If the index is out of bounds, return nullptr.
+template <typename T, typename BlockType>
+constexpr T* GetArraySlot(BlockType* block, size_t index) {
+    if (index > ArrayCapacity(GetOrder(block))) {
+        return nullptr;
+    }
+
+    T* arr = reinterpret_cast<T*>(&block->payload);
+    return arr + index + 1 /* skip inline payload */;
 }
 
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);

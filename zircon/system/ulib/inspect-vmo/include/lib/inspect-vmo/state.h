@@ -5,6 +5,7 @@
 #ifndef LIB_INSPECT_VMO_STATE_H_
 #define LIB_INSPECT_VMO_STATE_H_
 
+#include "fbl/string_piece.h"
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <lib/inspect-vmo/block.h>
@@ -49,6 +50,18 @@ public:
     // the metric when destroyed.
     DoubleMetric CreateDoubleMetric(fbl::StringPiece name, BlockIndex parent, double value);
 
+    // Create a new |IntArray| in the Inspect VMO. The returned object releases
+    // the array when destroyed.
+    IntArray CreateIntArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+
+    // Create a new |UintArray| in the Inspect VMO. The returned object releases
+    // the array when destroyed.
+    UintArray CreateUintArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+
+    // Create a new |DoubleArray| in the Inspect VMO. The returned object releases
+    // the array when destroyed.
+    DoubleArray CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+
     // Create a new |Property| in the Inspect VMO. The returned object releases
     // the metric when destroyed.
     Property CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value, PropertyFormat format);
@@ -62,16 +75,25 @@ public:
     void SetIntMetric(IntMetric* metric, int64_t value);
     void SetUintMetric(UintMetric* metric, uint64_t value);
     void SetDoubleMetric(DoubleMetric* metric, double value);
+    void SetIntArray(IntArray* array, size_t index, int64_t value);
+    void SetUintArray(UintArray* array, size_t index, uint64_t value);
+    void SetDoubleArray(DoubleArray* array, size_t index, double value);
 
     // Adders for various metric types
     void AddIntMetric(IntMetric* metric, int64_t value);
     void AddUintMetric(UintMetric* metric, uint64_t value);
     void AddDoubleMetric(DoubleMetric* metric, double value);
+    void AddIntArray(IntArray* array, size_t index, int64_t value);
+    void AddUintArray(UintArray* array, size_t index, uint64_t value);
+    void AddDoubleArray(DoubleArray* array, size_t index, double value);
 
     // Subtractors for various metric types
     void SubtractIntMetric(IntMetric* metric, int64_t value);
     void SubtractUintMetric(UintMetric* metric, uint64_t value);
     void SubtractDoubleMetric(DoubleMetric* metric, double value);
+    void SubtractIntArray(IntArray* array, size_t index, int64_t value);
+    void SubtractUintArray(UintArray* array, size_t index, uint64_t value);
+    void SubtractDoubleArray(DoubleArray* array, size_t index, double value);
 
     // Set the value of a property.
     void SetProperty(Property* property, fbl::StringPiece value);
@@ -80,6 +102,9 @@ public:
     void FreeIntMetric(IntMetric* metric);
     void FreeUintMetric(UintMetric* metric);
     void FreeDoubleMetric(DoubleMetric* metric);
+    void FreeIntArray(IntArray* array);
+    void FreeUintArray(UintArray* array);
+    void FreeDoubleArray(DoubleArray* array);
     void FreeProperty(Property* property);
     void FreeObject(Object* object);
 
@@ -91,7 +116,8 @@ private:
 
     // Helper method for creating a new VALUE block type.
     zx_status_t InnerCreateValue(fbl::StringPiece name, BlockType type, BlockIndex parent_index,
-                                 BlockIndex* out_name, BlockIndex* out_value) __TA_REQUIRES(mutex_);
+                                 BlockIndex* out_name, BlockIndex* out_value,
+                                 size_t min_size_required = kMinOrderSize) __TA_REQUIRES(mutex_);
 
     // Returns true if the block is an extent, false otherwise.
     constexpr bool IsExtent(const Block* block) {
@@ -108,6 +134,23 @@ private:
 
     // Helper to create a new name block with the given name.
     zx_status_t CreateName(fbl::StringPiece name, BlockIndex* out) __TA_REQUIRES(mutex_);
+
+    // Helper function to create an array with the given name, number of slots, and format.
+    template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+    WrapperType InnerCreateArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+
+    // Helper function to set the value of a specific index in an array.
+    template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+    void InnerSetArray(WrapperType* metric, size_t index, NumericType value);
+
+    // Helper function to perform an operation on a specific index in an array.
+    // Common operations are std::plus and std::minus.
+    template <typename NumericType, typename WrapperType, BlockType BlockTypeValue, typename Operation>
+    void InnerOperationArray(WrapperType* metric, size_t index, NumericType value);
+
+    // Helper function to free an array type.
+    template <typename WrapperType>
+    void InnerFreeArray(WrapperType* value);
 
     // Mutex wrapping all fields in the state.
     mutable fbl::Mutex mutex_;

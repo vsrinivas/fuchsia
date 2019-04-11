@@ -5,6 +5,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/inspect-vmo/block.h>
 #include <lib/inspect-vmo/scanner.h>
 #include <lib/inspect-vmo/snapshot.h>
 #include <lib/inspect-vmo/state.h>
@@ -12,15 +13,20 @@
 
 namespace {
 
+using inspect::vmo::ArrayFormat;
 using inspect::vmo::BlockType;
+using inspect::vmo::DoubleArray;
 using inspect::vmo::DoubleMetric;
+using inspect::vmo::IntArray;
 using inspect::vmo::IntMetric;
 using inspect::vmo::kNumOrders;
 using inspect::vmo::Object;
 using inspect::vmo::Property;
 using inspect::vmo::PropertyFormat;
 using inspect::vmo::Snapshot;
+using inspect::vmo::UintArray;
 using inspect::vmo::UintMetric;
+using inspect::vmo::internal::ArrayBlockPayload;
 using inspect::vmo::internal::Block;
 using inspect::vmo::internal::BlockIndex;
 using inspect::vmo::internal::ExtentBlockFields;
@@ -49,6 +55,17 @@ bool CompareBlock(const Block* actual, const Block expected) {
 
     EXPECT_BYTES_EQ((const uint8_t*)(&expected), (const uint8_t*)(actual), sizeof(Block),
                     "Block header contents did not match");
+
+    END_HELPER;
+}
+
+template <typename T>
+bool CompareArray(const Block* block, const T* expected, size_t count) {
+    BEGIN_HELPER;
+    EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(&block->payload) + 8,
+                    reinterpret_cast<const uint8_t*>(expected),
+                    sizeof(int64_t) * count,
+                    "Array payload does not match");
 
     END_HELPER;
 }
@@ -279,6 +296,107 @@ bool CreateDoubleMetric() {
         blocks.find(6)->block,
         MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
                   "c\0\0\0\0\0\0\0")));
+
+    END_TEST;
+}
+
+bool CreateArrays() {
+    BEGIN_TEST;
+
+    auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
+    ASSERT_TRUE(vmo != nullptr);
+    auto heap = std::make_unique<Heap>(std::move(vmo));
+    auto state = State::Create(std::move(heap));
+
+    IntArray a = state->CreateIntArray("a", 0, 10, ArrayFormat::kLinearHistogram);
+    UintArray b = state->CreateUintArray("b", 0, 10, ArrayFormat::kDefault);
+    DoubleArray c = state->CreateDoubleArray("c", 0, 10, ArrayFormat::kDefault);
+
+    a.Add(0, 10);
+    a.Set(1, -10);
+    a.Subtract(2, 9);
+    // out of bounds
+    a.Set(10, -10);
+    a.Add(10, 0xFF);
+    a.Subtract(10, 0xDD);
+
+    b.Add(0, 10);
+    b.Set(1, 10);
+    b.Subtract(1, 9);
+    // out of bounds
+    b.Set(10, 10);
+    b.Add(10, 10);
+    b.Subtract(10, 10);
+
+    c.Add(0, .25);
+    c.Set(1, 1.25);
+    c.Subtract(1, .5);
+    // out of bounds
+    c.Set(10, 10);
+    c.Add(10, 10);
+    c.Subtract(10, 10);
+
+    fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+    size_t free_blocks, allocated_blocks;
+    auto snapshot =
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+    ASSERT_TRUE(snapshot);
+
+    // Header and 2 for each metric.
+    EXPECT_EQ(7, allocated_blocks);
+    EXPECT_EQ(4, free_blocks);
+
+    EXPECT_TRUE(CompareBlock(blocks.find(0)->block, MakeHeader(42)));
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(1)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "a\0\0\0\0\0\0\0")));
+        EXPECT_TRUE(CompareBlock(blocks.find(8)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(1),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kIntValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        int64_t a_array_values[] = {10, -10, -9, 0, 0, 0, 0, 0, 0, 0};
+        EXPECT_TRUE(CompareArray(blocks.find(8)->block, a_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(2)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "b\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(16)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(2),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kUintValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kDefault) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        uint64_t b_array_values[] = {10, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+        EXPECT_TRUE(CompareArray(blocks.find(16)->block, b_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(3)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "c\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(24)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(3),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kDoubleValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kDefault) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        double c_array_values[] = {.25, .75, 0, 0, 0, 0, 0, 0, 0, 0};
+        EXPECT_TRUE(CompareArray(blocks.find(24)->block, c_array_values, 10));
+    }
 
     END_TEST;
 }
@@ -939,6 +1057,7 @@ BEGIN_TEST_CASE(StateTests)
 RUN_TEST(CreateIntMetric)
 RUN_TEST(CreateUintMetric)
 RUN_TEST(CreateDoubleMetric)
+RUN_TEST(CreateArrays)
 RUN_TEST(CreateSmallProperties)
 RUN_TEST(CreateLargeSingleExtentProperties)
 RUN_TEST(CreateMultiExtentProperty)

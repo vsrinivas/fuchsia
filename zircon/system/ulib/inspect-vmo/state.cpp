@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <lib/inspect-vmo/state.h>
@@ -10,41 +12,123 @@ namespace inspect {
 namespace vmo {
 namespace internal {
 
-namespace {
 // Helper class to support RAII locking of the generation count.
 class AutoGenerationIncrement final {
 public:
-    AutoGenerationIncrement(BlockIndex target, Heap* heap)
-        : target_(target), heap_(heap) {
-        Acquire(heap_->GetBlock(target_));
-    }
-    ~AutoGenerationIncrement() { Release(heap_->GetBlock(target_)); }
+    AutoGenerationIncrement(BlockIndex target, Heap* heap);
+    ~AutoGenerationIncrement();
 
 private:
     // Acquire the generation count lock.
     // This consists of atomically incrementing the count using
     // acquire-release ordering, ensuring readers see this increment before
     // any changes to the buffer.
-    void Acquire(Block* block) {
-        uint64_t* ptr = &block->payload.u64;
-        __atomic_fetch_add(ptr, 1, std::memory_order_acq_rel);
-    }
+    void Acquire(Block* block);
 
     // Release the generation count lock.
     // This consists of atomically incrementing the count using release
     // ordering, ensuring readers see this increment after all changes to
     // the buffer are committed.
-    void Release(Block* block) {
-        uint64_t* ptr = &block->payload.u64;
-        __atomic_fetch_add(ptr, 1, std::memory_order_release);
-    }
+    void Release(Block* block);
+
     BlockIndex target_;
     Heap* heap_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(AutoGenerationIncrement);
 };
 
-} // namespace
+AutoGenerationIncrement ::AutoGenerationIncrement(BlockIndex target, Heap* heap)
+    : target_(target), heap_(heap) {
+    Acquire(heap_->GetBlock(target_));
+}
+AutoGenerationIncrement::~AutoGenerationIncrement() {
+    Release(heap_->GetBlock(target_));
+}
+
+void AutoGenerationIncrement ::Acquire(Block* block) {
+    uint64_t* ptr = &block->payload.u64;
+    __atomic_fetch_add(ptr, 1, std::memory_order_acq_rel);
+}
+
+void AutoGenerationIncrement::Release(Block* block) {
+    uint64_t* ptr = &block->payload.u64;
+    __atomic_fetch_add(ptr, 1, std::memory_order_release);
+}
+
+template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+WrapperType State::InnerCreateArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+    size_t block_size_needed = slots * sizeof(NumericType) + kMinOrderSize;
+    ZX_DEBUG_ASSERT_MSG(block_size_needed <= kMaxOrderSize, "The requested array size cannot fit in a block");
+    if (block_size_needed > kMaxOrderSize) {
+        return WrapperType();
+    }
+
+    fbl::AutoLock lock(&mutex_);
+    auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+    BlockIndex name_index, value_index;
+    zx_status_t status;
+    status = InnerCreateValue(name, BlockType::kArrayValue, parent, &name_index, &value_index, block_size_needed);
+    if (status != ZX_OK) {
+        return WrapperType();
+    }
+
+    auto* block = heap_->GetBlock(value_index);
+    block->payload.u64 = ArrayBlockPayload::EntryType::Make(BlockTypeValue) |
+                         ArrayBlockPayload::Flags::Make(format) |
+                         ArrayBlockPayload::Count::Make(slots);
+
+    return WrapperType(fbl::WrapRefPtr(this), name_index, value_index);
+}
+
+template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+void State::InnerSetArray(WrapperType* metric, size_t index, NumericType value) {
+    ZX_ASSERT(metric->state_.get() == this);
+    fbl::AutoLock lock(&mutex_);
+    auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+    auto* block = heap_->GetBlock(metric->value_index_);
+    ZX_ASSERT(GetType(block) == BlockType::kArrayValue);
+    auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
+    ZX_ASSERT(entry_type == BlockTypeValue);
+    auto* slot = GetArraySlot<NumericType>(block, index);
+    if (slot != nullptr) {
+        *slot = value;
+    }
+}
+
+template <typename NumericType, typename WrapperType, BlockType BlockTypeValue, typename Operation>
+void State::InnerOperationArray(WrapperType* metric, size_t index, NumericType value) {
+    ZX_ASSERT(metric->state_.get() == this);
+    fbl::AutoLock lock(&mutex_);
+    auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+    auto* block = heap_->GetBlock(metric->value_index_);
+    ZX_ASSERT(GetType(block) == BlockType::kArrayValue);
+    auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
+    ZX_ASSERT(entry_type == BlockTypeValue);
+    auto* slot = GetArraySlot<NumericType>(block, index);
+    if (slot != nullptr) {
+        *slot = Operation()(*slot, value);
+    }
+}
+
+template <typename WrapperType>
+void State::InnerFreeArray(WrapperType* value) {
+    ZX_DEBUG_ASSERT_MSG(value->state_.get() == this, "Array being freed from the wrong state");
+    if (value->state_.get() != this) {
+        return;
+    }
+
+    fbl::AutoLock lock(&mutex_);
+    auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+    DecrementParentRefcount(value->value_index_);
+
+    heap_->Free(value->name_index_);
+    heap_->Free(value->value_index_);
+    value->state_ = nullptr;
+}
 
 fbl::RefPtr<State> State::Create(fbl::unique_ptr<Heap> heap) {
     BlockIndex header;
@@ -132,6 +216,18 @@ DoubleMetric State::CreateDoubleMetric(fbl::StringPiece name, BlockIndex parent,
     return DoubleMetric(fbl::WrapRefPtr(this), name_index, value_index);
 }
 
+IntArray State::CreateIntArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+    return InnerCreateArray<int64_t, IntArray, BlockType::kIntValue>(name, parent, slots, format);
+}
+
+UintArray State::CreateUintArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+    return InnerCreateArray<uint64_t, UintArray, BlockType::kUintValue>(name, parent, slots, format);
+}
+
+DoubleArray State::CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+    return InnerCreateArray<double, DoubleArray, BlockType::kDoubleValue>(name, parent, slots, format);
+}
+
 Property State::CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value, PropertyFormat format) {
     fbl::AutoLock lock(&mutex_);
     auto gen = AutoGenerationIncrement(header_, heap_.get());
@@ -201,6 +297,18 @@ void State::SetDoubleMetric(DoubleMetric* metric, double value) {
     ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
                         static_cast<int>(GetType(block)));
     block->payload.f64 = value;
+}
+
+void State::SetIntArray(IntArray* array, size_t index, int64_t value) {
+    InnerSetArray<int64_t, IntArray, BlockType::kIntValue>(array, index, value);
+}
+
+void State::SetUintArray(UintArray* array, size_t index, uint64_t value) {
+    InnerSetArray<uint64_t, UintArray, BlockType::kUintValue>(array, index, value);
+}
+
+void State::SetDoubleArray(DoubleArray* array, size_t index, double value) {
+    InnerSetArray<double, DoubleArray, BlockType::kDoubleValue>(array, index, value);
 }
 
 void State::AddIntMetric(IntMetric* metric, int64_t value) {
@@ -273,6 +381,30 @@ void State::SubtractDoubleMetric(DoubleMetric* metric, double value) {
     ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
                         static_cast<int>(GetType(block)));
     block->payload.f64 -= value;
+}
+
+void State::AddIntArray(IntArray* array, size_t index, int64_t value) {
+    InnerOperationArray<int64_t, IntArray, BlockType::kIntValue, std::plus<int64_t>>(array, index, value);
+}
+
+void State::SubtractIntArray(IntArray* array, size_t index, int64_t value) {
+    InnerOperationArray<int64_t, IntArray, BlockType::kIntValue, std::minus<int64_t>>(array, index, value);
+}
+
+void State::AddUintArray(UintArray* array, size_t index, uint64_t value) {
+    InnerOperationArray<uint64_t, UintArray, BlockType::kUintValue, std::plus<uint64_t>>(array, index, value);
+}
+
+void State::SubtractUintArray(UintArray* array, size_t index, uint64_t value) {
+    InnerOperationArray<uint64_t, UintArray, BlockType::kUintValue, std::minus<uint64_t>>(array, index, value);
+}
+
+void State::AddDoubleArray(DoubleArray* array, size_t index, double value) {
+    InnerOperationArray<double, DoubleArray, BlockType::kDoubleValue, std::plus<double>>(array, index, value);
+}
+
+void State::SubtractDoubleArray(DoubleArray* array, size_t index, double value) {
+    InnerOperationArray<double, DoubleArray, BlockType::kDoubleValue, std::minus<double>>(array, index, value);
 }
 
 void State::SetProperty(Property* property, fbl::StringPiece value) {
@@ -366,6 +498,18 @@ void State::FreeDoubleMetric(DoubleMetric* metric) {
     metric->state_ = nullptr;
 }
 
+void State::FreeIntArray(IntArray* array) {
+    InnerFreeArray<IntArray>(array);
+}
+
+void State::FreeUintArray(UintArray* array) {
+    InnerFreeArray<UintArray>(array);
+}
+
+void State::FreeDoubleArray(DoubleArray* array) {
+    InnerFreeArray<DoubleArray>(array);
+}
+
 void State::FreeProperty(Property* property) {
     ZX_DEBUG_ASSERT_MSG(property->state_.get() == this,
                         "Property being freed from the wrong state");
@@ -412,10 +556,11 @@ void State::FreeObject(Object* object) {
 }
 
 zx_status_t State::InnerCreateValue(fbl::StringPiece name, BlockType type, BlockIndex parent_index,
-                                    BlockIndex* out_name, BlockIndex* out_value) {
+                                    BlockIndex* out_name, BlockIndex* out_value,
+                                    size_t min_size_required) {
     BlockIndex value_index, name_index;
     zx_status_t status;
-    status = heap_->Allocate(kMinOrderSize, &value_index);
+    status = heap_->Allocate(min_size_required, &value_index);
     if (status != ZX_OK) {
         return status;
     }
@@ -431,7 +576,7 @@ zx_status_t State::InnerCreateValue(fbl::StringPiece name, BlockType type, Block
                     ValueBlockFields::Type::Make(type) |
                     ValueBlockFields::ParentIndex::Make(parent_index) |
                     ValueBlockFields::NameIndex::Make(name_index);
-    block->payload.u64 = 0;
+    memset(&block->payload, 0, min_size_required - sizeof(block->header));
 
     // Increment the parent refcount.
     Block* parent = heap_->GetBlock(parent_index);

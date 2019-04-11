@@ -128,6 +128,126 @@ void internal::NumericMetric<double>::Subtract(double value) {
     }
 }
 
+template <>
+internal::ArrayValue<int64_t>::~ArrayValue<int64_t>() {
+    if (state_) {
+        state_->FreeIntArray(this);
+    }
+}
+
+template <>
+internal::ArrayValue<int64_t>& internal::ArrayValue<int64_t>::
+operator=(internal::ArrayValue<int64_t>&& other) {
+    if (state_) {
+        state_->FreeIntArray(this);
+    }
+    state_ = std::move(other.state_);
+    name_index_ = std::move(other.name_index_);
+    value_index_ = std::move(other.value_index_);
+    return *this;
+}
+
+template <>
+void internal::ArrayValue<int64_t>::Set(size_t index, int64_t value) {
+    if (state_) {
+        state_->SetIntArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<int64_t>::Add(size_t index, int64_t value) {
+    if (state_) {
+        state_->AddIntArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<int64_t>::Subtract(size_t index, int64_t value) {
+    if (state_) {
+        state_->SubtractIntArray(this, index, value);
+    }
+}
+
+template <>
+internal::ArrayValue<uint64_t>::~ArrayValue<uint64_t>() {
+    if (state_) {
+        state_->FreeUintArray(this);
+    }
+}
+
+template <>
+internal::ArrayValue<uint64_t>& internal::ArrayValue<uint64_t>::
+operator=(internal::ArrayValue<uint64_t>&& other) {
+    if (state_) {
+        state_->FreeUintArray(this);
+    }
+    state_ = std::move(other.state_);
+    name_index_ = std::move(other.name_index_);
+    value_index_ = std::move(other.value_index_);
+    return *this;
+}
+
+template <>
+void internal::ArrayValue<uint64_t>::Set(size_t index, uint64_t value) {
+    if (state_) {
+        state_->SetUintArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<uint64_t>::Add(size_t index, uint64_t value) {
+    if (state_) {
+        state_->AddUintArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<uint64_t>::Subtract(size_t index, uint64_t value) {
+    if (state_) {
+        state_->SubtractUintArray(this, index, value);
+    }
+}
+
+template <>
+internal::ArrayValue<double>::~ArrayValue<double>() {
+    if (state_) {
+        state_->FreeDoubleArray(this);
+    }
+}
+
+template <>
+internal::ArrayValue<double>& internal::ArrayValue<double>::
+operator=(internal::ArrayValue<double>&& other) {
+    if (state_) {
+        state_->FreeDoubleArray(this);
+    }
+    state_ = std::move(other.state_);
+    name_index_ = std::move(other.name_index_);
+    value_index_ = std::move(other.value_index_);
+    return *this;
+}
+
+template <>
+void internal::ArrayValue<double>::Set(size_t index, double value) {
+    if (state_) {
+        state_->SetDoubleArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<double>::Add(size_t index, double value) {
+    if (state_) {
+        state_->AddDoubleArray(this, index, value);
+    }
+}
+
+template <>
+void internal::ArrayValue<double>::Subtract(size_t index, double value) {
+    if (state_) {
+        state_->SubtractDoubleArray(this, index, value);
+    }
+}
+
 Property::~Property() {
     if (state_) {
         state_->FreeProperty(this);

@@ -64,11 +64,60 @@ private:
     internal::BlockIndex value_index_;
 };
 
+// A value containing an array of numeric types. All methods wrap the
+// corresponding functionality on |internal::State|, and concrete
+// implementations are available only for int64_t, uint64_t and double.
+template <typename T>
+class ArrayValue final {
+public:
+    // Construct a default array value. Operations on this value are
+    // no-ops.
+    ArrayValue() = default;
+    ~ArrayValue();
+
+    // Allow moving, disallow copying.
+    ArrayValue(const ArrayValue& other) = delete;
+    ArrayValue(ArrayValue&& other) = default;
+    ArrayValue& operator=(const ArrayValue& other) = delete;
+    ArrayValue& operator=(ArrayValue&& other);
+
+    // Set the value of the given index of this array.
+    void Set(size_t index, T value);
+
+    // Add the given value to the value of this numeric metric.
+    void Add(size_t index, T value);
+
+    // Subtract the given value from the value of this numeric metric.
+    void Subtract(size_t index, T value);
+
+    // Return true if this metric is stored in a buffer. False otherwise.
+    explicit operator bool() { return state_.get() != nullptr; }
+
+private:
+    friend class internal::State;
+    ArrayValue(fbl::RefPtr<internal::State> state, internal::BlockIndex name,
+               internal::BlockIndex value)
+        : state_(std::move(state)), name_index_(name), value_index_(value) {}
+
+    // Reference to the state containing this value.
+    fbl::RefPtr<internal::State> state_;
+
+    // Index of the name block in the state.
+    internal::BlockIndex name_index_;
+
+    // Index of the value block in the state.
+    internal::BlockIndex value_index_;
+};
+
 } // namespace internal
 
 using IntMetric = internal::NumericMetric<int64_t>;
 using UintMetric = internal::NumericMetric<uint64_t>;
 using DoubleMetric = internal::NumericMetric<double>;
+
+using IntArray = internal::ArrayValue<int64_t>;
+using UintArray = internal::ArrayValue<uint64_t>;
+using DoubleArray = internal::ArrayValue<double>;
 
 // A property containing a string value.
 // All methods wrap the corresponding functionality on |internal::State|.
@@ -145,7 +194,26 @@ public:
     // Create a new |Property| with the given name and format that is a child of this object.
     // If this object is not stored in a buffer, the created property will
     // also not be stored in a buffer.
-    [[nodiscard]] Property CreateProperty(fbl::StringPiece name, fbl::StringPiece value, PropertyFormat format);
+    [[nodiscard]] Property CreateProperty(fbl::StringPiece name,
+                                          fbl::StringPiece value, PropertyFormat format);
+
+    // Create a new |IntArray| with the given name and format that is a child of this object.
+    // If this object is not stored in a buffer, the created value will
+    // also not be stored in a buffer.
+    [[nodiscard]] IntArray CreateIntArray(fbl::StringPiece name,
+                                          fbl::StringPiece value, ArrayFormat format);
+
+    // Create a new |UintArray| with the given name and format that is a child of this object.
+    // If this object is not stored in a buffer, the created value will
+    // also not be stored in a buffer.
+    [[nodiscard]] UintArray CreateUintArray(fbl::StringPiece name,
+                                            fbl::StringPiece value, ArrayFormat format);
+
+    // Create a new |DoubleArray| with the given name and format that is a child of this object.
+    // If this object is not stored in a buffer, the created value will
+    // also not be stored in a buffer.
+    [[nodiscard]] DoubleArray CreateDoubleArray(fbl::StringPiece name,
+                                                fbl::StringPiece value, ArrayFormat format);
 
     // Return true if this object is stored in a buffer. False otherwise.
     explicit operator bool() { return state_.get() != nullptr; }
