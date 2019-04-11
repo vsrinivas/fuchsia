@@ -12,3 +12,33 @@ source_set("host_reactor") {
     "//src/connectivity/overnet/lib/environment:trace",
   ]
 }
+
+source_set("channel") {
+  sources = [
+    "decoder.cc",
+    "decoder.h",
+    "encoder.cc",
+    "encoder.h",
+    "fidl_channel.cc",
+    "fidl_channel.h",
+    "zx_channel.cc",
+    "zx_channel.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+    "//src/connectivity/overnet/lib/endpoint:router_endpoint",
+    "//src/connectivity/overnet/lib/protocol:coding",
+    "//src/connectivity/overnet/lib/vocabulary:optional",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+source_set("zx_socket") {
+  sources = [
+    "zx_socket.cc",
+    "zx_socket.h",
+  ]
+  public_deps = [
+    ":channel",
+  ]
+}
