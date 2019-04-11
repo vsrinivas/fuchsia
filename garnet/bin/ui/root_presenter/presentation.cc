@@ -722,11 +722,11 @@ void Presentation::OnSensorEvent(uint32_t device_id,
 
 void Presentation::OnMediaButtonsEvent(fuchsia::ui::input::InputReport report) {
   FXL_CHECK(report.media_buttons);
-  fuchsia::ui::input::MediaButtonsEvent event;
-  event.set_volume(report.media_buttons->volume);
-  event.set_mic_mute(report.media_buttons->mic_mute);
 
   for (auto& listener : media_buttons_listeners_) {
+    fuchsia::ui::input::MediaButtonsEvent event;
+    event.set_volume(report.media_buttons->volume);
+    event.set_mic_mute(report.media_buttons->mic_mute);
     listener->OnMediaButtonsEvent(std::move(event));
   }
 }
