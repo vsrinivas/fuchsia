@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <type_traits>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -2003,6 +2004,26 @@ zx::handle ReadException(const zx::channel& channel, zx_excp_type_t type,
     return exception;
 }
 
+// Returns true if the exception has a thread handle. If |koid| is given,
+// also checks that the thread's koid matches it.
+bool ExceptionHasThread(const zx::handle& exception, zx_koid_t koid = ZX_KOID_INVALID) {
+    zx::thread thread;
+    if (zx_exception_get_thread(exception.get(), thread.reset_and_get_address()) != ZX_OK) {
+        return false;
+    }
+    return koid == ZX_KOID_INVALID || koid == tu_get_koid(thread.get());
+}
+
+// Returns true if the exception has a process handle. If |koid| is given,
+// also checks that the process' koid matches it.
+bool ExceptionHasProcess(const zx::handle& exception, zx_koid_t koid = ZX_KOID_INVALID) {
+    zx::process process;
+    if (zx_exception_get_process(exception.get(), process.reset_and_get_address()) != ZX_OK) {
+        return false;
+    }
+    return koid == ZX_KOID_INVALID || koid == tu_get_koid(process.get());
+}
+
 uint32_t GetExceptionStateProperty(const zx::handle& exception) {
     uint32_t state = ~0;
     EXPECT_EQ(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
@@ -2017,7 +2038,7 @@ void SetExceptionStateProperty(const zx::handle& exception, uint32_t state) {
 
 // A finite timeout to use when you want to make sure something isn't happening
 // e.g. a certain signal isn't going to be asserted.
-auto constexpr kTestTimeout = zx::msec(100);
+auto constexpr kTestTimeout = zx::msec(50);
 
 bool create_exception_channel_test() {
     BEGIN_TEST;
@@ -2068,6 +2089,31 @@ bool create_exception_channel_invalid_args_test() {
     END_TEST;
 }
 
+// Removes a right from a task and ensures that channel creation now fails.
+//
+// |task_func|: TestLoop member function to get the task.
+// |right|: ZX_RIGHT_* value to remove.
+template <auto task_func, zx_rights_t right>
+bool task_requires_right_test() {
+    BEGIN_TEST;
+
+    TestLoop loop;
+    const auto& task = (loop.*task_func)();
+
+    zx_info_handle_basic_t info;
+    tu_handle_get_basic_info(task.get(), &info);
+
+    auto reduced_task = typename std::remove_reference<decltype(task)>::type();
+    ASSERT_EQ(task.duplicate(info.rights & ~right, &reduced_task), ZX_OK, "");
+
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(reduced_task.get(), 0,
+                                               exception_channel.reset_and_get_address()),
+              ZX_ERR_ACCESS_DENIED, "");
+
+    END_TEST;
+}
+
 bool create_second_exception_channel_test() {
     BEGIN_TEST;
 
@@ -2113,7 +2159,8 @@ bool overwrite_closed_exception_channel_test() {
 // |task_func|: TestLoop member function to get the task.
 // |create_flags|: flags to pass to zx_task_create_exception_channel().
 // |expected_type|: expected exception type reported in zx_info_thread_t.
-template <auto task_func, uint32_t create_flags, uint32_t expected_type>
+// |has_process|: true if the exception should have a process handle.
+template <auto task_func, uint32_t create_flags, uint32_t expected_type, bool has_process>
 bool receive_test() {
     BEGIN_TEST;
 
@@ -2130,7 +2177,14 @@ bool receive_test() {
 
     // Make sure exception info is correct.
     EXPECT_EQ(exception_info.tid, tu_get_koid(loop.aux_thread().get()), "");
+    EXPECT_TRUE(ExceptionHasThread(exception, exception_info.tid), "");
+
     EXPECT_EQ(exception_info.pid, tu_get_koid(loop.process().get()), "");
+    if (has_process) {
+        EXPECT_TRUE(ExceptionHasProcess(exception, exception_info.pid), "");
+    } else {
+        EXPECT_FALSE(ExceptionHasProcess(exception), "");
+    }
 
     // Make sure the thread state is correct.
     zx_info_thread_t thread_info = tu_thread_get_info(loop.aux_thread().get());
@@ -2407,12 +2461,22 @@ bool thread_lifecycle_channel_exception_test() {
     loop.Step2StartThreads();
 
     zx_exception_info_t primary_start_info;
-    ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &primary_start_info);
-    EXPECT_EQ(primary_start_info.pid, tu_get_koid(loop.process().get()), "");
+    {
+        zx::handle exception = ReadException(exception_channel, ZX_EXCP_THREAD_STARTING,
+                                             &primary_start_info);
+        EXPECT_EQ(primary_start_info.pid, tu_get_koid(loop.process().get()), "");
+        EXPECT_TRUE(ExceptionHasThread(exception, primary_start_info.tid), "");
+        EXPECT_TRUE(ExceptionHasProcess(exception, primary_start_info.pid), "");
+    }
 
     zx_exception_info_t aux_start_info;
-    ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &aux_start_info);
-    EXPECT_EQ(aux_start_info.pid, tu_get_koid(loop.process().get()), "");
+    {
+        zx::handle exception = ReadException(exception_channel, ZX_EXCP_THREAD_STARTING,
+                                             &aux_start_info);
+        EXPECT_EQ(aux_start_info.pid, tu_get_koid(loop.process().get()), "");
+        EXPECT_TRUE(ExceptionHasThread(exception, aux_start_info.tid), "");
+        EXPECT_TRUE(ExceptionHasProcess(exception, aux_start_info.pid), "");
+    }
 
     // We don't have access to the primary thread handle so just check the aux
     // thread TID to make sure it's correct.
@@ -2421,15 +2485,25 @@ bool thread_lifecycle_channel_exception_test() {
 
     loop.Step4ShutdownAuxThread();
     zx_exception_info_t aux_exit_info;
-    ReadException(exception_channel, ZX_EXCP_THREAD_EXITING, &aux_exit_info);
-    EXPECT_EQ(aux_exit_info.tid, aux_start_info.tid, "");
-    EXPECT_EQ(aux_exit_info.pid, aux_start_info.pid, "");
+    {
+        zx::handle exception = ReadException(exception_channel, ZX_EXCP_THREAD_EXITING,
+                                             &aux_exit_info);
+        EXPECT_TRUE(ExceptionHasThread(exception, aux_exit_info.tid), "");
+        EXPECT_TRUE(ExceptionHasProcess(exception, aux_exit_info.pid), "");
+        EXPECT_EQ(aux_exit_info.tid, aux_start_info.tid, "");
+        EXPECT_EQ(aux_exit_info.pid, aux_start_info.pid, "");
+    }
 
     loop.Step5ShutdownMainThread();
     zx_exception_info_t primary_exit_info;
-    ReadException(exception_channel, ZX_EXCP_THREAD_EXITING, &primary_exit_info);
-    EXPECT_EQ(primary_exit_info.tid, primary_start_info.tid, "");
-    EXPECT_EQ(primary_exit_info.pid, primary_start_info.pid, "");
+    {
+        zx::handle exception = ReadException(exception_channel, ZX_EXCP_THREAD_EXITING,
+                                             &primary_exit_info);
+        EXPECT_TRUE(ExceptionHasThread(exception, primary_exit_info.tid), "");
+        EXPECT_TRUE(ExceptionHasProcess(exception, primary_exit_info.pid), "");
+        EXPECT_EQ(primary_exit_info.tid, primary_start_info.tid, "");
+        EXPECT_EQ(primary_exit_info.pid, primary_start_info.pid, "");
+    }
 
     END_TEST;
 }
@@ -2457,8 +2531,13 @@ bool process_lifecycle_channel_exception_test() {
 
         loop.Step2StartThreads();
         zx_exception_info_t info;
-        ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING, &info);
-        EXPECT_EQ(info.pid, tu_get_koid(loop.process().get()), "");
+        {
+            zx::handle exception = ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING,
+                                                 &info);
+            EXPECT_EQ(info.pid, tu_get_koid(loop.process().get()), "");
+            EXPECT_TRUE(ExceptionHasThread(exception, info.tid), "");
+            EXPECT_TRUE(ExceptionHasProcess(exception, info.pid), "");
+        }
 
         loop.Step3ReadAuxThreadHandle();
         loop.Step4ShutdownAuxThread();
@@ -2555,6 +2634,75 @@ bool lifecycle_channel_exception_debug_handlers_only_test() {
     END_TEST;
 }
 
+// Returns the state of the thread underlying the given exception.
+zx_thread_state_t GetExceptionThreadState(const zx::handle& exception) {
+    zx::thread thread;
+    EXPECT_EQ(zx_exception_get_thread(exception.get(), thread.reset_and_get_address()), ZX_OK, "");
+    return tu_thread_get_info(thread.get()).state;
+}
+
+// A lifecycle exception blocks due to:
+//   * process/thread start
+//   * thread killing itself via zx_thread_exit()
+//
+// It does not block due to:
+//   * zx_task_kill() on the thread or any of its parents
+//
+// In the non-blocking case, the exception is still sent, but the thread
+// doesn't wait for a response.
+bool lifecycle_channel_blocking_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(TestLoop::Control::kManual);
+    loop.Step1CreateProcess();
+
+    zx::channel job_channel;
+    ASSERT_EQ(zx_task_create_exception_channel(loop.job().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               job_channel.reset_and_get_address()),
+              ZX_OK, "");
+    zx::channel process_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.process().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               process_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // Process/thread start: exception handler should block the task.
+    loop.Step2StartThreads();
+    {
+        zx::handle exception = ReadException(job_channel, ZX_EXCP_PROCESS_STARTING);
+        zx::nanosleep(zx::deadline_after(kTestTimeout));
+        EXPECT_EQ(GetExceptionThreadState(exception), ZX_THREAD_STATE_BLOCKED_EXCEPTION);
+    }
+    for (int i = 0; i < 2; ++i) {
+        zx::handle exception = ReadException(process_channel, ZX_EXCP_THREAD_STARTING);
+        zx::nanosleep(zx::deadline_after(kTestTimeout));
+        EXPECT_EQ(GetExceptionThreadState(exception), ZX_THREAD_STATE_BLOCKED_EXCEPTION);
+    }
+
+    // The aux thread exits gracefully via zx_thread_exit() so should block.
+    loop.Step3ReadAuxThreadHandle();
+    loop.Step4ShutdownAuxThread();
+    {
+        zx::handle exception = ReadException(process_channel, ZX_EXCP_THREAD_EXITING);
+        zx::nanosleep(zx::deadline_after(kTestTimeout));
+        // The thread reports DYING because it takes precedence over BLOCKED,
+        // but if it wasn't actually blocking it would report DEAD by now.
+        EXPECT_EQ(GetExceptionThreadState(exception), ZX_THREAD_STATE_DYING);
+    }
+
+    // The main thread shuts down the whole process via zx_task_kill() so
+    // should not block.
+    loop.Step5ShutdownMainThread();
+    {
+        zx::handle exception = ReadException(process_channel, ZX_EXCP_THREAD_EXITING);
+        zx::thread thread;
+        EXPECT_EQ(zx_exception_get_thread(exception.get(), thread.reset_and_get_address()), ZX_OK, "");
+        EXPECT_EQ(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK, "");
+        EXPECT_EQ(GetExceptionThreadState(exception), ZX_THREAD_STATE_DEAD);
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(exceptions_tests)
@@ -2596,17 +2744,32 @@ RUN_TEST(full_queue_sending_exception_packet_test);
 RUN_TEST(create_exception_channel_test);
 RUN_TEST(create_exception_channel_rights_test);
 RUN_TEST(create_exception_channel_invalid_args_test);
+RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_INSPECT>));
+RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_DUPLICATE>));
+RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_TRANSFER>));
+RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_MANAGE_THREAD>));
+RUN_TEST((task_requires_right_test<&TestLoop::process, ZX_RIGHT_INSPECT>));
+RUN_TEST((task_requires_right_test<&TestLoop::process, ZX_RIGHT_DUPLICATE>));
+RUN_TEST((task_requires_right_test<&TestLoop::process, ZX_RIGHT_TRANSFER>));
+RUN_TEST((task_requires_right_test<&TestLoop::process, ZX_RIGHT_MANAGE_THREAD>));
+RUN_TEST((task_requires_right_test<&TestLoop::process, ZX_RIGHT_ENUMERATE>));
+RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_INSPECT>));
+RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_DUPLICATE>));
+RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_TRANSFER>));
+RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_MANAGE_THREAD>));
+RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_ENUMERATE>));
 RUN_TEST(create_second_exception_channel_test);
 RUN_TEST(overwrite_closed_exception_channel_test);
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::aux_thread, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_THREAD>));
+                                            ZX_EXCEPTION_PORT_TYPE_THREAD, false>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::process, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_PROCESS>));
+                                            ZX_EXCEPTION_PORT_TYPE_PROCESS, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::process, ZX_EXCEPTION_PORT_DEBUGGER,
-                                            ZX_EXCEPTION_PORT_TYPE_DEBUGGER>));
-RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::job, 0u, ZX_EXCEPTION_PORT_TYPE_JOB>));
+                                            ZX_EXCEPTION_PORT_TYPE_DEBUGGER, true>));
+RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::job, 0u,
+                                            ZX_EXCEPTION_PORT_TYPE_JOB, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::parent_job, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_JOB>));
+                                            ZX_EXCEPTION_PORT_TYPE_JOB, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_resume_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_bad_args_test);
@@ -2627,6 +2790,7 @@ RUN_TEST(process_lifecycle_channel_exception_test<&TestLoop::job>);
 RUN_TEST(process_lifecycle_channel_exception_test<&TestLoop::parent_job>);
 RUN_TEST(process_start_channel_exception_does_not_bubble_up_test);
 RUN_TEST(lifecycle_channel_exception_debug_handlers_only_test);
+RUN_TEST(lifecycle_channel_blocking_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)

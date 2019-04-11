@@ -42,6 +42,10 @@
 + [task_resume_from_exception](syscalls/task_resume_from_exception.md) - resume a task from a previously caught exception
 + [task_suspend](syscalls/task_suspend.md) - cause a task to be suspended
 
+## Exceptions
++ [exception_get_thread](syscalls/exception_get_thread.md) - create a handle for the exception thread
++ [exception_get_process](syscalls/exception_get_process.md) - create a handle for the exception process
+
 ## Channels
 + [channel_call](syscalls/channel_call.md) - synchronously send a message and receive a reply
 + [channel_create](syscalls/channel_create.md) - create a new channel

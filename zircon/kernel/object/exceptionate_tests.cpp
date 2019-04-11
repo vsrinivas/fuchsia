@@ -25,9 +25,9 @@ bool overwrite_valid_channel_fails() {
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
 
     Exceptionate exceptionate(ExceptionPort::Type::THREAD);
-    ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0]), "");
+    ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0], 0, 0), "");
 
-    EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(channels[2]), "");
+    EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(channels[2], 0, 0), "");
 
     END_TEST;
 }
@@ -41,11 +41,11 @@ bool overwrite_invalid_channel_succeeds() {
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
 
     Exceptionate exceptionate(ExceptionPort::Type::THREAD);
-    ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0]), "");
+    ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0], 0, 0), "");
 
     // Use HandleOwner destructor to tear down the external endpoint.
     ASSERT_TRUE(Handle::Make(std::move(channels[1]), ChannelDispatcher::default_rights()), "");
-    EXPECT_EQ(ZX_OK, exceptionate.SetChannel(channels[2]), "");
+    EXPECT_EQ(ZX_OK, exceptionate.SetChannel(channels[2], 0, 0), "");
 
     END_TEST;
 }
