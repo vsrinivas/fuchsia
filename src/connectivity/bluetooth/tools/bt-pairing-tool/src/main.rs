@@ -7,8 +7,9 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker},
-    fuchsia_app::client::connect_to_service,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_zircon as zx,
 };
 
 mod pairing;

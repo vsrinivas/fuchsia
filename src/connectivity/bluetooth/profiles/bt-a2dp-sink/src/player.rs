@@ -128,7 +128,7 @@ impl Player {
     /// `codec`
     // TODO(jamuraa): add encoding parameters for this (SetConfiguration)
     pub async fn new(codec: String) -> Result<Player, Error> {
-        let player = fuchsia_app::client::connect_to_service::<PlayerMarker>()
+        let player = fuchsia_component::client::connect_to_service::<PlayerMarker>()
             .context("Failed to connect to media player")?;
         let (source_client, source) = fidl::endpoints::create_endpoints()?;
         let source_proxy = source_client.into_proxy()?;

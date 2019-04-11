@@ -5,7 +5,7 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy},
-    fuchsia_app, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
         le::RemoteDevice,
@@ -26,7 +26,7 @@ where
     // Don't drop the FakeHciDevice until the end of this function
     let fake_host = await!(ActivatedFakeHost::new("bt-hci-integration-le-0"))?;
 
-    let proxy = fuchsia_app::client::connect_to_service::<CentralMarker>()
+    let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
 
     let state = CentralHarness::new(proxy.clone());

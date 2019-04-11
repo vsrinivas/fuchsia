@@ -11,11 +11,11 @@ use {
         PowerManagerMarker, PowerManagerWatcherMarker, PowerManagerWatcherRequest,
         PowerManagerWatcherRequestStream,
     },
-    fuchsia_app::client::connect_to_service,
     fuchsia_async::{
         self as fasync,
         futures::{select, FutureExt, TryStreamExt},
     },
+    fuchsia_component::client::connect_to_service,
     parking_lot::Mutex,
     pin_utils::pin_mut,
     std::collections::HashSet,

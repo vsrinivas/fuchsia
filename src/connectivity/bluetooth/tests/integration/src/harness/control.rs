@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, ControlEvent, ControlMarker, ControlProxy, RemoteDevice,
     },
-    fuchsia_app, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
         expectation::Predicate,
@@ -84,7 +84,7 @@ pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error>
 }
 
 pub async fn new_control_harness() -> Result<ControlHarness, Error> {
-    let proxy = fuchsia_app::client::connect_to_service::<ControlMarker>()
+    let proxy = fuchsia_component::client::connect_to_service::<ControlMarker>()
         .context("Failed to connect to Control service")?;
 
     let control_harness = ControlHarness::new(proxy);

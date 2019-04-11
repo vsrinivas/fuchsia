@@ -10,8 +10,8 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{
         AvrcpMarker, ControllerEvent, ControllerEventStream, ControllerMarker,
     },
-    fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     futures::{select, FutureExt, TryStreamExt},
     pin_utils::pin_mut,
     structopt::StructOpt,

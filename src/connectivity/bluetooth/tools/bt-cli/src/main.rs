@@ -9,9 +9,9 @@ use {
     fidl_fuchsia_bluetooth_control::{
         ControlEvent, ControlEventStream, ControlMarker, ControlProxy,
     },
-    fuchsia_app::client::connect_to_service,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::Status,
+    fuchsia_component::client::connect_to_service,
     futures::{
         channel::mpsc::{channel, SendError},
         FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt,

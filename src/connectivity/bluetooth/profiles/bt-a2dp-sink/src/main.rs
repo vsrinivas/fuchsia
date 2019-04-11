@@ -484,7 +484,7 @@ async fn decode_media_stream(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
-    let profile_svc = fuchsia_app::client::connect_to_service::<ProfileMarker>()
+    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 
     let mut service_def = make_profile_service_definition();
