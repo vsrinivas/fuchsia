@@ -56,7 +56,7 @@ void AutoGenerationIncrement::Release(Block* block) {
 }
 
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
-WrapperType State::InnerCreateArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+WrapperType State::InnerCreateArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format) {
     size_t block_size_needed = slots * sizeof(NumericType) + kMinOrderSize;
     ZX_DEBUG_ASSERT_MSG(block_size_needed <= kMaxOrderSize, "The requested array size cannot fit in a block");
     if (block_size_needed > kMaxOrderSize) {
@@ -216,15 +216,15 @@ DoubleMetric State::CreateDoubleMetric(fbl::StringPiece name, BlockIndex parent,
     return DoubleMetric(fbl::WrapRefPtr(this), name_index, value_index);
 }
 
-IntArray State::CreateIntArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+IntArray State::CreateIntArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format) {
     return InnerCreateArray<int64_t, IntArray, BlockType::kIntValue>(name, parent, slots, format);
 }
 
-UintArray State::CreateUintArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+UintArray State::CreateUintArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format) {
     return InnerCreateArray<uint64_t, UintArray, BlockType::kUintValue>(name, parent, slots, format);
 }
 
-DoubleArray State::CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format) {
+DoubleArray State::CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format) {
     return InnerCreateArray<double, DoubleArray, BlockType::kDoubleValue>(name, parent, slots, format);
 }
 

@@ -321,5 +321,26 @@ Property Object::CreateProperty(fbl::StringPiece name, fbl::StringPiece value, P
     return Property();
 }
 
+IntArray Object::CreateIntArray(fbl::StringPiece name, size_t slots, ArrayFormat format) {
+    if (state_) {
+        return state_->CreateIntArray(name, value_index_, slots, format);
+    }
+    return IntArray();
+}
+
+UintArray Object::CreateUintArray(fbl::StringPiece name, size_t slots, ArrayFormat format) {
+    if (state_) {
+        return state_->CreateUintArray(name, value_index_, slots, format);
+    }
+    return UintArray();
+}
+
+DoubleArray Object::CreateDoubleArray(fbl::StringPiece name, size_t slots, ArrayFormat format) {
+    if (state_) {
+        return state_->CreateDoubleArray(name, value_index_, slots, format);
+    }
+    return DoubleArray();
+}
+
 } // namespace vmo
 } // namespace inspect

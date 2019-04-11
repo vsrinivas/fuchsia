@@ -52,15 +52,15 @@ public:
 
     // Create a new |IntArray| in the Inspect VMO. The returned object releases
     // the array when destroyed.
-    IntArray CreateIntArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+    IntArray CreateIntArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format);
 
     // Create a new |UintArray| in the Inspect VMO. The returned object releases
     // the array when destroyed.
-    UintArray CreateUintArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+    UintArray CreateUintArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format);
 
     // Create a new |DoubleArray| in the Inspect VMO. The returned object releases
     // the array when destroyed.
-    DoubleArray CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+    DoubleArray CreateDoubleArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format);
 
     // Create a new |Property| in the Inspect VMO. The returned object releases
     // the metric when destroyed.
@@ -137,7 +137,7 @@ private:
 
     // Helper function to create an array with the given name, number of slots, and format.
     template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
-    WrapperType InnerCreateArray(fbl::StringPiece name, BlockIndex parent, uint8_t slots, ArrayFormat format);
+    WrapperType InnerCreateArray(fbl::StringPiece name, BlockIndex parent, size_t slots, ArrayFormat format);
 
     // Helper function to set the value of a specific index in an array.
     template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>

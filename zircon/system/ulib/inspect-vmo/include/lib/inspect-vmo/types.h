@@ -200,20 +200,17 @@ public:
     // Create a new |IntArray| with the given name and format that is a child of this object.
     // If this object is not stored in a buffer, the created value will
     // also not be stored in a buffer.
-    [[nodiscard]] IntArray CreateIntArray(fbl::StringPiece name,
-                                          fbl::StringPiece value, ArrayFormat format);
+    [[nodiscard]] IntArray CreateIntArray(fbl::StringPiece name, size_t slots, ArrayFormat format);
 
     // Create a new |UintArray| with the given name and format that is a child of this object.
     // If this object is not stored in a buffer, the created value will
     // also not be stored in a buffer.
-    [[nodiscard]] UintArray CreateUintArray(fbl::StringPiece name,
-                                            fbl::StringPiece value, ArrayFormat format);
+    [[nodiscard]] UintArray CreateUintArray(fbl::StringPiece name, size_t slots, ArrayFormat format);
 
     // Create a new |DoubleArray| with the given name and format that is a child of this object.
     // If this object is not stored in a buffer, the created value will
     // also not be stored in a buffer.
-    [[nodiscard]] DoubleArray CreateDoubleArray(fbl::StringPiece name,
-                                                fbl::StringPiece value, ArrayFormat format);
+    [[nodiscard]] DoubleArray CreateDoubleArray(fbl::StringPiece name, size_t slots, ArrayFormat format);
 
     // Return true if this object is stored in a buffer. False otherwise.
     explicit operator bool() { return state_.get() != nullptr; }
