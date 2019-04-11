@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
+#include "src/lib/containers/cpp/circular_deque.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
@@ -132,8 +133,20 @@ class Process : public ClientObject {
 
   StartType start_type() const { return start_type_; }
 
+  static constexpr size_t kMaxIOBufferSize = 1 * 1024 * 1024;  // In bytes.
+  const containers::circular_deque<uint8_t>& get_stdout() const {
+    return stdout_;
+  }
+
+  const containers::circular_deque<uint8_t>& get_stderr() const {
+    return stderr_;
+  }
+
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }
+
+  containers::circular_deque<uint8_t> stdout_;
+  containers::circular_deque<uint8_t> stderr_;
 
  private:
   StartType start_type_;

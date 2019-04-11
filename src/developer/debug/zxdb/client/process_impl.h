@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -61,6 +62,9 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   // Notification that the list of loaded modules may have been updated.
   void OnModules(const std::vector<debug_ipc::Module>& modules,
                  const std::vector<uint64_t>& stopped_thread_koids);
+
+  // Returns true if the caller should show the output. False means silence.
+  bool HandleIO(const debug_ipc::NotifyIO&);
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .

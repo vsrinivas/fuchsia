@@ -240,6 +240,17 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
   }
 }
 
+bool ProcessImpl::HandleIO(const debug_ipc::NotifyIO& io) {
+  auto& buffer =
+      io.type == debug_ipc::NotifyIO::Type::kStdout ? stdout_ : stderr_;
+
+  buffer.insert(buffer.end(), io.data.data(), io.data.data() + io.data.size());
+  if (buffer.size() >= kMaxIOBufferSize)
+    buffer.resize(kMaxIOBufferSize);
+
+  return target()->settings().GetBool(ClientSettings::System::kShowStdout);
+}
+
 void ProcessImpl::UpdateThreads(
     const std::vector<debug_ipc::ThreadRecord>& new_threads) {
   // Go through all new threads, checking to added ones and updating existing.

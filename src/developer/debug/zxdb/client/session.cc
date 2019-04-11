@@ -803,8 +803,7 @@ void Session::SendSessionNotification(SessionObserver::NotificationType type,
 
 SessionObserver::NotificationType Session::HandleProcessIO(
     ProcessImpl* process, const debug_ipc::NotifyIO& notify) {
-  if (!process->target()->settings().GetBool(
-          ClientSettings::System::kShowStdout)) {
+  if (!process->HandleIO(notify)) {
     return SessionObserver::NotificationType::kNone;
   }
 

@@ -124,6 +124,7 @@ static_library("client") {
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",
     "//src/developer/debug/zxdb/symbols",
+    "//src/lib/containers/cpp",
     "//src/lib/fxl",
   ]
 

@@ -69,6 +69,8 @@ enum class Verb {
   kRun,
   kSet,
   kStack,
+  kStderr,
+  kStdout,
   kStep,
   kStepi,
   kSymInfo,
