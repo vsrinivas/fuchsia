@@ -8,6 +8,7 @@ source_set("host_reactor") {
     "host_reactor.h",
   ]
   deps = [
-    "//garnet/lib/overnet/environment:timer",
+    "//src/connectivity/overnet/lib/environment:timer",
+    "//src/connectivity/overnet/lib/environment:trace",
   ]
 }

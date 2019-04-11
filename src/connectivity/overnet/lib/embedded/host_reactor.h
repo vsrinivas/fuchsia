@@ -8,7 +8,7 @@
 #include <map>
 #include <mutex>
 #include <unordered_map>
-#include "garnet/lib/overnet/environment/timer.h"
+#include "src/connectivity/overnet/lib/environment/timer.h"
 
 namespace overnet {
 
@@ -41,21 +41,27 @@ class MonotonicTimer {
 
 class HostReactor final : public Timer {
  public:
+  HostReactor();
   ~HostReactor();
   virtual TimeStamp Now() override { return source_.Now(); }
   Status Run();
+  void Step();
 
   void OnRead(int fd, StatusCallback cb) { fds_[fd].on_read = std::move(cb); }
   void OnWrite(int fd, StatusCallback cb) { fds_[fd].on_read = std::move(cb); }
 
-  void OnWrite(int fd, StatusCallback cb) { fds_[fd].on_read = std::move(cb); }
+  void Exit(const Status& status) { exit_status_ = status; }
 
  private:
   void InitTimeout(Timeout* timeout, TimeStamp when) override;
   void CancelTimeout(Timeout* timeout, Status status) override;
 
+  template <class F>
+  void Execute(F exit_condition);
+
   MonotonicTimer source_;
   bool shutting_down_ = false;
+  Optional<Status> exit_status_;
   std::multimap<TimeStamp, Timeout*> pending_timeouts_;
   struct FDState {
     StatusCallback on_read;

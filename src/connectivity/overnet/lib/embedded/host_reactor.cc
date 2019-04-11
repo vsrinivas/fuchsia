@@ -2,11 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/overnet/embedded/host_reactor.h"
+#include "src/connectivity/overnet/lib/embedded/host_reactor.h"
+
 #include <poll.h>
+
 #include <vector>
 
+#include "src/connectivity/overnet/lib/environment/trace.h"
+
 namespace overnet {
+
+HostReactor::HostReactor() = default;
 
 HostReactor::~HostReactor() {
   shutting_down_ = true;
@@ -21,6 +27,8 @@ void HostReactor::InitTimeout(overnet::Timeout* timeout,
     FireTimeout(timeout, overnet::Status::Cancelled());
     return;
   }
+
+  OVERNET_TRACE(DEBUG) << "Set timer for " << when;
 
   *TimeoutStorage<overnet::TimeStamp>(timeout) = when;
   pending_timeouts_.emplace(when, timeout);
@@ -42,12 +50,27 @@ void HostReactor::CancelTimeout(overnet::Timeout* timeout,
   FireTimeout(timeout, status);
 }
 
-overnet::Status HostReactor::Run() {
+Status HostReactor::Run() {
+  Execute([this] { return exit_status_.has_value(); });
+  return *exit_status_;
+}
+
+void HostReactor::Step() {
+  bool executed = false;
+  Execute([&executed] {
+    bool ret = executed;
+    executed = true;
+    return ret;
+  });
+}
+
+template <class F>
+void HostReactor::Execute(F exit_condition) {
   std::vector<int> gcfds;
   std::vector<pollfd> pollfds;
   std::vector<overnet::StatusCallback> cbs;
 
-  for (;;) {
+  while (!exit_condition()) {
     gcfds.clear();
     pollfds.clear();
     cbs.clear();
@@ -96,7 +119,7 @@ overnet::Status HostReactor::Run() {
     timespec* next = nullptr;
     timespec next_store;
     if (!pending_timeouts_.empty()) {
-      auto dt = now - pending_timeouts_.begin()->first;
+      auto dt = pending_timeouts_.begin()->first - now;
       if (dt > overnet::TimeDelta::Zero()) {
         next = &next_store;
         next->tv_sec = dt.as_us() / 1000000;
@@ -112,8 +135,11 @@ overnet::Status HostReactor::Run() {
         // EINTR ==> just try again.
         continue;
       }
-      return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
-                             strerror(e));
+      if (!exit_status_.has_value()) {
+        exit_status_ =
+            overnet::Status(overnet::StatusCode::INVALID_ARGUMENT, strerror(e));
+      }
+      return;
     }
 
     // Reap incoming events.
