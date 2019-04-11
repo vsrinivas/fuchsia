@@ -6,7 +6,6 @@
 # share much code.  Try to converge these more in the future.
 
 import("$zx/public/gn/fidl/fidlc.gni")
-import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 
 # List of BANJO support modules.  Each of these defines its own version of
 # $banjo_support_templates:
@@ -137,33 +136,47 @@ template("banjo_library") {
         # up a single Banjo library (all have identical `library ...;` lines).
         banjo_rspfile =
             [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
-      }
 
-      # TODO(BLD-353): temporary hack
-      data_deps = [
-        ":$banjo_target.pkg",
-      ]
-    }
+        # TODO(BLD-353): temporary hack
+        assert(banjo_target ==
+               get_path_info(get_label_info(":$banjo_target", "dir"), "name"))
+        legacy_dirs = [ "banjo/$banjo_target" ]
+        legacy_targets = [
+          {
+            import = "//build/banjo/banjo.gni"
+            target_name = banjo_target
 
-    # TODO(BLD-353): temporary hack
-    legacy_pkg("$banjo_target.pkg") {
-      contents = [
-        "[package]",
-        "name=$banjo_target",
-        "library=$banjo_library_name",
-        "arch=banjo",
-        "type=banjo",
-        "[banjo]",
-      ]
-      foreach(file, invoker.sources) {
-        contents += [ "$file=SOURCE/" + rebase_path(file, "//") ]
-      }
-      if (defined(invoker.public_deps)) {
-        contents += [ "[banjo-deps]" ]
-        foreach(label, invoker.public_deps) {
-          contents += [ get_label_info(label, "name") + "=SOURCE/" +
-                        rebase_path(get_label_info(label, "dir"), "//") ]
-        }
+            # The ddk-protocol prefix is magic: without it, you're a
+            # banjo_dummy() target; with it, you're a banjo() target.
+            if (string_replace(banjo_target, "ddk-protocol-", "") ==
+                banjo_target) {
+              target_type = "banjo_dummy"
+            } else {
+              target_type = "banjo"
+            }
+
+            # These all become the parameters to banjo() or banjo_dummy().
+            name = banjo_library_name
+            sdk_category = "partner"
+            sources = []
+            foreach(file, invoker.sources) {
+              # Make file names source-absolute in the Fuchsia GN.
+              file = rebase_path(file, "$zx/")
+              sources += [ "//zircon/$file" ]
+            }
+            deps = []
+            if (defined(invoker.public_deps)) {
+              foreach(label, invoker.public_deps) {
+                assert(get_label_info(label, "name") ==
+                           get_path_info(get_label_info(label, "dir"), "name"),
+                       "banjo_library(\"$banjo_target\") deps " +
+                           get_label_info(label, "label_no_toolchain"))
+                deps +=
+                    [ "//zircon/public/banjo/" + get_label_info(label, "name") ]
+              }
+            }
+          },
+        ]
       }
     }
 

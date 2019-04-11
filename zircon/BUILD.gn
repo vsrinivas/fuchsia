@@ -143,18 +143,49 @@ if (current_toolchain == default_toolchain) {
 
   # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
   # GN build.
+
+  legacy_deps = [
+    ":legacy-host_tests",
+    ":tools",
+
+    # Separately listed because they're reached by dependencies only on x64.
+    "$zx/system/banjo/ddk-protocol-acpi",
+    "$zx/system/banjo/ddk-protocol-intelgpucore",
+    "$zx/system/banjo/ddk-protocol-intelhda-codec",
+
+    # Separately listed because they're not reached by any dependencies.
+    "$zx/system/fidl/fuchsia-debugdata",
+    "$zx/system/fidl/fuchsia-inspect",
+    "$zx/system/fidl/fuchsia-tracelink",
+  ]
+  legacy_cpu_deps = [
+    ":ids",
+    ":legacy-fdio",
+    ":legacy-image",
+    ":legacy-tests",
+    ":all-ulib",
+    "$zx/system/ulib:asan-manifest",
+  ]
+
+  build_api_module("legacy_dirs") {
+    testonly = true
+    data_keys = [ "legacy_dirs" ]
+    deps = legacy_deps
+    foreach(cpu, standard_fuchsia_cpus) {
+      foreach(dep, legacy_cpu_deps) {
+        deps += [ "$dep-$cpu" ]
+      }
+    }
+  }
+
   foreach(cpu, standard_fuchsia_cpus) {
-    group("legacy-$cpu") {
+    build_api_module("legacy-$cpu") {
       testonly = true
-      deps = [
-        ":ids-$cpu",
-        ":legacy-fdio-$cpu",
-        ":legacy-host_tests",
-        ":legacy-image-$cpu",
-        ":legacy-tests-$cpu",
-        ":tools",
-        "$zx/system/ulib:asan-manifest-$cpu",
-      ]
+      data_keys = [ "legacy_targets" ]
+      deps = legacy_deps
+      foreach(dep, legacy_cpu_deps) {
+        deps += [ "$dep-$cpu" ]
+      }
     }
 
     environment_redirect("all-ulib-$cpu") {
@@ -170,14 +201,8 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_pkg_manifest" ]
       deps = [
-        ":all-ulib-$cpu",
         ":legacy-$cpu",
         ":tools",
-
-        # Separately listed because they're reached by dependencies only on x64.
-        "$zx/system/banjo/ddk-protocol-acpi",
-        "$zx/system/banjo/ddk-protocol-intelgpucore",
-        "$zx/system/banjo/ddk-protocol-intelhda-codec",
 
         # Separately listed because they're not reached by any dependencies.
         "$zx/system/fidl/fuchsia-debugdata",
