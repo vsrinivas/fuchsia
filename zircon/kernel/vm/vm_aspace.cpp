@@ -69,8 +69,8 @@ void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
 
     _kernel_aspace.root_vmar_ = fbl::AdoptRef(&_kernel_root_vmar);
 
-    auto err = _kernel_aspace.Init();
-    ASSERT(err >= 0);
+    zx_status_t status = _kernel_aspace.Init();
+    ASSERT(status == ZX_OK);
 
     // save a pointer to the singleton kernel address space
     VmAspace::kernel_aspace_ = &_kernel_aspace;
@@ -200,9 +200,9 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     }
 
     // initialize the arch specific component to our address space
-    auto err = aspace->Init();
-    if (err < 0) {
-        zx_status_t status = aspace->Destroy();
+    zx_status_t status = aspace->Init();
+    if (status != ZX_OK) {
+        status = aspace->Destroy();
         DEBUG_ASSERT(status == ZX_OK);
         return nullptr;
     }
@@ -340,9 +340,9 @@ zx_status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* n
 
     // if we're committing it, map the region now
     if (vmm_flags & VMM_FLAG_COMMIT) {
-        auto err = r->MapRange(0, size, true);
-        if (err < 0) {
-            return err;
+        status = r->MapRange(0, size, true);
+        if (status != ZX_OK) {
+            return status;
         }
     }
 
