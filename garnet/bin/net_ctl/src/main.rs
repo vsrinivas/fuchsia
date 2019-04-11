@@ -18,7 +18,7 @@ use {
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut exec = fasync::Executor::new().context("error creating executor")?;
-    let observer_proxy = fuchsia_app::client::connect_to_service::<ObserverMarker>()
+    let observer_proxy = fuchsia_component::client::connect_to_service::<ObserverMarker>()
         .context("Failed to connect to Observer service")?;
 
     let fut = async {
