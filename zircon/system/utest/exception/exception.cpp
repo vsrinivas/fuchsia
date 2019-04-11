@@ -2703,97 +2703,6 @@ bool lifecycle_channel_blocking_test() {
     END_TEST;
 }
 
-// Test read/write register state during (non-synthetic) exceptions.
-//
-// |task_func|: TestLoop member function to get the task.
-// |create_flags|: flags to pass to zx_task_create_exception_channel().
-template <auto task_func, uint32_t create_flags>
-bool channel_read_write_regs_test() {
-    BEGIN_TEST;
-
-    TestLoop loop;
-    zx::channel exception_channel;
-    EXPECT_EQ(zx_task_create_exception_channel((loop.*task_func)().get(), create_flags,
-                                               exception_channel.reset_and_get_address()),
-              ZX_OK, "");
-
-    loop.CrashAuxThread();
-    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
-
-    zx_thread_state_general_regs_t regs;
-    EXPECT_EQ(loop.aux_thread().read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
-              ZX_OK, "");
-    EXPECT_EQ(loop.aux_thread().write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
-              ZX_OK, "");
-
-    EXPECT_EQ(loop.aux_thread().kill(), ZX_OK, "");
-
-    END_TEST;
-}
-
-// Processes an exception and returns the result of trying to read/write
-// the thread general registers.
-//
-// If read/write return different status, marks a test failure and returns
-// ZX_ERR_INTERNAL.
-zx_status_t ExceptionRegAccess(const zx::channel& channel, zx_excp_type_t type) {
-    zx_exception_info_t info;
-    zx::handle exception = ReadException(channel, type, &info);
-
-    zx::thread thread;
-    ASSERT_EQ(zx_exception_get_thread(exception.get(), thread.reset_and_get_address()),
-              ZX_OK, "");
-
-    zx_thread_state_general_regs_t regs;
-    zx_status_t read_status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-    zx_status_t write_status = thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs,
-                                                  sizeof(regs));
-
-    EXPECT_EQ(read_status, write_status, "");
-    if (read_status != write_status) {
-        return ZX_ERR_INTERNAL;
-    }
-    return read_status;
-}
-
-// Read/write register state is supported during STARTING exceptions, but not
-// during EXITING.
-bool channel_synthetic_read_write_regs_test() {
-    BEGIN_TEST;
-
-    zx::channel job_channel;
-    zx::channel process_channel;
-
-    TestLoop loop(TestLoop::Control::kManual);
-    ASSERT_EQ(zx_task_create_exception_channel(loop.job().get(), ZX_EXCEPTION_PORT_DEBUGGER,
-                                               job_channel.reset_and_get_address()),
-              ZX_OK, "");
-
-    loop.Step1CreateProcess();
-    ASSERT_EQ(zx_task_create_exception_channel(loop.process().get(), ZX_EXCEPTION_PORT_DEBUGGER,
-                                               process_channel.reset_and_get_address()),
-              ZX_OK, "");
-
-    loop.Step2StartThreads();
-    EXPECT_EQ(ExceptionRegAccess(job_channel, ZX_EXCP_PROCESS_STARTING), ZX_OK, "");
-    EXPECT_EQ(ExceptionRegAccess(process_channel, ZX_EXCP_THREAD_STARTING), ZX_OK, "");
-    EXPECT_EQ(ExceptionRegAccess(process_channel, ZX_EXCP_THREAD_STARTING), ZX_OK, "");
-
-    loop.Step3ReadAuxThreadHandle();
-    loop.Step4ShutdownAuxThread();
-    EXPECT_EQ(ExceptionRegAccess(process_channel, ZX_EXCP_THREAD_EXITING),
-              ZX_ERR_NOT_SUPPORTED, "");
-
-    // When the main thread is shut down it kills the whole process, which
-    // causes it to stop waiting for responses from exception handlers. We'll
-    // still receive the exception, but by the time we process it here it's
-    // likely that the thread is already dead so we can't check reg access.
-    loop.Step5ShutdownMainThread();
-    ReadException(process_channel, ZX_EXCP_THREAD_EXITING);
-
-    END_TEST;
-}
-
 } // namespace
 
 BEGIN_TEST_CASE(exceptions_tests)
@@ -2882,12 +2791,6 @@ RUN_TEST(process_lifecycle_channel_exception_test<&TestLoop::parent_job>);
 RUN_TEST(process_start_channel_exception_does_not_bubble_up_test);
 RUN_TEST(lifecycle_channel_exception_debug_handlers_only_test);
 RUN_TEST(lifecycle_channel_blocking_test);
-RUN_TEST((channel_read_write_regs_test<&TestLoop::aux_thread, 0u>));
-RUN_TEST((channel_read_write_regs_test<&TestLoop::process, 0u>));
-RUN_TEST((channel_read_write_regs_test<&TestLoop::process, ZX_EXCEPTION_PORT_DEBUGGER>));
-RUN_TEST((channel_read_write_regs_test<&TestLoop::job, 0u>));
-RUN_TEST((channel_read_write_regs_test<&TestLoop::parent_job, 0u>));
-RUN_TEST(channel_synthetic_read_write_regs_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)
