@@ -5,12 +5,11 @@
 
 use {
     failure::Error,
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_setui::SetUiServiceMarker,
-    fuchsia_app::server::ServicesServer,
+    fidl_fuchsia_setui::SetUiServiceRequestStream,
     fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_info},
-    futures::TryFutureExt,
+    futures::{StreamExt, TryFutureExt},
 };
 
 mod setui_service;
@@ -21,19 +20,18 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new()?;
 
-    let server = ServicesServer::new()
-        .add_service((SetUiServiceMarker::NAME, move |channel: fasync::Channel| {
-            spawn_setui_service(channel)
-        }))
-        .start()?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(spawn_setui_service);
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(server)
+    let () = executor.run_singlethreaded(fs.collect());
+    Ok(())
 }
 
-fn spawn_setui_service(channel: fasync::Channel) {
+fn spawn_setui_service(stream: SetUiServiceRequestStream) {
     fx_log_info!("Connecting to setui_service");
     fasync::spawn(
-        setui_service::start_setui_service(channel)
+        setui_service::start_setui_service(stream)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     )
 }

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error, failure::ResultExt, fidl::endpoints::RequestStream, fidl_fuchsia_setui::*,
-    fuchsia_async as fasync, futures::prelude::*,
+    failure::Error,
+    failure::ResultExt,
+    fidl_fuchsia_setui::*,
+    futures::prelude::*,
 };
 
-pub async fn start_setui_service(channel: fasync::Channel) -> Result<(), Error> {
-    let mut stream = SetUiServiceRequestStream::from_channel(channel);
-
+pub async fn start_setui_service(mut stream: SetUiServiceRequestStream) -> Result<(), Error> {
     while let Some(event) = await!(stream.try_next()).context("error reading value from stream")? {
         await!(handler(event))?;
     }
