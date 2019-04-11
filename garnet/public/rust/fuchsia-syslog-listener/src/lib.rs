@@ -9,8 +9,8 @@
 #![deny(missing_docs)]
 
 use failure::{Error, ResultExt};
-use fuchsia_app::client::connect_to_service;
 use futures::TryStreamExt;
+use fuchsia_component::client::connect_to_service;
 use fidl::encoding::OutOfLine;
 
 // Include the generated FIDL bindings for the `Logger` service.
