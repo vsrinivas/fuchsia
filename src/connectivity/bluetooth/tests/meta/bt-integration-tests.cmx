@@ -2,8 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.bluetooth.le.Central": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
+                "fuchsia.bluetooth.bredr.Profile": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
                 "fuchsia.bluetooth.control.Control": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
+                "fuchsia.bluetooth.le.Central": "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx",
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
             }
         }
@@ -17,6 +18,7 @@
             "test/test"
         ],
         "services": [
+            "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.control.Control"
         ],
