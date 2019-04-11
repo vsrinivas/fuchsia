@@ -45,11 +45,116 @@ constexpr Msm8x53PowerDomainInfo kMsm8x53PowerDomains[] = {
 };
 
 zx_status_t Msm8x53Power::ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value) {
-    return ZX_ERR_NOT_SUPPORTED;
+    // Extract slave id, periph id and register offset.
+    auto reg = PmicRegAddr::Get().FromValue(reg_addr);
+    uint32_t reg_offset = reg.reg_offset();
+    uint32_t periph_id = reg.periph_id();
+    uint32_t slave_id = reg.slave_id();
+
+    uint32_t ppid = PPID(slave_id, periph_id);
+    // SID is 4 bits and PPID is 8 bits and ppid will always < 4096(kMaxPPIDEntries)
+    // So there is not need for bounds check.
+    ZX_DEBUG_ASSERT(ppid < kMaxPPIDEntries);
+
+    uint32_t apid = ppid_to_apid_[ppid];
+    // Disable Irq mode for the current channel.
+    // TODO(ravoorir): Support Interrupts.
+    uint32_t cmd_cfg_offset = PMIC_ARB_CHANNEL_CMD_CONFIG_OFFSET(apid);
+    PmicArbCoreChannelCmdConfig::Get(cmd_cfg_offset)
+                                 .ReadFrom(&obsvr_mmio_)
+                                 .set_intr(0)
+                                 .WriteTo(&obsvr_mmio_);
+    // Write the CMD to read data
+    // TODO(ravoorir): Update byte_cnt with actual number of bytes
+    uint32_t cmd_offset = PMIC_ARB_CHANNEL_CMD_OFFSET(apid);
+    PmicArbCoreChannelCmdInfo::Get(cmd_offset)
+                               .ReadFrom(&obsvr_mmio_)
+                               .set_byte_cnt(0)
+                               .set_reg_offset_addr(reg_offset)
+                               .set_periph_id(periph_id)
+                               .set_slave_id(slave_id)
+                               .set_priority(0)
+                               .set_opcode(kSpmiCmdRegReadOpcode)
+                               .WriteTo(&obsvr_mmio_);
+    // Wait for CMD Completion
+    uint32_t status = 0;
+    while (!status) {
+        status = PmicArbCoreChannelCmdStatus::Get(PMIC_ARB_CHANNEL_CMD_STATUS_OFFSET(apid))
+                     .ReadFrom(&obsvr_mmio_)
+                     .status();
+    }
+    if (status ^ PmicArbCoreChannelCmdStatus::kPmicArbCmdDone) {
+        // Cmd completed with an error
+        zxlogf(ERROR, "%s Unable to read Pmic Reg: 0x%x status: 0x%x\n", __FUNCTION__,
+               reg_addr, status);
+        return ZX_ERR_IO;
+    }
+
+    // Read RDATA0
+    uint32_t rdata = PmicArbCoreChannelCmdRData::Get(PMIC_ARB_CHANNEL_CMD_RDATA0_OFFSET(apid))
+                         .ReadFrom(&obsvr_mmio_)
+                         .data();
+    *reg_value = rdata;
+    return ZX_OK;
 }
 
 zx_status_t Msm8x53Power::WritePMICReg(uint32_t reg_addr, uint32_t value) {
-    return ZX_ERR_NOT_SUPPORTED;
+    // Extract slave id, periph id and register offset.
+    auto reg = PmicRegAddr::Get().FromValue(reg_addr);
+    uint32_t reg_offset = reg.reg_offset();
+    uint32_t periph_id = reg.periph_id();
+    uint32_t slave_id = reg.slave_id();
+
+    uint32_t ppid = PPID(slave_id, periph_id);
+
+    // SID is 4 bits and PPID is 8 bits and ppid will always < 4096(kMaxPPIDEntries)
+    // So there is not need for bounds check.
+    ZX_DEBUG_ASSERT(ppid < kMaxPPIDEntries);
+
+    uint32_t apid = ppid_to_apid_[ppid];
+
+    // Disable Irq mode for the current channel.
+    // TODO(ravoorir): Support Interrupts later
+    uint32_t cmd_cfg_offset = PMIC_ARB_CHANNEL_CMD_CONFIG_OFFSET(apid);
+    PmicArbCoreChannelCmdConfig::Get(cmd_cfg_offset)
+                                 .ReadFrom(&chnls_mmio_)
+                                 .set_intr(0)
+                                 .WriteTo(&chnls_mmio_);
+
+    // Write first 4 bytes to WDATA0
+    // TODO(ravoorir): Support writing of 8 byte data.
+    PmicArbCoreChannelCmdWData::Get(PMIC_ARB_CHANNEL_CMD_WDATA0_OFFSET(apid))
+        .ReadFrom(&chnls_mmio_)
+        .set_data(value)
+        .WriteTo(&chnls_mmio_);
+
+    // Write the CMD
+    // TODO(ravoorir): update byte_cnt to the write byte count.
+    uint32_t cmd_offset = PMIC_ARB_CHANNEL_CMD_OFFSET(apid);
+    PmicArbCoreChannelCmdInfo::Get(cmd_offset)
+                              .ReadFrom(&chnls_mmio_)
+                              .set_byte_cnt(0)
+                              .set_reg_offset_addr(reg_offset)
+                              .set_periph_id(periph_id)
+                              .set_slave_id(slave_id)
+                              .set_priority(0)
+                              .set_opcode(kSpmiCmdRegWriteOpcode).WriteTo(&chnls_mmio_);
+
+    // Wait for CMD Completion
+    uint32_t status = 0;
+    while (!status) {
+        status = PmicArbCoreChannelCmdStatus::Get(PMIC_ARB_CHANNEL_CMD_STATUS_OFFSET(apid))
+                     .ReadFrom(&chnls_mmio_)
+                     .status();
+    }
+    if (status ^ PmicArbCoreChannelCmdStatus::kPmicArbCmdDone) {
+        // Cmd completed with an error
+        zxlogf(ERROR, "%s Unable to write PMIC Reg 0x%x status:0x%x\n", __FUNCTION__, reg_addr,
+               status);
+        return ZX_ERR_IO;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Msm8x53Power::RpmRegulatorEnable(const Msm8x53PowerDomainInfo* domain) {
@@ -125,9 +230,29 @@ void Msm8x53Power::DdkUnbind() {
     DdkRemove();
 }
 
+zx_status_t Msm8x53Power::PmicArbInit() {
+    // Read version
+    static uint32_t pmic_arb_ver = PmicArbVersion::Get().ReadFrom(&core_mmio_).arb_version();
+    zxlogf(ERROR, "%s Pmic Arbiter version: 0x%x\n", __FUNCTION__, pmic_arb_ver);
+    if (pmic_arb_ver != kPmicArbVersionTwo) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    uint32_t slave_id = 0;
+    uint32_t periph_id = 0;
+
+    // Maintain PPID->APID mapping
+    for (uint32_t apid = 0; apid < kMaxPmicPeripherals; apid++) {
+        uint32_t core_channel_offset = PMIC_ARB_CORE_CHANNEL_INFO_OFFSET(apid);
+        auto reg = PmicArbCoreChannelInfo::Get(core_channel_offset).ReadFrom(&core_mmio_);
+        slave_id = reg.slave_id();
+        periph_id = reg.periph_id();
+        ppid_to_apid_[PPID(slave_id, periph_id)] = apid;
+    }
+    return ZX_OK;
+}
+
 zx_status_t Msm8x53Power::Init() {
-    //TODO(ravoorir): Check if bootloader did not init the PMIC and
-    // do the needful.
+    PmicArbInit();
     return ZX_OK;
 }
 
@@ -203,7 +328,7 @@ zx_status_t Msm8x53Power::Create(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    auto dev = std::make_unique<Msm8x53Power>(parent, pdev, *std::move(core_mmio),
+    auto dev = std::make_unique<Msm8x53Power>(parent, *std::move(core_mmio),
                                               *std::move(chnls_mmio),
                                               *std::move(obsvr_mmio),
                                               *std::move(intr_mmio),
@@ -222,7 +347,7 @@ zx_status_t Msm8x53Power::Create(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t mtk_power_driver_ops = []() {
+static zx_driver_ops_t msm8x53_power_driver_ops = []() {
     zx_driver_ops_t driver_ops;
     driver_ops.version = DRIVER_OPS_VERSION;
     driver_ops.bind = Msm8x53Power::Create;
@@ -231,8 +356,8 @@ static zx_driver_ops_t mtk_power_driver_ops = []() {
 
 } //namespace power
 
-ZIRCON_DRIVER_BEGIN(mtk_power, power::mtk_power_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+ZIRCON_DRIVER_BEGIN(msm8x53_power, power::msm8x53_power_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_POWER),
-    ZIRCON_DRIVER_END(mtk_power)
+ZIRCON_DRIVER_END(msm8x53_power)

@@ -4,11 +4,15 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddktl/device.h>
+#include <ddktl/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <lib/mmio/mmio.h>
-#include <threads.h>
+
+#include <soc/msm8x53/msm8x53-power-regs.h>
 
 namespace power {
 
@@ -30,13 +34,12 @@ class Msm8x53Power : public Msm8x53PowerType,
                      public ddk::PowerImplProtocol<Msm8x53Power, ddk::base_protocol> {
 public:
     explicit Msm8x53Power(zx_device_t* parent,
-                          const ddk::PDev& pdev,
                           ddk::MmioBuffer core_mmio,
                           ddk::MmioBuffer chnls_mmio,
                           ddk::MmioBuffer obsvr_mmio,
                           ddk::MmioBuffer intr_mmio,
                           ddk::MmioBuffer cfg_mmio)
-        : Msm8x53PowerType(parent), pdev_(pdev), core_mmio_(std::move(core_mmio)),
+        : Msm8x53PowerType(parent), core_mmio_(std::move(core_mmio)),
           chnls_mmio_(std::move(chnls_mmio)), obsvr_mmio_(std::move(obsvr_mmio)),
           intr_mmio_(std::move(intr_mmio)), cfg_mmio_(std::move(cfg_mmio)) {}
 
@@ -53,8 +56,11 @@ public:
     zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
     zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
 
+protected:
+    zx_status_t PmicArbInit();
+    uint32_t ppid_to_apid_[kMaxPPIDEntries];
+
 private:
-    ddk::PDev pdev_;
     ddk::MmioBuffer core_mmio_;
     ddk::MmioBuffer chnls_mmio_;
     ddk::MmioBuffer obsvr_mmio_;

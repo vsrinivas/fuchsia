@@ -14,6 +14,8 @@ static constexpr uint32_t kPmicArbIntrMmio = 0x3800000;
 static constexpr uint32_t kPmicArbIntrMmioSize = 0x200000;
 static constexpr uint32_t kPmicArbCnfgMmio = 0x200a000;
 static constexpr uint32_t kPmicArbCnfgMmioSize = 0x2100;
+static constexpr uint32_t kMaxPmicPeripherals = 256;
+
 
 // TODO(ravoorir): Is power domain right
 // terminology here, given that this includes register

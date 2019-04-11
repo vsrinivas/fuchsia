@@ -7,8 +7,6 @@ driver("msm8x53-power") {
     "msm8x53-power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-powerimpl",
@@ -23,5 +21,31 @@ driver("msm8x53-power") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("msm8x53-power-test") {
+  testonly = true
+  output_name = "msm8x53-power-test"
+  sources = [
+    "msm8x53-power-test.cpp",
+    "msm8x53-power.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/msm8x53",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }
