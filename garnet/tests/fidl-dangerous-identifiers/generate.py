@@ -246,7 +246,7 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
   for style_name, style_func in STYLES:
     for use_name, use_func in USES:
       library_name = '%s.%s.%s' % (prefix, use_name, style_name)
-      with open(os.path.join(directory, '%s.fidl' % library_name), 'w') as f:
+      with open(os.path.join(directory, '%s.test.fidl' % library_name), 'w') as f:
         f.write(generated('//'))
         f.write('library %s;\n' % library_name)
         use_func(f, [style_func(r) for r in identifiers])
@@ -263,7 +263,7 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
     build_gn.write(']}\n')
     for library_name in library_names:
       build_gn.write(
-          'fidl("%s") {\n  sources = [ "%s.fidl" ]\n  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }\n\n'
+          'fidl("%s") {\n  sources = [ "%s.test.fidl" ]\n  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }\n\n'
           % (library_name, library_name))
   subprocess.check_output([GN, 'format', build_file])
 
