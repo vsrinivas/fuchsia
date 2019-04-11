@@ -990,9 +990,11 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       if (region.sfrac_pts > first_sample_pos_window_edge) {
         int64_t src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
 
-        // "+subject_delta-1" so that we 'round up' any fractional leftover.
-        output_offset_64 = dest_to_src.Inverse().Scale(
-            src_to_skip + dest_to_src.subject_delta() - 1);
+        // In determining output_offset and input_offset, we want to "round up"
+        // any subframes to the next integer frame. To do this, we subtract a
+        // single subframe (to handle the no-subframes case), then scale (which
+        // truncates any subframes), then add an additional 'round-up' frame.
+        output_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
         source_offset_64 += dest_to_src.Scale(output_offset_64);
       }
 

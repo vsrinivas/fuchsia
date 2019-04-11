@@ -403,15 +403,25 @@ void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
                        sinad_results);
 }
 
+// For the given resampler, target a 3:1 downsampling ratio. We articulate this
+// by specifying a source buffer three times the length of the destination.
+void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results,
+                          double* sinad_results) {
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               48000 * 3, 1, 48000, sampler_type);
+
+  MeasureFreqRespSinad(std::move(mixer), round(kFreqTestBufSize * 3.0),
+                       freq_resp_results, sinad_results);
+}
+
 // For the given resampler, target a 2:1 downsampling ratio. We articulate this
 // by specifying a source buffer twice the length of the destination buffer.
 void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                               96000, 1, 48000, sampler_type);
+                               48000 * 2, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer),
-                       round(kFreqTestBufSize * 96000.0 / 48000.0),
+  MeasureFreqRespSinad(std::move(mixer), round(kFreqTestBufSize * 2.0),
                        freq_resp_results, sinad_results);
 }
 
@@ -444,10 +454,9 @@ void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results,
 void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                         double* sinad_results) {
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                               24000, 1, 48000, sampler_type);
+                               24000, 1, 24000 * 2, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer),
-                       round(kFreqTestBufSize * 24000.0 / 48000.0),
+  MeasureFreqRespSinad(std::move(mixer), round(kFreqTestBufSize / 2.0),
                        freq_resp_results, sinad_results);
 }
 
@@ -482,7 +491,27 @@ TEST(Sinad, Point_Unity) {
                        AudioResult::kPrevSinadPointUnity.data());
 }
 
-// Measure Freq Response for Point sampler, first down-sampling ratio.
+// Measure Freq Response for Point sampler for down-sampling ratio #0.
+TEST(FrequencyResponse, Point_DownSamp0) {
+  TestDownSampleRatio0(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown0.data(),
+                       AudioResult::SinadPointDown0.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespPointDown0.data(),
+                          AudioResult::kPrevFreqRespPointDown0.data());
+}
+
+// Measure SINAD for Point sampler for down-sampling ratio #0.
+TEST(Sinad, Point_DownSamp0) {
+  TestDownSampleRatio0(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown0.data(),
+                       AudioResult::SinadPointDown0.data());
+
+  EvaluateSinadResults(AudioResult::SinadPointDown0.data(),
+                       AudioResult::kPrevSinadPointDown0.data());
+}
+
+// Measure Freq Response for Point sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold,
                        AudioResult::FreqRespPointDown1.data(),
@@ -492,7 +521,7 @@ TEST(FrequencyResponse, Point_DownSamp1) {
                           AudioResult::kPrevFreqRespPointDown1.data());
 }
 
-// Measure SINAD for Point sampler, first down-sampling ratio.
+// Measure SINAD for Point sampler for down-sampling ratio #1.
 TEST(Sinad, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold,
                        AudioResult::FreqRespPointDown1.data(),
@@ -502,7 +531,7 @@ TEST(Sinad, Point_DownSamp1) {
                        AudioResult::kPrevSinadPointDown1.data());
 }
 
-// Measure Freq Response for Point sampler, second down-sampling ratio.
+// Measure Freq Response for Point sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold,
                        AudioResult::FreqRespPointDown2.data(),
@@ -512,7 +541,7 @@ TEST(FrequencyResponse, Point_DownSamp2) {
                           AudioResult::kPrevFreqRespPointDown2.data());
 }
 
-// Measure SINAD for Point sampler, second down-sampling ratio.
+// Measure SINAD for Point sampler for down-sampling ratio #2.
 TEST(Sinad, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold,
                        AudioResult::FreqRespPointDown2.data(),
@@ -522,7 +551,7 @@ TEST(Sinad, Point_DownSamp2) {
                        AudioResult::kPrevSinadPointDown2.data());
 }
 
-// Measure Freq Response for Point sampler, first up-sampling ratio.
+// Measure Freq Response for Point sampler for up-sampling ratio #1.
 TEST(FrequencyResponse, Point_UpSamp1) {
   TestUpSampleRatio1(Resampler::SampleAndHold,
                      AudioResult::FreqRespPointUp1.data(),
@@ -532,7 +561,7 @@ TEST(FrequencyResponse, Point_UpSamp1) {
                           AudioResult::kPrevFreqRespPointUp1.data());
 }
 
-// Measure SINAD for Point sampler, first up-sampling ratio.
+// Measure SINAD for Point sampler for up-sampling ratio #1.
 TEST(Sinad, Point_UpSamp1) {
   TestUpSampleRatio1(Resampler::SampleAndHold,
                      AudioResult::FreqRespPointUp1.data(),
@@ -542,7 +571,7 @@ TEST(Sinad, Point_UpSamp1) {
                        AudioResult::kPrevSinadPointUp1.data());
 }
 
-// Measure Freq Response for Point sampler, second up-sampling ratio.
+// Measure Freq Response for Point sampler for up-sampling ratio #2.
 TEST(FrequencyResponse, Point_UpSamp2) {
   TestUpSampleRatio2(Resampler::SampleAndHold,
                      AudioResult::FreqRespPointUp2.data(),
@@ -552,7 +581,7 @@ TEST(FrequencyResponse, Point_UpSamp2) {
                           AudioResult::kPrevFreqRespPointUp2.data());
 }
 
-// Measure SINAD for Point sampler, second up-sampling ratio.
+// Measure SINAD for Point sampler for up-sampling ratio #2.
 TEST(Sinad, Point_UpSamp2) {
   TestUpSampleRatio2(Resampler::SampleAndHold,
                      AudioResult::FreqRespPointUp2.data(),
@@ -602,7 +631,27 @@ TEST(Sinad, Linear_Unity) {
                        AudioResult::kPrevSinadLinearUnity.data());
 }
 
-// Measure Freq Response for Linear sampler, first down-sampling ratio.
+// Measure Freq Response for Linear sampler for down-sampling ratio #0.
+TEST(FrequencyResponse, Linear_DownSamp0) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown0.data(),
+                       AudioResult::SinadLinearDown0.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearDown0.data(),
+                          AudioResult::kPrevFreqRespLinearDown0.data());
+}
+
+// Measure SINAD for Linear sampler for down-sampling ratio #0.
+TEST(Sinad, Linear_DownSamp0) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown0.data(),
+                       AudioResult::SinadLinearDown0.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearDown0.data(),
+                       AudioResult::kPrevSinadLinearDown0.data());
+}
+
+// Measure Freq Response for Linear sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Linear_DownSamp1) {
   TestDownSampleRatio1(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearDown1.data(),
@@ -612,7 +661,7 @@ TEST(FrequencyResponse, Linear_DownSamp1) {
                           AudioResult::kPrevFreqRespLinearDown1.data());
 }
 
-// Measure SINAD for Linear sampler, first down-sampling ratio.
+// Measure SINAD for Linear sampler for down-sampling ratio #1.
 TEST(Sinad, Linear_DownSamp1) {
   TestDownSampleRatio1(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearDown1.data(),
@@ -622,7 +671,7 @@ TEST(Sinad, Linear_DownSamp1) {
                        AudioResult::kPrevSinadLinearDown1.data());
 }
 
-// Measure Freq Response for Linear sampler, second down-sampling ratio.
+// Measure Freq Response for Linear sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Linear_DownSamp2) {
   TestDownSampleRatio2(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearDown2.data(),
@@ -632,7 +681,7 @@ TEST(FrequencyResponse, Linear_DownSamp2) {
                           AudioResult::kPrevFreqRespLinearDown2.data());
 }
 
-// Measure SINAD for Linear sampler, second down-sampling ratio.
+// Measure SINAD for Linear sampler for down-sampling ratio #2.
 TEST(Sinad, Linear_DownSamp2) {
   TestDownSampleRatio2(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearDown2.data(),
@@ -642,7 +691,7 @@ TEST(Sinad, Linear_DownSamp2) {
                        AudioResult::kPrevSinadLinearDown2.data());
 }
 
-// Measure Freq Response for Linear sampler, first up-sampling ratio.
+// Measure Freq Response for Linear sampler for up-sampling ratio #1.
 TEST(FrequencyResponse, Linear_UpSamp1) {
   TestUpSampleRatio1(Resampler::LinearInterpolation,
                      AudioResult::FreqRespLinearUp1.data(),
@@ -652,7 +701,7 @@ TEST(FrequencyResponse, Linear_UpSamp1) {
                           AudioResult::kPrevFreqRespLinearUp1.data());
 }
 
-// Measure SINAD for Linear sampler, first up-sampling ratio.
+// Measure SINAD for Linear sampler for up-sampling ratio #1.
 TEST(Sinad, Linear_UpSamp1) {
   TestUpSampleRatio1(Resampler::LinearInterpolation,
                      AudioResult::FreqRespLinearUp1.data(),
@@ -662,7 +711,7 @@ TEST(Sinad, Linear_UpSamp1) {
                        AudioResult::kPrevSinadLinearUp1.data());
 }
 
-// Measure Freq Response for Linear sampler, second up-sampling ratio.
+// Measure Freq Response for Linear sampler for up-sampling ratio #2.
 TEST(FrequencyResponse, Linear_UpSamp2) {
   TestUpSampleRatio2(Resampler::LinearInterpolation,
                      AudioResult::FreqRespLinearUp2.data(),
@@ -672,7 +721,7 @@ TEST(FrequencyResponse, Linear_UpSamp2) {
                           AudioResult::kPrevFreqRespLinearUp2.data());
 }
 
-// Measure SINAD for Linear sampler, second up-sampling ratio.
+// Measure SINAD for Linear sampler for up-sampling ratio #2.
 TEST(Sinad, Linear_UpSamp2) {
   TestUpSampleRatio2(Resampler::LinearInterpolation,
                      AudioResult::FreqRespLinearUp2.data(),

@@ -177,6 +177,8 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespPointDown0;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointDown2;
@@ -188,6 +190,8 @@ class AudioResult {
   // Same as the above section, but for LinearSampler instead of PointSampler
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespLinearUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespLinearDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespLinearDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -212,6 +216,8 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespPointDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointDown2;
@@ -225,6 +231,8 @@ class AudioResult {
   // Same as the above section, but for LinearSampler instead of PointSampler
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -255,6 +263,7 @@ class AudioResult {
   // The input sinusoid is a 0 dBFS sinusoid. Results are ratios of output-
   // -signal-to-output-noise, measured in dBr, so larger values are better.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp1;
@@ -263,6 +272,7 @@ class AudioResult {
 
   // Same as the above section, but for LinearSampler instead of PointSampler
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp1;
@@ -274,6 +284,8 @@ class AudioResult {
   // LESS than this value, then the test case fails.
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadPointDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -288,6 +300,8 @@ class AudioResult {
   // Same as the above section, but for LinearSampler instead of PointSampler
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -519,7 +533,8 @@ class AudioResult {
   static void DumpThresholdValues();
 
  private:
-  static void DumpFreqRespValues(double* freq_resp_vals, const std::string& arr_name);
+  static void DumpFreqRespValues(double* freq_resp_vals,
+                                 const std::string& arr_name);
   static void DumpSinadValues(double* sinad_vals, const std::string& arr_name);
   static void DumpNoiseFloorValues();
   static void DumpLevelValues();
@@ -528,61 +543,5 @@ class AudioResult {
 };
 
 }  // namespace media::audio::test
-
-/*
-    AudioResult journal - updated upon each CL that affects these measurements
-
-    2018-08-31  Added running fractional source position modulo to the core
-                Mix() function, and incorporated this into the frequency
-                response tests (those are the only tests that break a large Mix
-                pass into multiple chunks). In contrast to slight inaccuracies
-                in Rate, small imprecisions in Starting Position do not compound
-                over time and hence do not significantly impact fidelity. After
-                this change, as expected there was a measureable but negligible
-                improvement in audio fidelity, shown in updates to the threshold
-                values. For this reason, the internal clients (AudioCapturerImpl
-                and StandardOutputBase) do not yet adopt this feature.
-    2018-07-16  Added high-precision fixed-point data type 24-in-32-integer
-                support in the normalize and output functions (mixer_utils.h and
-                output_formatter.cc, respectively). Added level and noise-floor
-                test thresholds for 24-bit sources, outputs and mixes.
-    2018-06-29  Converted internal processing pipeline to 32-bit floating-point.
-                Gain-scaling, stereo-to-mono rechannelization, interpolation and
-                summing are all done in the float domain (although PTS subframes
-                are still 19.13 fixed-point). Converted all generic frequency
-                response and dynamic range tests over to use float data type.
-                Also added level and noise-floor test thresholds for float
-                sources, outputs and mixes.
-    2018-05-08  Added rate_modulo & denominator parameters, to express
-                resampling precision that cannot be captured by a single
-                frac_step_size uint32. We can now send mix jobs of any size
-                (even 64k) without accumulating position error.
-                With this fix, our first round of audio fidelity improvements is
-                complete. One remaining future focus could be to achieve flatter
-                frequency response, presumably via a higher-order resampler.
-    2018-05-01  Added new rate ratio for micro-SRC testing: 47999:48000. Also
-                increased our mix job size to 20 ms (see 04-23 below), to better
-                show the effects of accumulated fractional position errors.
-    2018-04-30  Converted internal accumulator pipeline to 18-bit fixed-point
-                rather than 16-bit. This will improve noise-floor and other
-                measurements by up to 12 dB, in cases where quality is not gated
-                by other factors (such as the bit-width of the input or output).
-    2018-04-24  Converted fidelity tests to float-based input, instead of 16-bit
-                signed integers -- enabling higher-resolution measurement (and
-                requiring updates to most thresholds).
-    2018-04-23  Moved fidelity tests to call Mixer objects in smaller mix jobs,
-                to emulate how these objects are used by their callers elsewhere
-                in audio_core. By forcing source-to-accumulator buffer lengths
-                to match the required ratios, we directly expose a longstanding
-                source of distortion, MTWN-49 (the "step_size" bug).
-    2018-03-28  Full-spectrum frequency response and distortion tests: in all,
-                47 frequencies, from DC, 13Hz, 20Hz to 22kHz, 24kHz and beyond.
-                Down-sampling tests show significant aliasing.
-    2018-03-28  Initial mix floor tests: 8- and 16-bit for accumulation.
-    2018-03-26  Initial dynamic range tests. kPrevScaleEpsilon = 0FFFFFFF for
-                incoming positive values; 0FFFE000 for negative values.
-    2018-03-21  Initial frequency response / sinad tests: 1kHz, 40Hz, 12kHz.
-    2018-03-20  Initial source/output noise floor tests: 8- & 16-bit, 1kHz.
-*/
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_AUDIO_RESULT_H_

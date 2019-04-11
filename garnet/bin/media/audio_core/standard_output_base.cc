@@ -398,9 +398,14 @@ bool StandardOutputBase::ProcessMix(
   if (packet->start_pts() > first_sample_pos_window_edge) {
     const TimelineRate& dest_to_src =
         info->dest_frames_to_frac_source_frames.rate();
-    output_offset_64 = dest_to_src.Inverse().Scale(
-        packet->start_pts() - first_sample_pos_window_edge + Mixer::FRAC_ONE -
-        1);
+    // In determining output_offset and input_offset, we want to "round up" any
+    // subframes that are present, to the next integer frame. To do this, we
+    // subtract a single subframe (to handle the no-subframes case), then scale
+    // (which truncates any subframes), then add an additional 'round-up' frame.
+    output_offset_64 =
+        dest_to_src.Inverse().Scale(packet->start_pts() -
+                                    first_sample_pos_window_edge - 1) +
+        1;
     input_offset_64 += dest_to_src.Scale(output_offset_64);
   }
 
