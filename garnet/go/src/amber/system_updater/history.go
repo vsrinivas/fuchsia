@@ -63,6 +63,7 @@ func (h *UpdateHistory) Save() error {
 	if err := json.NewEncoder(f).Encode(h); err != nil {
 		return err
 	}
+	f.Sync()
 
 	return nil
 }
