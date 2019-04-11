@@ -4,6 +4,7 @@
 
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
+#include <hid/ft3x27.h>
 #include <hid/paradise.h>
 
 #include <gtest/gtest.h>
@@ -381,6 +382,49 @@ TEST(TouchscreenTest, ParadiseV3) {
   EXPECT_EQ(1U, report.contacts[0].id);
   EXPECT_EQ(25000, report.contacts[0].x);
   EXPECT_EQ(50000, report.contacts[0].y);
+}
+
+TEST(TouchscreenTest, Ft3x27) {
+  mozart::Touch ts;
+  const uint8_t *ft3x27_report_desc;
+  size_t desc_size = get_ft3x27_report_desc(&ft3x27_report_desc);
+
+  ParseTouchscreen(ft3x27_report_desc, desc_size, &ts);
+  mozart::Touch::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
+  EXPECT_EQ(5UL, ts.touch_points());
+  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
+                mozart::Touch::Capabilities::TIP_SWITCH |
+                mozart::Touch::Capabilities::X |
+                mozart::Touch::Capabilities::Y |
+                mozart::Touch::Capabilities::CONTACT_COUNT,
+            ts.capabilities());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(600, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(1024, ts_desc.y_max);
+
+  // Now use the parsed descriptor to interpret a touchpad report.
+  ft3x27_touch touch_report = {};
+  touch_report.rpt_id = 1;
+  touch_report.contact_count = 1;
+  touch_report.fingers[1].finger_id = 0xFF;
+  touch_report.fingers[1].x = 100;
+  touch_report.fingers[1].y = 200;
+
+  uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_report);
+
+  mozart::Touch::Report report;
+  auto success = ts.ParseReport(report_data, sizeof(touch_report), &report);
+  EXPECT_EQ(true, success);
+
+  EXPECT_EQ(1UL, report.contact_count);
+
+  // 63 is the max allowed ID since the contactID field is only 6 bits wide.
+  EXPECT_EQ(63U, report.contacts[0].id);
+  EXPECT_EQ(100, report.contacts[0].x);
+  EXPECT_EQ(200, report.contacts[0].y);
 }
 
 }  // namespace test
