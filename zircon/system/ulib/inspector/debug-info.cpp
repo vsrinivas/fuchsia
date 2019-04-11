@@ -216,8 +216,10 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 #elif defined(__aarch64__)
     inspector_print_general_regs(stdout, regs, &context.arch.u.arm_64);
 
-    // Only output the Fault address register and ESR if there's a data fault.
-    if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type) {
+    // Only output the Fault address register and ESR if there's a data or
+    // alignment fault.
+    if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type ||
+        ZX_EXCP_UNALIGNED_ACCESS == report.header.type) {
         printf(" far %#18" PRIx64 " esr %#18x\n",
                context.arch.u.arm_64.far, context.arch.u.arm_64.esr);
     }
