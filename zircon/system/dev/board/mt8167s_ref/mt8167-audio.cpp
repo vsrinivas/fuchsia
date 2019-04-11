@@ -61,8 +61,8 @@ zx_status_t Mt8167::AudioInit() {
         },
     };
     static constexpr pbus_clk_t clks[] = {
-        {.clk = board_mt8167::kClkAud1},
-        {.clk = board_mt8167::kClkAud2},
+        {.clk = board_mt8167::kClkRgAud1},
+        {.clk = board_mt8167::kClkRgAud2},
     };
 
     static constexpr pbus_bti_t btis_out[] = {

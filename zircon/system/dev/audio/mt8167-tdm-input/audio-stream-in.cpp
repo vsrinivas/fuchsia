@@ -123,9 +123,9 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
     mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                          pinned_ring_buffer_.region(0).size);
 
-    // Disables aud1 clk gating: 0 is the index, board_mt8167::kClkAud1.
+    // Disables aud1 clk gating: 0 is the index, board_mt8167::kClkRgAud1.
     clk_.Enable(0);
-    // Disables aud2 clk gating: 1 is the index, board_mt8167::kClkAud2.
+    // Disables aud2 clk gating: 1 is the index, board_mt8167::kClkRgAud2.
     clk_.Enable(1);
     return ZX_OK;
 }

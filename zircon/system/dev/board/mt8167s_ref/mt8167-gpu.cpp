@@ -46,10 +46,10 @@ zx_status_t Mt8167::GpuInit() {
 
     const pbus_clk_t gpu_clks[] = {
         {
-            .clk = kClkSlowMfg,
+            .clk = kClkRgSlowMfg,
         },
         {
-            .clk = kClkAxiMfg,
+            .clk = kClkRgAxiMfg,
         },
         {
             .clk = kClkMfgMm,

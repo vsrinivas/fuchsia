@@ -50,7 +50,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
-    clk_.Enable(0); // board_mt8167::kClkAud1, disables clk gating.
+    clk_.Enable(0); // board_mt8167::kClkRgAud1, disables clk gating.
 
     // TODO(andresoportus): Move GPIO control to codecs?
     // Not all codecs have these GPIOs.

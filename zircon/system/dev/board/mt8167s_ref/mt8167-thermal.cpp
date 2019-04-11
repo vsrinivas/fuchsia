@@ -38,16 +38,16 @@ constexpr pbus_mmio_t thermal_mmios[] = {
 
 constexpr pbus_clk_t thermal_clks[] = {
     {
-        .clk = board_mt8167::kClkThermal
+        .clk = board_mt8167::kClkThem
     },
     {
         .clk = board_mt8167::kClkAuxAdc
     },
     {
-        .clk = board_mt8167::kClkPmicWrapAp
+        .clk = board_mt8167::kClkPmicwrapAp
     },
     {
-        .clk = board_mt8167::kClkPmicWrap26M
+        .clk = board_mt8167::kClkPmicwrap26m
     }
 };
 

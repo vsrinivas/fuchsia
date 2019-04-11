@@ -23,31 +23,127 @@ struct MtkClkGateRegs {
     const zx_off_t clr;
 };
 
+constexpr uint32_t kFlagInverted = (1 << 0);
+
 struct MtkClkGate {
     const MtkClkGateRegs regs;
     const uint8_t bit;
+    const uint32_t flags;
 };
 
 constexpr MtkClkGateRegs kClkGatingCtrl0 = {.set = 0x50, .clr = 0x80};
 constexpr MtkClkGateRegs kClkGatingCtrl1 = {.set = 0x54, .clr = 0x84};
+constexpr MtkClkGateRegs kClkGatingCtrl2 = {.set = 0x6c, .clr = 0x9c};
 constexpr MtkClkGateRegs kClkGatingCtrl8 = {.set = 0xa0, .clr = 0xb0};
+constexpr MtkClkGateRegs kClkGatingCtrl9 = {.set = 0xa4, .clr = 0xb4};
 
+// clang-format off
 constexpr MtkClkGate kMtkClkGates[] = {
-    [board_mt8167::kClkThermal] = {.regs = kClkGatingCtrl1, .bit = 1},
-    [board_mt8167::kClkI2c0] = {.regs = kClkGatingCtrl1, .bit = 3},
-    [board_mt8167::kClkI2c1] = {.regs = kClkGatingCtrl1, .bit = 4},
-    [board_mt8167::kClkI2c2] = {.regs = kClkGatingCtrl1, .bit = 16},
-    [board_mt8167::kClkPmicWrapAp] = {.regs = kClkGatingCtrl1, .bit = 20},
-    [board_mt8167::kClkPmicWrap26M] = {.regs = kClkGatingCtrl1, .bit = 29},
-    [board_mt8167::kClkAuxAdc] = {.regs = kClkGatingCtrl1, .bit = 30},
-    [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
-    [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
-    [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
-    [board_mt8167::kClkAud1] = {.regs = kClkGatingCtrl8, .bit = 8},
-    [board_mt8167::kClkAud2] = {.regs = kClkGatingCtrl8, .bit = 9},
-    [board_mt8167::kClkAudEngen1] = {.regs = kClkGatingCtrl8, .bit = 10},
-    [board_mt8167::kClkAudEngen2] = {.regs = kClkGatingCtrl8, .bit = 11},
+    // kClkGatingCtrl0
+    [board_mt8167::kClkPwmMm]          = { .regs = kClkGatingCtrl0, .bit = 0, .flags = 0 },
+    [board_mt8167::kClkCamMm]          = { .regs = kClkGatingCtrl0, .bit = 1, .flags = 0 },
+    [board_mt8167::kClkMfgMm]          = { .regs = kClkGatingCtrl0, .bit = 2, .flags = 0 },
+    [board_mt8167::kClkSpm52m]         = { .regs = kClkGatingCtrl0, .bit = 3, .flags = 0 },
+    [board_mt8167::kClkMipi26mDbg]     = { .regs = kClkGatingCtrl0, .bit = 4, .flags = kFlagInverted },
+    [board_mt8167::kClkScamMm]         = { .regs = kClkGatingCtrl0, .bit = 5, .flags = 0 },
+    [board_mt8167::kClkSmiMm]          = { .regs = kClkGatingCtrl0, .bit = 9, .flags = 0 },
+
+    // kClkGatingCtrl1
+    [board_mt8167::kClkThem]           = { .regs = kClkGatingCtrl1, .bit = 1,  .flags = 0 },
+    [board_mt8167::kClkApdma]          = { .regs = kClkGatingCtrl1, .bit = 2,  .flags = 0 },
+    [board_mt8167::kClkI2c0]           = { .regs = kClkGatingCtrl1, .bit = 3,  .flags = 0 },
+    [board_mt8167::kClkI2c1]           = { .regs = kClkGatingCtrl1, .bit = 4,  .flags = 0 },
+    [board_mt8167::kClkAuxadc1]        = { .regs = kClkGatingCtrl1, .bit = 5,  .flags = 0 },
+    [board_mt8167::kClkNfi]            = { .regs = kClkGatingCtrl1, .bit = 6,  .flags = 0 },
+    [board_mt8167::kClkNfiecc]         = { .regs = kClkGatingCtrl1, .bit = 7,  .flags = 0 },
+    [board_mt8167::kClkDebugsys]       = { .regs = kClkGatingCtrl1, .bit = 8,  .flags = 0 },
+    [board_mt8167::kClkPwm]            = { .regs = kClkGatingCtrl1, .bit = 9,  .flags = 0 },
+    [board_mt8167::kClkUart0]          = { .regs = kClkGatingCtrl1, .bit = 10, .flags = 0 },
+    [board_mt8167::kClkUart1]          = { .regs = kClkGatingCtrl1, .bit = 11, .flags = 0 },
+    [board_mt8167::kClkBtif]           = { .regs = kClkGatingCtrl1, .bit = 12, .flags = 0 },
+    [board_mt8167::kClkUsb]            = { .regs = kClkGatingCtrl1, .bit = 13, .flags = 0 },
+    [board_mt8167::kClkFlashif26m]     = { .regs = kClkGatingCtrl1, .bit = 14, .flags = 0 },
+    [board_mt8167::kClkAuxadc2]        = { .regs = kClkGatingCtrl1, .bit = 15, .flags = 0 },
+    [board_mt8167::kClkI2c2]           = { .regs = kClkGatingCtrl1, .bit = 16, .flags = 0 },
+    [board_mt8167::kClkMsdc0]          = { .regs = kClkGatingCtrl1, .bit = 17, .flags = 0 },
+    [board_mt8167::kClkMsdc1]          = { .regs = kClkGatingCtrl1, .bit = 18, .flags = 0 },
+    [board_mt8167::kClkNfi2x]          = { .regs = kClkGatingCtrl1, .bit = 19, .flags = 0 },
+    [board_mt8167::kClkPmicwrapAp]     = { .regs = kClkGatingCtrl1, .bit = 20, .flags = 0 },
+    [board_mt8167::kClkSej]            = { .regs = kClkGatingCtrl1, .bit = 21, .flags = 0 },
+    [board_mt8167::kClkMemslpDlyer]    = { .regs = kClkGatingCtrl1, .bit = 22, .flags = 0 },
+    [board_mt8167::kClkSpi]            = { .regs = kClkGatingCtrl1, .bit = 23, .flags = 0 },
+    [board_mt8167::kClkApxgpt]         = { .regs = kClkGatingCtrl1, .bit = 24, .flags = 0 },
+    [board_mt8167::kClkAudio]          = { .regs = kClkGatingCtrl1, .bit = 25, .flags = 0 },
+    [board_mt8167::kClkPmicwrapMd]     = { .regs = kClkGatingCtrl1, .bit = 27, .flags = 0 },
+    [board_mt8167::kClkPmicwrapConn]   = { .regs = kClkGatingCtrl1, .bit = 28, .flags = 0 },
+    [board_mt8167::kClkPmicwrap26m]    = { .regs = kClkGatingCtrl1, .bit = 29, .flags = 0 },
+    [board_mt8167::kClkAuxAdc]         = { .regs = kClkGatingCtrl1, .bit = 30, .flags = 0 },
+    [board_mt8167::kClkAuxTp]          = { .regs = kClkGatingCtrl1, .bit = 31, .flags = 0 },
+
+    // kClkGatingCtrl2
+    [board_mt8167::kClkMsdc2]          = { .regs = kClkGatingCtrl2, .bit = 0,  .flags = 0 },
+    [board_mt8167::kClkRbist]          = { .regs = kClkGatingCtrl2, .bit = 1,  .flags = 0 },
+    [board_mt8167::kClkNfiBus]         = { .regs = kClkGatingCtrl2, .bit = 2,  .flags = 0 },
+    [board_mt8167::kClkGce]            = { .regs = kClkGatingCtrl2, .bit = 4,  .flags = 0 },
+    [board_mt8167::kClkTrng]           = { .regs = kClkGatingCtrl2, .bit = 5,  .flags = 0 },
+    [board_mt8167::kClkSej13m]         = { .regs = kClkGatingCtrl2, .bit = 6,  .flags = 0 },
+    [board_mt8167::kClkAes]            = { .regs = kClkGatingCtrl2, .bit = 7,  .flags = 0 },
+    [board_mt8167::kClkPwmB]           = { .regs = kClkGatingCtrl2, .bit = 8,  .flags = 0 },
+    [board_mt8167::kClkPwm1Fb]         = { .regs = kClkGatingCtrl2, .bit = 9,  .flags = 0 },
+    [board_mt8167::kClkPwm2Fb]         = { .regs = kClkGatingCtrl2, .bit = 10, .flags = 0 },
+    [board_mt8167::kClkPwm3Fb]         = { .regs = kClkGatingCtrl2, .bit = 11, .flags = 0 },
+    [board_mt8167::kClkPwm4Fb]         = { .regs = kClkGatingCtrl2, .bit = 12, .flags = 0 },
+    [board_mt8167::kClkPwm5Fb]         = { .regs = kClkGatingCtrl2, .bit = 13, .flags = 0 },
+    [board_mt8167::kClkUsb1p]          = { .regs = kClkGatingCtrl2, .bit = 14, .flags = 0 },
+    [board_mt8167::kClkFlashifFreerun] = { .regs = kClkGatingCtrl2, .bit = 15, .flags = 0 },
+    [board_mt8167::kClk26mHdmiSifm]    = { .regs = kClkGatingCtrl2, .bit = 16, .flags = 0 },
+    [board_mt8167::kClk26mCec]         = { .regs = kClkGatingCtrl2, .bit = 17, .flags = 0 },
+    [board_mt8167::kClk32kCec]         = { .regs = kClkGatingCtrl2, .bit = 18, .flags = 0 },
+    [board_mt8167::kClk66mEth]         = { .regs = kClkGatingCtrl2, .bit = 19, .flags = 0 },
+    [board_mt8167::kClk133mEth]        = { .regs = kClkGatingCtrl2, .bit = 20, .flags = 0 },
+    [board_mt8167::kClkFeth25m]        = { .regs = kClkGatingCtrl2, .bit = 21, .flags = 0 },
+    [board_mt8167::kClkFeth50m]        = { .regs = kClkGatingCtrl2, .bit = 22, .flags = 0 },
+    [board_mt8167::kClkFlashifAxi]     = { .regs = kClkGatingCtrl2, .bit = 23, .flags = 0 },
+    [board_mt8167::kClkUsbif]          = { .regs = kClkGatingCtrl2, .bit = 24, .flags = 0 },
+    [board_mt8167::kClkUart2]          = { .regs = kClkGatingCtrl2, .bit = 25, .flags = 0 },
+    [board_mt8167::kClkBsi]            = { .regs = kClkGatingCtrl2, .bit = 26, .flags = 0 },
+    [board_mt8167::kClkGcpuB]          = { .regs = kClkGatingCtrl2, .bit = 27, .flags = 0 },
+    [board_mt8167::kClkMsdc0Infra]     = { .regs = kClkGatingCtrl2, .bit = 28, .flags = kFlagInverted },
+    [board_mt8167::kClkMsdc1Infra]     = { .regs = kClkGatingCtrl2, .bit = 29, .flags = kFlagInverted },
+    [board_mt8167::kClkMsdc2Infra]     = { .regs = kClkGatingCtrl2, .bit = 30, .flags = kFlagInverted },
+    [board_mt8167::kClkUsb78m]         = { .regs = kClkGatingCtrl2, .bit = 31, .flags = 0 },
+
+    // kClkGatingCtrl8
+    [board_mt8167::kClkRgSpinor]       = { .regs = kClkGatingCtrl8, .bit = 0,  .flags = 0 },
+    [board_mt8167::kClkRgMsdc2]        = { .regs = kClkGatingCtrl8, .bit = 1,  .flags = 0 },
+    [board_mt8167::kClkRgEth]          = { .regs = kClkGatingCtrl8, .bit = 2,  .flags = 0 },
+    [board_mt8167::kClkRgVdec]         = { .regs = kClkGatingCtrl8, .bit = 3,  .flags = 0 },
+    [board_mt8167::kClkRgFdpi0]        = { .regs = kClkGatingCtrl8, .bit = 4,  .flags = 0 },
+    [board_mt8167::kClkRgFdpi1]        = { .regs = kClkGatingCtrl8, .bit = 5,  .flags = 0 },
+    [board_mt8167::kClkRgAxiMfg]       = { .regs = kClkGatingCtrl8, .bit = 6,  .flags = 0 },
+    [board_mt8167::kClkRgSlowMfg]      = { .regs = kClkGatingCtrl8, .bit = 7,  .flags = 0 },
+    [board_mt8167::kClkRgAud1]         = { .regs = kClkGatingCtrl8, .bit = 8,  .flags = 0 },
+    [board_mt8167::kClkRgAud2]         = { .regs = kClkGatingCtrl8, .bit = 9,  .flags = 0 },
+    [board_mt8167::kClkRgAudEngen1]    = { .regs = kClkGatingCtrl8, .bit = 10, .flags = 0 },
+    [board_mt8167::kClkRgAudEngen2]    = { .regs = kClkGatingCtrl8, .bit = 11, .flags = 0 },
+    [board_mt8167::kClkRgI2c]          = { .regs = kClkGatingCtrl8, .bit = 12, .flags = 0 },
+    [board_mt8167::kClkRgPwmInfra]     = { .regs = kClkGatingCtrl8, .bit = 13, .flags = 0 },
+    [board_mt8167::kClkRgAudSpdifIn]   = { .regs = kClkGatingCtrl8, .bit = 14, .flags = 0 },
+    [board_mt8167::kClkRgUart2]        = { .regs = kClkGatingCtrl8, .bit = 15, .flags = 0 },
+    [board_mt8167::kClkRgBsi]          = { .regs = kClkGatingCtrl8, .bit = 16, .flags = 0 },
+    [board_mt8167::kClkRgDbgAtclk]     = { .regs = kClkGatingCtrl8, .bit = 17, .flags = 0 },
+    [board_mt8167::kClkRgNfiecc]       = { .regs = kClkGatingCtrl8, .bit = 18, .flags = 0 },
+
+    // kClkGatingCtrl9
+    [board_mt8167::kClkRgApll1D2En]    = { .regs = kClkGatingCtrl9, .bit = 8,  .flags = kFlagInverted },
+    [board_mt8167::kClkRgApll1D4En]    = { .regs = kClkGatingCtrl9, .bit = 9,  .flags = kFlagInverted },
+    [board_mt8167::kClkRgApll1D8En]    = { .regs = kClkGatingCtrl9, .bit = 10, .flags = kFlagInverted },
+    [board_mt8167::kClkRgApll2D2En]    = { .regs = kClkGatingCtrl9, .bit = 11, .flags = kFlagInverted },
+    [board_mt8167::kClkRgApll2D4En]    = { .regs = kClkGatingCtrl9, .bit = 12, .flags = kFlagInverted },
+    [board_mt8167::kClkRgApll2D8En]    = { .regs = kClkGatingCtrl9, .bit = 13, .flags = kFlagInverted },
 };
+// clang-format on
+
 struct clock_info {
     uint32_t idx;
     const char* name;
@@ -180,7 +276,12 @@ zx_status_t MtkClk::ClockImplEnable(uint32_t index) {
     }
 
     const MtkClkGate& gate = kMtkClkGates[index];
-    mmio_.Write32(1 << gate.bit, gate.regs.clr);
+
+    if (gate.flags & kFlagInverted) {
+        mmio_.Write32(1 << gate.bit, gate.regs.set);
+    } else {
+        mmio_.Write32(1 << gate.bit, gate.regs.clr);
+    }
     return ZX_OK;
 }
 
@@ -190,7 +291,11 @@ zx_status_t MtkClk::ClockImplDisable(uint32_t index) {
     }
 
     const MtkClkGate& gate = kMtkClkGates[index];
-    mmio_.Write32(1 << gate.bit, gate.regs.set);
+    if (gate.flags & kFlagInverted) {
+        mmio_.Write32(1 << gate.bit, gate.regs.clr);
+    } else {
+        mmio_.Write32(1 << gate.bit, gate.regs.set);
+    }
     return ZX_OK;
 }
 
