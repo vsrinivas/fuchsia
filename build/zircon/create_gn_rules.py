@@ -58,22 +58,6 @@ LIBRARIES_WITHOUT_SDK_HEADERS = ['trace-engine']
 # is the reason why this list is needed.
 NON_SDK_DEPS = ['zircon-internal']
 
-# FIDL libraries that may be included in SDKs.
-# Note that this is a temporary measure until the Zircon GN build allows us to
-# express the same concept of SDK publication.
-PUBLISHED_FIDL_LIBRARIES = [
-    'fuchsia-cobalt',
-    'fuchsia-hardware-ethernet',
-    'fuchsia-io',
-    'fuchsia-ldsvc',
-    'fuchsia-logger',
-    'fuchsia-mem',
-    'fuchsia-net',
-    'fuchsia-process',
-    'fuchsia-sysinfo',
-    'fuchsia-sysmem',
-]
-
 def make_dir(path, is_dir=False):
     '''Creates the directory at `path`.'''
     target = path if is_dir else os.path.dirname(path)
@@ -372,41 +356,6 @@ def generate_host_tool(package, context):
     generate_build_file(build_path, 'host_tool.mako', data, context)
 
 
-class FidlLibrary(object):
-    '''Represents a FIDL library.
-
-       Convenience storage object to be consumed by Mako templates.'''
-
-    def __init__(self, name, library):
-        self.name = name
-        self.library = library
-        self.sources = []
-        self.fidl_deps = []
-        self.is_published = False
-        self.api = ''
-
-
-def generate_fidl_library(package, context):
-    '''Generates the build glue for a FIDL library.'''
-    pkg_name = package['package']['name']
-    # TODO(pylaligand): remove fallback.
-    data = FidlLibrary(pkg_name, package['package'].get('library', pkg_name))
-
-    if pkg_name in PUBLISHED_FIDL_LIBRARIES:
-        data.is_published = True
-        library_name = pkg_name.replace('-', '.')
-        data.api = '//sdk/fidl/%s/%s.api' % (library_name, library_name)
-
-    for name, path in package.get('fidl', {}).iteritems():
-        (file, _) = extract_file(name, path, context)
-        data.sources.append('//%s' % file)
-    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
-
-    # Generate the build file.
-    build_path = os.path.join(context.out_dir, 'fidl', pkg_name, 'BUILD.gn')
-    generate_build_file(build_path, 'fidl.mako', data, context)
-
-
 class GenerationContext(object):
     '''Describes the context in which GN rules should be generated.'''
 
@@ -434,7 +383,6 @@ def main():
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
-    shutil.rmtree(os.path.join(out_dir, 'fidl'), True)
     shutil.rmtree(os.path.join(out_dir, 'lib'), True)
     shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
     shutil.rmtree(os.path.join(out_dir, 'tool'), True)
@@ -480,8 +428,6 @@ def main():
             else:
                 type = 'prebuilt'
                 generate_compiled_library(package, context)
-        elif type == 'fidl':
-            generate_fidl_library(package, context)
         else:
             print('(%s) Unsupported package type: %s/%s, skipping'
                   % (name, type, arch))

@@ -5,6 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-cobalt") {
+  sdk = true
   sources = [
     "cobalt.fidl",
     "cobalt_controller.fidl",

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/fidl/fidlc.gni")
-import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 
 # List of FIDL support modules.  Each of these defines its own version of
 # $fidl_support_fidlc and $fidl_support_templates.
@@ -136,6 +135,11 @@ foreach(gen, _fidl_generators) {
 #     other fidl_library() targets and may not use a "(toolchain)" suffix.
 #     Type: list(label_no_toolchain)
 #
+#   sdk
+#     Optional: This library is exported to the SDK.
+#     Type: bool
+#     Default: false
+#
 template("fidl_library") {
   assert(defined(invoker.sources),
          "fidl_library(\"$target_name\") must set `sources`")
@@ -206,38 +210,70 @@ template("fidl_library") {
         visibility += [ ":$files_rspfile_target" ]
       }
 
+      if (defined(invoker.sdk) && invoker.sdk) {
+        assert(
+            !defined(deps),
+            "Public fidl_library(\"$fidl_target\") can only have public_deps")
+        if (false) {
+          # TODO(BLD-353): Implement this GN feature: require that all the
+          # immediate deps have assert_metadata={sdk=...} too.
+          assert_metadata = {
+            sdk = []
+            if (defined(public_deps)) {
+              sdk += public_deps
+            }
+          }
+        }
+      }
+
       metadata = {
         # These inputs are needed both here and in every dependent library.
         # Each --files switch introduces a group of source files that make
         # up a single FIDL library (all have identical `library ...;` lines).
         fidl_rspfile =
             [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
-      }
 
-      # TODO(BLD-353): temporary hack
-      data_deps = [
-        ":$fidl_target.pkg",
-      ]
-    }
+        if (defined(invoker.sdk) && invoker.sdk) {
+          # TODO(BLD-353): Assert that every dep also has sdk set.
+          sdk = [ true ]
+        }
 
-    # TODO(BLD-353): temporary hack
-    legacy_pkg("$fidl_target.pkg") {
-      contents = [
-        "[package]",
-        "name=$fidl_target",
-        "library=$fidl_name",
-        "arch=fidl",
-        "type=fidl",
-        "[fidl]",
-      ]
-      foreach(file, invoker.sources) {
-        contents += [ "$file=SOURCE/" + rebase_path(file, "//") ]
-      }
-      if (defined(invoker.public_deps)) {
-        contents += [ "[fidl-deps]" ]
-        foreach(label, invoker.public_deps) {
-          contents += [ get_label_info(label, "name") + "=SOURCE/" +
-                        rebase_path(get_label_info(label, "dir"), "//") ]
+        # TODO(BLD-353): temporary hack
+        if (fidl_target ==
+            get_path_info(get_label_info(":$fidl_target", "dir"), "name")) {
+          legacy_dirs = [ "fidl/$fidl_target" ]
+          legacy_targets = [
+            {
+              import = "//build/fidl/fidl.gni"
+              target_type = "fidl"
+              target_name = fidl_target
+
+              # These all become the parameters to fidl().
+              name = fidl_name
+              if (defined(invoker.sdk) && invoker.sdk) {
+                sdk_category = "partner"
+                api = "//sdk/fidl/$fidl_name/$fidl_name.api"
+              }
+              sources = []
+              foreach(file, invoker.sources) {
+                # Make file names source-absolute in the Fuchsia GN.
+                file = rebase_path(file, "$zx/")
+                sources += [ "//zircon/$file" ]
+              }
+              deps = []
+              if (defined(public_deps)) {
+                foreach(label, public_deps) {
+                  assert(
+                      get_label_info(label, "name") ==
+                          get_path_info(get_label_info(label, "dir"), "name"),
+                      "fidl_library(\"$fidl_target\") deps " +
+                          get_label_info(label, "label_no_toolchain"))
+                  deps += [ "//zircon/public/fidl/" +
+                            get_label_info(label, "name") ]
+                }
+              }
+            },
+          ]
         }
       }
     }

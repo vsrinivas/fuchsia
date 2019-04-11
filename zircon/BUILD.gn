@@ -203,11 +203,6 @@ if (current_toolchain == default_toolchain) {
       deps = [
         ":legacy-$cpu",
         ":tools",
-
-        # Separately listed because they're not reached by any dependencies.
-        "$zx/system/fidl/fuchsia-debugdata",
-        "$zx/system/fidl/fuchsia-inspect",
-        "$zx/system/fidl/fuchsia-tracelink",
       ]
     }
 

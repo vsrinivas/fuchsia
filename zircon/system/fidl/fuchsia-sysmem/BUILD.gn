@@ -5,6 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-sysmem") {
+  sdk = true
   sources = [
     "allocator.fidl",
     "collection.fidl",
