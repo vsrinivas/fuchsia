@@ -3779,7 +3779,7 @@ zx_status_t Device::StartInterruptPolling() {
     }
 
     status = async_tx_interrupt_timer_.wait_async(interrupt_port_, kAsyncTxInterruptKey,
-                                                  ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+                                                  ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_ONCE);
     if (status != ZX_OK) {
         errorf("could not wait on async TX timer: %d\n", status);
         return status;
@@ -3792,7 +3792,7 @@ zx_status_t Device::StartInterruptPolling() {
     }
 
     status = tbtt_interrupt_timer_.wait_async(interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED,
-                                              ZX_WAIT_ASYNC_REPEATING);
+                                              ZX_WAIT_ASYNC_ONCE);
     if (status != ZX_OK) {
         errorf("could not wait on TBTT timer: %d\n", status);
         return status;
@@ -3956,13 +3956,21 @@ zx_status_t Device::InterruptWorker() {
         case ZX_PKT_TYPE_USER:
             if (pkt.key == kInterruptShutdownKey) { return ZX_OK; }
             break;
-        case ZX_PKT_TYPE_SIGNAL_REP: {
+        case ZX_PKT_TYPE_SIGNAL_ONE: {
             if (pkt.key == kAsyncTxInterruptKey) {
                 status = OnTxReportInterruptTimer();
                 if (status != ZX_OK) { return status; }
+                async_tx_interrupt_timer_.wait_async(interrupt_port_,
+                                                     kAsyncTxInterruptKey,
+                                                     ZX_TIMER_SIGNALED,
+                                                     ZX_WAIT_ASYNC_ONCE);
             } else if (pkt.key == kTbttInterruptKey) {
                 status = OnTbttInterruptTimer();
                 if (status != ZX_OK) { return status; }
+                tbtt_interrupt_timer_.wait_async(interrupt_port_,
+                                                 kTbttInterruptKey,
+                                                 ZX_TIMER_SIGNALED,
+                                                 ZX_WAIT_ASYNC_ONCE);
             }
             break;
         }
