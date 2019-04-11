@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api)]
-// #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog as syslog;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
-use futures::{future, io, TryFutureExt, TryStreamExt};
+use futures::{future, io, StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -20,7 +18,7 @@ use std::io::prelude::*;
 use std::sync::Arc;
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
-use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker, DeviceSettingsManagerRequest,
+use fidl_fuchsia_devicesettings::{DeviceSettingsManagerRequest,
                                   DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
                                   Status, ValueType};
 
@@ -85,10 +83,10 @@ fn read_file(file: &str) -> io::Result<String> {
     Ok(contents)
 }
 
-fn spawn_device_settings_server(state: DeviceSettingsManagerServer, chan: fasync::Channel) {
+fn spawn_device_settings_server(state: DeviceSettingsManagerServer, stream: DeviceSettingsManagerRequestStream) {
     let state = Arc::new(Mutex::new(state));
     fasync::spawn(
-        DeviceSettingsManagerRequestStream::from_channel(chan)
+        stream
             .try_for_each(move |req| {
                 let state = state.clone();
                 let mut state = state.lock();
@@ -201,38 +199,36 @@ fn main_ds() -> Result<(), Error> {
     // Attempt to create data directory
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
 
-    let server = ServicesServer::new()
-        .add_service((DeviceSettingsManagerMarker::NAME, move |channel| {
-            let mut d = DeviceSettingsManagerServer {
-                setting_file_map: HashMap::new(),
-                watchers: watchers.clone(),
-            };
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let mut d = DeviceSettingsManagerServer {
+            setting_file_map: HashMap::new(),
+            watchers: watchers.clone(),
+        };
 
-            d.initialize_keys(
-                DATA_DIR,
-                &[
-                    "DeviceName",
-                    "TestSetting",
-                    "Display.Brightness",
-                    "Audio",
-                    "FactoryReset",
-                ],
-            );
+        d.initialize_keys(
+            DATA_DIR,
+            &[
+                "DeviceName",
+                "TestSetting",
+                "Display.Brightness",
+                "Audio",
+                "FactoryReset",
+            ],
+        );
 
-            spawn_device_settings_server(d, channel)
-        })).start()
-        .map_err(|e| e.context("error starting service server"))?;
+        spawn_device_settings_server(d, stream)
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    Ok(core
-        .run(server, /* threads */ 2)
-        .context("running server")?)
+    Ok(core.run(fs.collect(), /* threads */ 2))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use fidl_fuchsia_devicesettings::DeviceSettingsManagerProxy;
+    use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker, DeviceSettingsManagerProxy};
     use futures::prelude::*;
     use tempfile::TempDir;
 
@@ -259,13 +255,9 @@ mod tests {
 
         device_settings.initialize_keys(tmp_dir.path().to_str().unwrap(), keys);
 
-        let (server_chan, client_chan) = zx::Channel::create().unwrap();
-        let server_chan = fasync::Channel::from_channel(server_chan).unwrap();
-        let client_chan = fasync::Channel::from_channel(client_chan).unwrap();
-
-        spawn_device_settings_server(device_settings, server_chan);
-
-        let proxy = DeviceSettingsManagerProxy::new(client_chan);
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DeviceSettingsManagerMarker>().unwrap();
+        spawn_device_settings_server(device_settings, stream);
 
         // return tmp_dir to keep it in scope
         return Ok((exec, proxy, tmp_dir));
