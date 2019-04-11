@@ -242,7 +242,7 @@ zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
     ctx_.param.active.height = supported_modes[mode].resolution.height;
     ctx_.HMAX = static_cast<uint16_t>(ReadReg(0x342) << 8 | ReadReg(0x343));
     ctx_.VMAX = static_cast<uint16_t>(ReadReg(0x340) << 8 | ReadReg(0x341));
-    ctx_.int_max = 0x0A8C; // Max allowed for 30fps = 2782 (dec), 0x0A8E (hex)
+    ctx_.int_max = 0x0ADE; // Max allowed for 30fps = 2782 (dec), 0x0ADE (hex)
     ctx_.int_time_min = 1;
     ctx_.int_time_limit = ctx_.int_max;
     ctx_.param.total.height = ctx_.VMAX;

@@ -1070,7 +1070,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
     ping::Top_Bypass2::Get()
         .ReadFrom(&isp_mmio_local_)
         .set_bypass_sinter(0)
-        .set_bypass_temper(0)
+        .set_bypass_temper(1)
         .set_bypass_ca_correction(0)
         .WriteTo(&isp_mmio_local_);
 
@@ -2293,7 +2293,7 @@ void ArmIspDevice::IspLoadCustomSequence() {
       .WriteTo(&isp_mmio_local_);
 
     ping::Top_Bypass2::Get().ReadFrom(&isp_mmio_local_)
-      .set_bypass_temper(0)
+      .set_bypass_temper(1)
       .WriteTo(&isp_mmio_local_);
 
     ping::FullResolution::Sharpen_Enable::Get().ReadFrom(&isp_mmio_local_)
