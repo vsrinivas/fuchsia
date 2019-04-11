@@ -55,9 +55,7 @@ handling will continue on to the next handler in the search order.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-*handle* must have **ZX_RIGHT_INSPECT** and have **ZX_RIGHT_DUPLICATE** and have **ZX_RIGHT_TRANSFER** and have **ZX_RIGHT_MANAGE_THREAD**.
-
-If *handle* is of type **ZX_OBJ_TYPE_JOB** or **ZX_OBJ_TYPE_PROCESS**, it must have **ZX_RIGHT_ENUMERATE**.
+*handle* must have **ZX_RIGHT_INSPECT**.
 
 ## RETURN VALUE
 

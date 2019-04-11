@@ -87,15 +87,6 @@ def match_sentence_form(sentence, arg_names):
     sentence_forms = [
         ['None', '.'],
         ['ARG', 'must', 'have', 'RIGHT', '.'],
-        ['ARG', 'must', 'have', 'RIGHT1', 'and', 'have', 'RIGHT2', '.'],
-        [
-            'ARG', 'must', 'have', 'RIGHT1', 'and', 'have', 'RIGHT2', 'and',
-            'have', 'RIGHT3', '.'
-        ],
-        [
-            'ARG', 'must', 'have', 'RIGHT1', 'and', 'have', 'RIGHT2', 'and',
-            'have', 'RIGHT3', 'and', 'have', 'RIGHT4', '.'
-        ],
         ['ARG', 'must', 'have', 'resource', 'kind', 'RSRC', '.'],
         ['ARG', 'must', 'be', 'of', 'type', 'TYPE', '.'],
         [
@@ -109,10 +100,6 @@ def match_sentence_form(sentence, arg_names):
         [
             'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and',
             'have', 'RIGHT', '.'
-        ],
-        [
-            'If', 'ARG', 'is', 'of', 'type', 'TYPE1', 'or', 'TYPE2', ',',
-            'it', 'must', 'have', 'RIGHT', '.'
         ],
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
@@ -198,7 +185,6 @@ def match_sentence_form(sentence, arg_names):
         'ZX_OBJ_TYPE_PMT',
         'ZX_OBJ_TYPE_SUSPEND_TOKEN',
         'ZX_OBJ_TYPE_PAGER',
-        'ZX_OBJ_TYPE_EXCEPTION',
     ])
 
     all_rsrcs = set([

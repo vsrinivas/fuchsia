@@ -21,8 +21,7 @@ Exceptionate::~Exceptionate() {
     Shutdown();
 }
 
-zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel,
-                                     zx_rights_t thread_rights, zx_rights_t process_rights) {
+zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     if (!channel) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -41,8 +40,6 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel,
     // dead channel with no peer (since channel endpoints can't re-open) so we
     // can overwrite it.
     channel_ = ktl::move(channel);
-    thread_rights_ = thread_rights;
-    process_rights_ = process_rights;
 
     return ZX_OK;
 }
@@ -84,15 +81,6 @@ zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> excepti
     if (status != ZX_OK) {
         return status;
     }
-
-    // Do this before we ktl::move() the exception. It's OK if the function
-    // fails after this point, all exception sending funnels through here so
-    // the task rights will get overwritten next time we try to send it.
-    //
-    // This is safe to do because we know that an ExceptionDispatcher only goes
-    // to one handler at a time, so we'll never change the task rights while
-    // the exception is out in userspace.
-    exception->SetTaskRights(thread_rights_, process_rights_);
 
     HandleOwner exception_handle(Handle::Make(ktl::move(exception),
                                               ExceptionDispatcher::default_rights()));

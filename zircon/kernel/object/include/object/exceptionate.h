@@ -48,16 +48,11 @@ public:
     // already a valid channel in place (i.e. has a live peer) this will
     // fail.
     //
-    // The |*_rights| arguments give the rights to assign to task handles
-    // provided through this exception channel. A value of 0 indicates that
-    // the handle should not be made available through this channel.
-    //
     // Returns:
     //   ZX_ERR_INVALID_ARGS if |channel| is null.
     //   ZX_ERR_ALREADY_BOUND is there is already a valid channel.
     //   ZX_ERR_BAD_STATE if Shutdown() has already been called.
-    zx_status_t SetChannel(fbl::RefPtr<ChannelDispatcher> channel, zx_rights_t thread_rights,
-                           zx_rights_t process_rights);
+    zx_status_t SetChannel(fbl::RefPtr<ChannelDispatcher> channel);
 
     // Removes any exception channel, which will signal PEER_CLOSED for the
     // userspace endpoint.
@@ -85,7 +80,5 @@ private:
     const ExceptionPort::Type port_type_;
     mutable DECLARE_MUTEX(Exceptionate) lock_;
     fbl::RefPtr<ChannelDispatcher> channel_ TA_GUARDED(lock_);
-    zx_rights_t thread_rights_ TA_GUARDED(lock_) = 0;
-    zx_rights_t process_rights_ TA_GUARDED(lock_) = 0;
     bool is_shutdown_ TA_GUARDED(lock_) = false;
 };

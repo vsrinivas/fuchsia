@@ -7,7 +7,6 @@ test("exception") {
     "exception.cpp",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/test-utils",
     "$zx/system/ulib/unittest",
