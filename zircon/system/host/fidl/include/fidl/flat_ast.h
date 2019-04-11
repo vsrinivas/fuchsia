@@ -765,9 +765,12 @@ struct Table : public TypeDecl {
               maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                                 std::move(maybe_default_value),
                                                 std::move(attributes))) {}
-        Member(std::unique_ptr<raw::Ordinal> ordinal)
-            : ordinal(std::move(ordinal)) {}
+        Member(std::unique_ptr<raw::Ordinal> ordinal, SourceLocation location)
+            : ordinal(std::move(ordinal)),
+              maybe_location(std::make_unique<SourceLocation>(location)) {}
         std::unique_ptr<raw::Ordinal> ordinal;
+        // The location for reserved table members.
+        std::unique_ptr<SourceLocation> maybe_location;
         struct Used {
             Used(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                  std::unique_ptr<Constant> maybe_default_value,

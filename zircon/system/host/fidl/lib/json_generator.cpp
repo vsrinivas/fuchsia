@@ -515,6 +515,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("ordinal", *value.ordinal, Position::kFirst);
         if (value.maybe_used) {
+            assert(!value.maybe_location);
             GenerateObjectMember("reserved", false);
             GenerateObjectMember("type", value.maybe_used->type_ctor->type);
             GenerateObjectMember("name", value.maybe_used->name);
@@ -528,7 +529,9 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
             GenerateObjectMember("alignment", value.maybe_used->typeshape.Alignment());
             GenerateObjectMember("max_handles", value.maybe_used->typeshape.MaxHandles());
         } else {
+            assert(value.maybe_location);
             GenerateObjectMember("reserved", true);
+            GenerateObjectMember("location", NameLocation(*value.maybe_location));
         }
     });
 }

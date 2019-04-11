@@ -414,7 +414,12 @@ table Simple {
         },
         {
           "ordinal": 3,
-          "reserved": true
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 7,
+            "column": 5
+          }
         }
       ],
       "size": 16,

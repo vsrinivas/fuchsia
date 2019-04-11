@@ -1768,7 +1768,7 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
                                  member->maybe_used->identifier->location(),
                                  std::move(maybe_default_value), std::move(attributes));
         } else {
-            members.emplace_back(std::move(ordinal_literal));
+            members.emplace_back(std::move(ordinal_literal), member->location());
         }
     }
 
