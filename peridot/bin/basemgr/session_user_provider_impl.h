@@ -114,6 +114,17 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   fidl::Binding<fuchsia::auth::account::AccountListener>
       account_listener_binding_;
 
+  // The personas that are currently, or should be, joined on the session that's
+  // started in modular framework.
+  struct JoinedPersona {
+    // The persona joined on the session.
+    fuchsia::auth::account::PersonaPtr persona;
+
+    // The account associated with the above persona.
+    fuchsia::auth::account::AccountPtr account;
+  };
+  std::vector<JoinedPersona> joined_personas_;
+
   OnInitializeCallback on_initialize_;
   OnLoginCallback on_login_;
 

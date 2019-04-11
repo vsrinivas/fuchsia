@@ -215,12 +215,19 @@ void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
     auto account_deprecated = fuchsia::modular::auth::Account::New();
     account_deprecated->id = params.account_id->c_str();
 
+    // Save the newly added user as a joined persona.
+    struct JoinedPersona joined_persona {
+      .account = std::move(account), .persona = std::move(persona),
+    };
+    joined_personas_.emplace_back(std::move(joined_persona));
+
     on_login_(std::move(account_deprecated), std::move(ledger_token_manager),
               std::move(agent_token_manager));
   }
 }
 
 void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
+  joined_personas_.clear();
   account_manager_->GetAccountIds(
       [this, callback = std::move(callback)](
           std::vector<fuchsia::auth::account::LocalAccountId>
