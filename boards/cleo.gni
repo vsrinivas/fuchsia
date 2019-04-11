@@ -4,6 +4,8 @@
 
 import("//boards/arm64.gni")
 
+board_name = "cleo"
+
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
 

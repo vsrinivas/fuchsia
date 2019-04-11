@@ -45,6 +45,9 @@ declare_args() {
   vbmeta_r_partition = ""
   active_partition = ""
   signed_image = false
+
+  # arguments for pave script.
+  board_name = ""
 }
 
 assert(
@@ -1212,6 +1215,7 @@ foreach(target, paver_targets) {
     args = [
       "--depfile=" + rebase_path(depfile, root_build_dir),
       target.switch + rebase_path(outputs[0], root_build_dir),
+      "--board_name=${board_name}",
     ]
     args += rebase_path(sources, root_build_dir)
   }

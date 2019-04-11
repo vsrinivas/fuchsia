@@ -4,6 +4,8 @@
 
 target_cpu = "x64"
 
+board_name = "pc"
+
 fuchsia_packages = []
 
 board_packages = [

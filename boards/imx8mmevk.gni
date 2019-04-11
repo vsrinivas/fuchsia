@@ -4,6 +4,8 @@
 
 import("//boards/arm64.gni")
 
+board_name = "imx8mmevk"
+
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/imx8mmevk/package-image.sh"
 

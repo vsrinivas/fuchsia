@@ -15,7 +15,7 @@ import time
 import zipfile
 
 
-def generate_script(images, type):
+def generate_script(images, board_name, type):
     # The bootserver must be in there or we lose.
     # TODO(mcgrathr): Multiple bootservers for different platforms
     # and switch in the script.
@@ -30,6 +30,8 @@ set -x
                     for image in images if type in image
                     for switch in image[type])
     cmd = ['exec', '"$dir/%s"' % bootserver]
+    if board_name:
+        cmd += ['--board_name', '"%s"' % board_name]
     for switch, path in sorted(switches.iteritems()):
         cmd += [switch, path]
     cmd.append('"$@"')
@@ -96,7 +98,7 @@ def format_archiver(outfile, format):
     return {'tgz': TGZArchiver, 'zip': ZipArchiver}[format](outfile)
 
 
-def write_archive(outfile, format, images):
+def write_archive(outfile, format, images, board_name):
     # Synthesize a sanitized form of the input.
     path_images = []
     for image in images:
@@ -108,13 +110,13 @@ def write_archive(outfile, format, images):
 
     # Generate scripts that use the sanitized file names.
     content_images = [
-        (generate_script([image for path, image in path_images],
+        (generate_script([image for path, image in path_images], board_name,
                                  'bootserver_pave'), {
             'name': 'pave',
             'type': 'sh',
             'path': 'pave.sh'
         }),
-        (generate_script([image for path, image in path_images],
+        (generate_script([image for path, image in path_images], board_name,
                                  'bootserver_netboot'), {
             'name': 'netboot',
             'type': 'sh',
@@ -197,6 +199,8 @@ def main():
                         help='Write symbol archive to FILE')
     parser.add_argument('--format', choices=['tgz', 'zip'],
                         help='Archive format (default: from FILE suffix)')
+    parser.add_argument('--board_name',
+                        help='Board name images were built for')
     args = parser.parse_args()
 
     # Keep track of every input file for the depfile.
@@ -217,7 +221,7 @@ def main():
         with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY,
                                0o777),
                        'w') as script_file:
-            script_file.write(generate_script(images, mode))
+            script_file.write(generate_script(images, args.board_name, mode))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
@@ -234,7 +238,7 @@ def main():
                               'bootserver_pave' in image or
                               'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
-        write_archive(outfile, archive_format(args, outfile), archive_images)
+        write_archive(outfile, archive_format(args, outfile), archive_images, args.board_name)
 
     if args.symbol_archive:
         outfile = args.symbol_archive

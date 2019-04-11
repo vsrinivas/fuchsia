@@ -4,6 +4,8 @@
 
 import("//boards/arm64.gni")
 
+board_name = "vim2"
+
 board_packages += [ "garnet/packages/config/vim2_media_config" ]
 
 # partitions for fx flash to flash
