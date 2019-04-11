@@ -79,13 +79,12 @@ func (m *Manager) HasBlob(root string) bool {
 		// writable, which means it exists and is being written by someone.
 		return false
 	case *zx.Error:
-		// Access denied indicates we explicitly know that we have opened a blob that
-		// already exists and it is not writable - meaning it's already written.
-		if err.Status == zx.ErrAccessDenied {
+		switch err.Status {
+		case zx.ErrAccessDenied:
+			// Access denied indicates we explicitly know that we have opened a blob that
+			// already exists and it is not writable - meaning it's already written.
 			return true
-		}
-	default:
-		if os.IsNotExist(err) {
+		case zx.ErrNotFound:
 			return false
 		}
 	}
