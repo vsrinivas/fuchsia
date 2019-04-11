@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+package("component_index") {
+  testonly = true
+
+  deps = [
+    "//build/images:component_index_metadata",
+  ]
+
+  resources = [
+    {
+      path = get_label_info("//build/images:component_index_metadata",
+                            "target_out_dir") + "/component_index_metadata"
+      dest = "component_index.txt"
+    },
+  ]
+  components = [ ":component_index_component" ]
+}
+
+rustc_binary("component_index_bin") {
+  name = "component_index"
+  edition = "2018"
+}
+
+fuchsia_component("component_index_component") {
+  manifest = rebase_path("meta/component_index.cmx")
+  deps = [
+    ":component_index_bin",
+  ]
+
+  binary = "component_index"
+}

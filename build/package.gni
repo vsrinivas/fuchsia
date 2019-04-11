@@ -22,7 +22,7 @@ declare_args() {
 # transitive closure of declared dependencies, with an implied barrier at each
 # package (dependency chains cease processing at package targets).
 #
-# Paramters
+# Parameters
 #
 #   data_keys (required)
 #     [list of strings] A list of package target metadata keys to collect into a
@@ -82,6 +82,42 @@ template("package_metadata_list") {
     }
 
     walk_keys = [ "package_barrier" ]
+  }
+}
+
+# Generate a list of fuchsia-pkg URLs for component from all packages in the
+# transitive closure of declared dependencies, with an implied barrier at each
+# package (dependency chains cease processing at package targets).
+#
+# Parameters
+#
+#   data_deps (optional)
+#   deps (optional)
+#   outputs (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `generated_file()` target.
+template("component_index_metadata_list") {
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "outputs",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (!defined(outputs)) {
+      outputs = [
+        target_gen_dir + "/" + target_name,
+      ]
+    }
+
+    data_keys = [ "component_index" ]
+    walk_keys = [ "component_index_barrier" ]
   }
 }
 
@@ -536,8 +572,11 @@ template("package") {
     # cmx_format will minify cmx files in non-debug builds, and pretty-print cmx
     # files in debug builds
     meta_with_formatted_cmx = []
+    component_indices = []
     foreach(meta, pkg.meta) {
       if (get_path_info(meta.dest, "extension") == "cmx") {
+        component_indices += [ "fuchsia-pkg://fuchsia.com/" + pkg.package_name +
+                               "#meta/" + meta.dest ]
         format =
             "format_" + pkg_target_name + "_" + get_path_info(meta.dest, "file")
         cmx_format(format) {
@@ -771,6 +810,7 @@ template("package") {
                                             root_build_dir) ]
         }
       }
+      not_needed(component_indices)
     } else {
       # Fuchsia package aggregates a manifest from it's arguments and builds a
       # signed metadata archive.
@@ -804,6 +844,7 @@ template("package") {
         public_deps = pkg.public_deps
 
         foreach(component, pkg.components) {
+          # TODO(CF-162): Add to component_indices
           deps += [ component ]
           component_name = get_label_info(component, "name")
           dir = get_label_info(component, "target_out_dir")
@@ -822,6 +863,14 @@ template("package") {
         manifest = ":$manifest"
         metadata = {
           forward_variables_from(pkg.metadata, "*")
+
+          component_index = component_indices
+
+          # We only ever want to collect the following component indices from
+          # packages, not from dependencies of packages, so the barrier prevents
+          # us from walking any further in the dependency chain. See `gn help
+          # walk_keys` for more information on the mechanic.
+          component_index_barrier = []
         }
 
         deps = pkg.deps

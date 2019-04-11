@@ -6,7 +6,10 @@ import("//products/bringup.gni")
 
 enable_netboot = false
 
-meta_package_labels += [ "//build/images:shell-commands" ]
+meta_package_labels += [
+  "//build/images:shell-commands",
+  "//garnet/bin/component_index:component_index",
+]
 
 monolith += [
   "garnet/packages/config/kernel_crash_checker",

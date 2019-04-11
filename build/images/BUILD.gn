@@ -1402,6 +1402,22 @@ package_metadata_list("amber_index") {
   ]
 }
 
+# The component index is the index of components in all available packages.
+component_index_metadata = "$target_out_dir/component_index_metadata"
+component_index_metadata_list("component_index_metadata") {
+  visibility = [ "//garnet/bin/component_index:*" ]
+
+  testonly = true
+
+  outputs = [
+    component_index_metadata,
+  ]
+
+  deps = [
+    ":available_packages",
+  ]
+}
+
 # The system index is the index of all available packages, naming each blobs.json
 # file instead of its merkleroot, and including a tag of the package set the
 # package is a part of (monolith/preinstall/available). Additionally the
