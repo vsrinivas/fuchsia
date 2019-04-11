@@ -429,17 +429,16 @@ func (ios *iostate) loopControl() error {
 								case zx.ErrCanceled:
 									return nil
 								}
-								panic(err)
-							}
-							switch {
-							case obs&zx.SignalSocketControlWriteable != 0:
-								continue
-							case obs&localSignalClosing != 0:
-								return nil
-							case obs&zx.SignalSocketPeerClosed != 0:
-								return nil
 							}
 							panic(err)
+						}
+						switch {
+						case obs&zx.SignalSocketControlWriteable != 0:
+							continue
+						case obs&localSignalClosing != 0:
+							return nil
+						case obs&zx.SignalSocketPeerClosed != 0:
+							return nil
 						}
 					}
 				}
