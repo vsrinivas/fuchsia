@@ -13,6 +13,15 @@
 
 namespace modular {
 
+namespace {
+#ifdef AUTO_LOGIN_TO_GUEST
+constexpr bool kAutoLoginToGuest = true;
+#else
+constexpr bool kAutoLoginToGuest = false;
+#endif
+
+}  // namespace
+
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   base_shell.set_url(command_line.GetOptionValueWithDefault(
       "base_shell",
@@ -86,7 +95,19 @@ BasemgrSettings::CreateBasemgrConfig() {
   config.set_test(test);
   config.set_test_name(test_name);
 
-  config.mutable_base_shell()->set_app_config(std::move(base_shell));
+  // When auto-login to guest is specified, we use dev_base_shell with user
+  // specified such that a persistent guest user is created on first-time boot.
+  if (kAutoLoginToGuest) {
+    fuchsia::modular::internal::AppConfig override_base_shell;
+    override_base_shell.set_url(
+        "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
+        "dev_base_shell.cmx");
+    override_base_shell.mutable_args()->push_back("--user=persistent_guest");
+    config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
+  } else {
+    config.mutable_base_shell()->set_app_config(std::move(base_shell));
+  }
+
   config.mutable_base_shell()->set_keep_alive_after_login(
       keep_base_shell_alive_after_login);
 

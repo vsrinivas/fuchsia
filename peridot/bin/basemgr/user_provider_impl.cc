@@ -29,7 +29,7 @@ constexpr char kUserProviderAppUrl[] = "user_provider_url";
 // Dev auth provider configuration
 constexpr char kDevAuthProviderType[] = "dev";
 constexpr char kDevAuthProviderUrl[] =
-    "fuchsia-pkg://fuchsia.com/dev_auth_provider#meta/"
+    "fuchsia-pkg://fuchsia.com/dev_auth_providers#meta/"
     "dev_auth_provider.cmx";
 
 // Google auth provider configuration
@@ -231,6 +231,7 @@ void UserProviderImpl::AddUser(
   // AccountManager in the future. For now, create an account_id that
   // uniquely maps to a token manager instance at runtime.
   const std::string& account_id = GetRandomId();
+
   fuchsia::auth::TokenManagerPtr token_manager;
   token_manager = CreateTokenManager(account_id);
 
@@ -380,7 +381,8 @@ void UserProviderImpl::RemoveUserInternal(
       [this, account_id, token_manager = std::move(token_manager),
        callback = std::move(callback)](fuchsia::auth::Status status) {
         if (status != fuchsia::auth::Status::OK) {
-          FXL_LOG(ERROR) << "Token Manager DeleteAllTokens() call returned error";
+          FXL_LOG(ERROR)
+              << "Token Manager DeleteAllTokens() call returned error";
         }
 
         std::string error;

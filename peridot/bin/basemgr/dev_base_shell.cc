@@ -194,14 +194,17 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
                   account_id = account.id;
                   break;
                 }
-                if (account_id.empty()) {
-                  user_provider_->AddUser(
-                      fuchsia::modular::auth::IdentityProvider::DEV,
-                      [this](fuchsia::modular::auth::AccountPtr account,
-                             fidl::StringPtr status) { Login(account->id); });
-                } else {
-                  Login(account_id);
-                }
+              }
+
+              if (account_id.empty()) {
+                user_provider_->AddUser(
+                    fuchsia::modular::auth::IdentityProvider::DEV,
+                    [this](fuchsia::modular::auth::AccountPtr account,
+                           fidl::StringPtr status) {
+                      Login(account->id);
+                    });
+              } else {
+                Login(account_id);
               }
             });
       }

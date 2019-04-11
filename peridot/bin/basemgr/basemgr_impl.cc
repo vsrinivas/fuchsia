@@ -47,11 +47,6 @@ struct TypeConverter<fuchsia::modular::AppConfig,
 namespace modular {
 
 namespace {
-#ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kAutoLoginToGuest = true;
-#else
-constexpr bool kAutoLoginToGuest = false;
-#endif
 
 #ifdef USE_ACCOUNT_MANAGER
 constexpr bool kUseAccountManager = true;
@@ -433,11 +428,6 @@ void BasemgrImpl::UpdateSessionShellConfig() {
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
-    if (kAutoLoginToGuest) {
-      user_provider_impl_->Login(fuchsia::modular::UserLoginParams());
-      return;
-    }
-
     // If there are no session shell settings specified, default to showing
     // setup.
     if (!config_.test() &&

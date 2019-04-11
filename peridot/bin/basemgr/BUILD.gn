@@ -9,7 +9,7 @@ import("//peridot/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
-  # Whether basemgr should automatically login as a guest user.
+  # Whether basemgr should automatically login as a persistent guest user.
   auto_login_to_guest = false
 
   # Whether basemgr and dev_base_shell should use account_manager for account
