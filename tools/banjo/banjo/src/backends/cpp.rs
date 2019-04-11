@@ -41,6 +41,10 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Bti => Ok(String::from("zx::bti")),
         ast::HandleTy::Profile => Ok(String::from("zx::profile")),
         ast::HandleTy::DebugLog => Ok(String::from("zx::debuglog")),
+        ast::HandleTy::VCpu => Ok(String::from("zx::vcpu")),
+        ast::HandleTy::IoMmu => Ok(String::from("zx::iommu")),
+        ast::HandleTy::Pager => Ok(String::from("zx::pager")),
+        ast::HandleTy::Pmt => Ok(String::from("zx::pmt")),
     }
 }
 

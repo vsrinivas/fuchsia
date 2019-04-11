@@ -246,6 +246,10 @@ struct handles {
     handle<guest> guest_handle;
     handle<timer> timer_handle;
     handle<profile> profile_handle;
+    handle<vcpu> vcpu_handle;
+    handle<iommu> iommu_handle;
+    handle<pager> pager_handle;
+    handle<pmt> pmt_handle;
 
     handle? nullable_handle_handle;
     handle<process>? nullable_process_handle;
@@ -265,6 +269,10 @@ struct handles {
     handle<guest>? nullable_guest_handle;
     handle<timer>? nullable_timer_handle;
     handle<profile>? nullable_profile_handle;
+    handle<vcpu>? nullable_vcpu_handle;
+    handle<iommu>? nullable_iommu_handle;
+    handle<pager>? nullable_pager_handle;
+    handle<pmt>? nullable_pmt_handle;
 };
 
 const uint32 strings_size = 32;

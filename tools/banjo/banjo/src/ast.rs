@@ -193,6 +193,10 @@ pub enum HandleTy {
     Bti,
     Profile,
     DebugLog,
+    VCpu,
+    IoMmu,
+    Pager,
+    Pmt,
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
@@ -306,6 +310,10 @@ impl Ty {
                                 "bti" => HandleTy::Bti,
                                 "profile" => HandleTy::Profile,
                                 "debuglog" => HandleTy::DebugLog,
+                                "vcpu" => HandleTy::VCpu,
+                                "iommu" => HandleTy::IoMmu,
+                                "pager" => HandleTy::Pager,
+                                "pmt" => HandleTy::Pmt,
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),

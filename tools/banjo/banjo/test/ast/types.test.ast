@@ -3986,6 +3986,62 @@ BanjoAst {
                             []
                         ),
                         ty: Handle {
+                            ty: VCpu,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "vcpu_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: IoMmu,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "iommu_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Pager,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "pager_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Pmt,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "pmt_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
                             ty: Handle,
                             reference: true
                         },
@@ -4230,6 +4286,62 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "nullable_profile_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: VCpu,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_vcpu_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: IoMmu,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_iommu_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Pager,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_pager_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Pmt,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_pmt_handle"
                         },
                         val: None
                     }
