@@ -13,15 +13,13 @@ use std::path;
 use std::sync::Arc;
 
 use failure::{self, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fuchsia_net_dns::DnsPolicyMarker;
-use fidl_fuchsia_net_policy::{ObserverMarker, ObserverRequestStream};
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
-use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{self, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
 mod device_id;
@@ -131,19 +129,16 @@ fn main() -> Result<(), failure::Error> {
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
-    let stack = fuchsia_app::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
         .context("could not connect to stack")?;
-    let netstack =
-        fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-            .context("could not connect to netstack")?;
-    let resolver_admin =
-        fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::ResolverAdminMarker>()
-            .context("could not connect to resolver admin")?;
-    let device_settings_manager = fuchsia_app::client::connect_to_service::<
-        fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
-    >()
-    .context("could not connect to device settings manager")?;
-    let filter = fuchsia_app::client::connect_to_service::<fidl_fuchsia_net_filter::FilterMarker>()
+    let netstack = connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("could not connect to netstack")?;
+    let resolver_admin = connect_to_service::<fidl_fuchsia_netstack::ResolverAdminMarker>()
+        .context("could not connect to resolver admin")?;
+    let device_settings_manager =
+        connect_to_service::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>()
+            .context("could not connect to device settings manager")?;
+    let filter = connect_to_service::<fidl_fuchsia_net_filter::FilterMarker>()
         .context("could not connect to filter")?;
 
     let filter_setup = async {
@@ -337,27 +332,23 @@ fn main() -> Result<(), failure::Error> {
 
     let interface_ids = interface_ids.clone();
 
-    let fidl_service_fut = ServicesServer::new()
-        .add_service((DnsPolicyMarker::NAME, move |channel| {
-            dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), channel);
-        }))
-        .add_service((ObserverMarker::NAME, move |channel| {
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
+            dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
+        })
+        .add_fidl_service(move |stream| {
             fasync::spawn(
-                observer_service::serve_fidl_requests(
-                    stack.clone(),
-                    ObserverRequestStream::from_channel(channel),
-                    interface_ids.clone(),
-                )
-                .unwrap_or_else(|e| fx_log_err!("failed to serve_fidl_requests:{}", e)),
+                observer_service::serve_fidl_requests(stack.clone(), stream, interface_ids.clone())
+                    .unwrap_or_else(|e| fx_log_err!("failed to serve_fidl_requests:{}", e)),
             );
-        }))
-        .start()
-        .context("error starting netcfg services server")?;
+        });
+    fs.take_and_serve_directory_handle()?;
 
     let (_success, (), (), ()) = executor.run_singlethreaded(device_name.try_join4(
         filter_setup,
         ethernet_device,
-        fidl_service_fut,
+        fs.collect().map(Ok),
     ))?;
     Ok(())
 }

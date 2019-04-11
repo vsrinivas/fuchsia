@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::RequestStream,
     fidl_fuchsia_net_dns::{DnsConfig, DnsPolicyRequest, DnsPolicyRequestStream, NetError, Status},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -12,9 +11,8 @@ use {
 
 pub fn spawn_net_dns_fidl_server(
     resolver_admin: fidl_fuchsia_netstack::ResolverAdminProxy,
-    channel: fasync::Channel,
+    stream: DnsPolicyRequestStream,
 ) {
-    let stream = DnsPolicyRequestStream::from_channel(channel);
     let fut = serve_fidl_requests(resolver_admin, stream)
         .unwrap_or_else(|e| fx_log_err!("failed to serve net dns FIDL call: {}", e));
     fasync::spawn(fut);
