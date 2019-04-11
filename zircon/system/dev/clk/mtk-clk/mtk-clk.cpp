@@ -256,8 +256,9 @@ static zx_driver_ops_t mtk_clk_driver_ops = []() {
     return ops;
 }();
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(mtk_clk, mtk_clk_driver_ops, "zircon", "0.1", 3)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_CLK),
-    ZIRCON_DRIVER_END(mtk_clk)
+ZIRCON_DRIVER_END(mtk_clk)
