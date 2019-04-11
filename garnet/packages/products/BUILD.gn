@@ -109,6 +109,7 @@ group("devtools") {
     "//garnet/packages/prod:debugserver",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:installblob",
+    "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:ssh",
