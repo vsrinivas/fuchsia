@@ -8,7 +8,7 @@ use {
     failure::{bail, Error, ResultExt},
     fdio,
     fidl_fuchsia_media_playback::*,
-    fuchsia_app::client::connect_to_service,
+    fuchsia_component::client::connect_to_service,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     std::fs::File,
