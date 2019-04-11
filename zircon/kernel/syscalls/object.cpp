@@ -390,7 +390,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // lookup the dispatcher from handle
         fbl::RefPtr<VmObjectDispatcher> vmo;
         zx_status_t status = up->GetDispatcher(handle, &vmo);
-        if (status < 0)
+        if (status != ZX_OK)
             return status;
         auto vmos = _buffer.reinterpret<zx_info_vmo_t>();
         zx_info_vmo_t entry;

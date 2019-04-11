@@ -202,7 +202,7 @@ enum {
     zx_handle_t root_resource_handle;
     status = zx_handle_duplicate(resource_root, ZX_RIGHT_SAME_RIGHTS,
                                  &root_resource_handle);
-    if (status < 0)
+    if (status != ZX_OK)
         fail(log, "zx_handle_duplicate failed: %d", status);
 
     // Locate the first bootfs bootdata section and decompress it.
@@ -234,7 +234,7 @@ enum {
     zx_handle_t vmar;
     status = zx_process_create(job, filename, strlen(filename), 0,
                                &proc, &vmar);
-    if (status < 0)
+    if (status != ZX_OK)
         fail(log, "zx_process_create failed: %d", status);
 
     zx_handle_t reserve_vmar = reserve_low_address_space(log, vmar);
@@ -242,7 +242,7 @@ enum {
     // Create the initial thread in the new process
     zx_handle_t thread;
     status = zx_thread_create(proc, filename, strlen(filename), 0, &thread);
-    if (status < 0)
+    if (status != ZX_OK)
         fail(log, "zx_thread_create failed: %d", status);
 
     zx_vaddr_t entry, vdso_base;
@@ -256,7 +256,7 @@ enum {
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
     zx_handle_t stack_vmo;
     status = zx_vmo_create(stack_size, 0, &stack_vmo);
-    if (status < 0)
+    if (status != ZX_OK)
         fail(log, "zx_vmo_create failed for child stack: %d", status);
     zx_object_set_property(stack_vmo, ZX_PROP_NAME,
                            STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
@@ -282,7 +282,7 @@ enum {
 
     // Reuse the slot for the child's handle.
     status = zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS, proc_handle_loc);
-    if (status < 0)
+    if (status != ZX_OK)
         fail(log, "zx_handle_duplicate failed on child process handle: %d", status);
 
     if (thread_handle_loc != NULL) {
@@ -290,7 +290,7 @@ enum {
         // NOTE: Leaks the current thread handle the same way as the process handle.
         status = zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS,
                                      thread_handle_loc);
-        if (status < 0)
+        if (status != ZX_OK)
             fail(log, "zx_handle_duplicate failed on child thread handle: %d", status);
     }
 

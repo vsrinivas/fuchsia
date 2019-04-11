@@ -193,12 +193,12 @@ static int event_waiter(void* arg) {
 
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
-        zx_status_t err = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
-        if (err == ZX_ERR_INTERNAL_INTR_KILLED) {
+        zx_status_t status = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
+        if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
             printf("thread %p: killed\n", get_current_thread());
             return -1;
-        } else if (err < 0) {
-            printf("thread %p: event_wait() returned error %d\n", get_current_thread(), err);
+        } else if (status != ZX_OK) {
+            printf("thread %p: event_wait() returned error %d\n", get_current_thread(), status);
             return -1;
         }
         printf("thread %p: done waiting on event\n", get_current_thread());

@@ -349,10 +349,9 @@ void thread_resume(thread_t* t) {
 }
 
 zx_status_t thread_detach_and_resume(thread_t* t) {
-    zx_status_t err;
-    err = thread_detach(t);
-    if (err < 0) {
-        return err;
+    zx_status_t status = thread_detach(t);
+    if (status != ZX_OK) {
+        return status;
     }
     thread_resume(t);
     return ZX_OK;
@@ -458,9 +457,9 @@ zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
 
         // wait for the thread to die
         if (t->state != THREAD_DEATH) {
-            zx_status_t err = wait_queue_block(&t->retcode_wait_queue, deadline);
-            if (err < 0) {
-                return err;
+            zx_status_t status = wait_queue_block(&t->retcode_wait_queue, deadline);
+            if (status != ZX_OK) {
+                return status;
             }
         }
 

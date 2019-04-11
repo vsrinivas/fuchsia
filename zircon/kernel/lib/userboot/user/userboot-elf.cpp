@@ -157,7 +157,7 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
         zx_status_t status = zx_vmo_read(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1],
             interp_off, interp_len);
-        if (status < 0)
+        if (status != ZX_OK)
             fail(log, "zx_vmo_read failed: %d", status);
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 

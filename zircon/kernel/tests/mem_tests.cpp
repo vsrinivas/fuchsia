@@ -174,11 +174,11 @@ static int mem_test(int argc, const cmd_args* argv, uint32_t flags) {
         }
 
         /* allocate a region to test in */
-        zx_status_t err = VmAspace::kernel_aspace()->AllocContiguous(
+        zx_status_t status = VmAspace::kernel_aspace()->AllocContiguous(
             "memtest", len, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
             ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-        if (err < 0) {
-            printf("error %d allocating test region\n", err);
+        if (status != ZX_OK) {
+            printf("error %d allocating test region\n", status);
             return -1;
         }
 
