@@ -106,7 +106,7 @@ zx_status_t Device::Bind() {
 
     // TODO: Separate protected memory allocator into separate driver or library
     if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
-        auto amlogic_allocator = fbl::make_unique<AmlogicMemoryAllocator>(std::move(bti_copy));
+        auto amlogic_allocator = std::make_unique<AmlogicMemoryAllocator>(std::move(bti_copy));
         status = amlogic_allocator->Init(protected_memory_size);
         if (status != ZX_OK) {
             DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);

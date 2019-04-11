@@ -306,7 +306,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
         return ZX_ERR_BAD_STATE;
     }
 
-    auto write_info = fbl::make_unique<WritebackInfo>();
+    auto write_info = std::make_unique<WritebackInfo>();
 
     // Initialize the inode with known fields.
     memset(inode_.merkle_root_hash, 0, Digest::kLength);

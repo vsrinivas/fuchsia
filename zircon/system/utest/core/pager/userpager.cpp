@@ -250,7 +250,7 @@ bool UserPager::WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet
                 return true;
             }
 
-            auto req = fbl::make_unique<request>();
+            auto req = std::make_unique<request>();
             req->req = actual_packet;
             requests_.push_front(std::move(req));
         } else {

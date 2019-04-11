@@ -190,7 +190,7 @@ bool concurrent_overlapping_access_test(bool check_vmar) {
     constexpr uint64_t kNumThreads = 32;
     fbl::unique_ptr<TestThread> threads[kNumThreads];
     for (unsigned i = 0; i < kNumThreads; i++) {
-        threads[i] = fbl::make_unique<TestThread>([vmo, check_vmar]() -> bool {
+        threads[i] = std::make_unique<TestThread>([vmo, check_vmar]() -> bool {
             return check_buffer(vmo, 0, 1, check_vmar);
         });
 
@@ -225,7 +225,7 @@ bool bulk_single_supply_test(bool check_vmar) {
 
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
+        ts[i] = std::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
             return check_buffer(vmo, i, 1, check_vmar);
         });
         ASSERT_TRUE(ts[i]->Start());
@@ -269,7 +269,7 @@ bool bulk_odd_supply_test_inner(bool check_vmar, bool use_src_offset) {
         fbl::unique_ptr<TestThread> ts[kSupplyLengths[supply_idx]];
         for (uint64_t j = 0; j < kSupplyLengths[supply_idx]; j++) {
             uint64_t thread_offset = offset + j;
-            ts[j] = fbl::make_unique<TestThread>([vmo, thread_offset, check_vmar]() -> bool {
+            ts[j] = std::make_unique<TestThread>([vmo, thread_offset, check_vmar]() -> bool {
                 return check_buffer(vmo, thread_offset, 1, check_vmar);
             });
             ASSERT_TRUE(ts[j]->Start());
@@ -348,7 +348,7 @@ bool many_request_test(bool check_vmar) {
 
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
+        ts[i] = std::make_unique<TestThread>([vmo, i, check_vmar]() -> bool {
             return check_buffer(vmo, i, 1, check_vmar);
         });
         ASSERT_TRUE(ts[i]->Start());
@@ -409,7 +409,7 @@ bool multiple_concurrent_vmo_test() {
     for (unsigned i = 0; i < kNumVmos; i++) {
         ASSERT_TRUE(pager.CreateVmo(1, vmos + i));
 
-        ts[i] = fbl::make_unique<TestThread>([vmo = vmos[i]]() -> bool {
+        ts[i] = std::make_unique<TestThread>([vmo = vmos[i]]() -> bool {
             return check_buffer(vmo, 0, 1, true);
         });
 
@@ -468,7 +468,7 @@ bool vmar_remap_test() {
 
     fbl::unique_ptr<TestThread> ts[kNumPages];
     for (unsigned i = 0; i < kNumPages; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+        ts[i] = std::make_unique<TestThread>([vmo, i]() -> bool {
             return check_buffer(vmo, i, 1, true);
         });
         ASSERT_TRUE(ts[i]->Start());
@@ -1328,7 +1328,7 @@ bool overlap_commit_supply_test() {
 
     fbl::unique_ptr<TestThread> tsA[kNumPages / kCommitLenA];
     for (unsigned i = 0; i < fbl::count_of(tsA); i++) {
-        tsA[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+        tsA[i] = std::make_unique<TestThread>([vmo, i]() -> bool {
             return vmo->Commit(i * kCommitLenA, kCommitLenA);
         });
 
@@ -1338,7 +1338,7 @@ bool overlap_commit_supply_test() {
 
     fbl::unique_ptr<TestThread> tsB[kNumPages / kCommitLenB];
     for (unsigned i = 0; i < fbl::count_of(tsB); i++) {
-        tsB[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+        tsB[i] = std::make_unique<TestThread>([vmo, i]() -> bool {
             return vmo->Commit(i * kCommitLenB, kCommitLenB);
         });
 
@@ -1404,7 +1404,7 @@ bool multicommit_supply_test() {
 
     fbl::unique_ptr<TestThread> ts[kNumCommits];
     for (unsigned i = 0; i < kNumCommits; i++) {
-        ts[i] = fbl::make_unique<TestThread>([vmo, i]() -> bool {
+        ts[i] = std::make_unique<TestThread>([vmo, i]() -> bool {
             return vmo->Commit(i * kNumSupplies, kNumSupplies);
         });
         ASSERT_TRUE(ts[i]->Start());

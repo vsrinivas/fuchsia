@@ -93,7 +93,7 @@ TestLoop::TestLoop() : TestLoop(0) {}
 TestLoop::TestLoop(uint32_t state)
     : time_keeper_(new TestLoopTimeKeeper()),
       initial_state_((state != 0)? state : GetRandomSeed()), state_(initial_state_) {
-    dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
+    dispatchers_.push_back(std::make_unique<TestLoopDispatcher>(time_keeper_.get()));
     async_set_default_dispatcher(dispatchers_[0].get());
 
     printf("\nTEST_LOOP_RANDOM_SEED=\"%u\"\n", initial_state_);
@@ -108,9 +108,9 @@ async_dispatcher_t* TestLoop::dispatcher() {
 }
 
 fbl::unique_ptr<LoopInterface> TestLoop::StartNewLoop() {
-    dispatchers_.push_back(fbl::make_unique<TestLoopDispatcher>(time_keeper_.get()));
+    dispatchers_.push_back(std::make_unique<TestLoopDispatcher>(time_keeper_.get()));
     auto* new_dispatcher = dispatchers_[dispatchers_.size() - 1].get();
-    return fbl::make_unique<TestLoopInterface>(this, new_dispatcher);
+    return std::make_unique<TestLoopInterface>(this, new_dispatcher);
 }
 
 zx::time TestLoop::Now() const {

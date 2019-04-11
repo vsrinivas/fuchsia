@@ -126,7 +126,7 @@ zx_status_t FtDevice::Create(zx_device_t* device) {
 
     zxlogf(INFO, "focaltouch: driver started...\n");
 
-    auto ft_dev = fbl::make_unique<FtDevice>(device);
+    auto ft_dev = std::make_unique<FtDevice>(device);
     zx_status_t status = ft_dev->InitPdev();
     if (status != ZX_OK) {
         zxlogf(ERROR, "focaltouch: Driver bind failed %d\n", status);

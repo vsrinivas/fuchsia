@@ -51,7 +51,7 @@ UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
       device_info_(std::move(device_info)) {
   if (fidl_dispatch_loop_ == nullptr) {
     fidl_dispatch_loop_ =
-        fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     fidl_dispatch_loop_->StartThread();
   }
 }
@@ -293,7 +293,7 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
     return ZX_ERR_INVALID_ARGS;
   }
   fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
-  camera_control_ = fbl::make_unique<camera::ControlImpl>(
+  camera_control_ = std::make_unique<camera::ControlImpl>(
       this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
       [this] {
         fbl::AutoLock lock(&lock_);

@@ -568,7 +568,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
 }
 
 zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost** out) {
-    auto dh = fbl::make_unique<Devhost>();
+    auto dh = std::make_unique<Devhost>();
     if (dh == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }

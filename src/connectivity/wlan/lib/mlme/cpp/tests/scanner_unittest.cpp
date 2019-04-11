@@ -82,7 +82,7 @@ class ScannerTest : public ::testing::Test {
         info.snr_dbh = 30;
 
         auto buffer = GetBuffer(data.size());
-        auto packet = fbl::make_unique<Packet>(std::move(buffer), data.size());
+        auto packet = std::make_unique<Packet>(std::move(buffer), data.size());
         packet->CopyCtrlFrom(info);
         memcpy(packet->mut_field<uint8_t*>(0), data.data(), data.size());
         return packet;

@@ -57,7 +57,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     }
     bp.ops->query(bp.ctx, &block_info, &block_op_size);
 
-    auto vpm = fbl::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
+    auto vpm = std::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
 
     zx_status_t status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {

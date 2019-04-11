@@ -49,7 +49,7 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
         return status;
     }
 
-    fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>(max_num_pages);
+    fbl::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(max_num_pages);
     fs->vfs.SetDispatcher(dispatcher);
 
     fbl::RefPtr<memfs::VnodeDir> root;

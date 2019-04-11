@@ -124,7 +124,7 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
       return ZX_ERR_CANCELED;
     }
 
-    activables_.push_back(fbl::make_unique<WaitActivable>(this, wait));
+    activables_.push_back(std::make_unique<WaitActivable>(this, wait));
     return ZX_OK;
 }
 
@@ -198,7 +198,7 @@ void TestLoopDispatcher::ExtractActivated() {
 
     // Move all tasks that reach their deadline to the activable list.
     while (!future_tasks_.empty() && (*future_tasks_.begin())->deadline <= Now().get()) {
-        activables_.push_back(fbl::make_unique<TaskActivable>(this, (*future_tasks_.begin())));
+        activables_.push_back(std::make_unique<TaskActivable>(this, (*future_tasks_.begin())));
         future_tasks_.erase(future_tasks_.begin());
     }
 

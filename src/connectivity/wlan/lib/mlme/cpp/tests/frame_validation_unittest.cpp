@@ -48,7 +48,7 @@ struct DynamicTestHdr {
 
 static fbl::unique_ptr<Packet> GetPacket(size_t len) {
     auto buffer = GetBuffer(len);
-    auto pkt = fbl::make_unique<Packet>(std::move(buffer), len);
+    auto pkt = std::make_unique<Packet>(std::move(buffer), len);
     pkt->clear();
     return pkt;
 }

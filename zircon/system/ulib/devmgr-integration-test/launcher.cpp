@@ -66,7 +66,7 @@ int bootsvc_main(void* arg) {
     root->AddEntry(fuchsia_boot_Items_Name, node);
 
     // Serve VFS on channel.
-    auto conn = fbl::make_unique<fs::Connection>(&vfs, root, std::move(data->server),
+    auto conn = std::make_unique<fs::Connection>(&vfs, root, std::move(data->server),
                                                  ZX_FS_FLAG_DIRECTORY |
                                                  ZX_FS_RIGHT_READABLE |
                                                  ZX_FS_RIGHT_WRITABLE);

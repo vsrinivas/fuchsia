@@ -18,7 +18,7 @@ bool CreateDeleteActive() {
     Object object;
 
     {
-        auto inspector = fbl::make_unique<Inspector>();
+        auto inspector = std::make_unique<Inspector>();
         object = inspector->CreateObject("object");
         EXPECT_TRUE(object);
         Object child = object.CreateChild("child");

@@ -203,7 +203,7 @@ zx_status_t Msm8x53Power::Create(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    auto dev = fbl::make_unique<Msm8x53Power>(parent, pdev, *std::move(core_mmio),
+    auto dev = std::make_unique<Msm8x53Power>(parent, pdev, *std::move(core_mmio),
                                               *std::move(chnls_mmio),
                                               *std::move(obsvr_mmio),
                                               *std::move(intr_mmio),

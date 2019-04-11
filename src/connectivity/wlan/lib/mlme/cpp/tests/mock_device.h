@@ -65,7 +65,7 @@ struct MockDevice : public DeviceInterface {
     }
 
     fbl::unique_ptr<Timer> CreateTimer(uint64_t id) {
-        return fbl::make_unique<TestTimer>(id, &clock_);
+        return std::make_unique<TestTimer>(id, &clock_);
     }
 
     zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final {

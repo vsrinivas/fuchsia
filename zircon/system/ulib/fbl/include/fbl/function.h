@@ -113,7 +113,7 @@ template <typename Callable, typename Result, typename... Args>
 class HeapFunctionTarget final : public FunctionTarget<Result, Args...> {
 public:
     explicit HeapFunctionTarget(Callable target)
-        : target_ptr_(fbl::make_unique<Callable>(std::move(target))) {}
+        : target_ptr_(std::make_unique<Callable>(std::move(target))) {}
     HeapFunctionTarget(Callable target, AllocChecker* ac)
         : target_ptr_(fbl::make_unique_checked<Callable>(ac, std::move(target))) {}
     HeapFunctionTarget(HeapFunctionTarget&& other)

@@ -87,7 +87,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
     device_->ConfigureBss(&cfg);
 
     // Create and start BSS.
-    auto bcn_sender = fbl::make_unique<BeaconSender>(device_);
+    auto bcn_sender = std::make_unique<BeaconSender>(device_);
     bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid, std::move(timer)));
     bss_->Start(req);
 

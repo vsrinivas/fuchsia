@@ -26,7 +26,7 @@ zx_status_t ParseActions(const fidl_type_t* type, fidl::Message* msg,
         return status;
     }
     auto payload = msg->GetBytesAs<MessageType>();
-    auto array = fbl::make_unique<fuchsia_device_mock_Action[]>(payload->actions.count);
+    auto array = std::make_unique<fuchsia_device_mock_Action[]>(payload->actions.count);
     memcpy(array.get(), payload->actions.data,
            payload->actions.count * sizeof(fuchsia_device_mock_Action));
     actions_out->reset(array.release(), payload->actions.count);

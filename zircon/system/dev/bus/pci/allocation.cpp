@@ -26,7 +26,7 @@ zx_status_t PciAllocation::CreateVmObject(fbl::unique_ptr<zx::vmo>* out_vmo) con
         return status;
     }
 
-    *out_vmo = fbl::make_unique<zx::vmo>(std::move(temp));
+    *out_vmo = std::make_unique<zx::vmo>(std::move(temp));
     return status;
 }
 

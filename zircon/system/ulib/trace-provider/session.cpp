@@ -32,7 +32,7 @@ Session::Session(void* buffer, size_t buffer_num_bytes,
       enabled_categories_(std::move(enabled_categories)) {
     // Build a quick lookup table for IsCategoryEnabled().
     for (const auto& cat : enabled_categories_) {
-        auto entry = fbl::make_unique<StringSetEntry>(cat.c_str());
+        auto entry = std::make_unique<StringSetEntry>(cat.c_str());
         enabled_category_set_.insert_or_find(std::move(entry));
     }
 }

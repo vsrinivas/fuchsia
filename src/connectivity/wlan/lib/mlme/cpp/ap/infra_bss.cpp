@@ -262,7 +262,7 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
              client_addr.ToString().c_str());
 
     // Else, create a new remote client instance.
-    auto client = fbl::make_unique<RemoteClient>(device_,
+    auto client = std::make_unique<RemoteClient>(device_,
                                                  this,  // bss
                                                  this,  // client listener
                                                  client_addr);

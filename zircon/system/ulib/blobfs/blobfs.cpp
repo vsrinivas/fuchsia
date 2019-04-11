@@ -589,7 +589,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
         return status;
     }
 
-    fs->allocator_ = fbl::make_unique<Allocator>(fs.get(), std::move(block_map),
+    fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map),
                                                  std::move(node_map), std::move(nodes_bitmap));
     if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);

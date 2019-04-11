@@ -75,7 +75,7 @@ template <size_t padding_len, size_t payload_len> struct TripleHdrFrame {
 static fbl::unique_ptr<Packet> GetPacket(size_t len) {
     auto buffer = GetBuffer(len);
     memset(buffer->data(), 0, len);
-    return fbl::make_unique<Packet>(std::move(buffer), len);
+    return std::make_unique<Packet>(std::move(buffer), len);
 }
 
 using DefaultTripleHdrFrame = TripleHdrFrame<0, 10>;

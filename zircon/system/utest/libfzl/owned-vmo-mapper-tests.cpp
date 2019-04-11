@@ -56,7 +56,7 @@ bool UncheckedCreateHelper(fbl::unique_ptr<fzl::OwnedVmoMapper>* out_mapper,
     }
 
     ASSERT_NONNULL(out_mapper);
-    auto mapper = fbl::make_unique<fzl::OwnedVmoMapper>();
+    auto mapper = std::make_unique<fzl::OwnedVmoMapper>();
     if (mapper->CreateAndMap(size, name, map_options, std::move(manager), cache_policy) == ZX_OK) {
         *out_mapper = std::move(mapper);
     }

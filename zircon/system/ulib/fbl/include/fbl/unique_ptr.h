@@ -45,20 +45,6 @@ struct unique_type<T[]> {
 
 } // namespace internal
 
-// Constructs a new object and assigns it to a unique_ptr.
-template <typename T, typename... Args>
-typename internal::unique_type<T>::single
-make_unique(Args&&... args) {
-    return unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
-template <typename T, typename... Args>
-typename internal::unique_type<T>::incomplete_array
-make_unique(size_t size) {
-    using single_type = std::remove_extent_t<T>;
-    return unique_ptr<single_type[]>(new single_type[size]());
-}
-
 template <typename T, typename... Args>
 typename internal::unique_type<T>::single
 make_unique_checked(AllocChecker* ac, Args&&... args) {

@@ -219,7 +219,7 @@ zx_status_t MtkPower::Create(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s Failed to get mmio: %d\n", __FUNCTION__, status);
         return status;
     }
-    auto dev = fbl::make_unique<MtkPower>(parent, pdev, *std::move(mmio));
+    auto dev = std::make_unique<MtkPower>(parent, pdev, *std::move(mmio));
 
     if ((status = dev->Init()) != ZX_OK) {
         return status;

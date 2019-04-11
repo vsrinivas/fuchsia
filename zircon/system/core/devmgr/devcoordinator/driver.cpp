@@ -45,12 +45,12 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
         return;
     }
 
-    auto drv = fbl::make_unique<devmgr::Driver>();
+    auto drv = std::make_unique<devmgr::Driver>();
     if (drv == nullptr) {
         return;
     }
 
-    auto binding = fbl::make_unique<zx_bind_inst_t[]>(note->bindcount);
+    auto binding = std::make_unique<zx_bind_inst_t[]>(note->bindcount);
     if (binding == nullptr) {
         return;
     }

@@ -222,7 +222,7 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_tee_Uuid* trusted_app,
         return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
-    open_sessions_.insert(fbl::make_unique<OpteeSession>(message.session_id()));
+    open_sessions_.insert(std::make_unique<OpteeSession>(message.session_id()));
 
     return fuchsia_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
 }

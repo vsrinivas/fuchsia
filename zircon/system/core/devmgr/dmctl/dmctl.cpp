@@ -34,7 +34,7 @@ public:
 Dmctl::Dmctl(zx_device_t* parent) : DmctlBase(parent) {}
 
 zx_status_t Dmctl::Bind(void* ctx, zx_device_t* parent) {
-    auto dev = fbl::make_unique<Dmctl>(parent);
+    auto dev = std::make_unique<Dmctl>(parent);
     auto status = dev->DdkAdd("dmctl");
     if (status == ZX_OK) {
         // devmgr owns the memory now

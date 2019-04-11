@@ -44,7 +44,7 @@ zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t
         return ZX_ERR_BAD_STATE;
     }
 
-    auto ftl_wrapper = fbl::make_unique<ftl_mtd::FtlVolumeWrapper>();
+    auto ftl_wrapper = std::make_unique<ftl_mtd::FtlVolumeWrapper>();
 
     status = ftl_wrapper->Init(std::move(driver));
     if (status != ZX_OK) {

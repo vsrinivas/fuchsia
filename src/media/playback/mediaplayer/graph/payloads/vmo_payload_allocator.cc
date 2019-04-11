@@ -86,7 +86,7 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
   payload_vmos_.push_back(payload_vmo);
   if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
     payload_vmo->allocator_ =
-        fbl::make_unique<FifoAllocator>(payload_vmo->size());
+        std::make_unique<FifoAllocator>(payload_vmo->size());
   }
 }
 

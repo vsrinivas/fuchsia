@@ -110,7 +110,7 @@ zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t
 }  // namespace
 
 extern "C" zx_status_t fallback_rtc_bind(void* ctx, zx_device_t* parent) {
-    auto dev = fbl::make_unique<FallbackRtc>(parent);
+    auto dev = std::make_unique<FallbackRtc>(parent);
     auto status = dev->Bind();
     if (status == ZX_OK) {
         // devmgr is now in charge of the device, until DdkRelease().

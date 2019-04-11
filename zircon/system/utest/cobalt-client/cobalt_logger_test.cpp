@@ -382,7 +382,7 @@ private:
 
         Context() {
             services.loop =
-                std::move(fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread));
+                std::move(std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread));
         }
 
         struct ReturnValues {
@@ -420,7 +420,7 @@ private:
                                       return_values.service_connect);
             }
             fbl::unique_ptr<CobaltLogger> logger =
-                fbl::make_unique<CobaltLogger>(std::move(options));
+                std::make_unique<CobaltLogger>(std::move(options));
             services.loop->StartThread("FactoryServiceThread");
             return logger;
         }

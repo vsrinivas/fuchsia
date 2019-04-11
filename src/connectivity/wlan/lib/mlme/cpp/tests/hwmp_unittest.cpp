@@ -31,7 +31,7 @@ TEST(Hwmp, HwmpSeqnoLessThan) {
 }
 
 struct HwmpTest : public ::testing::Test {
-    HwmpTest() : state(fbl::make_unique<TestTimer>(123, &clock)) { clock.Set(zx::time(1000)); }
+    HwmpTest() : state(std::make_unique<TestTimer>(123, &clock)) { clock.Set(zx::time(1000)); }
 
     MacHeaderWriter CreateMacHeaderWriter() { return MacHeaderWriter(self_addr(), seq_mgr.get()); }
 

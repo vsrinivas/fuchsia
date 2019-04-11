@@ -73,7 +73,7 @@ public:
             return fbl::unique_ptr<ScopedTeecSession>();
         }
         fbl::unique_ptr<ScopedTeecSession> session_ptr =
-            fbl::make_unique<ScopedTeecSession>(session);
+            std::make_unique<ScopedTeecSession>(session);
         return session_ptr;
     }
 

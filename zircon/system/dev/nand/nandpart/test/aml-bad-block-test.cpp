@@ -176,7 +176,7 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
                     bad_blocks.push_back(block);
                 }
             }
-            auto node = fbl::make_unique<TableNode>(op->rw.offset_nand + i, std::move(bad_blocks),
+            auto node = std::make_unique<TableNode>(op->rw.offset_nand + i, std::move(bad_blocks),
                                                     true, oob->generation);
             if (!context->table_entries.insert_or_find(std::move(node))) {
                 unittest_printf("Trying to write to a page that isn't erased!\n");
@@ -218,8 +218,8 @@ bool GetBadBlockListTest() {
     BEGIN_TEST;
     TableNode::ResetCount();
     TableEntries table_entries;
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(0));
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(1));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(0));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(1));
     Context context = {
         .table_entries = table_entries,
     };
@@ -240,9 +240,9 @@ bool GetBadBlockListWithEntriesTest() {
     BEGIN_TEST;
     TableNode::ResetCount();
     TableEntries table_entries;
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(0));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(0));
     fbl::Vector<uint32_t> bad_blocks_v = {4, 8};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(1, std::move(bad_blocks_v)));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(1, std::move(bad_blocks_v)));
     Context context = {
         .table_entries = table_entries,
     };
@@ -276,12 +276,12 @@ bool FindBadBlockSecondBlockTest() {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(0, std::move(bad_blocks_1)));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(0, std::move(bad_blocks_1)));
     fbl::Vector<uint32_t> bad_blocks_2 = {4, 6, 8};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3,
                                                                 std::move(bad_blocks_2)));
     fbl::Vector<uint32_t> bad_blocks_3 = {4, 6, 8, 9};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock,
                                                                 std::move(bad_blocks_3)));
     Context context = {
         .table_entries = table_entries,
@@ -304,13 +304,13 @@ bool FindBadBlockLastBlockTest() {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 2,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 2,
                                                                 std::move(bad_blocks_1)));
     fbl::Vector<uint32_t> bad_blocks_2 = {4, 6, 8};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock,
                                                                 std::move(bad_blocks_2)));
     fbl::Vector<uint32_t> bad_blocks_3 = {4, 6, 8, 9};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3,
                                                                 std::move(bad_blocks_3)));
     Context context = {
         .table_entries = table_entries,
@@ -332,8 +332,8 @@ bool MarkBlockBadTest() {
     BEGIN_TEST;
     TableNode::ResetCount();
     TableEntries table_entries;
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(0));
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(1));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(0));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(1));
     Context context = {
         .table_entries = table_entries,
     };
@@ -363,13 +363,13 @@ bool FindBadBlockLastPageInvalidTest() {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 2,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 2,
                                                                 std::move(bad_blocks_1)));
     fbl::Vector<uint32_t> bad_blocks_2 = {4, 6, 8};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3,
                                                                 std::move(bad_blocks_2)));
     fbl::Vector<uint32_t> bad_blocks_3 = {4, 6, 8, 9};
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3 + 1,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3 + 1,
                                                                 std::move(bad_blocks_3), false));
     Context context = {
         .table_entries = table_entries,
@@ -399,10 +399,10 @@ bool FindBadBlockNoValidTest() {
     TableEntries table_entries;
     for (uint32_t block = 0; block < 4; block++) {
         for (uint32_t page = 0; page < 6; page++) {
-            table_entries.insert_or_replace(fbl::make_unique<TableNode>(
+            table_entries.insert_or_replace(std::make_unique<TableNode>(
                 kPagesPerBlock * block + page, false));
         }
-        table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * block + 6));
+        table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * block + 6));
     }
     Context context = {
         .table_entries = table_entries,
@@ -422,11 +422,11 @@ bool FindBadBlockBigHoleTest() {
     BEGIN_TEST;
     TableNode::ResetCount();
     TableEntries table_entries;
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3));
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3));
     for (uint32_t i = 1; i < 9; i++) {
-        table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3 + i, false));
+        table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3 + i, false));
     }
-    table_entries.insert_or_replace(fbl::make_unique<TableNode>(kPagesPerBlock * 3 + 9,
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3 + 9,
                                                                 fbl::Vector<uint32_t>({4})));
 
     Context context = {
@@ -450,7 +450,7 @@ bool MarkBlockBadFullBlockTest() {
     TableNode::ResetCount();
     TableEntries table_entries;
     for (uint32_t i = 0; i < kPagesPerBlock; i++) {
-        table_entries.insert_or_replace(fbl::make_unique<TableNode>(i));
+        table_entries.insert_or_replace(std::make_unique<TableNode>(i));
     }
     Context context = {
         .table_entries = table_entries,

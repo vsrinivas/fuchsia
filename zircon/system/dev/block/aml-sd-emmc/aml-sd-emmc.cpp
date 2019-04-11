@@ -995,7 +995,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
         }
     }
 
-    auto dev = fbl::make_unique<AmlSdEmmc>(parent, pdev, std::move(bti), *std::move(mmio),
+    auto dev = std::make_unique<AmlSdEmmc>(parent, pdev, std::move(bti), *std::move(mmio),
                                            *std::move(pinned_mmio),
                                            config, std::move(irq), reset_gpio);
 

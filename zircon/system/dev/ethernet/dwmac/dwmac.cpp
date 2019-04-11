@@ -192,7 +192,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
         return status;
     }
 
-    auto mac_device = fbl::make_unique<DWMacDevice>(device, &pdev, &eth_board);
+    auto mac_device = std::make_unique<DWMacDevice>(device, &pdev, &eth_board);
 
     status = mac_device->InitPdev();
     if (status != ZX_OK) {

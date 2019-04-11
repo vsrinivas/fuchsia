@@ -52,7 +52,7 @@ public:
         ASSERT_NE(pipe2(pipefd_, O_NONBLOCK), -1, "");
         zx::channel local, remote;
         ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-        logger_ = fbl::make_unique<logger::LoggerImpl>(std::move(remote), pipefd_[0]);
+        logger_ = std::make_unique<logger::LoggerImpl>(std::move(remote), pipefd_[0]);
         ASSERT_EQ(ZX_OK, logger_->Begin(loop_.dispatcher()));
         logger_handle_.reset(local.release());
         logger_->set_error_handler([this](zx_status_t status) {

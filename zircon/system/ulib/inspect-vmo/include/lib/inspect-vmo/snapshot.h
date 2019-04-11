@@ -28,7 +28,7 @@ namespace vmo {
 // Test Example:
 // zx_status_t status = Snapshot::Create(std::move(vmo),
 //   {.read_attempts = 1024, .skip_consistency_check = false},
-//   fbl::make_unique<TestCallback>(),
+//   std::make_unique<TestCallback>(),
 //   &snapshot);
 class Snapshot final {
 public:

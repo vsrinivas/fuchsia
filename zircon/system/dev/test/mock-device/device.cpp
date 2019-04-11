@@ -142,7 +142,7 @@ int MockDevice::ThreadFunc(void* raw_arg) {
 }
 
 void MockDevice::CreateThread(zx::channel channel) {
-    auto arg = fbl::make_unique<ThreadFuncArg>();
+    auto arg = std::make_unique<ThreadFuncArg>();
     arg->channel = std::move(channel);
     arg->dev = this;
 
@@ -353,7 +353,7 @@ zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
 
 zx_status_t MockDevice::Create(zx_device_t* parent, zx::channel controller,
                                fbl::unique_ptr<MockDevice>* out) {
-    auto dev = fbl::make_unique<MockDevice>(parent, std::move(controller));
+    auto dev = std::make_unique<MockDevice>(parent, std::move(controller));
     *out = std::move(dev);
     return ZX_OK;
 }

@@ -163,7 +163,7 @@ bool TestLog() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
+    auto log_listener = std::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });
@@ -206,7 +206,7 @@ bool TestLogMany() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
+    auto log_listener = std::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });
@@ -252,7 +252,7 @@ bool TestDroppedLogs() {
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
 
     // start listener
-    auto log_listener = fbl::make_unique<LogExporter>(std::move(listener_request), buf_file);
+    auto log_listener = std::make_unique<LogExporter>(std::move(listener_request), buf_file);
     log_listener->set_error_handler([](zx_status_t status) {
         EXPECT_EQ(ZX_ERR_CANCELED, status);
     });

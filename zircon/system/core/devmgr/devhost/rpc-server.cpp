@@ -97,7 +97,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-    auto newconn = fbl::make_unique<DevfsConnection>();
+    auto newconn = std::make_unique<DevfsConnection>();
     if (!newconn) {
         r = ZX_ERR_NO_MEMORY;
         if (describe) {

@@ -59,7 +59,7 @@ private:
     }
 
     fbl::unique_ptr<WritebackWork> CreateWork() final {
-        return fbl::make_unique<WritebackWork>(nullptr);
+        return std::make_unique<WritebackWork>(nullptr);
     }
 
     // The following functions are no-ops, and only exist so they can be called by the

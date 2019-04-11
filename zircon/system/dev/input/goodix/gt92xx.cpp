@@ -112,7 +112,7 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
         zxlogf(ERROR, "%s failed to allocate gpio or i2c\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
-    auto goodix_dev = fbl::make_unique<Gt92xxDevice>(device,
+    auto goodix_dev = std::make_unique<Gt92xxDevice>(device,
                                                      std::move(i2c),
                                                      std::move(intr),
                                                      std::move(reset));

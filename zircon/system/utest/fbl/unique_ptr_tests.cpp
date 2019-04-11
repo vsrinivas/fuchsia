@@ -572,7 +572,7 @@ static bool uptr_test_make_unique() {
     // no alloc checker
     destroy_count = 0;
     {
-        CountingPtr ptr = fbl::make_unique<DeleteCounter>(42);
+        CountingPtr ptr = std::make_unique<DeleteCounter>(42);
         EXPECT_EQ(42, ptr->value, "value");
     }
     EXPECT_EQ(1, destroy_count);
@@ -598,7 +598,7 @@ static bool uptr_test_make_unique_array() {
     // no alloc checker
     destroy_count = 0;
     {
-        CountingArrPtr ptr = fbl::make_unique<DeleteCounter[]>(array_size);
+        CountingArrPtr ptr = std::make_unique<DeleteCounter[]>(array_size);
         EXPECT_NONNULL(ptr);
         for (size_t i = 0; i < array_size; ++i) {
             EXPECT_EQ(0, ptr[i].value);

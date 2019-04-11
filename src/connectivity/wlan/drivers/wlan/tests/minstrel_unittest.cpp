@@ -34,7 +34,7 @@ static const uint8_t kBasicRateBit = 0b10000000;
 
 struct MinstrelTest : public ::testing::Test {
     MinstrelTest()
-        : minstrel_(MinstrelRateSelector(fbl::make_unique<TestTimer>(0, &clock),
+        : minstrel_(MinstrelRateSelector(std::make_unique<TestTimer>(0, &clock),
                                          ProbeSequence(SequentialTable()), zx::msec(100))) {
         kTestMacAddr.CopyTo(assoc_ctx_ht_.bssid);
     }

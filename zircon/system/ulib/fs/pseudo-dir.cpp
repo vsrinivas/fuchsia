@@ -106,7 +106,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     }
 
     Notify(name.ToStringPiece(), fuchsia_io_WATCH_EVENT_ADDED);
-    auto entry = fbl::make_unique<Entry>(next_node_id_++,
+    auto entry = std::make_unique<Entry>(next_node_id_++,
                                          std::move(name), std::move(vn));
     entries_by_name_.insert(entry.get());
     entries_by_id_.insert(std::move(entry));

@@ -43,9 +43,9 @@ class MockedTimer : public Timer {
 
 struct TimerManagerTest : public ::testing::Test {
     TimerManagerTest() {
-        auto timer_box = fbl::make_unique<MockedTimer>();
+        auto timer_box = std::make_unique<MockedTimer>();
         timer = timer_box.get();
-        timer_manager = fbl::make_unique<TimerManager<std::string>>(std::move(timer_box));
+        timer_manager = std::make_unique<TimerManager<std::string>>(std::move(timer_box));
     }
 
     timekeeper::TestClock* clock() { return &timer->clock; }

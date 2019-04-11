@@ -107,7 +107,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
     }
 
 private:
-    friend fbl::unique_ptr<zx_driver> fbl::make_unique<zx_driver>();
+    friend fbl::unique_ptr<zx_driver> std::make_unique<zx_driver>();
     zx_driver() = default;
 
     const char* name_ = nullptr;

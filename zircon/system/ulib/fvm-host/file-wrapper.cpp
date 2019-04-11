@@ -44,7 +44,7 @@ zx_status_t UniqueFdWrapper::Open(
         return ZX_ERR_IO;
     }
 
-    *out = fbl::make_unique<UniqueFdWrapper>(std::move(fd));
+    *out = std::make_unique<UniqueFdWrapper>(std::move(fd));
     return ZX_OK;
 }
 

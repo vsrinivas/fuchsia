@@ -110,7 +110,7 @@ bool send_sync(const zx::channel& client) {
 bool sync_start(sync_completion_t* completions, async::Loop* loop,
                 fbl::unique_ptr<fs::ManagedVfs>* vfs) {
     BEGIN_HELPER;
-    *vfs = fbl::make_unique<fs::ManagedVfs>(loop->dispatcher());
+    *vfs = std::make_unique<fs::ManagedVfs>(loop->dispatcher());
     ASSERT_EQ(loop->StartThread(), ZX_OK);
 
     auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
@@ -260,7 +260,7 @@ bool TestTeardownSlowClone() {
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
-    auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.dispatcher());
+    auto vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
@@ -318,7 +318,7 @@ bool TestSynchronousTeardown() {
 
     {
         // Tear down the VFS while the async loop is running.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
+        auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
         auto vn = fbl::AdoptRef(new FdCountVnode());
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
@@ -330,7 +330,7 @@ bool TestSynchronousTeardown() {
 
     {
         // Tear down the VFS while the async loop is not running.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
+        auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
         auto vn = fbl::AdoptRef(new FdCountVnode());
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
@@ -340,7 +340,7 @@ bool TestSynchronousTeardown() {
 
     {
         // Tear down the VFS with no active connections.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
+        auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
     }
 
     END_TEST;

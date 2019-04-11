@@ -112,7 +112,7 @@ Snapshot SnapshotAndScan(const zx::vmo& vmo,
                 } else {
                     *allocated_blocks += 1;
                 }
-                blocks->insert(fbl::make_unique<ScannedBlock>(index, block));
+                blocks->insert(std::make_unique<ScannedBlock>(index, block));
             });
     }
     return snapshot;
@@ -123,7 +123,7 @@ bool CreateIntMetric() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     IntMetric a = state->CreateIntMetric("a", 0, 0);
@@ -178,7 +178,7 @@ bool CreateUintMetric() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     UintMetric a = state->CreateUintMetric("a", 0, 0);
@@ -233,7 +233,7 @@ bool CreateDoubleMetric() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     DoubleMetric a = state->CreateDoubleMetric("a", 0, 0);
@@ -288,7 +288,7 @@ bool CreateSmallProperties() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     Property a = state->CreateProperty("a", 0, "Hello", PropertyFormat::kUtf8);
@@ -343,7 +343,7 @@ bool CreateLargeSingleExtentProperties() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     char input[] = "abcdefg";
@@ -411,7 +411,7 @@ bool CreateMultiExtentProperty() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     char input[] = "abcdefg";
@@ -473,7 +473,7 @@ bool SetSmallProperty() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     struct test_case {
@@ -523,7 +523,7 @@ bool SetLargeProperty() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     char input[] = "abcdefg";
@@ -572,7 +572,7 @@ bool SetPropertyOutOfMemory() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo), 16 * 1024);
+    auto heap = std::make_unique<Heap>(std::move(vmo), 16 * 1024);
     auto state = State::Create(std::move(heap));
 
     fbl::Vector<char> vec;
@@ -602,7 +602,7 @@ bool CreateObjectHierarchy() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     Object root = state->CreateObject("objects", 0);
@@ -693,7 +693,7 @@ bool TombstoneTest() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     fbl::unique_ptr<Object> requests;
@@ -701,7 +701,7 @@ bool TombstoneTest() {
         // Root going out of scope causes a tombstone to be created,
         // but since requests is referencing it it will not be deleted.
         Object root = state->CreateObject("objects", 0);
-        requests = fbl::make_unique<Object>(root.CreateChild("requests"));
+        requests = std::make_unique<Object>(root.CreateChild("requests"));
         auto a = root.CreateIntMetric("a", 1);
         auto b = root.CreateUintMetric("b", 1);
         auto c = root.CreateDoubleMetric("c", 1);
@@ -747,7 +747,7 @@ bool TombstoneCleanup() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     IntMetric metric = state->CreateIntMetric("a", 0, 0);
@@ -852,7 +852,7 @@ bool MultithreadingTest() {
 
     auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
     ASSERT_TRUE(vmo != nullptr);
-    auto heap = fbl::make_unique<Heap>(std::move(vmo));
+    auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
     size_t per_thread_times_operation_count = 0;

@@ -29,7 +29,7 @@ zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
                                fbl::unique_ptr<VPartition>* out) {
     ZX_DEBUG_ASSERT(entry_index != 0);
 
-    auto vp = fbl::make_unique<VPartition>(vpm, entry_index, vpm->BlockOpSize());
+    auto vp = std::make_unique<VPartition>(vpm, entry_index, vpm->BlockOpSize());
 
     *out = std::move(vp);
     return ZX_OK;

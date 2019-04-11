@@ -88,7 +88,7 @@ async::Loop* DevhostAsyncLoop() {
 }
 
 static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
-    auto conn = fbl::make_unique<DevhostControllerConnection>();
+    auto conn = std::make_unique<DevhostControllerConnection>();
     if (conn == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -367,7 +367,7 @@ static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uin
     zx::channel rpc(raw_rpc);
     log(RPC_IN, "devhost: create device stub\n");
 
-    auto newconn = fbl::make_unique<DeviceControllerConnection>();
+    auto newconn = std::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -413,7 +413,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
         static_cast<int>(driver_path_size), driver_path_data, static_cast<int>(proxy_args_size),
         proxy_args_data);
 
-    auto newconn = fbl::make_unique<DeviceControllerConnection>();
+    auto newconn = std::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -490,7 +490,7 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
 
     log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name_size), name_data);
 
-    auto newconn = fbl::make_unique<DeviceControllerConnection>();
+    auto newconn = std::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn,
                                                                                    ZX_ERR_NO_MEMORY);
@@ -872,7 +872,7 @@ zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channe
         dev->proxy_ios = nullptr;
     }
 
-    auto ios = fbl::make_unique<ProxyIostate>();
+    auto ios = std::make_unique<ProxyIostate>();
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -925,7 +925,7 @@ static ssize_t devhost_log_write_internal(uint32_t flags, const void* void_data,
     static thread_local fbl::unique_ptr<Context> ctx;
 
     if (ctx == nullptr) {
-        ctx = fbl::make_unique<Context>();
+        ctx = std::make_unique<Context>();
         if (ctx == nullptr) {
             return len;
         }
@@ -1024,7 +1024,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 
     bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
 
-    auto conn = fbl::make_unique<DeviceControllerConnection>();
+    auto conn = std::make_unique<DeviceControllerConnection>();
     if (!conn) {
         return ZX_ERR_NO_MEMORY;
     }

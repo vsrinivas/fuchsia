@@ -57,7 +57,7 @@ struct MockOffChannelHandler : OffChannelHandler {
 };
 
 TEST_F(ChannelSchedulerTest, OnChannelFrame) {
-    chan_sched_.HandleIncomingFrame(fbl::make_unique<Packet>(GetBuffer(10), 10));
+    chan_sched_.HandleIncomingFrame(std::make_unique<Packet>(GetBuffer(10), 10));
     EXPECT_EQ("frame_on,", str_);
 }
 
@@ -70,7 +70,7 @@ TEST_F(ChannelSchedulerTest, RequestOffChannelTime) {
     EXPECT_EQ(7u, device_.GetChannelNumber());
     str_.clear();
 
-    chan_sched_.HandleIncomingFrame(fbl::make_unique<Packet>(GetBuffer(10), 10));
+    chan_sched_.HandleIncomingFrame(std::make_unique<Packet>(GetBuffer(10), 10));
     EXPECT_EQ("frame_off,", str_);
     str_.clear();
 

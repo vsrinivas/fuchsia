@@ -564,7 +564,7 @@ void TraceReader::SetCurrentProvider(ProviderId id) {
 }
 
 void TraceReader::RegisterProvider(ProviderId id, fbl::String name) {
-    auto provider = fbl::make_unique<ProviderInfo>();
+    auto provider = std::make_unique<ProviderInfo>();
     provider->id = id;
     provider->name = name;
     current_provider_ = provider.get();
@@ -576,7 +576,7 @@ void TraceReader::RegisterString(trace_string_index_t index, fbl::String string)
     ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
-    auto entry = fbl::make_unique<StringTableEntry>(index, string);
+    auto entry = std::make_unique<StringTableEntry>(index, string);
     current_provider_->string_table.insert_or_replace(std::move(entry));
 }
 
@@ -585,7 +585,7 @@ void TraceReader::RegisterThread(trace_thread_index_t index,
     ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
-    auto entry = fbl::make_unique<ThreadTableEntry>(index, process_thread);
+    auto entry = std::make_unique<ThreadTableEntry>(index, process_thread);
     current_provider_->thread_table.insert_or_replace(std::move(entry));
 }
 

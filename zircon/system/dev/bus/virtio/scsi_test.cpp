@@ -33,7 +33,7 @@ class FakeBackendForScsi : public virtio::FakeBackend {
 
 bool InitTest() {
     BEGIN_TEST;
-    fbl::unique_ptr<virtio::Backend> backend = fbl::make_unique<FakeBackendForScsi>();
+    fbl::unique_ptr<virtio::Backend> backend = std::make_unique<FakeBackendForScsi>();
     zx::bti bti(ZX_HANDLE_INVALID);
 
     virtio::ScsiDevice scsi(/*parent=*/nullptr, std::move(bti), std::move(backend));

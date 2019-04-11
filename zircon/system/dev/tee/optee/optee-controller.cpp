@@ -287,7 +287,7 @@ zx_status_t OpteeController::ConnectDevice(zx_handle_t service_provider,
     ZX_DEBUG_ASSERT(device_request_channel.is_valid());
 
     // Create a new OpteeClient device and hand off client communication to it.
-    auto client = fbl::make_unique<OpteeClient>(this, std::move(service_provider_channel));
+    auto client = std::make_unique<OpteeClient>(this, std::move(service_provider_channel));
 
     // Add child client device and have it immediately start serving device_request
     //

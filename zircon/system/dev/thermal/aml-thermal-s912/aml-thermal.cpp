@@ -85,7 +85,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
         return status;
     }
 
-    auto thermal = fbl::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto,
+    auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto,
                                                 scpi_proto, sensor_id, port);
 
     status = thermal->DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);

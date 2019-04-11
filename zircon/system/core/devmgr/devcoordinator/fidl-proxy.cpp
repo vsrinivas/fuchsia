@@ -10,7 +10,7 @@ namespace devmgr {
 
 zx_status_t FidlProxyHandler::Create(Coordinator* coordinator, async_dispatcher_t* dispatcher,
                                      zx::channel proxy_channel) {
-    auto handler = fbl::make_unique<FidlProxyHandler>(coordinator);
+    auto handler = std::make_unique<FidlProxyHandler>(coordinator);
     if (handler == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }

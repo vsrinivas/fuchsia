@@ -170,7 +170,7 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
 }
 
 zx_status_t AmlClock::Create(zx_device_t* parent) {
-    auto clock_device = fbl::make_unique<amlogic_clock::AmlClock>(parent);
+    auto clock_device = std::make_unique<amlogic_clock::AmlClock>(parent);
 
     zx_status_t status = clock_device->InitPdev(parent);
     if (status != ZX_OK) {

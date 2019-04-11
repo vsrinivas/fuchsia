@@ -268,7 +268,7 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
 } // namespace
 
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
-    auto watcher = fbl::make_unique<Watcher>(dn, std::move(h), mask);
+    auto watcher = std::make_unique<Watcher>(dn, std::move(h), mask);
     if (watcher == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -297,7 +297,7 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 namespace {
 
 fbl::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl::String& name) {
-    auto dn = fbl::make_unique<Devnode>(name);
+    auto dn = std::make_unique<Devnode>(name);
     if (!dn) {
         return nullptr;
     }
@@ -555,7 +555,7 @@ void DcIostate::DetachFromDevnode() {
 }
 
 zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* ipc) {
-    auto ios = fbl::make_unique<DcIostate>(dn);
+    auto ios = std::make_unique<DcIostate>(dn);
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -850,7 +850,7 @@ zx::channel devfs_root_clone() {
 }
 
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
-    root_devnode = fbl::make_unique<Devnode>("");
+    root_devnode = std::make_unique<Devnode>("");
     if (!root_devnode) {
         printf("devcoordinator: failed to allocate devfs root node\n");
         return;

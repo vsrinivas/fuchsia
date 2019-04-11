@@ -23,7 +23,7 @@ using namespace inspect::testing;
 namespace {
 
 TEST(VmoReader, CreateAndReadObjectHierarchy) {
-  auto inspector = fbl::make_unique<inspect::vmo::Inspector>();
+  auto inspector = std::make_unique<inspect::vmo::Inspector>();
   ASSERT_TRUE(inspector);
 
   Object object = inspector->CreateObject("objects");

@@ -21,7 +21,7 @@ fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, Jo
         errorf("could not create STA timer: %d\n", status);
         return nullptr;
     }
-    return fbl::make_unique<Station>(device, TimerManager<>(std::move(timer)), chan_scheduler,
+    return std::make_unique<Station>(device, TimerManager<>(std::move(timer)), chan_scheduler,
                                      join_ctx);
 }
 

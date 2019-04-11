@@ -76,7 +76,7 @@ void ControlImpl::CreateStream(
     return;
   }
 
-  stream_ = fbl::make_unique<StreamImpl>(*this, std::move(stream),
+  stream_ = std::make_unique<StreamImpl>(*this, std::move(stream),
                                          std::move(stream_token));
 }
 

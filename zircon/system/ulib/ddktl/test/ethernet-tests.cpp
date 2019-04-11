@@ -101,7 +101,7 @@ public:
 
     zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc) {
         start_this_ = get_this();
-        client_ = fbl::make_unique<ddk::EthmacIfcProtocolClient>(ifc);
+        client_ = std::make_unique<ddk::EthmacIfcProtocolClient>(ifc);
         start_called_ = true;
         return ZX_OK;
     }

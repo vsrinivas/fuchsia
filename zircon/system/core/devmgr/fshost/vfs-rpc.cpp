@@ -138,7 +138,7 @@ zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs
         printf("fshost: cannot create global root: %d\n", status);
     }
 
-    connections_ = fbl::make_unique<FshostConnections>(std::move(devfs_root), std::move(svc_root),
+    connections_ = std::make_unique<FshostConnections>(std::move(devfs_root), std::move(svc_root),
                                                        std::move(fs_root), std::move(fshost_event));
     // Now that we've initialized our connection to the outside world,
     // monitor for external shutdown events.

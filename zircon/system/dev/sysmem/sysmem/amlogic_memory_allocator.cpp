@@ -56,7 +56,7 @@ zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
         }
     }
 
-    auto region = fbl::make_unique<Region>();
+    auto region = std::make_unique<Region>();
     zx_status_t status = protected_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
 
     if (status != ZX_OK) {

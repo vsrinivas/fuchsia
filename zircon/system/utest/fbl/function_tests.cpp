@@ -604,7 +604,7 @@ bool bind_member() {
     BEGIN_TEST;
 
     Obj obj;
-    auto move_only_value = fbl::make_unique<int>(4);
+    auto move_only_value = std::make_unique<int>(4);
 
     BindMember(&obj, &Obj::Call)();
     EXPECT_EQ(23, BindMember(&obj, &Obj::AddOne)(22));

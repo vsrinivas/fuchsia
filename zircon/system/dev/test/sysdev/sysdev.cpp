@@ -31,7 +31,7 @@ public:
 };
 
 zx_status_t Sysdev::Create(zx_device_t* parent, const char* name, zx::channel items_svc) {
-    auto sysdev = fbl::make_unique<Sysdev>(parent);
+    auto sysdev = std::make_unique<Sysdev>(parent);
 
     zx_status_t status = sysdev->DdkAdd("sys", DEVICE_ADD_NON_BINDABLE,
                                         nullptr /* props */, 0 /* prop_count */);

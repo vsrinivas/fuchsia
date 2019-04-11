@@ -170,7 +170,7 @@ int LaunchNextProcess(void* raw_ctx) {
 
 void StartLaunchNextProcessThread(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
                                   const fbl::RefPtr<bootsvc::SvcfsService>& svcfs) {
-    auto args = fbl::make_unique<LaunchNextProcessArgs>();
+    auto args = std::make_unique<LaunchNextProcessArgs>();
     args->bootfs = bootfs;
     args->svcfs = svcfs;
 

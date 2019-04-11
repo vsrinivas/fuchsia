@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
     zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
     // First, initialize the local filesystem in isolation.
-    auto root = fbl::make_unique<devmgr::FsManager>();
+    auto root = std::make_unique<devmgr::FsManager>();
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.

@@ -167,7 +167,7 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name,
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    auto device = fbl::make_unique<TestDevice>(zxdev());
+    auto device = std::make_unique<TestDevice>(zxdev());
     zx_status_t status = device->DdkAdd(devname);
     if (status != ZX_OK) {
         return status;
@@ -199,7 +199,7 @@ zx_status_t TestRootDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t TestDriverBind(void* ctx, zx_device_t* dev) {
-    auto root = fbl::make_unique<TestRootDevice>(dev);
+    auto root = std::make_unique<TestRootDevice>(dev);
     zx_status_t status = root->Bind();
     if (status != ZX_OK) {
         return status;

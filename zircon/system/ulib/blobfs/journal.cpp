@@ -399,7 +399,7 @@ fbl::unique_ptr<JournalEntry> Journal::CreateEntry(uint64_t header_index, uint64
         status = EntryStatus::kError;
     }
 
-    return fbl::make_unique<JournalEntry>(this, status, header_index, commit_index,
+    return std::make_unique<JournalEntry>(this, status, header_index, commit_index,
                                           std::move(work));
 }
 

@@ -455,7 +455,7 @@ bool HugeAmountOfTaskAreDispatched() {
     size_t wait_count = 0;
     // Creating the array on the heap as its size is greater than the available
     // stack.
-    auto waits_ptr = fbl::make_unique<std::array<async::Wait, kPostCount>>();
+    auto waits_ptr = std::make_unique<std::array<async::Wait, kPostCount>>();
     auto& waits = *waits_ptr;
 
     for (size_t i = 0; i < kPostCount; ++i) {

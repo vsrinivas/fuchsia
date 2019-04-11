@@ -25,7 +25,7 @@ bool InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
     space_manager->MutableInfo().data_block_count = blocks;
     std::unique_ptr<IdAllocator> nodes_bitmap = {};
     ASSERT_EQ(ZX_OK, IdAllocator::Create(nodes, &nodes_bitmap), "nodes bitmap");
-    *out = fbl::make_unique<Allocator>(space_manager, std::move(block_map), std::move(node_map),
+    *out = std::make_unique<Allocator>(space_manager, std::move(block_map), std::move(node_map),
                                        std::move(nodes_bitmap));
     (*out)->SetLogging(false);
     END_HELPER;

@@ -103,7 +103,7 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
 fbl::unique_ptr<Packet> GetPacket(size_t len, Packet::Peer peer) {
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return nullptr; }
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), len);
+    auto packet = std::make_unique<Packet>(std::move(buffer), len);
     packet->set_peer(peer);
     return packet;
 }

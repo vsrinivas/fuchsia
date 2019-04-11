@@ -183,7 +183,7 @@ zx_status_t AmlPcieDevice::Init() {
     st = InitMetadata();
     if (st != ZX_OK) return st;
 
-    pcie_ = fbl::make_unique<AmlPcie>(
+    pcie_ = std::make_unique<AmlPcie>(
         *std::move(dbi_),
         *std::move(cfg_),
         *std::move(rst_),

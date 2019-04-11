@@ -95,7 +95,7 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
     size_t old_slice_size = SuperBlock()->slice_size;
     size_t old_metadata_size = fvm::MetadataSize(disk_size, old_slice_size);
     fbl::unique_ptr<uint8_t[]> old_metadata =
-        fbl::make_unique<uint8_t[]>(old_metadata_size * 2);
+        std::make_unique<uint8_t[]>(old_metadata_size * 2);
 
     // Read remainder of metadata.
     file->Seek(disk_offset, SEEK_SET);

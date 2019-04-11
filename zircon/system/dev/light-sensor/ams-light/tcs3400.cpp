@@ -426,7 +426,7 @@ void Tcs3400Device::DdkRelease() {
 } // namespace tcs
 
 extern "C" zx_status_t tcs3400_bind(void* ctx, zx_device_t* parent) {
-    auto dev = fbl::make_unique<tcs::Tcs3400Device>(parent);
+    auto dev = std::make_unique<tcs::Tcs3400Device>(parent);
     auto status = dev->Bind();
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
