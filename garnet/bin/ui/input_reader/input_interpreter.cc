@@ -189,7 +189,7 @@ bool InputInterpreter::ParseHidFeatureReportDescriptor(
   }
 
   if (collection == nullptr) {
-    FXL_LOG(ERROR) << "Can't process HID feature report descriptor for "
+    FXL_LOG(INFO) << "Can't process HID feature report descriptor for "
                    << name()
                    << "; Needed a valid Collection but didn't get one";
     return false;
@@ -233,7 +233,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
   }
 
   if (collection == nullptr) {
-    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+    FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
                    << "; Needed a valid Collection but didn't get one";
     return false;
   }
@@ -310,7 +310,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
 
   if (!input_device.device->ParseReportDescriptor(*input_desc,
                                                   &input_device.descriptor)) {
-    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+    FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
                    << "; Failed to do generic device parsing";
     return false;
   }
@@ -357,7 +357,7 @@ bool InputInterpreter::ParseProtocol() {
   auto parse_res =
       hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
-    FXL_LOG(ERROR) << "hid-parser: error " << int(parse_res)
+    FXL_LOG(INFO) << "hid-parser: error " << int(parse_res)
                    << " parsing report descriptor for " << name();
     return false;
   }
@@ -385,7 +385,7 @@ bool InputInterpreter::ParseProtocol() {
 
   // If we never parsed a single device correctly then fail.
   if (devices_.size() == 0) {
-    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+    FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
                    << "; All parsing attempts failed.";
     return false;
   }

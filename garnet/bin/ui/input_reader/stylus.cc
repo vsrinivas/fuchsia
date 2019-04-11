@@ -122,7 +122,7 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
   uint8_t tmp_val;
 
   if (len != report_size_) {
-    FXL_LOG(ERROR) << "Stylus HID Report is not correct size, (" << len
+    FXL_LOG(INFO) << "Stylus HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
     return false;
   }
@@ -135,7 +135,7 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
 
   if (capabilities_ & Capabilities::X) {
     if (!hid::ExtractAsUnit(data, len, x_, &x)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse X";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse X";
       return false;
     }
 
@@ -145,7 +145,7 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
   }
   if (capabilities_ & Capabilities::Y) {
     if (!hid::ExtractAsUnit(data, len, y_, &y)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse Y";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse Y";
       return false;
     }
 
@@ -155,41 +155,41 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
   }
   if (capabilities_ & Capabilities::PRESSURE) {
     if (!hid::ExtractAsUnit(data, len, pressure_, &pressure)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse PRESSURE";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse PRESSURE";
       return false;
     }
   }
   if (capabilities_ & Capabilities::TIP_SWITCH) {
     if (!hid::ExtractUint(data, len, tip_switch_, &tmp_val)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse TIP_SWITCH";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse TIP_SWITCH";
       return false;
     }
     tip_switch = (tmp_val == 1);
   }
   if (capabilities_ & Capabilities::BARREL_SWITCH) {
     if (!hid::ExtractUint(data, len, barrel_switch_, &tmp_val)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse BARREL_SWITCH";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse BARREL_SWITCH";
       return false;
     }
     barrel_switch = (tmp_val == 1);
   }
   if (capabilities_ & Capabilities::INVERT) {
     if (!hid::ExtractUint(data, len, invert_, &tmp_val)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse INVERT";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse INVERT";
       return false;
     }
     invert = (tmp_val == 1);
   }
   if (capabilities_ & Capabilities::ERASER) {
     if (!hid::ExtractUint(data, len, eraser_, &tmp_val)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse ERASER";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse ERASER";
       return false;
     }
     eraser = (tmp_val == 1);
   }
   if (capabilities_ & Capabilities::IN_RANGE) {
     if (!hid::ExtractUint(data, len, in_range_, &tmp_val)) {
-      FXL_LOG(ERROR) << "Stylus report: Failed to parse IN_RANGE";
+      FXL_LOG(INFO) << "Stylus report: Failed to parse IN_RANGE";
       return false;
     }
     in_range = (tmp_val == 1);

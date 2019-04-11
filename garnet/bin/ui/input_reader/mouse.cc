@@ -58,7 +58,7 @@ bool Mouse::ParseReportDescriptor(
   uint32_t base_caps =
       (Capabilities::X | Capabilities::Y | Capabilities::LEFT_CLICK);
   if ((caps & base_caps) != base_caps) {
-    FXL_LOG(ERROR) << "Mouse descriptor: Missing basic capabilities";
+    FXL_LOG(INFO) << "Mouse descriptor: Missing basic capabilities";
     return false;
   }
 
@@ -112,7 +112,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
 
   Report mouse_report = {};
   if (len != report_size_) {
-    FXL_LOG(ERROR) << "Mouse HID Report is not correct size, (" << len
+    FXL_LOG(INFO) << "Mouse HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
     return false;
   }
@@ -120,21 +120,21 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   uint32_t clicked;
   if (capabilities_ & Capabilities::LEFT_CLICK) {
     if (!hid::ExtractUint(data, len, left_click_, &clicked)) {
-      FXL_LOG(ERROR) << "Mouse report: Failed to parse LEFT_CLICK";
+      FXL_LOG(INFO) << "Mouse report: Failed to parse LEFT_CLICK";
       return false;
     }
     mouse_report.left_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::MIDDLE_CLICK) {
     if (!hid::ExtractUint(data, len, middle_click_, &clicked)) {
-      FXL_LOG(ERROR) << "Mouse report: Failed to parse MIDDLE_CLICK";
+      FXL_LOG(INFO) << "Mouse report: Failed to parse MIDDLE_CLICK";
       return false;
     }
     mouse_report.middle_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::RIGHT_CLICK) {
     if (!hid::ExtractUint(data, len, right_click_, &clicked)) {
-      FXL_LOG(ERROR) << "Mouse report: Failed to parse RIGHT_CLICK";
+      FXL_LOG(INFO) << "Mouse report: Failed to parse RIGHT_CLICK";
       return false;
     }
     mouse_report.right_click = (clicked == 1);
@@ -149,7 +149,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   if (capabilities_ & Capabilities::X) {
     double x;
     if (!hid::ExtractAsUnit(data, len, x_, &x)) {
-      FXL_LOG(ERROR) << "Mouse report: Failed to parse X";
+      FXL_LOG(INFO) << "Mouse report: Failed to parse X";
       return false;
     }
 
@@ -162,7 +162,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   if (capabilities_ & Capabilities::Y) {
     double y;
     if (!hid::ExtractAsUnit(data, len, y_, &y)) {
-      FXL_LOG(ERROR) << "Mouse report: Failed to parse Y";
+      FXL_LOG(INFO) << "Mouse report: Failed to parse Y";
       return false;
     }
 

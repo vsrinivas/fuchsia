@@ -42,7 +42,7 @@ bool Buttons::ParseReportDescriptor(
   }
 
   if (caps == 0) {
-    FXL_LOG(ERROR) << "Buttons report descriptor: Buttons has no capabilities";
+    FXL_LOG(INFO) << "Buttons report descriptor: Buttons has no capabilities";
     return false;
   }
 
@@ -79,20 +79,20 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   double mic_mute = 0;
 
   if (report_size_ != len) {
-    FXL_LOG(ERROR) << "Sensor report: Expected size " << report_size_
+    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_
                    << "Received size " << len;
     return false;
   }
 
   if (capabilities_ & Capabilities::VOLUME) {
     if (!hid::ExtractAsUnit(data, len, volume_, &volume)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse volume";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse volume";
       return false;
     }
   }
   if (capabilities_ & Capabilities::PHONE_MUTE) {
     if (!hid::ExtractAsUnit(data, len, phone_mute_, &mic_mute)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse phone_mute";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse phone_mute";
       return false;
     }
   }

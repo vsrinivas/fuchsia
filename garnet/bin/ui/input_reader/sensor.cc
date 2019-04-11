@@ -84,7 +84,7 @@ bool Sensor::ParseReportDescriptor(
     sensor_type = fuchsia::ui::input::SensorType::LIGHTMETER;
 
   } else {
-    FXL_LOG(ERROR) << "Sensor report descriptor: Sensor page not supported (0x"
+    FXL_LOG(INFO) << "Sensor report descriptor: Sensor page not supported (0x"
                    << std::hex << sensor_usage.usage << ")";
     return false;
   }
@@ -112,13 +112,13 @@ bool Sensor::ParseReportDescriptor(
 
   if ((caps & Capabilities::SCALAR) &&
       (caps & (Capabilities::X | Capabilities::Y | Capabilities::Z))) {
-    FXL_LOG(ERROR) << "Sensor report descriptor: Sensor describes Axis and "
+    FXL_LOG(INFO) << "Sensor report descriptor: Sensor describes Axis and "
                       "Scalar, must only describe one";
     return false;
   }
 
   if (caps == 0) {
-    FXL_LOG(ERROR) << "Sensor report descriptor: Sensor has no capabilities";
+    FXL_LOG(INFO) << "Sensor report descriptor: Sensor has no capabilities";
     return false;
   }
 
@@ -155,32 +155,32 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
   double scalar = 0;
 
   if (report_size_ != len) {
-    FXL_LOG(ERROR) << "Sensor report: Expected size " << report_size_
+    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_
                    << "Recieved size " << len;
     return false;
   }
 
   if (capabilities_ & Capabilities::X) {
     if (!hid::ExtractAsUnit(data, len, x_, &x)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse X";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse X";
       return false;
     }
   }
   if (capabilities_ & Capabilities::Y) {
     if (!hid::ExtractAsUnit(data, len, y_, &y)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse Y";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse Y";
       return false;
     }
   }
   if (capabilities_ & Capabilities::Z) {
     if (!hid::ExtractAsUnit(data, len, z_, &z)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse Z";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse Z";
       return false;
     }
   }
   if (capabilities_ & Capabilities::SCALAR) {
     if (!hid::ExtractAsUnit(data, len, scalar_, &scalar)) {
-      FXL_LOG(ERROR) << "Sensor report: Failed to parse Scalar";
+      FXL_LOG(INFO) << "Sensor report: Failed to parse Scalar";
       return false;
     }
   }

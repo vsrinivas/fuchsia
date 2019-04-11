@@ -64,12 +64,12 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
     }
 
     if (touch_points < 1) {
-      FXL_LOG(ERROR)
+      FXL_LOG(INFO)
           << "Touch descriptor: No touch points found in a collection";
       return false;
     }
     if (touch_points > MAX_TOUCH_POINTS) {
-      FXL_LOG(ERROR) << "Touch descriptor: Current touchscreen has "
+      FXL_LOG(INFO) << "Touch descriptor: Current touchscreen has "
                      << touch_points
                      << " touch points which is above hardcoded limit of "
                      << MAX_TOUCH_POINTS;
@@ -103,17 +103,17 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
   }
 
   if (touch_points == 0) {
-    FXL_LOG(ERROR) << "Touch descriptor: Failed to find any touch points";
+    FXL_LOG(INFO) << "Touch descriptor: Failed to find any touch points";
     return false;
   }
 
   // Ensure that all touch points have the same capabilities.
   for (size_t i = 1; i < touch_points; i++) {
     if (configs[i].capabilities != configs[0].capabilities) {
-      FXL_LOG(ERROR)
+      FXL_LOG(INFO)
           << "Touch descriptor: Touch point capabilities are different";
       for (size_t j = 0; j < touch_points; j++) {
-        FXL_LOG(ERROR) << "Touch descriptor: touch_point[" << j
+        FXL_LOG(INFO) << "Touch descriptor: touch_point[" << j
                        << "] = " << configs[i].capabilities;
       }
       return false;
@@ -140,7 +140,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   assert(report != nullptr);
 
   if (len != report_size_) {
-    FXL_LOG(ERROR) << "Touch HID Report is not correct size, (" << len
+    FXL_LOG(INFO) << "Touch HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
     return false;
   }
@@ -169,14 +169,14 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     // XXX(konkers): Add 32 bit generic field extraction helpers.
     if (config->capabilities & Capabilities::CONTACT_ID) {
       if (!hid::ExtractUint(data, len, config->contact_id, &contact->id)) {
-        FXL_LOG(ERROR) << "Touch report: Failed to parse CONTACT_ID";
+        FXL_LOG(INFO) << "Touch report: Failed to parse CONTACT_ID";
         return false;
       }
     }
     if (config->capabilities & Capabilities::X) {
       double x;
       if (!hid::ExtractAsUnit(data, len, config->x, &x)) {
-        FXL_LOG(ERROR) << "Touch report: Failed to parse X";
+        FXL_LOG(INFO) << "Touch report: Failed to parse X";
         return false;
       }
       // If this returns true, x was converted. If it returns false,
@@ -187,7 +187,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     if (config->capabilities & Capabilities::Y) {
       double y;
       if (!hid::ExtractAsUnit(data, len, config->y, &y)) {
-        FXL_LOG(ERROR) << "Touchpad report: Failed to parse Y";
+        FXL_LOG(INFO) << "Touchpad report: Failed to parse Y";
         return false;
       }
       // If this returns true, x was converted. If it returns false,
@@ -206,7 +206,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   if (capabilities_ & Capabilities::BUTTON) {
     uint8_t button;
     if (!hid::ExtractUint(data, len, button_, &button)) {
-      FXL_LOG(ERROR) << "Touchpad report: Failed to parse BUTTON";
+      FXL_LOG(INFO) << "Touchpad report: Failed to parse BUTTON";
       return false;
     }
     report->button = (button == 1);
@@ -221,7 +221,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     } else {
       double scan_time;
       if (!hid::ExtractAsUnit(data, len, scan_time_, &scan_time)) {
-        FXL_LOG(ERROR) << "Touchpad report: Failed to parse SCAN_TIME";
+        FXL_LOG(INFO) << "Touchpad report: Failed to parse SCAN_TIME";
         return false;
       }
 
