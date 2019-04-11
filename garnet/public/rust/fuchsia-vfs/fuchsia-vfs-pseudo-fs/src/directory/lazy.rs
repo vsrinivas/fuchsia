@@ -587,12 +587,10 @@ mod tests {
         },
         crate::file::simple::read_only,
         fidl_fuchsia_io::{
-            DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
-            NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
+            DirectoryObject, NodeAttributes, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
             MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         fuchsia_zircon::Status,
-        futures::stream::StreamExt,
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         proc_macro_hack::proc_macro_hack,
     };

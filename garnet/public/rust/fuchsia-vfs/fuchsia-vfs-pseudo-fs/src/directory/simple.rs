@@ -512,7 +512,7 @@ impl<'entries> FusedFuture for Simple<'entries> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{empty, empty_attr};
 
     use {
         crate::directory::test_utils::{
@@ -523,14 +523,16 @@ mod tests {
         crate::test_utils::open_get_proxy,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{
-            DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
-            FileMarker, FileObject, SeekOrigin, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-            INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-            OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeAttributes, NodeInfo,
+            DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+            MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
+        fuchsia_zircon::sys::ZX_OK,
         futures::SinkExt,
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         proc_macro_hack::proc_macro_hack,
+        std::iter,
         std::sync::atomic::{AtomicUsize, Ordering},
     };
 

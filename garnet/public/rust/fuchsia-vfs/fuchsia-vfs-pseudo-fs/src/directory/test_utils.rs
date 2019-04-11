@@ -10,12 +10,17 @@
 
 #![cfg(test)]
 
+#[doc(hidden)]
+pub mod reexport {
+    pub use fuchsia_zircon::Status;
+}
+
 use {
     crate::directory::entry::DirectoryEntry,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeMarker, MAX_FILENAME},
-    fuchsia_async as fasync,
+    fuchsia_async::Executor,
     futures::channel::mpsc,
     futures::{future::FutureExt, select, stream::StreamExt, Future},
     pin_utils::pin_mut,
@@ -42,7 +47,7 @@ pub fn run_server_client<GetClientRes>(
     run_server_client_with_mode(flags, 0, server, get_client)
 }
 
-/// Similar to [`run_server_client()]` except that allows to specify the `mode` argument value to
+/// Similar to [`run_server_client()`] except that allows to specify the `mode` argument value to
 /// the `open()` call.  See [`run_server_client()`] for details.
 pub fn run_server_client_with_mode<GetClientRes>(
     flags: u32,
@@ -52,7 +57,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let mut exec = fasync::Executor::new().expect("Executor creation failed");
+    let mut exec = Executor::new().expect("Executor creation failed");
 
     let (client_proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
@@ -97,7 +102,7 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let mut exec = fasync::Executor::new().expect("Executor creation failed");
+    let mut exec = Executor::new().expect("Executor creation failed");
 
     let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs<'path>>(0);
 
@@ -165,15 +170,19 @@ impl DirentsSameInodeBuilder {
 }
 
 /// Calls `rewind` on the provided `proxy`, checking that the result status is Status::OK.
+#[macro_export]
 macro_rules! assert_rewind {
-    ($proxy:expr) => {
+    ($proxy:expr) => {{
+        use $crate::test_utils::reexport::*;
+
         let status = await!($proxy.rewind()).expect("rewind failed");
         assert_eq!(Status::from_raw(status), Status::OK);
-    };
+    }};
 }
 
 /// Opens the specified path as a file and checks its content.  Also see all the `assert_*` macros
 /// in `../test_utils.rs`.
+#[macro_export]
 macro_rules! open_as_file_assert_content {
     ($proxy:expr, $flags:expr, $path:expr, $expected_content:expr) => {
         let file = open_get_file_proxy_assert_ok!($proxy, $flags, $path);

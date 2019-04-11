@@ -498,9 +498,8 @@ mod tests {
         crate::file::simple::read_only,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker, FileObject,
-            NodeInfo, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
-            OPEN_RIGHT_READABLE,
+            DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeInfo, NodeMarker,
+            DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         proc_macro_hack::proc_macro_hack,
     };

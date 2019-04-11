@@ -15,7 +15,7 @@ mod common;
 
 #[cfg(test)]
 #[macro_use]
-mod test_utils;
+pub mod test_utils;
 
 pub mod directory;
 pub mod file;

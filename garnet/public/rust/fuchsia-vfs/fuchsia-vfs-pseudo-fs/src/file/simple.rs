@@ -466,9 +466,8 @@ mod tests {
         },
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
-            FileEvent, FileMarker, FileObject, NodeAttributes, NodeInfo, SeekOrigin, INO_UNKNOWN,
-            MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            FileMarker, NodeAttributes, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_OK,
@@ -1418,6 +1417,19 @@ mod tests {
     }
 
     #[test]
+    /// This test checks a somewhat non-trivial case.  Two clients are connected to the same file,
+    /// and we want to make sure that they get individual buffers.  The file content will be
+    /// different every time a new buffer is created, as `on_read` returns a string with an
+    /// invocation count in it.
+    ///
+    /// [`run_server_client_with_open_requests_channel_and_executor`] is used to control relative
+    /// execution of the clients and the server.  Clients wait before they open the file, read the
+    /// file content and then wait before reading the file content once again.
+    ///
+    /// `run_until_stalled` and `oneshot::channel` are used to make sure that the test execution
+    /// does not have race conditions.  We check that the futures are still running and check the
+    /// `on_read` invocation counter.  See `executor` argument of the
+    /// `run_server_client_with_open_requests_channel_and_executor` invocation.
     fn mock_directory_with_one_file_and_two_connections() {
         // If futures::join would provide a way to "unpack" an incomplete (or complete) Join
         // future, this test could have been written a bit easier.  Without the unpack

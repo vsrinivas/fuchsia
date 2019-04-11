@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 #[macro_use]
-mod test_utils;
+pub mod test_utils;
 
 #[macro_use]
 mod common;
