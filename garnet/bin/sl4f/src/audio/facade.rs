@@ -63,6 +63,9 @@ struct OutputWorker {
     extracted_data: Vec<u8>,
     vmo: Option<zx::Vmo>,
 
+    // Whether we should store samples when we receive notification from the VAD
+    capturing: bool,
+
     // How much of the vmo's data we're actually using, in bytes.
     work_space: u64,
 
@@ -143,7 +146,6 @@ impl OutputWorker {
         &mut self,
         mut rx: mpsc::Receiver<ExtractMsg>,
         va_output: OutputProxy,
-        capturing: Arc<Mutex<bool>>,
     ) -> Result<(), Error> {
         let mut output_events = va_output.take_event_stream();
         self.va_output = Some(va_output);
@@ -156,6 +158,7 @@ impl OutputWorker {
                             bail!("Got None InjectMsg Event, exiting worker");
                         },
                         Some(ExtractMsg::Stop { mut out_sender }) => {
+                            self.capturing = false;
                             let mut ret_data = vec![0u8; 0];
 
                             ret_data.append(&mut self.extracted_data);
@@ -164,6 +167,7 @@ impl OutputWorker {
                         }
                         Some(ExtractMsg::Start) => {
                             self.extracted_data.clear();
+                            self.capturing = true;
                             fx_log_info!("Someone set us up the start");
                         }
                     }
@@ -180,11 +184,9 @@ impl OutputWorker {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
                         Some(OutputEvent::OnPositionNotify { ring_position, clock_time }) => {
-                            let mut capturing = await!(capturing.lock());
-                            if !*(capturing) {
-                                continue 'ExtractEvents
+                            if self.capturing {
+                                self.on_position_notify(ring_position, clock_time)?;
                             }
-                            self.on_position_notify(ring_position, clock_time)?;
                         },
                         Some(evt) => {
                             fx_log_info!("XXXXXXXXXXXXXXXXXXXXXX Got unknown InputEvent {:?}", evt);
@@ -253,11 +255,10 @@ impl VirtualOutput {
 
         let (tx, rx) = mpsc::channel(512);
         va_output.add()?;
-        let capturing = self.capturing.clone();
         fasync::spawn(
             async move {
                 let mut worker = OutputWorker::default();
-                await!(worker.run(rx, va_output, capturing))?;
+                await!(worker.run(rx, va_output))?;
                 Ok::<(), Error>(())
             }
                 .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
