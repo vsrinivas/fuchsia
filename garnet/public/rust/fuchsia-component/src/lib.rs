@@ -275,7 +275,6 @@ pub mod server {
         fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output>;
     }
 
-
     impl<F, O> Service for F
     where
         F: FnMut(zx::Channel) -> Option<O>,

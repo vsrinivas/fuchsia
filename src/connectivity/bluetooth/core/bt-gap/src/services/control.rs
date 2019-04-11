@@ -8,7 +8,6 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth,
     fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream},
-    fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
     futures::prelude::*,
     std::sync::Arc,
@@ -29,8 +28,7 @@ impl ControlSession {
 
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
-pub async fn start_control_service(hd: HostDispatcher, chan: fasync::Channel) -> Result<(), Error> {
-    let mut stream = ControlRequestStream::from_channel(chan);
+pub async fn start_control_service(hd: HostDispatcher, mut stream: ControlRequestStream) -> Result<(), Error> {
     let event_listener = Arc::new(stream.control_handle());
     hd.add_event_listener(Arc::downgrade(&event_listener));
     let mut session = ControlSession::new();

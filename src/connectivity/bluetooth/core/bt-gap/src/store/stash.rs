@@ -183,7 +183,7 @@ impl Stash {
 /// Connects to the stash service and initializes a Stash object. This function obtains
 /// read/write capability to the component-specific storage identified by `component_id`.
 pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
-    let stash_svc = fuchsia_app::client::connect_to_service::<StoreMarker>()?;
+    let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
     stash_svc.identify(component_id)?;
 
     let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
@@ -199,7 +199,7 @@ pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
 mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_host::LocalKey;
-    use {fuchsia_app::client::connect_to_service, fuchsia_async as fasync, pin_utils::pin_mut};
+    use {fuchsia_component::client::connect_to_service, fuchsia_async as fasync, pin_utils::pin_mut};
 
     // create_stash_accessor will create a new accessor to stash scoped under the given test name.
     // All preexisting data in stash under this identity is deleted before the accessor is

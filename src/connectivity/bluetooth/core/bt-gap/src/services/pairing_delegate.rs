@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::{self, endpoints::RequestStream},
     fidl_fuchsia_bluetooth_control::{PairingDelegateRequest::*, *},
-    fuchsia_async as fasync,
     fuchsia_syslog::fx_log_warn,
     futures::{Future, TryStreamExt},
 };
@@ -92,9 +90,8 @@ fn handle_remote_keypress(
 
 pub fn start_pairing_delegate(
     hd: HostDispatcher,
-    channel: fasync::Channel,
+    stream: PairingDelegateRequestStream,
 ) -> impl Future<Output = fidl::Result<()>> {
-    let stream = PairingDelegateRequestStream::from_channel(channel);
     stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |event| {
         handler(hd.pairing_delegate(), event)
     })

@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, ControlControlHandle, DeviceClass, InputCapabilityType, OutputCapabilityType,
-        PairingDelegateMarker, PairingDelegateProxy, RemoteDevice,
+        PairingDelegateProxy, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_host::{HostData, HostProxy, LocalKey},
@@ -702,16 +702,14 @@ fn start_pairing_delegate(
     // Initialize bt-gap as this host's pairing delegate.
     // TODO(NET-1445): Do this only for the active host. This will make sure that non-active hosts
     // always reject pairing.
-    let (delegate_local, delegate_remote) = zx::Channel::create()?;
-    let delegate_local = fasync::Channel::from_channel(delegate_local)?;
-    let delegate_ptr = fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
+    let (delegate_client_end, delegate_stream) = fidl::endpoints::create_request_stream()?;
     host_device.read().set_host_pairing_delegate(
         hd.state.read().input,
         hd.state.read().output,
-        delegate_ptr,
+        delegate_client_end,
     );
     fasync::spawn(
-        services::start_pairing_delegate(hd.clone(), delegate_local)
+        services::start_pairing_delegate(hd.clone(), delegate_stream)
             .unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
     );
     Ok(())
