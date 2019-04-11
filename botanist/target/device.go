@@ -37,6 +37,9 @@ type DeviceConfig struct {
 
 	// SSHKeys are the default system keys to be used with the device.
 	SSHKeys []string `json:"keys,omitempty"`
+
+	// Serial is the path to the device file for serial i/o.
+	Serial string `json:"serial,omitempty`
 }
 
 // NetworkProperties are the static network properties of a target.
@@ -100,6 +103,11 @@ func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
 		return net.ParseIP(t.config.Network.IPv4Addr), nil
 	}
 	return botanist.ResolveIPv4(context.Background(), t.Nodename(), netstackTimeout)
+}
+
+// Serial returns the serial device associated with the target for serial i/o.
+func (t *DeviceTarget) Serial() string {
+	return t.config.Serial
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be paved.

@@ -100,6 +100,11 @@ func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
 	return nil, nil
 }
 
+// Serial returns the serial device associated with the target for serial i/o.
+func (t *QEMUTarget) Serial() string {
+	return ""
+}
+
 // SSHKey returns the private SSH key path associated with the authorized key to be pavet.
 func (t *QEMUTarget) SSHKey() string {
 	return t.opts.SSHKey

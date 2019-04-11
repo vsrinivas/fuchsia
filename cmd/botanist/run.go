@@ -20,6 +20,7 @@ import (
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/runner"
+	"fuchsia.googlesource.com/tools/serial"
 	"fuchsia.googlesource.com/tools/sshutil"
 
 	"github.com/google/subcommands"
@@ -36,6 +37,9 @@ type Target interface {
 
 	// IPv4Addr returns the IPv4 address of the target.
 	IPv4Addr() (net.IP, error)
+
+	// Serial returns the serial device associated with the target for serial i/o.
+	Serial() string
 
 	// SSHKey returns the private key corresponding an authorized SSH key of the target.
 	SSHKey() string
@@ -84,8 +88,11 @@ type RunCommand struct {
 	// SysloggerFile, if nonempty, is the file to where the system's logs will be written.
 	syslogFile string
 
-	// sshKey is the path to a private SSH user key.
+	// SshKey is the path to a private SSH user key.
 	sshKey string
+
+	// SerialLogFile, if nonempty, is the file where the system's serial logs will be written.
+	serialLogFile string
 }
 
 func (*RunCommand) Name() string {
@@ -115,6 +122,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.cmdStderr, "stderr", "", "file to redirect the command's stderr into; if unspecified, it will be redirected to the process' stderr")
 	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
+	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 }
 
 func (r *RunCommand) runCmd(ctx context.Context, args []string, t Target, syslog io.Writer) error {
@@ -233,6 +241,38 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		defer syslog.Close()
+	}
+
+	if t.Serial() != "" && r.serialLogFile != "" {
+		serialLog, err := os.Create(r.serialLogFile)
+		if err != nil {
+			return err
+		}
+		defer serialLog.Close()
+
+		serialDevice, err := serial.Open(t.Serial())
+		if err != nil {
+			return fmt.Errorf("unable to open %s: %v", t.Serial(), err)
+		}
+		defer serialDevice.Close()
+
+		// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
+		// output file.  This should give us everything since Zedboot boot, and new messages should
+		// be written to directly to the serial port without needing to tail with `dlog -f`.
+		if _, err = io.WriteString(serialDevice, "\ndlog\n"); err != nil {
+			logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
+		}
+
+		go func() {
+			_, err := io.Copy(serialLog, serialDevice)
+			if err != nil {
+				logger.Errorf(ctx, "failed to write serial log: %v", err)
+			}
+		}()
+
+		// Modify the zirconArgs passed to the kernel on boot to enable serial logging on x64.
+		// arm64 devices should already be enabling kernel.serial at compile time.
+		r.zirconArgs = append(r.zirconArgs, "kernel.bypass-debuglog=true", "kernel.serial=legacy")
 	}
 
 	defer func() {
