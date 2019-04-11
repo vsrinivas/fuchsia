@@ -6,7 +6,6 @@
 #define FBL_REF_COUNTED_INTERNAL_H_
 
 #include <atomic>
-#include <fbl/canary.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 

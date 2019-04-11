@@ -5,7 +5,6 @@
 #ifndef GARNET_BIN_GUEST_VMM_IO_H_
 #define GARNET_BIN_GUEST_VMM_IO_H_
 
-#include <fbl/canary.h>
 #include <lib/async/cpp/trap.h>
 #include <trace/event.h>
 #include <zircon/types.h>
@@ -62,22 +61,18 @@ class IoMapping {
             IoHandler* handler);
 
   zx_gpaddr_t base() const {
-    canary_.Assert();
     return base_;
   }
 
   size_t size() const {
-    canary_.Assert();
     return size_;
   }
 
   uint32_t kind() const {
-    canary_.Assert();
     return kind_;
   }
 
   zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const {
-    canary_.Assert();
     const zx_gpaddr_t address = addr - base_ + off_;
     TRACE_DURATION("machina", "read", "address", address, "access_size",
                    value->access_size);
@@ -85,7 +80,6 @@ class IoMapping {
   }
 
   zx_status_t Write(zx_gpaddr_t addr, const IoValue& value) {
-    canary_.Assert();
     const zx_gpaddr_t address = addr - base_ + off_;
     TRACE_DURATION("machina", "write", "address", address, "access_size",
                    value.access_size);
@@ -99,7 +93,6 @@ class IoMapping {
                           async::GuestBellTrapBase* trap, zx_status_t status,
                           const zx_packet_guest_bell_t* bell);
 
-  fbl::Canary<fbl::magic("IOMP")> canary_;
   const uint32_t kind_;
   const zx_gpaddr_t base_;
   const size_t size_;

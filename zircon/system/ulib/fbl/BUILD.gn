@@ -10,7 +10,6 @@ library("fbl") {
     "fbl/array.h",
     "fbl/auto_call.h",
     "fbl/auto_lock.h",
-    "fbl/canary.h",
     "fbl/condition_variable.h",
     "fbl/deleter.h",
     "fbl/function.h",
