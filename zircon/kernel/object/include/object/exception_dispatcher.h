@@ -43,6 +43,14 @@ public:
     fbl::RefPtr<ThreadDispatcher> thread() const { return thread_; }
     zx_excp_type_t exception_type() const { return exception_type_; }
 
+    // Copies the exception report provided at ExceptionDispatcher creation.
+    //
+    // The exception report is only available while the exception thread is
+    // still alive.
+    //
+    // Returns false and leaves |report| untouched if the thread has died.
+    bool FillReport(zx_exception_report_t* report) const;
+
     // Sets the task rights to use for subsequent handle creation.
     //
     // rights == 0 indicates that the current exception handler is not allowed

@@ -759,7 +759,7 @@ zx_status_t ThreadDispatcher::MarkExceptionHandledWorker(PortDispatcher* eport,
     LTRACEF("obj %p, handled_state %d\n", this, static_cast<int>(handled_state));
 
     Guard<fbl::Mutex> guard{get_lock()};
-    if (!InExceptionLocked())
+    if (!InPortExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
     // The exception port isn't used directly but is instead proof that the caller has
@@ -795,7 +795,7 @@ void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& 
 
     LTRACE_ENTRY_OBJ;
     Guard<fbl::Mutex> guard{get_lock()};
-    if (!InExceptionLocked())
+    if (!InPortExceptionLocked())
         return;
     if (exception_wait_port_ == eport) {
         // Leave things alone if already processed. See MarkExceptionHandled.
@@ -806,12 +806,26 @@ void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& 
     }
 }
 
-bool ThreadDispatcher::InExceptionLocked() {
+bool ThreadDispatcher::InPortExceptionLocked() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(get_lock()->lock().IsHeld());
     return thread_stopped_in_exception(&thread_);
+}
+
+bool ThreadDispatcher::InChannelExceptionLocked() {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+    DEBUG_ASSERT(get_lock()->lock().IsHeld());
+    return exception_ != nullptr;
+}
+
+bool ThreadDispatcher::SuspendedOrInExceptionLocked() {
+    canary_.Assert();
+    return state_.lifecycle() == ThreadState::Lifecycle::SUSPENDED ||
+           InPortExceptionLocked() || InChannelExceptionLocked();
 }
 
 zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
@@ -826,10 +840,10 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
         Guard<fbl::Mutex> guard{get_lock()};
         state = state_;
         blocked_reason = blocked_reason_;
-        if (in_channel_exception_) {
+        if (InChannelExceptionLocked()) {
             excp_port_type = channel_exception_wait_type_;
         } else {
-            if (InExceptionLocked() &&
+            if (InPortExceptionLocked() &&
                 // A port type of !NONE here indicates to the caller that the
                 // thread is waiting for an exception response. So don't return
                 // !NONE if the thread just woke up but hasn't reacquired
@@ -952,10 +966,19 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
 
     LTRACE_ENTRY_OBJ;
     Guard<fbl::Mutex> guard{get_lock()};
-    if (!InExceptionLocked())
+
+    if (InPortExceptionLocked()) {
+        DEBUG_ASSERT(exception_report_ != nullptr);
+        *report = *exception_report_;
+    } else if (InChannelExceptionLocked()) {
+        // We always leave exception handling before the report gets wiped
+        // so this must succeed.
+        [[maybe_unused]] bool success = exception_->FillReport(report);
+        DEBUG_ASSERT(success);
+    } else {
         return ZX_ERR_BAD_STATE;
-    DEBUG_ASSERT(exception_report_ != nullptr);
-    *report = *exception_report_;
+    }
+
     return ZX_OK;
 }
 
@@ -989,7 +1012,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
         *sent = true;
 
         // This state is needed by GetInfoForUserspace().
-        in_channel_exception_ = true;
+        exception_ = exception;
         channel_exception_wait_type_ = exceptionate->port_type();
         state_.set(ThreadState::Exception::UNPROCESSED);
     }
@@ -1001,7 +1024,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
     LTRACEF("received exception response %d\n", status);
 
     Guard<fbl::Mutex> guard{get_lock()};
-    in_channel_exception_ = false;
+    exception_.reset();
     channel_exception_wait_type_ = ExceptionPort::Type::NONE;
     state_.set(ThreadState::Exception::IDLE);
 
@@ -1057,8 +1080,9 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
     // SUSPENDED to RUNNING.
     Guard<fbl::Mutex> guard{get_lock()};
 
-    if (state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED && !InExceptionLocked())
+    if (!SuspendedOrInExceptionLocked()) {
         return ZX_ERR_BAD_STATE;
+    }
 
     switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS: {
@@ -1113,8 +1137,9 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
     // SUSPENDED to RUNNING.
     Guard<fbl::Mutex> guard{get_lock()};
 
-    if (state_.lifecycle() != ThreadState::Lifecycle::SUSPENDED && !InExceptionLocked())
+    if (!SuspendedOrInExceptionLocked()) {
         return ZX_ERR_BAD_STATE;
+    }
 
     switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS: {

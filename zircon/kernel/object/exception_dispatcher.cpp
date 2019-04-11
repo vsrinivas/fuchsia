@@ -46,6 +46,17 @@ ExceptionDispatcher::~ExceptionDispatcher() {
     kcounter_add(dispatcher_exception_destroy_count, 1);
 }
 
+bool ExceptionDispatcher::FillReport(zx_exception_report_t* report) const {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (report_) {
+        *report = *report_;
+        return true;
+    }
+    return false;
+}
+
 void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t process_rights) {
     canary_.Assert();
 

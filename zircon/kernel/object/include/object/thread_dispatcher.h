@@ -239,7 +239,11 @@ private:
     void Resuming();
 
     // Return true if waiting for an exception response.
-    bool InExceptionLocked() TA_REQ(get_lock());
+    bool InPortExceptionLocked() TA_REQ(get_lock());
+    bool InChannelExceptionLocked() TA_REQ(get_lock());
+
+    // Returns true if the thread is suspended or processing an exception.
+    bool SuspendedOrInExceptionLocked() TA_REQ(get_lock());
 
     // Helper routine to minimize code duplication.
     zx_status_t MarkExceptionHandledWorker(PortDispatcher* eport,
@@ -288,11 +292,13 @@ private:
     event_t exception_event_ =
         EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
+    // Non-null if the thread is currently processing a channel exception.
+    fbl::RefPtr<ExceptionDispatcher> exception_ TA_GUARDED(get_lock());
+
     // Some glue to temporarily bridge state between channel-based and
     // port-based exception handling until we remove ports.
     ExceptionPort::Type channel_exception_wait_type_ TA_GUARDED(get_lock()) =
         ExceptionPort::Type::NONE;
-    bool in_channel_exception_ TA_GUARDED(get_lock()) = false;
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};
