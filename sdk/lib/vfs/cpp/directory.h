@@ -49,8 +49,8 @@ class Directory : public Node {
   //
   // Called from |fuchsia.io.Directory#Open|.
   void Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
-            const char* path, size_t path_len,
-            zx::channel request, async_dispatcher_t* dispatcher);
+            const char* path, size_t path_len, zx::channel request,
+            async_dispatcher_t* dispatcher);
 
   // Validates passed path
   //
@@ -79,9 +79,20 @@ class Directory : public Node {
                               const char** out_path, size_t* out_len,
                               std::string* out_key, bool* out_is_self);
 
+  // |Node| implementation
+  zx_status_t GetAttr(
+      fuchsia::io::NodeAttributes* out_attributes) const override;
+
  protected:
+  // |Node| implementations
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
+
+  bool IsDirectory() const final;
+
+  uint32_t GetAdditionalAllowedFlags() const override;
+
+  uint32_t GetProhibitiveFlags() const override;
 
   // Walks |path| until the node corresponding to |path| is found, or a remote
   // filesystem was encountered during traversal. In the latter case,
@@ -98,12 +109,6 @@ class Directory : public Node {
   zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir,
                          Node** out_node, const char** out_path,
                          size_t* out_len);
-
-  bool IsDirectory() const final;
-
-  uint32_t GetAdditionalAllowedFlags() const override;
-
-  uint32_t GetProhibitiveFlags() const override;
 };
 
 }  // namespace vfs

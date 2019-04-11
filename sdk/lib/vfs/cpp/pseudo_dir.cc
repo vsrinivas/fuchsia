@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/pseudo_dir.h>
-
 #include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/internal/dirent_filler.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+
 #include <mutex>
 
 namespace vfs {
@@ -72,18 +72,6 @@ zx_status_t PseudoDir::Lookup(const std::string& name, Node** out_node) const {
   } else {
     return ZX_ERR_NOT_FOUND;
   }
-}
-
-zx_status_t PseudoDir::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
-  out_attributes->mode = fuchsia::io::MODE_TYPE_DIRECTORY | V_IRUSR;
-  out_attributes->id = fuchsia::io::INO_UNKNOWN;
-  out_attributes->content_size = 0;
-  out_attributes->storage_size = 0;
-  out_attributes->link_count = 1;
-  out_attributes->creation_time = 0;
-  out_attributes->modification_time = 0;
-  return ZX_OK;
 }
 
 zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len,

@@ -42,8 +42,6 @@ class RemoteDir final : public Directory {
   // |Node| implementation
   zx_status_t Connect(uint32_t flags, zx::channel request,
                       async_dispatcher_t* dispatcher) final;
-  zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const override;
 
   // |Directory| implementation
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,

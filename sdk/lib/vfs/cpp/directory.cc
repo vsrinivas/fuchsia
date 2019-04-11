@@ -3,10 +3,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/cpp/fidl.h>
+#include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/directory.h>
 #include <lib/vfs/cpp/flags.h>
-
-#include <fuchsia/io/cpp/fidl.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 #include <zircon/errors.h>
 
@@ -52,6 +52,18 @@ zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
       (path_len > 0 && path[0] == '/')) {
     return ZX_ERR_INVALID_ARGS;
   }
+  return ZX_OK;
+}
+
+zx_status_t Directory::GetAttr(
+    fuchsia::io::NodeAttributes* out_attributes) const {
+  out_attributes->mode = fuchsia::io::MODE_TYPE_DIRECTORY | V_IRUSR;
+  out_attributes->id = fuchsia::io::INO_UNKNOWN;
+  out_attributes->content_size = 0;
+  out_attributes->storage_size = 0;
+  out_attributes->link_count = 1;
+  out_attributes->creation_time = 0;
+  out_attributes->modification_time = 0;
   return ZX_OK;
 }
 
@@ -146,9 +158,8 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len,
   return ZX_OK;
 }
 
-void Directory::Open(uint32_t open_flags, uint32_t parent_flags,
-                     uint32_t mode, const char* path,
-                     size_t path_len, zx::channel request,
+void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
+                     const char* path, size_t path_len, zx::channel request,
                      async_dispatcher_t* dispatcher) {
   if (!Flags::InputPrecondition(open_flags)) {
     Node::SendOnOpenEventOnError(open_flags, std::move(request),
@@ -187,8 +198,7 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags,
   }
   bool node_is_dir = n->IsDirectory();
 
-  if (Flags::IsPosix(open_flags) &&
-      !Flags::IsWritable(open_flags) &&
+  if (Flags::IsPosix(open_flags) && !Flags::IsWritable(open_flags) &&
       !Flags::IsWritable(parent_flags)) {
     // Posix compatibility flag allows the child dir connection to inherit
     // every right from its immediate parent. Here we know there exists
