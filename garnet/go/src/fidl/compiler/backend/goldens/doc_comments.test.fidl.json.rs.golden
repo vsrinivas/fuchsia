@@ -90,7 +90,7 @@ pub struct InterfaceMarker;
 impl fidl::endpoints::ServiceMarker for InterfaceMarker {
 	type Proxy = InterfaceProxy;
 	type RequestStream = InterfaceRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) Interface";
 }
 
 pub trait InterfaceProxyInterface: Send + Sync {
@@ -208,7 +208,7 @@ impl futures::Stream for InterfaceEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -316,7 +316,7 @@ impl futures::Stream for InterfaceRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})

@@ -13,7 +13,7 @@ mod kms_sealing_key;
 use crate::key_manager::KeyManager;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl::endpoints::{RequestStream, DiscoverableService};
 use fidl_fuchsia_kms::{KeyManagerMarker, KeyManagerRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;

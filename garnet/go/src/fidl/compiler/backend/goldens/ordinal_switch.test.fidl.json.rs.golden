@@ -29,7 +29,7 @@ pub struct SwitchingOrdinalsMarker;
 impl fidl::endpoints::ServiceMarker for SwitchingOrdinalsMarker {
 	type Proxy = SwitchingOrdinalsProxy;
 	type RequestStream = SwitchingOrdinalsRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) SwitchingOrdinals";
 }
 
 pub trait SwitchingOrdinalsProxyInterface: Send + Sync {
@@ -173,7 +173,7 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -317,7 +317,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})

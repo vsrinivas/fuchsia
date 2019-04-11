@@ -9,7 +9,7 @@ mod index_convert;
 mod legacy_ime;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::DiscoverableService;
 use fidl_fuchsia_ui_input::{ImeServiceMarker, ImeVisibilityServiceMarker};
 use fidl_fuchsia_ui_text::TextInputContextMarker;
 use fuchsia_app::server::ServicesServer;

@@ -10,7 +10,7 @@ use crate::{
     Result,
 };
 use failure::ResultExt;
-use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
+use fidl::endpoints::{ClientEnd, RequestStream, DiscoverableService};
 use fidl_fuchsia_mediasession::{
     PublisherMarker, PublisherRequest, PublisherRequestStream, SessionMarker,
 };

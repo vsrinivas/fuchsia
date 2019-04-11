@@ -7,7 +7,7 @@ use crate::{
     view::{ViewAssistantPtr, ViewController, ViewKey},
 };
 use failure::{bail, Error, ResultExt};
-use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServiceMarker};
+use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, DiscoverableService};
 use fidl_fuchsia_ui_app::{ViewProviderMarker, ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;

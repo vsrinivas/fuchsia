@@ -9,7 +9,7 @@
 use {
     failure::{Error, ResultExt},
     fdio,
-    fidl::endpoints::{RequestStream, ServiceMarker},
+    fidl::endpoints::{RequestStream, DiscoverableService},
     fidl_fuchsia_hardware_vsock::DeviceMarker,
     fidl_fuchsia_vsock::{ConnectorMarker, ConnectorRequestStream},
     fuchsia_app::server::ServicesServer,

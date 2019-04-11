@@ -10,7 +10,7 @@ extern crate serde_derive;
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::DiscoverableService,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::ControlRequestStream,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,

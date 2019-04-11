@@ -7,7 +7,7 @@ use crate::{
     log_error::log_error_discard_result, mpmc, session_list::SessionList, session_proxy::*,
     subscriber::Subscriber, Result,
 };
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ServerEnd, DiscoverableService};
 use fidl_fuchsia_mediasession::{
     ActiveSession, RegistryControlHandle, RegistryMarker, RegistryRequest, SessionDelta,
     SessionEntry, SessionsChange,

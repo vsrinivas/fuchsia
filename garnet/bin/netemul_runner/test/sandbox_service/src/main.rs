@@ -13,7 +13,7 @@ fn main() {
 mod tests {
     use {
         failure::{format_err, Error, ResultExt},
-        fidl::endpoints::ServiceMarker,
+        fidl::endpoints::DiscoverableService,
         fidl_fuchsia_netemul_environment::{
             EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
             ManagedEnvironmentProxy,

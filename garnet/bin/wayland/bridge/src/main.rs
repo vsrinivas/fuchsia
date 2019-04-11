@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl::endpoints::{RequestStream, DiscoverableService};
 use fidl_fuchsia_guest::{
     WaylandDispatcherMarker, WaylandDispatcherRequest, WaylandDispatcherRequestStream,
 };

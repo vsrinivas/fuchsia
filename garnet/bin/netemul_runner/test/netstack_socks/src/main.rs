@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{format_err, Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::DiscoverableService;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };

@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{RequestStream, ServerEnd, DiscoverableService};
 use fidl_fuchsia_net_oldhttp as oldhttp;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
