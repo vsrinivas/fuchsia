@@ -1438,38 +1438,23 @@ template("host_tool") {
           host_tool_rspfile += toolchain.host_run_env
         }
         host_tool_rspfile += [ run_file ]
+
+        # TODO(BLD-353): Temporary hacks for integrating with the legacy
+        # Fuchsia GN build.
+        legacy_dirs = [ "tool/$target_name" ]
+        legacy_targets = [
+          {
+            import = "//build/zircon/zircon_host_tool.gni"
+            target_type = "zircon_host_tool"
+            target_name = target_name
+            path = install_file
+          },
+        ]
       }
       variant_suffix_outputs = [ tool_executable + tool_extension ]
       variant_suffix_metadata = {
         tool_executables = variant_suffix_outputs
       }
-    }
-
-    # TODO(BLD-353): temporary hack
-    if (is_host && current_os == host_os && current_cpu == host_cpu) {
-      if (!defined(data_deps)) {
-        data_deps = []
-      }
-      data_deps += [ ":$target_name.pkg" ]
-    }
-  }
-
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
-  if (is_host && current_os == host_os && current_cpu == host_cpu) {
-    import("$zx/public/gn/legacy_pkg.gni")
-    assert(!defined(invoker.output_name))
-    tool_name = target_name
-    legacy_pkg("$target_name.pkg") {
-      contents = [
-        "[package]",
-        "name=$tool_name",
-        "type=tool",
-        "arch=host",
-        "[bin]",
-        "$tool_name=BUILD/" +
-            rebase_path("$target_out_dir/$tool_name", root_build_dir),
-      ]
     }
   }
 }
