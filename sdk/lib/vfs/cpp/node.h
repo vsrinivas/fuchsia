@@ -58,35 +58,8 @@ class Node {
                               const fuchsia::io::NodeAttributes& attributes);
 
   // Implementation of |fuchsia.io.Node/Clone|.
-  virtual void Clone(uint32_t flags, uint32_t parent_flags,
-                     zx::channel request,
+  virtual void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                      async_dispatcher_t* dispatcher);
-
-  // Validate flags on |Serve|.
-  //
-  // If the caller specified an invalid combination of flags as per io.fidl,
-  // returns |ZX_ERR_INVALID_ARGS|.
-  //
-  // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and |IsDirectory|
-  // returns false.
-  //
-  // Calls |GetProhibitiveFlags| flags and if one of the flag is in prohibitive
-  // list, returns |ZX_ERR_INVALID_ARGS|.
-  //
-  // Calls |GetAdditionalAllowedFlags|, appends |OPEN_FLAG_DESCRIBE|,
-  // |OPEN_FLAG_NODE_REFERENCE|, |OPEN_FLAG_DIRECTORY| (only if |IsDirectory|
-  // returns true) to those flags and returns |ZX_ERR_NOT_SUPPORTED| if flags
-  // are not found in allowed list.
-  //
-  // Returns ZX_OK if none of the above cases are true.
-  zx_status_t ValidateFlags(uint32_t flags) const;
-
-  // Validate flags on |ServeWithMode|.
-  //
-  // Calls |GetAttr| and checks that mode should not be anything other than
-  // |MODE_PROTECTION_MASK| and one in attr. Returns |ZX_ERR_INVALID_ARGS| if it
-  // is, else returns |ZX_OK|.
-  zx_status_t ValidateMode(uint32_t mode) const;
 
   // Establishes a connection for |request| using the given |flags|.
   //
@@ -114,7 +87,7 @@ class Node {
   // Default implementation in this class return |ZX_ERR_NOT_DIR| if
   // |IsDirectory| is false, else throws error with |ZX_ASSERT|.
   //
-  // All directory types should implement this method.
+  // All directory types which are not remote should implement this method.
   virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
   // Return true if |Node| is a remote node.
@@ -139,11 +112,6 @@ class Node {
   // concrete type of this object.
   virtual zx_status_t Connect(uint32_t flags, zx::channel request,
                               async_dispatcher_t* dispatcher);
-
-  // Filters out flags that are invalid when combined with
-  // |OPEN_FLAG_NODE_REFERENCE|.
-  // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
-  uint32_t FilterRefFlags(uint32_t flags);
 
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
   static void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
@@ -172,9 +140,41 @@ class Node {
   virtual uint32_t GetProhibitiveFlags() const;
 
   // guards connection_
-  mutable std::mutex mutex_;
+  std::mutex mutex_;
   // The active connections associated with this object.
   std::vector<std::unique_ptr<Connection>> connections_ __TA_GUARDED(mutex_);
+
+ private:
+  // Validate flags on |Serve|.
+  //
+  // If the caller specified an invalid combination of flags as per io.fidl,
+  // returns |ZX_ERR_INVALID_ARGS|.
+  //
+  // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and |IsDirectory|
+  // returns false.
+  //
+  // Calls |GetProhibitiveFlags| flags and if one of the flag is in prohibitive
+  // list, returns |ZX_ERR_INVALID_ARGS|.
+  //
+  // Calls |GetAdditionalAllowedFlags|, appends |OPEN_FLAG_DESCRIBE|,
+  // |OPEN_FLAG_NODE_REFERENCE|, |OPEN_FLAG_DIRECTORY| (only if |IsDirectory|
+  // returns true) to those flags and returns |ZX_ERR_NOT_SUPPORTED| if flags
+  // are not found in allowed list.
+  //
+  // Returns ZX_OK if none of the above cases are true.
+  zx_status_t ValidateFlags(uint32_t flags) const;
+
+  // Validate flags on |ServeWithMode|.
+  //
+  // Calls |GetAttr| and checks that mode should not be anything other than
+  // |MODE_PROTECTION_MASK| and one in attr. Returns |ZX_ERR_INVALID_ARGS| if it
+  // is, else returns |ZX_OK|.
+  zx_status_t ValidateMode(uint32_t mode) const;
+
+  // Filters out flags that are invalid when combined with
+  // |OPEN_FLAG_NODE_REFERENCE|.
+  // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
+  uint32_t FilterRefFlags(uint32_t flags);
 };
 
 }  // namespace vfs

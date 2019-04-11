@@ -2,29 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/pseudo_file.h>
-
 #include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/assert.h>
 
 #include <sstream>
 
 namespace vfs {
 
-BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler,
-                                       WriteHandler write_handler,
-                                       size_t buffer_capacity)
+PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler,
+                       size_t buffer_capacity)
     : read_handler_(std::move(read_handler)),
       write_handler_(std::move(write_handler)),
       buffer_capacity_(buffer_capacity) {
   ZX_DEBUG_ASSERT(read_handler_ != nullptr);
 }
 
-BufferedPseudoFile::~BufferedPseudoFile() = default;
+PseudoFile::~PseudoFile() = default;
 
-zx_status_t BufferedPseudoFile::CreateConnection(
+zx_status_t PseudoFile::CreateConnection(
     uint32_t flags, std::unique_ptr<Connection>* connection) {
   std::vector<uint8_t> output;
   if (Flags::IsReadable(flags)) {
@@ -33,12 +31,12 @@ zx_status_t BufferedPseudoFile::CreateConnection(
       return status;
     }
   }
-  *connection = std::make_unique<BufferedPseudoFile::Content>(
-      this, flags, std::move(output));
+  *connection =
+      std::make_unique<PseudoFile::Content>(this, flags, std::move(output));
   return ZX_OK;
 }
 
-zx_status_t BufferedPseudoFile::GetAttr(
+zx_status_t PseudoFile::GetAttr(
     fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_FILE;
   if (read_handler_ != nullptr)
@@ -54,7 +52,7 @@ zx_status_t BufferedPseudoFile::GetAttr(
   return ZX_OK;
 }
 
-uint32_t BufferedPseudoFile::GetAdditionalAllowedFlags() const {
+uint32_t PseudoFile::GetAdditionalAllowedFlags() const {
   auto allowed_flags = fuchsia::io::OPEN_RIGHT_READABLE;
   if (write_handler_ != nullptr) {
     allowed_flags |=
@@ -63,26 +61,26 @@ uint32_t BufferedPseudoFile::GetAdditionalAllowedFlags() const {
   return allowed_flags;
 }
 
-uint32_t BufferedPseudoFile::GetProhibitiveFlags() const {
+uint32_t PseudoFile::GetProhibitiveFlags() const {
   return fuchsia::io::OPEN_FLAG_APPEND;
 }
 
-uint64_t BufferedPseudoFile::GetLength() {
+uint64_t PseudoFile::GetLength() {
   // this should never be called
   ZX_DEBUG_ASSERT(false);
 
   return 0u;
 }
 
-size_t BufferedPseudoFile::GetCapacity() {
+size_t PseudoFile::GetCapacity() {
   // this should never be called
   ZX_DEBUG_ASSERT(false);
 
   return buffer_capacity_;
 }
 
-BufferedPseudoFile::Content::Content(BufferedPseudoFile* file, uint32_t flags,
-                                     std::vector<uint8_t> content)
+PseudoFile::Content::Content(PseudoFile* file, uint32_t flags,
+                             std::vector<uint8_t> content)
     : Connection(flags),
       file_(file),
       buffer_(std::move(content)),
@@ -90,15 +88,15 @@ BufferedPseudoFile::Content::Content(BufferedPseudoFile* file, uint32_t flags,
   SetInputLength(buffer_.size());
 }
 
-BufferedPseudoFile::Content::~Content() {
+PseudoFile::Content::~Content() {
   if (!dirty_) {
     return;
   }
   file_->write_handler_(std::move(buffer_));
 };
 
-zx_status_t BufferedPseudoFile::Content::ReadAt(
-    uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) {
+zx_status_t PseudoFile::Content::ReadAt(uint64_t count, uint64_t offset,
+                                        std::vector<uint8_t>* out_data) {
   if (offset >= buffer_.size()) {
     return ZX_OK;
   }
@@ -108,22 +106,22 @@ zx_status_t BufferedPseudoFile::Content::ReadAt(
   return ZX_OK;
 }
 
-uint32_t BufferedPseudoFile::Content::GetAdditionalAllowedFlags() const {
+uint32_t PseudoFile::Content::GetAdditionalAllowedFlags() const {
   return file_->GetAdditionalAllowedFlags();
 }
 
-uint32_t BufferedPseudoFile::Content::GetProhibitiveFlags() const {
+uint32_t PseudoFile::Content::GetProhibitiveFlags() const {
   return file_->GetProhibitiveFlags();
 }
 
-zx_status_t BufferedPseudoFile::Content::GetAttr(
+zx_status_t PseudoFile::Content::GetAttr(
     fuchsia::io::NodeAttributes* out_attributes) const {
   return file_->GetAttr(out_attributes);
 }
 
-zx_status_t BufferedPseudoFile::Content::WriteAt(std::vector<uint8_t> data,
-                                                 uint64_t offset,
-                                                 uint64_t* out_actual) {
+zx_status_t PseudoFile::Content::WriteAt(std::vector<uint8_t> data,
+                                         uint64_t offset,
+                                         uint64_t* out_actual) {
   if (offset >= file_->buffer_capacity_) {
     *out_actual = 0u;
     return ZX_OK;
@@ -145,7 +143,7 @@ zx_status_t BufferedPseudoFile::Content::WriteAt(std::vector<uint8_t> data,
   return ZX_OK;
 }
 
-zx_status_t BufferedPseudoFile::Content::Truncate(uint64_t length) {
+zx_status_t PseudoFile::Content::Truncate(uint64_t length) {
   if (length > file_->buffer_capacity_) {
     return ZX_ERR_NO_SPACE;
   }
@@ -155,20 +153,18 @@ zx_status_t BufferedPseudoFile::Content::Truncate(uint64_t length) {
   return ZX_OK;
 }
 
-uint64_t BufferedPseudoFile::Content::GetLength() { return buffer_.size(); }
+uint64_t PseudoFile::Content::GetLength() { return buffer_.size(); }
 
-size_t BufferedPseudoFile::Content::GetCapacity() {
-  return file_->buffer_capacity_;
-}
+size_t PseudoFile::Content::GetCapacity() { return file_->buffer_capacity_; }
 
-void BufferedPseudoFile::Content::SetInputLength(size_t length) {
+void PseudoFile::Content::SetInputLength(size_t length) {
   ZX_DEBUG_ASSERT(length <= file_->buffer_capacity_);
 
   buffer_.resize(length);
 }
 
-zx_status_t BufferedPseudoFile::Content::Bind(zx::channel request,
-                                              async_dispatcher_t* dispatcher) {
+zx_status_t PseudoFile::Content::Bind(zx::channel request,
+                                      async_dispatcher_t* dispatcher) {
   std::unique_ptr<Connection> connection;
   zx_status_t status = CreateConnection(flags_, &connection);
   if (status != ZX_OK) {
@@ -186,20 +182,18 @@ zx_status_t BufferedPseudoFile::Content::Bind(zx::channel request,
   return status;
 }
 
-std::unique_ptr<Connection> BufferedPseudoFile::Content::Close(
-    Connection* connection) {
+std::unique_ptr<Connection> PseudoFile::Content::Close(Connection* connection) {
   File::Close(connection);
   return file_->Close(this);
 }
 
-void BufferedPseudoFile::Content::Clone(
-    uint32_t flags, uint32_t parent_flags,
-    zx::channel request,
-    async_dispatcher_t* dispatcher) {
+void PseudoFile::Content::Clone(uint32_t flags, uint32_t parent_flags,
+                                zx::channel request,
+                                async_dispatcher_t* dispatcher) {
   file_->Clone(flags, parent_flags, std::move(request), dispatcher);
 }
 
-void BufferedPseudoFile::Content::SendOnOpenEvent(zx_status_t status) {
+void PseudoFile::Content::SendOnOpenEvent(zx_status_t status) {
   std::lock_guard<std::mutex> guard(mutex_);
   ZX_DEBUG_ASSERT(connections_.size() == 1);
   connections_[0]->SendOnOpenEvent(status);

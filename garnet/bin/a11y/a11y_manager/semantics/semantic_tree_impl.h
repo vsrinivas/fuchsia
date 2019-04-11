@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTIC_TREE_IMPL_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTIC_TREE_IMPL_H_
 
-#include <unordered_map>
-#include <unordered_set>
-
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <src/lib/fxl/macros.h>
+
+#include <unordered_map>
+#include <unordered_set>
 
 #include "garnet/bin/a11y/a11y_manager/util.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
@@ -34,7 +34,7 @@ class SemanticTreeImpl
     if (debug_dir_) {
       // Add Semantic Tree log file in Hub-Debug directory.
       debug_dir_->AddEntry(std::to_string(GetKoid(view_ref_)),
-                           std::make_unique<vfs::BufferedPseudoFile>(
+                           std::make_unique<vfs::PseudoFile>(
                                [this](std::vector<uint8_t>* output) {
                                  std::string buffer = LogSemanticTree();
                                  output->resize(buffer.length());

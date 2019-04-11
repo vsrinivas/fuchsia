@@ -25,7 +25,7 @@ namespace vfs {
 // the file is closed(if there were any writes).  Truncation is also supported.
 //
 // Instances of this class are thread-safe.
-class BufferedPseudoFile : public File {
+class PseudoFile : public File {
  public:
   // Handler called to read from the pseudo-file.
   using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output)>;
@@ -39,11 +39,11 @@ class BufferedPseudoFile : public File {
   // pseudo-file is considered not writable. The |buffer_capacity|
   // determines the maximum number of bytes which can be written to the
   // pseudo-file's input buffer when it it opened for writing.
-  BufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
-                     WriteHandler write_handler = WriteHandler(),
-                     size_t buffer_capacity = 1024);
+  PseudoFile(ReadHandler read_handler = ReadHandler(),
+             WriteHandler write_handler = WriteHandler(),
+             size_t buffer_capacity = 1024);
 
-  ~BufferedPseudoFile() override;
+  ~PseudoFile() override;
 
   // |Node| implementations:
   zx_status_t GetAttr(
@@ -60,8 +60,7 @@ class BufferedPseudoFile : public File {
  private:
   class Content final : public Connection, public File {
    public:
-    Content(BufferedPseudoFile* file, uint32_t flags,
-            std::vector<uint8_t> content);
+    Content(PseudoFile* file, uint32_t flags, std::vector<uint8_t> content);
     ~Content() override;
 
     // |File| implementations:
@@ -84,8 +83,7 @@ class BufferedPseudoFile : public File {
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
 
-    void Clone(uint32_t flags, uint32_t parent_flags,
-               zx::channel request,
+    void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                async_dispatcher_t* dispatcher) override;
 
     zx_status_t GetAttr(
@@ -99,7 +97,7 @@ class BufferedPseudoFile : public File {
    private:
     void SetInputLength(size_t length);
 
-    BufferedPseudoFile* const file_;
+    PseudoFile* const file_;
 
     std::vector<uint8_t> buffer_;
     uint32_t flags_;

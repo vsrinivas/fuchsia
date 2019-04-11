@@ -66,7 +66,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
     }
     zx_status_t status = dir->AddEntry(
         segs[segs.size() - 1],
-        std::make_unique<vfs::BufferedPseudoFile>(
+        std::make_unique<vfs::PseudoFile>(
             /* read_handler= */
             [this, path](std::vector<uint8_t>* output) {
               auto out = ReadFile(path);

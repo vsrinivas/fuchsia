@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/vfs/cpp/pseudo_file.h"
+
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -16,7 +18,6 @@
 #include <vector>
 
 #include "lib/gtest/real_loop_fixture.h"
-#include "lib/vfs/cpp/pseudo_file.h"
 
 namespace {
 
@@ -24,7 +25,7 @@ class FileWrapper {
  public:
   const std::string& buffer() { return buffer_; };
 
-  vfs::BufferedPseudoFile* file() { return file_.get(); };
+  vfs::PseudoFile* file() { return file_.get(); };
 
   static FileWrapper CreateReadWriteFile(std::string initial_str,
                                          size_t capacity,
@@ -52,7 +53,7 @@ class FileWrapper {
       return ZX_OK;
     };
 
-    vfs::BufferedPseudoFile::WriteHandler writeFn;
+    vfs::PseudoFile::WriteHandler writeFn;
     if (write_allowed) {
       writeFn = [this](std::vector<uint8_t> input) {
         std::string str(input.size(), 0);
@@ -61,19 +62,19 @@ class FileWrapper {
       };
     }
 
-    file_ = std::make_unique<vfs::BufferedPseudoFile>(
-        std::move(readFn), std::move(writeFn), capacity);
+    file_ = std::make_unique<vfs::PseudoFile>(std::move(readFn),
+                                              std::move(writeFn), capacity);
     if (start_loop) {
       loop_.StartThread("vfs test thread");
     }
   }
 
-  std::unique_ptr<vfs::BufferedPseudoFile> file_;
+  std::unique_ptr<vfs::PseudoFile> file_;
   std::string buffer_;
   async::Loop loop_;
 };
 
-class BufferedPseudoFileTest : public gtest::RealLoopFixture {
+class PseudoFileTest : public gtest::RealLoopFixture {
  protected:
   void AssertOpen(vfs::Node* node, async_dispatcher_t* dispatcher,
                   uint32_t flags, zx_status_t expected_status,
@@ -218,7 +219,7 @@ class BufferedPseudoFileTest : public gtest::RealLoopFixture {
   }
 };
 
-TEST_F(BufferedPseudoFileTest, ServeOnInValidFlagsForReadWriteFile) {
+TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadWriteFile) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100, false);
   {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
@@ -242,7 +243,7 @@ TEST_F(BufferedPseudoFileTest, ServeOnInValidFlagsForReadWriteFile) {
   }
 }
 
-TEST_F(BufferedPseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
+TEST_F(PseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
   auto file_wrapper = FileWrapper::CreateReadOnlyFile("test_str");
   {
     SCOPED_TRACE("OPEN_FLAG_DIRECTORY");
@@ -266,7 +267,7 @@ TEST_F(BufferedPseudoFileTest, ServeOnInValidFlagsForReadOnlyFile) {
   }
 }
 
-TEST_F(BufferedPseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
+TEST_F(PseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100, false);
   uint32_t allowed_flags[] = {
       fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
@@ -277,7 +278,7 @@ TEST_F(BufferedPseudoFileTest, ServeOnValidFlagsForReadWriteFile) {
   }
 }
 
-TEST_F(BufferedPseudoFileTest, ServeOnValidFlagsForReadOnlyFile) {
+TEST_F(PseudoFileTest, ServeOnValidFlagsForReadOnlyFile) {
   auto file_wrapper = FileWrapper::CreateReadOnlyFile("test_str", false);
   uint32_t allowed_flags[] = {fuchsia::io::OPEN_RIGHT_READABLE,
                               fuchsia::io::OPEN_FLAG_NODE_REFERENCE};
@@ -287,7 +288,7 @@ TEST_F(BufferedPseudoFileTest, ServeOnValidFlagsForReadOnlyFile) {
   }
 }
 
-TEST_F(BufferedPseudoFileTest, Simple) {
+TEST_F(PseudoFileTest, Simple) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile("test_str", 100);
 
   int fd = OpenAsFD(file_wrapper.file(), file_wrapper.dispatcher());
@@ -308,7 +309,7 @@ TEST_F(BufferedPseudoFileTest, Simple) {
   AssertFileWrapperState(file_wrapper, "abcd_str");
 }
 
-TEST_F(BufferedPseudoFileTest, WriteAt) {
+TEST_F(PseudoFileTest, WriteAt) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -327,7 +328,7 @@ TEST_F(BufferedPseudoFileTest, WriteAt) {
   AssertFileWrapperState(file_wrapper, updated_str);
 }
 
-TEST_F(BufferedPseudoFileTest, MultipleWriteAt) {
+TEST_F(PseudoFileTest, MultipleWriteAt) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -348,7 +349,7 @@ TEST_F(BufferedPseudoFileTest, MultipleWriteAt) {
   AssertFileWrapperState(file_wrapper, updated_str);
 }
 
-TEST_F(BufferedPseudoFileTest, ReadAt) {
+TEST_F(PseudoFileTest, ReadAt) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -359,7 +360,7 @@ TEST_F(BufferedPseudoFileTest, ReadAt) {
   AssertReadAt(file, 15, 5, str.substr(15, 5));
 }
 
-TEST_F(BufferedPseudoFileTest, Read) {
+TEST_F(PseudoFileTest, Read) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -370,7 +371,7 @@ TEST_F(BufferedPseudoFileTest, Read) {
   AssertRead(file, 10, str.substr(10, 10));
 }
 
-TEST_F(BufferedPseudoFileTest, Write) {
+TEST_F(PseudoFileTest, Write) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -393,7 +394,7 @@ TEST_F(BufferedPseudoFileTest, Write) {
   AssertFileWrapperState(file_wrapper, updated_str);
 }
 
-TEST_F(BufferedPseudoFileTest, Truncate) {
+TEST_F(PseudoFileTest, Truncate) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -411,7 +412,7 @@ TEST_F(BufferedPseudoFileTest, Truncate) {
   AssertFileWrapperState(file_wrapper, str.substr(0, 10));
 }
 
-TEST_F(BufferedPseudoFileTest, SeekFromStart) {
+TEST_F(PseudoFileTest, SeekFromStart) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadOnlyFile(str);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -421,7 +422,7 @@ TEST_F(BufferedPseudoFileTest, SeekFromStart) {
   AssertRead(file, 100, str.substr(5));
 }
 
-TEST_F(BufferedPseudoFileTest, SeekFromCurent) {
+TEST_F(PseudoFileTest, SeekFromCurent) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadOnlyFile(str);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -433,7 +434,7 @@ TEST_F(BufferedPseudoFileTest, SeekFromCurent) {
   AssertRead(file, 100, str.substr(15));
 }
 
-TEST_F(BufferedPseudoFileTest, SeekFromEnd) {
+TEST_F(PseudoFileTest, SeekFromEnd) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadOnlyFile(str);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -443,7 +444,7 @@ TEST_F(BufferedPseudoFileTest, SeekFromEnd) {
   AssertRead(file, 100, str.substr(str.length() - 2));
 }
 
-TEST_F(BufferedPseudoFileTest, SeekFromEndWith0Offset) {
+TEST_F(PseudoFileTest, SeekFromEndWith0Offset) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadOnlyFile(str);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -453,7 +454,7 @@ TEST_F(BufferedPseudoFileTest, SeekFromEndWith0Offset) {
   AssertRead(file, 100, "");
 }
 
-TEST_F(BufferedPseudoFileTest, SeekFailsIfOffsetMoreThanCapacity) {
+TEST_F(PseudoFileTest, SeekFailsIfOffsetMoreThanCapacity) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadOnlyFile(str);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -464,7 +465,7 @@ TEST_F(BufferedPseudoFileTest, SeekFailsIfOffsetMoreThanCapacity) {
   AssertRead(file, 100, str);
 }
 
-TEST_F(BufferedPseudoFileTest, WriteafterEndOfFile) {
+TEST_F(PseudoFileTest, WriteafterEndOfFile) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -487,7 +488,7 @@ TEST_F(BufferedPseudoFileTest, WriteafterEndOfFile) {
   AssertFileWrapperState(file_wrapper, updated_str);
 }
 
-TEST_F(BufferedPseudoFileTest, WriteFailsForReadOnly) {
+TEST_F(PseudoFileTest, WriteFailsForReadOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -500,7 +501,7 @@ TEST_F(BufferedPseudoFileTest, WriteFailsForReadOnly) {
   AssertFileWrapperState(file_wrapper, str);
 }
 
-TEST_F(BufferedPseudoFileTest, WriteAtFailsForReadOnly) {
+TEST_F(PseudoFileTest, WriteAtFailsForReadOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -513,7 +514,7 @@ TEST_F(BufferedPseudoFileTest, WriteAtFailsForReadOnly) {
   AssertFileWrapperState(file_wrapper, str);
 }
 
-TEST_F(BufferedPseudoFileTest, TruncateFailsForReadOnly) {
+TEST_F(PseudoFileTest, TruncateFailsForReadOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
@@ -526,7 +527,7 @@ TEST_F(BufferedPseudoFileTest, TruncateFailsForReadOnly) {
   AssertFileWrapperState(file_wrapper, str);
 }
 
-TEST_F(BufferedPseudoFileTest, ReadAtFailsForWriteOnly) {
+TEST_F(PseudoFileTest, ReadAtFailsForWriteOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE,
@@ -535,7 +536,7 @@ TEST_F(BufferedPseudoFileTest, ReadAtFailsForWriteOnly) {
   AssertReadAt(file, 0, 10, "", ZX_ERR_ACCESS_DENIED);
 }
 
-TEST_F(BufferedPseudoFileTest, ReadFailsForWriteOnly) {
+TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE,
@@ -544,7 +545,7 @@ TEST_F(BufferedPseudoFileTest, ReadFailsForWriteOnly) {
   AssertRead(file, 10, "", ZX_ERR_ACCESS_DENIED);
 }
 
-TEST_F(BufferedPseudoFileTest, CantReadNodeReferenceFile) {
+TEST_F(PseudoFileTest, CantReadNodeReferenceFile) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file =
@@ -561,7 +562,7 @@ TEST_F(BufferedPseudoFileTest, CantReadNodeReferenceFile) {
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &status, &buffer));
 }
 
-TEST_F(BufferedPseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
+TEST_F(PseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
@@ -588,7 +589,7 @@ TEST_F(BufferedPseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
   AssertFileWrapperState(file_wrapper, updated_str);
 }
 
-TEST_F(BufferedPseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
+TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file =

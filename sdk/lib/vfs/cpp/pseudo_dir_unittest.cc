@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/pseudo_dir.h>
-
 #include <lib/fdio/vfs.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 
@@ -198,8 +197,7 @@ class DirectoryWrapper {
       return ZX_OK;
     };
 
-    auto file =
-        std::make_unique<vfs::BufferedPseudoFile>(std::move(read_fn), nullptr);
+    auto file = std::make_unique<vfs::PseudoFile>(std::move(read_fn), nullptr);
 
     AddEntry(file_name, std::move(file));
   }
@@ -215,12 +213,11 @@ class DirectoryWrapper {
     };
 
     auto write_fn = [file_content](std::vector<uint8_t> input) {
-        file_content->resize(input.size());
-        std::copy(input.begin(), input.end(), file_content->begin());
+      file_content->resize(input.size());
+      std::copy(input.begin(), input.end(), file_content->begin());
     };
 
-    auto file =
-        std::make_unique<vfs::BufferedPseudoFile>(std::move(read_fn),
+    auto file = std::make_unique<vfs::PseudoFile>(std::move(read_fn),
                                                   std::move(write_fn));
 
     AddEntry(file_name, std::move(file));
@@ -736,11 +733,10 @@ TEST_F(PseudoDirConnection, CannotOpenFileWithDirectoryFlag) {
   dir_.AddReadOnlyFile("file1", "file1");
   auto ptr = dir_.Serve();
   fuchsia::io::FileSyncPtr file_ptr;
-  AssertOpenPath(ptr, "file1", file_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE |
-                     fuchsia::io::OPEN_FLAG_DIRECTORY,
-                 0,
-                 ZX_ERR_NOT_DIR);
+  AssertOpenPath(
+      ptr, "file1", file_ptr,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DIRECTORY, 0,
+      ZX_ERR_NOT_DIR);
 }
 
 TEST_F(PseudoDirConnection, CannotOpenDirectoryWithInvalidFlags) {
@@ -776,8 +772,7 @@ TEST_F(PseudoDirConnection, OpenDirWithCorrectMode) {
     for (auto mode : modes) {
       SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
       fuchsia::io::NodeSyncPtr node_ptr;
-      AssertOpenPath(ptr, path, node_ptr,
-                     fuchsia::io::OPEN_RIGHT_READABLE,
+      AssertOpenPath(ptr, path, node_ptr, fuchsia::io::OPEN_RIGHT_READABLE,
                      mode);
     }
   }
@@ -798,10 +793,8 @@ TEST_F(PseudoDirConnection, OpenDirWithIncorrectMode) {
     for (auto mode : modes) {
       SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
       fuchsia::io::NodeSyncPtr node_ptr;
-      AssertOpenPath(ptr, path, node_ptr,
-                     fuchsia::io::OPEN_RIGHT_READABLE,
-                     mode,
-                     ZX_ERR_INVALID_ARGS);
+      AssertOpenPath(ptr, path, node_ptr, fuchsia::io::OPEN_RIGHT_READABLE,
+                     mode, ZX_ERR_INVALID_ARGS);
     }
   }
 }
@@ -815,8 +808,7 @@ TEST_F(PseudoDirConnection, OpenFileWithCorrectMode) {
   for (auto mode : modes) {
     SCOPED_TRACE("mode: " + std::to_string(mode));
     fuchsia::io::NodeSyncPtr node_ptr;
-    AssertOpenPath(ptr, "file1", node_ptr,
-                   fuchsia::io::OPEN_RIGHT_READABLE,
+    AssertOpenPath(ptr, "file1", node_ptr, fuchsia::io::OPEN_RIGHT_READABLE,
                    mode);
   }
 }
@@ -832,10 +824,8 @@ TEST_F(PseudoDirConnection, OpenFileWithIncorrectMode) {
   for (auto mode : modes) {
     SCOPED_TRACE("mode: " + std::to_string(mode));
     fuchsia::io::NodeSyncPtr node_ptr;
-    AssertOpenPath(ptr, "file1", node_ptr,
-                   fuchsia::io::OPEN_RIGHT_READABLE,
-                   mode,
-                   ZX_ERR_INVALID_ARGS);
+    AssertOpenPath(ptr, "file1", node_ptr, fuchsia::io::OPEN_RIGHT_READABLE,
+                   mode, ZX_ERR_INVALID_ARGS);
   }
 }
 
@@ -849,8 +839,7 @@ TEST_F(PseudoDirConnection, CanCloneDirectoryConnection) {
 
   fuchsia::io::NodeSyncPtr node_ptr;
   AssertOpenPath(cloned_ptr, "file1", node_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE,
-                 0);
+                 fuchsia::io::OPEN_RIGHT_READABLE, 0);
 }
 
 TEST_F(PseudoDirConnection, NodeReferenceIsClonedAsNodeReference) {
@@ -879,11 +868,10 @@ TEST_F(PseudoDirConnection, NodeReferenceIsInvalidWithRights) {
   dir_.AddSharedEntry("subdir1", subdir1.dir());
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
-  AssertOpenPath(ptr, "subdir1", new_ptr,
-                 fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
-                     fuchsia::io::OPEN_RIGHT_READABLE,
-                 0,
-                 ZX_ERR_INVALID_ARGS);
+  AssertOpenPath(
+      ptr, "subdir1", new_ptr,
+      fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_RIGHT_READABLE,
+      0, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PseudoDirConnection, NodeReferenceWithInvalidFlags) {
@@ -891,11 +879,10 @@ TEST_F(PseudoDirConnection, NodeReferenceWithInvalidFlags) {
   dir_.AddSharedEntry("subdir1", subdir1.dir());
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
-  AssertOpenPath(ptr, "subdir1", new_ptr,
-                 fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
-                     fuchsia::io::OPEN_FLAG_POSIX,
-                 0,
-                 ZX_ERR_INVALID_ARGS);
+  AssertOpenPath(
+      ptr, "subdir1", new_ptr,
+      fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_FLAG_POSIX, 0,
+      ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PseudoDirConnection, OpeningWithNoRightsAndNoNodeReference) {
@@ -903,10 +890,7 @@ TEST_F(PseudoDirConnection, OpeningWithNoRightsAndNoNodeReference) {
   dir_.AddSharedEntry("subdir1", subdir1.dir());
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
-  AssertOpenPath(ptr, "subdir1", new_ptr,
-                 0,
-                 0,
-                 ZX_ERR_INVALID_ARGS);
+  AssertOpenPath(ptr, "subdir1", new_ptr, 0, 0, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PseudoDirConnection, DirectoryRightsAreHierarchical) {
@@ -935,22 +919,19 @@ TEST_F(PseudoDirConnection, DirectoryRightsAreHierarchical) {
 
   {
     auto ptr = dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                              fuchsia::io::OPEN_RIGHT_WRITABLE);
+                          fuchsia::io::OPEN_RIGHT_WRITABLE);
     fuchsia::io::DirectorySyncPtr sub_ptr;
     AssertOpenPath(ptr, "subdir1", sub_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
     fuchsia::io::FileSyncPtr file_ptr;
     AssertOpenPath(sub_ptr, "file1", file_ptr,
                    fuchsia::io::OPEN_RIGHT_READABLE);
     file_ptr.Unbind();
-    AssertOpenPath(sub_ptr, "file1", file_ptr,
-                   fuchsia::io::OPEN_RIGHT_READABLE |
-                       fuchsia::io::OPEN_RIGHT_WRITABLE,
-                   0,
-                   ZX_ERR_ACCESS_DENIED);
-    AssertOpenPath(sub_ptr, "file1", file_ptr,
-                   fuchsia::io::OPEN_RIGHT_WRITABLE,
-                   0,
-                   ZX_ERR_ACCESS_DENIED);
+    AssertOpenPath(
+        sub_ptr, "file1", file_ptr,
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
+        ZX_ERR_ACCESS_DENIED);
+    AssertOpenPath(sub_ptr, "file1", file_ptr, fuchsia::io::OPEN_RIGHT_WRITABLE,
+                   0, ZX_ERR_ACCESS_DENIED);
   }
 }
 
@@ -960,21 +941,19 @@ TEST_F(PseudoDirConnection, PosixFlagExpandsInheritedRights) {
   std::vector<uint8_t> buffer(10);
   subdir1.AddReadWriteFile("file1", &buffer);
   auto ptr = dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                            fuchsia::io::OPEN_RIGHT_WRITABLE);
+                        fuchsia::io::OPEN_RIGHT_WRITABLE);
   fuchsia::io::DirectorySyncPtr sub_ptr;
-  AssertOpenPath(ptr, "subdir1", sub_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE |
-                     fuchsia::io::OPEN_FLAG_POSIX);
+  AssertOpenPath(
+      ptr, "subdir1", sub_ptr,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_POSIX);
   fuchsia::io::FileSyncPtr file_ptr;
-  AssertOpenPath(sub_ptr, "file1", file_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE);
+  AssertOpenPath(sub_ptr, "file1", file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
   file_ptr.Unbind();
-  AssertOpenPath(sub_ptr, "file1", file_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE |
-                     fuchsia::io::OPEN_RIGHT_WRITABLE);
+  AssertOpenPath(
+      sub_ptr, "file1", file_ptr,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
   file_ptr.Unbind();
-  AssertOpenPath(sub_ptr, "file1", file_ptr,
-                 fuchsia::io::OPEN_RIGHT_WRITABLE);
+  AssertOpenPath(sub_ptr, "file1", file_ptr, fuchsia::io::OPEN_RIGHT_WRITABLE);
   file_ptr.Unbind();
 }
 

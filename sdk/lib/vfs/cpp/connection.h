@@ -21,7 +21,10 @@ class Connection {
  public:
   // Create a connection with the given |flags|.
   //
-  // TODO: Document the list of supported flags.
+  // |flags| define permissions and rights that this connection have over
+  // |Node|. They are defined in |fuchsia.io| fidl for example
+  // |OPEN_FLAG_DESCRIBE|. These are stored in this object for future use and no
+  // validations are performed.
   explicit Connection(uint32_t flags);
   virtual ~Connection();
 
@@ -64,8 +67,7 @@ class Connection {
   // Implementations for common |fuchsia.io.Node| operations. Used by subclasses
   // to avoid code duplication.
 
-  void Clone(Node* vn, uint32_t flags,
-             zx::channel request,
+  void Clone(Node* vn, uint32_t flags, zx::channel request,
              async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);

@@ -197,13 +197,13 @@ void GfxSystem::Initialize() {
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   context()->app_context()->outgoing()->debug_dir()->AddEntry(
-      "dump-scenes", std::make_unique<vfs::BufferedPseudoFile>(
-                         [this](std::vector<uint8_t>* output) {
-                           auto out = engine_->DumpScenes();
-                           output->resize(out.length());
-                           std::copy(out.begin(), out.end(), output->begin());
-                           return ZX_OK;
-                         }));
+      "dump-scenes",
+      std::make_unique<vfs::PseudoFile>([this](std::vector<uint8_t>* output) {
+        auto out = engine_->DumpScenes();
+        output->resize(out.length());
+        std::copy(out.begin(), out.end(), output->begin());
+        return ZX_OK;
+      }));
 
   SetToInitialized();
 };

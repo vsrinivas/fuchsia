@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/remote_dir.h>
-
-#include <memory>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
+
+#include <memory>
 
 namespace {
 
@@ -59,13 +58,13 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
 
  private:
   void AddFileToPseudoDir(const std::string& name) {
-    pseudo_dir_.AddEntry(name, std::make_unique<vfs::BufferedPseudoFile>(
-                                   [name](std::vector<uint8_t>* output) {
-                                     output->resize(name.length());
-                                     std::copy(name.begin(), name.end(),
-                                               output->begin());
-                                     return ZX_OK;
-                                   }));
+    pseudo_dir_.AddEntry(
+        name,
+        std::make_unique<vfs::PseudoFile>([name](std::vector<uint8_t>* output) {
+          output->resize(name.length());
+          std::copy(name.begin(), name.end(), output->begin());
+          return ZX_OK;
+        }));
   }
 };
 

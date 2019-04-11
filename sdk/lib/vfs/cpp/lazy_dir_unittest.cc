@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/lazy_dir.h>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/vfs/cpp/lazy_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 #include <zircon/system/public/zircon/errors.h>
+
 #include <memory>
 
 namespace {
@@ -81,7 +81,7 @@ class LazyDirConnection : public vfs_tests::DirConnection {
 
   TestLazyDir::TestContent CreateTestFile(std::string name,
                                           std::string content) {
-    auto file = std::make_unique<vfs::BufferedPseudoFile>(
+    auto file = std::make_unique<vfs::PseudoFile>(
         [content = std::move(content)](std::vector<uint8_t>* output) {
           output->resize(content.length());
           std::copy(content.begin(), content.end(), output->begin());

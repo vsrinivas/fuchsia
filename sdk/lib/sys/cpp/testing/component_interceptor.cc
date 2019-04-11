@@ -10,10 +10,9 @@
 // environment, forwards its requests back up to environment's injected
 // |fuchsia.sys.Runner| implemented here.
 
-#include <lib/sys/cpp/testing/component_interceptor.h>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/channel.h>
@@ -21,6 +20,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zircon/assert.h>
+
 #include <memory>
 
 namespace sys {
@@ -123,7 +123,7 @@ bool ComponentInterceptor::InterceptURL(std::string component_url,
   info.pkg_dir = std::make_unique<vfs::PseudoDir>();
   info.pkg_dir->AddEntry(
       kAutogenPkgDirManifestPath,
-      std::make_unique<vfs::BufferedPseudoFile>(
+      std::make_unique<vfs::PseudoFile>(
           [cmx_str = std::move(cmx_str)](std::vector<uint8_t>* out) {
             std::copy(cmx_str.begin(), cmx_str.end(), std::back_inserter(*out));
             return ZX_OK;
