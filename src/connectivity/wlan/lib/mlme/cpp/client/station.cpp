@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/client/station.h>
-
+#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <inttypes.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/band.h>
 #include <wlan/common/buffer_writer.h>
@@ -15,6 +15,7 @@
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
+#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/key.h>
@@ -22,11 +23,8 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
-
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <zircon/status.h>
 
-#include <inttypes.h>
 #include <algorithm>
 #include <cstring>
 #include <utility>
@@ -45,7 +43,7 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
       timer_mgr_(std::move(timer_mgr)),
       chan_sched_(chan_sched),
       join_ctx_(join_ctx),
-      seq_mgr_(NewSequenceManager())  {
+      seq_mgr_(NewSequenceManager()) {
     rust_device_ = {
         .device = static_cast<void*>(device),
         .deliver_ethernet = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {
@@ -654,64 +652,24 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     // If off channel, drop the frame and let upper layer handle retransmission if necessary.
     if (!chan_sched_->OnChannel()) { return ZX_ERR_IO_NOT_PRESENT; }
 
-    auto eth_hdr = eth_frame.hdr();
-    const size_t frame_len =
-        DataFrameHeader::max_len() + LlcHeader::max_len() + eth_frame.body_len();
-    auto packet = GetWlanPacket(frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
     bool needs_protection =
         !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
-    BufferWriter w(*packet);
-
-    auto data_hdr = w.Write<DataFrameHeader>();
-    bool has_ht_ctrl = false;
-    data_hdr->fc.set_type(FrameType::kData);
-    data_hdr->fc.set_subtype(IsQosReady() ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
-    data_hdr->fc.set_to_ds(1);
-    data_hdr->fc.set_from_ds(0);
-    data_hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
-    data_hdr->fc.set_protected_frame(needs_protection);
-    data_hdr->addr1 = join_ctx_->bssid();
-    data_hdr->addr2 = eth_hdr->src;
-    data_hdr->addr3 = eth_hdr->dest;
-
-    // TODO(porce): Construct addr4 field
-
-    if (IsQosReady()) {  // QoS Control field
-        auto qos_ctrl = w.Write<QosControl>();
-        qos_ctrl->set_tid(GetTid(eth_frame));
-        qos_ctrl->set_eosp(0);
-        qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
-
-        // AMSDU: set_amsdu_present(1) requires dot11HighthroughputOptionImplemented should be true.
-        qos_ctrl->set_amsdu_present(0);
-        qos_ctrl->set_byte(0);
-
-        auto seq_num =
-            mlme_sequence_manager_next_sns2(seq_mgr_.get(), &data_hdr->addr1.byte, qos_ctrl->tid());
-        data_hdr->sc.set_seq(seq_num);
-    } else {
-        auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
-        data_hdr->sc.set_seq(seq_num);
+    auto eth_hdr = eth_frame.hdr();
+    auto payload = eth_frame.body_data();
+    mlme_out_buf_t out_buf;
+    auto status = mlme_write_data_frame(
+        rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte, &eth_hdr->src.byte,
+        &eth_hdr->dest.byte, needs_protection, IsQosReady(), eth_hdr->ether_type(), payload.data(),
+        payload.size_bytes(), &out_buf);
+    if (status != ZX_OK) {
+        errorf("could not write data frame: %s\n", zx_status_get_string(status));
+        return status;
     }
 
-    // TODO(porce): Construct htc_order field
-
-    auto llc_hdr = w.Write<LlcHeader>();
-    FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type_be);
-    w.Write(eth_frame.body_data());
-
-    packet->set_len(w.WrittenBytes());
-
-    finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
-    finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
-    finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
-    finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
-
-    auto status = SendDataFrame(std::move(packet), data_hdr->addr3.IsUcast());
-    if (status != ZX_OK && status != ZX_ERR_NO_RESOURCES) {
-        errorf("could not send wlan data: %s\n", zx_status_get_string(status));
+    status = SendDataFrame(FromRustOutBuf(out_buf), eth_hdr->dest.IsUcast());
+    if (status != ZX_OK) {
+        errorf("could not send WLAN data frame: %s\n", zx_status_get_string(status));
+        return status;
     }
     return status;
 }
