@@ -358,6 +358,7 @@ static bool TestInvokingPolicyWithException(
     ASSERT_TRUE(get_koid(thread.get(), &tid));
 
     // Check that we receive an exception message.
+    zx_handle_t exception = ZX_HANDLE_INVALID;
     if (test_type == ExceptionTestType::kPorts) {
         zx_port_packet_t packet;
         ASSERT_EQ(zx_port_wait(exc_port, ZX_TIME_INFINITE, &packet), ZX_OK);
@@ -367,27 +368,11 @@ static bool TestInvokingPolicyWithException(
         ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_POLICY_ERROR);
         ASSERT_EQ(packet.exception.pid, pid);
         ASSERT_EQ(packet.exception.tid, tid);
-
-        // Check that we can read the thread's register state.
-        zx_thread_state_general_regs_t regs;
-        ASSERT_EQ(zx_thread_read_state(thread.get(),
-                                       ZX_THREAD_STATE_GENERAL_REGS, &regs,
-                                       sizeof(regs)),
-                  ZX_OK);
-        ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
-        // TODO(mseaborn): Check the values of other registers.  We could check
-        // that rip/pc is within the VDSO, which will require figuring out
-        // where the VDSO is mapped.  We could check that unwinding the stack
-        // using crashlogger gives a correct backtrace.
-
-        // Resume the thread.
-        ASSERT_EQ(zx_task_resume_from_exception(thread.get(), exc_port, 0), ZX_OK);
     } else {
         ASSERT_EQ(zx_object_wait_one(exc_channel, ZX_CHANNEL_READABLE,
                                      ZX_TIME_INFINITE, nullptr),
                   ZX_OK);
 
-        zx_handle_t exception = ZX_HANDLE_INVALID;
         zx_exception_info_t info;
         uint32_t num_handles = 1;
         uint32_t num_bytes = sizeof(info);
@@ -413,8 +398,24 @@ static bool TestInvokingPolicyWithException(
         zx_koid_t handle_pid = ZX_KOID_INVALID;
         EXPECT_TRUE(get_koid(exception_process.get(), &handle_pid));
         EXPECT_EQ(handle_pid, pid);
+    }
 
-        // Resume the thread.
+    // Check that we can read the thread's register state.
+    zx_thread_state_general_regs_t regs;
+    ASSERT_EQ(zx_thread_read_state(thread.get(),
+                                   ZX_THREAD_STATE_GENERAL_REGS, &regs,
+                                   sizeof(regs)),
+              ZX_OK);
+    ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
+    // TODO(mseaborn): Check the values of other registers.  We could check
+    // that rip/pc is within the VDSO, which will require figuring out
+    // where the VDSO is mapped.  We could check that unwinding the stack
+    // using crashlogger gives a correct backtrace.
+
+    // Resume the thread.
+    if (test_type == ExceptionTestType::kPorts) {
+        ASSERT_EQ(zx_task_resume_from_exception(thread.get(), exc_port, 0), ZX_OK);
+    } else {
         uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
         ASSERT_EQ(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE,
                                          &state, sizeof(state)),
