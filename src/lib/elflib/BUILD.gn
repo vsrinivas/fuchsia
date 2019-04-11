@@ -12,7 +12,11 @@ static_library("elflib") {
   ]
 
   deps = [
-    "//src/lib/fxl",
+    "//zircon/system/public",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fbl",
   ]
 }
 

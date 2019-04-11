@@ -119,6 +119,7 @@ static_library("symbols") {
 
   deps = [
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+    "//src/lib/elflib",
   ]
 
   if (is_mac) {

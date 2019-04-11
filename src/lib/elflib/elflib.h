@@ -13,7 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "src/lib/fxl/macros.h"
+#include <fbl/macros.h>
+
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
 namespace elflib {
@@ -188,7 +189,7 @@ class ElfLib {
 
   std::vector<std::string> warnings_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ElfLib);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ElfLib);
 };
 
 }  // namespace elflib

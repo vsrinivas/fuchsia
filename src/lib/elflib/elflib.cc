@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string>
 
-#include <src/lib/fxl/logging.h>
+#include <zircon/assert.h>
 
 #include "src/lib/elflib/elflib.h"
 
@@ -241,7 +241,7 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 
       if (iter != data_.end() && iter->first <= offset &&
           iter->first + iter->second.size() > offset) {
-        FXL_DCHECK(iter->first == offset && iter->second.size() == size);
+        ZX_DEBUG_ASSERT(iter->first == offset && iter->second.size() == size);
       }
 #endif  // NDEBUG
       for (const auto& range : data_[offset]) {
@@ -586,7 +586,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
     char second_jump[5];
   } __attribute__((packed, aligned(1)));
 
-  FXL_DCHECK(sizeof(PltEntry) == 16);
+  static_assert(sizeof(PltEntry) == 16);
 
   // We'd prefer if this works but we can get by without it, so we're not
   // checking the return value.
