@@ -29,6 +29,7 @@ class Function;
 struct InputLocation;
 class Location;
 class SymbolServer;
+class TargetSymbols;
 class Thread;
 
 // Ensures the target is currently running (it has a current Process associated
@@ -123,12 +124,19 @@ OutputBuffer FormatFunctionName(const Function* function, bool show_params);
 
 // Formats the location. Normally if a function name is present the code
 // address will be omitted, but always_show_address will override this.
-OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
+//
+// The target symbols, if non-null, will be used to shorten file names while
+// keeping them unique.
+OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols,
+                            const Location& loc, bool always_show_address,
                             bool show_params);
 
-// If show_path is set, the path to the file will be included, otherwise only
-// the last file component will be printed.
-std::string DescribeFileLine(const FileLine& file_line, bool show_path = false);
+// The TargetSymbols pointer is used to find the shortest unique way to
+// reference the file name.
+//
+// If target_symbols is null, the full file path will always be included.
+std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
+                             const FileLine& file_line);
 
 // The setting "set" command has different modification modes, which depend on
 // the setting type being modified.

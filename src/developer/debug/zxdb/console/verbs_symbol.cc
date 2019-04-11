@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/verbs.h"
-
 #include <inttypes.h>
+
 #include <algorithm>
 #include <limits>
 #include <set>
@@ -24,6 +23,7 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
@@ -567,7 +567,8 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
       cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
           InputLocation(address));
   FXL_DCHECK(locations.size() == 1u);
-  Console::get()->Output(FormatLocation(locations[0], true, true));
+  Console::get()->Output(
+      FormatLocation(cmd.target()->GetSymbols(), locations[0], true, true));
   return Err();
 }
 

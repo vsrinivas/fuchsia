@@ -88,7 +88,7 @@ class ModuleSymbolIndex {
   // name is matched from the right side with a left boundary of either a slash
   // or the beginning of the full path. This may match more than one file name,
   // and the caller is left to decide which one(s) it wants.
-  std::vector<std::string> FindFileMatches(const std::string& name) const;
+  std::vector<std::string> FindFileMatches(std::string_view name) const;
 
   // Same as FindFileMatches but does a prefix search. This only matches the
   // file name component (not directory paths).

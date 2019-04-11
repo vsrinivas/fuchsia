@@ -19,10 +19,6 @@ class FileLine {
   const std::string& file() const { return file_; }
   int line() const { return line_; }
 
-  // Returns the file name part of the path, which is the portion after the
-  // last slash.
-  std::string GetFileNamePart() const;
-
  private:
   std::string file_;
   int line_ = 0;

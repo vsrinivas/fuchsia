@@ -32,6 +32,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -434,7 +435,10 @@ std::string DescribeInputLocation(const InputLocation& location) {
     case InputLocation::Type::kNone:
       return "<no location>";
     case InputLocation::Type::kLine:
-      return DescribeFileLine(location.line);
+      // Don't pass a TargetSymbols to DescribeFileLine because we always want
+      // the full file name as passed-in by the user (as this is an "input"
+      // location object). It is surprising if the debugger deletes some input.
+      return DescribeFileLine(nullptr, location.line);
     case InputLocation::Type::kSymbol: {
       std::string output;
       // TODO(brettw) need to disambiguate symbols with leading "::".
@@ -517,7 +521,8 @@ OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
   return result;
 }
 
-OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
+OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols,
+                            const Location& loc, bool always_show_address,
                             bool always_show_types) {
   if (!loc.is_valid())
     return OutputBuffer("<invalid address>");
@@ -552,20 +557,23 @@ OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
   }
 
   if (loc.file_line().is_valid())
-    result.Append(DescribeFileLine(loc.file_line()));
+    result.Append(DescribeFileLine(optional_target_symbols, loc.file_line()));
   return result;
 }
 
-std::string DescribeFileLine(const FileLine& file_line, bool show_path) {
+std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
+                             const FileLine& file_line) {
   std::string result;
 
   // Name.
-  if (file_line.file().empty())
+  if (file_line.file().empty()) {
     result = "?";
-  else if (show_path)
+  } else if (!optional_target_symbols) {
     result = file_line.file();
-  else
-    result = file_line.GetFileNamePart();
+  } else {
+    result =
+        optional_target_symbols->GetShortestUniqueFileName(file_line.file());
+  }
 
   result.push_back(':');
 

@@ -6,10 +6,12 @@
 
 #include <set>
 
+#include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace zxdb {
 
@@ -77,7 +79,7 @@ std::vector<Location> TargetSymbols::ResolveInputLocation(
 }
 
 std::vector<std::string> TargetSymbols::FindFileMatches(
-    const std::string& name) const {
+    std::string_view name) const {
   // Different modules can each use the same file, but we want to return each
   // one once.
   std::set<std::string> result_set;
@@ -89,6 +91,34 @@ std::vector<std::string> TargetSymbols::FindFileMatches(
   std::vector<std::string> result;
   for (auto& cur : result_set)
     result.push_back(std::move(cur));
+  return result;
+}
+
+// This could be optimized quite a bit if we find it's slow, there are a lot
+// of container copies in this implementation.
+std::string TargetSymbols::GetShortestUniqueFileName(
+    std::string_view file_name) const {
+  if (file_name.empty())
+    return std::string();
+
+  // Get all matches for just the file name part.
+  std::string_view file_name_last_part = ExtractLastFileComponent(file_name);
+  std::vector<std::string> all_matches = FindFileMatches(file_name_last_part);
+  if (all_matches.size() <= 1)
+    return std::string(file_name_last_part);  // Unique or not found.
+
+  auto components =
+      fxl::SplitString(fxl::StringView(file_name.data(), file_name.size()), "/",
+                       fxl::kKeepWhitespace, fxl::kSplitWantAll);
+
+  // Append path components from the right until its unique.
+  std::string result(file_name_last_part);
+  for (int comp_index = static_cast<int>(components.size()) - 2;
+       comp_index >= 0; comp_index--) {
+    result = components[comp_index].ToString() + "/" + result;
+    if (FindFileMatches(result).size() <= 1)
+      return result;
+  }
   return result;
 }
 

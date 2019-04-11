@@ -228,7 +228,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
 }
 
 std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
-    const std::string& name) const {
+    std::string_view name) const {
   return index_.FindFileMatches(name);
 }
 

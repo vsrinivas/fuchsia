@@ -74,7 +74,18 @@ class TargetSymbols {
 
   // Gets file matches across all known modules. See
   // ModuleSymbols::FindFileMatches().
-  std::vector<std::string> FindFileMatches(const std::string& name) const;
+  std::vector<std::string> FindFileMatches(std::string_view name) const;
+
+  // Returns the shortest possible name that uniquely identifies the given file
+  // in the index.
+  //
+  // Multiple files with the same name can exist in the different directories.
+  // If a name is unique, returns only the name part, otherwise appends
+  // directories from the right until the input is disambiguated from all other
+  // files of the same name.
+  //
+  // If the name isn't in the index, returns just the file part.
+  std::string GetShortestUniqueFileName(std::string_view file_name) const;
 
  private:
   // Comparison functor for ModuleRefs. Does a pointer-identity comparison.

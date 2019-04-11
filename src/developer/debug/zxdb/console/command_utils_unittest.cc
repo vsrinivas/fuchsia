@@ -9,7 +9,6 @@
 #include <limits>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -17,8 +16,10 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -250,12 +251,13 @@ TEST(CommandUtils, FormatLocation) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   EXPECT_EQ("<invalid address>",
-            FormatLocation(Location(), true, false).AsString());
+            FormatLocation(nullptr, Location(), true, false).AsString());
 
   // Address-only location.
   EXPECT_EQ(
       "0x12345",
-      FormatLocation(Location(Location::State::kAddress, 0x12345), false, false)
+      FormatLocation(nullptr, Location(Location::State::kAddress, 0x12345),
+                     false, false)
           .AsString());
 
   // Function-only location.
@@ -264,7 +266,8 @@ TEST(CommandUtils, FormatLocation) {
   function->set_assigned_name("Func");
   function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
   EXPECT_EQ("Func() + 0x34 (no line info)",
-            FormatLocation(Location(0x1234, FileLine(), 0, symbol_context,
+            FormatLocation(nullptr,
+                           Location(0x1234, FileLine(), 0, symbol_context,
                                     LazySymbol(function)),
                            false, false)
                 .AsString());
@@ -272,14 +275,16 @@ TEST(CommandUtils, FormatLocation) {
   // Same as above but location is before the function address (probably
   // something is corrupt). It should omit the offset.
   EXPECT_EQ("Func()",
-            FormatLocation(Location(0x1100, FileLine(), 0, symbol_context,
+            FormatLocation(nullptr,
+                           Location(0x1100, FileLine(), 0, symbol_context,
                                     LazySymbol(function)),
                            false, false)
                 .AsString());
 
   // File/line-only location.
-  EXPECT_EQ("foo.cc:21",
-            FormatLocation(Location(0x1234, FileLine("/path/foo.cc", 21), 0,
+  EXPECT_EQ("/path/foo.cc:21",
+            FormatLocation(nullptr,
+                           Location(0x1234, FileLine("/path/foo.cc", 21), 0,
                                     symbol_context),
                            false, false)
                 .AsString());
@@ -287,21 +292,28 @@ TEST(CommandUtils, FormatLocation) {
   // Full location.
   Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context,
                LazySymbol(function));
-  EXPECT_EQ("0x1234, Func() • foo.cc:21",
-            FormatLocation(loc, true, false).AsString());
-  EXPECT_EQ("Func() • foo.cc:21", FormatLocation(loc, false, false).AsString());
+  EXPECT_EQ("0x1234, Func() • /path/foo.cc:21",
+            FormatLocation(nullptr, loc, true, false).AsString());
+  EXPECT_EQ("Func() • /path/foo.cc:21",
+            FormatLocation(nullptr, loc, false, false).AsString());
 }
 
 TEST(CommandUtils, DescribeFileLine) {
   FileLine fl("/path/to/foo.cc", 21);
-  EXPECT_EQ("/path/to/foo.cc:21", DescribeFileLine(fl, true));
-  EXPECT_EQ("foo.cc:21", DescribeFileLine(fl, false));
+  EXPECT_EQ("/path/to/foo.cc:21", DescribeFileLine(nullptr, fl));
 
   // Missing line number.
-  EXPECT_EQ("foo.cc:?", DescribeFileLine(FileLine("/path/foo.cc", 0), false));
+  EXPECT_EQ("/path/foo.cc:?",
+            DescribeFileLine(nullptr, FileLine("/path/foo.cc", 0)));
 
   // Missing both.
-  EXPECT_EQ("?:?", DescribeFileLine(FileLine(), false));
+  EXPECT_EQ("?:?", DescribeFileLine(nullptr, FileLine()));
+
+  // Pass an TargetSymbols to trigger path shortening. Since the TargetSymbols
+  // has no files to match, the name will be unique and we'll get just the name
+  // part.
+  ProcessSymbolsTestSetup setup;
+  EXPECT_EQ("foo.cc:21", DescribeFileLine(&setup.target(), fl));
 }
 
 TEST(SetElementsToAdd, TestCase) {

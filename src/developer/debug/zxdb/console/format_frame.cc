@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -14,11 +15,11 @@
 #include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/value.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -100,7 +101,16 @@ void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
                  int id) {
   if (id >= 0)
     out->Append(fxl::StringPrintf("Frame %d ", id));
-  out->Append(FormatLocation(frame->GetLocation(), false, include_params));
+
+  // Allow the thread to be null for unit testing purposes. This only disables
+  // the file name shortener.
+  const TargetSymbols* syms =
+      !frame->GetThread()
+          ? nullptr
+          : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
+
+  out->Append(
+      FormatLocation(syms, frame->GetLocation(), false, include_params));
 }
 
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
@@ -111,8 +121,16 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
   // Only print the location if it has symbols, otherwise the hex
   // address will be shown twice.
   const Location& location = frame->GetLocation();
-  if (location.has_symbols())
-    out->Append(FormatLocation(location, false, include_params));
+  if (location.has_symbols()) {
+    // Allow the thread to be null for unit testing purposes. This only
+    // disables the file name shortener.
+    const TargetSymbols* syms =
+        !frame->GetThread()
+            ? nullptr
+            : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
+
+    out->Append(FormatLocation(syms, location, false, include_params));
+  }
 
   if (frame->IsInline())
     out->Append(OutputBuffer(Syntax::kComment, " (inline)"));

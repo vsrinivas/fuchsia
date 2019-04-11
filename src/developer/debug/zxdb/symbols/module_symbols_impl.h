@@ -59,7 +59,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t absolute_address) const override;
   std::vector<std::string> FindFileMatches(
-      const std::string& name) const override;
+      std::string_view name) const override;
   const ModuleSymbolIndex& GetIndex() const override;
   LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const override;

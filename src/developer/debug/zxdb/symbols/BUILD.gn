@@ -221,6 +221,7 @@ source_set("tests") {
     "module_symbols_impl_unittest.cc",
     "process_symbols_unittest.cc",
     "symbol_utils_unittest.cc",
+    "target_symbols_unittest.cc",
     "test_symbol_module.cc",
     "type_utils_unittest.cc",
     "variable_location_unittest.cc",

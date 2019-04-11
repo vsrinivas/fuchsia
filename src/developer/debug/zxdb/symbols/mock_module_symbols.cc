@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
@@ -27,6 +28,10 @@ void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
 void MockModuleSymbols::AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
                                   fxl::RefPtr<Symbol> symbol) {
   die_refs_[die.offset()] = std::move(symbol);
+}
+
+void MockModuleSymbols::AddFileName(const std::string& file_name) {
+  files_.push_back(file_name);
 }
 
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
@@ -85,8 +90,15 @@ LineDetails MockModuleSymbols::LineDetailsForAddress(
 }
 
 std::vector<std::string> MockModuleSymbols::FindFileMatches(
-    const std::string& name) const {
-  return std::vector<std::string>();
+    std::string_view name) const {
+  std::vector<std::string> result;
+  for (const std::string& cur : files_) {
+    std::string with_slash("/");
+    with_slash += std::string(name);
+    if (cur == name || StringEndsWith(cur, with_slash))
+      result.push_back(cur);
+  }
+  return result;
 }
 
 const ModuleSymbolIndex& MockModuleSymbols::GetIndex() const { return index_; }

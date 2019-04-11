@@ -76,7 +76,7 @@ class ModuleSymbols {
   // In the future we may want to return an object representing the compilation
   // unit for each of the files.
   virtual std::vector<std::string> FindFileMatches(
-      const std::string& name) const = 0;
+      std::string_view name) const = 0;
 
   // Returns the symbol index for this module.
   virtual const ModuleSymbolIndex& GetIndex() const = 0;

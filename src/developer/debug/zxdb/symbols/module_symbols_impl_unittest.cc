@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
-#include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
@@ -79,12 +81,14 @@ TEST(ModuleSymbols, Basic) {
   // no functions starting at offset 0 in the file.
   ASSERT_NE(0u, addrs[0].address());
 
-  // That address should resolve back to the function name.
+  // That address should resolve back to the function name (don't know the
+  // exact file path the compiler generated so just check the name).
   auto locations = module.ResolveInputLocation(
       symbol_context, InputLocation(addrs[0].address()));
   ASSERT_EQ(1u, locations.size());
   EXPECT_TRUE(locations[0].is_symbolized());
-  EXPECT_EQ("zxdb_symbol_test.cc", locations[0].file_line().GetFileNamePart());
+  EXPECT_TRUE(
+      StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
   EXPECT_EQ(TestSymbolModule::kMyFunctionLine, locations[0].file_line().line());
 }
 

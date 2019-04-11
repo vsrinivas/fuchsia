@@ -312,7 +312,8 @@ void ConsoleContext::OutputThreadContext(
     console->Output(out);
   } else {
     const Location& location = stack[0]->GetLocation();
-    out.Append(FormatLocation(location, false, false));
+    out.Append(FormatLocation(thread->GetProcess()->GetTarget()->GetSymbols(),
+                              location, false, false));
     if (location.has_symbols()) {
       out.Append("\n");
     } else {

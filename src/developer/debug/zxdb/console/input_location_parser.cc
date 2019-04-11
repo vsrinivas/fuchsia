@@ -124,6 +124,17 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols,
                                locations);
 }
 
+// This implementation isn't great, it doesn't always show the best
+// disambiguations for the given input.
+//
+// Also it misses a file name edge case: If there is one file whose full
+// path in the symbols is a right-side subset of another (say "foo/bar.cc" and
+// "something/foo/bar.cc"), then "foo/bar.cc" is the most unique name of the
+// first file. But if the user types that, they'll get both matches and this
+// function will report an ambiguous location.
+//
+// Instead, if the input is a file name and there is only one result where the
+// file name matches exactly, we should pick it.
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
                                const InputLocation& input_location,
                                bool symbolize, Location* location) {
@@ -155,15 +166,15 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
   }
 
   for (size_t i = 0; i < locations.size() && i < kMaxSuggestions; i++) {
-    // Always show the full path since we're doing disambiguation and the
-    // problem could have been two files with the same name but different
-    // paths.
+    // Always show the full path (omit TargetSymbols) since we're doing
+    // disambiguation and the problem could have been two files with the same
+    // name but different paths.
     err_str += fxl::StringPrintf(" %s ", GetBullet().c_str());
     if (locations[i].file_line().is_valid()) {
-      err_str += DescribeFileLine(locations[i].file_line(), true);
+      err_str += DescribeFileLine(nullptr, locations[i].file_line());
       err_str += fxl::StringPrintf(" = 0x%" PRIx64, locations[i].address());
     } else {
-      err_str += FormatLocation(locations[i], true, false).AsString();
+      err_str += FormatLocation(nullptr, locations[i], true, false).AsString();
     }
     err_str += "\n";
   }

@@ -406,7 +406,7 @@ ModuleSymbolIndex::FindPrefix(const std::vector<std::string>& input) const {
 }
 
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
-    const std::string& name) const {
+    std::string_view name) const {
   std::string_view name_last_comp = ExtractLastFileComponent(name);
 
   std::vector<std::string> result;

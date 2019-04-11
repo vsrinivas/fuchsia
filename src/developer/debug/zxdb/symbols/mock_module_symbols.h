@@ -30,6 +30,9 @@ class MockModuleSymbols : public ModuleSymbols {
   void AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
                  fxl::RefPtr<Symbol> symbol);
 
+  // Adds a name to the list of files considered for FindFileMatches().
+  void AddFileName(const std::string& file_name);
+
   // Provides writable access to the index for tests to insert data. To hook
   // up symbols, add them to the index and call AddDieRef() with the same
   // DieRef and the symbol you want it to resolve to.
@@ -43,7 +46,7 @@ class MockModuleSymbols : public ModuleSymbols {
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t address) const override;
   std::vector<std::string> FindFileMatches(
-      const std::string& name) const override;
+      std::string_view name) const override;
   const ModuleSymbolIndex& GetIndex() const override;
   LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const override;
@@ -61,6 +64,8 @@ class MockModuleSymbols : public ModuleSymbols {
 
   // Maps manually-aded DieRefs offsets to symbols.
   std::map<uint32_t, fxl::RefPtr<Symbol>> die_refs_;
+
+  std::vector<std::string> files_;
 };
 
 }  // namespace zxdb
