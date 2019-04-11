@@ -11,6 +11,7 @@ use {
         HistogramBucket, LoggerFactoryMarker, LoggerProxy, ProjectProfile, ReleaseStage, Status,
     },
     fidl_fuchsia_mem as fuchsia_mem,
+    fuchsia_component::client::connect_to_service,
     futures::{channel::mpsc, prelude::*, StreamExt},
     log::{error, info},
     std::{
@@ -118,7 +119,7 @@ pub fn serve(buffer_size: usize, config_path: &str) -> (CobaltSender, impl Futur
 async fn get_cobalt_logger_with_project_name(project_name: String) -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
         fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-    let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
+    let logger_factory = connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     let res = await!(logger_factory.create_logger_from_project_name(
@@ -133,7 +134,7 @@ async fn get_cobalt_logger_with_project_name(project_name: String) -> Result<Log
 async fn get_cobalt_logger(config_path: String) -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
         fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-    let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
+    let logger_factory = connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     let mut cobalt_config = File::open(config_path)?;
