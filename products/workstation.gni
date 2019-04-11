@@ -13,10 +13,12 @@ monolith += [
   "topaz/packages/prod/text_input_mod",
 ]
 
-preinstall += []
+preinstall += [
+  "topaz/packages/prod/simple_browser",
+]
 
 available += [
   "garnet/packages/prod/media_audio",
-  "src/modular/bundles/tools",
   "peridot/packages/prod/cloud_provider_firestore",
+  "src/modular/bundles/tools",
 ]
