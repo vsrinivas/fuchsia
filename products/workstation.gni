@@ -10,7 +10,6 @@ monolith += [
   "src/modular/bundles/framework",
   "topaz/packages/config/ermine",
   "topaz/packages/prod/ermine",
-  "topaz/packages/prod/text_input_mod",
 ]
 
 preinstall += [
