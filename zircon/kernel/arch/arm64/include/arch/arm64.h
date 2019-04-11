@@ -66,10 +66,29 @@ struct arch_exception_context {
     uint32_t esr;
 };
 
+// Register state layout used by arm64_context_switch().
+struct arm64_context_switch_frame {
+    uint64_t tpidr_el0;
+    uint64_t tpidrro_el0;
+    uint64_t r19;
+    uint64_t r20;
+    uint64_t r21;
+    uint64_t r22;
+    uint64_t r23;
+    uint64_t r24;
+    uint64_t r25;
+    uint64_t r26;
+    uint64_t r27;
+    uint64_t r28;
+    uint64_t r29;
+    uint64_t lr;
+};
+
 struct thread;
 
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
+arm64_context_switch_frame* arm64_get_context_switch_frame(struct thread* thread);
 
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);

@@ -50,10 +50,15 @@ void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
         (1 << 14) | // NT: nested task flag
         (1 << 18) | // AC: alignment check flag
         (1 << 21);  // ID: used for testing for CPUID support
+
+    // Set these to canonical addresses to avoid an error.
+    regs->fs_base = 0;
+    regs->gs_base = 0;
 #elif defined(__aarch64__)
     // Only set the 4 flag bits that are readable and writable by the
     // instructions "msr nzcv, REG" and "mrs REG, nzcv".
     regs->cpsr = 0xf0000000;
+    regs->tpidr = 0;
 #endif
 }
 
@@ -266,7 +271,9 @@ static_assert(offsetof(zx_thread_state_general_regs_t, r14) == 8 * 14, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, r15) == 8 * 15, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, rip) == 8 * 16, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, rflags) == 8 * 17, "");
-static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 18, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, fs_base) == 8 * 18, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, gs_base) == 8 * 19, "");
+static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 20, "");
 __asm__(".pushsection .text, \"ax\", @progbits\n"
         ".global spin_with_general_regs\n"
         "spin_with_general_regs:\n"
@@ -303,7 +310,7 @@ static_assert(offsetof(zx_thread_state_general_regs_t, lr) == 8 * 30, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, sp) == 8 * 31, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, pc) == 8 * 32, "");
 static_assert(offsetof(zx_thread_state_general_regs_t, cpsr) == 8 * 33, "");
-static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 34, "");
+static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 35, "");
 __asm__(".pushsection .text, \"ax\", %progbits\n"
         ".global spin_with_general_regs\n"
         "spin_with_general_regs:\n"
@@ -523,7 +530,7 @@ __asm__(".pushsection .text,\"ax\", @progbits\n"
         // Fill out the rip field with known value.
         "leaq save_general_regs_and_exit_thread(%rip), %rax\n"
         "movq %rax, 8*16(%rsp)\n"
-        "call zx_thread_exit@PLT\n"
+        "jmp zx_thread_exit@PLT\n"
         "ud2\n"
         ".popsection\n");
 #elif defined(__aarch64__)
@@ -581,7 +588,7 @@ __asm__(".pushsection .text,\"ax\", @progbits\n"
         "movq %mm6, 32 + 16*6(%rsp)\n"
         "movq %mm7, 32 + 16*7(%rsp)\n"
 
-        "call zx_thread_exit@PLT\n"
+        "jmp zx_thread_exit@PLT\n"
         "ud2\n"
         ".popsection\n");
 #elif defined(__aarch64__)
@@ -623,7 +630,7 @@ __asm__(".pushsection .text,\"ax\", @progbits\n"
         "movdqu %xmm14, 64*14(%rsp)\n"
         "movdqu %xmm15, 64*15(%rsp)\n"
 
-        "call zx_thread_exit@PLT\n"
+        "jmp zx_thread_exit@PLT\n"
         "ud2\n"
         ".popsection\n");
 #elif defined(__aarch64__)
@@ -659,6 +666,47 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "stp q26, q27, [x0, #(13 * 32)]\n"
         "stp q28, q29, [x0, #(14* 32)]\n"
         "stp q30, q31, [x0, #(15 * 32)]\n"
+
+        "bl zx_thread_exit\n"
+        "brk 0\n"
+        ".popsection\n");
+#else
+#error Unsupported architecture
+#endif
+
+// save_thread_local_regs_and_exit_thread() function.
+#if defined(__x86_64__)
+static_assert(offsetof(struct thread_local_regs, fs_base_value) == 8 * 0, "");
+static_assert(offsetof(struct thread_local_regs, gs_base_value) == 8 * 1, "");
+__asm__(".pushsection .text,\"ax\", @progbits\n"
+        ".global save_thread_local_regs_and_exit_thread\n"
+        "save_thread_local_regs_and_exit_thread:\n"
+
+        // Read from fs_base and gs_base into the output. Test will assert the
+        // correct values were read.
+        "movq %fs:0, %rax\n"
+        "movq %rax, 8*0(%rsp)\n"
+        "movq %gs:0, %rax\n"
+        "movq %rax, 8*1(%rsp)\n"
+        // Write constants into fs_base and gs_base. Test will assert the
+        // correct values were written.
+        "movq $0x12345678, %fs:0\n"
+        "movq $0x7890abcd, %gs:0\n"
+
+        "jmp zx_thread_exit@PLT\n"
+        "ud2\n"
+        ".popsection\n");
+#elif defined(__aarch64__)
+__asm__(".pushsection .text,\"ax\", @progbits\n"
+        ".global save_thread_local_regs_and_exit_thread\n"
+        "save_thread_local_regs_and_exit_thread:\n"
+
+        "mrs x1, tpidr_el0\n"
+        "ldr x2, [x1]\n"
+        "str x2, [sp, #(8*0)]\n"
+        "movz x2, 0x5678\n"
+        "movk x2, 0x1234, lsl 16\n"
+        "str x2, [x1]\n"
 
         "bl zx_thread_exit\n"
         "brk 0\n"

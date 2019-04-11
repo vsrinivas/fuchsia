@@ -43,6 +43,9 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
     out->pc = in->elr;
     out->cpsr = in->spsr & kUserVisibleFlags;
 
+    struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(thread);
+    out->tpidr = frame->tpidr_el0;
+
     return ZX_OK;
 }
 
@@ -63,6 +66,9 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
     out->usp = in->sp;
     out->elr = in->pc;
     out->spsr = (out->spsr & ~kUserVisibleFlags) | (in->cpsr & kUserVisibleFlags);
+
+    struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(thread);
+    frame->tpidr_el0 = in->tpidr;
 
     return ZX_OK;
 }

@@ -1254,6 +1254,70 @@ static bool TestWritingVectorRegisterState() {
     END_TEST;
 }
 
+// This test starts a thread which reads and writes from TLS.
+static bool TestThreadLocalRegisterState() {
+    BEGIN_TEST;
+
+    RegisterWriteSetup<struct thread_local_regs> setup;
+    ASSERT_TRUE(setup.Init());
+
+    zx_thread_state_general_regs_t regs;
+
+#if defined(__x86_64__)
+    // The thread will read these from the fs and gs base addresses
+    // into the output regs struct, and then write different numbers.
+    uint64_t fs_base_value = 0x1234;
+    uint64_t gs_base_value = 0x5678;
+    regs.fs_base = (uintptr_t)&fs_base_value;
+    regs.gs_base = (uintptr_t)&gs_base_value;
+#elif defined(__aarch64__)
+    uint64_t tpidr_value = 0x1234;
+    regs.tpidr = (uintptr_t)&tpidr_value;
+#endif
+
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
+                                    &regs, sizeof(regs)),
+              ZX_OK);
+
+    // TODO(tbodt): Remove once support for the old sizes is removed from the kernel.
+    // Test that writing using the old size for the struct does not write the new members.
+    // Do this by setting them to bogus values that will cause a page fault if used.
+#if defined(__x86_64__)
+    regs.fs_base = 0;
+    regs.gs_base = 0;
+#elif defined(__aarch64__)
+    regs.tpidr = 0;
+#endif
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
+                                    &regs, sizeof(__old_zx_thread_state_general_regs_t)),
+              ZX_OK);
+    // Test that reading using the old size for the struct does not read the new members.
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
+                                   &regs, sizeof(__old_zx_thread_state_general_regs_t)),
+              ZX_OK);
+#if defined(__x86_64__)
+    ASSERT_EQ(regs.fs_base, 0);
+    ASSERT_EQ(regs.gs_base, 0);
+#elif defined(__aarch64__)
+    ASSERT_EQ(regs.tpidr, 0);
+#endif
+
+    struct thread_local_regs tls_regs;
+    ASSERT_TRUE(setup.DoSave(&save_thread_local_regs_and_exit_thread, &tls_regs));
+
+#if defined(__x86_64__)
+    EXPECT_EQ(tls_regs.fs_base_value, 0x1234);
+    EXPECT_EQ(tls_regs.gs_base_value, 0x5678);
+    EXPECT_EQ(fs_base_value, 0x12345678);
+    EXPECT_EQ(gs_base_value, 0x7890abcd);
+#elif defined(__aarch64__)
+    EXPECT_EQ(tls_regs.tpidr_value, 0x1234);
+    EXPECT_EQ(tpidr_value, 0x12345678);
+#endif
+
+    END_TEST;
+}
+
 #if defined(__x86_64__)
 
 #include <cpuid.h>
@@ -1638,6 +1702,7 @@ RUN_TEST(TestWritingGeneralRegisterState)
 // RUN_TEST(TestWritingFpRegisterState)
 // RUN_TEST(TestWritingVectorRegisterState)
 
+RUN_TEST(TestThreadLocalRegisterState)
 RUN_TEST(TestNoncanonicalRipAddress)
 RUN_TEST(TestWritingArmFlagsRegister)
 

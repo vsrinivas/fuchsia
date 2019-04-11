@@ -85,7 +85,14 @@ union thread_state_local_buffer_t {
 zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t* out_len) {
     switch (in_topic) {
     case ZX_THREAD_STATE_GENERAL_REGS:
-        *out_len = sizeof(zx_thread_state_general_regs_t);
+        // We are temporarily supporting programs that pass in the length of
+        // the old struct.
+        // TODO(ZX-3883): remove after old struct users have been migrated
+        if (in_len >= sizeof(__old_zx_thread_state_general_regs_t) &&
+            in_len < sizeof(zx_thread_state_general_regs_t))
+            *out_len = sizeof(__old_zx_thread_state_general_regs_t);
+        else
+            *out_len = sizeof(zx_thread_state_general_regs_t);
         break;
     case ZX_THREAD_STATE_FP_REGS:
         *out_len = sizeof(zx_thread_state_fp_regs_t);
@@ -244,6 +251,23 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
     status = buffer.copy_array_from_user(&local_buffer, local_buffer_len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
+
+    // Don't clobber new registers if this program uses the old struct.
+    // TODO(ZX-3883): remove after old struct users have been migrated
+    if (kind == ZX_THREAD_STATE_GENERAL_REGS &&
+        local_buffer_len == sizeof(__old_zx_thread_state_general_regs_t)) {
+        zx_thread_state_general_regs_t current_regs;
+        status = thread->ReadState(ZX_THREAD_STATE_GENERAL_REGS, &current_regs,
+                                   sizeof(current_regs));
+        if (status != ZX_OK)
+            return status;
+#if defined(__x86_64__)
+        local_buffer.general_regs.fs_base = current_regs.fs_base;
+        local_buffer.general_regs.gs_base = current_regs.gs_base;
+#else
+        local_buffer.general_regs.tpidr = current_regs.tpidr;
+#endif
+    }
 
     return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
                               local_buffer_len);

@@ -1086,7 +1086,11 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
 
     switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS: {
-        if (buffer_len != sizeof(zx_thread_state_general_regs_t))
+        // We are temporarily supporting programs that pass in the length of
+        // the old struct.
+        // TODO(ZX-3883): remove after old struct users have been migrated
+        if (buffer_len != sizeof(zx_thread_state_general_regs_t) &&
+            buffer_len != sizeof(__old_zx_thread_state_general_regs_t))
             return ZX_ERR_INVALID_ARGS;
         return arch_get_general_regs(
             &thread_, static_cast<zx_thread_state_general_regs_t*>(buffer));
@@ -1143,7 +1147,11 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 
     switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS: {
-        if (buffer_len != sizeof(zx_thread_state_general_regs_t))
+        // We are temporarily supporting programs that pass in the length of
+        // the old struct.
+        // TODO(ZX-3883): remove after old struct users have been migrated
+        if (buffer_len != sizeof(zx_thread_state_general_regs_t) &&
+            buffer_len != sizeof(__old_zx_thread_state_general_regs_t))
             return ZX_ERR_INVALID_ARGS;
         return arch_set_general_regs(
             &thread_, static_cast<const zx_thread_state_general_regs_t*>(buffer));

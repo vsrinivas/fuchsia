@@ -16,27 +16,9 @@
 
 #define LOCAL_TRACE 0
 
-// Register state layout used by arm64_context_switch().
-struct context_switch_frame {
-    uint64_t tpidr_el0;
-    uint64_t tpidrro_el0;
-    uint64_t r19;
-    uint64_t r20;
-    uint64_t r21;
-    uint64_t r22;
-    uint64_t r23;
-    uint64_t r24;
-    uint64_t r25;
-    uint64_t r26;
-    uint64_t r27;
-    uint64_t r28;
-    uint64_t r29;
-    uint64_t lr;
-};
-
 // assert that the context switch frame is a multiple of 16 to maintain
 // stack alignment requirements per ABI
-static_assert(sizeof(context_switch_frame) % 16 == 0, "");
+static_assert(sizeof(arm64_context_switch_frame) % 16 == 0, "");
 
 extern void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
 
@@ -51,7 +33,7 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
     stack_top = ROUNDDOWN(stack_top, 16);
     t->stack.top = stack_top;
 
-    struct context_switch_frame* frame = (struct context_switch_frame*)(stack_top);
+    struct arm64_context_switch_frame* frame = (struct arm64_context_switch_frame*)(stack_top);
     frame--;
 
     // fill in the entry point
@@ -123,8 +105,7 @@ void* arch_thread_get_blocked_fp(struct thread* t) {
     if (!WITH_FRAME_POINTERS)
         return nullptr;
 
-    struct context_switch_frame* frame = (struct context_switch_frame*)t->arch.sp;
-
+    struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(t);
     return (void*)frame->r29;
 }
 
@@ -142,4 +123,8 @@ void arm64_debug_state_context_switch(thread *old_thread, thread *new_thread) {
     if (unlikely(old_thread->arch.track_debug_state)) {
         arm64_set_debug_state_for_cpu(false);
     }
+}
+
+arm64_context_switch_frame* arm64_get_context_switch_frame(struct thread* thread) {
+    return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch.sp);
 }

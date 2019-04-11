@@ -7,6 +7,7 @@
 #include <arch/debugger.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
 #include <err.h>
 #include <kernel/lockdep.h>
@@ -14,6 +15,7 @@
 #include <kernel/thread_lock.h>
 #include <string.h>
 #include <sys/types.h>
+#include <vm/vm.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
@@ -25,45 +27,8 @@
 
 namespace {
 
-#define SYSCALL_OFFSETS_EQUAL(reg)                      \
-    (__offsetof(zx_thread_state_general_regs_t, reg) == \
-     __offsetof(x86_syscall_general_regs_t, reg))
-
-static_assert(SYSCALL_OFFSETS_EQUAL(rax), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rbx), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rcx), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rdx), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rsi), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rdi), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rbp), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(rsp), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r8), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r9), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r10), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r11), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r12), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r13), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r14), "");
-static_assert(SYSCALL_OFFSETS_EQUAL(r15), "");
-static_assert(sizeof(zx_thread_state_general_regs_t) == sizeof(x86_syscall_general_regs_t), "");
-
-void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out,
-                                    const x86_syscall_general_regs_t* in) {
-    memcpy(out, in, sizeof(*in));
-}
-
-void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
-                                    const zx_thread_state_general_regs_t* in) {
-    // Don't allow overriding privileged fields of rflags, and ignore writes
-    // to reserved fields.
-    const uint64_t orig_rflags = out->rflags;
-    memcpy(out, in, sizeof(*in));
-    out->rflags = orig_rflags & ~X86_FLAGS_USER;
-    out->rflags |= in->rflags & X86_FLAGS_USER;
-}
-
 #define COPY_REG(out, in, reg) (out)->reg = (in)->reg
-#define COPY_COMMON_IFRAME_REGS(out, in) \
+#define COPY_COMMON_REGS(out, in) \
     do {                                 \
         COPY_REG(out, in, rax);          \
         COPY_REG(out, in, rbx);          \
@@ -82,9 +47,28 @@ void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
         COPY_REG(out, in, r15);          \
     } while (0)
 
+void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out,
+                                    const x86_syscall_general_regs_t* in) {
+    COPY_COMMON_REGS(out, in);
+    out->rip = in->rip;
+    out->rsp = in->rsp;
+    out->rflags = in->rflags;
+}
+
+void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
+                                    const zx_thread_state_general_regs_t* in) {
+    COPY_COMMON_REGS(out, in);
+    out->rip = in->rip;
+    out->rsp = in->rsp;
+    // Don't allow overriding privileged fields of rflags, and ignore writes
+    // to reserved fields.
+    out->rflags &= ~X86_FLAGS_USER;
+    out->rflags |= in->rflags & X86_FLAGS_USER;
+}
+
 void x86_fill_in_gregs_from_iframe(zx_thread_state_general_regs_t* out,
                                    const x86_iframe_t* in) {
-    COPY_COMMON_IFRAME_REGS(out, in);
+    COPY_COMMON_REGS(out, in);
     out->rsp = in->user_sp;
     out->rip = in->ip;
     out->rflags = in->flags;
@@ -92,7 +76,7 @@ void x86_fill_in_gregs_from_iframe(zx_thread_state_general_regs_t* out,
 
 void x86_fill_in_iframe_from_gregs(x86_iframe_t* out,
                                    const zx_thread_state_general_regs_t* in) {
-    COPY_COMMON_IFRAME_REGS(out, in);
+    COPY_COMMON_REGS(out, in);
     out->user_sp = in->rsp;
     out->ip = in->rip;
     // Don't allow overriding privileged fields of rflags, and ignore writes
@@ -221,6 +205,9 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
         return ZX_ERR_BAD_STATE;
     }
 
+    out->fs_base = thread->arch.fs_base;
+    out->gs_base = thread->arch.gs_base;
+
     return ZX_OK;
 }
 
@@ -231,6 +218,13 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
     // ZX-563 (registers aren't available in synthetic exceptions)
     if (thread->arch.suspended_general_regs.gregs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
+
+    // If these addresses are not canonical, the kernel will GPF when it tries
+    // to set them as the current values.
+    if (!x86_is_vaddr_canonical(in->fs_base))
+        return ZX_ERR_INVALID_ARGS;
+    if (!x86_is_vaddr_canonical(in->gs_base))
+        return ZX_ERR_INVALID_ARGS;
 
     DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
     switch (thread->arch.general_regs_source) {
@@ -254,6 +248,9 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
         DEBUG_ASSERT(false);
         return ZX_ERR_BAD_STATE;
     }
+
+    thread->arch.fs_base = in->fs_base;
+    thread->arch.gs_base = in->gs_base;
 
     return ZX_OK;
 }

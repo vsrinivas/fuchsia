@@ -20,6 +20,17 @@
 #error Unsupported architecture
 #endif
 
+struct thread_local_regs {
+#if defined(__x86_64__)
+    uint64_t fs_base_value;
+    uint64_t gs_base_value;
+#elif defined(__aarch64__)
+    uint64_t tpidr_value;
+#else
+#error Unsupported architecture
+#endif
+};
+
 // Initializes the register set with known test data.
 void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs);
 void fp_regs_fill_test_values(zx_thread_state_fp_regs* regs);
@@ -55,5 +66,6 @@ void spin_with_debug_regs(zx_thread_state_debug_regs_t* regs);
 void save_general_regs_and_exit_thread();
 void save_fp_regs_and_exit_thread();
 void save_vector_regs_and_exit_thread();
+void save_thread_local_regs_and_exit_thread();
 
 __END_CDECLS
