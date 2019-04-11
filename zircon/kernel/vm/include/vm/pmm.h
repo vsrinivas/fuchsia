@@ -63,11 +63,6 @@ uint64_t pmm_count_free_pages();
 // Return amount of physical memory in system, in bytes.
 uint64_t pmm_count_total_bytes();
 
-// Counts the number of pages in every state. For every page in every arena,
-// increments the corresponding VM_PAGE_STATE_*-indexed entry of
-// |state_count|. Does not zero out the entries first.
-void pmm_count_total_states(size_t state_count[VM_PAGE_STATE_COUNT_]) __NONNULL((1));
-
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);
 

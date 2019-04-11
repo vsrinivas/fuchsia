@@ -608,11 +608,12 @@ the VMOs of arbitrary processes by koid.
 
 *buffer* type: `zx_info_kmem_stats_t[1]`
 
-Returns information about kernel memory usage. It can be expensive to gather.
+Returns information about kernel memory usage.
 
 ```
 typedef struct zx_info_kmem_stats {
     // The total amount of physical memory available to the system.
+    // Note, the values below may not exactly add up to this total.
     size_t total_bytes;
 
     // The amount of unallocated memory.

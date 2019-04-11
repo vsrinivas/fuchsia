@@ -38,7 +38,6 @@ public:
 
     uint64_t CountFreePages() const;
     uint64_t CountTotalBytes() const;
-    void CountTotalStates(uint64_t state_count[VM_PAGE_STATE_COUNT_]) const;
 
     // printf free and overall state of the internal arenas
     // NOTE: both functions skip mutexes and can be called inside timer or crash context

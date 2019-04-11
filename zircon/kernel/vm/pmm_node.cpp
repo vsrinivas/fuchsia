@@ -19,11 +19,11 @@
 namespace {
 
 void set_state_alloc(vm_page* page) {
-    LTRACEF("page %p: prev state %s\n", page, page_state_to_string(page->state));
+    LTRACEF("page %p: prev state %s\n", page, page_state_to_string(page->state()));
 
-    DEBUG_ASSERT(page->state == VM_PAGE_STATE_FREE);
+    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_FREE);
 
-    page->state = VM_PAGE_STATE_ALLOC;
+    page->set_state(VM_PAGE_STATE_ALLOC);
 }
 
 } // namespace
@@ -154,7 +154,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
         CheckFreeFill(page);
 #endif
 
-        page->state = VM_PAGE_STATE_ALLOC;
+        page->set_state(VM_PAGE_STATE_ALLOC);
         list_add_tail(list, &page->queue_node);
 
         count--;
@@ -192,7 +192,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
             list_delete(&page->queue_node);
 
-            page->state = VM_PAGE_STATE_ALLOC;
+            page->set_state(VM_PAGE_STATE_ALLOC);
 
             list_add_tail(list, &page->queue_node);
 
@@ -242,11 +242,11 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 
         // remove the pages from the run out of the free list
         for (size_t i = 0; i < count; i++, p++) {
-            DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, p->state);
+            DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, p->state());
             DEBUG_ASSERT(list_in_list(&p->queue_node));
 
             list_delete(&p->queue_node);
-            p->state = VM_PAGE_STATE_ALLOC;
+            p->set_state(VM_PAGE_STATE_ALLOC);
 
             DEBUG_ASSERT(free_count_ > 0);
 
@@ -267,9 +267,9 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 }
 
 void PmmNode::FreePageHelperLocked(vm_page* page) {
-    LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state, page->paddr());
+    LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state(), page->paddr());
 
-    DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
+    DEBUG_ASSERT(page->state() != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
     DEBUG_ASSERT(!page->is_free());
 
 #if PMM_ENABLE_FREE_FILL
@@ -277,7 +277,7 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
 #endif
 
     // mark it free
-    page->state = VM_PAGE_STATE_FREE;
+    page->set_state(VM_PAGE_STATE_FREE);
 }
 
 void PmmNode::FreePage(vm_page* page) {
@@ -324,15 +324,6 @@ uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
 
 uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
     return arena_cumulative_size_;
-}
-
-void PmmNode::CountTotalStates(uint64_t state_count[VM_PAGE_STATE_COUNT_]) const {
-    // TODO(MG-833): This is extremely expensive, holding a global lock
-    // and touching every page/arena. We should keep a running count instead.
-    Guard<fbl::Mutex> guard{&lock_};
-    for (auto& a : arena_list_) {
-        a.CountStates(state_count);
-    }
 }
 
 void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {

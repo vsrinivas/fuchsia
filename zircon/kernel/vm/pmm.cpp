@@ -107,10 +107,6 @@ uint64_t pmm_count_total_bytes() {
     return pmm_node.CountTotalBytes();
 }
 
-void pmm_count_total_states(size_t state_count[VM_PAGE_STATE_COUNT_]) {
-    pmm_node.CountTotalStates(state_count);
-}
-
 static void pmm_dump_timer(struct timer* t, zx_time_t now, void*) {
     zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
     timer_set_oneshot(t, deadline, &pmm_dump_timer, nullptr);

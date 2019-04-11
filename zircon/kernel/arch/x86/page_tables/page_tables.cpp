@@ -301,7 +301,7 @@ static volatile pt_entry_t* _map_alloc_page(void) {
     if (status != ZX_OK) {
         return nullptr;
     }
-    p->state = VM_PAGE_STATE_MMU;
+    p->set_state(VM_PAGE_STATE_MMU);
 
     pt_entry_t* page_ptr = static_cast<pt_entry_t*>(paddr_to_physmap(pa));
     DEBUG_ASSERT(page_ptr);
@@ -514,8 +514,8 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
             vm_page_t* page = paddr_to_vm_page(ptable_phys);
 
             DEBUG_ASSERT(page);
-            DEBUG_ASSERT_MSG(page->state == VM_PAGE_STATE_MMU,
-                             "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state,
+            DEBUG_ASSERT_MSG(page->state() == VM_PAGE_STATE_MMU,
+                             "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state(),
                              X86_VIRT_TO_PHYS(next_table));
             DEBUG_ASSERT(!list_in_list(&page->queue_node));
 
