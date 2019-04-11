@@ -456,7 +456,7 @@ BanjoAst {
                         },
                         val: Some(
                             Constant(
-                                "\"hello\""
+                                "\"hello-_/.,\'()&0123456789\""
                             )
                         )
                     }
