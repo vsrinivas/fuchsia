@@ -205,6 +205,13 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 //   deadbeef.debug
 //   deadmeat.debug
 func WalkBuildIDDir(dirpath string) ([]BinaryFileRef, error) {
+	info, err := os.Stat(dirpath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat %q: %v", dirpath, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%q is not a directory", dirpath)
+	}
 	var refs []BinaryFileRef
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
