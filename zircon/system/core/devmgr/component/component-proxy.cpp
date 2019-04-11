@@ -388,6 +388,7 @@ zx_status_t ComponentProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
     PdevProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_PDEV;
     req.op = PdevOp::GET_INTERRUPT;
+    req.index = index;
     req.flags = flags;
 
     return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
