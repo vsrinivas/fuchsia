@@ -7,6 +7,7 @@ package netstack
 import (
 	"encoding/binary"
 	"math"
+	"net"
 	"time"
 
 	"syslog/logger"
@@ -296,7 +297,11 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 			return nil, err
 		}
 
-		return encodeAddr(ipv4.ProtocolNumber, tcpip.FullAddress{Addr: v.InterfaceAddr}), nil
+		if len(v.InterfaceAddr) == 0 {
+			return []byte(net.IPv4zero.To4()), nil
+		}
+
+		return []byte((v.InterfaceAddr)), nil
 
 	case C.IP_MULTICAST_LOOP:
 		var v tcpip.MulticastLoopOption
@@ -573,12 +578,21 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 		}
 
+		multicastAddr := mreqn.imr_multiaddr.Bytes()
+		if isZeros(multicastAddr) {
+			multicastAddr = nil
+		}
+		interfaceAddr := mreqn.imr_address.Bytes()
+		if isZeros(interfaceAddr) {
+			interfaceAddr = nil
+		}
+
 		switch name {
 		case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
 			o := tcpip.MembershipOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
-				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr.Bytes()),
-				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+				MulticastAddr: tcpip.Address(multicastAddr),
+				InterfaceAddr: tcpip.Address(interfaceAddr),
 			}
 
 			switch name {
@@ -595,7 +609,7 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		case C.IP_MULTICAST_IF:
 			return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
-				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+				InterfaceAddr: tcpip.Address(interfaceAddr),
 			})
 
 		default:

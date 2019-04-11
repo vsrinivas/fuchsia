@@ -5,17 +5,37 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
-#include "util.h"
-
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <poll.h>
+
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "util.h"
 
 namespace netstack {
+
+TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
+  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  ASSERT_GE(s, 0) << strerror(errno);
+
+  ip_mreqn param_in = {};
+  param_in.imr_ifindex = 1;
+  ASSERT_EQ(setsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)),
+            0)
+      << strerror(errno);
+
+  in_addr param_out = {};
+  socklen_t len = sizeof(param_out);
+  ASSERT_EQ(getsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, &len), 0)
+      << strerror(errno);
+  ASSERT_EQ(len, sizeof(param_out));
+
+  ASSERT_EQ(param_out.s_addr, INADDR_ANY);
+}
 
 TEST(LocalhostTest, Accept) {
   int serverfd = socket(AF_INET6, SOCK_STREAM, 0);

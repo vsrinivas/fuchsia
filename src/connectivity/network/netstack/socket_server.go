@@ -762,6 +762,9 @@ func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
 			return tcpipErrorToCode(err), nil, nil
 		}
 	}
+	if val, ok := val.([]byte); ok {
+		return 0, val, nil
+	}
 	b := make([]byte, reflect.TypeOf(val).Size())
 	n := copyAsBytes(b, val)
 	if n < len(b) {
