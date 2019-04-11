@@ -5,20 +5,20 @@
 #ifndef GARNET_BIN_SYSMGR_APP_H_
 #define GARNET_BIN_SYSMGR_APP_H_
 
+#include <fuchsia/pkg/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_set>
 
-#include <fs/managed-vfs.h>
-#include <fuchsia/pkg/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/config.h"
 #include "garnet/bin/sysmgr/package_updating_loader.h"
-#include "lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/macros.h"
-#include "lib/svc/cpp/service_namespace.h"
-#include "lib/svc/cpp/services.h"
 
 namespace sysmgr {
 
@@ -44,18 +44,17 @@ class App {
   void RegisterDefaultServiceConnector();
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   // Keep track of all services, indexed by url.
-  std::map<std::string, component::Services> services_;
+  std::map<std::string, std::shared_ptr<sys::ServiceDirectory>> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
 
-  fs::ManagedVfs vfs_;
-  fbl::RefPtr<fs::PseudoDir> svc_root_;
+  vfs::PseudoDir svc_root_;
   fidl::VectorPtr<std::string> svc_names_;
 
   std::unique_ptr<PackageUpdatingLoader> package_updating_loader_;

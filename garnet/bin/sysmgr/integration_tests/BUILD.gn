@@ -22,8 +22,8 @@ executable("test_sysmgr_service") {
 
   deps = [
     ":interface",
-    "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -38,9 +38,9 @@ executable("mock_resolver") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.pkg",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -58,8 +58,8 @@ executable("service_startup_test") {
   deps = [
     ":interface",
     "//garnet/bin/appmgr:appmgr_for_test",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]

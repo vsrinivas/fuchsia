@@ -4,15 +4,21 @@
 
 #include "garnet/bin/sysmgr/app.h"
 
-#include <fs/managed-vfs.h>
+#include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/vfs/cpp/node.h>
+#include <lib/vfs/cpp/service.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include "lib/component/cpp/connect.h"
-#include "lib/fidl/cpp/clone.h"
+
 #include "src/lib/fxl/logging.h"
 
 namespace sysmgr {
@@ -27,11 +33,9 @@ constexpr bool kAutoUpdatePackages = false;
 }  // namespace
 
 App::App(Config config)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      vfs_(async_get_default_dispatcher()),
-      svc_root_(fbl::AdoptRef(new fs::PseudoDir())),
+    : component_context_(sys::ComponentContext::Create()),
       auto_updates_enabled_(kAutoUpdatePackages) {
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
 
   // The set of excluded services below are services that are the transitive
   // closure of dependencies required for auto-updates that must not be resolved
@@ -90,24 +94,25 @@ App::App(Config config)
         async_get_default_dispatcher());
   }
   static const char* const kLoaderName = fuchsia::sys::Loader::Name_;
-  auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-    if (auto_updates_enabled_) {
-      package_updating_loader_->Bind(
-          fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-    } else {
-      startup_context_->ConnectToEnvironmentService(kLoaderName,
-                                                    std::move(channel));
-    }
-    return ZX_OK;
-  }));
+  auto child = std::make_unique<vfs::Service>(
+      [this](zx::channel channel, async_dispatcher_t* dispatcher) {
+        if (auto_updates_enabled_) {
+          package_updating_loader_->Bind(
+              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
+        } else {
+          component_context_->svc()->Connect(kLoaderName, std::move(channel));
+        }
+      });
   svc_names_.push_back(kLoaderName);
-  svc_root_->AddEntry(kLoaderName, std::move(child));
+  svc_root_.AddEntry(kLoaderName, std::move(child));
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(svc_names_);
   service_list->host_directory = OpenAsDirectory();
-  startup_context_->environment()->CreateNestedEnvironment(
+  fuchsia::sys::EnvironmentPtr environment;
+  component_context_->svc()->Connect(environment.NewRequest());
+  environment->CreateNestedEnvironment(
       std::move(env_request), env_controller_.NewRequest(), kDefaultLabel,
       std::move(service_list), {});
 
@@ -128,42 +133,41 @@ App::App(Config config)
 App::~App() = default;
 
 zx::channel App::OpenAsDirectory() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-    return zx::channel();
-  if (vfs_.ServeDirectory(svc_root_, std::move(h1)) != ZX_OK)
-    return zx::channel();
-  return h2;
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  svc_root_.Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      dir.NewRequest().TakeChannel());
+  return dir.TakeChannel();
 }
 
 void App::ConnectToService(const std::string& service_name,
                            zx::channel channel) {
-  fbl::RefPtr<fs::Vnode> child;
-  svc_root_->Lookup(&child, service_name);
-  auto status = child->Serve(&vfs_, std::move(channel), 0);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+  vfs::Node* child;
+  auto status = svc_root_.Lookup(service_name, &child);
+  if (status == ZX_OK) {
+    status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));
   }
+  FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
 }
 
 void App::RegisterSingleton(std::string service_name,
                             fuchsia::sys::LaunchInfoPtr launch_info,
                             bool optional) {
-  auto child = fbl::AdoptRef(new fs::Service(
+  auto child = std::make_unique<vfs::Service>(
       [this, optional, service_name, launch_info = std::move(launch_info),
        controller = fuchsia::sys::ComponentControllerPtr()](
-          zx::channel client_handle) mutable {
+          zx::channel client_handle, async_dispatcher_t* dispatcher) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);
         if (it == services_.end()) {
           FXL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
-          component::Services services;
           fuchsia::sys::LaunchInfo dup_launch_info;
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
-          dup_launch_info.directory_request = services.NewRequest();
+          auto services = sys::ServiceDirectory::CreateWithRequest(
+              &dup_launch_info.directory_request);
           controller.events().OnTerminated =
               [service_name, url = launch_info->url, optional](
                   int64_t return_code, fuchsia::sys::TerminationReason reason) {
@@ -189,11 +193,10 @@ void App::RegisterSingleton(std::string service_name,
               services_.emplace(launch_info->url, std::move(services));
         }
 
-        it->second.ConnectToService(std::move(client_handle), service_name);
-        return ZX_OK;
-      }));
+        it->second->Connect(service_name, std::move(client_handle));
+      });
   svc_names_.push_back(service_name);
-  svc_root_->AddEntry(service_name, std::move(child));
+  svc_root_.AddEntry(service_name, std::move(child));
 }
 
 void App::LaunchApplication(fuchsia::sys::LaunchInfo launch_info) {

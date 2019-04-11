@@ -47,12 +47,7 @@ source_set("cpp") {
     "//garnet/bin/netemul_runner/*",
     "//garnet/bin/media/*",
     "//garnet/bin/netconnector/*",
-    "//garnet/bin/sysmgr/*",
     "//garnet/bin/system_monitor/harvester/*",
-    "//garnet/bin/trace/*",
-    "//garnet/bin/trace/tests/*",
-    "//garnet/bin/trace_manager/*",
-    "//garnet/bin/tz-util/*",
     "//garnet/bin/ui/set_renderer_params_HACK:*",
     "//garnet/bin/ui/present_view:*",
     "//garnet/bin/ui/set_root_view:*",
@@ -130,9 +125,6 @@ source_set("cpp") {
     "//topaz/app/term:*",
     "//topaz/auth_providers/google:*",
     "//topaz/bin/ui/skottie_viewer:*",
-    "//topaz/runtime/dart_runner:*",
-    "//topaz/runtime/flutter_runner:*",
-    "//topaz/tests/web_runner_tests:*",
     "//vendor/*",
   ]
 }
