@@ -13,8 +13,9 @@ use {
     },
 };
 
-use crate::harness::control::{
-    control_expectation, control_timeout, ControlHarness, ControlState, FAKE_HCI_ADDRESS,
+use crate::harness::{
+    control::{control_expectation, control_timeout, ControlHarness, ControlState},
+    low_energy_central::FAKE_HCI_ADDRESS,
 };
 
 pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {

@@ -12,6 +12,3 @@ pub mod lifecycle;
 
 /// Tests for the fuchsia.bluetooth.le.Central interface
 pub mod low_energy_central;
-
-/// Tests for the fuchsia.bluetotoh.bredr.Profile interface
-pub mod profile;
