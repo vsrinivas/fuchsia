@@ -34,7 +34,6 @@ import (
 
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -56,8 +55,6 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 
 type tufSourceConfig struct {
 	Config *amber.SourceConfig
-
-	Oauth2Token *oauth2.Token
 
 	Status *SourceStatus
 }
@@ -156,8 +153,7 @@ type Source struct {
 	// the TUF database.
 	localStore tuf.LocalStore
 
-	tokenSource oauth2.TokenSource
-	httpClient  *http.Client
+	httpClient *http.Client
 
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
@@ -299,7 +295,24 @@ func (f *Source) initSource() error {
 	}
 	f.localStore = localStore
 
-	return f.updateTUFClientLocked()
+	// We got our tuf client ready to go. Before we store the client in our
+	// source, make sure to close the old client's transport's idle
+	// connections so we don't leave a bunch of sockets open.
+	f.closeIdleConnections()
+
+	f.httpClient, err = newHTTPClient(f.cfg.Config.TransportConfig)
+	if err != nil {
+		return err
+	}
+
+	// Create a new tuf client that uses the new http client.
+	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, f.httpClient)
+	if err != nil {
+		return RemoteStoreError{fmt.Errorf("server address not understood: %s", err)}
+	}
+	f.tufClient = tuf.NewClient(f.localStore, remoteStore)
+
+	return err
 }
 
 // Start starts background operations associated with this Source, such as
@@ -307,108 +320,6 @@ func (f *Source) initSource() error {
 // called once per active source.
 func (f *Source) Start() {
 	f.AutoWatch()
-	f.updateRefreshToken()
-}
-
-func (f *Source) processTokenUpdate(clientId, token string) {
-	if !f.Enabled() {
-		return
-	}
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if clientId != f.cfg.Config.Oauth2Config.ClientId {
-		log.Println("source: client ID is unexpected, dropping token")
-		return
-	}
-
-	f.cfg.Oauth2Token = &oauth2.Token{RefreshToken: token, TokenType: "Bearer", Expiry: time.Now()}
-
-	if err := f.updateTUFClientLocked(); err != nil {
-		log.Printf("failed to update tuf client: %s", err)
-		return
-	}
-
-	if err := f.saveLocked(); err != nil {
-		log.Printf("failed to save config: %s", err)
-		return
-	}
-}
-
-func oauth2Config(c *amber.OAuth2Config) *oauth2.Config {
-	if c == nil {
-		return nil
-	}
-	return &oauth2.Config{
-		ClientID:     c.ClientId,
-		ClientSecret: c.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  c.AuthUrl,
-			TokenURL: c.TokenUrl,
-		},
-		Scopes: c.Scopes,
-	}
-}
-
-func oauth2HttpClient(httpClient *http.Client, cfg *oauth2.Config,
-	token *oauth2.Token) (*http.Client, oauth2.TokenSource) {
-	if cfg == nil {
-		return httpClient, nil
-	}
-
-	// If we have oauth2 configured, we need to wrap the client in order to
-	// inject the authentication header.
-	var tokenSource oauth2.TokenSource
-	// Store the client in the context so oauth2 can use it to
-	// fetch the token. This client's transport will also be used
-	// as the base of the client oauth2 returns to us, except for
-	// the request timeout, which we manually have to copy over.
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-
-	timeout := httpClient.Timeout
-
-	tokenSource = cfg.TokenSource(ctx, token)
-	httpClient = oauth2.NewClient(ctx, tokenSource)
-
-	httpClient.Timeout = timeout
-
-	return httpClient, tokenSource
-}
-
-// Initialize (or reinitialize) the TUFClient. This is especially useful when
-// logging in, or modifying any of the http settings since there's no way to
-// change settings in place, so we need to replace it with a new tuf.Client.
-//
-// NOTE: It's the responsibility of the caller to hold the mutex before calling
-// this function.
-func (f *Source) updateTUFClientLocked() error {
-	httpClient, err := newHTTPClient(f.cfg.Config.TransportConfig)
-	if err != nil {
-		return err
-	}
-
-	authConfig := oauth2Config(f.cfg.Config.Oauth2Config)
-	httpClient, tokenSource := oauth2HttpClient(httpClient, authConfig, f.cfg.Oauth2Token)
-
-	// Create a new tuf client that uses the new http client.
-	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, httpClient)
-	if err != nil {
-		return RemoteStoreError{fmt.Errorf("server address not understood: %s", err)}
-	}
-	tufClient := tuf.NewClient(f.localStore, remoteStore)
-
-	// We got our tuf client ready to go. Before we store the client in our
-	// source, make sure to close the old client's transport's idle
-	// connections so we don't leave a bunch of sockets open.
-	f.closeIdleConnections()
-
-	// We're done! Save the clients for the next time we update our source.
-	f.tokenSource = tokenSource
-	f.httpClient = httpClient
-	f.tufClient = tufClient
-
-	return nil
 }
 
 func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
@@ -559,56 +470,13 @@ func (f *Source) SetEnabled(enabled bool) {
 	f.mu.Unlock()
 }
 
-// try to start a refresh token update. This should not be called while holding
-// the struct mutex as it will be locked during this call
-func (f *Source) updateRefreshToken() {
-	if !f.Enabled() {
-		return
-	}
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.cfg.Config.Oauth2Config == nil {
-		return
-	}
-	go defaultTokenLoader.ReadToken(f.processTokenUpdate, f.cfg.Config.Oauth2Config.ClientId)
-}
-
 func (f *Source) GetHttpClient() (*http.Client, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if err := f.refreshOauth2TokenLocked(); err != nil {
-		return nil, fmt.Errorf("failed to refresh oauth2 token: %s", err)
-	}
-
 	// http.Client itself is thread safe, but the member alias is not, so is
 	// guarded here.
 	return f.httpClient, nil
-}
-
-// Check if the token has refreshed. If so, save a new token
-func (f *Source) refreshOauth2TokenLocked() error {
-	if f.cfg.Oauth2Token == nil {
-		return nil
-	}
-
-	// Grab the latest token from the token source. If the token has
-	// expired, it will automatically refresh it in the background and give
-	// us a new access token.
-	newToken, err := f.tokenSource.Token()
-	if err != nil {
-		return err
-	}
-
-	if newToken.AccessToken != f.cfg.Oauth2Token.AccessToken {
-		log.Printf("refreshed oauth2 token for: %s", f.cfg.Config.Id)
-		f.cfg.Oauth2Token = newToken
-		f.saveLocked()
-	}
-
-	return nil
 }
 
 // UpdateIfStale updates this source if the source has not recently updated.
@@ -632,13 +500,6 @@ func (f *Source) Update() error {
 
 		if !*f.cfg.Status.Enabled {
 			return nil
-		}
-
-		// update any relevant auth token before initializing the tuf client
-		// because the tuf client will try to use the HTTP context when
-		// initializing
-		if err := f.refreshOauth2TokenLocked(); err != nil {
-			return fmt.Errorf("tuf_source: failed to refresh oauth2 token: %s", err)
 		}
 
 		if err := f.initLocalStoreLocked(); err != nil {
