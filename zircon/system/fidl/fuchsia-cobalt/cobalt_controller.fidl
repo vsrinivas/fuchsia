@@ -32,4 +32,17 @@ protocol Controller {
     // may possibly prove useful in production also.
     GetNumSendAttempts() -> (uint32 num);
     GetFailedSendAttempts() -> (uint32 num);
+
+    // Triggers Cobalt to generate Observations based on locally aggregated
+    // event data and write them to the local ObservationStore. In a non-test
+    // environment this would normally be done periodically by a background
+    // thread. In a test environment this method should be invoked against an
+    // instance of the Cobalt FIDL service that was passed the flag
+    // --start_event_aggregator_worker=false.
+    //
+    // |day_index| The index of the day for which locally aggregated
+    //             Observations should be generated.
+    //
+    // Returns the number of Observations which were generated.
+    GenerateAggregatedObservations(uint32 day_index) -> (int64 num);
 };

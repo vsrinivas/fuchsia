@@ -11,26 +11,26 @@
 
 #include "src/cobalt/bin/testapp/cobalt_testapp.h"
 
-#include <memory>
-#include <sstream>
-#include <string>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/component_context.h"
+#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
+#include "src/cobalt/bin/testapp/tests.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/component_context.h"
-#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
-#include "src/cobalt/bin/testapp/tests.h"
 
 namespace cobalt {
 namespace testapp {
@@ -81,6 +81,7 @@ bool CobaltTestApp::RunTests() {
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds,
                             CobaltConfigType type,
+                            size_t event_aggregator_backfill_days,
                             bool start_event_aggregator_worker,
                             uint32_t initial_interval_seconds) {
   controller_.Unbind();
@@ -108,8 +109,15 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
 
   {
     std::ostringstream stream;
+    stream << "--event_aggregator_backfill_days="
+           << event_aggregator_backfill_days;
+    launch_info.arguments.push_back(stream.str());
+  }
+
+  {
+    std::ostringstream stream;
     stream << "--start_event_aggregator_worker="
-           << start_event_aggregator_worker;
+           << (start_event_aggregator_worker ? "true" : "false");
     launch_info.arguments.push_back(stream.str());
   }
 
@@ -163,8 +171,11 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
 
   // Reconnect using the cobalt 1.0 config.
   Connect(999999999, 0, kCobaltConfig);
-  FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (v1.0 config) iteration.";
+  FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (v1.0 config).";
   if (!RequestSendSoonTests()) {
+    return false;
+  }
+  if (!RequestSendSoonTestsWithAggregation(kEventAggregatorBackfillDays)) {
     return false;
   }
 
@@ -224,6 +235,12 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
     return false;      \
   }
 
+#define CONNECT_AND_TRY_TEST(test, backfill_days)             \
+  Connect(999999999, 0, kCobaltConfig, backfill_days, false); \
+  if (!(test)) {                                              \
+    return false;                                             \
+  }
+
 bool CobaltTestApp::LegacyRequestSendSoonTests() {
   TRY_TEST(legacy::TestLogEvent(&logger_));
   TRY_TEST(legacy::TestLogEventCount(&logger_));
@@ -246,6 +263,23 @@ bool CobaltTestApp::RequestSendSoonTests() {
   TRY_TEST(TestLogMemoryUsage(&logger_));
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
+  return true;
+}
+
+bool CobaltTestApp::RequestSendSoonTestsWithAggregation(
+    const size_t backfill_days) {
+  CONNECT_AND_TRY_TEST(
+      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_,
+                                  backfill_days),
+      backfill_days);
+  CONNECT_AND_TRY_TEST(
+      TestLogEventCountWithAggregation(&logger_, clock_.get(),
+                                       &cobalt_controller_, backfill_days),
+      backfill_days);
+  CONNECT_AND_TRY_TEST(
+      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(),
+                                        &cobalt_controller_, backfill_days),
+      backfill_days);
   return true;
 }
 

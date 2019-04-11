@@ -21,9 +21,12 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "third_party/cobalt/util/clock.h"
 
 namespace cobalt {
 namespace testapp {
+
+constexpr size_t kEventAggregatorBackfillDays = 2;
 
 enum CobaltConfigType {
   kLegacyCobaltConfig = 0,
@@ -36,7 +39,9 @@ class CobaltTestApp {
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
         context_(sys::ComponentContext::Create()),
-        logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
+        logger_(use_network, num_observations_per_batch, &cobalt_controller_) {
+    clock_.reset(new util::SystemClock);
+  }
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -47,20 +52,23 @@ class CobaltTestApp {
  private:
   // Starts and connects to the cobalt fidl service using the provided
   // scheduling parameters.
-  void Connect(uint32_t schedule_interval_seconds,
-               uint32_t min_interval_seconds, CobaltConfigType type,
-               bool start_event_aggregator_worker = false,
-               uint32_t initial_interval_seconds = 0);
+  void Connect(
+      uint32_t schedule_interval_seconds, uint32_t min_interval_seconds,
+      CobaltConfigType type,
+      size_t event_aggregator_backfill_days = kEventAggregatorBackfillDays,
+      bool start_event_aggregator_worker = false,
+      uint32_t initial_interval_seconds = 0);
 
   // Loads the CobaltConfig proto for this project and writes it to a VMO.
   // Returns the VMO and the size of the proto in bytes.
   fuchsia::cobalt::ProjectProfile LoadCobaltConfig(CobaltConfigType type);
 
   // Tests using the strategy of using the scheduling parameters (9999999, 0)
-  // meaning that no scheduled sends will occur and RequestSendSoon() will cause
-  // an immediate send so that we are effectively putting the ShippingManager
-  // into a manual mode in which sends only occur when explicitly requested.
-  // The tests invoke RequestSendSoon() when they want to send.
+  // meaning that no scheduled sends will occur and RequestSendSoon() will
+  // cause an immediate send so that we are effectively putting the
+  // ShippingManager into a manual mode in which sends only occur when
+  // explicitly requested. The tests invoke RequestSendSoon() when they want
+  // to send.
   bool RunTestsWithRequestSendSoon();
 
   // Tests using the strategy of initializing the ShippingManager with the
@@ -80,12 +88,14 @@ class CobaltTestApp {
 
   bool LegacyRequestSendSoonTests();
   bool RequestSendSoonTests();
+  bool RequestSendSoonTestsWithAggregation(const size_t backfill_days);
 
   bool do_environment_test_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   CobaltTestAppLogger logger_;
+  std::unique_ptr<util::ClockInterface> clock_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };

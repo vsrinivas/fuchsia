@@ -8,15 +8,28 @@
 #include <mutex>
 #include <vector>
 
+#include "third_party/cobalt/logger/local_aggregation.pb.h"
+
 namespace cobalt {
 
 using encoder::ShippingManager;
 
 CobaltControllerImpl::CobaltControllerImpl(
     async_dispatcher_t* dispatcher,
-    std::vector<encoder::ShippingManager*> shipping_managers)
+    std::vector<encoder::ShippingManager*> shipping_managers,
+    logger::EventAggregator* event_aggregator,
+    encoder::ObservationStore* observation_store)
     : dispatcher_(dispatcher),
-      shipping_managers_(std::move(shipping_managers)) {}
+      shipping_managers_(std::move(shipping_managers)),
+      event_aggregator_(event_aggregator),
+      observation_store_(observation_store) {
+  CHECK(dispatcher_);
+  CHECK(event_aggregator_);
+  CHECK(observation_store_);
+  for (auto shipping_manager : shipping_managers_) {
+    CHECK(shipping_manager);
+  }
+}
 
 // This struct is used in the method RequestSendSoon() below in order
 // to coordinate the results of multiple callbacks. We invoke RequestSendSoon()
@@ -91,4 +104,14 @@ void CobaltControllerImpl::GetFailedSendAttempts(
   }
   callback(num_failed_attempts);
 }
+
+void CobaltControllerImpl::GenerateAggregatedObservations(
+    uint32_t day_index, GenerateAggregatedObservationsCallback callback) {
+  size_t num_obs_before = observation_store_->num_observations_added();
+  event_aggregator_->GenerateObservationsNoWorker(day_index);
+  size_t num_new_obs =
+      observation_store_->num_observations_added() - num_obs_before;
+  callback(num_new_obs);
+}
+
 }  // namespace cobalt

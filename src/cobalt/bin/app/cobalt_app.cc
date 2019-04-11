@@ -146,8 +146,8 @@ CobaltApp::CobaltApp(
           &logger_encoder_, &observation_writer_, &local_aggregate_proto_store_,
           &obs_history_proto_store_, event_aggregator_backfill_days),
       controller_impl_(new CobaltControllerImpl(
-          dispatcher,
-          {&legacy_shipping_manager_, &clearcut_shipping_manager_})) {
+          dispatcher, {&legacy_shipping_manager_, &clearcut_shipping_manager_},
+          &event_aggregator_, observation_store_.get())) {
   legacy_shipping_manager_.Start();
   clearcut_shipping_manager_.Start();
   if (start_event_aggregator_worker) {

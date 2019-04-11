@@ -46,8 +46,13 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//third_party/cobalt/config:cobalt_registry_proto",
     "//third_party/cobalt/config:id",
+    "//third_party/cobalt/util:clock",
+    "//third_party/cobalt/util:datetime_util",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
   ]
+
+  configs += [ "//third_party/cobalt:cobalt_config" ]
 }

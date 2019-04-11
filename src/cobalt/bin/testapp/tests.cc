@@ -5,8 +5,14 @@
 #include "src/cobalt/bin/testapp/tests.h"
 #include "src/cobalt/bin/testapp/cobalt_metrics.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
+#include "third_party/cobalt/config/metric_definition.pb.h"
+#include "third_party/cobalt/util/datetime_util.h"
 
 namespace cobalt {
+
+using util::ClockInterface;
+using util::TimeToDayIndex;
+
 namespace testapp {
 
 using fidl::VectorPtr;
@@ -161,6 +167,11 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
 }  // namespace legacy
 
 namespace {
+uint32_t CurrentDayIndex(ClockInterface* clock) {
+  return TimeToDayIndex(std::chrono::system_clock::to_time_t(clock->now()),
+                        MetricDefinition::UTC);
+}
+
 bool SendAndCheckSuccess(const std::string& test_name,
                          bool use_request_send_soon,
                          CobaltTestAppLogger* logger) {
@@ -353,6 +364,136 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
 
   FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
   return success;
+}
+
+////////////////////// Tests using local aggregation ///////////////////////
+
+// A helper function which generates locally aggregated observations for
+// |day_index| and checks that the number of generated observations is equal to
+// |expected_num_obs|.
+bool GenerateObsAndCheckCount(
+    uint32_t day_index, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+    int64_t expected_num_obs) {
+  FXL_LOG(INFO) << "Generating locally aggregated observations for day index "
+                << day_index;
+  int64_t num_obs = 0;
+  (*cobalt_controller)->GenerateAggregatedObservations(day_index, &num_obs);
+  FXL_LOG(INFO) << "Generated " << num_obs
+                << " locally aggregated observations.";
+  if (num_obs != expected_num_obs) {
+    FXL_LOG(INFO) << "Expected " << expected_num_obs << " observations.";
+    return false;
+  }
+  return true;
+}
+
+bool TestLogEventWithAggregation(
+    CobaltTestAppLogger* logger, ClockInterface* clock,
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+    const size_t backfill_days) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogEventWithAggregation";
+  bool use_request_send_soon = true;
+  for (uint32_t index : kFeaturesActiveIndices) {
+    if (!logger->LogEvent(metrics::kFeaturesActiveMetricId, index)) {
+      FXL_LOG(INFO) << "Failed to log event with index " << index << ".";
+      FXL_LOG(INFO) << "TestLogEventWithAggregation : FAIL";
+      return false;
+    }
+  }
+  if (logger->LogEvent(metrics::kFeaturesActiveMetricId,
+                       kFeaturesActiveInvalidIndex)) {
+    FXL_LOG(INFO) << "Failed to reject event with invalid index "
+                  << kFeaturesActiveInvalidIndex << ".";
+    FXL_LOG(INFO) << "TestLogEventWithAggregation : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(
+          CurrentDayIndex(clock), cobalt_controller,
+          kNumAggregatedObservations * (1 + backfill_days))) {
+    FXL_LOG(INFO) << "TestLogEventWithAggregation : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, 0)) {
+    FXL_LOG(INFO) << "TestLogEventWithAggregation : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogEventWithAggregation",
+                             use_request_send_soon, logger);
+}
+
+bool TestLogEventCountWithAggregation(
+    CobaltTestAppLogger* logger, ClockInterface* clock,
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+    const size_t backfill_days) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogEventCountWithAggregation";
+  bool use_request_send_soon = true;
+  int expected_num_obs = kNumAggregatedObservations * (1 + backfill_days);
+  for (uint32_t index : kConnectionAttemptsIndices) {
+    for (std::string component : kConnectionAttemptsComponentNames) {
+      // Log a count depending on the index.
+      int64_t count = index * 5;
+      if (!logger->LogEventCount(metrics::kConnectionAttemptsMetricId, index,
+                                 component, count)) {
+        FXL_LOG(INFO) << "Failed to log event count for index " << index
+                      << " and component " << component << ".";
+        FXL_LOG(INFO) << "TestLogEventCountWithAggregation : FAIL";
+        return false;
+      }
+      if (count != 0) {
+        expected_num_obs += kConnectionAttemptsNumWindowSizes;
+      }
+    }
+  }
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
+                                expected_num_obs)) {
+    FXL_LOG(INFO) << "TestLogEventCountWithAggregation : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, 0)) {
+    FXL_LOG(INFO) << "TestLogEventCountWithAggregation : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogEventCountWithAggregation",
+                             use_request_send_soon, logger);
+}
+
+bool TestLogElapsedTimeWithAggregation(
+    CobaltTestAppLogger* logger, ClockInterface* clock,
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+    const size_t backfill_days) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation";
+  bool use_request_send_soon = true;
+  int expected_num_obs = kNumAggregatedObservations * (1 + backfill_days);
+  for (uint32_t index : kStreamingTimeIndices) {
+    for (std::string component : kStreamingTimeComponentNames) {
+      // Log a duration depending on the index.
+      int64_t duration = index * 100;
+      if (!logger->LogElapsedTime(metrics::kStreamingTimeMetricId, index,
+                                  component, duration)) {
+        FXL_LOG(INFO) << "Failed to log elapsed time for index " << index
+                      << " and component " << component << ".";
+        FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
+        return false;
+      }
+      if (duration != 0) {
+        expected_num_obs += kStreamingTimeNumWindowSizes;
+      }
+    }
+  }
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
+                                expected_num_obs)) {
+    FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, 0)) {
+    FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogElapsedTimeWithAggregation",
+                             use_request_send_soon, logger);
 }
 
 }  // namespace testapp
