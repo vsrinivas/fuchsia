@@ -5,15 +5,15 @@
 #ifndef PERIDOT_LIB_FIDL_JSON_XDR_H_
 #define PERIDOT_LIB_FIDL_JSON_XDR_H_
 
+#include <lib/fidl/cpp/string.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
+
 #include <array>
 #include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include <lib/fidl/cpp/string.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
@@ -224,8 +224,7 @@ class XdrContext {
     Field(field).Value(data);
   }
 
-  // Same as Field(), but allows a default value to be specified. Only simple
-  // types and std::vector<simple type> are supported.
+  // Same as Field(), but allows a default value to be specified.
   //
   // |field| is the name of the JSON field to be read or written to
   // |data| is a pointer to the fidl field to be read or written to
@@ -268,6 +267,17 @@ class XdrContext {
     Field(field).Value(data, filter);
   }
 
+  // Same as Field(), but allows for a default value to be specified. If
+  // |use_data| is false, the supplied |default_value| is used. Otherwise,
+  // |data| is used.
+  template <typename D, typename V>
+  void FieldWithDefault(const char field[], D* const data,
+                        XdrFilterType<V> const filter, bool use_data,
+                        D default_value) {
+    FieldWithDefault(field).ValueWithDefault(data, filter, use_data,
+                                             std::move(default_value));
+  }
+
   // Below are methods analog to those for values on properties of
   // objects for handling standalone values. These methods are called
   // by XdrContext client code such as XdrRead() and XdrWrite() to
@@ -306,7 +316,7 @@ class XdrContext {
             AddError("Unexpected type.");
             return;
           }
-          *data = default_value;
+          *data = std::move(default_value);
           return;
         }
         *data = value_->Get<V>();
@@ -330,7 +340,7 @@ class XdrContext {
             AddError("Unexpected type.");
             return;
           }
-          *data = default_value;
+          *data = std::move(default_value);
           return;
         }
         *data = static_cast<V>(value_->Get<int>());
@@ -370,6 +380,30 @@ class XdrContext {
   template <typename D, typename V>
   void Value(D* data, XdrFilterType<V> filter) {
     filter(this, data);
+  }
+
+  // Same as Value() but allows a default value to be specified.
+  template <typename D, typename V>
+  void ValueWithDefault(D* data, XdrFilterType<V> filter, bool use_data,
+                        D default_value) {
+    switch (op_) {
+      case XdrOp::TO_JSON: {
+        if (use_data) {
+          filter(this, data);
+          break;
+        }
+        filter(this, &default_value);
+        break;
+      }
+
+      case XdrOp::FROM_JSON: {
+        if (value_->IsNull()) {
+          *data = std::move(default_value);
+          break;
+        }
+        filter(this, data);
+      }
+    }
   }
 
   // Operator & may be overloaded to return a type that acts like a pointer, but
@@ -567,8 +601,8 @@ class XdrContext {
         }
         data->resize(default_value.size());
         for (size_t i = 0; i < default_value.size(); ++i) {
-          ElementWithDefault(i).ValueWithDefault(&data->at(i), use_data,
-                                                 default_value.at(i));
+          ElementWithDefault(i).ValueWithDefault(
+              &data->at(i), filter, use_data, std::move(default_value.at(i)));
         }
         break;
 
@@ -580,8 +614,8 @@ class XdrContext {
           }
           data->resize(default_value.size());
           for (size_t i = 0; i < default_value.size(); ++i) {
-            ElementWithDefault(i).ValueWithDefault(&data->at(i), use_data,
-                                                   default_value.at(i));
+            ElementWithDefault(i).ValueWithDefault(
+                &data->at(i), filter, use_data, std::move(default_value.at(i)));
           }
           return;
         }

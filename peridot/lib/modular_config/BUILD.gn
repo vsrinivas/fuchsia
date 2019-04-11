@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("modular_config") {
+  sources = [
+    "modular_config.cc",
+    "modular_config.h",
+  ]
+
+  deps = [
+    ":json_xdr",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json",
+    "//peridot/lib/fidl:json_xdr",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+  ]
+}
+
+source_set("json_xdr") {
+  sources = [
+    "modular_config_xdr.cc",
+    "modular_config_xdr.h",
+  ]
+
+  deps = [
+    "//peridot/lib/fidl:json_xdr",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "modular_config_xdr_unittest.cc",
+  ]
+
+  deps = [
+    ":json_xdr",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rapidjson",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}

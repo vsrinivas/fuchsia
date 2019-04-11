@@ -4,10 +4,10 @@
 
 #include "peridot/lib/fidl/json_xdr.h"
 
+#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
+
 #include <map>
 #include <vector>
-
-#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 
@@ -944,6 +944,59 @@ TEST(Xdr, FillWithDefaults) {
   EXPECT_EQ(10.0, t1.float64());
   EXPECT_EQ(json_xdr_unittest::Enum::ZERO, t1.enum_());
   std::vector<std::string> v = {"a", "vector"};
+  EXPECT_EQ(v, t1.vector_of_strings());
+}
+
+TEST(Xdr, IgnoreDefaults) {
+  json_xdr_unittest::FillWithDefaultValues t0;
+  t0.set_string("new string");
+  t0.set_bool_(false);
+  t0.set_int8(10);
+  t0.set_int16(20);
+  t0.set_int32(30);
+  t0.set_int64(40);
+  t0.set_uint8(50);
+  t0.set_uint16(60);
+  t0.set_uint32(70);
+  t0.set_uint64(80);
+  t0.set_float32(90);
+  t0.set_float64(100);
+  t0.set_enum_(json_xdr_unittest::Enum::ONE);
+  std::vector<std::string> v = {"new", "vector"};
+  t0.set_vector_of_strings(v);
+
+  std::string json0;
+  XdrWrite(&json0, &t0, XdrFillWithDefaultType);
+  EXPECT_EQ(
+      "{\"string\":\"new "
+      "string\",\"bool\":false,\"int8\":10,\"int16\":20,\"int32\":30,\"int64\":"
+      "40,\"uint8\":50,\"uint16\":60,\"uint32\":70,\"uint64\":80,\"float32\":"
+      "90.0,\"float64\":100.0,\"enum\":1,\"vector_of_strings\":[\"new\","
+      "\"vector\"]}",
+      json0);
+
+  std::string json1 =
+      "{\"string\":\"new "
+      "string\",\"bool\":false,\"int8\":10,\"int16\":20,\"int32\":30,\"int64\":"
+      "40,\"uint8\":50,\"uint16\":60,\"uint32\":70,\"uint64\":80,\"float32\":"
+      "90.0,\"float64\":100.0,\"enum\":1,\"vector_of_strings\":[\"new\","
+      "\"vector\"]}";
+  json_xdr_unittest::FillWithDefaultValues t1;
+  EXPECT_TRUE(XdrRead(json1, &t1, XdrFillWithDefaultType));
+
+  EXPECT_EQ("new string", t1.string());
+  EXPECT_FALSE(t1.bool_());
+  EXPECT_EQ(10, t1.int8());
+  EXPECT_EQ(20, t1.int16());
+  EXPECT_EQ(30, t1.int32());
+  EXPECT_EQ(40, t1.int64());
+  EXPECT_EQ(50u, t1.uint8());
+  EXPECT_EQ(60u, t1.uint16());
+  EXPECT_EQ(70u, t1.uint32());
+  EXPECT_EQ(80u, t1.uint64());
+  EXPECT_EQ(90.0f, t1.float32());
+  EXPECT_EQ(100.0, t1.float64());
+  EXPECT_EQ(json_xdr_unittest::Enum::ONE, t1.enum_());
   EXPECT_EQ(v, t1.vector_of_strings());
 }
 

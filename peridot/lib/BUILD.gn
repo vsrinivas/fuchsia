@@ -40,6 +40,7 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/firebase:unittests",
     "//peridot/lib/ledger_client:unittests",
+    "//peridot/lib/modular_config:unittests",
     "//peridot/lib/module_manifest:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
