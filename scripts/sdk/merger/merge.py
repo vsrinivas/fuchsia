@@ -229,34 +229,50 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     return True
 
 
+def _has_host_content(parts):
+    '''Returns true if the given list of SDK parts contains an element with
+    content built for a host.
+    '''
+    return 'host_tool' in [part.type for part in parts]
+
+
+
 def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     '''Writes a manifest file resulting from the merge of the manifest files for
     the two given SDK directories.
     '''
     manifest_one = _get_manifest(source_dir_one)
     manifest_two = _get_manifest(source_dir_two)
+    parts_one = set([Part(p) for p in manifest_one['new_parts']])
+    parts_two = set([Part(p) for p in manifest_two['new_parts']])
 
-    # Base attributes.
-    if manifest_one['arch']['host'] != manifest_two['arch']['host']:
-        print('Error: mismatching host architecture')
+    manifest = {
+        'arch': {}
+    }
+
+    # Host architecture.
+    host_archs = set()
+    if _has_host_content(parts_one):
+        host_archs.add(manifest_one['arch']['host'])
+    if _has_host_content(parts_two):
+        host_archs.add(manifest_two['arch']['host'])
+    if len(host_archs) != 1:
+        print('Error: mismatching host architecture: %s' %
+              ', '.join(host_archs))
         return False
+    manifest['arch']['host']= list(host_archs)[0]
+
+    # Id.
     if manifest_one['id'] != manifest_two['id']:
         print('Error: mismatching id')
         return False
-    manifest = {
-        'arch': {
-            'host': manifest_one['arch']['host'],
-        },
-        'id': manifest_one['id'],
-    }
+    manifest['id'] = manifest_one['id']
 
     # Target architectures.
     manifest['arch']['target'] = sorted(set(manifest_one['arch']['target']) |
                                         set(manifest_two['arch']['target']))
 
     # Parts.
-    parts_one = set([Part(p) for p in manifest_one['new_parts']])
-    parts_two = set([Part(p) for p in manifest_two['new_parts']])
     manifest['new_parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
     manifest['parts'] = sorted(set(manifest_one['parts']) |
                                set(manifest_two['parts']))
