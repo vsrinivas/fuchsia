@@ -475,8 +475,6 @@ zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     zx_status_t status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &t);
     if (status != ZX_OK) { return status; }
 
-    status = t.wait_async(port_, id, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
-    if (status != ZX_OK) { return status; }
     timer->reset(new SystemTimer(&timer_scheduler_, id, std::move(t)));
 
     return ZX_OK;
@@ -742,7 +740,7 @@ void Device::MainLoop() {
                 break;
             }
             break;
-        case ZX_PKT_TYPE_SIGNAL_REP:
+        case ZX_PKT_TYPE_SIGNAL_ONE:
             switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kMlme:
                 dispatcher_->HandlePortPacket(pkt.key);
@@ -752,13 +750,6 @@ void Device::MainLoop() {
                 minstrel_->HandleTimeout();
                 break;
             }
-            default:
-                errorf("unknown port key: %" PRIu64 "\n", pkt.key);
-                break;
-            }
-            break;
-        case ZX_PKT_TYPE_SIGNAL_ONE:
-            switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kService:
                 ProcessChannelPacketLocked(pkt.signal.count);
                 break;
@@ -930,7 +921,10 @@ void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
 
 zx_status_t Device::TimerSchedulerImpl::Schedule(Timer* timer, zx::time deadline) {
     auto sys_timer = static_cast<SystemTimer*>(timer);
-    return sys_timer->inner()->set(deadline, zx::nsec(0));
+    zx_status_t status = sys_timer->inner()->set(deadline, zx::nsec(0));
+    if (status != ZX_OK) { return status; }
+    return sys_timer->inner()->wait_async(device_->port_, sys_timer->id(), ZX_TIMER_SIGNALED,
+                                          ZX_WAIT_ASYNC_ONCE);
 }
 
 zx_status_t Device::TimerSchedulerImpl::Cancel(Timer* timer) {
