@@ -1,12 +1,12 @@
-# Cache
+# Token Cache
 
 ## Overview
 
-Cache provides an ephemeral cache for short-lived authentication tokens such as
-OAuth access and ID tokens and Firebase tokens. The cache contents are only
-stored in memory so are not preserved across executions.
+Token Cache provides an ephemeral cache for short-lived authentication tokens
+such as OAuth access and ID tokens and Firebase tokens. The cache contents are
+only stored in memory so are not preserved across executions.
 
-This create is used by the Token Manager library.
+This crate is used by the Token Manager library.
 
 
 ## Key Dependencies

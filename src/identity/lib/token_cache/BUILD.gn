@@ -4,8 +4,8 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("cache") {
-  name = "auth_cache"
+rustc_library("token_cache") {
+  name = "identity_token_cache"
   edition = "2018"
   with_unit_tests = true
 

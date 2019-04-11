@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
-use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
 use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;
@@ -19,6 +18,7 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
+use identity_token_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
 use identity_token_store::file::AuthDbFile;
 use identity_token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use log::{error, info, warn};

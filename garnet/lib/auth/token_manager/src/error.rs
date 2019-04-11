@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use auth_cache::AuthCacheError;
 use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
+use identity_token_cache::AuthCacheError;
 use identity_token_store::AuthDbError;
 
 /// An extension trait to simplify conversion of results based on general errors to

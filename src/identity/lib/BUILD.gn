@@ -21,13 +21,13 @@ group("tests") {
 
 package("identity_lib_unittests") {
   deps = [
+    "token_cache:token_cache",
     "token_store:token_store",
-    "//garnet/lib/auth/cache:cache",
   ]
 
   tests = [
     {
-      name = "auth_cache_lib_test"
+      name = "identity_token_cache_lib_test"
       environments = basic_envs
     },
     {
