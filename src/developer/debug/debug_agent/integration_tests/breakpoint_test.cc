@@ -65,6 +65,7 @@ class BreakpointStreamBackend : public MockStreamBackend {
   const debug_ipc::NotifyThread& thread_notification() const {
     return thread_notification_;
   }
+  void clear_thread_notification() { thread_notification_ = {}; }
 
   // The messages we're interested in handling ---------------------------------
 
@@ -85,6 +86,10 @@ class BreakpointStreamBackend : public MockStreamBackend {
     loop_->QuitNow();
   }
 
+  void HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) override {
+    thread_notification_ = std::move(thread);
+    loop_->QuitNow();
+  }
   void HandleNotifyThreadExiting(debug_ipc::NotifyThread thread) override {
     thread_notification_ = std::move(thread);
     loop_->QuitNow();
@@ -126,7 +131,19 @@ TEST(BreakpointIntegration, SWBreakpoint) {
         << "Expected ZX_OK, Got: "
         << debug_ipc::ZxStatusToString(launch_reply.status);
 
-    // We run the look to get the notifications sent by the agent.
+    // We run the loop which will stop at the new thread notification.
+    loop->Run();
+    auto thread_notification = mock_stream_backend.thread_notification();
+    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
+    mock_stream_backend.clear_thread_notification();
+
+    // We resume the thread because the new thread will be stopped.
+    debug_ipc::ResumeRequest resume_request;
+    resume_request.process_koid = thread_notification.process_koid;
+    debug_ipc::ResumeReply resume_reply;
+    remote_api->OnResume(resume_request, &resume_reply);
+
+    // We run the loop to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
     // notification.
     loop->Run();
@@ -153,9 +170,6 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     ASSERT_EQ(breakpoint_reply.status, ZX_OK);
 
     // Resume the process now that the breakpoint is installed.
-    debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = launch_reply.process_id;
-    debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
     // The loop will run until the stream backend receives an exception
@@ -175,12 +189,11 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     EXPECT_TRUE(breakpoint.should_delete);
   }
 }
+
 // TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
 //               emulated by QEMU without KVM. This will sometimes make tests
-//               fail or even crash QEMU.
-//               The tests will be re-enabled when there is way to express
-//               that these test must not run on QEMU.
-
+//               fail or even crash QEMU. The bot configuration should avoid
+//               running this test on QEMU.
 TEST(BreakpointIntegration, HWBreakpoint) {
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
@@ -211,7 +224,19 @@ TEST(BreakpointIntegration, HWBreakpoint) {
         << "Expected ZX_OK, Got: "
         << debug_ipc::ZxStatusToString(launch_reply.status);
 
-    // We run the look to get the notifications sent by the agent.
+    // We run the loop which will stop at the new thread notification.
+    loop->Run();
+    auto thread_notification = mock_stream_backend.thread_notification();
+    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
+    mock_stream_backend.clear_thread_notification();
+
+    // We resume the thread because the new thread will be stopped.
+    debug_ipc::ResumeRequest resume_request;
+    resume_request.process_koid = thread_notification.process_koid;
+    debug_ipc::ResumeReply resume_reply;
+    remote_api->OnResume(resume_request, &resume_reply);
+
+    // We run the loop to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
     // notification.
     loop->Run();
@@ -243,9 +268,6 @@ TEST(BreakpointIntegration, HWBreakpoint) {
         << "Received: " << debug_ipc::ZxStatusToString(breakpoint_reply.status);
 
     // Resume the process now that the breakpoint is installed.
-    debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = launch_reply.process_id;
-    debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
     // The loop will run until the stream backend receives an exception
@@ -273,7 +295,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     DEBUG_LOG(Test) << "Verifyint thread exited correctly.";
 
     // We verify that the thread exited.
-    auto& thread_notification = mock_stream_backend.thread_notification();
+    thread_notification = mock_stream_backend.thread_notification();
     ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
     auto& record = thread_notification.record;
     ASSERT_EQ(record.state, debug_ipc::ThreadRecord::State::kDead)

@@ -104,7 +104,7 @@ class ScopedFakeArchProvider {
 class FakeProcess : public DebuggedProcess {
  public:
   FakeProcess(zx_koid_t koid)
-      : DebuggedProcess(nullptr, {koid, zx::process(), true}) {}
+      : DebuggedProcess(nullptr, {koid, zx::process()}) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {

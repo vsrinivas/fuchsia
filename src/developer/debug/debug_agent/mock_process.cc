@@ -9,7 +9,7 @@
 namespace debug_agent {
 
 MockProcess::MockProcess(zx_koid_t koid)
-    : DebuggedProcess(nullptr, {koid, zx::process(), true}) {}
+    : DebuggedProcess(nullptr, {koid, zx::process()}) {}
 
 MockProcess::~MockProcess() = default;
 

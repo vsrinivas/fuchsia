@@ -6,9 +6,9 @@
 
 #include <inttypes.h>
 #include <zircon/syscalls/exception.h>
+
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/object_util.h"
@@ -22,6 +22,7 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -52,20 +53,15 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
 
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
-                                                     zx::process handle,
-                                                     bool resume_initial_thread)
-    : koid(process_koid),
-      handle(std::move(handle)),
-      resume_initial_thread(resume_initial_thread) {}
+                                                     zx::process handle)
+    : koid(process_koid), handle(std::move(handle)) {}
 
 DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent,
                                  DebuggedProcessCreateInfo&& create_info)
     : debug_agent_(debug_agent),
       koid_(create_info.koid),
       process_(std::move(create_info.handle)),
-      name_(std::move(create_info.name)),
-      resume_initial_thread_(create_info.resume_initial_thread),
-      waiting_for_initial_thread_(true) {
+      name_(std::move(create_info.name)) {
   // set this property so we can know about module loads.
   const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
   zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
@@ -353,15 +349,10 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
   zx::thread thread = ThreadForKoid(process_.get(), thread_koid);
 
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
-  ThreadCreationOption option = ThreadCreationOption::kSuspendedShouldRun;
-  if (waiting_for_initial_thread_) {
-    waiting_for_initial_thread_ = false;
-    if (!resume_initial_thread_)
-      option = ThreadCreationOption::kSuspendedKeepSuspended;
-  }
   auto added = threads_.emplace(
-      thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),
-                                                    thread_koid, option));
+      thread_koid, std::make_unique<DebuggedThread>(
+                       this, std::move(thread), thread_koid,
+                       ThreadCreationOption::kSuspendedKeepSuspended));
 
   // Notify the client.
   added.first->second->SendThreadNotification();

@@ -5,15 +5,11 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 
 #include <inttypes.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"
@@ -31,6 +27,9 @@
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
@@ -139,7 +138,6 @@ void DebugAgent::OnAttach(uint32_t transaction_id,
       create_info.name = reply.name;
       create_info.koid = request.koid;
       create_info.handle = std::move(process);
-      create_info.resume_initial_thread = true;
       reply.status = AddDebuggedProcess(std::move(create_info));
     }
 
@@ -510,11 +508,9 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   zx::process process = launcher.GetProcess();
   zx_koid_t process_koid = KoidForObject(process);
 
-  // TODO(donosoc): change resume thread setting once we have global settings.
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
   create_info.handle = std::move(process);
-  create_info.resume_initial_thread = true;
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
   zx_status_t status = AddDebuggedProcess(std::move(create_info));
@@ -549,8 +545,8 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 
   ComponentDescription description;
   ComponentHandles handles;
-  zx_status_t status = component_launcher.Prepare(request.argv, &description,
-                                                  &handles);
+  zx_status_t status =
+      component_launcher.Prepare(request.argv, &description, &handles);
   if (status != ZX_OK) {
     reply->status = status;
     return;
@@ -638,8 +634,7 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   auto process_koid = KoidForObject(process_handle);
 
   DEBUG_LOG(Process) << "Process starting. Name: " << description.process_name
-                     << ", koid: " << process_koid
-                     << ", filter: " << filter
+                     << ", koid: " << process_koid << ", filter: " << filter
                      << ", component id: " << description.component_id;
 
   // Send notification, then create debug process so that thread notification is
@@ -656,7 +651,6 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   create_info.koid = process_koid;
   create_info.handle = std::move(process_handle);
   create_info.name = description.process_name;
-  create_info.resume_initial_thread = false;
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);
   AddDebuggedProcess(std::move(create_info));

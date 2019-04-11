@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 #define GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 
-#include <map>
-#include <memory>
-#include <vector>
-
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/thread.h>
+
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -20,7 +20,6 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/lib/files/unique_fd.h"
-
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -35,13 +34,11 @@ class Watchpoint;
 struct DebuggedProcessCreateInfo {
   DebuggedProcessCreateInfo();
   // Constructor with only the required fields.
-  DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process,
-                            bool resume_initial_thread);
+  DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process);
 
   // Required.
   zx_koid_t koid = 0;
   zx::process handle;
-  bool resume_initial_thread = false;
 
   // Optional.
   std::string name;
@@ -173,10 +170,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   std::map<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
            debug_ipc::AddressRangeCompare>
       watchpoints_;
-
-  // TODO(donosoc): Allow options to stop none, initial or all threads.
-  bool resume_initial_thread_;
-  bool waiting_for_initial_thread_;
 
   debug_ipc::BufferedZxSocket stdout_;
   debug_ipc::BufferedZxSocket stderr_;

@@ -7,9 +7,9 @@
 #include <inttypes.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
@@ -23,6 +23,7 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -69,6 +70,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
     case ThreadCreationOption::kSuspendedShouldRun:
       debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid,
                                                                    thread_, 0);
+      break;
   }
 }
 
