@@ -6,6 +6,7 @@
 #define GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTIC_TREE_IMPL_H_
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
@@ -68,6 +69,13 @@ class SemanticTreeImpl
   bool IsSameView(const zx::event& view_ref);
 
  private:
+  // Representation of single semantic tree update/delete transaction.
+  struct SemanticTreeTransaction {
+    uint32_t node_id;
+    bool delete_node;
+    fuchsia::accessibility::semantics::Node node;
+  };
+
   // Semantic Tree for a particular view. Each client is responsible for
   // maintaining the state of their tree. Nodes can be added, updated or
   // deleted. Because the size of an update may exceed FIDL transfer limits,
@@ -94,6 +102,16 @@ class SemanticTreeImpl
       fuchsia::accessibility::semantics::NodePtr root_node, int current_level,
       std::string* tree_log);
 
+  // Detect directed and undirected cycles in the tree rooted at "node".
+  bool IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
+                std::unordered_set<uint32_t>* visited);
+
+  // Helper function to delete subtree rooted at node_id.
+  void DeleteSubtree(uint32_t node_id);
+
+  // Helper function to delete pointer from parent node to given node.
+  void DeletePointerFromParent(uint32_t node_id);
+
   // Internal recursive hit-test function using the cached tree. Returns a
   // null pointer if no hit nodes were found. Returns a copy of the node
   // (but not the subtree), to prevent tree modification.
@@ -115,12 +133,8 @@ class SemanticTreeImpl
                      fuchsia::accessibility::semantics::Node>
       nodes_;
 
-  // List of nodes that should be updated or added to the
-  // tree on the next commit.
-  std::vector<fuchsia::accessibility::semantics::Node> uncommitted_nodes_;
-
-  // List of local node ids that should be removed from the next commit.
-  std::vector<uint32_t> /*node_ids*/ uncommitted_deletes_;
+  // List of pending semantic tree transactions.
+  std::vector<SemanticTreeTransaction> pending_transactions_;
 
   zx::event view_ref_;
   fuchsia::accessibility::semantics::SemanticActionListenerPtr
