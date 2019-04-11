@@ -144,7 +144,3 @@ int XfsAddVol(XfsVol* ftl) {
     return 0;
 }
 
-// Callback from the FTL.
-int XfsDelVol(const char* name) {
-    return 0;
-}

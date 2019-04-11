@@ -6,7 +6,7 @@
 
 // Type Definitions
 typedef struct {
-    ui32 first_ppn;  // first physical page number or -1
+    ui32 ppn0;       // first physical page number if run_cnt != 0
     ui32 run_cnt;    // number of staged page reads
     ui8* buf;        // pointer to output buffer
 } StagedRd;
@@ -27,14 +27,14 @@ static int flush_pending_reads(FTLN ftl, StagedRd* staged) {
 
     // Issue pending reads.
     ftl->stats.read_page += staged->run_cnt;
-    status = ftl->read_pages(ftl->start_pn + staged->first_ppn, staged->run_cnt, staged->buf,
+    status = ftl->read_pages(ftl->start_pn + staged->ppn0, staged->run_cnt, staged->buf,
                              ftl->spare_buf, ftl->ndm);
 
     // Adjust data buffer pointer.
     staged->buf += staged->run_cnt * ftl->page_size;
 
     // Get handle on blocks[] entry and increment block wear count.
-    b_ptr = &ftl->bdata[staged->first_ppn / ftl->pgs_per_blk];
+    b_ptr = &ftl->bdata[staged->ppn0 / ftl->pgs_per_blk];
     INC_RC(ftl, b_ptr, staged->run_cnt);
 
     // Check if error was reported.
@@ -51,36 +51,46 @@ static int flush_pending_reads(FTLN ftl, StagedRd* staged) {
     }
 
     // Reset pending sequence and return status.
-    staged->first_ppn = (ui32)-1;
     staged->run_cnt = 0;
     return status;
 }
 
-// read_sectors: Read as many virtual sectors as possible/needed from
-//              an FTL page
+// Global Function Definitions
+
+// FtlnRdPages: Read count worth of virtual pages from FTL
 //
-//      Inputs: ftl = pointer to FTL control block
-//              vsn = first virtual sector to read
-//              count = number of consecutive sectors to read
-//              data = pointer to where data is copied to
+//      Inputs: buf = pointer to where data is copied to
+//              vpn = first volume page to read
+//              count = number of consecutive pages to read
+//              vol = pointer to FTL control block
 //
 //     Returns: 0 on success, -1 on error
 //
-static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
-    ui32 vpn, pn;
+int FtlnRdPages(void* buf, ui32 vpn, int count, void* vol) {
+    FTLN ftl = vol;
     StagedRd staged;
+    ui32 ppn;
 
-    // Initialize structure for staging deferred consecutive page reads.
-    staged.buf = data;
-    staged.run_cnt = 0;
-    staged.first_ppn = (ui32)-1;
+    // Ensure request is within volume's range of provided pages.
+    if (vpn + count > ftl->num_vpages)
+        return FsError2(FTL_ASSERT, ENOSPC);
+
+    // If no pages to read, return success.
+    if (count == 0)
+        return 0;
+
+    // If there's at least a block with a maximum read count, recycle.
+    if (ftl->max_rc_blk != (ui32)-1)
+        if (FtlnRecCheck(ftl, 0))
+            return -1;
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
         return FsError2(NDM_EIO, EIO);
 
-    // Get offset in page to first sector and its virtual page number.
-    vpn = vsn / ftl->sects_per_page;
+    // Initialize structure for staging deferred consecutive page reads.
+    staged.buf = buf;
+    staged.run_cnt = 0;
 
     // Loop to read whole pages.
     do {
@@ -104,7 +114,7 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
             return -1;
 
         // Convert the virtual page number to its physical page number.
-        if (FtlnMapGetPpn(ftl, vpn, &pn) < 0)
+        if (FtlnMapGetPpn(ftl, vpn, &ppn) < 0)
             return -1;
 
 #if FS_ASSERT
@@ -113,13 +123,13 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
 #endif
 
         // Check if page is unmapped.
-        if (pn == (ui32)-1) {
+        if (ppn == (ui32)-1) {
             // Flush pending reads if any.
-            if (staged.first_ppn != (ui32)-1)
+            if (staged.run_cnt)
                 if (flush_pending_reads(ftl, &staged))
                     return -1;
 
-            // Fill page's sectors with the value for unwritten data and
+            // Fill page with the value for unwritten data and
             // advance buffer pointer.
             memset(staged.buf, 0xFF, ftl->page_size);
             staged.buf += ftl->page_size;
@@ -128,27 +138,26 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
         // Else have valid mapped page number.
         else {
             // If next in sequence and in same block, add page to list.
-            if ((staged.first_ppn + staged.run_cnt == pn) &&
-                (staged.first_ppn / ftl->pgs_per_blk == pn / ftl->pgs_per_blk))
+            if ((staged.ppn0 + staged.run_cnt == ppn) &&
+                (staged.ppn0 / ftl->pgs_per_blk == ppn / ftl->pgs_per_blk))
                 ++staged.run_cnt;
 
             // Else flush pending reads, if any, and start new list.
             else {
-                if (staged.first_ppn != (ui32)-1)
+                if (staged.run_cnt)
                     if (flush_pending_reads(ftl, &staged))
                         return -1;
-                staged.first_ppn = pn;
+                staged.ppn0 = ppn;
                 staged.run_cnt = 1;
             }
         }
 
-        // Adjust virtual page number and sector count.
+        // Adjust virtual page number and count.
         ++vpn;
-        count -= ftl->sects_per_page;
-    } while (count >= ftl->sects_per_page);
+    } while (--count > 0);
 
     // Flush pending reads if any.
-    if (staged.first_ppn != (ui32)-1)
+    if (staged.run_cnt)
         if (flush_pending_reads(ftl, &staged))
             return -1;
 
@@ -156,38 +165,7 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
     return 0;
 }
 
-// Global Function Definitions
-
-// FtlnRdSects: Read count worth of virtual sectors from FTL
-//
-//      Inputs: buffer = place to store data bytes from read sectors
-//              sect = first sector to read from
-//              count = number of consecutive sectors to read
-//              vol = FTL handle
-//
-//     Returns: 0 on success, -1 on failure
-//
-int FtlnRdSects(void* buffer, ui32 sect, int count, void* vol) {
-    FTLN ftl = vol;
-
-    // Ensure request is within volume's range of provided sectors.
-    if (sect + count > ftl->num_vsects)
-        return FsError2(FTL_ASSERT, ENOSPC);
-
-    // If no sectors to read, return success.
-    if (count == 0)
-        return 0;
-
-    // If there's at least a block with a maximum read count, recycle.
-    if (ftl->max_rc_blk != (ui32)-1)
-        if (FtlnRecCheck(ftl, 0))
-            return -1;
-
-    // Read sectors and return status.
-    return read_sectors(ftl, sect, count, buffer);
-}
-
-//  FtlnRdPage: Read one page from flash and check return status
+// FtlnRdPage: Read one physical page from flash
 //
 //      Inputs: ftl = pointer to FTL control block
 //              ppn = physical page number of page to read from flash

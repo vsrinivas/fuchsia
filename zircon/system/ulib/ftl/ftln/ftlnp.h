@@ -13,9 +13,9 @@
 #include <kprivate/ndm.h>
 #include <kprivate/ftl_mc.h>
 
-/***********************************************************************/
-/* Configuration                                                       */
-/***********************************************************************/
+//
+// Configuration.
+//
 #define FTLN_LEGACY TRUE // TRUE to be backward compatible
 #define INC_ELIST TRUE   // if true, write erased blocks list
 #define DEBUG_ELIST FALSE
@@ -29,24 +29,15 @@
 #define FTLN_3B_PN TRUE // if true, use 3B page numbers
 #endif
 
-/***********************************************************************/
-/* Symbol Definitions                                                  */
-/***********************************************************************/
+//
+// Symbol Definitions.
+//
 #define FTLN_MIN_FREE_BLKS 4
-
-//
-// FTL Flag Values
-//
-#define FTLN_FAT_VOL (1 << 0)    // TargetFAT volume
-#define FTLN_XFS_VOL (1 << 1)    // TargetXFS volume
-#define FTLN_FATAL_ERR (1 << 2)  // fatal I/O error has occurred
-#define FTLN_MOUNTED (1 << 3)    // FTL is mounted flag
 
 //
 // FTL meta-page information
 //
-#define FTLN_META_VER0 20100427  // first metapage version
-#define FTLN_META_VER1 20180423  // second metapage version
+#define FTLN_META_VER1 20180423  // current metapage version
 #define FTLN_META_VER_LOC 0      // version location in page
 #define FTLN_META_TYP_LOC 4      // page type location
 #define FTLN_META_DATA_BEG 8     // starting data offset
@@ -57,9 +48,9 @@
 #define CONT_FORMAT 0
 #define ERASED_LIST 1
 
-/***********************************************************************/
-/* Macro Definitions                                                   */
-/***********************************************************************/
+//
+// Macro Definitions.
+//
 //
 // Block Array Definitions
 //
@@ -132,7 +123,7 @@
 #endif
 
 //
-// Spare Area Access Definitions//
+// Spare Area Access Definitions.
 //
 // Layout of Spare Area (Extra Bytes)
 //  - byte   0: bad block mark byte - unused by the FTL
@@ -164,9 +155,9 @@
         spare[12] = (spare[12] & 0xF) | ((wc >> 20) & 0xF0); \
     }
 
-/***********************************************************************/
-/* Type Declarations                                                   */
-/***********************************************************************/
+//
+// Type Declarations.
+//
 //
 // The TargetFTL-NDM volume type
 //
@@ -187,15 +178,6 @@ struct ftln {
     ui32 (*pair_offset)(ui32 page_offset, void* ndm);
 #endif
 
-    //
-    // Callback function for freeing FTL specific resources
-    //
-    void (*free_ftl)(void* vol);
-
-// Virtual Volume Variables
-    ui32 sect_size;      // virtual sector size in bytes
-    ui32 sects_per_page; // virtual sectors in a page
-
     // Driver Dependent Variables
     ui32 num_pages;   // total number of pages
     ui32 pgs_per_blk; // number of pages in a block
@@ -214,7 +196,6 @@ struct ftln {
     ui32 free_vpn;         // next free page for volume page write
     ui32 free_mpn;         // next free page for map page write
     ui32 mappings_per_mpg; // number of phys page numbers per map page
-    ui32 num_vsects;       // number of volume sectors (FAT)
     ui32 num_vpages;       // number of volume pages
     ui32 num_free_blks;    // number of free blocks
     ui32 num_map_pgs;      // number of pages holding map data
@@ -249,21 +230,20 @@ struct ftln {
     char vol_name[FILENAME_MAX]; // volume name
 };
 
-/***********************************************************************/
-/* Variable Declarations                                               */
-/***********************************************************************/
+//
+// Variable Declarations.
+//
 extern CircLink FtlnVols;
 #if FTLN_DEBUG_PTR
 extern FTLN Ftln;
 #endif
 
-/***********************************************************************/
-/* Function Prototypes                                                 */
-/***********************************************************************/
-void* FtlnAddVol(FtlNdmVol* ftl, int type, int sect_size, void* fs_vol);
+//
+// Function Prototypes.
+//
 int FtlnDelVol(FTLN ftl);
-int FtlnWrSects(const void* buf, ui32 first, int count, void* vol);
-int FtlnRdSects(void* buf, ui32 first, int count, void* vol);
+int FtlnWrPages(const void* buf, ui32 first, int count, void* vol);
+int FtlnRdPages(void* buf, ui32 first, int count, void* vol);
 int FtlnReport(void* vol, ui32 msg, ...);
 ui32 FtlnGarbLvl(CFTLN ftl);
 int FtlnVclean(FTLN ftl);

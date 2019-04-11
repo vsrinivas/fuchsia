@@ -433,18 +433,6 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
         for (j = 0; j < NDM_PART_USER; ++j)
             printf("    - user[%u]     = %u\n", j, ndm->partitions[i].user[j]);
 #endif
-        printf("    - type        = ");
-        switch (ndm->partitions[i].type) {
-            case 0:
-                puts("NONE");
-                break;
-            case XFS_VOL:
-                puts("XFS");
-                break;
-            default:
-                printf("%u\n", ndm->partitions[i].type);
-                break;
-        }
 #endif // NDM_DEBUG
     }
 
@@ -710,12 +698,12 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
     return bn;
 }
 
-//  write_page: Write a page to flash for FFS and FTL
+//  write_page: Write a page to flash for FTL
 //
 //      Inputs: ndm = pointer to NDM control block
 //              pn = virtual page number
 //              buf = pointer to main page buffer array
-//              spare = pointer to spare page buffer array (1 if FFS)
+//              spare = pointer to spare page buffer array
 //              action = NDM_NONE, NDM_ECC, or NDM_ECC_VAL
 //
 //     Returns: 0 on success, -2 on fatal error
@@ -881,7 +869,7 @@ static int ftl_check_pg(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
     return status;
 }
 
-//   read_page:  FFS/FTL driver function - read page (data only)
+//   read_page:  FTL driver function - read page (data only)
 //
 //      Inputs: vpn = virtual page number
 //              buf = pointer to buffer to copy data to
@@ -932,7 +920,7 @@ static int read_page(ui32 vpn, void* buf, void* ndm_ptr) {
     return status;
 }
 
-// ftl_xfr_page: FFS/FTL driver function - transfer a page
+// ftl_xfr_page: FTL driver function - transfer a page
 //
 //      Inputs: old_vpn = old virtual page number
 //              new_vpn = new virtual page number
@@ -1304,18 +1292,17 @@ ui32 ndmGetNumVBlocks(CNDM ndm) {
     return ndm->num_vblks;
 }
 
-// ndmAddVolXfsFTL: Add FTL and XFS volume to NDM partition
+// ndmAddVolFTL: Add FTL volume to NDM partition
 //
 //      Inputs: ndm = pointer to NDM control block
 //              part_num = NDM partition number
-//              ftl = FTL driver information
+//              ftl = pointer to FTL config structure
 //              xfs = XFS volume information
 //
 //     Returns: 0 on success, -1 on error
 //
-int ndmAddVolXfsFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
+int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
     NDMPartition* part;
-    void* ftl_ndm;
 
     // Check partition number.
     if (part_num >= ndm->num_partitions)
@@ -1350,22 +1337,11 @@ int ndmAddVolXfsFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
     ftl->pair_offset = pair_offset;
 #endif
 
-    // Add a TargetXFS FTL to this TargetNDM partition.
-    ftl_ndm = FtlNdmAddXfsFTL(ftl, xfs);
-    if (ftl_ndm == NULL)
-        return -1;
-
-    // Register XFS volume on top of FTL. Delete FTL if error.
-    if (XfsAddVol(xfs)) {
-        FtlnFreeFTL(ftl_ndm);
-        return -1;
-    }
-
-    // Return success.
-    return 0;
+    // Add an FTL to this partition. Return status.
+    return FtlnAddVol(ftl, xfs);
 }
 
-// ndmReadPages: FFS/FTL driver function - read multiple consecutive
+// ndmReadPages: FTL driver function - read multiple consecutive
 //              pages from a single block (data only)
 //
 //      Inputs: vpn = starting virtual page number
@@ -1438,7 +1414,7 @@ int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
     }
 }
 
-// ndmWritePages: FFS/FTL driver function - write multiple consecutive
+// ndmWritePages: FTL driver function - write multiple consecutive
 //              pages to a single block (data only)
 //
 //      Inputs: vpn = starting virtual page number

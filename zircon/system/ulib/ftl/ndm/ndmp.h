@@ -14,16 +14,16 @@
 #include <sys.h>
 #include <kprivate/ndm.h>
 
-/***********************************************************************/
-/* Configuration                                                       */
-/***********************************************************************/
+//
+// Configuration.
+//
 #undef NDM_DEBUG
 #define NDM_DEBUG FALSE    // TRUE for TargetNDM debug output
 #define RDBACK_CHECK FALSE // TRUE for metadata read-back check
 
-/***********************************************************************/
-/* Symbol Definitions                                                  */
-/***********************************************************************/
+//
+// Symbol Definitions.
+//
 #define CTRL_SIG_SZ 7 // ctrl sig bytes
 #define CTRL_SIG "NDMTA01"
 
@@ -60,9 +60,9 @@
 #define EB_LAST_RESERVED 14
 #define EB_REG_MARK 15  // NDM control page iff zero
 
-/***********************************************************************/
-/* Type Declarations                                                   */
-/***********************************************************************/
+//
+// Type Declarations.
+//
 
 // <key, value> pair
 typedef struct {
@@ -134,15 +134,15 @@ struct ndm {
     ui8 dev_type;      // NAND device type
 };
 
-/***********************************************************************/
-/* Variable Declarations                                               */
-/***********************************************************************/
+//
+// Variable Declarations.
+//
 extern CircLink NdmDevs;
 extern SEM NdmSem;
 
-/***********************************************************************/
-/* Function Prototypes                                                 */
-/***********************************************************************/
+//
+// Function Prototypes.
+//
 int ndmInitBadBlock(CNDM ndm, ui32 b);
 int ndmWrCtrl(NDM ndm);
 void ndmCkMeta(NDM ndm);

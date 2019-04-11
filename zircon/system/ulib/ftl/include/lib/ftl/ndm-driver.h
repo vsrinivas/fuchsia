@@ -23,7 +23,7 @@ constexpr int kTrue = 1;
 constexpr int kFalse = 0;
 
 // Initialization should not alter the contents of the volume.
-constexpr uint32_t kReadOnlyInit = (1 << 6);  // Matches FSF_READ_ONLY_INIT.
+constexpr uint32_t kReadOnlyInit = (1 << 8);  // Matches FSF_READ_ONLY_INIT.
 
 // Options for a device to be created. All sizes are in bytes.
 struct VolumeOptions {

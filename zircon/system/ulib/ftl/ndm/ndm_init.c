@@ -789,21 +789,6 @@ static int read_ctrl_info(NDM ndm) {
             for (j = 0; j < NDM_PART_USER; ++j)
                 printf("   - user[%u]     = %u\n", j, ndm->partitions[i].user[j]);
 #endif
-            printf("   - type        = ");
-            switch (ndm->partitions[i].type) {
-                case 0:
-                    puts("NONE");
-                    break;
-                case FFS_VOL:
-                    puts("FFS");
-                    break;
-                case FAT_VOL:
-                    puts("FAT");
-                    break;
-                default:
-                    printf("%u\n", ndm->partitions[i].type);
-                    break;
-            }
 #endif // NDM_DEBUG
         }
     }
@@ -1022,6 +1007,7 @@ int NdmInit(void) {
         return -1;
     }
 
+    // Return success.
     return 0;
 }
 

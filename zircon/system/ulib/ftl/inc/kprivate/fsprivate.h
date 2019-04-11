@@ -75,9 +75,7 @@ int FsError(int err_code);
 int FsError2(int fs_err_code, int errno_code);
 int GetFsErrCode(void);
 void SetFsErrCode(int error);
-int FNameEqu(const char* s1, const char* s2);
-void* FtlNdmAddXfsFTL(FtlNdmVol* ftl_dvr, XfsVol* xfs_dvr);
-void FtlnFreeFTL(void* ftl);
+int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs_dvr);
 void FsMemPrn(void);
 ui32 FsMemPeakRst(void);
 

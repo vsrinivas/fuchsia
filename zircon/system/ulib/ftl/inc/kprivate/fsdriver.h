@@ -21,18 +21,15 @@ extern "C" {
 /***********************************************************************/
 
 // Flag values for the file systems' driver flags field
-
-#define FSF_EXTRA_FREE      (1 << 0)
-#define FSF_TRANSFER_PAGE   (1 << 1)
-#define FSF_MULTI_ACCESS    (1 << 2)
-#define FSF_FREE_SPARE_ECC  (1 << 3)    // spare decode has no overhead
-#define FSF_NDM_INIT_WRITE  (1 << 4)    // re-write NDM metadata on init
-#define FSF_READ_WEAR_LIMIT (1 << 5)    // driver specs read-wear limit
-#define FSF_READ_ONLY_INIT  (1 << 6)    // dev is read-only during init
-
-#define FSF_ALL                                                                             \
-    (FSF_EXTRA_FREE     | FSF_TRANSFER_PAGE   | FSF_MULTI_ACCESS   | FSF_FREE_SPARE_ECC |   \
-     FSF_NDM_INIT_WRITE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)
+#define FTLN_FATAL_ERR      (1 << 0)    // fatal I/O error has occurred
+#define FTLN_MOUNTED        (1 << 1)    // FTL is mounted flag
+#define FSF_EXTRA_FREE      (1 << 2)
+#define FSF_TRANSFER_PAGE   (1 << 3)
+#define FSF_MULTI_ACCESS    (1 << 4)
+#define FSF_FREE_SPARE_ECC  (1 << 5)    // spare decode has no overhead
+#define FSF_NDM_INIT_WRITE  (1 << 6)    // re-write NDM metadata on init
+#define FSF_READ_WEAR_LIMIT (1 << 7)    // driver specs read-wear limit
+#define FSF_READ_ONLY_INIT  (1 << 8)    // dev is read-only during init
 
 // Size in bytes of a FAT sector
 #define FAT_SECT_SZ 512
@@ -73,7 +70,6 @@ typedef struct XfsVol {
 
     const char* name;       // volume name
     ui32 flags;             // option flags
-    ui32 start_page;        // first page in volume
     ui32 num_pages;         // number of pages in volume
     ui32 page_size;         // page size in bytes
     void* vol;              // driver's volume pointer
@@ -115,7 +111,7 @@ typedef enum {
     FS_VCLEAN,
     FS_MARK_UNUSED,
     FS_SYNC,
-    FS_FLUSH_SECT,
+    FS_FLUSH_PAGE,
     FS_VSTAT,
     FS_UNFORMAT,
     FS_PAGE_SZ,

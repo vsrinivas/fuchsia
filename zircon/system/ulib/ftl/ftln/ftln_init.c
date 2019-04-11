@@ -108,23 +108,8 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
     if (mpn == ftl->num_map_pgs - 1) {
         ui32 type, vers = RD32_LE(&ppns[0]);
 
-        // Check if first metapage version number.
-        if (vers == FTLN_META_VER0) {
-            ui32 b, i;
-
-            // If recycle block wrong, page is invalid.
-            b = RD32_LE(&ppns[1]);
-            if (b >= ftl->num_blks && b != (ui32)-1)
-                return NDM_PAGE_INVALID;
-
-            // Rest of the page should be erased. If not, page is invalid.
-            for (i = 2; i < ftl->page_size / sizeof(ui32); ++i)
-                if (RD32_LE(&ppns[i]) != (ui32)-1)
-                    return NDM_PAGE_INVALID;
-        }
-
-        // Else check if second metapage version.
-        else if (vers == FTLN_META_VER1) {
+        // Check if metapage version.
+        if (vers == FTLN_META_VER1) {
             // Read the meta-page type.
             type = RD32_LE(&ppns[1]);
 
@@ -465,7 +450,7 @@ static int build_map(FTLN ftl) {
     // Clean temporary use of vol block read-wear field for page offset.
     for (b = 0; b < ftl->num_blks; ++b)
         if (NUM_USED(ftl->bdata[b]) && !IS_MAP_BLK(ftl->bdata[b]))
-            ftl->bdata[b] &= ~RC_MASK;
+            ftl->bdata[b] &= (ui32)~RC_MASK;
 
     // Return success.
     return 0;
@@ -995,12 +980,12 @@ static int init_ftln(FTLN ftl) {
                 // Find free block w/highest wear count. Error if none free.
                 b = FtlnHiWcFreeBlk(ftl);
                 if (b == (ui32)-1)
-                    return b;
+                    return -1;
 
                 // If the block is unerased, erase it now. Return -1 if error.
                 if ((ftl->bdata[b] & ERASED_BLK_FLAG) == 0)
                     if (FtlnEraseBlk(ftl, b))
-                        return (ui32)-1;
+                        return -1;
 
                 // Decrement free block count.
                 --ftl->num_free_blks;
@@ -1046,12 +1031,12 @@ static int init_ftln(FTLN ftl) {
             // Find free block with lowest wear count. Error if none free.
             b = FtlnLoWcFreeBlk(ftl);
             if (b == (ui32)-1)
-                return b;
+                return -1;
 
             // If the block is unerased, erase it now. Return -1 if error.
             if ((ftl->bdata[b] & ERASED_BLK_FLAG) == 0)
                 if (FtlnEraseBlk(ftl, b))
-                    return (ui32)-1;
+                    return -1;
 
             // Decrement free block count.
             --ftl->num_free_blks;
@@ -1084,7 +1069,7 @@ static int init_ftln(FTLN ftl) {
     return FtlnRecCheck(ftl, 0);
 }
 
-//    free_ftl: Callback used inside FtlnFreeFTL()
+//    free_ftl: Free FTL memory allocations
 //
 //       Input: vol = FTL handle
 //
@@ -1146,16 +1131,14 @@ static int rd_map_pg(void* vol, ui32 mpn, void* buf, int* unmapped) {
 
 // Global Function Definitions
 
-//  FtlnAddVol: Add a new TargetFTL-NDM volume
+// FtlnAddVol: Create a new FTL volume
 //
 //      Inputs: ftl_dvr = pointer to FTL NDM driver control block
-//              ftl_type = FTL type (FTLN_XFS_VOL or FTLN_FAT_VOL)
-//              sect_size = FAT or XFS sector size
-//              fs_vol = pointer to FS driver's volume control block
+//              xfs = pointer to FTL interface structure
 //
-//     Returns: Newly created FTL handle on success, NULL on error
+//     Returns: -1 if error, 0 for success.
 //
-void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) {
+int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
     ui32 n, vol_blks;
     ui8* buf;
     FTLN ftl;
@@ -1163,20 +1146,20 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     // If number of blocks less than 7, FTL-NDM cannot work.
     if (ftl_dvr->num_blocks < 7) {
         FsError2(FTL_CFG_ERR, EINVAL);
-        return NULL;
+        return -1;
     }
 
     // Ensure FTL flags are valid.
     if (ftl_dvr->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)) {
         FsError2(FTL_CFG_ERR, EINVAL);
-        return NULL;
+        return -1;
     }
 
 #if CACHE_LINE_SIZE
     // Ensure driver page size is a multiple of the CPU cache line size.
     if (ftl_dvr->page_size % CACHE_LINE_SIZE) {
         FsError2(FTL_CFG_ERR, EINVAL);
-        return NULL;
+        return -1;
     }
 #endif
 
@@ -1185,21 +1168,18 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     if (ftl_dvr->page_size % FAT_SECT_SZ || ftl_dvr->page_size == 0 ||
         ftl_dvr->page_size > ftl_dvr->block_size) {
         FsError2(FTL_CFG_ERR, EINVAL);
-        return NULL;
+        return -1;
     }
 
     // Allocate memory for FTL control block. Return NULL if unable.
     ftl = FsCalloc(1, sizeof(struct ftln));
     if (ftl == NULL) {
         FsError2(FTL_ENOMEM, ENOMEM);
-        return NULL;
+        return -1;
     }
 #if FTLN_DEBUG_PTR
     Ftln = ftl;
 #endif
-
-    // Set callback to free FTL resources from generic FTL NDM layer.
-    ftl->free_ftl = free_ftl;
 
     // Set all FTL driver dependent variables.
     ftl->num_blks = ftl_dvr->num_blocks;
@@ -1211,8 +1191,10 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     ftl->start_pn = ftl_dvr->start_page;
     ftl->ndm = ftl_dvr->ndm;
     ftl->type = ftl_dvr->type;
-    ftl->flags = ftl_dvr->flags | ftl_type;
+    ftl->flags = ftl_dvr->flags;
+    strcpy(ftl->vol_name, xfs->name);
 
+    // Ensure pages per block doesn't exceed alloted metadata field width.
     if (ftl->pgs_per_blk > PGS_PER_BLK_MAX) {
         FsError2(FTL_CFG_ERR, EINVAL);
         goto FtlnAddV_err;
@@ -1224,10 +1206,8 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
         goto FtlnAddV_err;
     }
 #endif
-    ftl->sect_size = sect_size;
-    ftl->sects_per_page = ftl->page_size / ftl->sect_size;
 
-    // Copy the driver callback functions.
+    // Copy the NDM interface functions.
     ftl->write_page = ftl_dvr->write_data_and_spare;
     ftl->write_pages = ftl_dvr->write_pages;
     ftl->read_spare = ftl_dvr->read_spare;
@@ -1327,9 +1307,6 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
            (ftl->num_vpages * 100) / ftl->num_pages);
 #endif
 
-    // Set the number of sectors based on the number of pages.
-    ftl->num_vsects = ftl->num_vpages * ftl->sects_per_page;
-
 // Allocate one or two main data pages and spare buffers. Max spare
 // use is one block worth of spare areas for multi-page writes.
     n = ftl->page_size + ftl->eb_size * ftl->pgs_per_blk;
@@ -1405,71 +1382,35 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     FtlnStats(ftl);
 #endif
 
-    // If XFS volume, prepare for registration with TargetXFS.
-    if (ftl_type == FTLN_XFS_VOL) {
-        XfsVol* xfs = (XfsVol*)fs_vol;
-
-        // Initialize TargetXFS driver structure with FTL specific fields.
-        xfs->start_page = 0;
-        xfs->num_pages = ftl->num_vsects;
-        xfs->page_size = ftl->page_size;
-        xfs->vol = ftl;
-        xfs->write_pages = FtlnWrSects;
-        xfs->read_pages = FtlnRdSects;
-        xfs->report = FtlnReport;
+    // Initialize FTL interface structure.
+    xfs->num_pages = ftl->num_vpages;
+    xfs->page_size = ftl->page_size;
+    xfs->write_pages = FtlnWrPages;
+    xfs->read_pages = FtlnRdPages;
+    xfs->report = FtlnReport;
+    xfs->vol = ftl;
 
 #if FTLN_DEBUG > 1
-        printf("\nXFS STATS:\n");
-        printf("  - start_page      = %u\n", xfs->start_page);
-        printf("  - num_pages       = %u\n\n", xfs->num_pages);
+    printf("\nXFS STATS:\n");
+    printf("  - num_pages       = %u\n\n", xfs->num_pages);
 #endif
 
-        // Save volume name.
-        strcpy(ftl->vol_name, xfs->name);
-    }
+    // Register FTL volume with user.
+    if (XfsAddVol(xfs))
+        goto FtlnAddV_err;
 
     // Add FTL to FTL-NDM volume list while holding access semaphore.
     semPend(FileSysSem, WAIT_FOREVER);
     CIRC_LIST_APPEND(&ftl->link, &FtlnVols);
     semPostBin(FileSysSem);
 
-    // Return pointer to FTL control block.
-    return ftl;
+    // Return success.
+    return 0;
 
 // Error exit.
 FtlnAddV_err:
     free_ftl(ftl);
-    return NULL;
-}
-
-// FtlNdmAddXfsFTL: Create a new TargetFTL-NDM XFS FTL
-//
-//      Inputs: ftl_dvr = pointer to FTL NDM driver control block
-//              xfs = pointer to XFS pseudo driver control block
-//
-//     Returns: -1 if error, 0 for success
-//
-void* FtlNdmAddXfsFTL(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
-    // Create new FTL and return FTL handle.
-    return FtlnAddVol(ftl_dvr, FTLN_XFS_VOL, ftl_dvr->page_size, xfs);
-} //lint !e818
-
-// FtlnFreeFTL: Free an existing FTL volume
-//
-//       Input: handle = FTL handle
-//
-void FtlnFreeFTL(void* handle) {
-    FTLN ftln = handle;
-
-    // Acquire exclusive access to upper file system.
-    semPend(FileSysSem, WAIT_FOREVER);
-
-    // Remove FTL from list and free its memory.
-    CIRC_NODE_REMOVE(&ftln->link);
-    ftln->free_ftl(ftln);
-
-    // Release exclusive access to upper file system.
-    semPostBin(FileSysSem);
+    return -1;
 }
 
 //  FtlnDelVol: Delete an existing FTL NDM volume (both FTL and FS)
@@ -1484,17 +1425,8 @@ int FtlnDelVol(FTLN ftl) {
     // Remove volume from list of volumes.
     CIRC_NODE_REMOVE(&ftl->link);
 
-    // Release file system exclusive access.
-    semPostBin(FileSysSem);
-
-    // Delete file system volume.
-    (void)XfsDelVol(ftl->vol_name);
-
-    // Acquire exclusive access to upper file system.
-    semPend(FileSysSem, WAIT_FOREVER);
-
     // Delete FTL and return success.
-    ftl->free_ftl(ftl);
+    free_ftl(ftl);
     return 0;
 }
 
@@ -1527,7 +1459,7 @@ int FtlNdmDelVol(const char* name) {
 
         // If volume found, delete it and return success.
         ftln = (FTLN)circ;
-        if (FNameEqu(ftln->vol_name, name)) {
+        if (strcmp(ftln->vol_name, name) == 0) {
             int rc;
 
             // Delete this TargetFTL-NDM volume.

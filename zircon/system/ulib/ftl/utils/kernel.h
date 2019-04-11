@@ -22,11 +22,8 @@ typedef struct scb* SEM;  /* Semaphore Control Block */
 // Semaphore Related Routines
 SEM semCreate(const char name[8], int init_count, int mode);
 void semDelete(SEM* semp);
-void semPost(SEM sem);
 void semPostBin(SEM sem);
 int semPend(SEM sem, int wait_opt);
-int semPendBin(SEM sem, int wait_opt);
-SEM semGetId(const char name[8]);
 
 #define ENOMEM 12 // out of memory
 

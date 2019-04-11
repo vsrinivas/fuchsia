@@ -58,11 +58,9 @@ typedef struct {
 typedef struct // Must be the same as vstat_fat up to driver stats
 {
     uint32_t vol_type;      // set to XFS_VOL
-    uint32_t sect_size;     // sector size in bytes
     uint32_t garbage_level; // garbage level as percentage 0 to 100
     uint32_t ftl_type;
     xfs_drvr_stats drvr_stats; // driver count statistics
-    uint32_t num_sects;        // number of sectors on volume
 } vstat_xfs;
 
 union vstat {
@@ -70,7 +68,6 @@ union vstat {
     vstat_xfs xfs;
 };
 
-int XfsDelVol(const char* name);
 int FtlNdmDelVol(const char* name);
 
 #ifdef __cplusplus

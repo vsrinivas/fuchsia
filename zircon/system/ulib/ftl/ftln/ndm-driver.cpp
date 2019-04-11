@@ -157,8 +157,6 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
 
     NDMPartition partition = {};
     partition.num_blocks = ndmGetNumVBlocks(ndm_) - partition.first_block;
-    partition.type = XFS_VOL;
-
     if (ndmWritePartition(ndm_, &partition, 0, "ftl") != 0) {
         return "ndmWritePartition failed";
     }
@@ -171,8 +169,8 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
     ftl.extra_free = 6;  // Over-provision 6% of the device.
     xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
 
-    if (ndmAddVolXfsFTL(ndm_, 0, &ftl, &xfs) != 0) {
-        return "ndmAddVolXfsFTL failed";
+    if (ndmAddVolFTL(ndm_, 0, &ftl, &xfs) != 0) {
+        return "ndmAddVolFTL failed";
     }
 
     return nullptr;

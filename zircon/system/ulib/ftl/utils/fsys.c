@@ -13,9 +13,3 @@ const ui8 NumberOnes[] = {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
 };
 
-// Compares two null-terminated file names.
-// Returns: TRUE if s1 = s2, else FALSE
-int FNameEqu(const char* s1, const char* s2) {
-    return (strcmp(s1, s2) == 0) ? TRUE : FALSE;
-}
-

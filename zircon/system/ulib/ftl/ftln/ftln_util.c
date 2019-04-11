@@ -131,9 +131,6 @@ int FtlnReport(void* vol, ui32 msg, ...) {
             return 1;
         }
 
-        case FS_PAGE_SZ:
-            return ftl->page_size;
-
         case FS_FORMAT:
         case FS_FORMAT_RESET_WC: {
             // Format volume. Return -1 if error.
@@ -281,19 +278,19 @@ int FtlnReport(void* vol, ui32 msg, ...) {
             return 0;
         }
 
-        case FS_FLUSH_SECT: {
-            ui32 vsn, mpn;
+        case FS_FLUSH_PAGE: {
+            ui32 vpn, mpn;
 
-            // Use the va_arg mechanism to get virtual sector to be flushed.
+            // Use the va_arg mechanism to get virtual page to be flushed.
             va_start(ap, msg);
-            vsn = va_arg(ap, ui32);
+            vpn = va_arg(ap, ui32);
             va_end(ap);
 
             // Check argument for validity.
-            PfAssert(vsn < ftl->num_vsects);
+            PfAssert(vpn < ftl->num_vpages);
 
-            // Figure out MPN this sector belongs to.
-            mpn = (vsn / ftl->sects_per_page) / ftl->mappings_per_mpg;
+            // Figure out MPN this page belongs to.
+            mpn = vpn / ftl->mappings_per_mpg;
 
             // Flush MPN from cache. Return -1 if error.
             if (ftlmcFlushPage(ftl->map_cache, mpn))
@@ -310,25 +307,21 @@ int FtlnReport(void* vol, ui32 msg, ...) {
         }
 
         case FS_MARK_UNUSED: {
-            ui32 ppn, vsn, count, past_end, vpn;
+            ui32 ppn, count, past_end, vpn;
 
-            // Use va_arg mechanism to get the starting sector and number of
-            // sectors to be invalidated.
+            // Use va_arg mechanism to get the starting page and number of
+            // pages to be invalidated.
             va_start(ap, msg);
-            vsn = va_arg(ap, ui32);
+            vpn = va_arg(ap, ui32);
             count = va_arg(ap, ui32);
             va_end(ap);
 
             // Check arguments for validity.
-            if (vsn + count > ftl->num_vsects)
+            if (vpn + count > ftl->num_vpages)
                 return -1;
 
-            // Compute first and one past last page that will be dirty.
-            vpn = vsn / ftl->sects_per_page;
-            past_end = vpn + count / ftl->sects_per_page;
-
             // Mark page(s) unused in FTL.
-            for (; vpn < past_end; ++vpn) {
+            for (past_end = vpn + count; vpn < past_end; ++vpn) {
                 // Prepare to potentially write 1 map page. Return -1 if error.
                 if (FtlnRecCheck(ftl, -1))
                     return -1;
@@ -393,7 +386,6 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
             // Set TargetFTL-NDM driver call counts and reset internal ones.
             buf->xfs.drvr_stats.ftl.ndm = ftl->stats;
-            buf->xfs.ftl_type = FTL_NDM;
             bzero(&ftl->stats, sizeof(ftl_ndm_stats));
 
             // Return success.
@@ -731,7 +723,6 @@ void FtlnStats(FTLN ftl) {
     ui32 b, n;
 
     printf("\nFTL STATS:\n");
-    printf("  - # vol sects    = %d\n", ftl->num_vsects);
     printf("  - # vol pages    = %d\n", ftl->num_vpages);
     printf("  - # map pages    = %d\n", ftl->num_map_pgs);
     printf("  - # free blocks  = %d\n", ftl->num_free_blks);

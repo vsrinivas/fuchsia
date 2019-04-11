@@ -25,8 +25,7 @@ int ndmDelVol(CNDM ndm, ui32 part_num) {
         return -1;
 
     // Remove partition's FTL volume. Return status.
-    if (part->type == XFS_VOL)
-        return FtlNdmDelVol(part->name);
+    return FtlNdmDelVol(part->name);
 
     // Return error if partition type is not handled.
     return -1;

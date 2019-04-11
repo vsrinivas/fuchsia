@@ -133,8 +133,8 @@ int ndmEraseBlock(ui32 pn, void* ndm_ptr);
 int ndmReadPages(ui32 start_pn, ui32 count, void* data, void* spare, void* ndm_ptr);
 int ndmWritePages(ui32 start_pn, ui32 count, const void* data, void* spare, void* ndm_ptr);
 
-// FAT/XFS/FFS Volume API
-int ndmAddVolXfsFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);
+// FTL Volume API
+int ndmAddVolFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);
 
 // Driver Test/Special Routines
 int ndmExtractBBL(NDM ndm);
