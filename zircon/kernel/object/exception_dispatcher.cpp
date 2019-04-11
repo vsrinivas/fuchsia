@@ -46,6 +46,48 @@ ExceptionDispatcher::~ExceptionDispatcher() {
     kcounter_add(dispatcher_exception_destroy_count, 1);
 }
 
+void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t process_rights) {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    thread_rights_ = thread_rights;
+    process_rights_ = process_rights;
+}
+
+zx_status_t ExceptionDispatcher::MakeThreadHandle(HandleOwner* handle) const {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    if (thread_rights_ == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    *handle = Handle::Make(thread_, thread_rights_);
+    if (!(*handle)) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    return ZX_OK;
+}
+
+zx_status_t ExceptionDispatcher::MakeProcessHandle(HandleOwner* handle) const {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    if (process_rights_ == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    // We have a RefPtr to |thread_| so it can't die, and the thread keeps its
+    // process alive, so we know the process is safe to wrap in a RefPtr.
+    *handle = Handle::Make(fbl::WrapRefPtr(thread_->process()), process_rights_);
+    if (!(*handle)) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    return ZX_OK;
+}
+
 void ExceptionDispatcher::on_zero_handles() {
     canary_.Assert();
 

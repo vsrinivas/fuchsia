@@ -457,7 +457,8 @@ syscall task_resume_from_exception
     returns (zx_status_t);
 
 #^ Create an exception channel for a given job, process, or thread.
-#! handle must have ZX_RIGHT_INSPECT.
+#! handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.
+#! If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.
 syscall task_create_exception_channel
     (handle: zx_handle_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
@@ -467,6 +468,20 @@ syscall task_create_exception_channel
 syscall task_kill
     (handle: zx_handle_t)
     returns (zx_status_t);
+
+# Exceptions
+
+#^ Create a handle for the exception's thread.
+#! handle must be of type ZX_OBJ_TYPE_EXCEPTION.
+syscall exception_get_thread
+    (handle: zx_handle_t)
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
+
+#^ Create a handle for the exception's process.
+#! handle must be of type ZX_OBJ_TYPE_EXCEPTION.
+syscall exception_get_process
+    (handle: zx_handle_t)
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 # Synchronization
 

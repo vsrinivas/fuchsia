@@ -43,6 +43,26 @@ public:
     fbl::RefPtr<ThreadDispatcher> thread() const { return thread_; }
     zx_excp_type_t exception_type() const { return exception_type_; }
 
+    // Sets the task rights to use for subsequent handle creation.
+    //
+    // rights == 0 indicates that the current exception handler is not allowed
+    // to access the corresponding task handle, for example a thread-level
+    // handler cannot access its parent process handle.
+    //
+    // This must only be called by an Exceptionate before transmitting the
+    // exception - we don't ever want to be changing task rights while the
+    // exception is out in userspace.
+    void SetTaskRights(zx_rights_t thread_rights, zx_rights_t process_rights);
+
+    // Creates new thread or process handles.
+    //
+    // Returns:
+    //   ZX_OK on success.
+    //   ZX_ERR_ACCESS_DENIED if the task rights have been set to 0.
+    //   ZX_ERR_NO_MEMORY if the Handle failed to allocate.
+    zx_status_t MakeThreadHandle(HandleOwner* handle) const;
+    zx_status_t MakeProcessHandle(HandleOwner* handle) const;
+
     // Whether to resume the thread on exception close or pass it to the
     // next handler in line.
     void GetResumeThreadOnClose(bool* resume_on_close) const;
@@ -69,6 +89,11 @@ private:
     // guarded with get_lock().
     const fbl::RefPtr<ThreadDispatcher> thread_;
     const zx_excp_type_t exception_type_;
+
+    // These gets updated by the Exceptionate whenever we get transmitted,
+    // according to the rights that specific Exceptionate was registered with.
+    zx_rights_t thread_rights_ TA_GUARDED(get_lock()) = 0;
+    zx_rights_t process_rights_ TA_GUARDED(get_lock()) = 0;
 
     // These will be nulled out if the underlying thread is killed while
     // userspace still has access to this exception.

@@ -399,7 +399,20 @@ static bool TestInvokingPolicyWithException(
         ASSERT_EQ(info.tid, tid);
         ASSERT_EQ(info.pid, pid);
 
-        // TODO(ZX-3072): check the registers once they are available.
+        // Make sure the exception has the correct task handles.
+        zx_handle_t task_handle;
+        ASSERT_EQ(zx_exception_get_thread(exception, &task_handle), ZX_OK, "");
+        zx::thread exception_thread(task_handle);
+        ASSERT_EQ(zx_exception_get_process(exception, &task_handle), ZX_OK, "");
+        zx::process exception_process(task_handle);
+
+        zx_koid_t handle_tid = ZX_KOID_INVALID;
+        EXPECT_TRUE(get_koid(exception_thread.get(), &handle_tid));
+        EXPECT_EQ(handle_tid, tid);
+
+        zx_koid_t handle_pid = ZX_KOID_INVALID;
+        EXPECT_TRUE(get_koid(exception_process.get(), &handle_pid));
+        EXPECT_EQ(handle_pid, pid);
 
         // Resume the thread.
         uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
