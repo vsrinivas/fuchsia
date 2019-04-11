@@ -5,20 +5,21 @@
 #![feature(futures_api)]
 #![deny(warnings)]
 
+use failure::{Error, ResultExt};
+use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use failure::{Error, ResultExt};
-use fidl::endpoints::ClientEnd;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
 use std::sync::Arc;
 
-use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogListenerMarker, LogListenerProxy,
-                          LogMessage, LogRequest, LogRequestStream,
-                          LogSinkRequest, LogSinkRequestStream};
+use fidl_fuchsia_logger::{
+    LogFilterOptions, LogLevelFilter, LogListenerMarker, LogListenerProxy, LogMessage, LogRequest,
+    LogRequestStream, LogSinkRequest, LogSinkRequestStream,
+};
 
 mod klogger;
 mod logger;
@@ -44,9 +45,7 @@ impl ListenerWrapper {
     fn filter(&self, log_message: &mut LogMessage) -> bool {
         if self.pid.map(|pid| pid != log_message.pid).unwrap_or(false)
             || self.tid.map(|tid| tid != log_message.tid).unwrap_or(false)
-            || self.min_severity
-                .map(|min_sev| min_sev > log_message.severity)
-                .unwrap_or(false)
+            || self.min_severity.map(|min_sev| min_sev > log_message.severity).unwrap_or(false)
         {
             return false;
         }
@@ -61,9 +60,7 @@ impl ListenerWrapper {
 
     /// This fn assumes that logs have already been filtered.
     fn send_filtered_logs(&self, log_messages: &mut Vec<&mut LogMessage>) -> ListenerStatus {
-        if let Err(e) = self.listener
-            .log_many(&mut log_messages.iter_mut().map(|x| &mut **x))
-        {
+        if let Err(e) = self.listener.log_many(&mut log_messages.iter_mut().map(|x| &mut **x)) {
             match e {
                 fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
                 | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => ListenerStatus::Stale,
@@ -128,11 +125,7 @@ impl<T> MemoryBoundedBuffer<T> {
     /// capacity in bytes
     pub fn new(capacity: usize) -> MemoryBoundedBuffer<T> {
         assert!(capacity > 0, "capacity should be more than 0");
-        MemoryBoundedBuffer {
-            inner: VecDeque::new(),
-            capacity: capacity,
-            total_size: 0,
-        }
+        MemoryBoundedBuffer { inner: VecDeque::new(), capacity: capacity, total_size: 0 }
     }
 
     /// size in bytes
@@ -149,9 +142,7 @@ impl<T> MemoryBoundedBuffer<T> {
     }
 
     pub fn iter_mut(&mut self) -> IterMut<T> {
-        IterMut {
-            inner: self.inner.iter_mut(),
-        }
+        IterMut { inner: self.inner.iter_mut() }
     }
 }
 
@@ -170,8 +161,10 @@ fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMess
 }
 
 fn log_manager_helper(
-    state: &LogManager, log_listener: ClientEnd<LogListenerMarker>,
-    options: Option<Box<LogFilterOptions>>, dump_logs: bool,
+    state: &LogManager,
+    log_listener: ClientEnd<LogListenerMarker>,
+    options: Option<Box<LogFilterOptions>>,
+    dump_logs: bool,
 ) {
     let ll = match log_listener.into_proxy() {
         Ok(ll) => ll,
@@ -248,20 +241,16 @@ fn log_manager_helper(
 fn spawn_log_manager(state: LogManager, stream: LogRequestStream) {
     let state = Arc::new(state);
     fasync::spawn(
-       stream
+        stream
             .map_ok(move |req| {
                 let state = state.clone();
                 match req {
-                    LogRequest::Listen {
-                        log_listener,
-                        options,
-                        ..
-                    } => log_manager_helper(&state, log_listener, options, false),
-                    LogRequest::DumpLogs {
-                        log_listener,
-                        options,
-                        ..
-                    } => log_manager_helper(&state, log_listener, options, true),
+                    LogRequest::Listen { log_listener, options, .. } => {
+                        log_manager_helper(&state, log_listener, options, false)
+                    }
+                    LogRequest::DumpLogs { log_listener, options, .. } => {
+                        log_manager_helper(&state, log_listener, options, true)
+                    }
                 }
             })
             .try_collect::<()>()
@@ -323,19 +312,16 @@ fn main_wrapper() -> Result<(), Error> {
     let shared_members_clone2 = shared_members.clone();
     klogger::add_listener(move |log_msg, size| {
         process_log(shared_members_clone2.clone(), log_msg, size);
-    }).context("failed to read kernel logs")?;
+    })
+    .context("failed to read kernel logs")?;
     let mut fs = ServiceFs::new();
     fs.dir("public")
         .add_fidl_service(move |stream| {
-            let ls = LogManager {
-                shared_members: shared_members.clone(),
-            };
+            let ls = LogManager { shared_members: shared_members.clone() };
             spawn_log_manager(ls, stream);
         })
         .add_fidl_service(move |stream| {
-            let ls = LogManager {
-                shared_members: shared_members_clone.clone(),
-            };
+            let ls = LogManager { shared_members: shared_members_clone.clone() };
             spawn_log_sink(ls, stream)
         });
     fs.take_and_serve_directory_handle()?;
@@ -351,10 +337,12 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    use fidl::encoding::OutOfLine;
-    use fidl_fuchsia_logger::{LogFilterOptions, LogListenerMarker, LogListenerRequest,
-                              LogListenerRequestStream, LogProxy, LogMarker, LogSinkProxy, LogSinkMarker};
     use crate::logger::fx_log_packet_t;
+    use fidl::encoding::OutOfLine;
+    use fidl_fuchsia_logger::{
+        LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
+        LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
+    };
     use fuchsia_zircon::prelude::*;
 
     mod memory_bounded_buffer {
@@ -444,9 +432,7 @@ mod tests {
     }
 
     fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
-        x[offset..(offset + size)]
-            .iter_mut()
-            .for_each(|x| *x = value);
+        x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
     }
 
     fn spawn_log_listener(ll: LogListenerState, stream: LogListenerRequestStream) {
@@ -483,30 +469,25 @@ mod tests {
     }
 
     fn setup_listener(
-        ll: LogListenerState, lp: LogProxy, filter_options: Option<&mut LogFilterOptions>,
+        ll: LogListenerState,
+        lp: LogProxy,
+        filter_options: Option<&mut LogFilterOptions>,
         dump_logs: bool,
     ) {
-        let (client_end, stream) = fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
+        let (client_end, stream) =
+            fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
         spawn_log_listener(ll, stream);
 
         let filter_options = filter_options.map(OutOfLine);
 
         if dump_logs {
-            lp.dump_logs(client_end, filter_options)
-                .expect("failed to register listener");
+            lp.dump_logs(client_end, filter_options).expect("failed to register listener");
         } else {
-            lp.listen(client_end, filter_options)
-                .expect("failed to register listener");
+            lp.listen(client_end, filter_options).expect("failed to register listener");
         }
     }
 
-    fn setup_test() -> (
-        fasync::Executor,
-        LogProxy,
-        LogSinkProxy,
-        zx::Socket,
-        zx::Socket,
-    ) {
+    fn setup_test() -> (fasync::Executor, LogProxy, LogSinkProxy, zx::Socket, zx::Socket) {
         let executor = fasync::Executor::new().expect("unable to create executor");
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let shared_members = Arc::new(Mutex::new(LogManagerShared {
@@ -514,9 +495,7 @@ mod tests {
             log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
         }));
 
-        let lm = LogManager {
-            shared_members: shared_members,
-        };
+        let lm = LogManager { shared_members: shared_members };
 
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
@@ -586,15 +565,9 @@ mod tests {
         }
 
         if test_dump_logs {
-            assert!(
-                closed.load(Ordering::Relaxed),
-                "done fn should have been called"
-            );
+            assert!(closed.load(Ordering::Relaxed), "done fn should have been called");
         } else {
-            assert!(
-                done.load(Ordering::Relaxed),
-                "task should have completed by now"
-            );
+            assert!(done.load(Ordering::Relaxed), "task should have completed by now");
         }
     }
 
@@ -609,8 +582,10 @@ mod tests {
     }
 
     fn filter_test_helper(
-        expected: Vec<LogMessage>, packets: Vec<fx_log_packet_t>,
-        filter_options: Option<&mut LogFilterOptions>, test_name: &str,
+        expected: Vec<LogMessage>,
+        packets: Vec<fx_log_packet_t>,
+        filter_options: Option<&mut LogFilterOptions>,
+        test_name: &str,
     ) {
         println!("DEBUG: {}: setup test", test_name);
         let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
@@ -641,10 +616,7 @@ mod tests {
             executor.run(timeout, 2);
             println!("DEBUG: {}: executor returned", test_name);
         }
-        assert!(
-            done.load(Ordering::Relaxed),
-            "task should have completed by now"
-        );
+        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
         println!("DEBUG: {}: assert done", test_name);
     }
 

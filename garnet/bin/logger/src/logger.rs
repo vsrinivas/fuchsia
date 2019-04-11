@@ -5,22 +5,15 @@
 use {
     byteorder::{ByteOrder, LittleEndian},
     fidl_fuchsia_logger::LogMessage,
-    fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         io::{self, AsyncRead},
         ready,
-        Stream,
         task::{Poll, Waker},
+        Stream,
     },
     libc::{c_char, c_int, uint32_t, uint64_t, uint8_t},
-    std::{
-        cell::RefCell,
-        marker::Unpin,
-        mem,
-        pin::Pin,
-        str,
-    },
+    std::{cell::RefCell, marker::Unpin, mem, pin::Pin, str},
 };
 
 type FxLogSeverityT = c_int;
@@ -76,9 +69,7 @@ thread_local! {
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
     pub fn new(socket: zx::Socket) -> Result<LoggerStream, io::Error> {
-        let l = LoggerStream {
-            socket: fasync::Socket::from_socket(socket)?,
-        };
+        let l = LoggerStream { socket: fasync::Socket::from_socket(socket)? };
         Ok(l)
     }
 }
@@ -168,12 +159,12 @@ impl Stream for LoggerStream {
 mod tests {
     use super::*;
 
-    use std::slice;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
     use fuchsia_zircon::prelude::*;
     use futures::future::TryFutureExt;
     use futures::stream::TryStreamExt;
+    use std::slice;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {
@@ -208,9 +199,7 @@ mod tests {
     }
 
     fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
-        x[offset..(offset + size)]
-            .iter_mut()
-            .for_each(|x| *x = value);
+        x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
     }
 
     #[test]
@@ -221,15 +210,9 @@ mod tests {
         assert_eq!(mem::size_of::<fx_log_packet_t>(), FX_LOG_MAX_DATAGRAM_LEN);
 
         // Test that there is no padding
-        assert_eq!(
-            mem::size_of::<fx_log_packet_t>(),
-            mem::size_of::<fx_log_packet_t_packed>(),
-        );
+        assert_eq!(mem::size_of::<fx_log_packet_t>(), mem::size_of::<fx_log_packet_t_packed>(),);
 
-        assert_eq!(
-            mem::size_of::<fx_log_metadata_t>(),
-            mem::size_of::<fx_log_metadata_t_packed>(),
-        );
+        assert_eq!(mem::size_of::<fx_log_metadata_t>(), mem::size_of::<fx_log_metadata_t_packed>(),);
     }
 
     #[test]
@@ -256,11 +239,13 @@ mod tests {
         expected_p.tags.push(String::from("AAAAA"));
         let calltimes = Arc::new(AtomicUsize::new(0));
         let c = calltimes.clone();
-        let f = ls.map_ok(move |(msg, s)| {
-            assert_eq!(msg, expected_p);
-            assert_eq!(s, METADATA_SIZE + 6 /* tag */+ 6 /* msg */);
-            c.fetch_add(1, Ordering::Relaxed);
-        }).try_collect::<()>();
+        let f = ls
+            .map_ok(move |(msg, s)| {
+                assert_eq!(msg, expected_p);
+                assert_eq!(s, METADATA_SIZE + 6 /* tag */+ 6 /* msg */);
+                c.fetch_add(1, Ordering::Relaxed);
+            })
+            .try_collect::<()>();
 
         fasync::spawn(f.unwrap_or_else(|e| {
             panic!("test fail {:?}", e);
@@ -386,10 +371,7 @@ mod tests {
                 let msg = vec![65 + i, 65 + i, 65 + i, 65 + i, 65 + i];
                 expected_p.msg = String::from_utf8(msg).unwrap();
             }
-            s = Some((
-                expected_p,
-                METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5,
-            ));
+            s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5));
             let buffer = to_u8_slice(&p);
             assert_eq!(
                 convert_to_log_message(
@@ -418,10 +400,7 @@ mod tests {
             p.data[1 + 3 * FX_LOG_MAX_TAGS as usize] = 0;
             expected_p = s.unwrap().0;
             expected_p.msg = String::from("");
-            s = Some((
-                expected_p,
-                METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize),
-            ));
+            s = Some((expected_p, METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize)));
             let buffer = to_u8_slice(&p);
             assert_eq!(
                 convert_to_log_message(
