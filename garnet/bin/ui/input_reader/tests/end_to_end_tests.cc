@@ -142,16 +142,11 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
   fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
   RunLoopUntilIdle();
 
-
-  // TODO(SCN-1347) Re-enable this test when we are using the generic
-  // touchscreen again.
-  if (0) {
-      std::vector<uint8_t> feature_report = device->GetLastOutputReport();
-      ASSERT_EQ(3U, feature_report.size());
-      uint8_t multitouch_enable_report[3] = {14, 2, 0};
-      for (int i = 0; i < 3; i++) {
-          EXPECT_EQ(multitouch_enable_report[i], feature_report[i]);
-      }
+  std::vector<uint8_t> feature_report = device->GetLastOutputReport();
+  ASSERT_EQ(3U, feature_report.size());
+  uint8_t multitouch_enable_report[3] = {14, 2, 0};
+  for (int i = 0; i < 3; i++) {
+    EXPECT_EQ(multitouch_enable_report[i], feature_report[i]);
   }
 
   // Create a single touch report.
