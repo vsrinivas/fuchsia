@@ -125,28 +125,30 @@ The council is comprised of Fuchsia contributors who have demonstrated:
 
 Members are appointed by each functional area of the project:
 
-*   Auth
-*   Architecture
-*   Component
-*   Connectivity
-*   DDK
-*   Developer
-*   Drivers
-*   Experiences
-*   FIDL
-*   Graphics
-*   Kernel
-*   Ledger
-*   Media
-*   Metrics
-*   Modular
-*   Security
-*   Software Delivery
-*   Storage
-*   System
-*   Toolchain
-*   Virtualization
-*   Web
+| Area              | Appointee               |
+| ----------------- | ----------------------- |
+| Auth              | jsankey@google.com      |
+| Architecture      | silberst@google.com     |
+| Component         | jeffbrown@google.com    |
+| Connectivity      | tkilbourn@google.com    |
+| DDK               | teisenbe@google.com     |
+| Developer         | dschulyer@google.com    |
+| Drivers           | ravoorir@google.com     |
+| Experiences       | chaselatta@google.com   |
+| FIDL              | ianloic@google.com      |
+| Graphics          | adamgousetis@google.com |
+| Kernel            | cpu@google.com          |
+| Ledger            | qsr@google.com          |
+| Media             | dalesat@google.com      |
+| Metrics           | rudominer@google.com    |
+| Modular           | lindkvist@google.com    |
+| Security          | jsankey@google.com      |
+| Software Delivery | raggi@google.com        |
+| Storage           | smklein@google.com      |
+| System            | cpu@google.com          |
+| Toolchain         | mcgrathr@google.com     |
+| Virtualization    | abdulla@google.com      |
+| Web               | wez@google.com          |
 
 As the project evolves, the list of functional areas (and therefore the makeup
 of the council) will evolve as well. The list of functional areas is maintained
