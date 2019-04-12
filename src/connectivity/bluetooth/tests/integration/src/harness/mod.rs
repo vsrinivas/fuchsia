@@ -8,14 +8,14 @@ use {
     futures::Future,
 };
 
-#[macro_use]
 pub mod control;
 
 #[macro_use]
 pub mod host_driver;
 
-#[macro_use]
 pub mod low_energy_central;
+
+pub mod profile;
 
 /// Trait for a Harness that we can run tests with
 pub trait TestHarness: Sized {

@@ -20,6 +20,7 @@ use crate::{
         },
         lifecycle::lifecycle_test,
         low_energy_central::{enable_and_disable_scan, enable_scan},
+        profile::{add_fake_profile, add_remove_profile, same_psm_twice_fails},
     },
 };
 
@@ -46,6 +47,7 @@ fn main() -> Result<(), Error> {
 
     collect_results(vec![
         run_test!(lifecycle_test),
+        // Host Driver tests
         run_test!(test_bd_addr),
         run_test!(test_set_local_name),
         run_test!(test_discoverable),
@@ -53,13 +55,20 @@ fn main() -> Result<(), Error> {
         run_test!(test_close),
         run_test!(test_list_devices),
         run_test!(test_connect),
+        // Bonding tests
         run_test!(test_add_bonded_devices_success),
         run_test!(test_add_bonded_devices_no_ltk_fails),
         run_test!(test_add_bonded_devices_duplicate_entry),
         run_test!(test_add_bonded_devices_invalid_entry),
+        // Control tests
         run_test!(set_active_host),
+        // le.Central tests
         run_test!(enable_scan),
         run_test!(enable_and_disable_scan),
+        // Profile tests
+        run_test!(add_fake_profile),
+        run_test!(same_psm_twice_fails),
+        run_test!(add_remove_profile),
     ])?;
     Ok(())
 }
