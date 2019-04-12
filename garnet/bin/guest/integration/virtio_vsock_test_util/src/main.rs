@@ -12,8 +12,8 @@ use {
         AcceptorMarker, AcceptorRequest, ConnectionMarker, ConnectionProxy, ConnectionTransport,
         ConnectorMarker,
     },
-    fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         io::{AsyncReadExt, AsyncWriteExt},
