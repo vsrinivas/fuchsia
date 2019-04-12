@@ -2156,7 +2156,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
     if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
         err = brcmf_fil_bsscfg_int_set(ifp, "mfp", mfp);
         if (err != ZX_OK) {
-            brcmf_err("mfp error %d\n", err);
+            brcmf_err("mfp error %s\n", zx_status_get_string(err));
             goto exit;
         }
     }
@@ -2515,6 +2515,53 @@ fail:
     return WLAN_START_RESULT_NOT_SUPPORTED;
 }
 
+// Returns an MLME result code (WLAN_STOP_RESULT_*)
+static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, wlanif_stop_req_t* req) {
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    zx_status_t status;
+    uint8_t result = WLAN_STOP_RESULT_SUCCESS;
+    struct brcmf_join_params join_params;
+
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
+        brcmf_err("attempt to stop already stopped AP\n");
+        return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
+    }
+
+    memset(&join_params, 0, sizeof(join_params));
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
+    if (status != ZX_OK) {
+        brcmf_err("SET SSID error (%s)\n", zx_status_get_string(status));
+        result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+    }
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+    if (status != ZX_OK) {
+        brcmf_err("BRCMF_C_DOWN error (%s)\n", zx_status_get_string(status));
+        result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+    }
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0);
+    if (status != ZX_OK) {
+        brcmf_err("setting AP mode failed (%s)\n", zx_status_get_string(status));
+        result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+    }
+
+    /* Bring device back up so it can be used again */
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+    if (status != ZX_OK) {
+        brcmf_err("BRCMF_C_UP error (%s)\n", zx_status_get_string(status));
+        result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+    }
+
+    brcmf_vif_clear_mgmt_ies(ifp->vif);
+    brcmf_set_mpc(ifp, 1);
+    brcmf_configure_arp_nd_offload(ifp, true);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+    brcmf_net_setcarrier(ifp, false);
+
+    return result;
+}
+
 // Deauthenticate with specified STA. The reason provided should be from WLAN_DEAUTH_REASON_*
 static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, uint8_t* mac,
                                               uint8_t reason) {
@@ -2827,6 +2874,7 @@ void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
     brcmf_err("Unimplemented\n");
 }
 
+/* Start AP mode */
 void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
     struct net_device* ndev = ctx;
@@ -2835,9 +2883,15 @@ void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
     ndev->if_callbacks->start_conf(ndev->if_callback_cookie, &result);
 }
 
+/* Stop AP mode */
 void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+    struct net_device* ndev = ctx;
+
+    uint8_t result_code = brcmf_cfg80211_stop_ap(ndev, req);
+
+    wlanif_stop_confirm_t result = {.result_code = result_code};
+    ndev->if_callbacks->stop_conf(ndev->if_callback_cookie, &result);
 }
 
 void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
