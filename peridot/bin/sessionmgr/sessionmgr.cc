@@ -18,6 +18,7 @@
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
 #include "peridot/lib/modular_config/modular_config.h"
+#include "peridot/lib/modular_config/modular_config_constants.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
     const bool enable_cobalt, async_dispatcher_t* dispatcher,
@@ -31,39 +32,45 @@ fit::deferred_action<fit::closure> SetupCobalt(
 void OverrideConfigFromCommandLine(
     fxl::CommandLine command_line,
     fuchsia::modular::internal::SessionmgrConfig* config) {
-  if (command_line.HasOption("enable_cobalt")) {
-    config->set_enable_cobalt(command_line.GetOptionValueWithDefault(
-                                  "enable_cobalt", "true") == "true");
+  if (command_line.HasOption(modular_config::kEnableCobalt)) {
+    config->set_enable_cobalt(
+        command_line.GetOptionValueWithDefault(modular_config::kEnableCobalt,
+                                               modular_config::kTrue) ==
+        modular_config::kTrue);
   }
 
-  if (command_line.HasOption("enable_story_shell_preload")) {
+  if (command_line.HasOption(modular_config::kEnableStoryShellPreload)) {
     config->set_enable_story_shell_preload(
-        command_line.GetOptionValueWithDefault("enable_story_shell_preload",
-                                               "true") == "true");
+        command_line.GetOptionValueWithDefault(
+            modular_config::kEnableStoryShellPreload, modular_config::kTrue) ==
+        modular_config::kTrue);
   }
 
-  if (command_line.HasOption("use_memfs_for_ledger")) {
+  if (command_line.HasOption(modular_config::kUseMemfsForLedger)) {
     config->set_use_memfs_for_ledger(true);
   }
 
-  if (command_line.HasOption("no_cloud_provider_for_ledger")) {
+  if (command_line.HasOption(modular_config::kNoCloudProviderForLedger)) {
     config->set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
-  } else if (command_line.HasOption("use_cloud_provider_from_environment")) {
+  } else if (command_line.HasOption(
+                 modular_config::kUseCloudProviderFromEnvironment)) {
     config->set_cloud_provider(
         fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT);
   }
 
-  if (command_line.HasOption("startup_agents")) {
+  if (command_line.HasOption(modular_config::kStartupAgents)) {
     auto startup_agents = fxl::SplitStringCopy(
-        command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
-        fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+        command_line.GetOptionValueWithDefault(modular_config::kStartupAgents,
+                                               ""),
+        ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     config->set_startup_agents(std::move(startup_agents));
   }
 
-  if (command_line.HasOption("session_agents")) {
+  if (command_line.HasOption(modular_config::kSessionAgents)) {
     auto session_agents = fxl::SplitStringCopy(
-        command_line.GetOptionValueWithDefault("session_agents", ""), ",",
-        fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+        command_line.GetOptionValueWithDefault(modular_config::kSessionAgents,
+                                               ""),
+        ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     config->set_session_agents(std::move(session_agents));
   }
 }
