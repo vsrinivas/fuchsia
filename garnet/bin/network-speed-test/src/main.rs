@@ -14,8 +14,8 @@ mod opts;
 use {
     failure::{Error, ResultExt, bail},
     fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
-    fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
     futures::io::{AllowStdIo, AsyncReadExt},
