@@ -11,7 +11,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/examples/intl/fidl:wisdom",
+    "//garnet/examples/intl/wisdom/fidl:wisdom",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//third_party/icu:icu",
@@ -27,7 +27,7 @@ executable("intl_wisdom_client") {
 
   deps = [
     ":lib",
-    "//garnet/examples/intl/fidl:wisdom",
+    "//garnet/examples/intl/wisdom/fidl:wisdom",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

@@ -6,8 +6,8 @@ import("//build/package.gni")
 
 package("intl_wisdom") {
   deps = [
-    "//garnet/examples/intl/client:intl_wisdom_client",
-    "//garnet/examples/intl/server:intl_wisdom_server",
+    "//garnet/examples/intl/wisdom/client:intl_wisdom_client",
+    "//garnet/examples/intl/wisdom/server:intl_wisdom_server",
   ]
 
   binaries = [

@@ -2,8 +2,8 @@
 // Use of this source code is governed by app BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_INTL_SERVER_INTL_WISDOM_SERVER_IMPL_H_
-#define GARNET_EXAMPLES_INTL_SERVER_INTL_WISDOM_SERVER_IMPL_H_
+#ifndef GARNET_EXAMPLES_INTL_WISDOM_SERVER_INTL_WISDOM_SERVER_IMPL_H_
+#define GARNET_EXAMPLES_INTL_WISDOM_SERVER_INTL_WISDOM_SERVER_IMPL_H_
 
 #include <fuchsia/examples/intl/wisdom/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -44,4 +44,4 @@ class IntlWisdomServerImpl : fuchsia::examples::intl::wisdom::IntlWisdomServer {
 
 }  // namespace intl_wisdom
 
-#endif  // GARNET_EXAMPLES_INTL_SERVER_INTL_WISDOM_SERVER_IMPL_H_
+#endif  // GARNET_EXAMPLES_INTL_WISDOM_SERVER_INTL_WISDOM_SERVER_IMPL_H_

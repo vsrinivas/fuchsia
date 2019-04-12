@@ -2,8 +2,8 @@
 // Use of this source code is governed by app BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
-#define GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
+#ifndef GARNET_EXAMPLES_INTL_WISDOM_CLIENT_INTL_WISDOM_CLIENT_H_
+#define GARNET_EXAMPLES_INTL_WISDOM_CLIENT_INTL_WISDOM_CLIENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -51,4 +51,4 @@ class IntlWisdomClient {
 
 }  // namespace intl_wisdom
 
-#endif  // GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
+#endif  // GARNET_EXAMPLES_INTL_WISDOM_CLIENT_INTL_WISDOM_CLIENT_H_
