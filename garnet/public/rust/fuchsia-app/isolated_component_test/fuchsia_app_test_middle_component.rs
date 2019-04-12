@@ -6,7 +6,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::{RequestStream, DiscoverableService},
+    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
     fidl_fuchsia_test_echos::{
         EchoExposedByParentMarker,

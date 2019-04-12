@@ -13,7 +13,7 @@ use {
     crate::device::TeeDeviceConnection,
     crate::device_server::serve_passthrough,
     failure::{format_err, Error},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_tee::DeviceMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

@@ -11,7 +11,7 @@ use std::io;
 use std::path::Path;
 
 use fidl;
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };

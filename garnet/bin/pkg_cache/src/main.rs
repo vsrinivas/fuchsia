@@ -6,7 +6,7 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_pkg::PackageCacheMarker;
 use fuchsia_app::server::ServicesServer;

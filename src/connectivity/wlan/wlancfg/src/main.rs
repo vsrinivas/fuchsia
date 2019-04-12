@@ -16,7 +16,7 @@ mod state_machine;
 use crate::{config::Config, known_ess_store::KnownEssStore};
 
 use failure::{format_err, Error, ResultExt};
-use fidl::endpoints::{RequestStream, DiscoverableService};
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fidl_fuchsia_wlan_service as legacy;
 use fuchsia_app::server::ServicesServer;

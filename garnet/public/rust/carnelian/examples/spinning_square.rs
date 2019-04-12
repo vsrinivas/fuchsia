@@ -9,7 +9,7 @@ use carnelian::{
     ViewAssistantPtr, ViewKey,
 };
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, DiscoverableService};
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_async as fasync;

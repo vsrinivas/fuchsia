@@ -10,7 +10,7 @@ mod view_controller;
 
 use app::App;
 use failure::{Error, ResultExt};
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fuchsia_async as fasync;
 use std::env;

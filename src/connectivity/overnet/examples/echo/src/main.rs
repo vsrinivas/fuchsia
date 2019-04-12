@@ -8,7 +8,7 @@
 use {
     clap::{App, Arg, SubCommand},
     failure::{Error, ResultExt},
-    fidl::endpoints::{ClientEnd, RequestStream, DiscoverableService},
+    fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
         OvernetMarker, OvernetProxy, ServiceProviderRequest, ServiceProviderRequestStream,

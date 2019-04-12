@@ -27,15 +27,6 @@ pub trait ServiceMarker: Sized + Send + Sync + 'static {
     /// The type of the stream of requests coming into a server.
     type RequestStream: RequestStream<Service = Self>;
 
-    /// A name of the service suitable for debug purposes.
-    const DEBUG_NAME: &'static str;
-}
-
-/// A marker for a particular FIDL service that is also discoverable.
-///
-/// Discoverable services may be referred to by a string name, and can be
-/// conveniently exported in a service directory via an entry of that name.
-pub trait DiscoverableService: ServiceMarker {
     /// The name of the service (to be used for service lookup and discovery).
     const NAME: &'static str;
 }
@@ -171,7 +162,7 @@ impl<T> From<zx::Channel> for ClientEnd<T> {
 
 impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "ClientEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
+        write!(f, "ClientEnd(name={}, channel={:?})", T::NAME, self.inner)
     }
 }
 
@@ -245,7 +236,7 @@ impl<T> From<zx::Channel> for ServerEnd<T> {
 
 impl<T: ServiceMarker> ::std::fmt::Debug for ServerEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "ServerEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
+        write!(f, "ServerEnd(name={}, channel={:?})", T::NAME, self.inner)
     }
 }
 

@@ -19,7 +19,7 @@ use {
         stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
     },
-    fidl::endpoints::{RequestStream, DiscoverableService, Proxy},
+    fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
     fidl_fuchsia_io::{
         DirectoryRequestStream,
         DirectoryRequest,
@@ -72,7 +72,7 @@ pub mod client {
     use super::*;
 
     /// Connect to a FIDL service using the provided channel and namespace prefix.
-    pub fn connect_channel_to_service_at<S: DiscoverableService>(
+    pub fn connect_channel_to_service_at<S: ServiceMarker>(
         server_end: zx::Channel,
         service_prefix: &str,
     ) -> Result<(), Error> {
@@ -83,14 +83,14 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the provided channel.
-    pub fn connect_channel_to_service<S: DiscoverableService>(server_end: zx::Channel)
+    pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel)
         -> Result<(), Error>
     {
         connect_channel_to_service_at::<S>(server_end, "/svc")
     }
 
     /// Connect to a FIDL service using the provided namespace prefix.
-    pub fn connect_to_service_at<S: DiscoverableService>(service_prefix: &str)
+    pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
         -> Result<S::Proxy, Error>
     {
         let (proxy, server) = zx::Channel::create()?;
@@ -100,7 +100,7 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the application root namespace.
-    pub fn connect_to_service<S: DiscoverableService>()
+    pub fn connect_to_service<S: ServiceMarker>()
         -> Result<S::Proxy, Error>
     {
         connect_to_service_at::<S>("/svc")
@@ -225,7 +225,7 @@ pub mod client {
 
         #[inline]
         /// Connect to a service provided by the `App`.
-        pub fn connect_to_service<S: DiscoverableService>(&self, service: S)
+        pub fn connect_to_service<S: ServiceMarker>(&self, service: S)
             -> Result<S::Proxy, Error>
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
@@ -234,7 +234,7 @@ pub mod client {
         }
 
         /// Connect to a service by passing a channel for the server.
-        pub fn pass_to_service<S: DiscoverableService>(&self, _: S, server_channel: zx::Channel)
+        pub fn pass_to_service<S: ServiceMarker>(&self, _: S, server_channel: zx::Channel)
             -> Result<(), Error>
         {
             self.pass_to_named_service(S::NAME, server_channel)
@@ -313,9 +313,9 @@ pub mod server {
         }
 
         /// Add a service that proxies requests to the current environment.
-        pub fn add_proxy_service<S: DiscoverableService>(self) -> Self {
+        pub fn add_proxy_service<S: ServiceMarker>(self) -> Self {
             struct Proxy<S>(PhantomData<S>);
-            impl<S: DiscoverableService> ServiceFactory for Proxy<S> {
+            impl<S: ServiceMarker> ServiceFactory for Proxy<S> {
                 fn service_name(&self) -> &str {
                     S::NAME
                 }

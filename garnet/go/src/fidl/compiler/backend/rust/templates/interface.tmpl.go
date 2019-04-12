@@ -14,18 +14,8 @@ pub struct {{ $interface.Name }}Marker;
 impl fidl::endpoints::ServiceMarker for {{ $interface.Name }}Marker {
 	type Proxy = {{ $interface.Name }}Proxy;
 	type RequestStream = {{ $interface.Name }}RequestStream;
-{{- if .ServiceName }}
-	const DEBUG_NAME: &'static str = "{{ $interface.ServiceName }}";
-{{- else }}
-	const DEBUG_NAME: &'static str = "(anonymous) {{ $interface.Name }}";
-{{- end }}
-}
-
-{{- if .ServiceName }}
-impl fidl::endpoints::DiscoverableService for {{ $interface.Name }}Marker {
 	const NAME: &'static str = "{{ $interface.ServiceName }}";
 }
-{{- end }}
 
 pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- range $method := $interface.Methods }}
@@ -273,7 +263,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 			{{- end }}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
 			})
 		}))
 	}
@@ -436,7 +426,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 				{{- end }}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+					service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
 				}),
 			}))
 		})

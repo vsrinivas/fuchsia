@@ -21,7 +21,7 @@ use {
     },
     fidl::{
         encoding::{Decodable, OutOfLine},
-        endpoints::{RequestStream, DiscoverableService, Proxy},
+        endpoints::{RequestStream, ServiceMarker, Proxy},
     },
     fidl_fuchsia_io::{
         DirectoryRequestStream,
@@ -84,7 +84,7 @@ pub mod client {
     use super::*;
 
     /// Connect to a FIDL service using the provided channel and namespace prefix.
-    pub fn connect_channel_to_service_at<S: DiscoverableService>(
+    pub fn connect_channel_to_service_at<S: ServiceMarker>(
         server_end: zx::Channel,
         service_prefix: &str,
     ) -> Result<(), Error> {
@@ -95,14 +95,14 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the provided channel.
-    pub fn connect_channel_to_service<S: DiscoverableService>(server_end: zx::Channel)
+    pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel)
         -> Result<(), Error>
     {
         connect_channel_to_service_at::<S>(server_end, "/svc")
     }
 
     /// Connect to a FIDL service using the provided namespace prefix.
-    pub fn connect_to_service_at<S: DiscoverableService>(service_prefix: &str)
+    pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
         -> Result<S::Proxy, Error>
     {
         let (proxy, server) = zx::Channel::create()?;
@@ -112,7 +112,7 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the application root namespace.
-    pub fn connect_to_service<S: DiscoverableService>()
+    pub fn connect_to_service<S: ServiceMarker>()
         -> Result<S::Proxy, Error>
     {
         connect_to_service_at::<S>("/svc")
@@ -224,7 +224,7 @@ pub mod client {
 
         /// Connect to a service provided by the `App`.
         #[inline]
-        pub fn connect_to_service<S: DiscoverableService>(&self, service: S)
+        pub fn connect_to_service<S: ServiceMarker>(&self, service: S)
             -> Result<S::Proxy, Error>
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
@@ -234,7 +234,7 @@ pub mod client {
 
         /// Connect to a service by passing a channel for the server.
         #[inline]
-        pub fn pass_to_service<S: DiscoverableService>(&self, _: S, server_channel: zx::Channel)
+        pub fn pass_to_service<S: ServiceMarker>(&self, _: S, server_channel: zx::Channel)
             -> Result<(), Error>
         {
             self.pass_to_named_service(S::NAME, server_channel)
@@ -520,7 +520,7 @@ pub mod server {
     #[doc(hidden)]
     pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
 
-    impl<S: DiscoverableService, O> Service for Proxy<S, O> {
+    impl<S: ServiceMarker, O> Service for Proxy<S, O> {
         type Output = O;
         fn connect(&mut self, channel: zx::Channel) -> Option<O> {
             if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
@@ -586,11 +586,10 @@ pub mod server {
             where
                 F: FnMut(RS) -> ServiceObjTy::Output,
                 RS: RequestStream,
-                RS::Service : DiscoverableService,
                 FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
             {
                 self.add_fidl_service_at(
-                    <RS::Service as DiscoverableService>::NAME,
+                    RS::Service::NAME,
                     service,
                 )
             }
@@ -618,7 +617,7 @@ pub mod server {
             // NOTE: we'd like to be able to remove the type parameter `O` here,
             //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
             //  makes type checking angry.
-            pub fn add_proxy_service<S: DiscoverableService, O>(&mut self) -> &mut Self
+            pub fn add_proxy_service<S: ServiceMarker, O>(&mut self) -> &mut Self
             where
                 ServiceObjTy: From<Proxy<S, O>>,
                 ServiceObjTy: ServiceObjTrait<Output = O>,

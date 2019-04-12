@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};

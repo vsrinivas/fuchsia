@@ -6,7 +6,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,

@@ -49,30 +49,15 @@
         },
         {
           "ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 8,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 3,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 9,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 4,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 10,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 5,
@@ -126,12 +111,7 @@
         },
         {
           "ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 16,
-            "column": 5
-          }
+          "reserved": true
         }
       ],
       "size": 16,
@@ -167,30 +147,15 @@
         },
         {
           "ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 21,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 3,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 22,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 4,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 23,
-            "column": 5
-          }
+          "reserved": true
         },
         {
           "ordinal": 5,
@@ -230,12 +195,7 @@
         },
         {
           "ordinal": 7,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
-            "line": 26,
-            "column": 5
-          }
+          "reserved": true
         }
       ],
       "size": 16,
