@@ -189,7 +189,7 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
     dwc3_metadata[0].data_size = sizeof(struct UsbConfig) + sizeof(FunctionDescriptor);
     dwc3_metadata[0].data_buffer = config;
 
-    status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, components, countof(components));
+    status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, components, countof(components), 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_composite_device_add failed: %d\n", __FUNCTION__, status);
         return status;

@@ -141,7 +141,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
     pdev.metadata_list = test_metadata;
     pdev.metadata_count = fbl::count_of(test_metadata);
 
-    status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite));
+    status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite),
+                                       UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d\n", status);
     }

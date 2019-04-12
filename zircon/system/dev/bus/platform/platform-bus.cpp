@@ -175,8 +175,13 @@ zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t
 
 zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
                                                 const device_component_t* components_list,
-                                                size_t components_count) {
+                                                size_t components_count,
+                                                uint32_t coresident_device_index) {
     if (!pdev || !pdev->name) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (coresident_device_index == 0) {
+        zxlogf(ERROR, "%s: coresident_device_index cannot be zero\n", __func__);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -221,7 +226,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
     };
 
     return DdkAddComposite(pdev->name, props, fbl::count_of(props), components,
-                           components_count + 1, UINT32_MAX);
+                           components_count + 1, coresident_device_index);
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {

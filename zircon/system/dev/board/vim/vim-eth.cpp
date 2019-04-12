@@ -182,7 +182,7 @@ zx_status_t Vim::EthInit() {
     }
 
     // Add a composite device for dwmac driver.
-    status = pbus_.CompositeDeviceAdd(&dwmac_dev, components, fbl::count_of(components));
+    status = pbus_.CompositeDeviceAdd(&dwmac_dev, components, fbl::count_of(components), 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
         return status;
