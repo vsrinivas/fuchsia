@@ -121,6 +121,11 @@ func run() (err error) {
 		ErrorText:      "",
 		ErrorCode:      0,
 	})
+
+	if err := UpdateCurrentChannel(); err != nil {
+		logger.Errorf("%v", err)
+	}
+
 	if err := history.Save(); err != nil {
 		logger.Errorf("error writing update history: %s", err)
 	}

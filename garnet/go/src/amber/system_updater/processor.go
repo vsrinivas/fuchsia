@@ -6,6 +6,7 @@ package system_updater
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -196,4 +197,31 @@ func writeImg(c *exec.Cmd, path string) ([]byte, error) {
 	c.Stdin = imgFile
 
 	return c.CombinedOutput()
+}
+
+// UpdateCurrentChannel persists the update channel info for a successful update
+func UpdateCurrentChannel() error {
+	targetPath := "/data/misc/ota/target_channel.json"
+	contents, err := ioutil.ReadFile(targetPath)
+	if err != nil {
+		return fmt.Errorf("no target channel recorded in %v: %v", targetPath, err)
+	}
+	currentPath := "/data/misc/ota/current_channel.json"
+	partPath := currentPath + ".part"
+	f, err := os.Create(partPath)
+	if err != nil {
+		return fmt.Errorf("unable to write current channel to %v: %v", partPath, err)
+	}
+	defer f.Close()
+	buf := bytes.NewBuffer(contents)
+	_, err = buf.WriteTo(f)
+	if err != nil {
+		return fmt.Errorf("unable to write current channel to %v: %v", currentPath, err)
+	}
+	f.Sync()
+	f.Close()
+	if err := os.Rename(partPath, currentPath); err != nil {
+		return fmt.Errorf("error moving %v to %v: %v", partPath, currentPath, err)
+	}
+	return nil
 }
