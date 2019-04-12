@@ -28,6 +28,7 @@ func SetTargetChannel(targetChannel string) {
 		return
 	}
 	setTargetChannel <- targetChannel
+	writeTargetChannel(targetChannel)
 }
 
 // Metric is a cobalt metric that can be submitted to cobalt
