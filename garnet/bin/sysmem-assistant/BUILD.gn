@@ -47,27 +47,25 @@ declare_args() {
 package("ta-image") {
   deprecated_system_image = true
 
-  if (have_secmem_ta) {
-    secmem_ta_uuid = "2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b"
-    libraries = [
-      {
-        source = rebase_path("firmware/$secmem_ta_uuid.ta")
-        name = "firmware/$secmem_ta_uuid.ta"
-      },
-    ]
-  }
+  secmem_ta_uuid = "2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b"
+  libraries = [
+    {
+      source = rebase_path("firmware/$secmem_ta_uuid.ta")
+      name = "firmware/$secmem_ta_uuid.ta"
+    },
+  ]
 }
 
 config_data("config") {
-  # Don't launch without a TA to use.
+  for_pkg = "sysmgr"
+  sources = [
+    "sysmem-assistant.config",
+  ]
+}
+
+# Don't launch without a TA to use.
+group("secmem-ta") {
   if (have_secmem_ta) {
-    for_pkg = "sysmgr"
-    sources = [
-      "sysmem-assistant.config",
-    ]
-  } else {
-    for_pkg = ""
-    outputs = []
-    sources = []
+    data_deps = [":ta-image", ":config"]
   }
 }

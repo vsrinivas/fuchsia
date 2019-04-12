@@ -315,8 +315,7 @@ group("sysmem-assistant") {
   testonly = true
   public_deps = [
     "//garnet/bin/sysmem-assistant",
-    "//garnet/bin/sysmem-assistant:config",
-    "//garnet/bin/sysmem-assistant:ta-image",
+    "//garnet/bin/sysmem-assistant:secmem-ta",
     "//garnet/packages/prod:tee_manager",
   ]
 }

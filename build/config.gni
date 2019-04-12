@@ -16,7 +16,8 @@ import("//build/package.gni")
 #     placeholders based on $sources; see copy() and `gn help source_expansion`.
 #     If not provided, the outputs will be named by processing the sources
 #     with the {{source_file_part}} template. Applying this template to
-#     "config/mycfg.config" produces "mycfg.config".
+#     "config/mycfg.config" produces "mycfg.config". If supplied the list must
+#     contain exactly one path pattern.
 #
 #   sources (required)
 #     [list of files] List of files in the source tree or build that become
@@ -29,37 +30,30 @@ template("config_data") {
                            [
                              "data_deps",
                              "deps",
+                             "for_pkg",
                              "metadata",
+                             "outputs",
                              "public_deps",
+                             "sources",
                              "testonly",
                            ])
 
-    # If sources and outputs are empty, mark them as not_needed otherwise GN
-    # will complain there was no side effect.
-    if (invoker.sources == [] && invoker.outputs == []) {
-      not_needed(invoker,
-                 [
-                   "sources",
-                   "outputs",
-                   "for_pkg",
-                 ])
+    if (!defined(outputs)) {
+      outputs = [ "{{source_file_part}}" ]
     }
+
+    assert(outputs != [] && outputs - [ outputs[0] ] == [],
+          "Exactly one output pattern required.")
 
     metadata = {
       config_package_entries = []
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
-      foreach(source, invoker.sources) {
-        out_template = ""
-        if (!defined(invoker.outputs)) {
-          out_template = [ "{{source_file_part}}" ]
-        } else {
-          out_template = invoker.outputs
-        }
-        foreach(target, process_file_template([ source ], out_template)) {
+      foreach(source, sources) {
+        foreach(target, process_file_template([ source ], outputs)) {
           config_package_entries +=
-              [ "data/" + invoker.for_pkg + "/" + target + "=" +
+              [ "data/" + for_pkg + "/" + target + "=" +
                 rebase_path(source, root_build_dir) ]
         }
       }
