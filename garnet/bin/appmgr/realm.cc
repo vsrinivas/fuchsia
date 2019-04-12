@@ -11,7 +11,16 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fsl/handles/object_info.h>
+#include <lib/fsl/io/fd.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/json/json_parser.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/process.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
 #include <trace/event.h>
 #include <unistd.h>
 #include <zircon/process.h>
@@ -21,15 +30,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <lib/fsl/handles/object_info.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
-#include <lib/json/json_parser.h>
-#include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
@@ -203,7 +203,8 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 
 // static
 RealmArgs RealmArgs::Make(
-    Realm* parent, std::string label, std::string data_path, std::string cache_path,
+    Realm* parent, std::string label, std::string data_path,
+    std::string cache_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
@@ -217,7 +218,8 @@ RealmArgs RealmArgs::Make(
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-    Realm* parent, std::string label, std::string data_path, std::string cache_path,
+    Realm* parent, std::string label, std::string data_path,
+    std::string cache_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
@@ -322,7 +324,7 @@ Realm::~Realm() {
   if (delete_storage_on_death_) {
     if (!files::DeletePath(data_path(), true)) {
       FXL_LOG(ERROR) << "Failed to delete persistent storage for environment '"
-                    << label() << "' on death";
+                     << label() << "' on death";
     }
     if (!files::DeletePath(cache_path(), true)) {
       FXL_LOG(ERROR) << "Failed to delete cache storage for environment '"
@@ -400,9 +402,9 @@ void Realm::CreateNestedEnvironment(
         /*run_virtual_console=*/false, std::move(additional_services),
         std::move(options));
   } else {
-    args = RealmArgs::Make(
-        this, label, nested_data_path, nested_cache_path, environment_services_,
-        /*run_virtual_console=*/false, std::move(options));
+    args = RealmArgs::Make(this, label, nested_data_path, nested_cache_path,
+                           environment_services_,
+                           /*run_virtual_console=*/false, std::move(options));
   }
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
@@ -607,7 +609,7 @@ std::unique_ptr<EnvironmentControllerImpl> Realm::ExtractChild(Realm* child) {
   return controller;
 }
 
-std::unique_ptr<ComponentControllerImpl> Realm::ExtractComponent(
+std::shared_ptr<ComponentControllerImpl> Realm::ExtractComponent(
     ComponentControllerImpl* controller) {
   auto it = applications_.find(controller);
   if (it == applications_.end()) {
@@ -727,9 +729,9 @@ void Realm::CreateComponentFromPackage(
   }
 
   if (!is_fuchsia_pkg_url) {
-    FXL_LOG(ERROR)
-        << "Component could not be launched from " << package->resolved_url
-        << " because it is not a valid Fuchsia component URL!";
+    FXL_LOG(ERROR) << "Component could not be launched from "
+                   << package->resolved_url
+                   << " because it is not a valid Fuchsia component URL!";
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
@@ -880,7 +882,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
     TerminationCallback termination_callback;
     component_request.Extract(&controller, &termination_callback);
-    auto application = std::make_unique<ComponentControllerImpl>(
+    auto application = std::make_shared<ComponentControllerImpl>(
         std::move(controller), this, std::move(child_job), std::move(process),
         url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
         std::move(channels.exported_dir), std::move(channels.client_request),
@@ -889,7 +891,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();
     if (callback != nullptr) {
-      callback(key);
+      callback(application);
     }
     applications_.emplace(key, std::move(application));
   }
@@ -978,8 +980,8 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
                                channel.release());
 }
 
-std::string Realm::IsolatedPathForPackage(
-    std::string path_prefix, const FuchsiaPkgUrl& fp) {
+std::string Realm::IsolatedPathForPackage(std::string path_prefix,
+                                          const FuchsiaPkgUrl& fp) {
   // Create a unique path for this combination of Realm and Component
   // identities. The Realm part comes from path_prefix, which should include all
   // Realm labels from the root Realm to this Realm. The Component part comes

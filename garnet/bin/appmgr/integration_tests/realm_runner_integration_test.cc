@@ -6,13 +6,16 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <unistd.h>
+
 #include <memory>
 
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
+#include "lib/async-loop/cpp/loop.h"
+#include "lib/async-loop/loop.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
 
@@ -319,9 +322,9 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
       runner_registry_.runner()->components()[0].unique_id,
       component_ptr.NewRequest());
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  fake_service_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                             fuchsia::io::OPEN_RIGHT_WRITABLE,
-                         dir_handle.NewRequest().TakeChannel());
+  fake_service_dir.Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      dir_handle.NewRequest().TakeChannel());
   ASSERT_EQ(ZX_OK,
             component_ptr->SetServiceDirectory(dir_handle.TakeChannel()));
   ASSERT_EQ(ZX_OK, component_ptr->PublishService(dummy_service_name));

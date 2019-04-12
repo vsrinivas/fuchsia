@@ -162,7 +162,7 @@ void Namespace::CreateComponent(
                     "launch_info.url", launch_info.url);
   realm_->CreateComponent(
       std::move(launch_info), std::move(controller),
-      [cc_trace_id](ComponentControllerImpl* component) {
+      [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
         TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
       });
 }

@@ -8,7 +8,7 @@
 template <typename T>
 class ComponentContainer {
  public:
-  virtual std::unique_ptr<T> ExtractComponent(T* controller) = 0;
+  virtual std::shared_ptr<T> ExtractComponent(T* controller) = 0;
   virtual ~ComponentContainer(){};
 };
 

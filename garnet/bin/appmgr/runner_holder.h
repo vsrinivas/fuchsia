@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
 #define GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
 
-#include <lib/fit/function.h>
-#include <lib/zx/vmo.h>
-
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/vmo.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
-#include <lib/sys/cpp/service_directory.h>
+
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/namespace.h"
@@ -35,19 +35,20 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
       TerminationCallback termination_callback);
 
-  std::unique_ptr<ComponentBridge> ExtractComponent(
+  std::shared_ptr<ComponentBridge> ExtractComponent(
       ComponentBridge* controller) override;
 
  private:
-  void CreateComponentCallback(ComponentControllerImpl* component);
+  void CreateComponentCallback(
+      std::weak_ptr<ComponentControllerImpl> component);
   void Cleanup();
 
   std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::sys::RunnerPtr runner_;
-  ComponentControllerImpl* impl_object_;
+  std::weak_ptr<ComponentControllerImpl> impl_object_;
   fit::function<void()> error_handler_;
-  std::unordered_map<ComponentBridge*, std::unique_ptr<ComponentBridge>>
+  std::unordered_map<ComponentBridge*, std::shared_ptr<ComponentBridge>>
       components_;
   uint64_t component_id_counter_;
   std::string koid_;

@@ -12,13 +12,14 @@
 #include <lib/zx/process.h>
 #include <zircon/assert.h>
 
+#include <vector>
+
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/debug_info_retriever.h"
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/system_objects_directory.h"
-
 #include "lib/fidl/cpp/binding.h"
 
 namespace component {

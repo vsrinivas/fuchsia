@@ -6,21 +6,21 @@
 #define GARNET_BIN_APPMGR_REALM_H_
 
 #include <fs/synchronous-vfs.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/function.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include <iosfwd>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/function.h>
-#include <lib/fsl/vmo/file.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/string_view.h>
-#include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
@@ -89,7 +89,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fuchsia::sys::EnvironmentOptions options);
 
   using ComponentObjectCreatedCallback =
-      fit::function<void(ComponentControllerImpl* component)>;
+      fit::function<void(std::weak_ptr<ComponentControllerImpl> component)>;
 
   void CreateComponent(
       fuchsia::sys::LaunchInfo launch_info,
@@ -106,7 +106,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // reference to the application's controller. The caller of this function
   // typically destroys the controller (and hence the application) shortly after
   // calling this function.
-  std::unique_ptr<ComponentControllerImpl> ExtractComponent(
+  // We use shared_ptr so that we can pass weak_ptrs to dependent code.
+  std::shared_ptr<ComponentControllerImpl> ExtractComponent(
       ComponentControllerImpl* controller) override;
 
   void AddBinding(
@@ -152,8 +153,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   zx::channel OpenInfoDir();
 
-  std::string IsolatedPathForPackage(
-      std::string path_prefix, const FuchsiaPkgUrl& fp);
+  std::string IsolatedPathForPackage(std::string path_prefix,
+                                     const FuchsiaPkgUrl& fp);
 
   Realm* const parent_;
   fuchsia::sys::LoaderPtr loader_;
@@ -175,7 +176,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       children_;
 
   std::unordered_map<ComponentControllerImpl*,
-                     std::unique_ptr<ComponentControllerImpl>>
+                     std::shared_ptr<ComponentControllerImpl>>
       applications_;
 
   std::unordered_map<std::string, std::unique_ptr<RunnerHolder>> runners_;

@@ -4,12 +4,12 @@
 
 #include "garnet/bin/appmgr/runner_holder.h"
 
+#include <lib/fit/function.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <utility>
 
-#include <lib/fit/function.h>
+#include <utility>
 
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
@@ -26,13 +26,13 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
                            fit::function<void()> error_handler)
     : services_(std::move(services)),
       controller_(std::move(controller)),
-      impl_object_(nullptr),
       error_handler_(std::move(error_handler)),
       component_id_counter_(0) {
-  realm->CreateComponent(std::move(launch_info), controller_.NewRequest(),
-                         [this](ComponentControllerImpl* component) {
-                           CreateComponentCallback(component);
-                         });
+  realm->CreateComponent(
+      std::move(launch_info), controller_.NewRequest(),
+      [this](std::weak_ptr<ComponentControllerImpl> component) {
+        CreateComponentCallback(component);
+      });
 
   controller_.events().OnTerminated =
       [this](int64_t return_code, TerminationReason termination_reason) {
@@ -53,7 +53,7 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
 RunnerHolder::~RunnerHolder() = default;
 
 void RunnerHolder::Cleanup() {
-  impl_object_ = nullptr;
+  impl_object_.reset();
   // Terminate all bridges currently owned by this runner.
   for (auto& component : components_) {
     component.second->SetTerminationReason(
@@ -62,14 +62,17 @@ void RunnerHolder::Cleanup() {
   components_.clear();
 }
 
-void RunnerHolder::CreateComponentCallback(ComponentControllerImpl* component) {
+void RunnerHolder::CreateComponentCallback(
+    std::weak_ptr<ComponentControllerImpl> component) {
   impl_object_ = component;
-  koid_ = component->koid();
 
-  // update hub
-  for (auto& n : components_) {
-    n.second->SetParentJobId(koid_);
-    impl_object_->AddSubComponentHub(n.second->HubInfo());
+  if (auto impl = impl_object_.lock()) {
+    koid_ = impl->koid();
+    // update hub
+    for (auto& n : components_) {
+      n.second->SetParentJobId(koid_);
+      impl->AddSubComponentHub(n.second->HubInfo());
+    }
   }
 }
 
@@ -87,7 +90,7 @@ void RunnerHolder::StartComponent(
   auto remote_controller_request = remote_controller.NewRequest();
 
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
-  auto component = std::make_unique<ComponentBridge>(
+  auto component = std::make_shared<ComponentBridge>(
       std::move(controller), std::move(remote_controller), this, url,
       std::move(args), Util::GetLabelFromURL(url),
       std::to_string(++component_id_counter_), std::move(ns),
@@ -95,9 +98,9 @@ void RunnerHolder::StartComponent(
       std::move(termination_callback));
 
   // update hub
-  if (impl_object_) {
+  if (auto impl = impl_object_.lock()) {
     component->SetParentJobId(koid_);
-    impl_object_->AddSubComponentHub(component->HubInfo());
+    impl->AddSubComponentHub(component->HubInfo());
   }
 
   ComponentBridge* key = component.get();
@@ -107,7 +110,7 @@ void RunnerHolder::StartComponent(
                           std::move(remote_controller_request));
 }
 
-std::unique_ptr<ComponentBridge> RunnerHolder::ExtractComponent(
+std::shared_ptr<ComponentBridge> RunnerHolder::ExtractComponent(
     ComponentBridge* controller) {
   auto it = components_.find(controller);
   if (it == components_.end()) {
@@ -116,8 +119,8 @@ std::unique_ptr<ComponentBridge> RunnerHolder::ExtractComponent(
   auto component = std::move(it->second);
 
   // update hub
-  if (impl_object_) {
-    impl_object_->RemoveSubComponentHub(component->HubInfo());
+  if (auto impl = impl_object_.lock()) {
+    impl->RemoveSubComponentHub(component->HubInfo());
   }
 
   components_.erase(it);

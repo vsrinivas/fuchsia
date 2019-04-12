@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/component_controller_impl.h"
-
 #include <fs/pseudo-dir.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
@@ -12,15 +10,15 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
+#include <zircon/syscalls/object.h>
 
+#include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/strings/split_string.h"
 #include "lib/gtest/real_loop_fixture.h"
-
-#include <zircon/syscalls/object.h>
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace component {
 namespace {
@@ -37,10 +35,10 @@ class ComponentContainerImpl : public ComponentContainer<T> {
 
   void AddComponent(std::unique_ptr<T> component);
 
-  std::unique_ptr<T> ExtractComponent(T* controller) override;
+  std::shared_ptr<T> ExtractComponent(T* controller) override;
 
  private:
-  std::unordered_map<T*, std::unique_ptr<T>> components_;
+  std::unordered_map<T*, std::shared_ptr<T>> components_;
 };
 
 template <typename T>
@@ -50,7 +48,7 @@ void ComponentContainerImpl<T>::AddComponent(std::unique_ptr<T> component) {
 }
 
 template <typename T>
-std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
+std::shared_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
   auto it = components_.find(controller);
   if (it == components_.end()) {
     return nullptr;
