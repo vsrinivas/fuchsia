@@ -543,7 +543,7 @@ struct iwl_trans_pcie {
 #if 0   // NEEDS_PORTING
     spinlock_t irq_lock;
 #endif  // NEEDS_PORTING
-    struct mutex mutex;
+    mtx_t mutex;
     uint32_t inta_mask;
     uint32_t scd_base_addr;
     struct iwl_dma_ptr scd_bc_tbls;

@@ -37,13 +37,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
-#include <linux/spinlock.h>
-#include <linux/wait.h>
-#include <net/mac80211.h>
+#include <threads.h>
 
-#include "fw-api.h"    /* IWL_MVM_STATION_COUNT */
-#include "iwl-trans.h" /* for IWL_MAX_TID_COUNT */
-#include "rs.h"
+/* for IWL_MAX_TID_COUNT */
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 
 struct iwl_mvm;
 struct iwl_mvm_vif;
@@ -386,7 +385,7 @@ struct iwl_mvm_sta {
     enum ieee80211_sta_state sta_state;
     bool bt_reduced_txpower;
     bool next_status_eosp;
-    spinlock_t lock;
+    mtx_t lock;
     struct iwl_mvm_tid_data tid_data[IWL_MAX_TID_COUNT + 1];
     uint8_t tid_to_baid[IWL_MAX_TID_COUNT];
     union {

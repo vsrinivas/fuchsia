@@ -25,9 +25,12 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
 
+typedef uint32_t __be32;
+typedef uint32_t __be16;
 typedef uint64_t __le64;
 typedef uint32_t __le32;
 typedef uint16_t __le16;
+typedef uint8_t __s8;
 typedef uint8_t __u8;
 
 typedef uint32_t netdev_features_t;
@@ -36,7 +39,7 @@ typedef uint64_t dma_addr_t;
 
 typedef char* acpi_string;
 
-#define BIT(x) (1 << x)
+#define BIT(x) (1 << (x))
 
 #define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
@@ -52,11 +55,17 @@ typedef char* acpi_string;
 
 #define IS_ENABLED(x) (false)
 
-#define __packed __PACKED
-#define __bitwise
-#define __force
-#define __must_check __attribute__((warn_unused_result))
+#define lockdep_assert_held(x) do {} while (0)
+#define pr_err(fmt, args...) zxlogf(ERROR, fmt, args)
 #define __aligned(x) __attribute__((aligned(x)))
+#define __bitwise
+#define __exit
+#define __force
+#define __init
+#define __must_check __attribute__((warn_unused_result))
+#define __packed __PACKED
+#define __rcu  // NEEDS_PORTING
+#define ____cacheline_aligned_in_smp  // NEEDS_PORTING
 
 // NEEDS_PORTING: Need to check if 'x' is static array.
 #define ARRAY_SIZE(x) (countof(x))
@@ -69,18 +78,71 @@ typedef char* acpi_string;
 #define WARN_ON_ONCE(x) (false)
 #define BUILD_BUG_ON(x) (false)
 
+#define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
+
+// NEEDS_PORTING: need to be generic
+#define roundup_pow_of_two(x)     \
+    (x >= 0x100 ? 0xFFFFFFFF :    \
+     x >= 0x080 ? 0x100 :         \
+     x >= 0x040 ? 0x080 :         \
+     x >= 0x020 ? 0x040 :         \
+     x >= 0x010 ? 0x020 :         \
+     x >= 0x008 ? 0x010 :         \
+     x >= 0x004 ? 0x008 :         \
+     x >= 0x002 ? 0x004 :         \
+     x >= 0x001 ? 0x002 : 1)
+
+
+// NEEDS_PORTING: need protection while accessing the variable.
+#define rcu_dereference(p) (p)
+#define rcu_dereference_protected(p, c) (p)
+
+// NEEDS_PORTING: how to guarantee this?
+#define READ_ONCE(x) (x)
+
+// NEEDS_PORTING: implement this
+#define rcu_read_lock() do {} while (0);
+#define rcu_read_unlock() do {} while (0);
+
 // NEEDS_PORTING: Below structures are used in code but not ported yet.
-struct device {};
+struct delayed_work {};
 struct dentry {};
+struct device {};
+struct ewma_rate {};
+struct inet6_dev {};
+struct mac_address {};
 struct napi_struct {};
+struct rcu_head {};
 struct sk_buff_head {};
-struct mutex {};
+struct timer_list {};
+struct wait_queue {};
+struct wait_queue_head {};
+struct wiphy {};
+struct work_struct {};
 
 struct firmware {
     zx_handle_t vmo;
     uint8_t* data;
     size_t size;
 };
+
+struct page {
+    void* virtual;
+};
+
+struct wireless_dev {
+    enum nl80211_iftype iftype;
+};
+
+////
+// Typedefs
+////
+typedef struct wait_queue wait_queue_t;
+typedef struct wait_queue_head wait_queue_head_t;
+
+////
+// Inlines functions
+////
 
 static inline int test_bit(int nbits, const volatile unsigned long* addr) {
     return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
@@ -113,6 +175,15 @@ static inline void vfree(const void* addr) {
 
 static inline void kfree(void* addr) {
     free(addr);
+}
+
+static inline bool IS_ERR_OR_NULL(const void *ptr) {
+    return !ptr || (((unsigned long)ptr) >= (unsigned long)-4095);
+}
+
+static inline void *page_address(const struct page *page)
+{
+    return page->virtual;
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

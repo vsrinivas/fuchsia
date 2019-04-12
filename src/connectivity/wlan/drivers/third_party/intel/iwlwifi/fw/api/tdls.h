@@ -36,8 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TDLS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TDLS_H_
 
-#include "fw/api/phy-ctxt.h"
-#include "fw/api/tx.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/phy-ctxt.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
 
 #define IWL_MVM_TDLS_STA_COUNT 4
 

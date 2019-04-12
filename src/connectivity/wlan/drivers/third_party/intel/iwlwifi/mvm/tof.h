@@ -33,7 +33,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_
 
-#include "fw/api/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tof.h"
 
 struct iwl_mvm_tof_data {
     struct iwl_tof_config_cmd tof_cfg;

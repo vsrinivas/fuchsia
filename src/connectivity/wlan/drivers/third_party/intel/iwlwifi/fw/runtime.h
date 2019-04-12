@@ -34,13 +34,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_RUNTIME_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_RUNTIME_H_
 
-#include "fw/api/dbg-tlv.h"
-#include "fw/api/debug.h"
-#include "fw/api/paging.h"
-#include "img.h"
-#include "iwl-config.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/paging.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 struct iwl_fw_runtime_ops {
     int (*dump_start)(void* ctx);

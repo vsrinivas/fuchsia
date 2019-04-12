@@ -33,14 +33,19 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_
 
-#include <linux/wait.h>
+#include <threads.h>
+#include <zircon/listnode.h>
 
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
+// NEEDS_PORTING: seems that this is exactly what sync_completion_t is doing.
 
 struct iwl_notif_wait_data {
-    struct list_head notif_waits;
-    spinlock_t notif_wait_lock;
+    struct list_node notif_waits;
+    mtx_t notif_wait_lock;
+#if 0   // NEEDS_PORTING
     wait_queue_head_t notif_waitq;
+#endif  // NEEDS_PORTING
 };
 
 #define MAX_NOTIF_CMDS 5
@@ -70,7 +75,7 @@ struct iwl_notif_wait_data {
  * the code for them.
  */
 struct iwl_notification_wait {
-    struct list_head list;
+    list_node_t list;
 
     bool (*fn)(struct iwl_notif_wait_data* notif_data, struct iwl_rx_packet* pkt, void* data);
     void* fn_data;
@@ -86,7 +91,9 @@ bool iwl_notification_wait(struct iwl_notif_wait_data* notif_data, struct iwl_rx
 void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_data);
 
 static inline void iwl_notification_notify(struct iwl_notif_wait_data* notif_data) {
+#if 0   // NEEDS_PORTING
     wake_up_all(&notif_data->notif_waitq);
+#endif  // NEEDS_PORTING
 }
 
 static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* notif_data,
@@ -94,6 +101,7 @@ static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* noti
     if (iwl_notification_wait(notif_data, pkt)) { iwl_notification_notify(notif_data); }
 }
 
+#if 0   // NEEDS_PORTING
 /* user functions */
 void __acquires(wait_entry)
     iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
@@ -109,5 +117,6 @@ int __must_check __releases(wait_entry)
 
 void __releases(wait_entry) iwl_remove_notification(struct iwl_notif_wait_data* notif_data,
                                                     struct iwl_notification_wait* wait_entry);
+#endif  // NEEDS_PORTING
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_NOTIF_WAIT_H_

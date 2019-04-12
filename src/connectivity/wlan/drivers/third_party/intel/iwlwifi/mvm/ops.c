@@ -33,40 +33,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/module.h>
-#include <linux/vmalloc.h>
-#include <net/mac80211.h>
 
+#include <stdbool.h>
+#include <threads.h>
+
+#if 0   // NEEDS_PORTING
 #include "fw-api.h"
-#include "fw/acpi.h"
-#include "fw/api/nan.h"
-#include "fw/api/scan.h"
-#include "fw/img.h"
-#include "fw/notif-wait.h"
-#include "iwl-csr.h"
-#include "iwl-debug.h"
-#include "iwl-drv.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-io.h"
-#include "iwl-modparams.h"
-#include "iwl-op-mode.h"
-#include "iwl-phy-db.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
-#include "mvm.h"
-#include "rs.h"
-#include "time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#endif  // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
-#include "iwl-tm-gnl.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-dispatch.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-tm-gnl.h"
 #endif
 
+#define KBUILD_MODNAME "iwlwifi"
 #define DRV_DESCRIPTION "The new Intel(R) wireless AGN driver for Linux"
-MODULE_DESCRIPTION(DRV_DESCRIPTION);
-MODULE_AUTHOR(DRV_COPYRIGHT " " DRV_AUTHOR);
-MODULE_LICENSE("GPL");
 
 static const struct iwl_op_mode_ops iwl_mvm_ops;
 static const struct iwl_op_mode_ops iwl_mvm_ops_mq;
@@ -76,6 +76,7 @@ struct iwl_mvm_mod_params iwlmvm_mod_params = {
     /* rest of fields are 0 by default */
 };
 
+#if 0   // NEEDS_PORTING
 module_param_named(init_dbg, iwlmvm_mod_params.init_dbg, bool, 0444);
 MODULE_PARM_DESC(init_dbg, "set to true to debug an ASSERT in INIT fw (default: false");
 module_param_named(power_scheme, iwlmvm_mod_params.power_scheme, int, 0444);
@@ -83,6 +84,7 @@ MODULE_PARM_DESC(power_scheme,
                  "power management scheme: 1-active, 2-balanced, 3-low power, default: 2");
 module_param_named(tfd_q_hang_detect, iwlmvm_mod_params.tfd_q_hang_detect, bool, 0444);
 MODULE_PARM_DESC(tfd_q_hang_detect, "TFD queues hang detection (default: true");
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 static void iwl_mvm_rx_fw_logs(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -93,7 +95,7 @@ static void iwl_mvm_rx_fw_logs(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rx
 /*
  * module init and exit functions
  */
-static int __init iwl_mvm_init(void) {
+int __init iwl_mvm_init(void) {
     int ret;
 
     ret = iwl_mvm_rate_control_register();
@@ -107,13 +109,11 @@ static int __init iwl_mvm_init(void) {
 
     return ret;
 }
-module_init(iwl_mvm_init);
 
-static void __exit iwl_mvm_exit(void) {
+void __exit iwl_mvm_exit(void) {
     iwl_opmode_deregister("iwlmvm");
     iwl_mvm_rate_control_unregister();
 }
-module_exit(iwl_mvm_exit);
 
 static void iwl_mvm_nic_config(struct iwl_op_mode* op_mode) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
@@ -457,6 +457,7 @@ static const struct iwl_hcmd_names iwl_mvm_data_path_names[] = {
     HCMD_NAME(RX_QUEUES_NOTIFICATION),
 };
 
+#ifdef CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
  */
@@ -466,6 +467,7 @@ static const struct iwl_hcmd_names iwl_mvm_debug_names[] = {
 #endif
     HCMD_NAME(MFU_ASSERT_DUMP_NTF),
 };
+#endif
 
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
@@ -510,7 +512,9 @@ static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 };
 
 /* this forward declaration can avoid to export the function */
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_async_handlers_wk(struct work_struct* wk);
+#endif  // NEEDS_PORTING
 #ifdef CONFIG_PM
 static void iwl_mvm_d0i3_exit_work(struct work_struct* wk);
 #endif
@@ -532,12 +536,13 @@ static uint32_t iwl_mvm_min_backoff(struct iwl_mvm* mvm) {
     return 0;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_tx_unblock_dwork(struct work_struct* work) {
     struct iwl_mvm* mvm = container_of(work, struct iwl_mvm, cs_tx_unblock_dwork.work);
     struct ieee80211_vif* tx_blocked_vif;
     struct iwl_mvm_vif* mvmvif;
 
-    mutex_lock(&mvm->mutex);
+    mtx_lock(&mvm->mutex);
 
     tx_blocked_vif =
         rcu_dereference_protected(mvm->csa_tx_blocked_vif, lockdep_is_held(&mvm->mutex));
@@ -546,10 +551,11 @@ static void iwl_mvm_tx_unblock_dwork(struct work_struct* work) {
 
     mvmvif = iwl_mvm_vif_from_mac80211(tx_blocked_vif);
     iwl_mvm_modify_all_sta_disable_tx(mvm, mvmvif, false);
-    RCU_INIT_POINTER(mvm->csa_tx_blocked_vif, NULL);
+    mvm->csa_tx_blocked_vif = NULL;
 unlock:
-    mutex_unlock(&mvm->mutex);
+    mtx_unlock(&mvm->mutex);
 }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 static void iwl_mvm_init_modparams(struct iwl_mvm* mvm) {
@@ -582,7 +588,7 @@ static int iwl_mvm_fwrt_dump_start(void* ctx) {
     ret = iwl_mvm_ref_sync(mvm, IWL_MVM_REF_FW_DBG_COLLECT);
     if (ret) { return ret; }
 
-    mutex_lock(&mvm->mutex);
+    mtx_lock(&mvm->mutex);
 
     return 0;
 }
@@ -590,7 +596,7 @@ static int iwl_mvm_fwrt_dump_start(void* ctx) {
 static void iwl_mvm_fwrt_dump_end(void* ctx) {
     struct iwl_mvm* mvm = ctx;
 
-    mutex_unlock(&mvm->mutex);
+    mtx_unlock(&mvm->mutex);
 
     iwl_mvm_unref(mvm, IWL_MVM_REF_FW_DBG_COLLECT);
 }
@@ -603,9 +609,9 @@ static int iwl_mvm_fwrt_send_hcmd(void* ctx, struct iwl_host_cmd* host_cmd) {
     struct iwl_mvm* mvm = (struct iwl_mvm*)ctx;
     int ret;
 
-    mutex_lock(&mvm->mutex);
+    mtx_lock(&mvm->mutex);
     ret = iwl_mvm_send_cmd(mvm, host_cmd);
-    mutex_unlock(&mvm->mutex);
+    mtx_unlock(&mvm->mutex);
 
     return ret;
 }
@@ -666,6 +672,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     hw = ieee80211_alloc_hw(sizeof(struct iwl_op_mode) + sizeof(struct iwl_mvm), &iwl_mvm_hw_ops);
     if (!hw) { return NULL; }
 
+#if 0   // NEEDS_PORTING
     if (cfg->max_rx_agg_size) {
         hw->max_rx_aggregation_subframes = cfg->max_rx_agg_size;
     } else {
@@ -677,6 +684,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     } else {
         hw->max_tx_aggregation_subframes = IEEE80211_MAX_AMPDU_BUF;
     }
+#endif  // NEEDS_PORTING
 
     op_mode = hw->priv;
 
@@ -718,14 +726,15 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     }
     mvm->drop_bcn_ap_mode = true;
 
-    mutex_init(&mvm->mutex);
-    mutex_init(&mvm->d0i3_suspend_mutex);
-    spin_lock_init(&mvm->async_handlers_lock);
-    INIT_LIST_HEAD(&mvm->time_event_list);
-    INIT_LIST_HEAD(&mvm->aux_roc_te_list);
-    INIT_LIST_HEAD(&mvm->async_handlers_list);
-    spin_lock_init(&mvm->time_event_lock);
+    mtx_init(&mvm->mutex, mtx_plain);
+    mtx_init(&mvm->d0i3_suspend_mutex, mtx_plain);
+    mtx_init(&mvm->async_handlers_lock, mtx_plain);
+    list_initialize(&mvm->time_event_list);
+    list_initialize(&mvm->aux_roc_te_list);
+    list_initialize(&mvm->async_handlers_list);
+    mtx_init(&mvm->time_event_lock, mtx_plain);
 
+#if 0   // NEEDS_PORTING
     INIT_WORK(&mvm->async_handlers_wk, iwl_mvm_async_handlers_wk);
     INIT_WORK(&mvm->roc_done_wk, iwl_mvm_roc_done_wk);
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
@@ -738,23 +747,30 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     INIT_DELAYED_WORK(&mvm->tdls_cs.dwork, iwl_mvm_tdls_ch_switch_work);
     INIT_DELAYED_WORK(&mvm->scan_timeout_dwork, iwl_mvm_scan_timeout_wk);
     INIT_WORK(&mvm->add_stream_wk, iwl_mvm_add_new_dqa_stream_wk);
-    INIT_LIST_HEAD(&mvm->add_stream_txqs);
+#endif  // NEEDS_PORTING
+    list_initialize(&mvm->add_stream_txqs);
 
-    spin_lock_init(&mvm->d0i3_tx_lock);
-    spin_lock_init(&mvm->refs_lock);
+    mtx_init(&mvm->d0i3_tx_lock, mtx_plain);
+    mtx_init(&mvm->refs_lock, mtx_plain);
+#if 0   // NEEDS_PORTING
     skb_queue_head_init(&mvm->d0i3_tx);
     init_waitqueue_head(&mvm->d0i3_exit_waitq);
     init_waitqueue_head(&mvm->rx_sync_waitq);
+#endif  // NEEDS_PORTING
 
-    atomic_set(&mvm->queue_sync_counter, 0);
+    atomic_store(&mvm->queue_sync_counter, 0);
 
+#if 0   // NEEDS_PORTING
     SET_IEEE80211_DEV(mvm->hw, mvm->trans->dev);
+#endif  // NEEDS_PORTING
 
-    spin_lock_init(&mvm->tcm.lock);
+    mtx_init(&mvm->tcm.lock, mtx_plain);
+#if 0   // NEEDS_PORTING
     INIT_DELAYED_WORK(&mvm->tcm.work, iwl_mvm_tcm_work);
     mvm->tcm.ts = jiffies;
     mvm->tcm.ll_ts = jiffies;
     mvm->tcm.uapsd_nonagg_ts = jiffies;
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
     INIT_LIST_HEAD(&mvm->tdls_peer_cache_list);
@@ -764,7 +780,9 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     mvm->rx_filters = IWL_MVM_VENDOR_RXFILTER_EINVAL;
 #endif
 
+#if 0   // NEEDS_PORTING
     INIT_DELAYED_WORK(&mvm->cs_tx_unblock_dwork, iwl_mvm_tx_unblock_dwork);
+#endif  // NEEDS_PORTING
 
     /*
      * Populate the state variables that the transport layer needs
@@ -808,14 +826,18 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     trans_cfg.cmd_fifo = IWL_MVM_TX_FIFO_CMD;
     trans_cfg.scd_set_active = true;
 
+#if 0   // NEEDS_PORTING
     trans_cfg.cb_data_offs = offsetof(struct ieee80211_tx_info, driver_data[2]);
+#endif  // NEEDS_PORTING
 
     trans_cfg.sw_csum_tx = IWL_MVM_SW_TX_CSUM_OFFLOAD;
 
     /* Set a short watchdog for the command queue */
     trans_cfg.cmd_q_wdg_timeout = iwl_mvm_get_wd_timeout(mvm, NULL, false, true);
 
+#if 0   // NEEDS_PORTING
     snprintf(mvm->hw->wiphy->fw_version, sizeof(mvm->hw->wiphy->fw_version), "%s", fw->fw_version);
+#endif  // NEEDS_PORTING
 
     /* Configure transport layer */
     iwl_trans_configure(mvm->trans, &trans_cfg);
@@ -855,13 +877,13 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     }
 #endif
     else {
-        IWL_DEBUG_EEPROM(mvm->trans->dev, "working without external nvm file\n");
+        IWL_DEBUG_EEPROM(mvm->trans->dev, "working without external nvm file%s\n", "");
     }
 
     err = iwl_trans_start_hw(mvm->trans);
     if (err) { goto out_free; }
 
-    mutex_lock(&mvm->mutex);
+    mtx_lock(&mvm->mutex);
     iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
     err = iwl_run_init_mvm_ucode(mvm, true);
     if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
@@ -869,7 +891,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     }
     if (!iwlmvm_mod_params.init_dbg || !err) { iwl_mvm_stop_device(mvm); }
     iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
-    mutex_unlock(&mvm->mutex);
+    mtx_unlock(&mvm->mutex);
     if (err < 0) {
         IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
         goto out_free;
@@ -877,7 +899,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 
     scan_size = iwl_mvm_scan_size(mvm);
 
-    mvm->scan_cmd = kmalloc(scan_size, GFP_KERNEL);
+    mvm->scan_cmd = malloc(scan_size);
     if (!mvm->scan_cmd) { goto out_free; }
 
     /* Set EBS as successful as long as not stated otherwise by the FW. */
@@ -925,12 +947,16 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 out_unregister:
     if (iwlmvm_mod_params.init_dbg) { return op_mode; }
 
+#if 0   // NEEDS_PORTING
     ieee80211_unregister_hw(mvm->hw);
+#endif  // NEEDS_PORTING
     mvm->hw_registered = false;
     iwl_mvm_leds_exit(mvm);
     iwl_mvm_thermal_exit(mvm);
 out_free:
+#if 0   // NEEDS_PORTING
     iwl_fw_flush_dump(&mvm->fwrt);
+#endif  // NEEDS_PORTING
     iwl_fw_runtime_free(&mvm->fwrt);
 
     if (iwlmvm_mod_params.init_dbg) { return op_mode; }
@@ -941,7 +967,9 @@ out_free:
     kfree(mvm->scan_cmd);
     iwl_trans_op_mode_leave(trans);
 
+#if 0   // NEEDS_PORTING
     ieee80211_free_hw(mvm->hw);
+#endif  // NEEDS_PORTING
     return NULL;
 }
 
@@ -960,7 +988,9 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
     iwl_mvm_thermal_exit(mvm);
 
     if (mvm->init_status & IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE) {
+#if 0   // NEEDS_PORTING
         ieee80211_unregister_hw(mvm->hw);
+#endif  // NEEDS_PORTING
         mvm->init_status &= ~IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE;
     }
 
@@ -990,10 +1020,12 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
 #endif
     kfree(mvm->nvm_data);
     for (i = 0; i < NVM_MAX_NUM_SECTIONS; i++) {
-        kfree(mvm->nvm_sections[i].data);
+        kfree((void*)mvm->nvm_sections[i].data);
     }
 
+#if 0   // NEEDS_PORTING
     cancel_delayed_work_sync(&mvm->tcm.work);
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
     iwl_mvm_tdls_peer_cache_clear(mvm, NULL);
@@ -1002,14 +1034,16 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
     iwl_mvm_tof_clean(mvm);
 
     iwl_fw_runtime_free(&mvm->fwrt);
-    mutex_destroy(&mvm->mutex);
-    mutex_destroy(&mvm->d0i3_suspend_mutex);
+    mtx_destroy(&mvm->mutex);
+    mtx_destroy(&mvm->d0i3_suspend_mutex);
 
+#if 0   // NEEDS_PORTING
     ieee80211_free_hw(mvm->hw);
+#endif  // NEEDS_PORTING
 }
 
 struct iwl_async_handler_entry {
-    struct list_head list;
+    list_node_t list;
     struct iwl_rx_cmd_buffer rxb;
     enum iwl_rx_handler_context context;
     void (*fn)(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
@@ -1018,15 +1052,19 @@ struct iwl_async_handler_entry {
 void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm) {
     struct iwl_async_handler_entry *entry, *tmp;
 
-    spin_lock_bh(&mvm->async_handlers_lock);
-    list_for_each_entry_safe(entry, tmp, &mvm->async_handlers_list, list) {
+    mtx_lock(&mvm->async_handlers_lock);
+    list_for_every_entry_safe(&mvm->async_handlers_list, entry, tmp,
+                              struct iwl_async_handler_entry, list) {
+#if 0   // NEEDS_PORTING
         iwl_free_rxb(&entry->rxb);
-        list_del(&entry->list);
+#endif  // NEEDS_PORTING
+        list_delete(&entry->list);
         kfree(entry);
     }
-    spin_unlock_bh(&mvm->async_handlers_lock);
+    mtx_unlock(&mvm->async_handlers_lock);
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_async_handlers_wk(struct work_struct* wk) {
     struct iwl_mvm* mvm = container_of(wk, struct iwl_mvm, async_handlers_wk);
     struct iwl_async_handler_entry *entry, *tmp;
@@ -1043,16 +1081,18 @@ static void iwl_mvm_async_handlers_wk(struct work_struct* wk) {
     spin_unlock_bh(&mvm->async_handlers_lock);
 
     list_for_each_entry_safe(entry, tmp, &local_list, list) {
-        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mutex_lock(&mvm->mutex); }
+        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mtx_lock(&mvm->mutex); }
         entry->fn(mvm, &entry->rxb);
         iwl_free_rxb(&entry->rxb);
         list_del(&entry->list);
-        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mutex_unlock(&mvm->mutex); }
+        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mtx_unlock(&mvm->mutex); }
         kfree(entry);
     }
 }
+#endif  // NEEDS_PORTING
 
 static inline void iwl_mvm_rx_check_trigger(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
+#if 0   // NEEDS_PORTING
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_cmd* cmds_trig;
     int i;
@@ -1075,11 +1115,12 @@ static inline void iwl_mvm_rx_check_trigger(struct iwl_mvm* mvm, struct iwl_rx_p
                                 pkt->hdr.cmd);
         break;
     }
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb,
                               struct iwl_rx_packet* pkt) {
-    int i;
+    size_t i;
 
     iwl_mvm_rx_check_trigger(mvm, pkt);
 
@@ -1101,7 +1142,7 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
             return;
         }
 
-        entry = kzalloc(sizeof(*entry), GFP_ATOMIC);
+        entry = calloc(1, sizeof(*entry));
         /* we can't do much... */
         if (!entry) { return; }
 
@@ -1110,10 +1151,12 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
         entry->rxb._rx_page_order = rxb->_rx_page_order;
         entry->fn = rx_h->fn;
         entry->context = rx_h->context;
-        spin_lock(&mvm->async_handlers_lock);
+        mtx_lock(&mvm->async_handlers_lock);
         list_add_tail(&entry->list, &mvm->async_handlers_list);
-        spin_unlock(&mvm->async_handlers_lock);
+        mtx_unlock(&mvm->async_handlers_lock);
+#if 0   // NEEDS_PORTING
         schedule_work(&mvm->async_handlers_wk);
+#endif  // NEEDS_PORTING
         break;
     }
 }
@@ -1206,7 +1249,11 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
         tid_bitmap = mvm->queue_info[hw_queue].tid_bitmap;
     }
 
-    for_each_set_bit(i, &tid_bitmap, IWL_MAX_TID_COUNT + 1) {
+    for(i = 0; i < (IWL_MAX_TID_COUNT + 1); i++) {
+        if (!(tid_bitmap & (1 << i))) {
+            continue;
+        }
+
         int tid = i;
 
         if (tid == IWL_MAX_TID_COUNT) { tid = IEEE80211_NUM_TIDS; }
@@ -1231,11 +1278,13 @@ static void iwl_mvm_wake_sw_queue(struct iwl_op_mode* op_mode, int hw_queue) {
 }
 
 static void iwl_mvm_set_rfkill_state(struct iwl_mvm* mvm) {
+#if 0   // NEEDS_PORTING
     bool state = iwl_mvm_is_radio_killed(mvm);
 
     if (state) { wake_up(&mvm->rx_sync_waitq); }
 
     wiphy_rfkill_set_hw_state(mvm->hw->wiphy, state);
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_set_hw_ctkill_state(struct iwl_mvm* mvm, bool state) {
@@ -1271,12 +1320,14 @@ static bool iwl_mvm_set_hw_rfkill_state(struct iwl_op_mode* op_mode, bool state)
 }
 
 static void iwl_mvm_free_skb(struct iwl_op_mode* op_mode, struct sk_buff* skb) {
+#if 0   // NEEDS_PORTING
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
     struct ieee80211_tx_info* info;
 
     info = IEEE80211_SKB_CB(skb);
     iwl_trans_free_tx_cmd(mvm->trans, info->driver_data[1]);
     ieee80211_free_txskb(mvm->hw, skb);
+#endif  // NEEDS_PORTING
 }
 
 struct iwl_mvm_reprobe {
@@ -1284,14 +1335,18 @@ struct iwl_mvm_reprobe {
     struct work_struct work;
 };
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
     struct iwl_mvm_reprobe* reprobe;
 
     reprobe = container_of(wk, struct iwl_mvm_reprobe, work);
-    if (device_reprobe(reprobe->dev)) { dev_err(reprobe->dev, "reprobe failed!\n"); }
+    if (device_reprobe(reprobe->dev)) {
+        IWL_ERR(reprobe->dev, "reprobe failed!\n");
+    }
     kfree(reprobe);
     module_put(THIS_MODULE);
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
     iwl_abort_notification_waits(&mvm->notif_wait);
@@ -1321,6 +1376,7 @@ void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
 
         IWL_ERR(mvm, "Firmware error during reconfiguration - reprobe!\n");
 
+#if 0   // NEEDS_PORTING
         /*
          * get a module reference to avoid doing this while unloading
          * anyway and to avoid scheduling a work with code that's
@@ -1330,15 +1386,20 @@ void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
             IWL_ERR(mvm, "Module is being unloaded - abort\n");
             return;
         }
+#endif  // NEEDS_PORTING
 
-        reprobe = kzalloc(sizeof(*reprobe), GFP_ATOMIC);
+        reprobe = calloc(1, sizeof(*reprobe));
         if (!reprobe) {
+#if 0   // NEEDS_PORTING
             module_put(THIS_MODULE);
+#endif  // NEEDS_PORTING
             return;
         }
         reprobe->dev = mvm->trans->dev;
+#if 0   // NEEDS_PORTING
         INIT_WORK(&reprobe->work, iwl_mvm_reprobe_wk);
         schedule_work(&reprobe->work);
+#endif  // NEEDS_PORTING
     } else if (mvm->fwrt.cur_fw_img == IWL_UCODE_REGULAR && mvm->hw_registered &&
                !test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) {
         /* don't let the transport/FW power down */
@@ -1346,7 +1407,9 @@ void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
 
         if (fw_error && mvm->fw_restart > 0) { mvm->fw_restart--; }
         set_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
+#if 0   // NEEDS_PORTING
         ieee80211_restart_hw(mvm->hw);
+#endif  // NEEDS_PORTING
     }
 }
 
@@ -1656,7 +1719,7 @@ static void iwl_mvm_d0i3_exit_work(struct work_struct* wk) {
     uint32_t wakeup_reasons = 0;
     __le16* qos_seq = NULL;
 
-    mutex_lock(&mvm->mutex);
+    mtx_lock(&mvm->mutex);
 
     status = iwl_mvm_send_wowlan_get_status(mvm);
     if (IS_ERR_OR_NULL(status)) {
@@ -1687,7 +1750,7 @@ out:
 
     iwl_mvm_resume_tcm(mvm);
     iwl_mvm_unref(mvm, IWL_MVM_REF_EXIT_WORK);
-    mutex_unlock(&mvm->mutex);
+    mtx_unlock(&mvm->mutex);
 }
 
 int _iwl_mvm_exit_d0i3(struct iwl_mvm* mvm) {
@@ -1698,14 +1761,14 @@ int _iwl_mvm_exit_d0i3(struct iwl_mvm* mvm) {
 
     if (WARN_ON_ONCE(mvm->fwrt.cur_fw_img != IWL_UCODE_REGULAR)) { return -EINVAL; }
 
-    mutex_lock(&mvm->d0i3_suspend_mutex);
+    mtx_lock(&mvm->d0i3_suspend_mutex);
     if (test_bit(D0I3_DEFER_WAKEUP, &mvm->d0i3_suspend_flags)) {
         IWL_DEBUG_RPM(mvm, "Deferring d0i3 exit until resume\n");
         __set_bit(D0I3_PENDING_WAKEUP, &mvm->d0i3_suspend_flags);
-        mutex_unlock(&mvm->d0i3_suspend_mutex);
+        mtx_unlock(&mvm->d0i3_suspend_mutex);
         return 0;
     }
-    mutex_unlock(&mvm->d0i3_suspend_mutex);
+    mtx_unlock(&mvm->d0i3_suspend_mutex);
 
     ret = iwl_mvm_send_cmd_pdu(mvm, D0I3_END_CMD, flags, 0, NULL);
     if (ret) { goto out; }

@@ -36,7 +36,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_
 
-#include "fw/api/mac.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/mac.h"
 
 #define MAX_PORT_ID_NUM 2
 #define MAX_MCAST_FILTERING_ADDRESSES 256

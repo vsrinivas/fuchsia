@@ -866,7 +866,7 @@ struct iwl_mvm_internal_rxq_notif {
     uint16_t type;
     uint16_t sync;
     uint32_t cookie;
-    uint8_t data[];
+    uint8_t data[0];
 } __packed;
 
 /**

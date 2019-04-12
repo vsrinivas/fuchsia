@@ -35,7 +35,6 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
-#include <linux/bitfield.h>
 
 /*
  * Registers in this file are internal, not PCI bus memory mapped.

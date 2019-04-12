@@ -231,6 +231,7 @@ struct iwl_host_cmd {
 static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
     free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
 }
+#endif  // NEEDS_PORTING
 
 struct iwl_rx_cmd_buffer {
     struct page* _page;
@@ -251,10 +252,13 @@ static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) {
 
 static inline struct page* rxb_steal_page(struct iwl_rx_cmd_buffer* r) {
     r->_page_stolen = true;
+#if 0   // NEEDS_PORTING
     get_page(r->_page);
+#endif  // NEEDS_PORTING
     return r->_page;
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer* r) {
     __free_pages(r->_page, r->_rx_page_order);
 }
@@ -1025,6 +1029,7 @@ static inline void iwl_trans_freeze_txq_timer(struct iwl_trans* trans,
         trans->ops->freeze_txq_timer(trans, txqs, freeze);
     }
 }
+#endif  // NEEDS_PORTING
 
 static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans,
         bool block) {
@@ -1038,6 +1043,7 @@ static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans,
     }
 }
 
+#if 0   // NEEDS_PORTING
 static inline int iwl_trans_wait_tx_queues_empty(struct iwl_trans* trans,
         uint32_t txqs) {
     if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty)) {
@@ -1137,12 +1143,14 @@ static inline void iwl_trans_sw_reset(struct iwl_trans* trans) {
         trans->ops->sw_reset(trans);
     }
 }
+#endif   // NEEDS_PORTING
 
 static inline void
 iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask, uint32_t value) {
     trans->ops->set_bits_mask(trans, reg, mask, value);
 }
 
+#if 0   // NEEDS_PORTING
 #define iwl_trans_grab_nic_access(trans, flags) \
     __cond_lock(nic_access, likely((trans)->ops->grab_nic_access(trans, flags)))
 

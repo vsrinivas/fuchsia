@@ -34,6 +34,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ACPI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ACPI_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 #define ACPI_WRDS_METHOD "WRDS"
 #define ACPI_EWRD_METHOD "EWRD"
 #define ACPI_WGDS_METHOD "WGDS"

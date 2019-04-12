@@ -32,8 +32,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 
-#include "iwl-devtrace.h"
-#include "iwl-trans.h"
+#if 0   // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-devtrace.h"
+#endif  // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 void iwl_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val);
 void iwl_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val);

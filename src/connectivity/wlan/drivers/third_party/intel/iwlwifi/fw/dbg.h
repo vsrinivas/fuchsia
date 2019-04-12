@@ -36,15 +36,14 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_DBG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_DBG_H_
-#include <linux/workqueue.h>
-#include <net/cfg80211.h>
-#include "api/commands.h"
-#include "api/dbg-tlv.h"
-#include "error-dump.h"
-#include "file.h"
-#include "iwl-io.h"
-#include "iwl-prph.h"
-#include "runtime.h"
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 
 /**
  * struct iwl_fw_dump_desc - describes the dump
@@ -70,7 +69,7 @@ struct iwl_fw_dbg_params {
 extern const struct iwl_fw_dump_desc iwl_dump_desc_assert;
 
 static inline void iwl_fw_free_dump_desc(struct iwl_fw_runtime* fwrt) {
-    if (fwrt->dump.desc != &iwl_dump_desc_assert) { kfree(fwrt->dump.desc); }
+    if (fwrt->dump.desc != &iwl_dump_desc_assert) { kfree((void*)fwrt->dump.desc); }
     fwrt->dump.desc = NULL;
     fwrt->dump.lmac_err_id[0] = 0;
     if (fwrt->smem_cfg.num_lmacs > 1) { fwrt->dump.lmac_err_id[1] = 0; }
@@ -119,6 +118,7 @@ static inline bool iwl_fw_dbg_trigger_stop_conf_match(struct iwl_fw_runtime* fwr
              (BIT(fwrt->dump.conf) & le32_to_cpu(trig->stop_conf_ids))));
 }
 
+#if 0   // NEEDS_PORTING
 static inline bool iwl_fw_dbg_no_trig_window(struct iwl_fw_runtime* fwrt, uint32_t id,
                                              uint32_t dis_ms) {
     unsigned long wind_jiff = msecs_to_jiffies(dis_ms);
@@ -286,23 +286,30 @@ static inline void iwl_fw_dbg_restart_recording(struct iwl_fw_runtime* fwrt,
     iwl_fw_set_dbg_rec_on(fwrt);
 #endif
 }
+#endif  // NEEDS_PORTING
 
 static inline void iwl_fw_dump_conf_clear(struct iwl_fw_runtime* fwrt) {
     fwrt->dump.conf = FW_DBG_INVALID;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_fw_error_dump_wk(struct work_struct* work);
 
 static inline bool iwl_fw_dbg_type_on(struct iwl_fw_runtime* fwrt, uint32_t type) {
     return (fwrt->fw->dbg.dump_mask & BIT(type) || fwrt->trans->ini_valid);
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_fw_dbg_is_d3_debug_enabled(struct iwl_fw_runtime* fwrt) {
+    return false;
+#if 0   // NEEDS_PORTING
     return fw_has_capa(&fwrt->fw->ucode_capa, IWL_UCODE_TLV_CAPA_D3_DEBUG) &&
            fwrt->trans->cfg->d3_debug_data_length &&
            iwl_fw_dbg_type_on(fwrt, IWL_FW_ERROR_DUMP_D3_DEBUG_DATA);
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 static inline bool iwl_fw_dbg_is_paging_enabled(struct iwl_fw_runtime* fwrt) {
     return iwl_fw_dbg_type_on(fwrt, IWL_FW_ERROR_DUMP_PAGING) && !fwrt->trans->cfg->gen2 &&
            fwrt->fw->img[fwrt->cur_fw_img].paging_mem_size && fwrt->fw_paging_db[0].fw_paging_block;
@@ -317,6 +324,7 @@ static inline void iwl_fw_flush_dump(struct iwl_fw_runtime* fwrt) {
 static inline void iwl_fw_cancel_dump(struct iwl_fw_runtime* fwrt) {
     cancel_delayed_work_sync(&fwrt->dump.wk);
 }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime* fwrt) {

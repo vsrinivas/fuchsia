@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_D3_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_D3_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 /**
  * enum iwl_d3_wakeup_flags - D3 manager wakeup flags
  * @IWL_WAKEUP_D3_CONFIG_FW_ERROR: wake up on firmware sysassert
@@ -139,6 +141,7 @@ struct iwl_proto_offload_cmd_v2 {
     uint8_t reserved2[3];
 } __packed; /* PROT_OFFLOAD_CONFIG_CMD_DB_S_VER_2 */
 
+#if 0   // NEEDS_PORTING
 struct iwl_ns_config {
     struct in6_addr source_ipv6_addr;
     struct in6_addr dest_ipv6_addr;
@@ -178,6 +181,7 @@ struct iwl_proto_offload_cmd_v3_large {
     struct iwl_targ_addr targ_addrs[IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V3L];
     struct iwl_ns_config ns_config[IWL_PROTO_OFFLOAD_NUM_NS_CONFIG_V3L];
 } __packed; /* PROT_OFFLOAD_CONFIG_CMD_DB_S_VER_3 */
+#endif  // NEEDS_PORTING
 
 /*
  * WOWLAN_PATTERNS

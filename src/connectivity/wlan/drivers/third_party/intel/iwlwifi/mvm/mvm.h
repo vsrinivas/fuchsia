@@ -37,36 +37,29 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <linux/in6.h>
-#include <linux/leds.h>
-#include <linux/list.h>
-#include <linux/spinlock.h>
+#include <threads.h>
+#include <zircon/listnode.h>
 
-#ifdef CONFIG_THERMAL
-#include <linux/thermal.h>
-#endif
-
-#include "constants.h"
-#include "fw-api.h"
-#include "fw/acpi.h"
-#include "fw/dbg.h"
-#include "fw/file.h"
-#include "fw/notif-wait.h"
-#include "fw/runtime.h"
-#include "iwl-config.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-nvm-parse.h"
-#include "iwl-op-mode.h"
-#include "iwl-trans.h"
-#include "iwl-vendor-cmd.h"
-#include "sta.h"
-#include "tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/fmac.h"  // for enum umac_scan_type
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-vendor-cmd.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/constants.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
-#include "lte-coex.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/lte-coex.h"
 #endif
-
-#include <linux/average.h>
 
 #define IWL_MVM_MAX_ADDRESSES 5
 /* RSSI offset for WkP */
@@ -141,7 +134,7 @@ struct iwl_mvm_phy_ctxt {
 
 struct iwl_mvm_time_event_data {
     struct ieee80211_vif* vif;
-    struct list_head list;
+    list_node_t list;
     unsigned long end_jiffies;
     uint32_t duration;
     bool running;
@@ -485,12 +478,14 @@ enum iwl_scan_status {
 };
 
 enum iwl_mvm_scan_type {
+#if 0   // NEEDS_PORTING: duplicate with 'enum umac_scan_type'
     IWL_SCAN_TYPE_NOT_SET,
     IWL_SCAN_TYPE_UNASSOC,
     IWL_SCAN_TYPE_WILD,
     IWL_SCAN_TYPE_MILD,
     IWL_SCAN_TYPE_FRAGMENTED,
-    IWL_SCAN_TYPE_FAST_BALANCE,
+#endif  // NEEDS_PORTING
+    IWL_SCAN_TYPE_FAST_BALANCE = IWL_SCAN_TYPE_FRAGMENTED + 1,
 };
 
 enum iwl_mvm_sched_scan_pass_all_states {
@@ -604,7 +599,7 @@ enum iwl_mvm_traffic_load {
     IWL_MVM_TRAFFIC_HIGH,
 };
 
-DECLARE_EWMA(rate, 16, 16)
+// NEEDS_PORINTG: DECLARE_EWMA(rate, 16, 16)
 
 struct iwl_mvm_tcm_mac {
     struct {
@@ -627,7 +622,7 @@ struct iwl_mvm_tcm_mac {
 
 struct iwl_mvm_tcm {
     struct delayed_work work;
-    spinlock_t lock;  /* used when time elapsed */
+    mtx_t lock;  /* used when time elapsed */
     unsigned long ts; /* timestamp when period ends */
     unsigned long ll_ts;
     unsigned long uapsd_nonagg_ts;
@@ -649,7 +644,7 @@ struct iwl_mvm_tcm {
 #define IWL_MVM_TDLS_CNT_MAX_PEERS 4
 
 struct iwl_mvm_tdls_peer_counter {
-    struct list_head list;
+    list_node_t list;
     struct rcu_head rcu_head;
 
     struct mac_address mac __aligned(2);
@@ -686,7 +681,7 @@ struct iwl_mvm_reorder_buffer {
     struct timer_list reorder_timer;
     bool removed;
     bool valid;
-    spinlock_t lock;
+    mtx_t lock;
     struct iwl_mvm* mvm;
 } ____cacheline_aligned_in_smp;
 
@@ -787,10 +782,10 @@ struct iwl_mvm_geo_profile {
 };
 
 struct iwl_mvm_txq {
-    struct list_head list;
+    list_node_t list;
     uint16_t txq_id;
     /* Protects TX path invocation from two places */
-    spinlock_t tx_path_lock;
+    mtx_t tx_path_lock;
     bool stopped;
 };
 
@@ -835,9 +830,9 @@ struct iwl_mvm {
     struct ieee80211_hw* hw;
 
     /* for protecting access to iwl_mvm */
-    struct mutex mutex;
-    struct list_head async_handlers_list;
-    spinlock_t async_handlers_lock;
+    mtx_t mutex;
+    list_node_t async_handlers_list;
+    mtx_t async_handlers_lock;
     struct work_struct async_handlers_wk;
 
     struct work_struct roc_done_wk;
@@ -856,7 +851,7 @@ struct iwl_mvm {
     unsigned long status;
 
     uint32_t queue_sync_cookie;
-    atomic_t queue_sync_counter;
+    atomic_int queue_sync_counter;
     /*
      * for beacon filtering -
      * currently only one interface can be supported
@@ -887,7 +882,7 @@ struct iwl_mvm {
         uint64_t on_time_scan;
     } radio_stats, accu_radio_stats;
 
-    struct list_head add_stream_txqs;
+    list_node_t add_stream_txqs;
     union {
         struct iwl_mvm_dqa_txq_info queue_info[IWL_MAX_HW_QUEUES];
         struct iwl_mvm_tvqm_txq_info tvqm_info[IWL_MAX_TVQM_QUEUES];
@@ -977,7 +972,7 @@ struct iwl_mvm {
     struct debugfs_blob_wrapper nvm_phy_sku_blob;
 
     struct iwl_mvm_frame_stats drv_rx_stats;
-    spinlock_t drv_stats_lock;
+    mtx_t drv_stats_lock;
     uint16_t dbgfs_rx_phyinfo;
 #ifdef CPTCFG_IWLMVM_ADVANCED_QUOTA_MGMT
     struct {
@@ -989,8 +984,8 @@ struct iwl_mvm {
 #endif
     struct iwl_mvm_phy_ctxt phy_ctxts[NUM_PHY_CTX];
 
-    struct list_head time_event_list;
-    spinlock_t time_event_lock;
+    list_node_t time_event_list;
+    mtx_t time_event_lock;
 
     /*
      * A bitmap indicating the index of the key in use. The firmware
@@ -1000,7 +995,7 @@ struct iwl_mvm {
     uint8_t fw_key_deleted[STA_KEY_MAX_NUM];
 
     /* references taken by the driver and spinlock protecting them */
-    spinlock_t refs_lock;
+    mtx_t refs_lock;
     uint8_t refs[IWL_MVM_REF_COUNT];
 
     uint8_t vif_count;
@@ -1042,10 +1037,10 @@ struct iwl_mvm {
     struct work_struct d0i3_exit_work;
     struct sk_buff_head d0i3_tx;
     /* protect d0i3_suspend_flags */
-    struct mutex d0i3_suspend_mutex;
+    mtx_t d0i3_suspend_mutex;
     unsigned long d0i3_suspend_flags;
     /* sync d0i3_tx queue and IWL_MVM_STATUS_IN_D0I3 status flag */
-    spinlock_t d0i3_tx_lock;
+    mtx_t d0i3_tx_lock;
     wait_queue_head_t d0i3_exit_waitq;
     wait_queue_head_t rx_sync_waitq;
 
@@ -1061,7 +1056,7 @@ struct iwl_mvm {
     struct lte_coex_state lte_state;
 #endif
     /* Aux ROC */
-    struct list_head aux_roc_te_list;
+    list_node_t aux_roc_te_list;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
     /* 2G-Coex */
@@ -1090,7 +1085,7 @@ struct iwl_mvm {
     struct iwl_mvm_tcm tcm;
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-    struct list_head tdls_peer_cache_list;
+    list_node_t tdls_peer_cache_list;
     uint32_t tdls_peer_cache_cnt;
 #endif
 
@@ -1507,14 +1502,18 @@ void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm);
 
 static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_tx_info* info,
                                            struct iwl_tx_cmd* tx_cmd) {
+#if 0   // NEEDS_PORTING
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
 
     tx_cmd->sec_ctl = TX_CMD_SEC_CCM;
     memcpy(tx_cmd->key, keyconf->key, keyconf->keylen);
+#endif  // NEEDS_PORTING
 }
 
 static inline void iwl_mvm_wait_for_async_handlers(struct iwl_mvm* mvm) {
+#if 0   // NEEDS_PORTING
     flush_work(&mvm->async_handlers_wk);
+#endif  // NEEDS_PORTING
 }
 
 /* Statistics */

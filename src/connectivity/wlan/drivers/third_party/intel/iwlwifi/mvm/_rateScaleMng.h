@@ -36,6 +36,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM__RATESCALEMNG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM__RATESCALEMNG_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiVersion.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiGroupDatapath.h"
+
 #define RS_MNG_INVALID_VAL ((U32)-1)
 #define RS_MNG_RATE_MIN_FAILURE_TH 3
 #define RS_MNG_RATE_MIN_SUCCESS_TH 8
