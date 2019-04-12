@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/routing_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    }
+}

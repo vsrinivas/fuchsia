@@ -10,48 +10,32 @@
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
 use {
     byteorder::{LittleEndian, WriteBytesExt},
-    failure::{Error, ResultExt, Fail, bail, format_err},
+    failure::{bail, format_err, Error, Fail, ResultExt},
     fdio::fdio_sys,
+    fidl::{
+        encoding::{Decodable, OutOfLine},
+        endpoints::{Proxy, RequestStream, ServiceMarker},
+    },
+    fidl_fuchsia_io::{
+        DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
+    fidl_fuchsia_sys::{
+        ComponentControllerProxy, EnvironmentControllerProxy, EnvironmentMarker,
+        EnvironmentOptions, FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker,
+        LauncherProxy, LoaderMarker, ServiceList,
+    },
     fuchsia_async as fasync,
+    fuchsia_zircon::{self as zx, Peered, Signals},
     futures::{
-        Future, Poll, Stream,
         ready,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
+        Future, Poll, Stream,
     },
-    fidl::{
-        encoding::{Decodable, OutOfLine},
-        endpoints::{RequestStream, ServiceMarker, Proxy},
-    },
-    fidl_fuchsia_io::{
-        DirectoryRequestStream,
-        DirectoryRequest,
-        DirectoryObject,
-        NodeAttributes,
-        NodeInfo,
-        NodeMarker,
-        OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-        OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_POSIX,
-    },
-    fidl_fuchsia_sys::{
-        ComponentControllerProxy,
-        EnvironmentControllerProxy,
-        EnvironmentMarker,
-        EnvironmentOptions,
-        FlatNamespace,
-        LauncherMarker,
-        LauncherProxy,
-        LaunchInfo,
-        LoaderMarker,
-        ServiceList,
-    },
-    fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
-        collections::hash_map::{HashMap, Entry},
+        collections::hash_map::{Entry, HashMap},
         fs::File,
         io::Write,
         marker::{PhantomData, Unpin},
@@ -69,14 +53,8 @@ use {
 #[macro_export]
 macro_rules! fuchsia_single_component_package_url {
     ($component_name:expr) => {
-        concat!(
-            "fuchsia-pkg://fuchsia.com/",
-            $component_name,
-            "#meta/",
-            $component_name,
-            ".cmx",
-            )
-    }
+        concat!("fuchsia-pkg://fuchsia.com/", $component_name, "#meta/", $component_name, ".cmx",)
+    };
 }
 
 /// Tools for starting or connecting to existing Fuchsia applications and services.
@@ -95,16 +73,16 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the provided channel.
-    pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel)
-        -> Result<(), Error>
-    {
+    pub fn connect_channel_to_service<S: ServiceMarker>(
+        server_end: zx::Channel,
+    ) -> Result<(), Error> {
         connect_channel_to_service_at::<S>(server_end, "/svc")
     }
 
     /// Connect to a FIDL service using the provided namespace prefix.
-    pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str)
-        -> Result<S::Proxy, Error>
-    {
+    pub fn connect_to_service_at<S: ServiceMarker>(
+        service_prefix: &str,
+    ) -> Result<S::Proxy, Error> {
         let (proxy, server) = zx::Channel::create()?;
         connect_channel_to_service_at::<S>(server, service_prefix)?;
         let proxy = fasync::Channel::from_channel(proxy)?;
@@ -112,14 +90,16 @@ pub mod client {
     }
 
     /// Connect to a FIDL service using the application root namespace.
-    pub fn connect_to_service<S: ServiceMarker>()
-        -> Result<S::Proxy, Error>
-    {
+    pub fn connect_to_service<S: ServiceMarker>() -> Result<S::Proxy, Error> {
         connect_to_service_at::<S>("/svc")
     }
 
     /// Adds a new directory to the namespace for the new process.
-    pub fn add_dir_to_namespace(namespace: &mut FlatNamespace, path: String, dir: File) -> Result<(), Error> {
+    pub fn add_dir_to_namespace(
+        namespace: &mut FlatNamespace,
+        path: String,
+        dir: File,
+    ) -> Result<(), Error> {
         let handle = fdio::transfer_fd(dir)?;
         namespace.paths.push(path);
         namespace.directories.push(zx::Channel::from(handle));
@@ -143,30 +123,35 @@ pub mod client {
 
     /// Options for the launcher when starting an applications.
     pub struct LaunchOptions {
-        namespace: Option<Box<FlatNamespace>>
+        namespace: Option<Box<FlatNamespace>>,
+        out: Option<Box<FileDescriptor>>,
     }
 
     impl LaunchOptions {
         /// Creates default launch options.
         pub fn new() -> LaunchOptions {
-            LaunchOptions {
-                namespace: None
-            }
+            LaunchOptions { namespace: None, out: None }
         }
 
         /// Adds a new directory to the namespace for the new process.
         pub fn add_dir_to_namespace(
             &mut self,
             path: String,
-            dir: File
+            dir: File,
         ) -> Result<&mut Self, Error> {
             let handle = fdio::transfer_fd(dir)?;
-            let namespace = self.namespace.get_or_insert_with(||
-                  Box::new(FlatNamespace {paths: vec![], directories: vec![]}));
+            let namespace = self.namespace.get_or_insert_with(|| {
+                Box::new(FlatNamespace { paths: vec![], directories: vec![] })
+            });
             namespace.paths.push(path);
             namespace.directories.push(zx::Channel::from(handle));
 
             Ok(self)
+        }
+
+        /// Sets the out handle.
+        pub fn set_out(&mut self, f: FileDescriptor) {
+            self.out = Some(Box::new(f));
         }
     }
 
@@ -179,21 +164,18 @@ pub mod client {
     ) -> Result<App, Error> {
         let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
         let (directory_request, directory_server_chan) = zx::Channel::create()?;
-
         let mut launch_info = LaunchInfo {
             url,
             arguments,
-            out: None,
+            out: options.out,
             err: None,
             directory_request: Some(directory_server_chan),
             flat_namespace: options.namespace,
             additional_services: None,
         };
-
         launcher
             .create_component(&mut launch_info, Some(controller_server_end.into()))
             .context("Failed to start a new Fuchsia application.")?;
-
         Ok(App { directory_request, controller })
     }
 
@@ -224,9 +206,7 @@ pub mod client {
 
         /// Connect to a service provided by the `App`.
         #[inline]
-        pub fn connect_to_service<S: ServiceMarker>(&self, service: S)
-            -> Result<S::Proxy, Error>
-        {
+        pub fn connect_to_service<S: ServiceMarker>(&self, service: S) -> Result<S::Proxy, Error> {
             let (client_channel, server_channel) = zx::Channel::create()?;
             self.pass_to_service(service, server_channel)?;
             Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
@@ -234,17 +214,21 @@ pub mod client {
 
         /// Connect to a service by passing a channel for the server.
         #[inline]
-        pub fn pass_to_service<S: ServiceMarker>(&self, _: S, server_channel: zx::Channel)
-            -> Result<(), Error>
-        {
+        pub fn pass_to_service<S: ServiceMarker>(
+            &self,
+            _: S,
+            server_channel: zx::Channel,
+        ) -> Result<(), Error> {
             self.pass_to_named_service(S::NAME, server_channel)
         }
 
         /// Connect to a service by name.
         #[inline]
-        pub fn pass_to_named_service(&self, service_name: &str, server_channel: zx::Channel)
-            -> Result<(), Error>
-        {
+        pub fn pass_to_named_service(
+            &self,
+            service_name: &str,
+            server_channel: zx::Channel,
+        ) -> Result<(), Error> {
             fdio::service_connect_at(&self.directory_request, service_name, server_channel)?;
             Ok(())
         }
@@ -321,7 +305,7 @@ pub mod server {
                 Err(e) => {
                     eprintln!("ServiceFs failed to convert channel to fasync channel: {:?}", e);
                     None
-                },
+                }
             }
         }
     }
@@ -434,9 +418,12 @@ pub mod server {
     const NO_FLAGS: u32 = 0;
     const CLONE_REQ_SUPPORTED_FLAGS: u32 =
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-    const OPEN_REQ_SUPPORTED_FLAGS: u32 =
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX |
-        OPEN_FLAG_DIRECTORY | OPEN_FLAG_NODE_REFERENCE;
+    const OPEN_REQ_SUPPORTED_FLAGS: u32 = OPEN_RIGHT_READABLE
+        | OPEN_RIGHT_WRITABLE
+        | OPEN_FLAG_DESCRIBE
+        | OPEN_FLAG_POSIX
+        | OPEN_FLAG_DIRECTORY
+        | OPEN_FLAG_NODE_REFERENCE;
 
     impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
         /// Create a new `ServiceFs` that is singlethreaded-only and does not
@@ -477,21 +464,16 @@ pub mod server {
         let self_dir = fs.nodes[position].expect_dir();
         let &mut position = self_dir.entry(path.clone()).or_insert(new_node_position);
         if position == new_node_position {
-            fs.nodes.push(ServiceFsNode::Directory {
-                children: HashMap::new(),
-            });
+            fs.nodes.push(ServiceFsNode::Directory { children: HashMap::new() });
         } else {
             if let ServiceFsNode::Service(_) = &fs.nodes[position] {
                 panic!("Error adding dir to ServiceFs: existing service at \"{}\"", path)
             }
         }
-        ServiceFsDir {
-            position,
-            fs,
-        }
+        ServiceFsDir { position, fs }
     }
 
-    fn add_service<'a, ServiceObjTy: ServiceObjTrait> (
+    fn add_service<'a, ServiceObjTy: ServiceObjTrait>(
         fs: &'a mut ServiceFs<ServiceObjTy>,
         position: usize,
         path: String,
@@ -510,7 +492,6 @@ pub mod server {
             }
         }
     }
-
 
     /// A `Service` implementation that proxies requests
     /// to the outside environment.
@@ -712,19 +693,12 @@ pub mod server {
         /// The resulting `ServiceList` can be attached to a new environment in
         /// order to provide child components with access to these services.
         pub fn host_services_list(&mut self) -> Result<ServiceList, Error> {
-            let names = self.nodes[ROOT_NODE].expect_dir()
-                            .keys()
-                            .cloned()
-                            .collect();
+            let names = self.nodes[ROOT_NODE].expect_dir().keys().cloned().collect();
 
             let (chan1, chan2) = zx::Channel::create()?;
             self.serve_connection(chan1)?;
 
-            Ok(ServiceList {
-                names,
-                provider: None,
-                host_directory: Some(chan2),
-            })
+            Ok(ServiceList { names, provider: None, host_directory: Some(chan2) })
         }
 
         /// Starts a new component inside an environment that only has access to
@@ -763,10 +737,12 @@ pub mod server {
                     kill_on_oom: false,
                     delete_storage_on_death: false,
                 },
-            ).context("creating isolated environment")?;
+            )
+            .context("creating isolated environment")?;
 
             let (launcher_proxy, launcher_server_end) = fidl::endpoints::create_proxy()?;
-            new_env.get_launcher(launcher_server_end)
+            new_env
+                .get_launcher(launcher_server_end)
                 .context("getting nested environment launcher")?;
 
             let app = crate::client::launch(&launcher_proxy, url, arguments)?;
@@ -830,9 +806,8 @@ pub mod server {
         /// result in `Err(MissingStartupHandle)`.
         pub fn take_and_serve_directory_handle(&mut self) -> Result<&mut Self, Error> {
             let startup_handle =
-                fuchsia_runtime::take_startup_handle(
-                    fuchsia_runtime::HandleType::DirectoryRequest
-                ).ok_or(MissingStartupHandle)?;
+                fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest)
+                    .ok_or(MissingStartupHandle)?;
 
             self.serve_connection(zx::Channel::from(startup_handle))
         }
@@ -843,9 +818,12 @@ pub mod server {
             Ok(self)
         }
 
-        fn serve_connection_at(&mut self, chan: zx::Channel, position: usize, flags: u32)
-            -> Result<(), Error>
-        {
+        fn serve_connection_at(
+            &mut self,
+            chan: zx::Channel,
+            position: usize,
+            flags: u32,
+        ) -> Result<(), Error> {
             // It is not an error if the other end of the channel is already
             // closed: the client may call Directory::Open, send a channel chan,
             // then write a request on their local end of chan. If the request
@@ -864,9 +842,12 @@ pub mod server {
 
             let stream = DirectoryRequestStream::from_channel(chan);
             if (flags & OPEN_FLAG_DESCRIBE) != 0 {
-                let mut info = self.describe_node(position)
+                let mut info = self
+                    .describe_node(position)
                     .expect("error serving connection for missing node");
-                stream.control_handle().send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
+                stream
+                    .control_handle()
+                    .send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
                     .context("fail sending OnOpen event")?;
             }
 
@@ -905,29 +886,32 @@ pub mod server {
                         maybe_send_error!($object, $flags, zx::sys::ZX_ERR_NOT_SUPPORTED);
                         bail!("flags contains unsupported flags: {}", $flags);
                     }
-                }
+                };
             }
 
             match request {
                 DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                     handle_potentially_unsupported_flags!(object, flags, CLONE_REQ_SUPPORTED_FLAGS);
 
-                    if let Err(e) = self.serve_connection_at(object.into_channel(),
-                                                             connection.position, flags)
+                    if let Err(e) =
+                        self.serve_connection_at(object.into_channel(), connection.position, flags)
                     {
                         eprintln!("ServiceFs failed to clone: {:?}", e);
                     }
                 }
-                DirectoryRequest::Close { responder, } => {
+                DirectoryRequest::Close { responder } => {
                     responder.send(zx::sys::ZX_OK)?;
                     return Ok((None, ConnectionState::Closed));
-                },
-                DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _, } => {
+                }
+                DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
                     handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
 
                     if path == "." {
-                        if let Err(e) = self.serve_connection_at(object.into_channel(),
-                                                                 connection.position, flags) {
+                        if let Err(e) = self.serve_connection_at(
+                            object.into_channel(),
+                            connection.position,
+                            flags,
+                        ) {
                             eprintln!("ServiceFS failed to open '.': {:?}", e);
                         }
                         return Ok((None, ConnectionState::Open));
@@ -949,13 +933,13 @@ pub mod server {
                     };
 
                     if let Some(&next_node_pos) = children.get(end_segment) {
-                        match self.nodes.get_mut(next_node_pos)
-                            .expect("Missing child node")
-                        {
+                        match self.nodes.get_mut(next_node_pos).expect("Missing child node") {
                             ServiceFsNode::Directory { .. } => {
-                                if let Err(e) = self.serve_connection_at(object.into_channel(),
-                                                                         next_node_pos, flags)
-                                {
+                                if let Err(e) = self.serve_connection_at(
+                                    object.into_channel(),
+                                    next_node_pos,
+                                    flags,
+                                ) {
                                     eprintln!("ServiceFs failed to open directory: {:?}", e);
                                 }
                             }
@@ -970,16 +954,20 @@ pub mod server {
                                 if flags & OPEN_FLAG_NODE_REFERENCE != 0
                                     || flags & OPEN_FLAG_DESCRIBE != 0
                                 {
-                                    if let Err(e) = self.serve_connection_at(object.into_channel(),
-                                                                             next_node_pos, flags)
-                                    {
+                                    if let Err(e) = self.serve_connection_at(
+                                        object.into_channel(),
+                                        next_node_pos,
+                                        flags,
+                                    ) {
                                         eprintln!("ServiceFs failed to open service node: {:?}", e);
                                     }
                                     return Ok((None, ConnectionState::Open));
                                 }
                                 // Case 2: client opens node to connect to service
-                                return Ok((service.service().connect(object.into_channel()),
-                                           ConnectionState::Open));
+                                return Ok((
+                                    service.service().connect(object.into_channel()),
+                                    ConnectionState::Open,
+                                ));
                             }
                         }
                     } else {
@@ -988,13 +976,14 @@ pub mod server {
                     }
                 }
                 DirectoryRequest::Describe { responder } => {
-                    let mut info = self.describe_node(connection.position)
+                    let mut info = self
+                        .describe_node(connection.position)
                         .expect("node missing for Describe req");
                     responder.send(&mut info)?;
                 }
-                DirectoryRequest::GetAttr { responder, } => {
-                    let node = self.nodes.get(connection.position)
-                        .expect("node missing for GetAttr req");
+                DirectoryRequest::GetAttr { responder } => {
+                    let node =
+                        self.nodes.get(connection.position).expect("node missing for GetAttr req");
                     let mode_type = match node {
                         ServiceFsNode::Directory { .. } => fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
                         ServiceFsNode::Service(..) => fidl_fuchsia_io::MODE_TYPE_SERVICE,
@@ -1015,29 +1004,32 @@ pub mod server {
                 DirectoryRequest::Ioctl { responder, .. } => {
                     unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
                 }
-                DirectoryRequest::Sync { responder, } => unsupported!(responder)?,
+                DirectoryRequest::Sync { responder } => unsupported!(responder)?,
                 DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
-                DirectoryRequest::ReadDirents { max_bytes, responder, } => {
+                DirectoryRequest::ReadDirents { max_bytes, responder } => {
                     let children = self.open_dir(connection.position)?;
 
-                    let dirents_buf = connection.dirents_buf.get_or_insert_with(|| {
-                        (self.to_dirent_bytes(&children), 0)
-                    });
+                    let dirents_buf = connection
+                        .dirents_buf
+                        .get_or_insert_with(|| (self.to_dirent_bytes(&children), 0));
                     let (dirents_buf, offset) = (&mut dirents_buf.0, &mut dirents_buf.1);
                     if *offset >= dirents_buf.len() {
                         responder.send(zx::sys::ZX_OK, &mut std::iter::empty())?;
                     } else {
-                        let new_offset = std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
-                        responder.send(zx::sys::ZX_OK,
-                                       &mut dirents_buf[*offset..new_offset].iter().cloned())?;
+                        let new_offset =
+                            std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
+                        responder.send(
+                            zx::sys::ZX_OK,
+                            &mut dirents_buf[*offset..new_offset].iter().cloned(),
+                        )?;
                         *offset = new_offset;
                     }
                 }
-                DirectoryRequest::Rewind { responder, } => {
+                DirectoryRequest::Rewind { responder } => {
                     connection.dirents_buf = None;
                     responder.send(zx::sys::ZX_OK)?;
-                },
-                DirectoryRequest::GetToken { responder, } => unsupported!(responder, None)?,
+                }
+                DirectoryRequest::GetToken { responder } => unsupported!(responder, None)?,
                 DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
@@ -1045,9 +1037,13 @@ pub mod server {
             Ok((None, ConnectionState::Open))
         }
 
-        fn send_failed_on_open(&self, object: fidl::endpoints::ServerEnd<NodeMarker>,
-                               status: zx::sys::zx_status_t) -> Result<(), Error> {
-            let (_stream, control_handle) = object.into_stream_and_control_handle()
+        fn send_failed_on_open(
+            &self,
+            object: fidl::endpoints::ServerEnd<NodeMarker>,
+            status: zx::sys::zx_status_t,
+        ) -> Result<(), Error> {
+            let (_stream, control_handle) = object
+                .into_stream_and_control_handle()
                 .context("fail to convert to stream and control handle")?;
             control_handle.send_on_open_(status, None).context("fail sending OnOpenEvent")?;
             Ok(())
@@ -1062,9 +1058,11 @@ pub mod server {
 
         /// Retrieve directory listing at |path| starting from node |start_pos|. If |path| is None,
         /// simply return directory listing of node |start_pos|.
-        fn descend(&self, start_pos: usize, path: Option<&str>)
-            -> Result<&HashMap<String, usize>, Error>
-        {
+        fn descend(
+            &self,
+            start_pos: usize,
+            path: Option<&str>,
+        ) -> Result<&HashMap<String, usize>, Error> {
             let mut pos = start_pos;
             let mut children = self.open_dir(pos)?;
 
@@ -1074,8 +1072,8 @@ pub mod server {
                         Some(next_pos) => pos = *next_pos,
                         _ => bail!("segment not found: {}", segment),
                     }
-                    children = self.open_dir(pos)
-                        .context(format!("cannot open segment {}", segment))?;
+                    children =
+                        self.open_dir(pos).context(format!("cannot open segment {}", segment))?;
                 }
             }
             Ok(children)
@@ -1136,7 +1134,7 @@ pub mod server {
                     Ok(request) => request,
                     Err(e) => {
                         eprintln!("ServiceFs failed to parse an incoming request: {:?}", e);
-                        continue
+                        continue;
                     }
                 };
                 match self.handle_request(request, &mut client_connection) {

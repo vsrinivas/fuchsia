@@ -53,24 +53,16 @@ generate_manifest("component_manager.bootfs") {
            rebase_path("$root_build_dir/component_manager", root_build_dir) ]
 }
 
-package("component_manager") {
+fuchsia_component("component_manager_component") {
   deps = [
     ":bin",
   ]
+  manifest = rebase_path("meta/component_manager.cmx")
+  binary = "component_manager"
+}
 
-  binaries = [
-    {
-      name = "rust_crates/component_manager"
-      dest = "component_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
-  ]
+package("component_manager") {
+  components = [ ":component_manager_component" ]
 }
 
 test_package("component_manager_tests") {

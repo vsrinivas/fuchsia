@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("routing_integration_test_bin") {
+  name = "routing_integration_test"
+  edition = "2018"
+  source_root = "routing_integration_test.rs"
+  deps = [
+    "//garnet/lib/rust/cm_fidl_translator",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+rustc_binary("mock_pkg_resolver_bin") {
+  name = "mock_pkg_resolver"
+  edition = "2018"
+  source_root = "mock_pkg_resolver.rs"
+  deps = [
+    "//garnet/lib/rust/fuchsia_uri",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+fuchsia_component("echo_realm") {
+  manifest = rebase_path("meta/echo_realm.cml")
+}
+
+fuchsia_component("mock_pkg_resolver") {
+  manifest = rebase_path("meta/mock_pkg_resolver.cmx")
+  deps = [
+    ":mock_pkg_resolver_bin",
+  ]
+  binary = "mock_pkg_resolver"
+}
+
+test_package("routing_integration_test") {
+  deps = [
+    ":routing_integration_test_bin",
+  ]
+  components = [
+    ":echo_realm",
+    ":mock_pkg_resolver",
+    "//garnet/bin/sys/component_manager:component_manager_component",
+    "//src/sys/examples/topology:echo_server",
+    "//src/sys/examples/topology:echo_client",
+  ]
+  tests = [
+    {
+      name = "routing_integration_test"
+    },
+  ]
+}
