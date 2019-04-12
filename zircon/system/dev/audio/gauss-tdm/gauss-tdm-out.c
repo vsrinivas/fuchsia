@@ -18,7 +18,8 @@ static zx_driver_ops_t gauss_tdm_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gauss_tdm, gauss_tdm_driver_ops, "gauss-tdm", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(gauss_tdm, gauss_tdm_driver_ops, "gauss-tdm", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GAUSS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GAUSS_AUDIO_OUT),

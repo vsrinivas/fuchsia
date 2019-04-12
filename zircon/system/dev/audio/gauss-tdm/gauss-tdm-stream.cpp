@@ -5,6 +5,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <lib/zx/vmar.h>
 #include <limits>
@@ -18,6 +19,12 @@
 
 namespace audio {
 namespace gauss {
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_I2C,
+    COMPONENT_COUNT,
+};
 
 // Device FIDL thunks
 fuchsia_hardware_audio_Device_ops_t TdmOutputStream::AUDIO_FIDL_THUNKS {
@@ -39,7 +46,22 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     auto stream = fbl::AdoptRef(
         new TdmOutputStream(parent, std::move(domain)));
 
-    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &stream->pdev_);
+    composite_protocol_t composite;
+    zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
+    if (res != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
+        return res;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT]; 
+    size_t actual;
+    composite_get_components(&composite, components, fbl::count_of(components), &actual);
+    if (actual != countof(components)) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    res = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &stream->pdev_);
     if (res != ZX_OK) {
         return res;
     }
@@ -63,7 +85,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     //Sleep to let clocks stabilize in amps.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
-    res = device_get_protocol(parent, ZX_PROTOCOL_I2C, &stream->i2c_);
+    res = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &stream->i2c_);
     if ( res != ZX_OK) {
         zxlogf(ERROR,"tdm-output-driver: failed to acquire i2c\n");
         return res;

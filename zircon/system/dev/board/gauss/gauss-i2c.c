@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-a113/a113-hw.h>
 
@@ -59,6 +61,32 @@ static const pbus_irq_t i2c_irqs[] = {
 */
 };
 
+static const i2c_channel_t i2c_channels[] = {
+    // Audio I2C channels
+    {
+        .bus_id = AML_I2C_B,
+        .address = 0x4C
+    },
+/* these appear to be unused.
+    {
+        .bus_id = AML_I2C_B,
+        .address = 0x4D
+    },
+    {
+        .bus_id = AML_I2C_B,
+        .address = 0x4E
+    },
+*/
+};
+
+static const pbus_metadata_t i2c_metadata[] = {
+    {
+        .type = DEVICE_METADATA_I2C_CHANNELS,
+        .data_buffer = &i2c_channels,
+        .data_size = sizeof(i2c_channels),
+    }
+};
+
 static const pbus_dev_t i2c_dev = {
     .name = "i2c",
     .vid = PDEV_VID_AMLOGIC,
@@ -68,6 +96,8 @@ static const pbus_dev_t i2c_dev = {
     .mmio_count = countof(i2c_mmios),
     .irq_list = i2c_irqs,
     .irq_count = countof(i2c_irqs),
+    .metadata_list = i2c_metadata,
+    .metadata_count = countof(i2c_metadata),
 };
 
 zx_status_t gauss_i2c_init(gauss_bus_t* bus) {

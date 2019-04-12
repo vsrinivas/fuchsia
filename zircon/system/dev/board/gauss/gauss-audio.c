@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -60,21 +61,6 @@ static const pbus_mmio_t tdm_audio_mmios[] = {
     },
 };
 
-static const pbus_i2c_channel_t tdm_i2cs[] = {
-    {
-        .bus_id = AML_I2C_B,
-        .address = 0x4C
-    },
-    {
-        .bus_id = AML_I2C_B,
-        .address = 0x4D
-    },
-    {
-        .bus_id = AML_I2C_B,
-        .address = 0x4E
-    },
-};
-
 static const pbus_irq_t tdm_irqs[] = {
     {
         .irq = (90 + 32),
@@ -98,10 +84,24 @@ static const pbus_dev_t gauss_tdm_audio_dev = {
     .irq_count = countof(tdm_irqs),
     .mmio_list = tdm_audio_mmios,
     .mmio_count = countof(tdm_audio_mmios),
-    .i2c_channel_list = tdm_i2cs,
-    .i2c_channel_count = countof(tdm_i2cs),
     .bti_list = tdm_btis,
     .bti_count = countof(tdm_btis),
+};
+
+const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+const zx_bind_inst_t i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, AML_I2C_B),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4C),
+};
+const device_component_part_t i2c_component[] = {
+    { countof(root_match), root_match },
+    { countof(i2c_match), i2c_match },
+};
+const device_component_t components[] = {
+    { countof(i2c_component), i2c_component },
 };
 
 zx_status_t gauss_audio_init(gauss_bus_t* bus) {
@@ -116,7 +116,8 @@ zx_status_t gauss_audio_init(gauss_bus_t* bus) {
     }
 
     printf("Adding the tdm device\n");
-    if ((status = pbus_device_add(&bus->pbus, &gauss_tdm_audio_dev)) != ZX_OK) {
+    if ((status = pbus_composite_device_add(&bus->pbus, &gauss_tdm_audio_dev, components,
+                                            countof(components), UINT32_MAX)) != ZX_OK) {
         zxlogf(ERROR, "a113_audio_init could not add gauss_tdm_audio_dev: %d\n", status);
     }
 
