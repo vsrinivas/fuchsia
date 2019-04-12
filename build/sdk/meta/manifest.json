@@ -29,14 +29,29 @@
       "type": "string"
     },
     "parts": {
-      "description": "The elements in this SDK (DEPRECATED - use new_parts instead)",
+      "description": "The elements in this SDK",
       "type": "array",
       "items": {
-        "$ref": "common.json#/definitions/file"
+        "type": "object",
+        "properties": {
+          "type": {
+            "description": "The type of the element",
+            "$ref": "common.json#/definitions/type"
+          },
+          "meta": {
+            "description": "The metadata file for the element",
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "required": [
+          "meta",
+          "type"
+        ],
+        "additionalProperties": false
       }
     },
     "new_parts": {
-      "description": "The elements in this SDK",
+      "description": "The elements in this SDK (DEPRECATED - use parts instead)",
       "type": "array",
       "items": {
         "type": "object",

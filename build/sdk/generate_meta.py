@@ -44,13 +44,13 @@ def main():
             ],
         },
         'id': args.id,
-        'parts': sorted(filter(lambda m: m, [a.metadata for a in atoms])),
-        'new_parts': sorted([{
+        'parts': sorted([{
             'meta': a.metadata,
             'type': a.type,
         } for a in atoms]),
         'schema_version': args.schema_version,
     }
+    meta['new_parts'] = meta['parts']
 
     with open(args.meta, 'w') as meta_file:
         json.dump(meta, meta_file, indent=2, sort_keys=True,

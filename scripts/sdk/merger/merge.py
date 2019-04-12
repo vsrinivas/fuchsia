@@ -243,8 +243,8 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     '''
     manifest_one = _get_manifest(source_dir_one)
     manifest_two = _get_manifest(source_dir_two)
-    parts_one = set([Part(p) for p in manifest_one['new_parts']])
-    parts_two = set([Part(p) for p in manifest_two['new_parts']])
+    parts_one = set([Part(p) for p in manifest_one['parts']])
+    parts_two = set([Part(p) for p in manifest_two['parts']])
 
     manifest = {
         'arch': {}
@@ -273,9 +273,8 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
                                         set(manifest_two['arch']['target']))
 
     # Parts.
-    manifest['new_parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
-    manifest['parts'] = sorted(set(manifest_one['parts']) |
-                               set(manifest_two['parts']))
+    manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
+    manifest['new_parts'] = manifest['parts']
 
     manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
     _ensure_directory(manifest_path)
