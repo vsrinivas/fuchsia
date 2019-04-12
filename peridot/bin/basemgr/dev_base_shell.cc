@@ -200,9 +200,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
                 user_provider_->AddUser(
                     fuchsia::modular::auth::IdentityProvider::DEV,
                     [this](fuchsia::modular::auth::AccountPtr account,
-                           fidl::StringPtr status) {
-                      Login(account->id);
-                    });
+                           fidl::StringPtr status) { Login(account->id); });
               } else {
                 Login(account_id);
               }

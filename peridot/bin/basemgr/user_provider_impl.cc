@@ -232,6 +232,27 @@ void UserProviderImpl::AddUser(
   // uniquely maps to a token manager instance at runtime.
   const std::string& account_id = GetRandomId();
 
+  // HACK: Intercept requests to create a dev account and bypass auth system.
+  // Reasoning: Dev auth provider doesn't work and this class is going away
+  // soon, replaced by session_user_provider_impl.
+  if (identity_provider == fuchsia::modular::auth::IdentityProvider::DEV) {
+    auto account = fuchsia::modular::auth::Account::New();
+    account->id = account_id;
+    account->identity_provider = identity_provider;
+
+    std::string error;
+    if (!AddUserToAccountsDB(account.get(), &error)) {
+      FXL_LOG(ERROR) << "Failed to add user: " << account_id
+                     << ", to the accounts database:" << error;
+      callback(nullptr, error);
+      return;
+    }
+
+    FXL_DLOG(INFO) << "Successfully added user: " << account_id;
+    callback(std::move(account), "");
+    return;
+  }
+
   fuchsia::auth::TokenManagerPtr token_manager;
   token_manager = CreateTokenManager(account_id);
 
