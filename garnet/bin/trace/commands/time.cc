@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <zircon/syscalls.h>
 
+#include <iomanip>
 #include <iostream>
 
 #include "src/lib/fxl/logging.h"
@@ -40,9 +41,8 @@ void Time::Start(const fxl::CommandLine& command_line) {
     return;
   }
 
-  out() << "Time sync tool: Input \"t\" to get a tracing timestamp in μs. "
-           "Input \"q\" to quit."
-        << std::endl;
+  out() << "Time sync tool: Input \"t\" to get a tracing timestamp in "
+        << "microseconds. Input \"q\" to quit." << std::endl;
 
   double tick_scale = 1'000'000.0 / static_cast<double>(zx_ticks_per_second());
   char c;
@@ -50,10 +50,11 @@ void Time::Start(const fxl::CommandLine& command_line) {
     in().get(c);
     switch (c) {
       case 'q':
+        Done(0);
         return;
       case 't': {
-        double timestamp = static_cast<double>(zx_ticks_get()) / tick_scale;
-        out() << timestamp << std::endl;
+        double timestamp = static_cast<double>(zx_ticks_get()) * tick_scale;
+        out() << std::fixed << std::setprecision(3) << timestamp << std::endl;
         break;
       }
       default:
