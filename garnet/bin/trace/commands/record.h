@@ -37,6 +37,7 @@ class Record : public CommandWithController {
     bool detach = false;
     bool decouple = false;
     bool spawn = false;
+    bool return_child_result = true;
     uint32_t buffer_size_megabytes = 4;
     std::vector<ProviderSpec> provider_specs;
     fuchsia::tracing::controller::BufferingMode buffering_mode =

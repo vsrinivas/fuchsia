@@ -33,13 +33,16 @@ Traces are captured using the `fx traceutil` host utility.  To record a trace
 simply run the following on your development host:
 
 ```{shell}
-fx traceutil record
+fx traceutil record [program arg1 ...]
 ```
 
 This will:
  * Take a trace on the target using the default option.
  * Download it from the target to your development host.
  * Convert the trace into a viewable HTML file.
+
+If a program is specified it will be run after tracing has started to not
+miss any early trace events in the program.
 
 This is a great place to start an investigation.  It is also a good when you
 are reporting a bug and are unsure what data is useful.
@@ -64,6 +67,22 @@ Some additional command line arguments to `fx traceutil record` include:
    Compress the output stream. This is useful when saving to a small or slow
    local disk. If both `-stream` and `-compress` are provided, `-compress`
    is ignored.
+
+ * `-decouple`
+
+   Don't stop tracing when the traced program exits.
+   This is only valid when `program` is provided.
+
+ * `-detach`
+
+   Don't stop the traced program when tracing finishes.
+   This is only valid when `program` is provided.
+
+ * `-spawn`
+
+   Use `fdio_spawn` to run a legacy app.
+   `-detach` will have no effect when using this option.
+   This is only valid when `program` is provided.
 
 For a complete list of command line arguments run `fx traceutil record --help`.
 

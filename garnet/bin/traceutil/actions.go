@@ -20,11 +20,16 @@ type captureTraceConfig struct {
 	BufferSize           uint // [MB]
 	BufferingMode        string
 	Duration             time.Duration
+	// Command is set differently as it is passed via positional args.
+	Command              []string
 	BenchmarkResultsFile string
 	SpecFile             string
 	Binary               bool
 	Stream               bool
 	Compress             bool
+	Detach               bool
+	Decouple             bool
+	Spawn                bool
 }
 
 func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
@@ -54,6 +59,12 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
 	f.BoolVar(&config.Compress, "compress", false,
 		"Compress the trace output before writing to disk. This option is currently ignored if --stream is specified.")
+	f.BoolVar(&config.Detach, "detach", false,
+		"Don't stop the traced program when tracing finished.")
+	f.BoolVar(&config.Decouple, "decouple", false,
+		"Don't stop tracing when the traced program exits.")
+	f.BoolVar(&config.Spawn, "spawn", false,
+		"Use fdio_spawn to run a legacy app. Detach will have no effect when using this option.")
 
 	return config
 }
@@ -133,6 +144,29 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 			}
 		}()
 		go streamTraceOutput(listener, traceOutput, streamChan)
+	}
+
+	if config.Detach {
+		cmd = append(cmd, "--detach")
+	}
+	if config.Decouple {
+		cmd = append(cmd, "--decouple")
+	}
+	if config.Spawn {
+		cmd = append(cmd, "--spawn")
+	}
+
+	// The program to run must appear last.
+	// TODO(PT-130): The handling of embedded spaces in the command
+	// and its arguments could be better.
+	if len(config.Command) > 0 {
+		// There is a difference between the trace failing and the
+		// child failing, we need to know if trace fails.
+		// TODO(PT-95): If we talk to trace-manager directly to get
+		// trace data and then talk to some other service to launch the
+		// child then there's no conflating of return codes.
+		cmd = append(cmd, "--return-child-result=false")
+		cmd = append(cmd, config.Command...)
 	}
 
 	// TODO(TO-401): The target `trace` command's output is misleading.

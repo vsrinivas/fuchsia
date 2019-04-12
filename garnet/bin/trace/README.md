@@ -23,6 +23,9 @@ trace [options] command [command-specific options]
     --categories=[""]: Categories that should be enabled for tracing
     --decouple=[false]: Don't stop tracing when the traced program exits
     --detach=[false]: Don't stop the traced program when tracing finished
+    --spawn=[false]: Use fdio_spawn to run a legacy app.
+        Detach will have no effect when using this option.
+    --return-child-result=[true]: Pass on the child's return code.
     --duration=[10]: Trace will be active for this many seconds after the
         session has been started. The provided value must be integral.
     --output-file=[/data/trace.json]: Trace data is stored in this file

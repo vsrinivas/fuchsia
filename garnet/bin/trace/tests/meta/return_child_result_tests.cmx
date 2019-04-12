@@ -1,0 +1,31 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracelink.Registry": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=2"
+                ],
+                "fuchsia.tracing.controller.Controller": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=2"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/return_child_result_tests"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.controller.Controller"
+        ]
+    }
+}

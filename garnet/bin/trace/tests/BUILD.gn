@@ -208,9 +208,34 @@ executable("two_providers_two_engines_test_app") {
   ]
 }
 
+executable("return_1234") {
+  testonly = true
+  output_name = "return_1234"
+
+  sources = [
+    "return_1234.cc"
+  ]
+}
+
+executable("return_child_result_tests") {
+  testonly = true
+  output_name = "return_child_result_tests"
+
+  sources = [
+    "return_child_result_tests.cc"
+  ]
+
+  deps = [
+    ":run_test",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test_package("trace_tests") {
   deps = [
     ":basic_integration_test_app",
+    ":return_1234",
+    ":return_child_result_tests",
     ":run_integration_test",
     ":trace_integration_tests",
     ":trace_tests_bin",
@@ -219,6 +244,10 @@ test_package("trace_tests") {
   ]
 
   tests = [
+    {
+      name = "return_child_result_tests"
+      environments = basic_envs
+    },
     {
       name = "trace_integration_tests"
       environments = basic_envs
@@ -234,6 +263,9 @@ test_package("trace_tests") {
       name = "basic_integration_test_app"
     },
     {
+      name = "return_1234"
+    },
+    {
       name = "run_integration_test"
     },
     {
@@ -244,6 +276,8 @@ test_package("trace_tests") {
     },
   ]
 
+  # Since this is a "test_package" there is no need to list the cmx files
+  # for the "tests" entries.
   meta = [
     {
       path = rebase_path("meta/basic_integration_test_app.cmx")

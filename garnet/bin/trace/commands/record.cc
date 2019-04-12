@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
+#include <zircon/status.h>
 
 #include <fstream>
 #include <string>
@@ -36,6 +37,13 @@ namespace tracing {
 
 namespace {
 
+// Result of ParseBooleanOption.
+enum class OptionStatus {
+  PRESENT,
+  NOT_PRESENT,
+  ERROR,
+};
+
 // Command line options.
 const char kSpecFile[] = "spec-file";
 const char kCategories[] = "categories";
@@ -48,6 +56,7 @@ const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
 const char kLaunchpad[] = "launchpad";  // deprecated
 const char kSpawn[] = "spawn";
+const char kReturnChildResult[] = "return-child-result";
 const char kBufferSize[] = "buffer-size";
 const char kProviderBufferSize[] = "provider-buffer-size";
 const char kBufferingMode[] = "buffering-mode";
@@ -98,7 +107,7 @@ zx_handle_t Launch(const std::vector<std::string>& args) {
   return subprocess;
 }
 
-bool WaitForExit(zx_handle_t process, int* exit_code) {
+bool WaitForExit(zx_handle_t process, int* return_code) {
   zx_signals_t signals_observed = 0;
   zx_status_t status = zx_object_wait_one(process, ZX_TASK_TERMINATED,
                                           ZX_TIME_INFINITE, &signals_observed);
@@ -116,7 +125,7 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
     return false;
   }
 
-  *exit_code = proc_info.return_code;
+  *return_code = proc_info.return_code;
   return true;
 }
 
@@ -132,15 +141,26 @@ bool LookupBufferingMode(
   return false;
 }
 
-bool ParseBoolean(const fxl::StringView& arg, bool* out_value) {
+OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line,
+                                const char* name, bool* out_value) {
+  std::string arg;
+  bool have_option = command_line.GetOptionValue(fxl::StringView(name), &arg);
+
+  if (!have_option) {
+    return OptionStatus::NOT_PRESENT;
+  }
+
   if (arg == "" || arg == "true") {
     *out_value = true;
   } else if (arg == "false") {
     *out_value = false;
   } else {
-    return false;
+    FXL_LOG(ERROR) << "Bad value for --" << name
+                   << " option, pass true or false";
+    return OptionStatus::ERROR;
   }
-  return true;
+
+  return OptionStatus::PRESENT;
 }
 
 void CheckCommandLineOverride(const char* name, bool present_in_spec) {
@@ -170,12 +190,12 @@ bool CheckBufferSize(uint32_t megabytes) {
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile,           kCategories,    kAppendArgs,
-      kOutputFile,         kBinary,        kCompress,
-      kDuration,           kDetach,        kDecouple,
-      kLaunchpad,          kSpawn,         kBufferSize,
-      kProviderBufferSize, kBufferingMode, kBenchmarkResultsFile,
-      kTestSuite};
+      kSpecFile,             kCategories,         kAppendArgs,
+      kOutputFile,           kBinary,             kCompress,
+      kDuration,             kDetach,             kDecouple,
+      kLaunchpad,            kSpawn,              kReturnChildResult,
+      kBufferSize,           kProviderBufferSize, kBufferingMode,
+      kBenchmarkResultsFile, kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -260,14 +280,20 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --binary
-  if (command_line.HasOption(kBinary, nullptr)) {
-    binary = true;
+  if (ParseBooleanOption(command_line, kBinary, &binary) ==
+          OptionStatus::ERROR) {
+    return false;
+  }
+  if (binary) {
     output_file_name = kDefaultBinaryOutputFileName;
   }
 
   // --compress
-  if (command_line.HasOption(kCompress, nullptr)) {
-    compress = true;
+  if (ParseBooleanOption(command_line, kCompress, &compress) ==
+          OptionStatus::ERROR) {
+    return false;
+  }
+  if (compress) {
     output_file_name += ".gz";
   }
 
@@ -290,39 +316,54 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --detach
-  detach = command_line.HasOption(kDetach);
+  if (ParseBooleanOption(command_line, kDetach, &detach) ==
+          OptionStatus::ERROR) {
+    return false;
+  }
 
   // --decouple
-  decouple = command_line.HasOption(kDecouple);
+  if (ParseBooleanOption(command_line, kDecouple, &decouple) ==
+          OptionStatus::ERROR) {
+    return false;
+  }
 
   // --spawn
   // --launchpad is a deprecated spelling
   {
-    size_t spawn_index, launchpad_index;
-    auto have_spawn = command_line.HasOption(kSpawn, &spawn_index);
-    auto have_launchpad = command_line.HasOption(kLaunchpad, &launchpad_index);
+    bool spawn_value = false, launchpad_value = false;
+    OptionStatus spawn_status =
+        ParseBooleanOption(command_line, kSpawn, &spawn_value);
+    if (spawn_status == OptionStatus::ERROR) {
+      return false;
+    }
+    OptionStatus launchpad_status =
+        ParseBooleanOption(command_line, kLaunchpad, &launchpad_value);
+    if (launchpad_status == OptionStatus::ERROR) {
+      return false;
+    }
+    bool have_spawn = spawn_status == OptionStatus::PRESENT;
+    bool have_launchpad = launchpad_status == OptionStatus::PRESENT;
     if (have_spawn && have_launchpad) {
       FXL_LOG(ERROR) << "Specify only one of " << kSpawn << ", " << kLaunchpad;
       return false;
     }
     if (have_spawn) {
-      auto arg = command_line.options()[spawn_index].value;
-      if (!ParseBoolean(arg, &spawn)) {
-        FXL_LOG(ERROR) << "Failed to parse command-line option " << kSpawn
-                       << ": " << arg;
-      }
+      spawn = spawn_value;
       CheckCommandLineOverride("spawn", spec.spawn);
     }
     if (have_launchpad) {
       FXL_LOG(WARNING) << "Option " << kLaunchpad << " is deprecated"
                        << ", use " << kSpawn << " instead";
-      auto arg = command_line.options()[launchpad_index].value;
-      if (!ParseBoolean(arg, &spawn)) {
-        FXL_LOG(ERROR) << "Failed to parse command-line option " << kLaunchpad
-                       << ": " << arg;
-      }
+      spawn = launchpad_value;
       CheckCommandLineOverride("spawn", spec.spawn);
     }
+  }
+
+  // --return-child-result=<flag>
+  if (ParseBooleanOption(command_line, kReturnChildResult,
+                         &return_child_result) ==
+          OptionStatus::ERROR) {
+    return false;
   }
 
   // --buffer-size=<megabytes>
@@ -438,6 +479,9 @@ Command::Info Record::Describe() {
        {"spawn=[false]",
         "Use fdio_spawn to run a legacy app. Detach will have no effect when "
         "using this option. May also be spelled --launchpad (deprecated)."},
+       {"return-child-result=[true]",
+        "Return with the same return code as the child. "
+        "Only valid when a child program is passed."},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
        {"provider-buffer-size=[provider-name:buffer-size]",
@@ -453,7 +497,7 @@ Command::Info Record::Describe() {
         "the results are uploaded to the Catapult dashboard (using "
         "bin/catapult_converter)"},
        {"[command args]",
-        "Run program before starting trace. The program is terminated when "
+        "Run program after starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
 }
 
@@ -755,7 +799,8 @@ void Record::LaunchApp() {
                             component_controller_.NewRequest());
 
   component_controller_.set_error_handler([this](zx_status_t error) {
-    out() << "Application terminated" << std::endl;
+    out() << "Error launching component: " << error << "/"
+          << zx_status_get_string(error) << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In
       // that case, |StopTrace| below does nothing.
@@ -766,8 +811,13 @@ void Record::LaunchApp() {
              fuchsia::sys::TerminationReason termination_reason) {
         out() << "Application exited with return code " << return_code
               << std::endl;
-        if (!options_.decouple)
-          StopTrace(return_code);
+        if (!options_.decouple) {
+          if (options_.return_child_result) {
+            StopTrace(return_code);
+          } else {
+            StopTrace(0);
+          }
+        }
       };
   if (options_.detach) {
     component_controller_->Detach();
@@ -791,13 +841,18 @@ void Record::LaunchTool() {
     return;
   }
 
-  int exit_code = -1;
-  if (!WaitForExit(process, &exit_code))
+  int return_code = -1;
+  if (!WaitForExit(process, &return_code))
     FXL_LOG(ERROR) << "Unable to get return code";
 
-  out() << "Application exited with return code " << exit_code << std::endl;
-  if (!options_.decouple)
-    StopTrace(exit_code);
+  out() << "Application exited with return code " << return_code << std::endl;
+  if (!options_.decouple) {
+    if (options_.return_child_result) {
+      StopTrace(return_code);
+    } else {
+      StopTrace(0);
+    }
+  }
 }
 
 void Record::StartTimer() {

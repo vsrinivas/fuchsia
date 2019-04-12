@@ -154,6 +154,10 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		remoteFilename += ".gz"
 	}
 
+	if f.NArg() > 0 {
+		cmd.captureConfig.Command = f.Args()
+	}
+
 	var z *zedmon
 	var zOffset, zDelta time.Duration
 	if doZedmon {
