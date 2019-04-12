@@ -108,8 +108,8 @@ zbi_result_t ZbiVMO::SplitComplete(ZbiVMO* kernel, ZbiVMO* data) const {
     const uint32_t kernel_size =
         static_cast<uint32_t>(sizeof(zbi_header_t) * 2) + kernel_hdr->length;
     const size_t kernel_vmo_size = PageRound(kernel_size);
-    auto status = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, kernel_vmo_size,
-                             &kernel->vmo_);
+    auto status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
+                                    0, kernel_vmo_size, &kernel->vmo_);
     if (status != ZX_OK) {
         return ZBI_RESULT_TOO_BIG;
     }
@@ -134,9 +134,9 @@ zbi_result_t ZbiVMO::SplitComplete(ZbiVMO* kernel, ZbiVMO* data) const {
     // we can clone the trailing portion as well.
     bool clone = (kernel_size - sizeof(zbi_header_t)) % PAGE_SIZE == 0;
     status = clone ?
-        vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE,
-                   kernel_size - sizeof(zbi_header_t),
-                   data_vmo_size, &data->vmo_) :
+        vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
+                          kernel_size - sizeof(zbi_header_t),
+                          data_vmo_size, &data->vmo_) :
         vmo_.create(data_vmo_size, 0, &data->vmo_);
     if (status != ZX_OK) {
         return ZBI_RESULT_TOO_BIG;

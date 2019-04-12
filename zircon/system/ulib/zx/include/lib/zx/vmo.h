@@ -52,11 +52,11 @@ public:
         return zx_vmo_set_size(get(), size);
     }
 
-    zx_status_t clone(uint32_t options, uint64_t offset, uint64_t size,
-                      vmo* result) const {
+    zx_status_t create_child(uint32_t options, uint64_t offset, uint64_t size,
+                             vmo* result) const {
         // Allow for the caller aliasing |result| to |this|.
         vmo h;
-        zx_status_t status = zx_vmo_clone(
+        zx_status_t status = zx_vmo_create_child(
             get(), options, offset, size, h.reset_and_get_address());
         result->reset(h.release());
         return status;

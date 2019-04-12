@@ -508,8 +508,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
         // Why don't we consider file->off in this branch? It seems like we
         // want to clone the part of the VMO from file->off to file->end rather
         // than length bytes at the start of the VMO.
-        return zx_vmo_clone(file->vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length,
-                            out_vmo);
+        return zx_vmo_create_child(file->vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, out_vmo);
     } else {
         size_t vmo_length = 0;
         if (file->off != 0 || zx_vmo_get_size(file->vmo, &vmo_length) != ZX_OK ||

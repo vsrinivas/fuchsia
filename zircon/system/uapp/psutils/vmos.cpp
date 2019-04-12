@@ -59,12 +59,12 @@ static void print_vmo(const zx_info_vmo_t* vmo) {
         break;
     }
 
-    char clone_str[21];
+    char parent_str[21];
     if (vmo->flags & ZX_INFO_VMO_IS_COW_CLONE) {
-        snprintf(clone_str, sizeof(clone_str), "%" PRIu64, vmo->parent_koid);
+        snprintf(parent_str, sizeof(parent_str), "%" PRIu64, vmo->parent_koid);
     } else {
-        clone_str[0] = '-';
-        clone_str[1] = '\0';
+        parent_str[0] = '-';
+        parent_str[1] = '\0';
     }
 
     char name[ZX_MAX_NAME_LEN];
@@ -76,7 +76,7 @@ static void print_vmo(const zx_info_vmo_t* vmo) {
 
     printf("%6s " // rights
            "%5" PRIu64 " " // koid
-           "%6s " // clone parent koid
+           "%6s " // parent koid
            "%5zu " // number of children
            "%4zu " // map count
            "%4zu " // share count
@@ -85,7 +85,7 @@ static void print_vmo(const zx_info_vmo_t* vmo) {
            "%s\n", // name
            rights_str,
            vmo->koid,
-           clone_str,
+           parent_str,
            vmo->num_children,
            vmo->num_mappings,
            vmo->share_count,

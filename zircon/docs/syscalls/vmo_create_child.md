@@ -1,10 +1,10 @@
-# zx_vmo_clone
+# zx_vmo_create_child
 
 ## NAME
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-Create a clone of a VM Object.
+Create a child of a VM Object.
 
 ## SYNOPSIS
 
@@ -13,27 +13,25 @@ Create a clone of a VM Object.
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_clone(zx_handle_t handle,
-                         uint32_t options,
-                         uint64_t offset,
-                         uint64_t size,
-                         zx_handle_t* out);
+zx_status_t zx_vmo_create_child(zx_handle_t handle,
+                                uint32_t options,
+                                uint64_t offset,
+                                uint64_t size,
+                                zx_handle_t* out);
 ```
 
 ## DESCRIPTION
 
-`zx_vmo_clone()` creates a new virtual memory object (VMO) that clones a range
-of an existing vmo.
+`zx_vmo_create_child()` creates a new virtual memory object (VMO) a child of
+an existing vmo. The behavior of the semantics depends on the type of the child.
 
 One handle is returned on success, representing an object with the requested
 size.
 
-*options* must contain **ZX_VMO_CLONE_COPY_ON_WRITE** and zero or more flags to control
-clone creation.
+*options* must contain exactly one of the following flags to specify the
+child type:
 
-Valid flags:
-
-- **ZX_VMO_CLONE_COPY_ON_WRITE** - Create a copy-on-write clone. The cloned vmo will
+- **ZX_VMO_CHILD_COPY_ON_WRITE** - Create a copy-on-write clone. The cloned vmo will
 behave the same way the parent does, except that any write operation on the clone
 will bring in a copy of the page at the offset the write occurred. The new page in
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
@@ -41,7 +39,11 @@ ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages.  See the NOTES section below for details on
 VMO syscall interactions with clones.
 
-- **ZX_VMO_CLONE_NON_RESIZEABLE** - Create a non-resizeable clone VMO.
+
+In addition, *options* can contain zero or more of the following flags to
+further specify the child's behavior:
+
+- **ZX_VMO_CHILD_NON_RESIZEABLE** - Create a non-resizeable clone VMO.
 
 *offset* must be page aligned.
 
@@ -51,22 +53,22 @@ Both offset and size may start or extend beyond the original VMO's size.
 
 The size of the VMO will be rounded up to the next page size boundary.
 
-By default the rights of the cloned handled will be the same as the
+By default the rights of the child handled will be the same as the
 original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
 
-If *options* is **ZX_VMO_CLONE_COPY_ON_WRITE** the following rights are added:
+If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** the following rights are added:
 
 - **ZX_RIGHT_WRITE**
 
 ## NOTES
 
 Cloning a VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
-to become inactive. Only when the last clone is destroyed and no mappings
-of those clones into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
+to become inactive. Only when the last child is destroyed and no mappings
+of those child into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
 active again.
 
-### ZX_VMO_CLONE_COPY_ON_WRITE
+### ZX_VMO_CHILD_COPY_ON_WRITE
 
 VMOs produced by this mode will interact with the VMO syscalls in the following
 ways:
@@ -89,7 +91,7 @@ ways:
 
 ## RETURN VALUE
 
-`zx_vmo_clone()` returns **ZX_OK** on success. In the event
+`zx_vmo_create_child()` returns **ZX_OK** on success. In the event
 of failure, a negative error value is returned.
 
 ## ERRORS

@@ -281,7 +281,7 @@ typedef struct zx_info_maps {
 // if (ZX_INFO_VMO_TYPE(f) == ZX_INFO_VMO_TYPE_PAGED)
 #define ZX_INFO_VMO_TYPE(flags)             ((flags) & (1u<<0))
 
-// The VMO is a clone, and is a copy-on-write clone.
+// The VMO is a child, and is a copy-on-write clone.
 #define ZX_INFO_VMO_IS_COW_CLONE            (1u<<2)
 
 // When reading a list of VMOs pointed to by a process, indicates that the

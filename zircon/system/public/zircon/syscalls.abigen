@@ -622,9 +622,14 @@ syscall vmo_op_range blocking
         buffer: any[buffer_size] INOUT, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ Create a clone of a VM Object.
+#^ Create a child of a VM Object.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
-syscall vmo_clone
+syscall vmo_create_child
+    (handle: zx_handle_t, options: uint32_t, offset: uint64_t, size: uint64_t)
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
+
+# TODO(stevensd): Remove this stub once Go migrates to the new syscall.
+syscall vmo_clone vdsocall
     (handle: zx_handle_t, options: uint32_t, offset: uint64_t, size: uint64_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 

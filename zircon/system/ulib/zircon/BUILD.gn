@@ -56,6 +56,7 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
       "zx_system_get_version.cpp",
       "zx_ticks_get.cpp",
       "zx_ticks_per_second.cpp",
+      "zx_vmo_clone.cpp",
     ]
 
     configs += [ ":config" ]
