@@ -8,6 +8,7 @@ fidl_library("fuchsia-net") {
   sdk = true
   sources = [
     "connectivity.fidl",
+    "namelookup.fidl",
     "net.fidl",
     "socket.fidl",
   ]

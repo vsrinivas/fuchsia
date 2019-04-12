@@ -1,0 +1,49 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net;
+
+struct IpAddressInfo {
+    /// All of the IPv4 addresses for the requested hostname.
+    vector<Ipv4Address> ipv4_addrs;
+    /// All of the IPv6 addresses for the requested hostname.
+    vector<Ipv6Address> ipv6_addrs;
+    /// The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
+    string? canonical_name;
+};
+
+enum LookupError {
+    /// No result was found for this query.
+    NOT_FOUND = 1;
+    /// The lookup failed, but may succeed at a later time. For instance, the
+    /// network or DNS server may be unreachable.
+    TRANSIENT = 2;
+    /// The lookup failed due to an invalid argument (for instance, the hostname was not encoded
+    /// correctly, or was too long).
+    INVALID_ARGS = 3;
+    /// The lookup failed due to an internal error.
+    INTERNAL_ERROR = 4;
+};
+
+table LookupIpOptions {
+    /// If the lookup should return IPv4 addresses.
+    /// Defaults to true.
+    1: bool v4_addrs;
+    /// If the lookup should return IPv6 addresses.
+    /// Defaults to true.
+    2: bool v6_addrs;
+    /// If the lookup should return a canonical_name, if one exists.
+    /// Defaults to false.
+    3: bool cname_lookup;
+};
+
+[Discoverable]
+protocol NameLookup {
+    /// Look up a list of IP addresses by hostname.
+    ///
+    /// If |hostname| is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    LookupIp(string hostname, LookupIpOptions options) -> (IpAddressInfo addr) error LookupError;
+    /// Look up a hostname by IP address.
+    LookupHostname(IpAddress addr) -> (string hostname) error LookupError;
+};
