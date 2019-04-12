@@ -24,16 +24,6 @@
 #define INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID (0x9d62)
 #define INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID (0x9d63)
 
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
-
 zx_status_t intel_serialio_bind_dma(zx_device_t* dev);
 zx_status_t intel_serialio_bind_i2c(zx_device_t* dev);
 zx_status_t intel_serialio_bind_sdio(zx_device_t* dev);
