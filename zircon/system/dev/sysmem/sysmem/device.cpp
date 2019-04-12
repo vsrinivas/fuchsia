@@ -38,14 +38,6 @@ zx_protocol_device_t sysmem_device_ops = [] {
     return tmp;
 }();
 
-zx_protocol_device_t out_of_proc_sysmem_protocol_ops = [] {
-    zx_protocol_device_t tmp{};
-    tmp.version = DEVICE_OPS_VERSION;
-    // tmp.message is not used - sysmem_device_ops.message is used for incoming
-    // FIDL messages.
-    return tmp;
-}();
-
 zx_status_t in_proc_sysmem_Connect(void* ctx,
                                    zx_handle_t allocator2_request_param) {
     Device* self = static_cast<Device*>(ctx);
@@ -133,7 +125,7 @@ zx_status_t Device::Bind() {
     // callback used is sysmem_device_ops.message, not
     // sysmem_protocol_ops.message.
     device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
-    device_add_args.proto_ops = &out_of_proc_sysmem_protocol_ops;
+    device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
     device_add_args.flags = DEVICE_ADD_INVISIBLE;
 
     status = device_add(parent_device_, &device_add_args, &device_);

@@ -15,6 +15,7 @@
 #include <limits.h>
 
 #include "astro.h"
+#include "astro-gpios.h"
 
 // uncomment to disable LED blinky test
 // #define GPIO_TEST 1
@@ -75,6 +76,9 @@ static const pbus_irq_t gpio_irqs[] = {
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     { S905D2_WIFI_SDIO_WAKE_HOST },
+    // For display.
+    { GPIO_PANEL_DETECT },
+    { GPIO_LCD_RESET },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

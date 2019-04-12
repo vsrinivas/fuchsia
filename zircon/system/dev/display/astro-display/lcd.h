@@ -18,7 +18,7 @@ class Lcd {
 public:
     Lcd(uint8_t panel_type) : panel_type_(panel_type) {}
 
-    zx_status_t Init(zx_device_t* parent);
+    zx_status_t Init(zx_device_t* dsi_dev, zx_device_t* gpio_dev);
     zx_status_t Enable();
     zx_status_t Disable();
 private:

@@ -100,7 +100,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
         DISP_ERROR("Could not create AmlMipiPhy object\n");
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = phy_->Init(parent_, disp_setting.lane_num);
+    zx_status_t status = phy_->Init(pdev_dev_, dsi_dev_, disp_setting.lane_num);
     if (status != ZX_OK) {
         DISP_ERROR("MIPI PHY Init failed!\n");
         return status;
@@ -145,7 +145,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = lcd_->Init(parent_);
+    status = lcd_->Init(dsi_dev_, lcd_gpio_dev_);
     if (status != ZX_OK) {
         DISP_ERROR("Error during LCD Initialization! %d\n", status);
         return status;
@@ -170,13 +170,13 @@ zx_status_t AmlDsiHost::Init() {
         return ZX_OK;
     }
 
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+    zx_status_t status = device_get_protocol(pdev_dev_, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
         DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
         return status;
     }
 
-    dsiimpl_ = parent_;
+    dsiimpl_ = dsi_dev_;
 
     // Map MIPI DSI and HHI registers
     mmio_buffer_t mmio;

@@ -13,6 +13,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "sherlock-gpios.h"
 
 namespace sherlock {
 
@@ -70,6 +71,9 @@ static const pbus_irq_t gpio_irqs[] = {
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     { T931_WIFI_HOST_WAKE },
+    // For display.
+    { GPIO_PANEL_DETECT },
+    { GPIO_LCD_RESET },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

@@ -208,7 +208,8 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-canvas",
         .ctx = canvas,
         .ops = &aml_canvas_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
+        .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
+        .proto_ops = &canvas_ops,
     };
 
     status = device_add(parent, &args, &canvas->zxdev);

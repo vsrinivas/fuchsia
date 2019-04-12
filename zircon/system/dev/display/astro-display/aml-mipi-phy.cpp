@@ -211,20 +211,20 @@ zx_status_t AmlMipiPhy::Startup() {
     return ZX_OK;
 }
 
-zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
+zx_status_t AmlMipiPhy::Init(zx_device_t* pdev_dev, zx_device_t* dsi_dev, uint32_t lane_num) {
     if (initialized_) {
         return ZX_OK;
     }
 
     num_of_lanes_ = lane_num;
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
+    zx_status_t status = device_get_protocol(pdev_dev, ZX_PROTOCOL_PDEV, &pdev_);
     if (status != ZX_OK) {
         DISP_ERROR("AmlMipiPhy: Could not get ZX_PROTOCOL_PDEV protocol\n");
         return status;
     }
 
-    dsiimpl_ = parent;
+    dsiimpl_ = dsi_dev;
 
     // Map Mipi Dsi and Dsi Phy registers
     mmio_buffer_t mmio;

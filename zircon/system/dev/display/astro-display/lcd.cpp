@@ -1249,22 +1249,14 @@ zx_status_t Lcd::Enable() {
     return status;
 }
 
-zx_status_t Lcd::Init(zx_device_t* parent) {
+zx_status_t Lcd::Init(zx_device_t* dsi_dev, zx_device_t* gpio_dev) {
     if (initialized_) {
         return ZX_OK;
     }
-    pdev_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not obtain platform device protocol\n");
-        return status;
-    }
 
-    dsiimpl_ = parent;
+    dsiimpl_ = dsi_dev;
 
-    // Obtain GPIO protocol
-    size_t actual;
-    status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, GPIO_LCD, &gpio_, sizeof(gpio_), &actual);
+    zx_status_t status = device_get_protocol(gpio_dev, ZX_PROTOCOL_GPIO, &gpio_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
         return status;

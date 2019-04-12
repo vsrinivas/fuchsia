@@ -26,8 +26,10 @@ namespace astro_display {
 
 class AmlDsiHost {
 public:
-    AmlDsiHost(zx_device_t* parent, uint32_t bitrate, uint8_t panel_type)
-        : parent_(parent), bitrate_(bitrate), panel_type_(panel_type) {}
+    AmlDsiHost(zx_device_t* pdev_dev, zx_device_t* dsi_dev, zx_device_t* lcd_gpio_dev,
+               uint32_t bitrate, uint8_t panel_type)
+        : pdev_dev_(pdev_dev), dsi_dev_(dsi_dev), lcd_gpio_dev_(lcd_gpio_dev), bitrate_(bitrate),
+          panel_type_(panel_type) {}
 
     // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
     // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,
@@ -52,7 +54,9 @@ private:
 
     ddk::DsiImplProtocolClient dsiimpl_;
 
-    zx_device_t* parent_;
+    zx_device_t* pdev_dev_;
+    zx_device_t* dsi_dev_;
+    zx_device_t* lcd_gpio_dev_;
 
     uint32_t bitrate_;
     uint8_t panel_type_;

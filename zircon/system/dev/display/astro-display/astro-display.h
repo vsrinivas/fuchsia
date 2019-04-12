@@ -50,7 +50,7 @@ class AstroDisplay : public DeviceType,
                      public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
 public:
     AstroDisplay(zx_device_t* parent)
-        : DeviceType(parent), dsiimpl_(parent) {}
+        : DeviceType(parent) {}
 
     // This function is called from the c-bind function upon driver matching
     zx_status_t Bind();
@@ -85,6 +85,17 @@ public:
     void Dump();
 
 private:
+    enum {
+        COMPONENT_PDEV,
+        COMPONENT_DSI,
+        COMPONENT_PANEL_GPIO,
+        COMPONENT_LCD_GPIO,
+        COMPONENT_SYSMEM,
+        COMPONENT_CANVAS,
+        COMPONENT_COUNT,
+    };
+    zx_device_t* components_[COMPONENT_COUNT];
+
     zx_status_t SetupDisplayInterface();
     int VSyncThread();
     void CopyDisplaySettings();
@@ -151,7 +162,7 @@ private:
     ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);
 
     // DSIIMPL Protocol
-    ddk::DsiImplProtocolClient dsiimpl_;
+    ddk::DsiImplProtocolClient dsiimpl_ = {};
 
     // Objects
     fbl::unique_ptr<astro_display::Vpu> vpu_;

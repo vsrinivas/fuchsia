@@ -853,7 +853,7 @@ zx_status_t DsiDw::Bind() {
     // Obtain display metadata needed to load the proper display driver
     display_driver_t display_info;
     size_t actual;
-    status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE,
+    status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_DEVICE,
                                  &display_info,
                                  sizeof(display_driver_t),
                                  &actual);
@@ -868,17 +868,7 @@ zx_status_t DsiDw::Bind() {
         {BIND_PLATFORM_DEV_DID, 0, display_info.did},
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "dw-dsi";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    status = pdev_.DeviceAdd(0, &args, &zxdev_);
+    status = DdkAdd("dw-dsi", 0, props, countof(props));
     if (status != ZX_OK) {
         DSI_ERROR("could not add device %d\n", status);
     }

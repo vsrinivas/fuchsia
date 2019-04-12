@@ -38,7 +38,7 @@ private:
     std::optional<ddk::MmioBuffer>    hhi_mmio_;
     std::optional<ddk::MmioBuffer>    aobus_mmio_;
     std::optional<ddk::MmioBuffer>    cbus_mmio_;
-    pdev_protocol_t        pdev_ = {};
+    pdev_protocol_t                   pdev_ = {};
 
     bool                              initialized_ = false;
 

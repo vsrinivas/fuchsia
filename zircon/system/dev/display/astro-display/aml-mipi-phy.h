@@ -23,7 +23,7 @@ class AmlMipiPhy {
 public:
     AmlMipiPhy() {}
     // This function initializes internal state of the object
-    zx_status_t Init(zx_device_t* parent, uint32_t lane_num);
+    zx_status_t Init(zx_device_t* pdev_dev, zx_device_t* dsi_dev, uint32_t lane_num);
     // This function enables and starts up the Mipi Phy
     zx_status_t Startup();
     // This function stops Mipi Phy
