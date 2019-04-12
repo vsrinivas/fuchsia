@@ -132,6 +132,9 @@ __BEGIN_CDECLS
 // GPIO binding variables at 0x0A1X
 #define BIND_GPIO_PIN       0x0A10
 
+// POWER binding variables at 0x0A2X
+#define BIND_POWER_DOMAIN   0x0A20
+
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
 // For vendor properties, it is recommended that a vendor ID be included

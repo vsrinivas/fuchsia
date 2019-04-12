@@ -17,6 +17,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/power.h>
 #include <zircon/assert.h>
 
 #define DRIVER_NAME "test-composite"
@@ -26,6 +27,7 @@ enum {
     COMPONENT_GPIO,
     COMPONENT_CLOCK,
     COMPONENT_I2C,
+    COMPONENT_POWER,
     COMPONENT_COUNT,
 };
 
@@ -117,6 +119,21 @@ static zx_status_t test_i2c(i2c_protocol_t* i2c) {
     return ZX_OK;
 }
 
+static zx_status_t test_power(power_protocol_t* power) {
+    zx_status_t status;
+    uint32_t value;
+
+    // Write a register and read it back
+    if ((status = power_write_pmic_ctrl_reg(power, 0x1234, 6)) != ZX_OK) {
+        return status;
+    }
+    if ((status = power_read_pmic_ctrl_reg(power, 0x1234, &value)) != ZX_OK || value != 6) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     composite_protocol_t composite;
     zx_status_t status;
@@ -143,6 +160,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     gpio_protocol_t gpio;
     clock_protocol_t clock;
     i2c_protocol_t i2c;
+    power_protocol_t power;
 
     status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
@@ -164,6 +182,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
         return status;
     }
+    status = device_get_protocol(components[COMPONENT_POWER], ZX_PROTOCOL_POWER, &power);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
+        return status;
+    }
 
     if ((status = test_gpio(&gpio)) != ZX_OK) {
         zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
@@ -177,6 +200,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
     if ((status = test_i2c(&i2c)) != ZX_OK) {
         zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
+        return status;
+    }
+
+    if ((status = test_power(&power)) != ZX_OK) {
+        zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
         return status;
     }
 

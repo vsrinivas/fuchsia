@@ -8,7 +8,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/powerimpl.h>
@@ -41,23 +40,18 @@ public:
                                               power_domain_status_t* out_status);
     zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
     zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
+
+private:
+    // For testing PMIC register read/write
+    uint32_t last_index_ = 0;
+    uint32_t last_addr_ = 0;
+    uint32_t last_value_ = 0;
 };
 
 zx_status_t TestPowerDevice::Init() {
-    pbus_protocol_t pbus;
-    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
+    auto status = DdkAdd("power");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
-        return status;
-    }
-    power_impl_protocol_t power_proto = {
-        .ops = &power_impl_protocol_ops_,
-        .ctx = this,
-    };
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto,
-                                    sizeof(power_proto));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pbus_register_protocol failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s DdkAdd failed %d\n", __func__, status);
         return status;
     }
     return ZX_OK;
@@ -114,16 +108,21 @@ zx_status_t TestPowerDevice::PowerImplGetPowerDomainStatus(uint32_t index,
 
 zx_status_t TestPowerDevice::PowerImplWritePmicCtrlReg(uint32_t index,
                                                        uint32_t addr, uint32_t value) {
-    //TODO(ravoorir): Implement this when there is a proper ZX_POWER_PROTOCOL
-    //driver.
+    // Save most recent write for read.
+    last_index_ = index;
+    last_addr_ = addr;
+    last_value_ = value;
+
     return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::PowerImplReadPmicCtrlReg(uint32_t index,
                                                       uint32_t addr, uint32_t* value) {
-    //TODO(ravoorir): Implement this when there is a proper ZX_POWER_PROTOCOL
-    //driver.
-    return ZX_OK;
+    if (index == last_index_ && addr == last_addr_) {
+        *value = last_value_;
+        return ZX_OK;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t test_power_bind(void* ctx, zx_device_t* parent) {

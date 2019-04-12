@@ -18,6 +18,7 @@ group("test") {
     ":test-clock",
     ":test-gpio",
     ":test-i2c",
+    ":test-power",
   ]
   foreach(driver, simple_drivers) {
     deps += [ ":test-$driver" ]

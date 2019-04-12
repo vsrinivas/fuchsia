@@ -48,6 +48,11 @@ int TestBoard::Thread() {
         zxlogf(ERROR, "%s: ClockInit failed: %d\n", __func__, status);
     }
 
+    status = PowerInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: PowerInit failed: %d\n", __func__, status);
+    }
+
     status = TestInit();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: TestInit failed: %d\n", __func__, status);
@@ -105,6 +110,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
         BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 5),
     };
+    const zx_bind_inst_t power_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
+        BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 3),
+    };
     device_component_part_t gpio_component[] = {
         { fbl::count_of(root_match), root_match },
         { fbl::count_of(gpio_match), gpio_match },
@@ -117,10 +126,15 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         { fbl::count_of(root_match), root_match },
         { fbl::count_of(i2c_match), i2c_match },
     };
+    device_component_part_t power_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(power_match), power_match },
+    };
     device_component_t composite[] = {
         { fbl::count_of(gpio_component), gpio_component },
         { fbl::count_of(clock_component), clock_component },
         { fbl::count_of(i2c_component), i2c_component },
+        { fbl::count_of(power_component), power_component },
     };
 
     const uint32_t test_metadata_value = 12345;

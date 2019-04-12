@@ -69,6 +69,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: array of gpio_pin_t
 #define DEVICE_METADATA_GPIO_PINS                 0x4F495047 // GPIO
 
+// type: array of power_domain_t
+#define DEVICE_METADATA_POWER_DOMAINS             0x52574F50  // POWR
+
 // type: clock_id_maps_t
 #define DEVICE_METADATA_CLOCK_MAPS                0x4D4B4C43 // CLKM
 

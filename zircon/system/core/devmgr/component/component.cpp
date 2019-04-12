@@ -326,6 +326,10 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
         return power_disable_power_domain(&power_);
     case PowerOp::GET_STATUS:
         return power_get_power_domain_status(&power_, &resp->status);
+    case PowerOp::WRITE_PMIC_CTRL_REG:
+        return power_write_pmic_ctrl_reg(&power_, req->reg_addr, req->reg_value);
+    case PowerOp::READ_PMIC_CTRL_REG:
+        return power_read_pmic_ctrl_reg(&power_,req->reg_addr, &resp->reg_value);
     default:
         zxlogf(ERROR, "%s: unknown Power op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
