@@ -1700,6 +1700,7 @@ images += [
 ]
 
 write_images_manifest("images-manifest") {
+  public = [ "FUCHSIA_BOARD_NAME=${board_name}" ]
   outputs = [
     "$root_build_dir/images.json",
     "$root_build_dir/image_paths.sh",

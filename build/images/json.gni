@@ -101,6 +101,9 @@ template("write_images_manifest") {
       }
     }
   }
+  if (defined(invoker.public)) {
+    image_paths += invoker.public
+  }
 
   outputs = invoker.outputs
   assert(outputs == [
