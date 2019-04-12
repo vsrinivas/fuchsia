@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("lib") {
@@ -19,7 +19,7 @@ group("tests") {
   ]
 }
 
-package("identity_lib_unittests") {
+test_package("identity_lib_unittests") {
   deps = [
     "token_cache:token_cache",
     "token_store:token_store",
