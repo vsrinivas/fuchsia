@@ -53,6 +53,18 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = PDEV_PID_TI_LP8556,
         .did = PDEV_DID_TI_BACKLIGHT,
     },
+    // Focaltech touch screen
+    {
+        .bus_id = ASTRO_I2C_2,
+        .address = I2C_FOCALTECH_TOUCH_ADDR,
+        // binds as composite device
+    },
+    // Goodix touch screen
+    {
+        .bus_id = ASTRO_I2C_2,
+        .address = I2C_GOODIX_TOUCH_ADDR,
+        // binds as composite device
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

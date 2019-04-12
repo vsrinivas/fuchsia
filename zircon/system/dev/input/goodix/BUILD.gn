@@ -8,6 +8,7 @@ driver("goodix") {
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-hidbus",
     "$zx/system/banjo/ddk-protocol-i2c",

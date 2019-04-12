@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -23,6 +25,14 @@
 #include "ft_device.h"
 
 namespace ft {
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_I2C,
+    COMPONENT_INT_GPIO,
+    COMPONENT_RESET_GPIO,
+    COMPONENT_COUNT,
+};
 
 FtDevice::FtDevice(zx_device_t* device)
     : ddk::Device<FtDevice, ddk::Unbindable>(device) {
@@ -66,43 +76,57 @@ int FtDevice::Thread() {
     zxlogf(INFO, "focaltouch: exiting\n");
 }
 
-zx_status_t FtDevice::InitPdev() {
-    pdev_protocol_t pdev;
+zx_status_t FtDevice::Init() {
+    composite_protocol_t composite;
 
-    zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev);
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "focaltouch: failed to acquire pdev\n");
+        zxlogf(ERROR, "Could not get composite protocol\n");
         return status;
     }
 
-    status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, fbl::count_of(components), &actual);
+    if (actual != fbl::count_of(components)) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
         return status;
     }
 
-    for (uint32_t i = 0; i < FT_PIN_COUNT; i++) {
-        size_t actual;
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i], sizeof(gpios_[i]),
-                                   &actual);
-        if (status != ZX_OK) {
-            return status;
-        }
+    status = device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO,
+                                 &gpios_[FT_INT_PIN]);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+        return status;
+    }
+
+    status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
+                                 &gpios_[FT_RESET_PIN]);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+        return status;
     }
 
     gpio_config_in(&gpios_[FT_INT_PIN], GPIO_NO_PULL);
 
-    status = gpio_get_interrupt(&gpios_[FT_INT_PIN],
-                                ZX_INTERRUPT_MODE_EDGE_LOW,
+    status = gpio_get_interrupt(&gpios_[FT_INT_PIN],  ZX_INTERRUPT_MODE_EDGE_LOW,
                                 irq_.reset_and_get_address());
     if (status != ZX_OK) {
         return status;
     }
 
+    // COMPONENT_PDEV is only used for metadata.
+    // TODO(voydanoff) remove COMPONENT_PDEV once we have a better way of passing metadata to
+    // composite devices.
     uint32_t device_id;
-    size_t actual;
-    status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
-                                 &actual);
+    status = device_get_metadata(components[COMPONENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
+                                 sizeof(device_id), &actual);
     if (status != ZX_OK || sizeof(device_id) != actual) {
         zxlogf(ERROR, "focaltouch: failed to read metadata\n");
         return status == ZX_OK ? ZX_ERR_INTERNAL : status;
@@ -122,12 +146,12 @@ zx_status_t FtDevice::InitPdev() {
     return ZX_OK;
 }
 
-zx_status_t FtDevice::Create(zx_device_t* device) {
+zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
 
     zxlogf(INFO, "focaltouch: driver started...\n");
 
     auto ft_dev = std::make_unique<FtDevice>(device);
-    zx_status_t status = ft_dev->InitPdev();
+    zx_status_t status = ft_dev->Init();
     if (status != ZX_OK) {
         zxlogf(ERROR, "focaltouch: Driver bind failed %d\n", status);
         return status;
@@ -275,8 +299,20 @@ zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
 
     return ZX_OK;
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = FtDevice::Create;
+    return ops;
+}();
+
 } //namespace ft
 
-extern "C" zx_status_t ft_device_bind(void* ctx, zx_device_t* device, void** cookie) {
-    return ft::FtDevice::Create(device);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(focaltech_touch, ft::driver_ops, "focaltech-touch", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_FOCALTOUCH),
+ZIRCON_DRIVER_END(focaltech_touch)
+// clang-format on

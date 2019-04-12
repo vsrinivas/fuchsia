@@ -8,7 +8,6 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
-#include <ddktl/pdev.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/mutex.h>

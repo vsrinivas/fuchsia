@@ -96,6 +96,14 @@ zx_status_t Mt8167::I2cInit() {
             .pid = 0,
             .did = 0,
         },
+        // For touch screen driver
+        {
+            .bus_id = 0,
+            .address = 0x38,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
     };
 
     const pbus_metadata_t cleo_i2c_metadata[] = {

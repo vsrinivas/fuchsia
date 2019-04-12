@@ -43,6 +43,9 @@ zx_status_t Mt8167::GpioInit() {
         { MT8167_CLEO_GPIO_LCM_EN },
         // For display driver
         { MT8167_GPIO_LCD_RST },
+        // For touch screen driver
+        { MT8167_GPIO_TOUCH_INT },
+        { MT8167_GPIO_TOUCH_RST },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {

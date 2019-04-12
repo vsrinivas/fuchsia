@@ -66,7 +66,7 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
 public:
     FtDevice(zx_device_t* device);
 
-    static zx_status_t Create(zx_device_t* device);
+    static zx_status_t Create(void* ctx, zx_device_t* device);
 
     void DdkRelease();
     void DdkUnbind() __TA_EXCLUDES(client_lock_);
@@ -100,7 +100,7 @@ private:
 
     static constexpr size_t kMaxI2cTransferLength = 8;
 
-    zx_status_t InitPdev();
+    zx_status_t Init();
     zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
 
     uint8_t Read(uint8_t addr);

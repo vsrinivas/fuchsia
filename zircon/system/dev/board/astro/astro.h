@@ -81,8 +81,11 @@ enum {
 #define GPIO_HW_ID2             (S905D2_GPIOZ(3))
 
 /* Astro I2C Devices */
-#define I2C_BACKLIGHT_ADDR    (0x2C)
-#define I2C_AMBIENTLIGHT_ADDR (0x39)
+#define I2C_BACKLIGHT_ADDR          (0x2C)
+#define I2C_FOCALTECH_TOUCH_ADDR    (0x38)
+#define I2C_AMBIENTLIGHT_ADDR       (0x39)
+#define I2C_GOODIX_TOUCH_ADDR       (0x5d)
+
 // astro-touch.c
 zx_status_t astro_touch_init(aml_bus_t* bus);
 // aml-raw_nand.c

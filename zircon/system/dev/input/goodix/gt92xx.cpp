@@ -5,7 +5,8 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/composite.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -15,6 +16,13 @@
 #include "gt92xx.h"
 
 namespace goodix {
+enum {
+    COMPONENT_I2C,
+    COMPONENT_INT_GPIO,
+    COMPONENT_RESET_GPIO,
+    COMPONENT_COUNT,
+};
+
 // Configuration data
 // first two bytes contain starting register address (part of i2c transaction)
 static uint8_t conf_data[] = {
@@ -96,26 +104,43 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
 
     zxlogf(INFO, "gt92xx: driver started...\n");
 
-    pdev_protocol_t pdev_proto;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_PDEV, &pdev_proto);
-    if (status) {
-        zxlogf(ERROR, "%s could not acquire platform device\n", __func__);
+    composite_protocol_t composite;
+    auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
         return status;
     }
-    ddk::PDev pdev(&pdev_proto);
 
-
-    auto i2c = pdev.GetI2c(0);
-    auto intr = pdev.GetGpio(0);
-    auto reset = pdev.GetGpio(1);
-    if (!i2c.is_valid() || !intr.is_valid() || !reset.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate gpio or i2c\n", __func__);
-        return ZX_ERR_NO_RESOURCES;
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, fbl::count_of(components), &actual);
+    if (actual != fbl::count_of(components)) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
-    auto goodix_dev = std::make_unique<Gt92xxDevice>(device,
-                                                     std::move(i2c),
-                                                     std::move(intr),
-                                                     std::move(reset));
+
+    i2c_protocol_t i2c;
+    status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
+        return status;
+    }
+
+    gpio_protocol_t int_gpio;
+    status = device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO, &int_gpio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+        return status;
+    }
+
+    gpio_protocol_t reset_gpio;
+    status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+        return status;
+    }
+
+    auto goodix_dev = std::make_unique<Gt92xxDevice>(device, &i2c, &int_gpio, &reset_gpio);
 
     status = goodix_dev->Init();
     if (status != ZX_OK) {
@@ -329,7 +354,8 @@ static zx_driver_ops_t gt92xx_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gt92xx, gt92xx_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(gt92xx, gt92xx_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ASTRO_GOODIXTOUCH),
