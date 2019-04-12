@@ -3,7 +3,12 @@
 # found in the LICENSE file.
 
 library("inspector") {
-  sdk = "static"
+  # This should only ever be used as a shared library because it hides
+  # the otherwise problematic ngunwind symbols.
+  shared = true
+  static = false
+
+  sdk = "shared"
   sdk_headers = [ "inspector/inspector.h" ]
   sources = [
     "backtrace.cpp",
@@ -14,6 +19,9 @@ library("inspector") {
     "utils.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/ulib/zircon:headers",
+  ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/elf-search",

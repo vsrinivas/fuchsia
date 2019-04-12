@@ -51,6 +51,7 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/broadcom",
       "$zx/system/dev/lib/usb",
       "$zx/system/fidl/fuchsia-net-stack:c",
+      "$zx/third_party/ulib/ngunwind",
       "async",
       "async-loop",
       "async-testutils",

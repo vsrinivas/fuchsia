@@ -151,7 +151,6 @@ executable("threads") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/backtrace",
-    "$zx/third_party/ulib/ngunwind",
   ]
 }
 

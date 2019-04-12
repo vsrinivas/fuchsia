@@ -67,7 +67,7 @@ class DebugInfoCache {
 
     zx_status_t GetDebugInfo(uintptr_t pc, inspector_dsoinfo_t** out_dso,
                              backtrace_state** out_bt_state);
-    
+
  private:
     inspector_dsoinfo_t* dso_list_;
 
@@ -386,7 +386,7 @@ void inspector_print_backtrace_impl(FILE* f,
     unw_destroy_fuchsia(fuchsia);
 }
 
-extern "C"
+extern "C" __EXPORT
 void inspector_print_backtrace_markup(FILE* f,
                                       zx_handle_t process, zx_handle_t thread,
                                       inspector_dsoinfo_t* dso_list,
@@ -396,7 +396,7 @@ void inspector_print_backtrace_markup(FILE* f,
                                   use_libunwind, true);
 }
 
-extern "C"
+extern "C" __EXPORT
 void inspector_print_backtrace(FILE* f,
                                zx_handle_t process, zx_handle_t thread,
                                inspector_dsoinfo_t* dso_list,

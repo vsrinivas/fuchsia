@@ -64,7 +64,7 @@ static inspector_dsoinfo_t* dsolist_add(inspector_dsoinfo_t** list,
     return dso;
 }
 
-inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h) {
+__EXPORT inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h) {
     // Prepend "app:" to the name we print for the process binary to tell the
     // reader (and the symbolize script!) that the name is the process's.
     // The name property is only 32 characters which may be insufficient.
@@ -125,7 +125,7 @@ inspector_dsoinfo_t* inspector_dso_fetch_list(zx_handle_t h) {
     return dsolist;
 }
 
-void inspector_dso_free_list(inspector_dsoinfo_t* list) {
+ __EXPORT void inspector_dso_free_list(inspector_dsoinfo_t* list) {
     while (list != NULL) {
         inspector_dsoinfo_t* next = list->next;
         free(list->debug_file);
@@ -134,8 +134,8 @@ void inspector_dso_free_list(inspector_dsoinfo_t* list) {
     }
 }
 
-inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list,
-                                          zx_vaddr_t pc) {
+ __EXPORT inspector_dsoinfo_t* inspector_dso_lookup(
+     inspector_dsoinfo_t* dso_list, zx_vaddr_t pc) {
     for (inspector_dsoinfo_t* dso = dso_list; dso != NULL; dso = dso->next) {
         if (pc >= dso->base) {
             return dso;
@@ -145,7 +145,7 @@ inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list,
     return nullptr;
 }
 
-void inspector_print_markup_context(FILE* f, zx_handle_t process) {
+ __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
     fprintf(f, "{{{reset}}}\n");
     unsigned int count;
     ForEachModule(*zx::unowned_process{process}, [&](const ModuleInfo& info) {
@@ -178,15 +178,16 @@ void inspector_print_markup_context(FILE* f, zx_handle_t process) {
     });
 }
 
-void inspector_dso_print_list(FILE* f, inspector_dsoinfo_t* dso_list) {
+ __EXPORT void inspector_dso_print_list(FILE* f,
+                                        inspector_dsoinfo_t* dso_list) {
     for (inspector_dsoinfo_t* dso = dso_list; dso != nullptr; dso = dso->next) {
         fprintf(f, "dso: id=%s base=%p name=%s\n",
                 dso->buildid, (void*) dso->base, dso->name);
     }
 }
 
-zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
-                                          const char** out_debug_file) {
+ __EXPORT zx_status_t inspector_dso_find_debug_file(
+     inspector_dsoinfo_t* dso, const char** out_debug_file) {
     // Have we already tried?
     // Yeah, if we OOM it's possible it'll succeed next time, but
     // it's not worth the extra complexity to avoid printing the debugging

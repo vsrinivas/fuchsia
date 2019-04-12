@@ -19,7 +19,7 @@ namespace inspector {
 
 int verbosity_level = 0;
 
-extern "C"
+extern "C" __EXPORT
 void inspector_set_verbosity(int level) {
     verbosity_level = level;
 }

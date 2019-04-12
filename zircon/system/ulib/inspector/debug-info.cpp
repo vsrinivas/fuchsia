@@ -257,13 +257,15 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 
 } // namespace inspector
 
-void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread) {
+ __EXPORT void inspector_print_debug_info(zx_handle_t process,
+                                          zx_handle_t thread) {
     zx_excp_type_t type = 0;
     zx_thread_state_general_regs_t regs;
     inspector::print_debug_info(process, thread, &type, &regs);
 }
 
-void inspector_print_debug_info_and_resume_thread(zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port) {
+ __EXPORT void inspector_print_debug_info_and_resume_thread(
+     zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port) {
     zx_excp_type_t type = 0;
     zx_thread_state_general_regs_t regs;
     inspector::print_debug_info(process, thread, &type, &regs);

@@ -21,6 +21,5 @@ source_set("pager") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/backtrace",
-    "$zx/third_party/ulib/ngunwind",
   ]
 }

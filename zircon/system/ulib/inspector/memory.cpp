@@ -20,8 +20,8 @@ static constexpr size_t kMemoryDumpChunkSize = 256;
 static constexpr size_t kHexdumpLineBytes = 16;
 static_assert(kMemoryDumpChunkSize % kHexdumpLineBytes == 0, "");
 
-void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t start,
-                            size_t length) {
+ __EXPORT void inspector_print_memory(FILE* f, zx_handle_t process,
+                                      zx_vaddr_t start, size_t length) {
     uint8_t buf[kMemoryDumpChunkSize];
     size_t bytes_read;
 

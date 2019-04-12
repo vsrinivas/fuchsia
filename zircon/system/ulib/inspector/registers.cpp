@@ -11,7 +11,8 @@
 #include "inspector/inspector.h"
 #include "utils-impl.h"
 
-zx_status_t inspector_read_general_regs(zx_handle_t thread, zx_thread_state_general_regs_t* regs) {
+ __EXPORT zx_status_t inspector_read_general_regs(
+     zx_handle_t thread, zx_thread_state_general_regs_t* regs) {
     auto status = zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(*regs));
     if (status < 0) {
         print_zx_error("unable to access general regs", status);
@@ -22,8 +23,9 @@ zx_status_t inspector_read_general_regs(zx_handle_t thread, zx_thread_state_gene
 
 #if defined(__x86_64__)
 
-void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
-                                  const inspector_excp_data_t* excp_data) {
+ __EXPORT void inspector_print_general_regs(
+     FILE* f, const zx_thread_state_general_regs_t* regs,
+     const inspector_excp_data_t* excp_data) {
     fprintf(f, " CS:  %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64,
             0ull, regs->rip, regs->rflags);
     if (excp_data) {
@@ -46,8 +48,9 @@ void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t*
 
 #elif defined(__aarch64__)
 
-void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
-                                  const inspector_excp_data_t* excp_data) {
+ __EXPORT void inspector_print_general_regs(
+     FILE* f, const zx_thread_state_general_regs_t* regs,
+     const inspector_excp_data_t* excp_data) {
     fprintf(f, " x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
             regs->r[0], regs->r[1], regs->r[2], regs->r[3]);
     fprintf(f, " x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n",
@@ -70,8 +73,9 @@ void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t*
 
 #else   // unsupported arch
 
-void inspector_print_general_regs(const zx_thread_state_general_regs_t* regs,
-                                  const inspector_excp_data_t* excp_data) {
+ __EXPORT void inspector_print_general_regs(
+     const zx_thread_state_general_regs_t* regs,
+     const inspector_excp_data_t* excp_data) {
     printf("unsupported architecture\n");
 }
 

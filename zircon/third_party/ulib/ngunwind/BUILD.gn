@@ -5,7 +5,19 @@
 import("$zx/public/gn/config/levels.gni")
 
 library("ngunwind") {
-  sdk = "shared"
+  # This library is very crufty and should not be used in general.  It's
+  # used as an implementation detail of the inspector library, which
+  # statically links it into its shared library.
+  visibility = [
+    ":*",
+    "$zx/system/ulib/inspector/*",
+  ]
+
+  # Unfortunately ngunwind is used directly by
+  # //src/developer/debug/debug_agent.
+  # TODO(mcgrathr): Give inspector an API debug_agent can use instead.
+  visibility += [ "$zx/system/ulib" ]
+  sdk = "static"
   sdk_headers = [
     "ngunwind/private/compiler.h",
     "ngunwind/private/config.h",
@@ -31,7 +43,9 @@ library("ngunwind") {
     "ngunwind/fuchsia.h",
     "ngunwind/libunwind.h",
   ]
-  shared = true
+
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
   configs += [ ":private_config" ]
   deps = [
     "$zx/system/ulib/zircon",
