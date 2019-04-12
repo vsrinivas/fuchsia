@@ -62,15 +62,25 @@ class DebuggedThread {
 
   void OnException(uint32_t type);
 
-  // Pauses execution of the thread. Returns true if the pause was successful.
-  // Returns false on error or of the thread was already stopped. Pausing
-  // happens asynchronously so the thread will not necessarily have stopped
-  // when this returns.
-  bool Pause();
-
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
+
+  // Pauses execution of the thread. Returns true if the pause was successful.
+  // Pausing happens asynchronously so the thread will not necessarily have
+  // stopped when this returns. Set the |synchronous| flag for blocking on the
+  // suspended signal and make this call synchronous.
+  //
+  // The return type determines the state the thread was in *before* the suspend
+  // operation. That means that if |kRunning| is returned, means that the thread
+  // was running and now is suspended.
+  enum class SuspendResult {
+    kWasRunning,      // Thread is now suspended.
+    kSuspended,       // Thread remains suspended.
+    kOnException,     // Thread is in exception, *not* suspended (ZX-3772).
+    kError,           // An error ocurred suspending or waiting for the signal.
+  };
+  SuspendResult Suspend(bool synchronous = false);
 
   // Fills the thread status record. If full_stack is set, a full backtrace
   // will be generated, otherwise a minimal one will be generated.
@@ -93,6 +103,8 @@ class DebuggedThread {
 
   // Notification that a ProcessBreakpoint is about to be deleted.
   void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
+
+  SuspendReason suspend_reason() const { return suspend_reason_; }
 
  private:
   enum class OnStop {
@@ -127,6 +139,8 @@ class DebuggedThread {
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
+
+  zx_status_t WaitForSuspension();
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.

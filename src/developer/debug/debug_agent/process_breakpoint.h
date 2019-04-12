@@ -7,15 +7,16 @@
 
 #include <map>
 
-#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
 
 class Breakpoint;
+class HardwareBreakpoint;
 
 // Represents one breakpoint address in a single process. One Breakpoint object
 // can expand to many ProcessBreakpoints across multiple processes and within a
@@ -131,7 +132,6 @@ class ProcessBreakpoint {
   // |software_breakpoint_| and |hardware_breakpoint_| members instanced.
   // Null means that that particular installation is not used.
   class SoftwareBreakpoint;
-  class HardwareBreakpoint;
   std::unique_ptr<SoftwareBreakpoint> software_breakpoint_;
   std::unique_ptr<HardwareBreakpoint> hardware_breakpoint_;
 

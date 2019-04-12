@@ -157,7 +157,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id,
         // breakpoints (this may take a while and we'd like to get any
         // breakpoints as early as possible).
         std::vector<uint64_t> paused_thread_koids;
-        new_process->PauseAll(&paused_thread_koids);
+        new_process->SuspendAll(&paused_thread_koids);
         new_process->SendModuleNotification(std::move(paused_thread_koids));
       }
     }

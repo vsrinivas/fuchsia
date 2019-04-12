@@ -146,12 +146,12 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread)
-      thread->Pause();
+      thread->Suspend();
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    PauseAll();
+    SuspendAll();
   }
 }
 
@@ -441,10 +441,12 @@ void DebuggedProcess::OnWriteMemory(
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }
 
-void DebuggedProcess::PauseAll(std::vector<uint64_t>* paused_koids) {
+void DebuggedProcess::SuspendAll(std::vector<uint64_t>* suspended_koids) {
   for (auto& pair : threads_) {
-    if (pair.second->Pause() && paused_koids)
-      paused_koids->push_back(pair.first);
+    if (pair.second->Suspend() == DebuggedThread::SuspendResult::kWasRunning) {
+      if (suspended_koids)
+        suspended_koids->push_back(pair.first);
+    }
   }
 }
 

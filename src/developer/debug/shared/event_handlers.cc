@@ -135,8 +135,10 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
   FXL_DCHECK(status == ZX_OK)
       << "Unexpected status: " << ZxStatusToString(status);
 
-  DEBUG_LOG(MessageLoop) << "Got exception: "
-                         << ExceptionTypeToString(packet->type);
+  if (packet->type != ZX_EXCP_PROCESS_STARTING) {
+    DEBUG_LOG(MessageLoop) << "Got exception: "
+                           << ExceptionTypeToString(packet->type);
+  }
 
   auto* loop = MessageLoopAsync::Current();
   FXL_DCHECK(loop);

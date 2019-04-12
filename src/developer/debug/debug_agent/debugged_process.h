@@ -81,7 +81,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
 
   // Pauses all threads in the process. If non-null, the paused_koids vector
   // will be populated with the koids of all threads paused by this operation.
-  void PauseAll(std::vector<uint64_t>* paused_koids = nullptr);
+  void SuspendAll(std::vector<uint64_t>* suspended_koids = nullptr);
 
   // Returns the thread or null if there is no known thread for this koid.
   virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;

@@ -173,22 +173,38 @@ void DebuggedThread::OnException(uint32_t type) {
   // processes as desired.
 }
 
-bool DebuggedThread::Pause() {
-  if (suspend_reason_ == SuspendReason::kNone) {
-    if (thread_.suspend(&suspend_token_) == ZX_OK) {
-      suspend_reason_ = SuspendReason::kOther;
-      return true;
-    }
-  }
-  return false;
-}
-
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
+  DEBUG_LOG(Thread) << "Resuming thread " << koid_;
   run_mode_ = request.how;
   step_in_range_begin_ = request.range_begin;
   step_in_range_end_ = request.range_end;
 
   ResumeForRunMode();
+}
+
+DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
+  if (suspend_reason_ == SuspendReason::kException)
+    return SuspendResult::kOnException;
+
+  if (suspend_reason_ == SuspendReason::kOther)
+    return SuspendResult::kSuspended;
+
+
+  DEBUG_LOG(Thread) << "Suspending thread " << koid_;
+
+  zx_status_t status;
+  status = thread_.suspend(&suspend_token_);
+  if (status != ZX_OK)
+    return SuspendResult::kError;
+
+  suspend_reason_ = SuspendReason::kOther;
+
+  if (synchronous) {
+    status = WaitForSuspension();
+    if (status != ZX_OK)
+      return SuspendResult::kError;
+  }
+  return SuspendResult::kWasRunning;
 }
 
 void DebuggedThread::FillThreadRecord(
@@ -448,6 +464,17 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   // This could fail for legitimate reasons, like the process could have just
   // closed the thread.
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
+}
+
+zx_status_t DebuggedThread::WaitForSuspension() {
+  zx_signals_t observed;
+  zx_status_t status = thread_.wait_one(ZX_THREAD_SUSPENDED,
+                                        zx::time::infinite(),
+                                        &observed);
+  FXL_DCHECK(observed & ZX_THREAD_SUSPENDED);
+  if (status != ZX_OK)
+    return status;
+  return ZX_OK;
 }
 
 const char* DebuggedThread::SuspendReasonToString(SuspendReason reason) {
