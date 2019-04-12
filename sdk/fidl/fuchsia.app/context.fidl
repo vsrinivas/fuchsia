@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app;
+
+using fuchsia.io;
+
+/// A common base protocol for fuchsia.app.(module|agent|*shell|).Context.
+/// Clients of those protocols will have access to all of these methods through those interfaces.
+[FragileBase]
+protocol Context {
+    /// Obtains a fuchsia.io.Directory of services from the agent specified in |request.handler|.
+    /// Services are bound to |request.services|. The agent endpoint may close |request.services|
+    /// at its discretion, at which point |request.controller| must be closed by the caller.
+    ///
+    /// If brokering a connection is successful, keeping |request.controller| open will ensure
+    /// that the agent endpoint is not terminated.
+    ///
+    /// Failure to provide all required fields in |request| will close the
+    /// Context channel with an ZX_ERR_INVALID_ARGS.
+    ConnectToAgent(AgentConnectionRequest request);
+};
+
+table AgentConnectionRequest {
+    /// The component URL of the agent which is to provide services.
+    ///
+    /// Required.
+    1: ComponentUrl handler;
+
+    /// |services| will be connected to a directory of services provided by |handler|.
+    ///
+    /// Required.
+    2: request<fuchsia.io.Directory> services;
+
+    /// The agent providing |services| stays alive so long as the channel backing |controller|
+    /// is not dropped.
+    ///
+    /// Required.
+    3: request<AgentController> controller;
+};
+
+/// This interface is used by calls to *Context/ConnectToAgent() to signal to the framework to keep
+/// the agent alive, so long as the AgentController channel is open.
+protocol AgentController {};

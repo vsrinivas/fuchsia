@@ -1,0 +1,50 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessioncontrol;
+
+// A client-supplied identifier for a story, unique within the namespace of the
+// client's component url.
+//
+// TODO(FIDL-582): convert to doc comment once that is supported.
+using StoryId = string:STORY_ID_MAX_LENGTH;
+
+/// Maximum length of story id provided to SessionController.
+const uint32 STORY_ID_MAX_LENGTH = 1024;
+
+/// Sessions contain a model describing the set of stories and modules contained within.
+/// SessionController allows clients to mutate and observe the session's model. Observed changes
+/// may originate from other local clients, or from the same session running on a different device.
+[Discoverable]
+protocol SessionController {
+    /// Requests a story controller for the story identified by |id|. |id| may be any
+    /// client-supplied value. A previously unused |id|, or one identifying a story that has been
+    /// deleted (using DeleteStory()) will create a new story record.
+    ///
+    /// |id|s are scoped to the requesting client's Component URI: two different clients
+    /// which use the same |id| will be controlling different story instances.
+    ///
+    /// In some system configurations, the results of mutating a story's state are durable across
+    /// reboots and devices.
+    ///
+    /// |request| is closed if control cannot be granted, or when DeleteStory() is called for the
+    /// same |id| on any device.
+    //
+    // TODO(MF-322): Enforce the above |id| isolation.
+    ObtainStoryController(StoryId id, request<StoryController> request);
+
+    /// Permanently deletes the story identified by |id|. Any StoryControllers
+    /// obtained through ObtainStoryController() will be closed.
+    DeleteStory(StoryId id);
+
+    /// Immediately returns the list of existing stories on the first call. On
+    /// subsequent calls, waits and returns the list of stories only once the
+    /// list has changed.
+    GetStories() -> (vector<StoryInfo> stories);
+};
+
+table StoryInfo {
+    /// The ID of the story as supplied to SessionController/ObtainStoryController().
+    1: StoryId id;
+};

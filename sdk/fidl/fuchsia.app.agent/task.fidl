@@ -1,0 +1,40 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.agent;
+
+using fuchsia.app;
+using zx;
+
+using TaskName = string:TASK_NAME_MAX_LENGTH;
+
+/// Maximum length of an agent task name. See fuchsia.app.agent.TaskInfo.
+const uint32 TASK_NAME_MAX_LENGTH = 100;
+
+table TaskInfo {
+    /// A client-provided task name that can be used later to refer to this task.
+    1: TaskName name;
+
+    /// The condition that would cause this task to get scheduled.
+    2: ScheduleCondition schedule_condition;
+};
+
+/// Describes the condition that needs to be met for a task to become scheduled.
+/// This is not yet complete and will be extended or changed.
+xunion ScheduleCondition {
+    /// Triggers when a new message arrives on the queue named by |message_queue_message|.
+    fuchsia.app.MessageQueueName message_on_message_queue;
+
+    /// Triggers when a the message queue named by |message_queue_deleted| is deleted.
+    ///
+    /// |queue_deleted| is the token for the message queue that is to be watched.
+    /// This allows both message queue readers and writers to watch for queue
+    /// deletions.
+    fuchsia.app.MessageQueueName message_queue_deleted;
+
+    /// Triggers the task approximately every time |repeating_timer| elapses.
+    /// Once a task with |repeating_timer| is scheduled, it will trigger at
+    /// approximately |now + repeating_timer|.
+    zx.duration repeating_timer;
+};

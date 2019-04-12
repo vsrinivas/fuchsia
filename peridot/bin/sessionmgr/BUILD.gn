@@ -23,6 +23,7 @@ executable_package("sessionmgr") {
   deps = [
     ":component_context",
     ":focus",
+    ":new_modular_apis", # Compile the new APIs to validate them while they are under review.
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",
@@ -91,6 +92,15 @@ executable_package("sessionmgr") {
                   "target_gen_dir") + "/basemgr_metrics_registry.pb")
       dest = "basemgr_metrics_registry.pb"
     },
+  ]
+}
+
+# Collection of all new modular APIs while they undergo review.
+group("new_modular_apis") {
+  deps = [
+    "//sdk/fidl/fuchsia.app",
+    "//sdk/fidl/fuchsia.app.agent",
+    "//sdk/fidl/fuchsia.app.sessioncontrol",
   ]
 }
 

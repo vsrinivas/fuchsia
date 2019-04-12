@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.agent;
+
+using fuchsia.app;
+
+/// An instance of this service is exposed to agents in their namespace. It
+/// exposes the base capabilities offered by modular to agents.
+///
+/// See also: fuchsia.app.Agent
+[Discoverable]
+protocol Context {
+    compose fuchsia.app.Context;
+
+    /// Schedules the task described in |task_info|. When this task is scheduled to
+    /// run, Agent.RunTask() is called.
+    ///
+    /// TODO(MF-40): Add a callback to task scheduling.
+    ScheduleTask(TaskInfo task_info);
+
+    /// Deletes the task |name| (see TaskInfo.name), meaning no new runs of this task will be scheduled.
+    DeleteTask(TaskName name);
+};

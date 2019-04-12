@@ -1,0 +1,73 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.agent;
+
+using fuchsia.app;
+using fuchsia.app.sessioncontrol;
+using fuchsia.io;
+
+/// An agent is a component which provides services in support of modules in a
+/// story. Agents cannot show UI directly.
+///
+/// - An agent is a singleton instance within the scope of a session.
+/// - Components can connect to an Agent using the Context service provided to
+///   each modular component class (fuchsia.app.agent, fuchsia.app.module,
+///   fuchsia.app.storyshell, fuchsia.app.sessionshell).
+/// - An agent vends services and resources to components that connect to it over a
+///   fuchsia.io.Directory.
+/// - An agent is started when someone wants to connect to it, or when a task it
+///   has scheduled has triggered.
+///
+/// This FIDL interface MUST be implemented for agent components.
+///
+/// For more info see:
+/// - peridot/docs/modular/agent.md
+/// - fuchsia.app.agent.Context for common methods provided by modular to agents.
+/// - fuchsia.app.Lifecycle for how agents receive lifecycle events.
+[Discoverable]
+protocol Agent {
+    /// Called when a client of this agent wishes to acquire a service directory from this agent.
+    ///
+    /// |client| describes the identity of the client component. See ClientIdentity below.
+    ///
+    /// |directory_request| should be bound to a fuchsia.io.Directory implementation or closed
+    /// if services are denied. The Agent implementation should keep |directory_request| bound
+    /// and available until the client closes it. At this point, it must NOT assume that
+    /// the client itself is gone, but rather that the client no longer wishes to open new
+    /// services connections.
+    AcceptConnection(ClientIdentity client, request<fuchsia.io.Directory> directory_request);
+
+    /// Called when a task identified by |task| is scheduled to run. Tasks are scheduled run when
+    /// the conditions described in |task.type| become true. Tasks are scheduled using
+    /// fuchsia.app.agent.Context/ScheduleTask().
+    ///
+    /// Agents must return from RunTask() when the task has finished. The Agent may be asked to
+    /// terminate in the middle of task execution.
+    ///
+    /// TODO(MF-321): The current implementation permits the Agent to run a task until its callback
+    /// returns, no matter how long. There is no mechanism to cancel an ongoing task.
+    RunTask(TaskInfo task) -> ();
+};
+
+table ClientIdentity {
+    /// The component URL of the requesting client, as formatted at the time of component creation.
+    ///
+    /// Always set.
+    1: fuchsia.app.ComponentUrl component_url;
+
+    /// If the client is a module created by this agent (using
+    /// fuchsia.app.sessioncontrol.StoryController), identifies the StoryId the agent specified at
+    /// module creation time. Otherwise not set.
+    ///
+    /// See fuchsia.app.sessioncontrol.StoryController.
+    2: fuchsia.app.sessioncontrol.StoryId story_id;
+
+    /// If the client is a module created by this agent (using
+    /// fuchsia.app.sessioncontrol.StoryController), identifies the ModuleId the agent specified at
+    /// module creation time. Otherwise not set.
+    ///
+    /// See fuchsia.app.sessioncontrol.StoryController.
+    3: fuchsia.app.sessioncontrol.ModuleId module_id;
+};

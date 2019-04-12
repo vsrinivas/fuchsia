@@ -1,0 +1,79 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessioncontrol;
+
+using fuchsia.app;
+
+// A client-supplied identifier for a module, unique within a single story
+//
+// TODO(FIDL-582): convert to doc comment once that is supported.
+using ModuleId = string:MODULE_ID_MAX_LENGTH;
+
+/// Maximum length of a module id provided to StoryController.
+const uint32 MODULE_ID_MAX_LENGTH = 1024;
+
+enum Error {
+    /// No modules for a supplied Intent.action or an explicit Intent.handler
+    /// exist and are compatible with the configuration on this device.
+    ERR_NO_MODULE_FOUND = 1;
+
+    /// The given ModuleId does not identify an existing module.
+    ERR_MODULE_ID_NOT_FOUND = 2;
+};
+
+/// Allows agents to alter the model of the story for a specific story. Acquired through
+/// SessionController/ObtainStoryController().
+///
+/// Not all method calls are guaranteed to result in equivalent and observable side-effects due to
+/// the potential for cross-device conflict resolution to alter the committed session model prior
+/// to observation of that model's new state.
+///
+/// Any invalid calls to methods on StoryController result in the StoryController channel closing
+/// with ZX_ERR_INVALID_ARGS.
+protocol StoryController {
+    /// Assigns the module identified by |id| to handle |intent|. Modules within a story are
+    /// a set: calling AddModule() with the same |id| updates the module in place, while calling
+    /// with new |id| results in a brand new module. Callers wishing to add a new module on every
+    /// call should assign a GUID for |id|.
+    ///
+    /// |intent| describes both the module to add, either explicitly through |intent.handler| or
+    /// indirectly through |intent.action|, as well as the module's input model. The latest
+    /// |intent| is always delivered to modules through their fuchsia.app.module.IntentHandler
+    /// service, either during the module's initialization or during its execution, depending on
+    /// the lifecycle state of the module.
+    ///
+    /// At least one of |intent.handler| or |intent.action| are required.  |composition|, if not
+    /// provided, uses the default (|composition.arrangement| is set to SurfaceArrangement.NONE).
+    ///
+    /// Returns Error.ERR_NO_MODULE_FOUND on error.
+    AddModule(ModuleId id, fuchsia.app.Intent intent, ModuleCompositionSettings composition) -> () error Error;
+
+    /// Permanently removes the module identified by |id|. Calling for a module that doesn't exist,
+    /// or was already removed either by this agent or by an agent on another device, is a no-op.
+    ///
+    /// Returns Error.ERR_MODULE_ID_NOT_FOUND on error.
+    RemoveModule(ModuleId id) -> () error Error;
+
+    /// Instructs the story shell to bring this module into focus. Calling for a non-existent
+    /// module is a no-op.
+    ///
+    /// Returns Error.ERR_MODULE_ID_NOT_FOUND on error.
+    FocusModule(ModuleId id) -> () error Error;
+};
+
+/// Describes preferences to the story shell for how a module's UI should be laid out relative to
+/// other modules in the same story.
+//
+// TODO(MF-342): This table to be reviewed along with story shell APIs.
+table ModuleCompositionSettings {
+    // If not specified, uses the story shell's default behavior.
+    // 1: fuchsia.modular.SurfaceRelation relation;
+    1: int32 placeholder;
+
+    /// Specifies the module relative to which the instruction in |relation| applies. |relative_to|
+    /// must identify a module previously added through calls to StoryController/AddModule()
+    /// and not since removed.
+    2: ModuleId relative_to;
+};
