@@ -1,0 +1,118 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This FIDL file mirrors the Camera Driver API Under SDK.
+// The plan is to deprecate the SDK one and move all clients to use this one.
+
+library fuchsia.hardware.camera;
+using fuchsia.sysmem;
+using zx;
+
+const uint32 MAX_FORMATS_PER_RESPONSE = 16;
+
+
+// This set of declarations would be the bitfield: CameraOutputCapabilities.
+const uint32 CAMERA_OUTPUT_UNKNOWN = 0;
+const uint32 CAMERA_OUTPUT_STILL_IMAGE = 0x01;
+const uint32 CAMERA_OUTPUT_BURST = 0x02;
+const uint32 CAMERA_OUTPUT_STREAM = 0x04;
+const uint32 CAMERA_OUTPUT_HDR = 0x08;
+const uint32 CAMERA_OUTPUT_DEPTH = 0x10;
+const uint32 CAMERA_OUTPUT_STEREO = 0x20;
+
+// Identifying information about the device.
+// TODO(braval): Uncomment the strings when zircon supports llcpp bindings
+struct DeviceInfo {
+    // Currently populated by the camera manager
+    uint64 camera_id;
+    uint16 vendor_id;
+    // string vendor_name;
+    uint16 product_id;
+    // string product_name;
+    // string serial_number;
+    /// The maximum number of stream interfaces that the device can support
+    // simultaneously.
+    uint16 max_stream_count;
+    uint32 output_capabilities;
+    // TODO(CAM-12): Add CameraPose, when we can actually use it.
+};
+
+/// Status to be set when a frame is signalled available.
+enum FrameStatus {
+    OK = 1;
+    // An error occurred during the production of a frame.
+    // No data will be available in the data buffer corresponding to this
+    // notification.
+    ERROR_FRAME = 2;
+
+    // No space was available in the data buffer, resulting in a dropped frame.
+    ERROR_BUFFER_FULL = 3;
+};
+
+struct Metadata {
+    int64 timestamp;
+};
+
+// Sent by the driver to the client when a frame is available for processing,
+// or an error occurred.
+struct FrameAvailableEvent {
+    // Non zero if an error occurred.
+    FrameStatus frame_status;
+
+    // The index of the buffer in the buffer collection.
+    uint32 buffer_id;
+
+    Metadata metadata;
+};
+
+struct FrameRate {
+    // The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
+    uint32 frames_per_sec_numerator;
+    uint32 frames_per_sec_denominator;
+};
+
+struct VideoFormat {
+    fuchsia.sysmem.ImageFormat format;
+    FrameRate rate;
+};
+
+[Layout = "Simple"]
+protocol Control {
+    /// Get the available format types for this device
+    /// NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    /// GetFormats need to be issued until total_format_count are received.
+    /// |actual_format_count| is the number of valid formats in this response.
+    /// |total_format_count| is the total number of formats supported by the camera.
+    GetFormats(uint32 index)
+        -> (array<VideoFormat>:MAX_FORMATS_PER_RESPONSE formats, uint32 total_format_count,
+            uint32 actual_format_count, zx.status status);
+
+    // Sent by the client to indicate desired stream characteristics.
+    // If setting the format is successful, the stream request will be honored.
+    // The stream token is used to provide additional control over the interface from the
+    // Camera Manager.  The driver provides the guarantee that:
+    //     1) If the stream token receives the PEER_CLOSED event, the driver will close
+    //        the stream.
+    //     2) If the Stream interface is closed, the driver will close the eventpair.
+    CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
+                 FrameRate rate, request<Stream> stream, handle<eventpair> stream_token);
+
+    GetDeviceInfo() -> (DeviceInfo device_info);
+};
+
+[Layout = "Simple"]
+protocol Stream {
+    // Starts the streaming of frames.
+    Start();
+
+    // Stops the streaming of frames.
+    Stop();
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    ReleaseFrame(uint32 buffer_id);
+
+    // Sent by the driver to the client when a frame is available for processing,
+    // or an error occurred.
+    -> OnFrameAvailable(FrameAvailableEvent frame);
+};

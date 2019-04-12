@@ -7,5 +7,10 @@ import("$zx/public/gn/fidl.gni")
 fidl_library("fuchsia-hardware-camera") {
   sources = [
     "camera.fidl",
+    "camera_intf.fidl",
+  ]
+
+  public_deps = [
+    "$zx/system/fidl/fuchsia-sysmem",
   ]
 }
