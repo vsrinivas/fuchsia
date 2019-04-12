@@ -129,10 +129,8 @@ impl Attrs {
                     }
                 }
                 Rule::attribute_list => {
-                    let attr_string =
-                        inner_pair.as_str().trim_start_matches('[').trim_end_matches(']');
-                    let attr_pairs = attr_string.split(",");
-                    for ap in attr_pairs {
+                    for attrib in inner_pair.into_inner() {
+                        let ap = attrib.as_str();
                         if !ap.contains("=") {
                             attrs.0.push(Attr { key: String::from(ap.trim()), val: None });
                         } else {

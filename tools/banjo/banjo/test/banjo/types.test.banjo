@@ -13,6 +13,7 @@ union this_is_a_union {
 };
 
 protocol this_is_an_interface {
+    [SomeAttrib, AnotherAttrib="Value containing, a comma"]
     Copy(string s, uint32 count) -> (string s);
 };
 

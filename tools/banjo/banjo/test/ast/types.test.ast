@@ -68,7 +68,18 @@ BanjoAst {
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [
+                                Attr {
+                                    key: "SomeAttrib",
+                                    val: None
+                                },
+                                Attr {
+                                    key: "AnotherAttrib",
+                                    val: Some(
+                                        "Value containing, a comma"
+                                    )
+                                }
+                            ]
                         ),
                         name: "Copy",
                         in_params: [
