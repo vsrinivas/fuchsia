@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
@@ -120,9 +121,8 @@ zx_status_t Mt8167::UsbInit() {
     constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
                                      ? alignof(UsbConfig)
                                      : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-    fbl::AllocChecker ac;
     UsbConfig* config = reinterpret_cast<UsbConfig*>(
-        aligned_alloc(alignment, sizeof(UsbConfig) + sizeof(FunctionDescriptor)));
+        aligned_alloc(alignment, ROUNDUP(sizeof(UsbConfig) + sizeof(FunctionDescriptor), alignment)));
     if (!config) {
         return ZX_ERR_NO_MEMORY;
     }

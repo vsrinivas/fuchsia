@@ -19,6 +19,10 @@
 
 #if !_KERNEL
 
+static inline size_t round_up_to_alignment(size_t s, std::align_val_t align) {
+    return (s + static_cast<size_t>(align) - 1) & ~(static_cast<size_t>(align) - 1);
+}
+
 // The kernel does not want non-AllocCheckered non-placement new
 // overloads, but userspace can have them.
 void* operator new(size_t s) {
@@ -35,6 +39,7 @@ void* operator new(size_t s, std::align_val_t align) {
     if (s == 0u) {
         s = 1u;
     }
+    s = round_up_to_alignment(s, align);
     auto mem = aligned_alloc(static_cast<size_t>(align), s);
     if (!mem) {
         ZX_PANIC("Out of memory (new)\n");
@@ -55,6 +60,7 @@ void* operator new[](size_t s, std::align_val_t align) {
     if (s == 0u) {
         s = 1u;
     }
+    s = round_up_to_alignment(s, align);
     auto mem = aligned_alloc(static_cast<size_t>(align), s);
     if (!mem) {
         ZX_PANIC("Out of memory (new[])\n");
@@ -71,6 +77,7 @@ void* operator new(size_t s, std::align_val_t align, const std::nothrow_t&) noex
     if (s == 0u) {
         s = 1u;
     }
+    s = round_up_to_alignment(s, align);
     return aligned_alloc(static_cast<size_t>(align), s);
 }
 void* operator new[](size_t s, const std::nothrow_t&) noexcept {
@@ -83,6 +90,7 @@ void* operator new[](size_t s, std::align_val_t align, const std::nothrow_t&) no
     if (s == 0u) {
         s = 1u;
     }
+    s = round_up_to_alignment(s, align);
     return aligned_alloc(static_cast<size_t>(align), s);
 }
 #else  // _KERNEL
