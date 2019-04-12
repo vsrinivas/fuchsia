@@ -25,9 +25,9 @@ zx_status_t SparsePaver::AddPartition(const SparsePartitionInfo* partition,
     info_.CheckValid();
 
     // Assign random guid.
-    uint8_t guid[FVM_GUID_LEN];
+    uint8_t guid[fvm::kGuidSize];
     static unsigned int seed = static_cast<unsigned int>(time(0));
-    for (size_t i = 0; i < FVM_GUID_LEN; i++) {
+    for (size_t i = 0; i < fvm::kGuidSize; i++) {
         guid[i] = static_cast<uint8_t>(rand_r(&seed));
     }
 

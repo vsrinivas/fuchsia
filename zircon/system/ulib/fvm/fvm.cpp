@@ -55,8 +55,8 @@ bool generation_ge(uint64_t g1, uint64_t g2) {
 // Validate the metadata's hash value.
 // Returns 'true' if it matches, 'false' otherwise.
 bool fvm_check_hash(const void* metadata, size_t metadata_size) {
-    ZX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::fvm_t));
-    const fvm::fvm_t* header = static_cast<const fvm::fvm_t*>(metadata);
+    ZX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::Header));
+    const fvm::Header* header = static_cast<const fvm::Header*>(metadata);
     const void* metadata_after_hash =
         reinterpret_cast<const void*>(header->hash + sizeof(header->hash));
     uint8_t empty_hash[sizeof(header->hash)];
@@ -64,10 +64,10 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 
     digest::Digest digest;
     digest.Init();
-    digest.Update(metadata, offsetof(fvm::fvm_t, hash));
+    digest.Update(metadata, offsetof(fvm::Header, hash));
     digest.Update(empty_hash, sizeof(empty_hash));
     digest.Update(metadata_after_hash,
-                  metadata_size - (offsetof(fvm::fvm_t, hash) + sizeof(header->hash)));
+                  metadata_size - (offsetof(fvm::Header, hash) + sizeof(header->hash)));
     digest.Final();
     return digest == header->hash;
 }
@@ -76,7 +76,7 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 
 #ifdef __cplusplus
 
-fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const fvm_t& superblock) {
+fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const Header& superblock) {
     fvm::FormatInfo summary;
     summary.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
     summary.metadata_size_ =
@@ -102,32 +102,10 @@ fvm::FormatInfo fvm::FormatInfo::FromDiskSize(size_t disk_size, size_t slice_siz
     return FromPreallocatedSize(disk_size, disk_size, slice_size);
 }
 
-uint64_t fvm::slice_entry::Vpart() const {
-    uint64_t result = data & VPART_MASK;
-    ZX_DEBUG_ASSERT(result < VPART_MAX);
-    return result;
-}
-
-void fvm::slice_entry::SetVpart(uint64_t vpart) {
-    ZX_DEBUG_ASSERT(vpart < VPART_MAX);
-    data = (data & ~VPART_MASK) | (vpart & VPART_MASK);
-}
-
-uint64_t fvm::slice_entry::Vslice() const {
-    uint64_t result = (data & VSLICE_MASK) >> VPART_BITS;
-    ZX_DEBUG_ASSERT(result < VSLICE_MAX);
-    return result;
-}
-
-void fvm::slice_entry::SetVslice(uint64_t vslice) {
-    ZX_DEBUG_ASSERT(vslice < VSLICE_MAX);
-    data = (data & ~VSLICE_MASK) | ((vslice & VSLICE_MAX) << VPART_BITS);
-}
-
 #endif // __cplusplus
 
 void fvm_update_hash(void* metadata, size_t metadata_size) {
-    fvm::fvm_t* header = static_cast<fvm::fvm_t*>(metadata);
+    fvm::Header* header = static_cast<fvm::Header*>(metadata);
     memset(header->hash, 0, sizeof(header->hash));
     digest::Digest digest;
     const uint8_t* hash = digest.Hash(metadata, metadata_size);
@@ -136,8 +114,8 @@ void fvm_update_hash(void* metadata, size_t metadata_size) {
 
 zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t metadata_size,
                                 const void** out) {
-    const fvm::fvm_t* primary_header = static_cast<const fvm::fvm_t*>(metadata);
-    const fvm::fvm_t* backup_header = static_cast<const fvm::fvm_t*>(backup);
+    const fvm::Header* primary_header = static_cast<const fvm::Header*>(metadata);
+    const fvm::Header* backup_header = static_cast<const fvm::Header*>(backup);
 
     bool primary_valid = fvm_check_hash(metadata, metadata_size);
     bool backup_valid = fvm_check_hash(backup, metadata_size);
@@ -155,12 +133,12 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
         use_primary = generation_ge(primary_header->generation, backup_header->generation);
     }
 
-    const fvm::fvm_t* header = use_primary ? primary_header : backup_header;
-    if (header->magic != FVM_MAGIC) {
+    const fvm::Header* header = use_primary ? primary_header : backup_header;
+    if (header->magic != fvm::kMagic) {
         fprintf(stderr, "fvm: Bad magic\n");
         return ZX_ERR_BAD_STATE;
     }
-    if (header->version > FVM_VERSION) {
+    if (header->version > fvm::kVersion) {
         fprintf(stderr, "fvm: Header Version does not match fvm driver\n");
         return ZX_ERR_BAD_STATE;
     }

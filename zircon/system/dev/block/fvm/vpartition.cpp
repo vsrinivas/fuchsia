@@ -337,7 +337,7 @@ void VPartition::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_ou
     *block_op_size_out = mgr_->BlockOpSize();
 }
 
-static_assert(FVM_GUID_LEN == GUID_LENGTH, "Invalid GUID length");
+static_assert(fvm::kGuidSize == GUID_LENGTH, "Invalid GUID length");
 
 zx_status_t VPartition::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
     fbl::AutoLock lock(&lock_);
@@ -347,28 +347,28 @@ zx_status_t VPartition::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_
 
     switch (guid_type) {
     case GUIDTYPE_TYPE:
-        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->type, FVM_GUID_LEN);
+        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->type, fvm::kGuidSize);
         return ZX_OK;
     case GUIDTYPE_INSTANCE:
-        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->guid, FVM_GUID_LEN);
+        memcpy(out_guid, mgr_->GetAllocatedVPartEntry(entry_index_)->guid, fvm::kGuidSize);
         return ZX_OK;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
 }
 
-static_assert(FVM_NAME_LEN < MAX_PARTITION_NAME_LENGTH, "Name Length mismatch");
+static_assert(fvm::kMaxVPartitionNameLength < MAX_PARTITION_NAME_LENGTH, "Name Length mismatch");
 
 zx_status_t VPartition::BlockPartitionGetName(char* out_name, size_t capacity) {
-    if (capacity < FVM_NAME_LEN + 1) {
+    if (capacity < fvm::kMaxVPartitionNameLength + 1) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
     fbl::AutoLock lock(&lock_);
     if (IsKilledLocked()) {
         return ZX_ERR_BAD_STATE;
     }
-    memcpy(out_name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, FVM_NAME_LEN);
-    out_name[FVM_NAME_LEN] = 0;
+    memcpy(out_name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, fvm::kMaxVPartitionNameLength);
+    out_name[fvm::kMaxVPartitionNameLength] = 0;
     return ZX_OK;
 }
 

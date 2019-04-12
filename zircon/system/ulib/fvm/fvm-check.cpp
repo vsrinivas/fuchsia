@@ -62,8 +62,8 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     }
     const size_t block_count = device_size / block_size_;
 
-    fbl::unique_ptr<uint8_t[]> header(new uint8_t[FVM_BLOCK_SIZE]);
-    if (pread(fd_.get(), header.get(), FVM_BLOCK_SIZE, 0) != static_cast<ssize_t>(FVM_BLOCK_SIZE)) {
+    fbl::unique_ptr<uint8_t[]> header(new uint8_t[fvm::kBlockSize]);
+    if (pread(fd_.get(), header.get(), fvm::kBlockSize, 0) != static_cast<ssize_t>(fvm::kBlockSize)) {
         logger_.Error("Could not read header\n");
         return false;
     }
@@ -118,12 +118,12 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
                              const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
                              fbl::Array<Partition>* out_partitions) const {
     fbl::Vector<Slice> slices;
-    fbl::Array<Partition> partitions(new Partition[FVM_MAX_ENTRIES], FVM_MAX_ENTRIES);
+    fbl::Array<Partition> partitions(new Partition[fvm::kMaxVPartitions], fvm::kMaxVPartitions);
 
     bool valid = true;
 
     // Initialize all allocated partitions.
-    for (size_t i = 1; i < FVM_MAX_ENTRIES; i++) {
+    for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
         const uint32_t slices = vpart_table[i].slices;
         if (slices != 0) {
             partitions[i].entry = &vpart_table[i];
@@ -132,18 +132,18 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
 
     // Initialize all slices, ensure they are used for allocated partitions.
     for (size_t i = 1; i <= slice_count; i++) {
-        if (slice_table[i].Vpart() != FVM_SLICE_ENTRY_FREE) {
-            const uint64_t vpart = slice_table[i].Vpart();
-            if (vpart >= FVM_MAX_ENTRIES) {
+        if (slice_table[i].IsAllocated()) {
+            const uint64_t vpart = slice_table[i].VPartition();
+            if (vpart >= kMaxVPartitions) {
                 logger_.Error("Invalid vslice entry; claims vpart which is out of range.\n");
                 valid = false;
-            } else if (!partitions[vpart].Allocated()) {
-                logger_.Error("Invalid slice entry; claims that it is allocated to invalid ");
+            } else if (!partitions[vpart].entry || partitions[vpart].entry->IsFree()) {
+                logger_.Error("Invalid slice entry; claims that it is allocated to unallocated ");
                 logger_.Error("partition %zu\n", vpart);
                 valid = false;
             }
 
-            Slice slice = {vpart, slice_table[i].Vslice(), i};
+            Slice slice = {vpart, slice_table[i].VSlice(), i};
 
             slices.push_back(slice);
             partitions[vpart].slices.push_back(std::move(slice));
@@ -151,7 +151,7 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
     }
 
     // Validate that all allocated partitions are correct about the number of slices used.
-    for (size_t i = 1; i < FVM_MAX_ENTRIES; i++) {
+    for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
         if (partitions[i].Allocated()) {
             const size_t claimed = partitions[i].entry->slices;
             const size_t actual = partitions[i].slices.size();
@@ -286,7 +286,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
     }
 
     logger_.Log("[  Partition Info  ]\n");
-    for (size_t i = 1; i < FVM_MAX_ENTRIES; i++) {
+    for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
         const uint32_t slices = vpart_table[i].slices;
         if (slices != 0) {
             char guid_string[GPT_GUID_STRLEN];
@@ -294,7 +294,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
             logger_.Log("Partition %zu allocated\n", i);
             logger_.Log("  Has %u slices allocated\n", slices);
             logger_.Log("  Type: %s\n", gpt_guid_to_type(guid_string));
-            logger_.Log("  Name: %.*s\n", FVM_NAME_LEN, vpart_table[i].name);
+            logger_.Log("  Name: %.*s\n", fvm::kMaxVPartitionNameLength, vpart_table[i].name);
         }
     }
     logger_.Log("\n");

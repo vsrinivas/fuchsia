@@ -128,29 +128,28 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-    PartitionInfo()
-        : pd(nullptr) {}
+    PartitionInfo() : pd(nullptr) {}
 
     fvm::partition_descriptor_t* pd;
     fbl::unique_fd new_part;
 };
 
 inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size_t extent) {
-    return reinterpret_cast<fvm::extent_descriptor_t*>(
-        reinterpret_cast<uintptr_t>(pd) + sizeof(fvm::partition_descriptor_t) +
-        extent * sizeof(fvm::extent_descriptor_t));
+    return reinterpret_cast<fvm::extent_descriptor_t*>(reinterpret_cast<uintptr_t>(pd) +
+                                                       sizeof(fvm::partition_descriptor_t) +
+                                                       extent * sizeof(fvm::extent_descriptor_t));
 }
 
 // Registers a FIFO
-zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
-                                vmoid_t* out_vmoid, block_client::Client* out_client) {
+zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
+                                block_client::Client* out_client) {
     fzl::UnownedFdioCaller disk_connection(fd.get());
     zx::unowned_channel channel(disk_connection.borrow_channel());
 
     zx::fifo fifo;
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
-                                                                fifo.reset_and_get_address());
+    zx_status_t io_status =
+        fuchsia_hardware_block_BlockGetFifo(channel->get(), &status, fifo.reset_and_get_address());
     if (io_status != ZX_OK)
         return io_status;
     if (status != ZX_OK)
@@ -163,8 +162,8 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
     }
 
     fuchsia_hardware_block_VmoID vmoid;
-    io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status,
-                                                      &vmoid);
+    io_status =
+        fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status, &vmoid);
     if (io_status != ZX_OK)
         return io_status;
     if (status != ZX_OK)
@@ -190,9 +189,9 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
         while (bytes_left > 0) {
             size_t vmo_sz = 0;
             size_t actual;
-            zx_status_t status = reader->ReadData(
-                &reinterpret_cast<uint8_t*>(mapper.start())[vmo_sz],
-                fbl::min(bytes_left, vmo_cap - vmo_sz), &actual);
+            zx_status_t status =
+                reader->ReadData(&reinterpret_cast<uint8_t*>(mapper.start())[vmo_sz],
+                                 fbl::min(bytes_left, vmo_cap - vmo_sz), &actual);
             vmo_sz += actual;
             bytes_left -= actual;
 
@@ -291,8 +290,8 @@ zx_status_t StreamPayloadToVmo(fzl::ResizeableVmoMapper& mapper, const fbl::uniq
 }
 
 // Writes a raw (non-FVM) partition to a block device from a VMO.
-zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size,
-                            const fbl::unique_fd& partition_fd, uint32_t block_size_bytes) {
+zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size, const fbl::unique_fd& partition_fd,
+                            uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
     vmoid_t vmoid;
@@ -325,8 +324,8 @@ zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size,
 }
 
 // Writes a raw (non-FVM) partition to a skip-block device from a VMO.
-zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
-                                const fzl::FdioCaller& caller, uint32_t block_size_bytes) {
+zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size, const fzl::FdioCaller& caller,
+                                uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
     zx::vmo dup;
@@ -357,12 +356,11 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
 // Also validates architecture in kernel header matches the target.
 bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
     const auto payload = reinterpret_cast<const zircon_kernel_t*>(buffer);
-    const uint32_t expected_kernel = (arch == Arch::X64) ? ZBI_TYPE_KERNEL_X64
-                                                         : ZBI_TYPE_KERNEL_ARM64;
+    const uint32_t expected_kernel =
+        (arch == Arch::X64) ? ZBI_TYPE_KERNEL_X64 : ZBI_TYPE_KERNEL_ARM64;
 
     const auto crc_valid = [](const zbi_header_t* hdr) {
-        const uint32_t crc = crc32(0, reinterpret_cast<const uint8_t*>(hdr + 1),
-                                   hdr->length);
+        const uint32_t crc = crc32(0, reinterpret_cast<const uint8_t*>(hdr + 1), hdr->length);
         return hdr->crc32 == crc;
     };
 
@@ -413,8 +411,7 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 }
 
 // Attempt to bind an FVM driver to a partition fd.
-fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd,
-                                  zx::duration timeout) {
+fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::duration timeout) {
     char path[PATH_MAX];
     zx_status_t status = GetTopoPathFromFd(partition_fd, path, sizeof(path));
     if (status != ZX_OK) {
@@ -533,12 +530,14 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
 
     fbl::unique_ptr<zxcrypt::FdioVolume> volume;
-    if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(part->new_part), &volume)) != ZX_OK) {
+    if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(part->new_part), &volume)) !=
+        ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;
     }
     zx::channel zxcrypt_manager_chan;
-    if ((status = volume->OpenManager(zx::sec(3), zxcrypt_manager_chan.reset_and_get_address())) != ZX_OK) {
+    if ((status = volume->OpenManager(zx::sec(3), zxcrypt_manager_chan.reset_and_get_address())) !=
+        ZX_OK) {
         ERROR("Could not open zxcrypt volume manager\n");
         return status;
     }
@@ -572,8 +571,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     {
         fzl::UnownedFdioCaller partition_connection(part->new_part.get());
         zx::unowned_channel partition(partition_connection.borrow_channel());
-        zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(partition->get(),
-                                                                           offset, length, &status);
+        zx_status_t io_status =
+            fuchsia_hardware_block_volume_VolumeExtend(partition->get(), offset, length, &status);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -725,8 +724,8 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 
             requested_slices += ext->slice_count;
         }
-        part = reinterpret_cast<fvm::partition_descriptor*>(
-            reinterpret_cast<uintptr_t>(ext) + sizeof(fvm::extent_descriptor_t));
+        part = reinterpret_cast<fvm::partition_descriptor*>(reinterpret_cast<uintptr_t>(ext) +
+                                                            sizeof(fvm::extent_descriptor_t));
     }
 
     *out_requested_slices = requested_slices;
@@ -744,7 +743,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
         alloc_req_t alloc;
         // Allocate this partition as inactive so it gets deleted on the next
         // reboot if this stream fails.
-        alloc.flags = fvm::kVPartFlagInactive;
+        alloc.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
         alloc.slice_count = ext->slice_count;
         memcpy(&alloc.type, parts[p].pd->type, sizeof(alloc.type));
         zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
@@ -775,9 +774,8 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
             fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
             zx::unowned_channel partition(partition_connection.borrow_channel());
             zx_status_t status;
-            zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(partition->get(),
-                                                                               offset, length,
-                                                                               &status);
+            zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(
+                partition->get(), offset, length, &status);
             if (io_status != ZX_OK) {
                 status = io_status;
             }
@@ -814,15 +812,14 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     fvm::sparse_image_t* hdr = reader->Image();
     // Acquire an fd to the FVM, either by finding one that already
     // exists, or formatting a new one.
-    fbl::unique_fd fvm_fd(FvmPartitionFormat(std::move(partition_fd2), hdr->slice_size,
-                                             BindOption::TryBind));
+    fbl::unique_fd fvm_fd(
+        FvmPartitionFormat(std::move(partition_fd2), hdr->slice_size, BindOption::TryBind));
     if (!fvm_fd) {
         ERROR("Couldn't find FVM partition\n");
         return ZX_ERR_IO;
     }
 
-    fbl::Array<PartitionInfo> parts(new PartitionInfo[hdr->partition_count],
-                                    hdr->partition_count);
+    fbl::Array<PartitionInfo> parts(new PartitionInfo[hdr->partition_count], hdr->partition_count);
 
     // Parse the incoming image and calculate its size.
     //
@@ -844,16 +841,14 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     if (info.pslice_total_count < requested_slices) {
         char buf[256];
         snprintf(buf, sizeof(buf), "Image size (%zu) > Storage size (%zu)",
-                 requested_slices * hdr->slice_size,
-                 info.pslice_total_count * hdr->slice_size);
+                 requested_slices * hdr->slice_size, info.pslice_total_count * hdr->slice_size);
         Warn(buf, "Image is too large to be paved to device");
         return ZX_ERR_NO_SPACE;
     }
     if (free_slices < requested_slices) {
         Warn("Not enough space to non-destructively pave",
              "Automatically reinitializing FVM; Expect data loss");
-        fvm_fd = FvmPartitionFormat(std::move(partition_fd), hdr->slice_size,
-                                    BindOption::Reformat);
+        fvm_fd = FvmPartitionFormat(std::move(partition_fd), hdr->slice_size, BindOption::Reformat);
         if (!fvm_fd) {
             ERROR("Couldn't reformat FVM partition.\n");
             return ZX_ERR_IO;
@@ -875,8 +870,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
     fzl::VmoMapper mapping;
     zx::vmo vmo;
-    if ((status = mapping.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                       nullptr, &vmo)) != ZX_OK) {
+    if ((status = mapping.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                       &vmo)) != ZX_OK) {
         ERROR("Failed to create stream VMO\n");
         return ZX_ERR_NO_MEMORY;
     }
@@ -896,8 +891,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
         zx::unowned_channel partition(partition_connection.borrow_channel());
         fuchsia_hardware_block_BlockInfo block_info;
-        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(partition->get(),
-                                                                    &status, &block_info);
+        zx_status_t io_status =
+            fuchsia_hardware_block_BlockGetInfo(partition->get(), &status, &block_info);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -914,8 +909,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         request.opcode = BLOCKIO_WRITE;
 
         LOG("Streaming partition %zu\n", p);
-        status = StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size,
-                                    &request);
+        status = StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size, &request);
         LOG("Done streaming partition %zu\n", p);
         if (status != ZX_OK) {
             ERROR("Failed to stream partition\n");
@@ -934,9 +928,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         // Upgrade the old partition (currently active) to the new partition (currently
         // inactive) so the new partition persists.
         fuchsia_hardware_block_partition_GUID guid;
-        zx_status_t io_status =
-            fuchsia_hardware_block_partition_PartitionGetInstanceGuid(partition->get(), &status,
-                                                                      &guid);
+        zx_status_t io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(
+            partition->get(), &status, &guid);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to get unique GUID of new partition\n");
             return ZX_ERR_BAD_STATE;
@@ -955,8 +948,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 }
 
 // Paves an image onto the disk.
-zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
-                          fbl::unique_fd payload_fd, Partition partition_type, Arch arch) {
+zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::unique_fd payload_fd,
+                          Partition partition_type, Arch arch) {
     LOG("Paving partition.\n");
 
     zx_status_t status;
@@ -989,7 +982,8 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
             }
         }
         LOG("Streaming partitions...\n");
-        if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload_fd))) != ZX_OK) {
+        if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload_fd))) !=
+            ZX_OK) {
             ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
             return status;
         }
@@ -1011,8 +1005,8 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
     // The streamed partition size may not line up with the mapped vmo size.
     size_t payload_size = 0;
-    if ((status = StreamPayloadToVmo(mapper, payload_fd, block_size_bytes,
-                                     &payload_size)) != ZX_OK) {
+    if ((status = StreamPayloadToVmo(mapper, payload_fd, block_size_bytes, &payload_size)) !=
+        ZX_OK) {
         ERROR("Failed to stream partition to VMO\n");
         return status;
     }
@@ -1051,8 +1045,8 @@ void Drain(fbl::unique_fd fd) {
 }
 
 // Paves |fd| to a target |data_path| within the /data partition.
-zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
-                         fbl::unique_fd payload_fd, char* data_path) {
+zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::unique_fd payload_fd,
+                         char* data_path) {
 
     const char* mount_path = "/volume/data";
     const uint8_t data_guid[] = GUID_DATA_VALUE;
@@ -1082,12 +1076,11 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     case DISK_FORMAT_ZXCRYPT: {
         fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
         uint8_t slot = 0;
-        if ((status =
-             zxcrypt::FdioVolume::UnlockWithDeviceKey(std::move(part_fd),
-                                                      static_cast<zxcrypt::key_slot_t>(slot),
-                                                      &zxc_volume)) != ZX_OK) {
-          ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
-          return status;
+        if ((status = zxcrypt::FdioVolume::UnlockWithDeviceKey(
+                 std::move(part_fd), static_cast<zxcrypt::key_slot_t>(slot), &zxc_volume)) !=
+            ZX_OK) {
+            ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
         }
 
         // Most of the time we'll expect the volume to actually already be
@@ -1100,9 +1093,8 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
 
         // Ensure zxcrypt volume manager is bound.
         zx::channel zxc_manager_chan;
-        if ((status =
-                 zxc_volume->OpenManager(zx::sec(5),
-                                         zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
+        if ((status = zxc_volume->OpenManager(zx::sec(5),
+                                              zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
             ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
             return status;
         }
@@ -1110,13 +1102,14 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         // Unseal.
         zxcrypt::FdioVolumeManager zxc_manager(std::move(zxc_manager_chan));
         if ((status = zxc_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
-          ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
-          return status;
+            ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
         }
 
         // Wait for the device to appear, and open it.
         if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
-            ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n", zx_status_get_string(status));
+            ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n",
+                  zx_status_get_string(status));
             return status;
         }
     } break;
@@ -1128,8 +1121,8 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
 
     mount_options_t opts(default_mount_options);
     opts.create_mountpoint = true;
-    if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS,
-                        &opts, launch_logs_async)) != ZX_OK) {
+    if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts,
+                        launch_logs_async)) != ZX_OK) {
         ERROR("mount error: %s\n", zx_status_get_string(status));
         Drain(std::move(payload_fd));
         return status;
@@ -1176,8 +1169,7 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
 
     if ((status = umount(mount_path)) != ZX_OK) {
-        ERROR("unmount %s failed: %s\n", mount_path,
-              zx_status_get_string(status));
+        ERROR("unmount %s failed: %s\n", mount_path, zx_status_get_string(status));
         return status;
     }
 

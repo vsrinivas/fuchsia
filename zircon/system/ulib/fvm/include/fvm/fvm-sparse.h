@@ -65,8 +65,8 @@ constexpr uint64_t kPartitionDescriptorMagic = (0x0bde4df7cf5c4c5dull);
 
 typedef struct partition_descriptor {
     uint64_t magic;
-    uint8_t type[FVM_GUID_LEN];
-    uint8_t name[FVM_NAME_LEN];
+    uint8_t type[fvm::kGuidSize];
+    uint8_t name[fvm::kMaxVPartitionNameLength];
     uint32_t flags;
     uint32_t extent_count;
 } __attribute__((packed)) partition_descriptor_t;

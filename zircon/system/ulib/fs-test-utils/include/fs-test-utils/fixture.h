@@ -35,7 +35,7 @@ namespace fs_test_utils {
 
 constexpr size_t kPathSize = PATH_MAX;
 
-constexpr size_t kFvmBlockSize = FVM_BLOCK_SIZE;
+constexpr size_t kFvmBlockSize = fvm::kBlockSize;
 
 // TODO(gevalentno): when ZX-2013 is resolved, make MemFs setup and teardown
 // part of the test fixture and remove RunWithMemFs.

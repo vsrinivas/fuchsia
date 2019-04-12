@@ -29,8 +29,8 @@ fvm_t MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_tabl
     superblock.vpartition_table_size = part_table_size;
     superblock.allocation_table_size = alloc_table_size;
     superblock.slice_size = kFvmSlizeSize;
-    superblock.version = FVM_VERSION;
-    superblock.magic = FVM_MAGIC;
+    superblock.version = fvm::kMagic;
+    superblock.magic = fvm::kVersion;
     superblock.generation = 1;
     fvm_update_hash(&superblock, sizeof(fvm_t));
     return superblock;
@@ -38,8 +38,8 @@ fvm_t MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_tabl
 
 size_t CalculateSliceStart(size_t part_size, size_t part_table_size, size_t allocation_table_size) {
     // Round Up to the next block.
-    return 2 *
-           fbl::round_up(FVM_BLOCK_SIZE + part_table_size + allocation_table_size, FVM_BLOCK_SIZE);
+    return 2 * fbl::round_up(fvm::kBlockSize + part_table_size + allocation_table_size,
+                             fvm::kBlockSize);
 }
 
 TEST(FvmInfoTest, FromSuperblockNoGaps) {

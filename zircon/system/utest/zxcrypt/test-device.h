@@ -43,7 +43,7 @@ namespace testing {
 const uint32_t kBlockCount = 64;
 const uint32_t kBlockSize = 512;
 const size_t kDeviceSize = kBlockCount * kBlockSize;
-const uint32_t kSliceCount = kDeviceSize / FVM_BLOCK_SIZE;
+const uint32_t kSliceCount = kDeviceSize / fvm::kBlockSize;
 
 // |zxcrypt::testing::Utils| is a collection of functions designed to make the zxcrypt
 // unit test setup and tear down easier.
@@ -141,7 +141,7 @@ public:
 
     // Allocates a new block device of at least |device_size| bytes grouped into blocks of
     // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
-    // appropriates number of slices of |FVM_BLOCK_SIZE| each.  A file descriptor for the block
+    // appropriates number of slices of |fvm::kBlockSize| each.  A file descriptor for the block
     // device is returned via |out_fd|.
     bool Create(size_t device_size, size_t block_size, bool fvm);
 
@@ -185,7 +185,7 @@ private:
 
     // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
     // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
-    // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
+    // device, and allocates a partition with a single slice of size fvm::kBlockSize.
     bool CreateFvmPart(size_t device_size, size_t block_size);
 
     // Connects the block client to the block server.

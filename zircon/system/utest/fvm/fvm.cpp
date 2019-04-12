@@ -701,7 +701,7 @@ bool TestAllocateOne() {
     ASSERT_TRUE(vp_fd);
 
     // Check that the name matches what we provided
-    char name[FVM_NAME_LEN + 1];
+    char name[fvm::kMaxVPartitionNameLength + 1];
     fzl::UnownedFdioCaller partition_connection(vp_fd.get());
 
     zx_status_t status;
@@ -1103,8 +1103,8 @@ bool TestVPartitionExtendSparse() {
     // Double check that we can access a block at this vslice address
     // (this isn't always possible; for certain slice sizes, blocks may be
     // allocatable / freeable, but not addressable).
-    size_t bno = (VSLICE_MAX - 1) * (slice_size / blk_size);
-    ASSERT_EQ(bno / (slice_size / blk_size), (VSLICE_MAX - 1), "bno overflowed");
+    size_t bno = (fvm::kMaxVSlices - 1) * (slice_size / blk_size);
+    ASSERT_EQ(bno / (slice_size / blk_size), (fvm::kMaxVSlices - 1), "bno overflowed");
     ASSERT_EQ((bno * blk_size) / blk_size, bno, "block access will overflow");
 
     fzl::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -1112,28 +1112,28 @@ bool TestVPartitionExtendSparse() {
     zx_status_t status;
 
     // Try allocating at a location that's slightly too large
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), VSLICE_MAX, 1,
-                                                         &status),
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), fvm::kMaxVSlices,
+                                                         1, &status),
               ZX_OK);
     ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // Try allocating at the largest offset
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), VSLICE_MAX - 1,
-                                                         1, &status),
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(),
+                                                         fvm::kMaxVSlices - 1, 1, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), bno, 1));
 
     // Try freeing beyond largest offset
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), VSLICE_MAX, 1,
-                                                         &status),
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), fvm::kMaxVSlices,
+                                                         1, &status),
               ZX_OK);
     ASSERT_NE(status, ZX_OK, "Expected request failure");
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), bno, 1));
 
     // Try freeing at the largest offset
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), VSLICE_MAX - 1,
-                                                         1, &status),
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(),
+                                                         fvm::kMaxVSlices - 1, 1, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), bno, 1));
@@ -2080,7 +2080,7 @@ bool TestPersistenceSimple() {
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
     // Check that the name matches what we provided
-    char name[FVM_NAME_LEN + 1];
+    char name[fvm::kMaxVPartitionNameLength + 1];
     zx_status_t status;
     size_t actual;
     ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetName(partition_channel->get(), &status,
@@ -2401,7 +2401,7 @@ bool TestVPartitionUpgrade() {
     // Allocate two VParts, one active, and one inactive.
     alloc_req_t request;
     memset(&request, 0, sizeof(request));
-    request.flags = fvm::kVPartFlagInactive;
+    request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -2430,7 +2430,7 @@ bool TestVPartitionUpgrade() {
     ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
 
     // Try to upgrade the partition (from GUID2 --> GUID)
-    request.flags = fvm::kVPartFlagInactive;
+    request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     fbl::unique_fd new_fd(fvm_allocate_partition(volume_manager.fd().get(), &request));
@@ -2468,7 +2468,7 @@ bool TestVPartitionUpgrade() {
     ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
 
     // Try upgrading when the "old" version doesn't exist.
-    request.flags = fvm::kVPartFlagInactive;
+    request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
     memcpy(request.guid, kTestUniqueGUID2, GUID_LEN);
     strcpy(request.name, kTestPartName2);
     new_fd.reset(fvm_allocate_partition(volume_manager.fd().get(), &request));
@@ -2501,7 +2501,7 @@ bool TestVPartitionUpgrade() {
         ZX_OK);
     ASSERT_EQ(status, ZX_OK);
     partition_caller.reset();
-    request.flags = fvm::kVPartFlagInactive;
+    request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
     new_fd.reset(fvm_allocate_partition(volume_manager.fd().get(), &request));
@@ -2724,7 +2724,7 @@ bool TestCorruptionOk() {
     // Corrupt the (backup) metadata and rebind.
     // The 'primary' was the last one written, so it'll be used.
     off_t off = fvm::BackupStart(kDiskSize, slice_size);
-    uint8_t buf[FVM_BLOCK_SIZE];
+    uint8_t buf[fvm::kBlockSize];
     ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
     ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
     // Modify an arbitrary byte (not the magic bits; we still want it to mount!)
@@ -2807,7 +2807,7 @@ bool TestCorruptionRegression() {
     // Corrupt the (primary) metadata and rebind.
     // The 'primary' was the last one written, so the backup will be used.
     off_t off = 0;
-    uint8_t buf[FVM_BLOCK_SIZE];
+    uint8_t buf[fvm::kBlockSize];
     ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
     ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
     buf[128]++;
@@ -2888,7 +2888,7 @@ bool TestCorruptionUnrecoverable() {
     // Corrupt both copies of the metadata.
     // The 'primary' was the last one written, so the backup will be used.
     off_t off = 0;
-    uint8_t buf[FVM_BLOCK_SIZE];
+    uint8_t buf[fvm::kBlockSize];
     ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
     ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
     buf[128]++;

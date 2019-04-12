@@ -78,7 +78,7 @@ public:
     size_t SliceSize() const { return format_info_.slice_size(); }
     // format_info_ is calculated on Load and never updated again.
     const FormatInfo& format_info() const { return format_info_; }
-    size_t VSliceMax() const { return VSLICE_MAX; }
+    uint64_t VSliceMax() const { return fvm::kMaxVSlices; }
     const block_info_t& Info() const { return info_; }
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

@@ -139,7 +139,7 @@ public:
 
     void GetPartitionInfo(fvm::partition_descriptor_t* partition) const {
         memcpy(partition->type, type_, sizeof(type_));
-        strncpy(reinterpret_cast<char*>(partition->name), Name(), FVM_NAME_LEN);
+        strncpy(reinterpret_cast<char*>(partition->name), Name(), fvm::kMaxVPartitionNameLength);
         partition->flags = flags_;
     }
 
@@ -159,7 +159,7 @@ public:
 protected:
     bool fvm_ready_;
     uint32_t vpart_index_;
-    uint8_t guid_[FVM_GUID_LEN];
+    uint8_t guid_[fvm::kGuidSize];
     uint8_t type_[GPT_GUID_LEN];
     uint32_t flags_;
 
@@ -174,7 +174,7 @@ protected:
 
     void GenerateGuid() {
         srand(static_cast<unsigned int>(time(0)));
-        for (unsigned i = 0; i < FVM_GUID_LEN; i++) {
+        for (unsigned i = 0; i < fvm::kGuidSize; i++) {
             guid_[i] = static_cast<uint8_t>(rand());
         }
     }

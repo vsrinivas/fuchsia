@@ -12,6 +12,8 @@ group("test") {
 test("fvm-unit") {
   sources = [
     "format-info-test.cpp",
+    "partition-entry-test.cpp",
+    "slice-entry-test.cpp",
   ]
   deps = [
     "$zx/system/ulib/fvm",

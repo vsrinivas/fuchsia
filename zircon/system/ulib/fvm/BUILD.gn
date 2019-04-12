@@ -6,6 +6,7 @@ library("fvm") {
   host = true
   sources = [
     "client.cpp",
+    "format.cpp",
     "fvm-check.cpp",
     "fvm.cpp",
     "sparse-reader.cpp",

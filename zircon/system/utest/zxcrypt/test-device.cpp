@@ -317,17 +317,17 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     BEGIN_HELPER;
 
     // Calculate total size of data + metadata.
-    device_size = fbl::round_up(device_size, FVM_BLOCK_SIZE);
-    size_t old_meta = fvm::MetadataSize(device_size, FVM_BLOCK_SIZE);
-    size_t new_meta = fvm::MetadataSize(old_meta + device_size, FVM_BLOCK_SIZE);
+    device_size = fbl::round_up(device_size, fvm::kBlockSize);
+    size_t old_meta = fvm::MetadataSize(device_size, fvm::kBlockSize);
+    size_t new_meta = fvm::MetadataSize(old_meta + device_size, fvm::kBlockSize);
     while (old_meta != new_meta) {
         old_meta = new_meta;
-        new_meta = fvm::MetadataSize(old_meta + device_size, FVM_BLOCK_SIZE);
+        new_meta = fvm::MetadataSize(old_meta + device_size, fvm::kBlockSize);
     }
     ASSERT_TRUE(CreateRamdisk(device_size + (new_meta * 2), block_size));
 
     // Format the ramdisk as FVM and bind to it
-    ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), FVM_BLOCK_SIZE));
+    ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
 
     fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
     ASSERT_NONNULL(io);
@@ -347,7 +347,7 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     // Allocate a FVM partition with the last slice unallocated.
     alloc_req_t req;
     memset(&req, 0, sizeof(alloc_req_t));
-    req.slice_count = (kDeviceSize / FVM_BLOCK_SIZE) - 1;
+    req.slice_count = (kDeviceSize / fvm::kBlockSize) - 1;
     memcpy(req.type, zxcrypt_magic, sizeof(zxcrypt_magic));
     for (uint8_t i = 0; i < GUID_LEN; ++i) {
         req.guid[i] = i;

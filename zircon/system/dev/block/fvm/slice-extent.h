@@ -19,7 +19,7 @@ namespace fvm {
 class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>> {
 public:
     SliceExtent() = delete;
-    explicit SliceExtent(size_t vslice_start) : vslice_start_(vslice_start) {}
+    explicit SliceExtent(uint64_t vslice_start) : vslice_start_(vslice_start) {}
     SliceExtent(const SliceExtent&) = delete;
     SliceExtent(SliceExtent&&) = delete;
     SliceExtent& operator=(const SliceExtent&) = delete;
@@ -81,7 +81,7 @@ private:
     friend class TypeWAVLTraits;
 
     fbl::Vector<uint64_t> pslices_;
-    const size_t vslice_start_;
+    const uint64_t vslice_start_;
 };
 
 } // namespace fvm

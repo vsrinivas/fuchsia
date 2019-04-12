@@ -114,7 +114,7 @@ zx_status_t FvmContainer::Verify() const {
     off_t start = 0;
     off_t end = disk_offset_ + info_.MetadataSize() * 2;
     size_t slice_index = 1;
-    for (size_t vpart_index = 1; vpart_index < FVM_MAX_ENTRIES; ++vpart_index) {
+    for (size_t vpart_index = 1; vpart_index < fvm::kMaxVPartitions; ++vpart_index) {
         fvm::vpart_entry_t* vpart = nullptr;
         start = end;
 
@@ -131,25 +131,25 @@ zx_status_t FvmContainer::Verify() const {
         size_t last_vslice = 0;
         size_t slice_count = 0;
         for (; slice_index <= sb->pslice_count; ++slice_index) {
-            fvm::slice_entry_t* slice = nullptr;
+            fvm::SliceEntry* slice = nullptr;
             if ((status = info_.GetSlice(slice_index, &slice)) != ZX_OK) {
                 return status;
             }
 
-            if (slice->Vpart() != vpart_index) {
+            if (slice->VPartition() != vpart_index) {
                 break;
             }
 
             end += slice_size_;
             slice_count++;
 
-            if (slice->Vslice() == last_vslice + 1) {
+            if (slice->VSlice() == last_vslice + 1) {
                 extent_lengths[extent_lengths.size() - 1] += slice_size_;
             } else {
                 extent_lengths.push_back(slice_size_);
             }
 
-            last_vslice = slice->Vslice();
+            last_vslice = slice->VSlice();
         }
 
         if (vpart->slices != slice_count) {
@@ -235,7 +235,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
             return status;
         }
 
-        if (slice->Vpart() == FVM_SLICE_ENTRY_FREE) {
+        if (slice->IsFree()) {
             continue;
         }
 
@@ -363,7 +363,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
     }
 
     uint32_t vpart_index;
-    uint8_t guid[FVM_GUID_LEN];
+    uint8_t guid[fvm::kGuidSize];
     format->Guid(guid);
     fvm::partition_descriptor_t descriptor;
     format->GetPartitionInfo(&descriptor);
@@ -447,7 +447,7 @@ uint64_t FvmContainer::CalculateDiskSize() const {
 
     size_t required_slices = 0;
 
-    for (size_t index = 1; index < FVM_MAX_ENTRIES; index++) {
+    for (size_t index = 1; index < fvm::kMaxVPartitions; index++) {
         fvm::vpart_entry_t* vpart;
         ZX_ASSERT(info_.GetPartition(index, &vpart) == ZX_OK);
 

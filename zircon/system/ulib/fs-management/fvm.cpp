@@ -71,10 +71,10 @@ constexpr char kBlockDevPath[] = "/dev/class/block/";
 
 zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t max_volume_size,
                                   size_t slice_size) {
-    if (slice_size % FVM_BLOCK_SIZE != 0) {
+    if (slice_size % fvm::kBlockSize != 0) {
         // Alignment
         return ZX_ERR_INVALID_ARGS;
-    } else if ((slice_size * VSLICE_MAX) / VSLICE_MAX != slice_size) {
+    } else if ((slice_size * fvm::kMaxVSlices) / fvm::kMaxVSlices != slice_size) {
         // Overflow
         return ZX_ERR_INVALID_ARGS;
     } else if (initial_volume_size > max_volume_size || initial_volume_size == 0 ||
@@ -91,8 +91,8 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
 
     // Superblock
     fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(mvmo.get());
-    sb->magic = FVM_MAGIC;
-    sb->version = FVM_VERSION;
+    sb->magic = fvm::kMagic;
+    sb->version = fvm::kVersion;
     sb->pslice_count = format_info.slice_count();
     sb->slice_size = slice_size;
     sb->fvm_partition_size = initial_volume_size;
@@ -326,7 +326,7 @@ zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID
 
     zx_status_t status;
     zx_status_t io_status =
-            fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status);
+        fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status);
     if (io_status) {
         return io_status;
     }

@@ -2,85 +2,164 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef __LIB_FVM_FORMAT_H__
+#define __LIB_FVM_FORMAT_H__
 
 #include <digest/digest.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define FVM_MAGIC (0x54524150204d5646ull) // 'FVM PART'
-#define FVM_VERSION 0x00000001
-#define FVM_SLICE_ENTRY_FREE 0
-#define FVM_BLOCK_SIZE 8192lu
-#define FVM_NAME_LEN 24
-
 #ifdef __cplusplus
+
+#include <limits>
+#include <type_traits>
 
 #include <fbl/algorithm.h>
 #include <gpt/gpt.h>
 
-#define FVM_GUID_LEN GPT_GUID_LEN
-#define FVM_GUID_STRLEN GPT_GUID_STRLEN
-
 namespace fvm {
 
-typedef struct {
+// Unique identifier mapped to a GPT partition that contains a FVM.
+static constexpr uint64_t kMagic = 0x54524150204d5646;
+
+// Current version of the FVM format being handled by this library.
+static constexpr uint64_t kVersion = 0x00000001;
+
+// Defines the block size of that the FVM driver exposes.
+static constexpr uint64_t kBlockSize = 8192;
+
+// Maximum number of virtual partitions that can be created.
+static constexpr uint64_t kMaxVPartitions = 1024;
+
+// Maximum size for a partition GUID.
+static constexpr uint64_t kGuidSize = GPT_GUID_LEN;
+
+// Maximum string length for virtual partition GUID.
+static constexpr uint64_t kGuidStrLen = GPT_GUID_STRLEN;
+
+// Maximum length allowed for a virtual partition name.
+static constexpr uint16_t kMaxVPartitionNameLength = 24;
+
+// Number of bits required for the VSlice address space.
+static constexpr uint64_t kSliceEntryVSliceBits = 32;
+
+// Number of bits required for the VPartition address space.
+static constexpr uint64_t kSliceEntryVPartitionBits = 16;
+
+// Maximum number of VSlices that can be addressed.
+static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
+
+namespace internal {
+// Minimal safety checks for persisted data structures. Currently they are required to be trivial
+// and standard layout.
+template <typename T>
+struct is_persistable {
+    static constexpr bool value = std::is_standard_layout<T>::value && std::is_trivial<T>::value;
+};
+
+// FVM block alignment properties for a given type.
+template <typename T>
+struct block_alignment {
+    static constexpr bool may_cross_boundary = (kBlockSize % sizeof(T)) != 0;
+    static constexpr bool ends_at_boundary = (sizeof(T) % kBlockSize);
+};
+} // namespace internal
+
+// FVM header which describes the contents and layout of the volume manager.
+struct Header {
+    // Unique identifier for this format type.
     uint64_t magic;
+    // Version of the format.
     uint64_t version;
-    uint64_t pslice_count; // Slices which can be used by vpartitions
-    uint64_t slice_size;   // All sizes in bytes
+    // Number of slices which can be addressed and allocated by the virtual parititons.
+    uint64_t pslice_count;
+    // Size of the each slice in size.
+    uint64_t slice_size;
+    // Size of the volume the fvm described by this header is expecting to interact with.
     uint64_t fvm_partition_size;
+    // Size of the partition table of the superblock the header describes, which contains
+    // partition metadata.
     uint64_t vpartition_table_size;
+    // Size of the allocation table allocated size. This includes extra space allowing the
+    // fvm to grow as the underlying volume grows. The actual allocation table size, which defines
+    // the number of slices that can be addressed, is determined by |fvm_partition_size|.
     uint64_t allocation_table_size;
+    // Use to determine over two copies(primary, secondary) of superblock, which one is the latest
+    // one.
     uint64_t generation;
+    // Integrity check.
     uint8_t hash[SHA256_DIGEST_LENGTH];
-    uint8_t reserved[0]; // Up to the rest of the block
-} fvm_t;
+    // Fill remainder of the block.
+    uint8_t reserved[0];
+};
 
-static_assert(sizeof(fvm_t) <= FVM_BLOCK_SIZE, "FVM Superblock too large");
+// TODO(gevalentino): Remove once all callsites have been updated.
+using fvm_t = Header;
 
-#define FVM_MAX_ENTRIES 1024
+static_assert(internal::is_persistable<Header>::value && sizeof(Header) <= kBlockSize,
+              "fvm::Header must fit within one block, be trivial and match standard layout.");
 
-// Identifies that the partition is inactive, and should be destroyed on
-// reboot (unless activated before rebinding the FVM).
-constexpr uint32_t kVPartFlagInactive = 0x00000001;
-constexpr uint32_t kVPartAllocateMask = 0x00000001; // All acceptable flags to pass to allocate.
+// Represent an entry in the FVM Partition table, which is fixed size contiguous flat buffer.
+struct VPartitionEntry {
 
-typedef struct {
-    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_, const char* name_,
-              uint32_t flags_) {
-        slices = slices_;
-        memcpy(type, type_, FVM_GUID_LEN);
-        memcpy(guid, guid_, FVM_GUID_LEN);
-        memcpy(name, name_, FVM_NAME_LEN);
-        flags = flags_;
+    // Returns a new blank entry.
+    static VPartitionEntry Create() {
+        VPartitionEntry entry;
+        entry.Release();
+        return entry;
     }
 
-    void clear() { memset(this, 0, sizeof(*this)); }
+    // Returns a new entry with a the respective |type|, |guid|, |name|, |slices| and |flags|.
+    // Note: This is subject to NRVO.
+    static VPartitionEntry Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
+                                  const char* name, uint32_t flags);
 
-    uint8_t type[FVM_GUID_LEN]; // Mirroring GPT value
-    uint8_t guid[FVM_GUID_LEN]; // Mirroring GPT value
-    uint32_t slices;            // '0' if unallocated
+    // Returns the allowed set of flags in |raw_flags|.
+    static uint32_t ParseFlags(uint32_t raw_flags);
+
+    // Returns true if the entry is allocated.
+    bool IsAllocated() const;
+
+    // Returns true if the entry is free.
+    bool IsFree() const;
+
+    // Releases the partition, marking it as free.
+    void Release();
+
+    // Returns true if the partition is should be treated as active..
+    bool IsActive() const;
+
+    // Returns true if the partition is flagged as inactive.
+    bool IsInactive() const;
+
+    // Marks this entry active status as |is_active|.
+    void SetActive(bool is_active);
+
+    // Mirrors GPT value.
+    uint8_t type[kGuidSize];
+
+    // Mirrors GPT value.
+    uint8_t guid[kGuidSize];
+
+    // Number of allocated slices.
+    uint32_t slices;
+
     uint32_t flags;
-    uint8_t name[FVM_NAME_LEN];
-} vpart_entry_t;
 
-static_assert(sizeof(vpart_entry_t) == 64, "Unexpected VPart entry size");
-static_assert(FVM_BLOCK_SIZE % sizeof(vpart_entry_t) == 0, "VPart entries might cross block");
-static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
-              "VPart entries don't cleanly fit within block");
+    // Partition name.
+    uint8_t name[fvm::kMaxVPartitionNameLength];
+};
 
-#define VPART_BITS 16
-#define VPART_MAX ((1UL << VPART_BITS) - 1)
-#define VPART_MASK VPART_MAX
+// TODO(gevalentino): remove after updating callsites.
+using vpart_entry_t = VPartitionEntry;
 
-#define VSLICE_BITS 32
-#define VSLICE_MAX ((1UL << VSLICE_BITS) - 1)
-#define VSLICE_MASK ((VSLICE_MAX) << VPART_BITS)
-
-#define RESERVED_BITS 16
-
-#define PSLICE_UNALLOCATED 0
+static_assert(sizeof(VPartitionEntry) == 64, "Unchecked VPartitionEntry size change.");
+static_assert(internal::is_persistable<VPartitionEntry>::value,
+              "VPartitionEntry must be standard layout compilant and trivial.");
+static_assert(!internal::block_alignment<VPartitionEntry>::may_cross_boundary,
+              "VPartitionEntry must not cross block boundary.");
+static_assert(!internal::block_alignment<VPartitionEntry[kMaxVPartitions]>::ends_at_boundary,
+              "VPartitionEntry table max size must end at block boundary.");
 
 // A Slice Entry represents the allocation of a slice.
 //
@@ -88,33 +167,83 @@ static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
 // determines the "physical slice" being accessed, where physical slices consist
 // of all disk space immediately following the FVM metadata on an FVM partition.
 //
-// The "Vpart" field describes which virtual partition allocated the slice.
-// If this field is set to FVM_SLICE_ENTRY_FREE, the slice is not allocated.
-//
-// If the slice is allocated, the "Vslice" field describes which virtual slice
-// within the virtual partition is using this slice.
-typedef struct slice_entry {
+struct SliceEntry {
+    // Returns a new blank entry.
+    static SliceEntry Create() {
+        SliceEntry entry;
+        entry.Release();
+        return entry;
+    }
+
+    // Returns a slice entry with vpartition and vslice set.
+    static SliceEntry Create(uint64_t vpartition, uint64_t vslice);
+
+    // Returns true if this slice is assigned to a partition.
+    bool IsAllocated() const;
+
+    // Returns true if this slice is unassigned.
+    bool IsFree() const;
+
+    // Resets the slice entry, marking it as Free.
+    void Release();
+
+    // Returns the |vpartition| that owns this slice.
+    uint64_t VPartition() const;
+
+    // Returns the |vslice| of this slice. This represents the relative order of the slices
+    // assigned to |vpartition|. This is, the block device exposed to |partition| sees an array of
+    // all slices assigned to it, sorted by |vslice|.
+    uint64_t VSlice() const;
+
+    // Sets the contents of the slice entry to |partition| and |slice|.
+    void Set(uint64_t vpartition, uint64_t vslice);
+
+    // Packed entry, the format must remain obscure to the user.
     uint64_t data;
+};
 
-    // Vpart is set to 'FVM_SLICE_ENTRY_FREE' if unallocated.
-    uint64_t Vpart() const;
-    void SetVpart(uint64_t vpart);
+using slice_entry_t = SliceEntry;
 
-    // Vslice is only valid if Vpart is not set to 'FVM_SLICE_ENTRY_FREE'.
-    uint64_t Vslice() const;
-    void SetVslice(uint64_t vslice);
-} slice_entry_t;
+static_assert(sizeof(SliceEntry) == 8, "Unchecked SliceEntry size change.");
+static_assert(internal::is_persistable<SliceEntry>::value,
+              "VSliceEntry must meet persistable constraints.");
+static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
+              "VSliceEntry must not cross block boundary.");
 
-static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart address space too small");
-static_assert(sizeof(slice_entry_t) == 8, "Unexpected FVM slice entry size");
-static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0, "FVM slice entry might cross block");
+// Partition Table.
+// TODO(gevalentino): Upgrade this into a class that provides a view into a an unowned buffer, so
+// the logic for calculating offsets and accessing respective entries is hidden.
+struct PartitionTable {
+    // The Partition table starts at the next block after the respective header.
+    static constexpr uint64_t kOffset = kBlockSize;
 
-constexpr size_t kVPartTableOffset = FVM_BLOCK_SIZE;
-constexpr size_t kVPartTableLength = (sizeof(vpart_entry_t) * FVM_MAX_ENTRIES);
-constexpr size_t kAllocTableOffset = kVPartTableOffset + kVPartTableLength;
+    // The Partition table size will finish at a block boundary, which is determined by the maximum
+    // allowed number of partitions.
+    static constexpr uint64_t kLength = sizeof(VPartitionEntry) * kMaxVPartitions;
+};
+
+// Allocation Table.
+// TODO(gevalentino): Upgrade this into a class that provides a view into a an unowned buffer, so
+// the logic for calculating offsets and accessing respective entries is hidden.
+struct AllocationTable {
+    // The allocation table offset with respect to the start of the header.
+    static constexpr uint64_t kOffset = PartitionTable::kOffset + PartitionTable::kLength;
+
+    // Returns an over estimation of size required to allocate all slices in a fvm_volume of
+    // |fvm_disk_size| with a given |slice_size|. The returned value is always rounded to the next
+    // block boundary.
+    constexpr uint64_t Length(size_t fvm_disk_size, size_t slice_size) {
+        return fbl::round_up(sizeof(SliceEntry) * (fvm_disk_size / slice_size), kBlockSize);
+    }
+};
+
+// Remove this.
+constexpr size_t kVPartTableOffset = PartitionTable::kOffset;
+constexpr size_t kVPartTableLength = PartitionTable::kLength;
+constexpr size_t kAllocTableOffset = AllocationTable::kOffset;
 
 constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
-    return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size), FVM_BLOCK_SIZE);
+    return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size), fvm::kBlockSize);
 }
 
 constexpr size_t MetadataSize(size_t total_size, size_t slice_size) {
@@ -237,3 +366,5 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
                                 const void** out);
 
 __END_CDECLS
+
+#endif //  __LIB_FVM_FORMAT_H__

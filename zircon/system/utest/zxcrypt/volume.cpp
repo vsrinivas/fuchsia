@@ -78,7 +78,7 @@ bool TestInit(Volume::Version version, bool fvm) {
     // Valid
     EXPECT_ZX(FdioVolume::Init(device.parent(), &volume), ZX_OK);
     ASSERT_TRUE(!!volume);
-    EXPECT_EQ(volume->reserved_blocks(), fvm ? (FVM_BLOCK_SIZE / kBlockSize) : 2u);
+    EXPECT_EQ(volume->reserved_blocks(), fvm ? (fvm::kBlockSize / kBlockSize) : 2u);
     EXPECT_EQ(volume->reserved_slices(), fvm ? 1u : 0u);
 
     END_TEST;
