@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 
+#include <fbl/algorithm.h>
 #include <lib/zx/job.h>
 #include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
@@ -118,7 +119,7 @@ static bool policy_basic_test() {
         { ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY },
     };
 
-    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policy, countof(policy)),
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policy, fbl::count_of(policy)),
               ZX_OK, "");
 
     END_TEST;

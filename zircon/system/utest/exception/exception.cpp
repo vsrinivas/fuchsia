@@ -23,6 +23,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <fbl/algorithm.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -445,7 +446,7 @@ static launchpad_t* setup_test_child(zx_handle_t job, const char* arg,
         arg,
         verbosity_string,
     };
-    int argc = countof(argv);
+    int argc = fbl::count_of(argv);
     zx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { PA_USER0 };
     *out_channel = our_channel;
@@ -1302,7 +1303,7 @@ static const struct {
 
 static void __NO_RETURN trigger_exception(const char* excp_name)
 {
-    for (size_t i = 0; i < countof(exceptions); ++i)
+    for (size_t i = 0; i < fbl::count_of(exceptions); ++i)
     {
         if (strcmp(excp_name, exceptions[i].name) == 0)
         {
@@ -1325,7 +1326,7 @@ static bool trigger_test()
     BEGIN_TEST;
     unittest_printf("exception trigger tests\n");
 
-    for (size_t i = 0; i < countof(exceptions); ++i) {
+    for (size_t i = 0; i < fbl::count_of(exceptions); ++i) {
         zx_excp_type_t excp_type = exceptions[i].type;
         const char *excp_name = exceptions[i].name;
         zx_handle_t child, eport, our_channel;
@@ -1754,7 +1755,7 @@ static bool exit_closing_excp_handle_test()
         exit_closing_excp_handle_child_name,
         verbosity_string,
     };
-    int argc = countof(argv);
+    int argc = fbl::count_of(argv);
 
     launchpad_t* lp = tu_launch_fdio_init(zx_job_default(),
                                           exit_closing_excp_handle_child_name,

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <atomic>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/futex.h>
 #include <inttypes.h>
@@ -388,11 +389,11 @@ bool TestFutexWakeupLimit() {
     // Test that exactly two threads wake up from the queue.  We do not know
     // which threads are going to wake up, just that two threads are going to
     // wake up.
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, countof(threads), 2));
+    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 2));
 
     // Clean up: Wake the remaining threads so that they can exit.
     ASSERT_EQ(zx_futex_wake(&futex_value, INT_MAX), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, countof(threads), countof(threads)));
+    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_EQ(t.wait_result(), ZX_OK);
@@ -490,16 +491,16 @@ bool TestFutexRequeue() {
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
 
     // 3 of the threads should have been woken.
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, countof(threads), 3));
+    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 3));
 
     // Since 2 of the threads should have been requeued, waking all the
     // threads on futex_value2 should wake 2 more threads.
     ASSERT_EQ(zx_futex_wake(&futex_value2, INT_MAX), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, countof(threads), 5));
+    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 5));
 
     // Clean up: Wake the remaining thread so that it can exit.
     ASSERT_EQ(zx_futex_wake(&futex_value1, 1), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, countof(threads), countof(threads)));
+    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_TRUE(t.Shutdown());

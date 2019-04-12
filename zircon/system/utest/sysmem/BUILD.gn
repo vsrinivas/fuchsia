@@ -9,6 +9,7 @@ test("sysmem") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fidl-async-2",

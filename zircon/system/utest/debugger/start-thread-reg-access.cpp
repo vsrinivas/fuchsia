@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <fbl/algorithm.h>
 #include <lib/zx/thread.h>
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
@@ -76,7 +77,7 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state,
     // If we're the first thread the pc should be the ELF entry point.
     // If not the pc should be the thread's entry point.
     zx_koid_t threads[1 + kNumExtraThreads];
-    size_t num_threads = tu_process_get_threads(inferior, threads, countof(threads));
+    size_t num_threads = tu_process_get_threads(inferior, threads, fbl::count_of(threads));
     if (num_threads == 1) {
         // We don't know the inferior's load address yet so we can't do a full
         // validation of the PC yet. Save it for later when we can.

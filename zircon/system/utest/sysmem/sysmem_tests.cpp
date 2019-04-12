@@ -4,6 +4,7 @@
 
 #include <unittest/unittest.h>
 
+#include <fbl/algorithm.h>
 #include <fcntl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fdio/unsafe.h>
@@ -594,7 +595,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     fuchsia_sysmem_BufferCollectionInfo_2 copy_1 = *buffer_collection_info_1.get();
     // struct copy
     fuchsia_sysmem_BufferCollectionInfo_2 copy_2 = *buffer_collection_info_2.get();
-    for (uint32_t i = 0; i < countof(buffer_collection_info_1->buffers); ++i) {
+    for (uint32_t i = 0; i < fbl::count_of(buffer_collection_info_1->buffers); ++i) {
         ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID,
                   buffer_collection_info_2->buffers[i].vmo != ZX_HANDLE_INVALID, "");
         if (buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID) {

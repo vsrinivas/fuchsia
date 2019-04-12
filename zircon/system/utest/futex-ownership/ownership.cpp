@@ -390,7 +390,7 @@ static bool WakeOwnershipTest() {
         //    woken (at which point, there should be no owner as there are no
         //    waiters).
         //
-        for (uint32_t i = 0; i < countof(WAITERS); ++i) {
+        for (uint32_t i = 0; i < fbl::count_of(WAITERS); ++i) {
             if (!pass) {
                 // Wake a thread.
                 res = do_op::wake(the_futex, 1u);
@@ -424,7 +424,7 @@ static bool WakeOwnershipTest() {
             // Now check to be sure that ownership was updated properly.  It
             // should be INVALID if this is pass 0, or if we just woke up the
             // last thread.
-            zx_koid_t expected_koid = (!pass || ((i + 1) == countof(WAITERS)))
+            zx_koid_t expected_koid = (!pass || ((i + 1) == fbl::count_of(WAITERS)))
                                     ? ZX_KOID_INVALID
                                     : woken_waiter->thread.koid();
 

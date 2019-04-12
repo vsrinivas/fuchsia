@@ -17,6 +17,7 @@
 #include <zircon/syscalls/object.h>
 #include <limits.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 
@@ -99,7 +100,7 @@ static bool run_one_argument_size_test(size_t size) {
     memset(&big[2], 'x', size);
     big[2 + size] = '\0';
     const char* const argv[] = { "/boot/bin/sh", "-c", big };
-    EXPECT_EQ(launchpad_set_args(lp, countof(argv), argv), ZX_OK, "");
+    EXPECT_EQ(launchpad_set_args(lp, fbl::count_of(argv), argv), ZX_OK, "");
     free(big);
 
     EXPECT_EQ(launchpad_load_from_file(lp, argv[0]), ZX_OK, "");

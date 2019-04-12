@@ -8,6 +8,7 @@ source_set("job") {
     "jobs.cpp",
   ]
   deps = [
+    "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/mini-process",
     "$zx/system/ulib/unittest",

@@ -5,6 +5,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <unittest/unittest.h>
 
+#include <fbl/algorithm.h>
 #include <utility>
 
 // Note: these tests focus on the added functionality of the resizable VMO
@@ -31,9 +32,9 @@ bool ValidateCreateHelper(const fzl::ResizeableVmoMapper& mapper, uint64_t size)
     }
 
     char name[ZX_MAX_NAME_LEN] = {};
-    zx_status_t status = mapper.vmo().get_property(ZX_PROP_NAME, name, countof(name));
+    zx_status_t status = mapper.vmo().get_property(ZX_PROP_NAME, name, fbl::count_of(name));
     ASSERT_EQ(status, ZX_OK);
-    for (size_t i = 0; i < countof(name); ++i) {
+    for (size_t i = 0; i < fbl::count_of(name); ++i) {
         ASSERT_EQ(name[i], vmo_name[i]);
     }
 

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
 #include <launchpad/launchpad.h>
 #include <lib/fdio/namespace.h>
 #include <zircon/compiler.h>
@@ -41,7 +42,7 @@ bool CreateNamespaceHelper(fdio_ns_t** out) {
     // Create new ns
     fdio_ns_t* ns;
     ASSERT_EQ(fdio_ns_create(&ns), ZX_OK);
-    for (unsigned n = 0; n < countof(NS); n++) {
+    for (unsigned n = 0; n < fbl::count_of(NS); n++) {
         int fd = open(NS[n].remote, O_RDONLY | O_DIRECTORY);
         ASSERT_GT(fd, 0);
         ASSERT_EQ(fdio_ns_bind_fd(ns, NS[n].local, fd), ZX_OK);
@@ -189,8 +190,8 @@ bool ExportTest() {
     ASSERT_EQ(fdio_ns_export(ns, &flat), ZX_OK);
 
     // Validate the contents match the initialized mapping.
-    ASSERT_EQ(flat->count, countof(NS));
-    for (unsigned n = 0; n < countof(NS); n++) {
+    ASSERT_EQ(flat->count, fbl::count_of(NS));
+    for (unsigned n = 0; n < fbl::count_of(NS); n++) {
         ASSERT_EQ(strcmp(flat->path[n], NS[n].local), 0);
     }
 

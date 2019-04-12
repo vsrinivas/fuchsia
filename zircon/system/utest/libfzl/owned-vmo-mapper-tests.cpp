@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <unittest/unittest.h>
@@ -32,9 +33,9 @@ bool ValidateCreateHelper(const fzl::OwnedVmoMapper& mapper, uint64_t size) {
     }
 
     char name[ZX_MAX_NAME_LEN] = {};
-    zx_status_t status = mapper.vmo().get_property(ZX_PROP_NAME, name, countof(name));
+    zx_status_t status = mapper.vmo().get_property(ZX_PROP_NAME, name, fbl::count_of(name));
     ASSERT_EQ(status, ZX_OK);
-    for (size_t i = 0; i < countof(name); ++i) {
+    for (size_t i = 0; i < fbl::count_of(name); ++i) {
         ASSERT_EQ(name[i], vmo_name[i]);
     }
 
