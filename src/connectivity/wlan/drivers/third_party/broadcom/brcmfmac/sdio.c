@@ -2275,9 +2275,6 @@ static zx_status_t brcmf_sdio_intr_rstatus(struct brcmf_sdio* bus) {
     unsigned long val;
     zx_status_t ret;
 
-    // TODO(cphoenix): Try taking this out. It was put in to try to solve a different problem.
-    brcmf_sdio_bus_sleep(bus, false, true);
-
     addr = core->base + SD_REG(intstatus);
 
     val = brcmf_sdiod_func1_rl(bus->sdiodev, addr, &ret);
