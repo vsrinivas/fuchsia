@@ -165,10 +165,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 	networks := []qemu.Netdev{
 		qemu.Netdev{
 			ID: "net0",
-			Tap: &qemu.NetdevTap{
-				Name: defaultInterfaceName,
-			},
-			MAC: defaultMACAddr,
+			User: &qemu.NetdevUser{},
 		},
 	}
 
