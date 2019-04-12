@@ -715,12 +715,12 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context,
     fuchsia_tee_ParameterSet parameter_set;
     memset(&parameter_set, 0, sizeof(parameter_set));
 
-    uint32_t teec_rc = preprocess_operation(operation, &parameter_set);
-    if (teec_rc != TEEC_SUCCESS) {
+    uint32_t processing_rc = preprocess_operation(operation, &parameter_set);
+    if (processing_rc != TEEC_SUCCESS) {
         if (returnOrigin) {
             *returnOrigin = TEEC_ORIGIN_COMMS;
         }
-        return teec_rc;
+        return processing_rc;
     }
 
     // Outputs
@@ -738,22 +738,27 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context,
         return convert_status_to_result(status);
     }
 
-    teec_rc = postprocess_operation(&out_result.parameter_set, operation);
-    if (teec_rc != TEEC_SUCCESS) {
+    // Run post-processing regardless of TEE operation status. The operation was invoked
+    // successfully, so the parameter set should be okay to post-process.
+    processing_rc = postprocess_operation(&out_result.parameter_set, operation);
+
+    if (out_result.return_code != TEEC_SUCCESS) {
+        // If the TEE operation failed, use that return code above any processing failure codes.
+        if (returnOrigin) {
+            *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
+        }
+        return out_result.return_code;
+    }
+    if (processing_rc != TEEC_SUCCESS) {
+        // The TEE operation succeeded but the processing operation failed.
         if (returnOrigin) {
             *returnOrigin = TEEC_ORIGIN_COMMS;
         }
-        return teec_rc;
+        return processing_rc;
     }
 
-    if (out_result.return_code == TEEC_SUCCESS) {
-        session->imp.session_id = out_session_id;
-        session->imp.context_imp = &context->imp;
-    }
-
-    if (returnOrigin) {
-        *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
-    }
+    session->imp.session_id = out_session_id;
+    session->imp.context_imp = &context->imp;
 
     return out_result.return_code;
 }
@@ -786,12 +791,12 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session,
     fuchsia_tee_OpResult out_result;
     memset(&out_result, 0, sizeof(out_result));
 
-    uint32_t teec_rc = preprocess_operation(operation, &parameter_set);
-    if (teec_rc != TEEC_SUCCESS) {
+    uint32_t processing_rc = preprocess_operation(operation, &parameter_set);
+    if (processing_rc != TEEC_SUCCESS) {
         if (returnOrigin) {
             *returnOrigin = TEEC_ORIGIN_COMMS;
         }
-        return teec_rc;
+        return processing_rc;
     }
 
     zx_status_t status = fuchsia_tee_DeviceInvokeCommand(
@@ -805,17 +810,23 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session,
         return convert_status_to_result(status);
     }
 
-    teec_rc = postprocess_operation(&out_result.parameter_set, operation);
+    // Run post-processing regardless of TEE operation status. The operation was invoked
+    // successfully, so the parameter set should be okay to post-process.
+    processing_rc = postprocess_operation(&out_result.parameter_set, operation);
 
-    if (teec_rc != TEEC_SUCCESS) {
+    if (out_result.return_code != TEEC_SUCCESS) {
+        // If the TEE operation failed, use that return code above any processing failure codes.
+        if (returnOrigin) {
+            *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
+        }
+        return out_result.return_code;
+    }
+    if (processing_rc != TEEC_SUCCESS) {
+        // The TEE operation succeeded but the processing operation failed.
         if (returnOrigin) {
             *returnOrigin = TEEC_ORIGIN_COMMS;
         }
-        return teec_rc;
-    }
-
-    if (returnOrigin) {
-        *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
+        return processing_rc;
     }
 
     return out_result.return_code;
