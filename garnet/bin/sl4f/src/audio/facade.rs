@@ -624,7 +624,7 @@ impl VirtualAudio {
         let va_control = app::client::connect_to_service::<ControlMarker>()?;
         Ok(VirtualAudio {
             output_sample_format: AudioSampleFormat::Signed16,
-            output_channels: 1,
+            output_channels: 2,
             output_frames_per_second: 48000,
             output: None,
 
