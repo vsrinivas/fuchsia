@@ -18,6 +18,7 @@ import (
 	"fidl/fuchsia/amber"
 
 	"amber/atonce"
+	"amber/metrics"
 	"amber/source"
 )
 
@@ -167,6 +168,13 @@ func (d *Daemon) DisableSource(srcID string) error {
 }
 
 func (d *Daemon) EnableSource(srcID string) error {
+	if err := d.enableSource(srcID); err != nil {
+		return err
+	}
+	metrics.SetTargetChannel(srcID)
+	return nil
+}
+func (d *Daemon) enableSource(srcID string) error {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
@@ -217,6 +225,7 @@ func (d *Daemon) addSource(src *source.Source) error {
 	d.addToActiveSrcs(src)
 
 	log.Printf("added TUF source %s %v\n", cfg.Id, cfg.RepoUrl)
+	metrics.SetTargetChannel(cfg.Id)
 
 	return nil
 }
