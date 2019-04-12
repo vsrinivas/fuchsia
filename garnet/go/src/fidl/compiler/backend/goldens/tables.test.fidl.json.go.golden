@@ -48,6 +48,13 @@ func (u *SimpleTable) GetX() int64 {
 	return u.X
 }
 
+func (u *SimpleTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
 func (u *SimpleTable) HasX() bool {
 	return u.XPresent
 }
@@ -62,6 +69,13 @@ func (u *SimpleTable) SetY(y int64) {
 }
 
 func (u *SimpleTable) GetY() int64 {
+	return u.Y
+}
+
+func (u *SimpleTable) GetYWithDefault(_default int64) int64 {
+	if !u.HasY() {
+		return _default
+	}
 	return u.Y
 }
 
@@ -95,6 +109,13 @@ func (u *OlderSimpleTable) SetX(x int64) {
 }
 
 func (u *OlderSimpleTable) GetX() int64 {
+	return u.X
+}
+
+func (u *OlderSimpleTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
 	return u.X
 }
 
@@ -135,6 +156,13 @@ func (u *NewerSimpleTable) GetX() int64 {
 	return u.X
 }
 
+func (u *NewerSimpleTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
 func (u *NewerSimpleTable) HasX() bool {
 	return u.XPresent
 }
@@ -152,6 +180,13 @@ func (u *NewerSimpleTable) GetY() int64 {
 	return u.Y
 }
 
+func (u *NewerSimpleTable) GetYWithDefault(_default int64) int64 {
+	if !u.HasY() {
+		return _default
+	}
+	return u.Y
+}
+
 func (u *NewerSimpleTable) HasY() bool {
 	return u.YPresent
 }
@@ -166,6 +201,13 @@ func (u *NewerSimpleTable) SetZ(z int64) {
 }
 
 func (u *NewerSimpleTable) GetZ() int64 {
+	return u.Z
+}
+
+func (u *NewerSimpleTable) GetZWithDefault(_default int64) int64 {
+	if !u.HasZ() {
+		return _default
+	}
 	return u.Z
 }
 

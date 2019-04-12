@@ -341,6 +341,10 @@ type TableMember struct {
 	// Getter is the exported name of the FIDL table member getter.
 	Getter string
 
+	// GetterWithDefault is the exported name of the FIDL table member getter
+	// with a default value.
+	GetterWithDefault string
+
 	// Clearer is the exported name of the FIDL table member clearer.
 	Clearer string
 
@@ -911,16 +915,17 @@ func (c *compiler) compileTable(val types.Table) Table {
 		tag.Ordinal = member.Ordinal
 		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
 		members = append(members, TableMember{
-			Attributes:       member.Attributes,
-			DataField:        name,
-			PrivateDataField: privateName,
-			PresenceField:    name + "Present",
-			Setter:           "Set" + name,
-			Getter:           "Get" + name,
-			Haser:            "Has" + name,
-			Clearer:          "Clear" + name,
-			Type:             ty,
-			Tags:             tagsfmt(tag, tag2),
+			Attributes:        member.Attributes,
+			DataField:         name,
+			PrivateDataField:  privateName,
+			PresenceField:     name + "Present",
+			Setter:            "Set" + name,
+			Getter:            "Get" + name,
+			GetterWithDefault: "Get" + name + "WithDefault",
+			Haser:             "Has" + name,
+			Clearer:           "Clear" + name,
+			Type:              ty,
+			Tags:              tagsfmt(tag, tag2),
 		})
 	}
 	return Table{

@@ -41,6 +41,13 @@ func (u *{{ $.Name }}) {{ .Getter }}() {{ .Type }} {
 	return u.{{ .DataField }}
 }
 
+func (u *{{ $.Name }}) {{ .GetterWithDefault }}(_default {{ .Type }}) {{ .Type }} {
+	if !u.{{ .Haser }}() {
+		return _default
+	}
+	return u.{{ .DataField }}
+}
+
 func (u *{{ $.Name }}) {{ .Haser }}() bool {
 	return u.{{ .PresenceField }}
 }

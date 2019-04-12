@@ -113,6 +113,13 @@ func (u *Table) GetField() int32 {
 	return u.Field
 }
 
+func (u *Table) GetFieldWithDefault(_default int32) int32 {
+	if !u.HasField() {
+		return _default
+	}
+	return u.Field
+}
+
 func (u *Table) HasField() bool {
 	return u.FieldPresent
 }
