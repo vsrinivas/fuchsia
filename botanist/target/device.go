@@ -39,7 +39,7 @@ type DeviceConfig struct {
 	SSHKeys []string `json:"keys,omitempty"`
 
 	// Serial is the path to the device file for serial i/o.
-	Serial string `json:"serial,omitempty`
+	Serial string `json:"serial,omitempty"`
 }
 
 // NetworkProperties are the static network properties of a target.
