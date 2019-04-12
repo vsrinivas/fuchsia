@@ -45,6 +45,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "cobalt_event_builder_unittest.cc",
     "cobalt_logger_unittest.cc",
     "observations_collector_test.cc",
     "project_profile_unittest.cc",
@@ -55,6 +56,7 @@ source_set("unittests") {
   ]
 
   deps = [
+    ":cobalt_event_builder",
     ":cobalt_logger",
     ":cpp",
     ":project_profile",
@@ -77,5 +79,16 @@ source_set("project_profile") {
   deps = [
     "//garnet/public/lib/fsl",
     "//third_party/cobalt/util/crypto_util",
+  ]
+}
+
+source_set("cobalt_event_builder") {
+  sources = [
+    "cobalt_event_builder.cc",
+    "cobalt_event_builder.h",
+  ]
+  configs += [ "//third_party/cobalt:cobalt_config" ]
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
