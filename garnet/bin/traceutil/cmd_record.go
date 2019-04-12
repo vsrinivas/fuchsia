@@ -1,12 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
+	"regexp"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/google/subcommands"
@@ -20,13 +26,19 @@ type cmdRecord struct {
 	filePrefix     string
 	reportType     string
 	stdout         bool
-	zedmon         bool
+	zedmon         string
 	captureConfig  *captureTraceConfig
 }
 
 type reportGenerator struct {
 	generatorPath    string
 	outputFileSuffix string
+}
+
+type zedmon struct {
+	cmd    *exec.Cmd
+	stderr io.ReadCloser
+	err    error
 }
 
 var (
@@ -46,8 +58,8 @@ func NewCmdRecord() *cmdRecord {
 	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
 	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
 		"Send the report to stdout, in addition to writing to file.")
-	cmd.flags.BoolVar(&cmd.zedmon, "zedmon", false,
-		"UNDER DEVELOPMENT: Capture power trace data from connected zedmon device.")
+	cmd.flags.StringVar(&cmd.zedmon, "zedmon", "",
+		"UNDER DEVELOPMENT: Path to power trace utility, zedmon.")
 
 	cmd.captureConfig = newCaptureTraceConfig(cmd.flags)
 	return cmd
@@ -101,15 +113,15 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 	defer conn.Close()
 
-	var offset, delta time.Duration
-	zedmon := cmd.zedmon
-	if zedmon {
-		offset, delta, err = conn.SyncClk()
+	var fOffset, fDelta time.Duration
+	doZedmon := cmd.zedmon != ""
+	if doZedmon {
+		fOffset, fDelta, err = conn.SyncClk()
 		if err != nil {
 			fmt.Printf("Error syncing with device clock: %v\n", err)
-			zedmon = false
+			doZedmon = false
 		} else {
-			fmt.Printf("Synced device clock: Offset: %v, +/-%v", offset, delta)
+			fmt.Printf("Synced device clock: Offset: %v, ±%v\n", fOffset, fDelta)
 		}
 	}
 
@@ -142,10 +154,33 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		remoteFilename += ".gz"
 	}
 
+	var z *zedmon
+	var zOffset, zDelta time.Duration
+	if doZedmon {
+		z = newZedmon()
+		zOffset, zDelta, err = z.start(cmd.zedmon)
+		if err != nil {
+			fmt.Printf("Error syncing with zedmon clock: %v\n", err)
+			doZedmon = false
+		} else {
+			fmt.Printf("Synced zedmon clock: Offset: %v, ±%v\n", zOffset, zDelta)
+		}
+	}
+
 	err = captureTrace(cmd.captureConfig, conn, localFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
+	}
+
+	if doZedmon {
+		err = z.stop()
+		if err != nil {
+			// No `doZedmon = false`; attempt to read whatever samples we can.
+			fmt.Printf("Error stopping zedmon: %v\n", err)
+		} else {
+			fmt.Printf("Zedmon data collection stopped cleanly\n")
+		}
 	}
 
 	if !cmd.captureConfig.Stream {
@@ -165,6 +200,10 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 			return subcommands.ExitFailure
 		}
 		fmt.Println("done")
+	}
+
+	if doZedmon {
+		// TODO(markdittmer): Read from zedmon data and convert to trace input.
 	}
 
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
@@ -247,4 +286,92 @@ func (cmd *cmdRecord) getReportTitle() string {
 		return ""
 	}
 	return fmt.Sprintf("Report for %s", text)
+}
+
+func newZedmon() *zedmon {
+	return &zedmon{}
+}
+
+var zRegExp = regexp.MustCompile("^Time offset: ([0-9]+)ns ± ([0-9]+)ns$")
+
+func (z *zedmon) fail(err error) error {
+	if z == nil {
+		return err
+	}
+	z.cmd = nil
+	z.stderr = nil
+	if z.stderr != nil {
+		z.stderr.Close()
+	}
+	if z.cmd != nil && z.cmd.Process != nil {
+		z.cmd.Process.Kill()
+	}
+	return err
+}
+
+func (z *zedmon) start(path string) (offset time.Duration, delta time.Duration, err error) {
+	if z == nil {
+		return offset, delta, z.fail(errors.New("Nil zedmon"))
+	}
+	if z.cmd != nil || z.stderr != nil || z.err != nil {
+		return offset, delta, z.fail(errors.New("Attempt to reuse zedmon object"))
+	}
+
+	z.cmd = exec.Command(path, "record")
+	z.cmd.Dir, err = os.Getwd()
+	if err != nil {
+		return offset, delta, z.fail(errors.New("Failed to get working directory"))
+	}
+	z.stderr, err = z.cmd.StderrPipe()
+	if err != nil {
+		return offset, delta, z.fail(err)
+	}
+	r := bufio.NewReader(z.stderr)
+
+	if err = z.cmd.Start(); err != nil {
+		return offset, delta, z.fail(err)
+	}
+
+	nl := byte('\n')
+	for l, err := r.ReadBytes(nl); err == nil; l, err = r.ReadBytes(nl) {
+		matches := zRegExp.FindSubmatch(l)
+		if len(matches) != 3 {
+			continue
+		}
+
+		o, err := strconv.ParseInt(string(matches[1]), 10, 64)
+		if err != nil {
+			return offset, delta, z.fail(errors.New("Failed to parse time sync offset"))
+		}
+		offset = time.Nanosecond * time.Duration(o)
+		d, err := strconv.ParseInt(string(matches[2]), 10, 64)
+		if err != nil {
+			z.cmd.Process.Kill()
+			return offset, delta, z.fail(errors.New("Failed to parse time sync delta"))
+		}
+		delta = time.Nanosecond * time.Duration(d)
+	}
+
+	if err != nil {
+		return offset, delta, z.fail(err)
+	}
+
+	return offset, delta, err
+}
+
+func (z *zedmon) stop() error {
+	if z == nil {
+		return z.fail(errors.New("Nil zedmon"))
+	}
+	if z.cmd == nil || z.cmd.Process == nil {
+		return z.fail(errors.New("No zedmon command/process"))
+	}
+	err := z.cmd.Process.Signal(syscall.SIGINT)
+	if err != nil {
+		return z.fail(errors.New("Failed to send zedmon process SIGINT"))
+	}
+	err = z.cmd.Wait()
+	z.cmd = nil
+	z.stderr = nil
+	return err
 }
