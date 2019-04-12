@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_DB_H_
 #define SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_DB_H_
 
-#include <map>
-
 #include <lib/async/dispatcher.h>
+
+#include <map>
 
 #include "src/ledger/bin/storage/public/db.h"
 
@@ -29,7 +29,7 @@ class FakeDb : public Db {
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
-                   std::unique_ptr<const Object>* object) override;
+                   std::unique_ptr<const Piece>* piece) override;
   Status GetByPrefix(coroutine::CoroutineHandler* handler,
                      convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override;

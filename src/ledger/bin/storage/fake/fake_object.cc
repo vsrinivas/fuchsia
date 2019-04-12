@@ -7,15 +7,26 @@
 namespace storage {
 namespace fake {
 
-FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
+FakePiece::FakePiece(ObjectIdentifier identifier, fxl::StringView content)
     : identifier_(std::move(identifier)), content_(content.ToString()) {}
 
-FakeObject::~FakeObject() {}
+fxl::StringView FakePiece::GetData() const { return content_; }
 
-ObjectIdentifier FakeObject::GetIdentifier() const { return identifier_; }
+ObjectIdentifier FakePiece::GetIdentifier() const { return identifier_; }
+
+FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
+    : piece_(std::make_unique<FakePiece>(std::move(identifier),
+                                         std::move(content))) {}
+
+FakeObject::FakeObject(std::unique_ptr<const Piece> piece)
+    : piece_(std::move(piece)) {}
+
+ObjectIdentifier FakeObject::GetIdentifier() const {
+  return piece_->GetIdentifier();
+}
 
 Status FakeObject::GetData(fxl::StringView* data) const {
-  *data = content_;
+  *data = piece_->GetData();
   return Status::OK;
 }
 

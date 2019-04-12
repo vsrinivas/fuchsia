@@ -99,7 +99,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
 // data come from different asynchronous calls.
 struct PageCommunicatorImpl::ObjectResponseHolder {
   storage::ObjectIdentifier identifier;
-  std::unique_ptr<const storage::Object> object;
+  std::unique_ptr<const storage::Piece> piece;
   bool is_synced = false;
 
   explicit ObjectResponseHolder(storage::ObjectIdentifier identifier)
@@ -549,68 +549,67 @@ void PageCommunicatorImpl::ProcessCommitRequest(
 
 void PageCommunicatorImpl::ProcessObjectRequest(
     fxl::StringView source, MessageHolder<ObjectRequest> request) {
-  coroutine_manager_.StartCoroutine(
-      [this, source = source.ToString(),
-       request = std::move(request)](coroutine::CoroutineHandler* handler) {
-        // We use a std::list so that we can keep a reference to an element
-        // while adding new items.
-        std::list<ObjectResponseHolder> object_responses;
-        auto response_waiter =
-            fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-                storage::Status::OK);
-        for (const ObjectId* object_id : *request->object_ids()) {
-          storage::ObjectIdentifier identifier{
-              object_id->key_index(), object_id->deletion_scope_id(),
-              storage::ObjectDigest(object_id->digest())};
-          object_responses.emplace_back(identifier);
-          auto& response = object_responses.back();
-          storage_->GetPiece(
-              identifier,
-              [callback = response_waiter->NewCallback(), &response](
-                  storage::Status status,
-                  std::unique_ptr<const storage::Object> object) mutable {
-                if (status == storage::Status::INTERNAL_NOT_FOUND) {
-                  // Not finding an object is okay in this context: we'll just
-                  // reply we don't have it. There is not need to abort
-                  // processing the request.
-                  callback(storage::Status::OK);
-                  return;
-                }
-                response.object = std::move(object);
-                callback(status);
-              });
-          storage_->IsPieceSynced(
-              std::move(identifier),
-              [callback = response_waiter->NewCallback(), &response](
-                  storage::Status status, bool is_synced) {
-                if (status == storage::Status::INTERNAL_NOT_FOUND) {
-                  // Not finding an object is okay in this context: we'll just
-                  // reply we don't have it. There is not need to abort
-                  // processing the request.
-                  callback(storage::Status::OK);
-                  return;
-                }
-                response.is_synced = is_synced;
-                callback(status);
-              });
-        }
+  coroutine_manager_.StartCoroutine([this, source = source.ToString(),
+                                     request = std::move(request)](
+                                        coroutine::CoroutineHandler* handler) {
+    // We use a std::list so that we can keep a reference to an element
+    // while adding new items.
+    std::list<ObjectResponseHolder> object_responses;
+    auto response_waiter =
+        fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+            storage::Status::OK);
+    for (const ObjectId* object_id : *request->object_ids()) {
+      storage::ObjectIdentifier identifier{
+          object_id->key_index(), object_id->deletion_scope_id(),
+          storage::ObjectDigest(object_id->digest())};
+      object_responses.emplace_back(identifier);
+      auto& response = object_responses.back();
+      storage_->GetPiece(
+          identifier, [callback = response_waiter->NewCallback(), &response](
+                          storage::Status status,
+                          std::unique_ptr<const storage::Piece> piece) mutable {
+            if (status == storage::Status::INTERNAL_NOT_FOUND) {
+              // Not finding an object is okay in this context: we'll just
+              // reply we don't have it. There is not need to abort
+              // processing the request.
+              callback(storage::Status::OK);
+              return;
+            }
+            response.piece = std::move(piece);
+            callback(status);
+          });
+      storage_->IsPieceSynced(
+          std::move(identifier),
+          [callback = response_waiter->NewCallback(), &response](
+              storage::Status status, bool is_synced) {
+            if (status == storage::Status::INTERNAL_NOT_FOUND) {
+              // Not finding an object is okay in this context: we'll just
+              // reply we don't have it. There is not need to abort
+              // processing the request.
+              callback(storage::Status::OK);
+              return;
+            }
+            response.is_synced = is_synced;
+            callback(status);
+          });
+    }
 
-        storage::Status status;
-        if (coroutine::Wait(handler, response_waiter, &status) ==
-            coroutine::ContinuationStatus::INTERRUPTED) {
-          return;
-        }
+    storage::Status status;
+    if (coroutine::Wait(handler, response_waiter, &status) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
 
-        if (status != storage::Status::OK) {
-          FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
-          return;
-        }
+    if (status != storage::Status::OK) {
+      FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
+      return;
+    }
 
-        flatbuffers::FlatBufferBuilder buffer;
-        BuildObjectResponseBuffer(&buffer, std::move(object_responses));
+    flatbuffers::FlatBufferBuilder buffer;
+    BuildObjectResponseBuffer(&buffer, std::move(object_responses));
 
-        mesh_->Send(source, buffer);
-      });
+    mesh_->Send(source, buffer);
+  });
 }
 
 void PageCommunicatorImpl::BuildObjectResponseBuffer(
@@ -627,15 +626,8 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
         object_response.identifier.deletion_scope_id(),
         convert::ToFlatBufferVector(
             buffer, object_response.identifier.object_digest().Serialize()));
-    if (object_response.object) {
-      fxl::StringView data;
-      storage::Status status = object_response.object->GetData(&data);
-      if (status != storage::Status::OK) {
-        FXL_LOG(ERROR) << "Unable to read object data, aborting: " << status;
-        // We do getData first so that we can continue in case of error
-        // without having written anything in the flatbuffer.
-        continue;
-      }
+    if (object_response.piece) {
+      fxl::StringView data = object_response.piece->GetData();
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
       ObjectSyncStatus sync_status = object_response.is_synced

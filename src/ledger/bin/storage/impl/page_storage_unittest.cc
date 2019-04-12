@@ -3,11 +3,6 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <chrono>
-#include <memory>
-#include <queue>
-#include <set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -18,9 +13,11 @@
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
+
+#include <chrono>
+#include <memory>
+#include <queue>
+#include <set>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -249,9 +246,9 @@ class ControlledLevelDb : public Db {
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
-                   std::unique_ptr<const Object>* object) override {
+                   std::unique_ptr<const Piece>* piece) override {
     return leveldb_.GetObject(handler, key, std::move(object_identifier),
-                              object);
+                              piece);
   }
 
   Status GetByPrefix(coroutine::CoroutineHandler* handler,
@@ -465,19 +462,19 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     return vmo;
   }
 
-  std::unique_ptr<const Object> TryGetPiece(
+  std::unique_ptr<const Piece> TryGetPiece(
       const ObjectIdentifier& object_identifier,
       Status expected_status = Status::OK) {
     bool called;
     Status status;
-    std::unique_ptr<const Object> object;
+    std::unique_ptr<const Piece> piece;
     storage_->GetPiece(
         object_identifier,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object));
+        callback::Capture(callback::SetWhenCalled(&called), &status, &piece));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
-    return object;
+    return piece;
   }
 
   std::vector<Entry> GetCommitContents(const Commit& commit) {
@@ -520,15 +517,15 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
   Status ReadObject(CoroutineHandler* handler,
                     ObjectIdentifier object_identifier,
-                    std::unique_ptr<const Object>* object) {
+                    std::unique_ptr<const Piece>* piece) {
     return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(
-        handler, object_identifier, object);
+        handler, object_identifier, piece);
   }
 
   // Checks that |object_identifier| is referenced by |expected_references|.
-  void CheckInboundObjectReferences(CoroutineHandler* handler,
-                              ObjectIdentifier object_identifier,
-                              ObjectReferencesAndPriority expected_references) {
+  void CheckInboundObjectReferences(
+      CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      ObjectReferencesAndPriority expected_references) {
     ObjectReferencesAndPriority stored_references;
     ASSERT_EQ(Status::OK,
               PageStorageImplAccessorForTest::GetDb(storage_)
@@ -727,8 +724,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(),
-      root_node, std::move(parent));
+      environment_.clock(), storage_.get(), root_node, std::move(parent));
   CommitId id1 = commit1->GetId();
   bool called;
   Status status;
@@ -742,8 +738,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   parent.clear();
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      environment_.clock(), storage_.get(),
-      root_node, std::move(parent));
+      environment_.clock(), storage_.get(), root_node, std::move(parent));
   CommitId id2 = commit2->GetId();
   storage_->AddCommitFromLocal(
       std::move(commit2), {},
@@ -752,7 +747,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  RunInCoroutine([this, root_node, id1, id2] (CoroutineHandler* handler) {
+  RunInCoroutine([this, root_node, id1, id2](CoroutineHandler* handler) {
     CheckInboundCommitReferences(handler, root_node, {id1, id2});
   });
 }
@@ -1151,14 +1146,12 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
             storage_->GetPiece(
                 std::move(identifier),
                 [callback = std::move(callback)](
-                    Status status, std::unique_ptr<const Object> object) {
+                    Status status, std::unique_ptr<const Piece> piece) {
                   if (status != Status::OK) {
                     callback(status, "");
                     return;
                   }
-                  fxl::StringView data;
-                  status = object->GetData(&data);
-                  callback(status, data);
+                  callback(status, piece->GetData());
                 });
           },
           [&iteration_status, &sub_identifiers](IterationStatus status,
@@ -1202,11 +1195,9 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(data.object_identifier, object_identifier);
 
-    std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK, ReadObject(handler, object_identifier, &object));
-    fxl::StringView content;
-    ASSERT_EQ(Status::OK, object->GetData(&content));
-    EXPECT_EQ(data.value, content);
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(Status::OK, ReadObject(handler, object_identifier, &piece));
+    EXPECT_EQ(data.value, piece->GetData());
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
     EXPECT_TRUE(IsPieceSynced(object_identifier, false));
   });
@@ -1230,9 +1221,9 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     EXPECT_EQ(data.value,
               ExtractObjectDigestData(object_identifier.object_digest()));
 
-    std::unique_ptr<const Object> object;
+    std::unique_ptr<const Piece> piece;
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-              ReadObject(handler, object_identifier, &object));
+              ReadObject(handler, object_identifier, &piece));
     // Inline objects do not need to ever be tracked.
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
   });
@@ -1281,11 +1272,9 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
-    fxl::StringView content;
-    ASSERT_EQ(Status::OK, object->GetData(&content));
-    EXPECT_EQ(data.value, content);
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &piece));
+    EXPECT_EQ(data.value, piece->GetData());
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
 
@@ -1312,11 +1301,9 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
-    fxl::StringView content;
-    ASSERT_EQ(Status::OK, object->GetData(&content));
-    EXPECT_EQ(data.value, content);
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &piece));
+    EXPECT_EQ(data.value, piece->GetData());
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
 
@@ -1340,11 +1327,9 @@ TEST_F(PageStorageTest, AddP2PPiece) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    std::unique_ptr<const Object> object;
-    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
-    fxl::StringView content;
-    ASSERT_EQ(Status::OK, object->GetData(&content));
-    EXPECT_EQ(data.value, content);
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &piece));
+    EXPECT_EQ(data.value, piece->GetData());
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
   });
@@ -1640,21 +1625,18 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
 
   // Check that the index piece obtained at |object_identifier| is different
   // from the object itself, ie. that some splitting occurred.
-  std::unique_ptr<const Object> piece = TryGetPiece(object_identifier);
-  fxl::StringView piece_content;
-  ASSERT_EQ(Status::OK, piece->GetData(&piece_content));
-  EXPECT_NE(content, piece_content);
+  std::unique_ptr<const Piece> piece = TryGetPiece(object_identifier);
+  EXPECT_NE(content, piece->GetData());
 
-  RunInCoroutine([this, piece_content = std::move(piece_content),
-                  tree_reference,
+  RunInCoroutine([this, piece = std::move(piece), tree_reference,
                   object_identifier](CoroutineHandler* handler) {
     // Check tree reference.
     CheckInboundObjectReferences(
         handler, tree_reference,
         {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
-    ForEachPiece(piece_content, [this, handler, object_identifier](
-                                    ObjectIdentifier piece_identifier) {
+    ForEachPiece(piece->GetData(), [this, handler, object_identifier](
+                                       ObjectIdentifier piece_identifier) {
       CheckInboundObjectReferences(
           handler, piece_identifier,
           {{object_identifier.object_digest(), KeyPriority::EAGER}});

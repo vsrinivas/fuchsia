@@ -6,8 +6,9 @@
 
 #include <lib/fsl/vmo/strings.h>
 
-namespace storage {
+#include <memory>
 
+namespace storage {
 Status Object::GetVmo(fsl::SizedVmo* vmo) const {
   fxl::StringView data;
   Status status = GetData(&data);
@@ -16,11 +17,10 @@ Status Object::GetVmo(fsl::SizedVmo* vmo) const {
   }
 
   if (!fsl::VmoFromString(data, vmo)) {
-    FXL_LOG(WARNING) << "Unable to produce VMO for data.";
+    FXL_LOG(WARNING) << "Unable to produce VMO for object " << GetIdentifier();
     return Status::INTERNAL_ERROR;
   }
 
   return Status::OK;
 }
-
 }  // namespace storage

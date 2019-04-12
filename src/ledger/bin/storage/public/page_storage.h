@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_PAGE_STORAGE_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_PAGE_STORAGE_H_
 
-#include <functional>
-#include <memory>
-#include <utility>
-
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include <functional>
+#include <memory>
+#include <utility>
 
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
@@ -182,7 +182,7 @@ class PageStorage : public PageSyncClient {
   // and not expanded.
   virtual void GetPiece(
       ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
+      fit::function<void(Status, std::unique_ptr<const Piece>)> callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved

@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_LEVELDB_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_LEVELDB_H_
 
-#include <utility>
-
 #include <lib/async/dispatcher.h>
+
+#include <utility>
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
@@ -35,7 +35,7 @@ class LevelDb : public Db {
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
-                   std::unique_ptr<const Object>* object) override;
+                   std::unique_ptr<const Piece>* piece) override;
   Status GetByPrefix(coroutine::CoroutineHandler* handler,
                      convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override;

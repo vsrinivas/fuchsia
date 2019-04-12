@@ -62,12 +62,12 @@ class Db {
       coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView key) = 0;
 
-  // Retrieves the value for the given |key| as an Object with the provided
+  // Retrieves the value for the given |key| as a Piece with the provided
   // |object_identifier|.
   FXL_WARN_UNUSED_RESULT virtual Status GetObject(
       coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
       ObjectIdentifier object_identifier,
-      std::unique_ptr<const Object>* object) = 0;
+      std::unique_ptr<const Piece>* piece) = 0;
 
   // Retrieves all keys matching the given |prefix|. |key_suffixes| will be
   // updated to contain the suffixes of corresponding keys.

@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_H_
 
+#include <lib/zx/time.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_view.h>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_view.h>
-#include <lib/zx/time.h>
 
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/db.h"
@@ -161,12 +161,12 @@ class PageDb : public PageDbMutator {
       coroutine::CoroutineHandler* handler, CommitIdView commit_id,
       std::string* storage_bytes) = 0;
 
-  // Object data.
-  // Reads the content of the given object.
+  // Piece data.
+  // Reads the content of the given piece.
   FXL_WARN_UNUSED_RESULT virtual Status ReadObject(
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
-      std::unique_ptr<const Object>* object) = 0;
+      std::unique_ptr<const Piece>* piece) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
   // database. Returns |OK| if the objet was found, or |INTERNAL_NOT_FOUND| if

@@ -4,18 +4,18 @@
 
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
-#include <lib/zx/time.h>
+
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/fake/fake_commit.h"
@@ -246,7 +246,14 @@ void FakePageStorage::AddObjectFromLocal(
 void FakePageStorage::GetObject(
     ObjectIdentifier object_identifier, Location /*location*/,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_identifier, std::move(callback));
+  GetPiece(object_identifier,
+           [callback = std::move(callback)](
+               Status status, std::unique_ptr<const Piece> piece) {
+             return callback(
+                 status, piece == nullptr
+                             ? nullptr
+                             : std::make_unique<FakeObject>(std::move(piece)));
+           });
 }
 
 void FakePageStorage::GetObjectPart(
@@ -254,17 +261,12 @@ void FakePageStorage::GetObjectPart(
     Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
   GetPiece(object_identifier,
            [offset, max_size, callback = std::move(callback)](
-               Status status, std::unique_ptr<const Object> piece) {
+               Status status, std::unique_ptr<const Piece> piece) {
              if (status != Status::OK) {
                callback(status, nullptr);
                return;
              }
-             fxl::StringView data;
-             Status data_status = piece->GetData(&data);
-             if (data_status != Status::OK) {
-               callback(data_status, nullptr);
-               return;
-             }
+             fxl::StringView data = piece->GetData();
              fsl::SizedVmo buffer;
              Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
              if (buffer_status != Status::OK) {
@@ -277,7 +279,7 @@ void FakePageStorage::GetObjectPart(
 
 void FakePageStorage::GetPiece(
     ObjectIdentifier object_identifier,
-    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
   object_requests_.emplace_back(
       [this, object_identifier = std::move(object_identifier),
        callback = std::move(callback)] {
@@ -288,7 +290,7 @@ void FakePageStorage::GetPiece(
         }
 
         callback(Status::OK,
-                 std::make_unique<FakeObject>(object_identifier, it->second));
+                 std::make_unique<FakePiece>(object_identifier, it->second));
       });
   async::PostDelayedTask(
       environment_->dispatcher(), [this] { SendNextObject(); },

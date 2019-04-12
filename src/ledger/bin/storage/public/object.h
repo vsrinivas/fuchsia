@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_OBJECT_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_OBJECT_H_
 
-#include <vector>
-
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
@@ -15,6 +13,9 @@
 
 namespace storage {
 
+// An object is a potentially large piece of data, identified by an object
+// identifier. Accessing an object can fail, for instance because its data may
+// be mapped into memory on-demand.
 class Object {
  public:
   Object() {}
@@ -32,6 +33,24 @@ class Object {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Object);
+};
+
+// A piece is a chunk of data small enough that accessing it never fails.
+// Objects are higher-level blobs of data and may be split into a number of
+// pieces before being stored in Ledger.
+class Piece {
+ public:
+  Piece() {}
+  virtual ~Piece() {}
+
+  // Returns the identifier of this storage object.
+  virtual ObjectIdentifier GetIdentifier() const = 0;
+
+  // Returns the data of this piece. The returned view is valid as long as this
+  // piece is not deleted.
+  virtual fxl::StringView GetData() const = 0;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(Piece);
 };
 
 }  // namespace storage

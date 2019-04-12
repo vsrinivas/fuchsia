@@ -4,12 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
+
 #include <algorithm>
 #include <iterator>
 #include <string>
-
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
@@ -95,11 +95,11 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
                               const ObjectIdentifier& object_identifier,
-                              std::unique_ptr<const Object>* object) {
-  FXL_DCHECK(object);
+                              std::unique_ptr<const Piece>* piece) {
+  FXL_DCHECK(piece);
   return db_->GetObject(handler,
                         ObjectRow::GetKeyFor(object_identifier.object_digest()),
-                        object_identifier, object);
+                        object_identifier, piece);
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,

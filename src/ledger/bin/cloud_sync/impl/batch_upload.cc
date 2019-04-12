@@ -4,10 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
-#include <algorithm>
-#include <set>
-#include <utility>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
@@ -16,6 +12,10 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
+
+#include <algorithm>
+#include <set>
+#include <utility>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 
@@ -124,38 +124,32 @@ void BatchUpload::GetObjectContentAndUpload(
           weak_ptr_factory_.GetWeakPtr(),
           [this, object_identifier, object_name = std::move(object_name)](
               storage::Status storage_status,
-              std::unique_ptr<const storage::Object> object) mutable {
+              std::unique_ptr<const storage::Piece> piece) mutable {
             FXL_DCHECK(storage_status == storage::Status::OK);
             UploadObject(std::move(object_identifier), std::move(object_name),
-                         std::move(object));
+                         std::move(piece));
           }));
 }
 
 void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
                                std::string object_name,
-                               std::unique_ptr<const storage::Object> object) {
-  fxl::StringView data;
-  auto status = object->GetData(&data);
-  // TODO(ppi): LE-225 Handle disk IO errors.
-  FXL_DCHECK(status == storage::Status::OK);
-
+                               std::unique_ptr<const storage::Piece> piece) {
   encryption_service_->EncryptObject(
-      std::move(object_identifier), data,
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                           [this, object_identifier = object->GetIdentifier(),
-                            object_name = std::move(object_name)](
-                               encryption::Status encryption_status,
-                               std::string encrypted_data) mutable {
-                             if (encryption_status != encryption::Status::OK) {
-                               EnqueueForRetryAndSignalError(
-                                   std::move(object_identifier));
-                               return;
-                             }
+      object_identifier, piece->GetData(),
+      callback::MakeScoped(
+          weak_ptr_factory_.GetWeakPtr(),
+          [this, object_identifier, object_name = std::move(object_name)](
+              encryption::Status encryption_status,
+              std::string encrypted_data) mutable {
+            if (encryption_status != encryption::Status::OK) {
+              EnqueueForRetryAndSignalError(std::move(object_identifier));
+              return;
+            }
 
-                             UploadEncryptedObject(std::move(object_identifier),
-                                                   std::move(object_name),
-                                                   std::move(encrypted_data));
-                           }));
+            UploadEncryptedObject(std::move(object_identifier),
+                                  std::move(object_name),
+                                  std::move(encrypted_data));
+          }));
 }
 
 void BatchUpload::UploadEncryptedObject(

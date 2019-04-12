@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/storage/impl/page_db.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/zx/time.h>
+#include <src/lib/fxl/macros.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <lib/async/cpp/task.h>
-#include <lib/callback/set_when_called.h>
-#include <src/lib/fxl/macros.h>
-#include <lib/zx/time.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -203,11 +203,11 @@ TEST_F(PageDbTest, ObjectStorage) {
     const ObjectIdentifier child_identifier =
         RandomObjectIdentifier(environment_.random());
     const std::string content = RandomString(environment_.random(), 32 * 1024);
-    std::unique_ptr<const Object> object;
+    std::unique_ptr<const Piece> piece;
     PageDbObjectStatus object_status;
 
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-              page_db_.ReadObject(handler, object_identifier, &object));
+              page_db_.ReadObject(handler, object_identifier, &piece));
     ASSERT_EQ(
         Status::OK,
         page_db_.WriteObject(
@@ -217,10 +217,8 @@ TEST_F(PageDbTest, ObjectStorage) {
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK,
-              page_db_.ReadObject(handler, object_identifier, &object));
-    fxl::StringView object_content;
-    EXPECT_EQ(Status::OK, object->GetData(&object_content));
-    EXPECT_EQ(content, object_content);
+              page_db_.ReadObject(handler, object_identifier, &piece));
+    EXPECT_EQ(content, piece->GetData());
     ObjectReferencesAndPriority references;
     EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, child_identifier, &references));
@@ -238,9 +236,8 @@ TEST_F(PageDbTest, ObjectStorage) {
                   {{child_identifier.object_digest(), KeyPriority::EAGER}}));
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
-    EXPECT_EQ(Status::OK, object->GetData(&object_content));
-    EXPECT_EQ(content, object_content);
-    EXPECT_NE(new_content, object_content);
+    EXPECT_EQ(content, piece->GetData());
+    EXPECT_NE(new_content, piece->GetData());
     EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, child_identifier, &references));
     EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),

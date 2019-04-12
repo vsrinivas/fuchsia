@@ -13,16 +13,28 @@
 namespace storage {
 namespace fake {
 
-class FakeObject : public Object {
+class FakePiece : public Piece {
  public:
-  FakeObject(ObjectIdentifier identifier, fxl::StringView content);
-  ~FakeObject() override;
+  FakePiece(ObjectIdentifier identifier, fxl::StringView content);
+  fxl::StringView GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
 
  private:
   ObjectIdentifier identifier_;
   std::string content_;
+};
+
+class FakeObject : public Object {
+ public:
+  explicit FakeObject(std::unique_ptr<const Piece> piece);
+  explicit FakeObject(ObjectIdentifier identifier, fxl::StringView content);
+
+  // Object:
+  ObjectIdentifier GetIdentifier() const override;
+  Status GetData(fxl::StringView* data) const override;
+
+ private:
+  std::unique_ptr<const Piece> piece_;
 };
 
 }  // namespace fake

@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_TESTING_PAGE_STORAGE_EMPTY_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_TESTING_PAGE_STORAGE_EMPTY_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 
@@ -97,7 +97,7 @@ class PageStorageEmptyImpl : public PageStorage {
                      callback) override;
 
   void GetPiece(ObjectIdentifier object_identifier,
-                fit::function<void(Status, std::unique_ptr<const Object>)>
+                fit::function<void(Status, std::unique_ptr<const Piece>)>
                     callback) override;
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,

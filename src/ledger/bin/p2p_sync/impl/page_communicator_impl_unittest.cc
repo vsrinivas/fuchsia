@@ -4,20 +4,21 @@
 
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
+
 #include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <lib/async/cpp/task.h>
-#include <lib/fit/function.h>
-
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
+
 #include "gmock/gmock.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
@@ -107,7 +108,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   void GetPiece(storage::ObjectIdentifier object_identifier,
                 fit::function<void(storage::Status,
-                                   std::unique_ptr<const storage::Object>)>
+                                   std::unique_ptr<const storage::Piece>)>
                     callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
                                   callback = std::move(callback)]() {
@@ -116,7 +117,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
         callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
         return;
       }
-      callback(storage::Status::OK, std::make_unique<storage::fake::FakeObject>(
+      callback(storage::Status::OK, std::make_unique<storage::fake::FakePiece>(
                                         object_identifier, it->second));
     });
   }

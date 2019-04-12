@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 #define SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 
+#include <lib/fit/function.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
+
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -67,7 +67,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
                  fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                fit::function<void(Status, std::unique_ptr<const Object>)>
+                fit::function<void(Status, std::unique_ptr<const Piece>)>
                     callback) override;
   void GetCommitContents(const Commit& commit, std::string min_key,
                          fit::function<bool(Entry)> on_next,

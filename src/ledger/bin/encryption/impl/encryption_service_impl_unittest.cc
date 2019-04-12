@@ -108,7 +108,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   storage::ObjectIdentifier identifier{
       42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
   std::string content(256u, '\0');
-  auto object =
+  std::unique_ptr<storage::Object> object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
   fxl::StringView content_data;
   ASSERT_EQ(storage::Status::OK, object->GetData(&content_data));

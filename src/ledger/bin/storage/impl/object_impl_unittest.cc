@@ -7,6 +7,8 @@
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
@@ -64,6 +66,23 @@ ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) {
   return ::testing::AssertionSuccess();
 }
 
+::testing::AssertionResult CheckPieceValue(std::unique_ptr<Piece> piece,
+                                           ObjectIdentifier identifier,
+                                           fxl::StringView data) {
+  fxl::StringView found_data = piece->GetData();
+
+  if (data != found_data) {
+    return ::testing::AssertionFailure()
+           << "Expected data: " << convert::ToHex(data)
+           << ", but got: " << convert::ToHex(found_data);
+  }
+
+  // Turn the piece into an object and check object-specific methods.
+  // This works because we only create CHUNK pieces below.
+  ChunkObject object(std::move(piece));
+  return CheckObjectValue(object, identifier, data);
+}
+
 class ObjectImplTest : public ledger::TestWithEnvironment {
  public:
   std::string RandomString(size_t size) {
@@ -74,25 +93,16 @@ class ObjectImplTest : public ledger::TestWithEnvironment {
   }
 };
 
-TEST_F(ObjectImplTest, InlinedObject) {
+TEST_F(ObjectImplTest, InlinedPiece) {
   std::string data = RandomString(12);
   ObjectIdentifier identifier = CreateObjectIdentifier(
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
-  InlinedObject object(identifier);
-  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
+  auto piece = std::make_unique<InlinePiece>(identifier);
+  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
 }
 
-TEST_F(ObjectImplTest, StringObject) {
-  std::string data = RandomString(256);
-  ObjectIdentifier identifier = CreateObjectIdentifier(
-      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
-
-  StringObject object(identifier, data);
-  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
-}
-
-TEST_F(ObjectImplTest, LevelDBObject) {
+TEST_F(ObjectImplTest, LevelDBPiece) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
   auto env = leveldb::MakeFuchsiaEnv(tmpfs.root_fd());
 
@@ -119,8 +129,8 @@ TEST_F(ObjectImplTest, LevelDBObject) {
   ASSERT_TRUE(iterator->Valid());
   ASSERT_TRUE(iterator->key() == "");
 
-  LevelDBObject object(identifier, std::move(iterator));
-  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
+  auto piece = std::make_unique<LevelDBPiece>(identifier, std::move(iterator));
+  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
 }
 
 TEST_F(ObjectImplTest, VmoObject) {

@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 
-#include <vector>
-
 #include <lib/async/dispatcher.h>
 #include <lib/callback/managed_container.h>
 #include <lib/callback/operation_serializer.h>
@@ -15,6 +13,8 @@
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/observer_list.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
@@ -108,7 +108,7 @@ class PageStorageImpl : public PageStorage {
                  fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                fit::function<void(Status, std::unique_ptr<const Object>)>
+                fit::function<void(Status, std::unique_ptr<const Piece>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(Status)> callback) override;
@@ -155,9 +155,9 @@ class PageStorageImpl : public PageStorage {
                 ObjectReferencesAndPriority references,
                 fit::function<void(Status)> callback);
 
-  // Reads the content of an object into a provided VMO. Takes into
-  // account the global offset and size in order to be able to read only the
-  // requested part of an object.
+  // Reads the content of a piece into a provided VMO. Takes into account the
+  // global offset and size in order to be able to read only the requested part
+  // of an object.
   // |global_offset| is the offset from the beginning of the full object in
   // bytes. |global_size| is the maximum size requested to be read into the vmo.
   // |current_position| is the position of the currently read piece (defined by
@@ -173,7 +173,7 @@ class PageStorageImpl : public PageStorage {
                                    int64_t current_position,
                                    int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
-  void FillBufferWithObjectContent(std::unique_ptr<const Object> object,
+  void FillBufferWithObjectContent(std::unique_ptr<const Piece> piece,
                                    fsl::SizedVmo vmo, int64_t global_offset,
                                    int64_t global_size,
                                    int64_t current_position,
@@ -196,11 +196,11 @@ class PageStorageImpl : public PageStorage {
                           int64_t current_position,
                           fit::function<void(Status)> callback);
 
-  // Treating the |object| as FileIndex, initializes a VMO of a needed size and
+  // Treating the |piece| as FileIndex, initializes a VMO of a needed size and
   // calls FillBufferWithObjectContent on it.
   // |offset| and |max_size| are used to denote partial mapping (see
   // GetObjectPart for details).
-  void GetIndexObject(std::unique_ptr<const Object> object, int64_t offset,
+  void GetIndexObject(std::unique_ptr<const Piece> piece, int64_t offset,
                       int64_t max_size, Location location,
                       fit::function<void(Status, fsl::SizedVmo)> callback);
 

@@ -185,13 +185,14 @@ Status FakeDb::HasKey(coroutine::CoroutineHandler* handler,
 Status FakeDb::GetObject(coroutine::CoroutineHandler* handler,
                          convert::ExtendedStringView key,
                          ObjectIdentifier object_identifier,
-                         std::unique_ptr<const Object>* object) {
+                         std::unique_ptr<const Piece>* piece) {
   auto it = key_value_store_.find(key.ToString());
   if (it == key_value_store_.end()) {
     return Status::INTERNAL_NOT_FOUND;
   }
-  if (object) {
-    *object = std::make_unique<FakeObject>(object_identifier, it->second);
+  if (piece) {
+    *piece =
+        std::make_unique<FakePiece>(std::move(object_identifier), it->second);
   }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }

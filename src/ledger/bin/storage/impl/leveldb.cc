@@ -4,12 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/leveldb.h"
 
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
+#include <utility>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
@@ -260,8 +260,8 @@ Status LevelDb::HasKey(CoroutineHandler* handler,
 Status LevelDb::GetObject(CoroutineHandler* handler,
                           convert::ExtendedStringView key,
                           ObjectIdentifier object_identifier,
-                          std::unique_ptr<const Object>* object) {
-  FXL_DCHECK(object);
+                          std::unique_ptr<const Piece>* piece) {
+  FXL_DCHECK(piece);
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
@@ -269,8 +269,8 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
     return Status::INTERNAL_NOT_FOUND;
   }
 
-  *object = std::make_unique<LevelDBObject>(std::move(object_identifier),
-                                            std::move(iterator));
+  *piece = std::make_unique<LevelDBPiece>(std::move(object_identifier),
+                                          std::move(iterator));
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 

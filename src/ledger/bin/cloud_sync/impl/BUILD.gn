@@ -67,6 +67,7 @@ source_set("unittests") {
     "//src/ledger/bin/cloud_sync/impl/testing",
     "//src/ledger/bin/cloud_sync/testing",
     "//src/ledger/bin/encryption/fake",
+    "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",

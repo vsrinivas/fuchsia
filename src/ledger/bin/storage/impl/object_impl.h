@@ -5,61 +5,59 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_IMPL_H_
 
-#include <memory>
-
 #include <lib/zx/vmar.h>
+
+#include <memory>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 
 namespace storage {
-
-// Object whose data is equal to its id.
-class InlinedObject : public Object {
+// Piece whose data is equal to its id.
+class InlinePiece : public Piece {
  public:
-  explicit InlinedObject(ObjectIdentifier identifier);
-  ~InlinedObject() override;
+  explicit InlinePiece(ObjectIdentifier identifier);
 
-  // Object:
+  // Piece:
+  fxl::StringView GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
 
  private:
   const ObjectIdentifier identifier_;
 };
 
-// Object whose data is backed by a string.
-class StringObject : public Object {
+// Piece whose data is backed by a value in LevelDB.
+class LevelDBPiece : public Piece {
  public:
-  StringObject(ObjectIdentifier identifier, std::string content);
-  ~StringObject() override;
+  explicit LevelDBPiece(ObjectIdentifier identifier,
+                        std::unique_ptr<leveldb::Iterator> iterator);
 
-  // Object:
+  // Piece:
+  fxl::StringView GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
-
- private:
-  const ObjectIdentifier identifier_;
-  std::string content_;
-};
-
-// Object whose data is backed by a value in LevelDB.
-class LevelDBObject : public Object {
- public:
-  LevelDBObject(ObjectIdentifier identifier,
-                std::unique_ptr<leveldb::Iterator> iterator);
-  ~LevelDBObject() override;
-
-  // Object:
-  ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
 
  private:
   const ObjectIdentifier identifier_;
   std::unique_ptr<leveldb::Iterator> iterator_;
+};
+
+// Object whose data is backed by a single chunk piece.
+class ChunkObject : public Object {
+ public:
+  // |piece| must be of type CHUNK; index pieces cannot be turned into objects
+  // automatically.
+  explicit ChunkObject(std::unique_ptr<const Piece> piece);
+
+  // Object:
+  ObjectIdentifier GetIdentifier() const override;
+  Status GetData(fxl::StringView* data) const override;
+
+ private:
+  std::unique_ptr<const Piece> piece_;
 };
 
 // Object whose data is backed by a VMO.

@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
 
-#include <functional>
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <functional>
+#include <memory>
+#include <vector>
 
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -79,7 +79,7 @@ class BatchUpload {
   // Uploads the given object.
   void UploadObject(storage::ObjectIdentifier object_identifier,
                     std::string object_name,
-                    std::unique_ptr<const storage::Object> object);
+                    std::unique_ptr<const storage::Piece> piece);
 
   // Uploads the given object.
   void UploadEncryptedObject(storage::ObjectIdentifier object_identifier,

@@ -4,9 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
+#include <lib/fsl/vmo/strings.h>
+
 #include <utility>
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 
@@ -16,39 +19,39 @@ uint64_t ToFullPages(uint64_t value) {
 }
 }  // namespace
 
-InlinedObject::InlinedObject(ObjectIdentifier identifier)
+InlinePiece::InlinePiece(ObjectIdentifier identifier)
     : identifier_(std::move(identifier)) {}
-InlinedObject::~InlinedObject() {}
 
-ObjectIdentifier InlinedObject::GetIdentifier() const { return identifier_; }
-
-Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = ExtractObjectDigestData(identifier_.object_digest());
-  return Status::OK;
+fxl::StringView InlinePiece::GetData() const {
+  return ExtractObjectDigestData(identifier_.object_digest());
 }
 
-StringObject::StringObject(ObjectIdentifier identifier, std::string content)
-    : identifier_(std::move(identifier)), content_(std::move(content)) {}
+ObjectIdentifier InlinePiece::GetIdentifier() const { return identifier_; }
 
-StringObject::~StringObject() {}
-
-ObjectIdentifier StringObject::GetIdentifier() const { return identifier_; }
-
-Status StringObject::GetData(fxl::StringView* data) const {
-  *data = content_;
-  return Status::OK;
-}
-
-LevelDBObject::LevelDBObject(ObjectIdentifier identifier,
-                             std::unique_ptr<leveldb::Iterator> iterator)
+LevelDBPiece::LevelDBPiece(ObjectIdentifier identifier,
+                           std::unique_ptr<leveldb::Iterator> iterator)
     : identifier_(std::move(identifier)), iterator_(std::move(iterator)) {}
 
-LevelDBObject::~LevelDBObject() {}
+fxl::StringView LevelDBPiece::GetData() const {
+  return convert::ExtendedStringView(iterator_->value());
+}
 
-ObjectIdentifier LevelDBObject::GetIdentifier() const { return identifier_; }
+ObjectIdentifier LevelDBPiece::GetIdentifier() const { return identifier_; }
 
-Status LevelDBObject::GetData(fxl::StringView* data) const {
-  *data = convert::ExtendedStringView(iterator_->value());
+ChunkObject::ChunkObject(std::unique_ptr<const Piece> piece)
+    : piece_(std::move(piece)) {
+  FXL_DCHECK(
+      GetObjectDigestInfo(piece_->GetIdentifier().object_digest()).is_chunk())
+      << "INDEX piece " << piece_->GetIdentifier()
+      << " cannot be used as an object.";
+}
+
+ObjectIdentifier ChunkObject::GetIdentifier() const {
+  return piece_->GetIdentifier();
+}
+
+Status ChunkObject::GetData(fxl::StringView* data) const {
+  *data = piece_->GetData();
   return Status::OK;
 }
 

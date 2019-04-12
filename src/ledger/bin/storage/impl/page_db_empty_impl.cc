@@ -31,7 +31,7 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
 Status PageDbEmptyImpl::ReadObject(
     CoroutineHandler* /*handler*/,
     const ObjectIdentifier& /*object_identifier*/,
-    std::unique_ptr<const Object>* /*object*/) {
+    std::unique_ptr<const Piece>* /*piece*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(
