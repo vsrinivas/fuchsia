@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
@@ -18,10 +19,12 @@ import (
 
 var tmpls = template.Must(template.New("tmpls").Parse(`
 {{- define "Header"}}
-package tbd
+package fidl_test
 
 import (
-	"tbd"
+	"testing"
+
+	"syscall/zx/fidl/conformance"
 )
 {{end -}}
 
@@ -30,7 +33,7 @@ import (
 {{ .value_build }}
 successCase{
 	name: {{ .name }},
-	input: {{ .value_var }},
+	input: &{{ .value_var }},
 	bytes: {{ .bytes }},
 }.check(t)
 }
@@ -74,7 +77,7 @@ func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("[]byte{\n")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%x", b))
+		builder.WriteString(fmt.Sprintf("0x%02x", b))
 		builder.WriteString(",")
 		if i%8 == 7 {
 			builder.WriteString("\n")
@@ -127,13 +130,13 @@ func (b *goValueBuilder) OnString(value string) {
 func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s\n", containerVar, value.Name))
+		"var %s conformance.%s\n", containerVar, value.Name))
 	for key, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.%s = %s\n", containerVar, key, fieldVar))
+			"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
 	}
 	b.lastVar = containerVar
 }
@@ -141,13 +144,13 @@ func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDec
 func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s\n", containerVar, value.Name))
+		"var %s conformance.%s\n", containerVar, value.Name))
 	for key, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(%s)\n", containerVar, key, fieldVar))
+			"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
 	}
 	b.lastVar = containerVar
 }
@@ -155,13 +158,13 @@ func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl)
 func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s\n", containerVar, value.Name))
+		"var %s conformance.%s\n", containerVar, value.Name))
 	for key, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(%s)\n", containerVar, key, fieldVar))
+			"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
 	}
 	b.lastVar = containerVar
 }

@@ -6,17 +6,9 @@ wire format specification.
 
 ## Using GIDL
 
-For now, GIDL only generates Go test files. Here is an example invocation:
+Regenerate conformance tests:
 
-    fx build && ./out/default/tools/gidl \
-        --gidl tools/fidl/gidl/example/example.gidl \
-        --json tools/fidl/gidl/example/example.test.fidl.json | gofmt
-
-To update the JSON IR
-
-    fx full-build && ./out/x64/host_x64/fidlc \
-        --json tools/fidl/gidl/example/example.test.fidl.json \
-        --files tools/fidl/gidl/example/example.test.fidl
+    fx full-build && ./tools/fidl/gidl-conformance-suite/regen.sh
 
 ## Writing Conformance Tests
 

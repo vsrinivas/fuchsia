@@ -1,0 +1,10 @@
+library conformance;
+
+struct Empty {};
+
+struct Uint8Uint16Uint32Uint64 {
+    uint8 f1;
+    uint16 f2;
+    uint32 f3;
+    uint64 f4;
+};
