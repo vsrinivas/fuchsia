@@ -578,21 +578,12 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 		}
 
-		multicastAddr := mreqn.imr_multiaddr.Bytes()
-		if isZeros(multicastAddr) {
-			multicastAddr = nil
-		}
-		interfaceAddr := mreqn.imr_address.Bytes()
-		if isZeros(interfaceAddr) {
-			interfaceAddr = nil
-		}
-
 		switch name {
 		case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
 			o := tcpip.MembershipOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
-				MulticastAddr: tcpip.Address(multicastAddr),
-				InterfaceAddr: tcpip.Address(interfaceAddr),
+				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr.Bytes()),
+				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
 			}
 
 			switch name {
@@ -607,6 +598,11 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 			}
 		case C.IP_MULTICAST_IF:
+			interfaceAddr := mreqn.imr_address.Bytes()
+			if isZeros(interfaceAddr) {
+				interfaceAddr = nil
+			}
+
 			return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
 				NIC:           tcpip.NICID(mreqn.imr_ifindex),
 				InterfaceAddr: tcpip.Address(interfaceAddr),

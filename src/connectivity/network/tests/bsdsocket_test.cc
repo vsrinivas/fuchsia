@@ -18,6 +18,18 @@
 
 namespace netstack {
 
+TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
+  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  ASSERT_GE(s, 0) << strerror(errno);
+
+  ip_mreqn param = {};
+  param.imr_ifindex = 1;
+  param.imr_multiaddr.s_addr = inet_addr("224.0.2.1");
+  param.imr_address.s_addr = htonl(INADDR_ANY);
+  ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
+      << strerror(errno);
+}
+
 TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
   int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   ASSERT_GE(s, 0) << strerror(errno);
