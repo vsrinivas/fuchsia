@@ -2,36 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+#include <sched.h>
+#include <threads.h>
+#include <unistd.h>
+
 #include <atomic>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <limits>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/futex.h>
-#include <inttypes.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
-#include <limits.h>
-#include <sched.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <time.h>
-#include <unistd.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-static constexpr zx::duration DEFAULT_TIMEOUT = zx::sec(5);
-static constexpr zx::duration DEFAULT_POLL_INTERVAL = zx::usec(100);
+namespace futex {
+namespace {
+
+constexpr zx::duration kDefaultTimeout = zx::sec(5);
+constexpr zx::duration kDefaultPollInterval = zx::usec(100);
 
 // Poll until the user provided Callable |should_stop| tells us to stop by
 // returning true.
 template <typename Callable>
-static zx_status_t WaitFor(const Callable& should_stop,
-                           zx::duration timeout = DEFAULT_TIMEOUT,
-                           zx::duration poll_interval = DEFAULT_POLL_INTERVAL) {
+zx_status_t WaitFor(const Callable& should_stop, zx::duration timeout = kDefaultTimeout,
+                    zx::duration poll_interval = kDefaultPollInterval) {
     static_assert(std::is_same_v<decltype(should_stop()), bool>,
                   "should_stop() must return a bool!");
 
@@ -43,7 +46,7 @@ static zx_status_t WaitFor(const Callable& should_stop,
             return ZX_OK;
         }
 
-        zx::nanosleep(zx::deadline_after(DEFAULT_POLL_INTERVAL));
+        zx::nanosleep(zx::deadline_after(poll_interval));
     }
 
     return ZX_ERR_TIMED_OUT;
@@ -54,13 +57,13 @@ static zx_status_t WaitFor(const Callable& should_stop,
 class TestThread {
 public:
     TestThread() = default;
+    TestThread(const TestThread&) = delete;
+    TestThread(TestThread&&) = delete;
+    TestThread& operator=(const TestThread&) = delete;
+    TestThread& operator=(TestThread&&) = delete;
     ~TestThread() { Shutdown(); }
 
-    TestThread(const TestThread &) = delete;
-    TestThread& operator=(const TestThread &) = delete;
-
-    static bool AssertWokeThreadCount(const TestThread threads[],
-                                      uint32_t total_thread_count,
+    static bool AssertWokeThreadCount(const TestThread threads[], uint32_t total_thread_count,
                                       uint32_t target_woke_count) {
         BEGIN_HELPER;
 
@@ -69,7 +72,7 @@ public:
         auto CountWoken = [&threads, total_thread_count]() -> uint32_t {
             uint32_t ret = 0;
             for (uint32_t i = 0; i < total_thread_count; ++i) {
-                if (threads[i].state() == State::WAIT_RETURNED) {
+                if (threads[i].HasWaitReturned()) {
                     ++ret;
                 }
             }
@@ -108,29 +111,30 @@ public:
         timeout_ = timeout;
         wait_result_.store(ZX_ERR_INTERNAL);
 
-        auto ret = thrd_create_with_name(&thread_,
-                [](void* ctx) -> int { return reinterpret_cast<TestThread*>(ctx)->ThreadFunc(); },
-                this, "wakeup_test_thread");
+        auto ret = thrd_create_with_name(
+            &thread_,
+            [](void* ctx) -> int { return reinterpret_cast<TestThread*>(ctx)->ThreadFunc(); }, this,
+            "wakeup_test_thread");
         ASSERT_EQ(ret, thrd_success, "Error during thread creation");
 
         // Make a copy of our thread's handle so that we have something to query
         // re: the thread's status, even if the thread exits out from under us
         // (which will invalidate the handled returned by thrd_get_zx_handle
-        zx::unowned_thread(thrd_get_zx_handle(thread_))->duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                                                   &thread_handle_);
+        zx::unowned_thread(thrd_get_zx_handle(thread_))
+            ->duplicate(ZX_RIGHT_SAME_RIGHTS, &thread_handle_);
 
-        EXPECT_EQ(WaitFor([this]() { return state() != State::WAITING_TO_START; }), ZX_OK);
+        EXPECT_EQ(WaitFor([this]() { return state() != State::kWaitingToStart; }), ZX_OK);
 
         // Note that this could fail if futex_wait() gets a spurious wakeup.
-        EXPECT_EQ(state(), State::ABOUT_TO_WAIT, "wrong state");
+        EXPECT_EQ(state(), State::kAboutToWait, "wrong state");
 
-        // We should only do this after state_ is State::ABOUT_TO_WAIT,
+        // We should only do this after state_ is State::kAboutToWait,
         // otherwise it could return when the thread has temporarily
         // blocked on a libc-internal futex.
         EXPECT_TRUE(WaitForKernelState(ZX_THREAD_STATE_BLOCKED_FUTEX));
 
         // This could also fail if futex_wait() gets a spurious wakeup.
-        EXPECT_EQ(state(), State::ABOUT_TO_WAIT, "wrong state");
+        EXPECT_EQ(state(), State::kAboutToWait, "wrong state");
 
         END_HELPER;
     }
@@ -140,8 +144,7 @@ public:
 
         if (thread_handle_.is_valid()) {
             zx_status_t res = thread_handle_.wait_one(ZX_THREAD_TERMINATED,
-                                                      zx::deadline_after(zx::sec(10)),
-                                                      NULL);
+                                                      zx::deadline_after(zx::sec(10)), nullptr);
             EXPECT_EQ(res, ZX_OK, "Thread did not terminate in a timely fashion!\n");
             if (res == ZX_OK) {
                 // If we have already explicitly killed this thread, do not
@@ -170,7 +173,7 @@ public:
                 // the fact that we are leaking resources and that they will be
                 // cleaned up when the test exits.
                 if (!explicitly_killed_) {
-                    EXPECT_EQ(thrd_join(thread_, NULL), thrd_success, "thrd_join failed");
+                    EXPECT_EQ(thrd_join(thread_, nullptr), thrd_success, "thrd_join failed");
                 }
             } else {
                 EXPECT_EQ(thread_handle_.kill(), ZX_OK, "Failed to kill unresponsive thread!\n");
@@ -189,8 +192,8 @@ public:
 
         ASSERT_NONNULL(out_state);
         ASSERT_TRUE(thread_handle_.is_valid());
-        ASSERT_EQ(thread_handle_.get_info(ZX_INFO_THREAD, &info,
-                                          sizeof(info), nullptr, nullptr), ZX_OK);
+        ASSERT_EQ(thread_handle_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr),
+                  ZX_OK);
         *out_state = info.state;
 
         END_HELPER;
@@ -221,9 +224,9 @@ public:
     bool WaitThreadWoken() const {
         BEGIN_HELPER;
 
-        zx_status_t res = WaitFor([this]() { return state() == State::WAIT_RETURNED; });
+        zx_status_t res = WaitFor([this]() { return HasWaitReturned(); });
         EXPECT_EQ(res, ZX_OK);
-        EXPECT_EQ(state(), State::WAIT_RETURNED, "wrong state");
+        EXPECT_EQ(state(), State::kWaitReturned, "wrong state");
 
         END_HELPER;
     }
@@ -234,11 +237,10 @@ public:
         ASSERT_TRUE(thread_handle_.is_valid());
         ASSERT_TRUE(explicitly_killed_);
 
-        zx_status_t res = thread_handle_.wait_one(ZX_THREAD_TERMINATED,
-                                                  zx::time::infinite(),
-                                                  NULL);
+        zx_status_t res =
+            thread_handle_.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr);
         EXPECT_EQ(res, ZX_OK, "failed to wait for thread temination.");
-        EXPECT_EQ(state(), State::ABOUT_TO_WAIT);
+        EXPECT_EQ(state(), State::kAboutToWait);
         EXPECT_EQ(wait_result(), ZX_ERR_INTERNAL);
 
         END_HELPER;
@@ -262,24 +264,26 @@ public:
         END_HELPER;
     }
 
+    bool HasWaitReturned() const { return state() == State::kWaitReturned; }
+
     const zx::thread& get_thread_handle() const { return thread_handle_; }
     zx_status_t wait_result() const { return wait_result_.load(); }
 
 private:
     enum class State {
-        WAITING_TO_START = 100,
-        ABOUT_TO_WAIT = 200,
-        WAIT_RETURNED = 300,
+        kWaitingToStart = 100,
+        kAboutToWait = 200,
+        kWaitReturned = 300,
     };
 
     int ThreadFunc() {
-        state_.store(State::ABOUT_TO_WAIT);
+        state_.store(State::kAboutToWait);
 
         zx::time deadline = zx::deadline_after(timeout_);
-        wait_result_.store(zx_futex_wait(futex_addr(), *futex_addr(),
-                                         ZX_HANDLE_INVALID, deadline.get()));
+        wait_result_.store(
+            zx_futex_wait(futex_addr(), *futex_addr(), ZX_HANDLE_INVALID, deadline.get()));
 
-        state_.store(State::WAIT_RETURNED);
+        state_.store(State::kWaitReturned);
         return 0;
     }
 
@@ -287,20 +291,20 @@ private:
     zx_futex_t* futex_addr() const { return futex_addr_.load(); }
 
     thrd_t thread_;
-    std::atomic<zx_status_t> wait_result_{ ZX_ERR_INTERNAL };
-    std::atomic<zx_futex_t*> futex_addr_{ nullptr };
+    std::atomic<zx_status_t> wait_result_{ZX_ERR_INTERNAL};
+    std::atomic<zx_futex_t*> futex_addr_{nullptr};
     zx::duration timeout_ = zx::duration::infinite();
     zx::thread thread_handle_;
     bool explicitly_killed_ = false;
 
-    std::atomic<State> state_{ State::WAITING_TO_START };
+    std::atomic<State> state_{State::kWaitingToStart};
 };
 
 static bool TestFutexWaitValueMismatch() {
     BEGIN_TEST;
     int32_t futex_value = 123;
-    zx_status_t rc = zx_futex_wait(&futex_value, futex_value + 1,
-                                   ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+    zx_status_t rc =
+        zx_futex_wait(&futex_value, futex_value + 1, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
     ASSERT_EQ(rc, ZX_ERR_BAD_STATE, "Futex wait should have reurned bad state");
     END_TEST;
 }
@@ -316,7 +320,7 @@ static bool TestFutexWaitTimeout() {
 }
 
 // This test checks that the timeout in futex_wait() is respected
-static bool TestFutexWaitTimeoutElapsed() {
+bool TestFutexWaitTimeoutElapsed() {
     BEGIN_TEST;
 
     int32_t futex_value = 0;
@@ -333,7 +337,7 @@ static bool TestFutexWaitTimeoutElapsed() {
     END_TEST;
 }
 
-static bool TestFutexWaitBadAddress() {
+bool TestFutexWaitBadAddress() {
     BEGIN_TEST;
     // Check that the wait address is checked for validity.
     zx_status_t rc = zx_futex_wait(nullptr, 123, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
@@ -352,11 +356,11 @@ bool TestFutexWakeup() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value, INT_MAX);
+        zx_futex_wake(&futex_value, std::numeric_limits<int>::max());
         thread.Shutdown();
     });
 
-    ASSERT_EQ(zx_futex_wake(&futex_value, INT_MAX), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value, std::numeric_limits<int>::max()), ZX_OK);
     ASSERT_TRUE(thread.WaitThreadWoken());
     ASSERT_EQ(thread.wait_result(), ZX_OK);
     ASSERT_TRUE(thread.Shutdown());
@@ -374,7 +378,7 @@ bool TestFutexWakeupLimit() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value, INT_MAX);
+        zx_futex_wake(&futex_value, std::numeric_limits<int>::max());
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -392,8 +396,9 @@ bool TestFutexWakeupLimit() {
     ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 2));
 
     // Clean up: Wake the remaining threads so that they can exit.
-    ASSERT_EQ(zx_futex_wake(&futex_value, INT_MAX), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
+    ASSERT_EQ(zx_futex_wake(&futex_value, std::numeric_limits<int>::max()), ZX_OK);
+    ASSERT_TRUE(
+        TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_EQ(t.wait_result(), ZX_OK);
@@ -416,8 +421,8 @@ bool TestFutexWakeupAddress() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, INT_MAX);
-        zx_futex_wake(&futex_value2, INT_MAX);
+        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -426,16 +431,16 @@ bool TestFutexWakeupAddress() {
     ASSERT_TRUE(threads[0].Start(&futex_value1));
     ASSERT_TRUE(threads[1].Start(&futex_value2));
 
-    ASSERT_EQ(zx_futex_wake(&dummy_value, INT_MAX), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&dummy_value, std::numeric_limits<int>::max()), ZX_OK);
     ASSERT_TRUE(threads[0].AssertThreadBlockedOnFutex());
     ASSERT_TRUE(threads[1].AssertThreadBlockedOnFutex());
 
-    ASSERT_EQ(zx_futex_wake(&futex_value1, INT_MAX), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value1, std::numeric_limits<int>::max()), ZX_OK);
     ASSERT_TRUE(threads[0].WaitThreadWoken());
     ASSERT_TRUE(threads[1].AssertThreadBlockedOnFutex());
 
     // Clean up: Wake the remaining thread so that it can exit.
-    ASSERT_EQ(zx_futex_wake(&futex_value2, INT_MAX), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value2, std::numeric_limits<int>::max()), ZX_OK);
     ASSERT_TRUE(threads[1].WaitThreadWoken());
 
     for (auto& t : threads) {
@@ -451,8 +456,8 @@ bool TestFutexRequeueValueMismatch() {
     BEGIN_TEST;
     zx_futex_t futex_value1 = 100;
     zx_futex_t futex_value2 = 200;
-    zx_status_t rc = zx_futex_requeue(&futex_value1, 1, futex_value1 + 1,
-                                      &futex_value2, 1, ZX_HANDLE_INVALID);
+    zx_status_t rc =
+        zx_futex_requeue(&futex_value1, 1, futex_value1 + 1, &futex_value2, 1, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_ERR_BAD_STATE, "requeue should have returned bad state");
     END_TEST;
 }
@@ -460,8 +465,8 @@ bool TestFutexRequeueValueMismatch() {
 bool TestFutexRequeueSameAddr() {
     BEGIN_TEST;
     zx_futex_t futex_value = 100;
-    zx_status_t rc = zx_futex_requeue(&futex_value, 1, futex_value,
-                                      &futex_value, 1, ZX_HANDLE_INVALID);
+    zx_status_t rc =
+        zx_futex_requeue(&futex_value, 1, futex_value, &futex_value, 1, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_ERR_INVALID_ARGS, "requeue should have returned invalid args");
     END_TEST;
 }
@@ -475,8 +480,8 @@ bool TestFutexRequeue() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, INT_MAX);
-        zx_futex_wake(&futex_value2, INT_MAX);
+        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -486,8 +491,7 @@ bool TestFutexRequeue() {
         ASSERT_TRUE(t.Start(&futex_value1));
     }
 
-    zx_status_t rc = zx_futex_requeue(&futex_value1, 3, 100,
-                                      &futex_value2, 2, ZX_HANDLE_INVALID);
+    zx_status_t rc = zx_futex_requeue(&futex_value1, 3, 100, &futex_value2, 2, ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
 
     // 3 of the threads should have been woken.
@@ -495,12 +499,13 @@ bool TestFutexRequeue() {
 
     // Since 2 of the threads should have been requeued, waking all the
     // threads on futex_value2 should wake 2 more threads.
-    ASSERT_EQ(zx_futex_wake(&futex_value2, INT_MAX), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value2, std::numeric_limits<int>::max()), ZX_OK);
     ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 5));
 
     // Clean up: Wake the remaining thread so that it can exit.
     ASSERT_EQ(zx_futex_wake(&futex_value1, 1), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
+    ASSERT_TRUE(
+        TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_TRUE(t.Shutdown());
@@ -522,16 +527,16 @@ bool TestFutexRequeueUnqueuedOnTimeout() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, INT_MAX);
-        zx_futex_wake(&futex_value2, INT_MAX);
+        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
         for (auto& t : threads) {
             t.Shutdown();
         }
     });
 
     ASSERT_TRUE(threads[0].Start(&futex_value1, zx::msec(300)));
-    zx_status_t rc = zx_futex_requeue(&futex_value1, 0, 100,
-                                      &futex_value2, INT_MAX, ZX_HANDLE_INVALID);
+    zx_status_t rc = zx_futex_requeue(&futex_value1, 0, 100, &futex_value2,
+                                      std::numeric_limits<int>::max(), ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
     ASSERT_TRUE(threads[1].Start(&futex_value2));
 
@@ -575,7 +580,7 @@ bool TestFutexThreadKilled() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, INT_MAX);
+        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
         thread.Shutdown();
     });
 
@@ -606,7 +611,7 @@ static bool TestFutexThreadSuspended() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, INT_MAX);
+        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
         thread.Shutdown();
     });
 
@@ -660,27 +665,26 @@ static bool TestFutexMisaligned() {
     END_TEST;
 }
 
-static void log(const char* str) {
+void log(const char* str) {
     zx::time now = zx::clock::get_monotonic();
-    unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
-                    now.get() / 1000000000, now.get() % 1000000000, str);
+    unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s", now.get() / 1000000000,
+                    now.get() % 1000000000, str);
 }
 
 class Event {
 public:
-    Event()
-        : signaled_(0) {}
+    Event() : signaled_(0) {}
 
-    void wait() {
+    void Wait() {
         if (signaled_ == 0) {
             zx_futex_wait(&signaled_, signaled_, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
         }
     }
 
-    void signal() {
+    void Signal() {
         if (signaled_ == 0) {
             signaled_ = 1;
-            zx_futex_wake(&signaled_, UINT32_MAX);
+            zx_futex_wake(&signaled_, std::numeric_limits<uint32_t>::max());
         }
     }
 
@@ -688,30 +692,7 @@ private:
     int32_t signaled_;
 };
 
-static Event event;
-
-static int signal_thread1(void* arg) {
-    log("thread 1 waiting on event\n");
-    event.wait();
-    log("thread 1 done\n");
-    return 0;
-}
-
-static int signal_thread2(void* arg) {
-    log("thread 2 waiting on event\n");
-    event.wait();
-    log("thread 2 done\n");
-    return 0;
-}
-
-static int signal_thread3(void* arg) {
-    log("thread 3 waiting on event\n");
-    event.wait();
-    log("thread 3 done\n");
-    return 0;
-}
-
-static bool wait_blocked_on_futex(thrd_t thread) {
+bool WaitBlockedOnFutex(thrd_t thread) {
     BEGIN_HELPER;
 
     zx_handle_t thrd_handle = thrd_get_zx_handle(thread);
@@ -722,7 +703,8 @@ static bool wait_blocked_on_futex(thrd_t thread) {
     zx_status_t wait_res = ZX_ERR_INTERNAL;
 
     wait_res = WaitFor([&]() {
-        get_info_res = zx_object_get_info(thrd_handle, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+        get_info_res =
+            zx_object_get_info(thrd_handle, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
         return (get_info_res != ZX_OK) || (info.state == ZX_THREAD_STATE_BLOCKED_FUTEX);
     });
 
@@ -733,28 +715,56 @@ static bool wait_blocked_on_futex(thrd_t thread) {
     END_HELPER;
 }
 
-static bool TestEventSignaling() {
+bool TestEventSignaling() {
     BEGIN_TEST;
+    Event event;
     thrd_t thread1, thread2, thread3;
 
     log("starting signal threads\n");
-    thrd_create_with_name(&thread1, signal_thread1, NULL, "thread 1");
-    thrd_create_with_name(&thread2, signal_thread2, NULL, "thread 2");
-    thrd_create_with_name(&thread3, signal_thread3, NULL, "thread 3");
+    thrd_create_with_name(
+        &thread1,
+        [](void* ctx) {
+            Event* event = reinterpret_cast<Event*>(ctx);
+            log("thread 1 waiting on event\n");
+            event->Wait();
+            log("thread 1 done\n");
+            return 0;
+        },
+        &event, "thread 1");
+    thrd_create_with_name(
+        &thread2,
+        [](void* ctx) {
+            Event* event = reinterpret_cast<Event*>(ctx);
+            log("thread 2 waiting on event\n");
+            event->Wait();
+            log("thread 2 done\n");
+            return 0;
+        },
+        &event, "thread 2");
+    thrd_create_with_name(
+        &thread3,
+        [](void* ctx) {
+            Event* event = reinterpret_cast<Event*>(ctx);
+            log("thread 3 waiting on event\n");
+            event->Wait();
+            log("thread 3 done\n");
+            return 0;
+        },
+        &event, "thread 3");
 
-    ASSERT_TRUE(wait_blocked_on_futex(thread1));
-    ASSERT_TRUE(wait_blocked_on_futex(thread2));
-    ASSERT_TRUE(wait_blocked_on_futex(thread3));
+    ASSERT_TRUE(WaitBlockedOnFutex(thread1));
+    ASSERT_TRUE(WaitBlockedOnFutex(thread2));
+    ASSERT_TRUE(WaitBlockedOnFutex(thread3));
 
     log("signaling event\n");
-    event.signal();
+    event.Signal();
 
     log("joining signal threads\n");
-    thrd_join(thread1, NULL);
+    thrd_join(thread1, nullptr);
     log("signal_thread 1 joined\n");
-    thrd_join(thread2, NULL);
+    thrd_join(thread2, nullptr);
     log("signal_thread 2 joined\n");
-    thrd_join(thread3, NULL);
+    thrd_join(thread3, nullptr);
     log("signal_thread 3 joined\n");
     END_TEST;
 }
@@ -776,3 +786,6 @@ RUN_TEST(TestFutexThreadSuspended);
 RUN_TEST(TestFutexMisaligned);
 RUN_TEST(TestEventSignaling);
 END_TEST_CASE(futex_tests)
+
+} // namespace
+} // namespace futex
