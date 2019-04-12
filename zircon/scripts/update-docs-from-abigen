@@ -32,6 +32,10 @@ STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
 REFERENCES_COMMENT = \
         '<!-- References updated by update-docs-from-abigen, do not edit. -->'
 
+SYSCALLS_ABIGEN = os.path.normpath(
+    os.path.join(SCRIPT_DIR, os.pardir, 'system', 'public', 'zircon',
+                 'syscalls.abigen'))
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -600,10 +604,32 @@ def update_syscall_references(lines, syscall, all_syscall_names, warn):
         lines[:] = lines[:-3]
 
 
+def build_if_out_of_date(abigen, json):
+    """If the json file appears out-of-date relative to syscalls.abigen, then
+    run a zircon build to get the definitions updated.
+    """
+    def is_up_to_date(input, output):
+        """Checks if output exists and is newer-or-equal in mtime to input."""
+        if not os.path.isfile(output):
+            return False
+        input_time = os.path.getmtime(input)
+        output_time = os.path.getmtime(output)
+        return output_time >= input_time
+
+    if not is_up_to_date(abigen, json):
+        print '%s out of date vs %s, running build-zircon-x64' % (json, abigen)
+        subprocess.check_call(
+            os.path.relpath(os.path.join(SCRIPT_DIR, 'build-zircon-x64')))
+        if not is_up_to_date(abigen, json):
+            print '%s still out of date relative to %s!' % (json, abigen)
+            raise SystemExit()
+
+
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
     outf = os.path.relpath(args.docroot)
+    build_if_out_of_date(os.path.relpath(SYSCALLS_ABIGEN), args.json)
     print 'using %s as input and updating %s...' % (inf, outf)
     data = json.loads(open(inf, 'rb').read())
     missing_count = 0
