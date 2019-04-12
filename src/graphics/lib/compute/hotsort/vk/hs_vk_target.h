@@ -13,8 +13,8 @@
 #include "common/macros.h"
 
 //
-// This structure packages the parameters and SPIR-V modules for a
-// target architecture.
+// This structure packages target-specific HotSort parameters and
+// SPIR-V modules.
 //
 
 struct hs_vk_target_config
@@ -28,7 +28,7 @@ struct hs_vk_target_config
   struct {
     uint8_t   key;
     uint8_t   val;
-  } words;
+  } dwords;
 
   struct {
     uint8_t   slabs;
@@ -44,8 +44,6 @@ struct hs_vk_target_config
       uint8_t scale_max;
     } hm;
   } merge;
-
-  uint8_t     pad[2];
 };
 
 //

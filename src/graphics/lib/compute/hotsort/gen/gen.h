@@ -65,7 +65,7 @@ struct hsg_config
   } thread;
 
   struct {
-    uint32_t    words;
+    uint32_t    dwords;
   } type;
 };
 
@@ -160,6 +160,12 @@ typedef enum hsg_file_type {
                                                                 \
   HSG_OP_EXPAND_X(HSG_OP_TYPE_TARGET_BEGIN)                     \
   HSG_OP_EXPAND_X(HSG_OP_TYPE_TARGET_END)                       \
+                                                                \
+  HSG_OP_EXPAND_X(HSG_OP_TYPE_FILL_IN_KERNEL_PROTO)             \
+  HSG_OP_EXPAND_X(HSG_OP_TYPE_FILL_IN_KERNEL_BODY)              \
+                                                                \
+  HSG_OP_EXPAND_X(HSG_OP_TYPE_FILL_OUT_KERNEL_PROTO)            \
+  HSG_OP_EXPAND_X(HSG_OP_TYPE_FILL_OUT_KERNEL_BODY)             \
                                                                 \
   HSG_OP_EXPAND_X(HSG_OP_TYPE_TRANSPOSE_KERNEL_PROTO)           \
   HSG_OP_EXPAND_X(HSG_OP_TYPE_TRANSPOSE_KERNEL_PREAMBLE)        \

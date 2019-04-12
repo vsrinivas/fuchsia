@@ -119,7 +119,6 @@ SPN_TARGET_GLSL_DS_EXPAND();
 // it will have a sizeof() equal to type (right?).
 //
 //
-//
 
 #define SPN_TARGET_BUFFER_OFFSETOF(_ds_id,_name,_member)        \
   OFFSET_OF_MACRO(SPN_TARGET_BUFFER_NAME(_ds_id,_name),_member)

@@ -9,12 +9,16 @@
 // Define the type based on key and val sizes
 //
 
-#if   HS_KEY_WORDS == 1
-#if   HS_VAL_WORDS == 0
-#define HS_KEY_TYPE  uint
+#if   HS_KEY_DWORDS == 1
+#if   HS_VAL_DWORDS == 0
+#define HS_KEY_TYPE    uint
+#define HS_KEY_VAL_MAX HS_KEY_TYPE(-1)
 #endif
-#elif HS_KEY_WORDS == 2       // FIXME -- might want to use uint2
-#define HS_KEY_TYPE  uint64_t // GL_ARB_gpu_shader_int64
+#elif HS_KEY_DWORDS == 2       // FIXME -- might want to use uint2
+#if   HS_VAL_DWORDS == 0
+#define HS_KEY_TYPE    uint64_t // GL_ARB_gpu_shader_int64
+#define HS_KEY_VAL_MAX HS_KEY_TYPE(-1L)
+#endif
 #endif
 
 //
@@ -28,82 +32,122 @@
 //
 //
 
-#define HS_GLSL_BINDING(n)                      \
-  layout( binding = n)
+#define HS_GLSL_WORKGROUP_SIZE(_x,_y,_z)         \
+  layout( local_size_x = _x,                     \
+          local_size_y = _y,                     \
+          local_size_z = _z) in
 
-#define HS_GLSL_WORKGROUP_SIZE(x,y,z)           \
-  layout( local_size_x = x,                     \
-          local_size_y = y,                     \
-          local_size_z = z) in
+#define HS_GLSL_BINDING(_m,_n)                  \
+  layout(set = _m, binding = _n)
+
+#define HS_GLSL_PUSH()                          \
+  layout(push_constant)                         \
+    uniform _pc {                               \
+    uint kv_offset_in;                          \
+    uint kv_offset_out;                         \
+    uint kv_count;                              \
+  }
 
 //
 // These can be overidden
 //
 
-#define HS_VIN                vin
-#define HS_VOUT               vout
-#define HS_VOUT_LOAD(idx)     HS_VOUT[idx]
-#define HS_VOUT_STORE(idx,kv) HS_VOUT[idx] = kv
+#define HS_KV_IN                  kv_in
+#define HS_KV_OUT                 kv_out
+
+//
+//
+//
+
+#define HS_KV_IN_LOAD(_idx)       HS_KV_IN [_idx]
+#define HS_KV_OUT_LOAD(_idx)      HS_KV_OUT[_idx]
+
+#define HS_KV_IN_STORE(_idx,_kv)  HS_KV_IN [_idx] = _kv
+#define HS_KV_OUT_STORE(_idx,_kv) HS_KV_OUT[_idx] = _kv
 
 //
 // KERNEL PROTOS
 //
 
-#define HS_BS_KERNEL_PROTO(slab_count,slab_count_ru_log2)               \
+#define HS_BS_KERNEL_PROTO(slab_count,slab_count_ru_log2)                       \
+  HS_GLSL_SUBGROUP_SIZE()                                                       \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS*slab_count,1,1);                       \
+  HS_GLSL_BINDING(0,0) writeonly buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };   \
+  HS_GLSL_BINDING(0,1) readonly  buffer _kv_in  { HS_KEY_TYPE HS_KV_IN[];  };   \
+  HS_GLSL_PUSH();                                                               \
+  void main()
+
+#define HS_BC_KERNEL_PROTO(slab_count,slab_count_log2)                  \
   HS_GLSL_SUBGROUP_SIZE()                                               \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS*slab_count,1,1);               \
-  HS_GLSL_BINDING(0) writeonly buffer Vout { HS_KEY_TYPE HS_VOUT[]; };  \
-  HS_GLSL_BINDING(1) readonly  buffer Vin  { HS_KEY_TYPE HS_VIN[];  };  \
+  HS_GLSL_BINDING(0,0) buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };     \
+  HS_GLSL_PUSH();                                                       \
   void main()
 
-#define HS_BC_KERNEL_PROTO(slab_count,slab_count_log2)          \
-  HS_GLSL_SUBGROUP_SIZE()                                       \
-  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS*slab_count,1,1);       \
-  HS_GLSL_BINDING(0) buffer Vout { HS_KEY_TYPE HS_VOUT[]; };    \
+#define HS_FM_KERNEL_PROTO(s,r)                                         \
+  HS_GLSL_SUBGROUP_SIZE()                                               \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                          \
+  HS_GLSL_BINDING(0,0) buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };     \
+  HS_GLSL_PUSH();                                                       \
   void main()
 
-#define HS_FM_KERNEL_PROTO(s,r)                                 \
-  HS_GLSL_SUBGROUP_SIZE()                                       \
-  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                  \
-  HS_GLSL_BINDING(0) buffer Vout { HS_KEY_TYPE HS_VOUT[]; };    \
+#define HS_HM_KERNEL_PROTO(s)                                           \
+  HS_GLSL_SUBGROUP_SIZE()                                               \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                          \
+  HS_GLSL_BINDING(0,0) buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };     \
+  HS_GLSL_PUSH();                                                       \
   void main()
 
-#define HS_HM_KERNEL_PROTO(s)                                   \
-  HS_GLSL_SUBGROUP_SIZE()                                       \
-  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                  \
-  HS_GLSL_BINDING(0) buffer Vout { HS_KEY_TYPE HS_VOUT[]; };    \
+#define HS_FILL_IN_KERNEL_PROTO()                                               \
+  HS_GLSL_SUBGROUP_SIZE()                                                       \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                                  \
+  HS_GLSL_BINDING(0,1) writeonly buffer _kv_in { HS_KEY_TYPE HS_KV_IN[]; };     \
+  HS_GLSL_PUSH();                                                               \
   void main()
 
-#define HS_TRANSPOSE_KERNEL_PROTO()                             \
-  HS_GLSL_SUBGROUP_SIZE()                                       \
-  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                  \
-  HS_GLSL_BINDING(0) buffer Vout { HS_KEY_TYPE HS_VOUT[]; };    \
+#define HS_FILL_OUT_KERNEL_PROTO()                                              \
+  HS_GLSL_SUBGROUP_SIZE()                                                       \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                                  \
+  HS_GLSL_BINDING(0,0) writeonly buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };   \
+  HS_GLSL_PUSH();                                                               \
+  void main()
+
+#define HS_TRANSPOSE_KERNEL_PROTO()                                     \
+  HS_GLSL_SUBGROUP_SIZE()                                               \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS,1,1);                          \
+  HS_GLSL_BINDING(0,0) buffer _kv_out { HS_KEY_TYPE HS_KV_OUT[]; };     \
+  HS_GLSL_PUSH();                                                       \
   void main()
 
 //
 // BLOCK LOCAL MEMORY DECLARATION
 //
 
-#define HS_BLOCK_LOCAL_MEM_DECL(width,height)   \
+#define HS_BLOCK_LOCAL_MEM_DECL(_width,_height) \
   shared struct {                               \
-    HS_KEY_TYPE m[width * height];              \
+    HS_KEY_TYPE m[_width * _height];            \
   } smem
 
 //
 // BLOCK BARRIER
 //
 
-#define HS_BLOCK_BARRIER()                      \
-  barrier()
+#define HS_BLOCK_BARRIER()  barrier()
 
 //
 // SHUFFLES
 //
 
-#if   (HS_KEY_WORDS == 1)
+//
+// Note that not all target architectures have support for uint64.
+// For this reason we will probably switch to a uvec2 representation
+// for 8-byte key-vals.
+//
+
+#if   (HS_KEY_DWORDS == 1)
 #define HS_SHUFFLE_CAST_TO(v)         v
 #define HS_SHUFFLE_CAST_FROM(v)       v
-#elif (HS_KEY_WORDS == 2)
+#elif (HS_KEY_DWORDS == 2)
 #define HS_SHUFFLE_CAST_TO(v)         uint64BitsToDouble(v)
 #define HS_SHUFFLE_CAST_FROM(v)       doubleBitsToUint64(v)
 #endif
@@ -117,27 +161,63 @@
 // SLAB GLOBAL
 //
 
-#define HS_SLAB_GLOBAL_PREAMBLE()                       \
-  const uint gmem_idx =                                 \
-    (gl_GlobalInvocationID.x & ~(HS_SLAB_THREADS-1)) *  \
-    HS_SLAB_HEIGHT +                                    \
-    (gl_LocalInvocationID.x  &  (HS_SLAB_THREADS-1))
+//
+// Note that subgroup sizes in Vulkan 1.1 aren't necessarily known in
+// advance -- at least on Intel GEN.  When we have control over which
+// subgroup size is selected at shader compile time then some of the
+// address calculation macros will be written in a less subtle manner.
+//
 
-#define HS_SLAB_GLOBAL_LOAD(extent,row_idx)  \
-  extent[gmem_idx + HS_SLAB_THREADS * row_idx]
+#define HS_SLAB_GLOBAL_BASE()                                                                   \
+  const uint gmem_base = (gl_GlobalInvocationID.x & ~(HS_SLAB_THREADS-1)) * HS_SLAB_HEIGHT
 
-#define HS_SLAB_GLOBAL_STORE(row_idx,reg)    \
-  HS_VOUT_STORE((gmem_idx + HS_SLAB_THREADS * row_idx),reg)
+#define HS_SLAB_GLOBAL_OFFSET()                                                 \
+  const uint gmem_offset = (gl_LocalInvocationID.x & (HS_SLAB_THREADS-1))
+
+//
+//
+//
+
+#define HS_SLAB_GLOBAL_IDX()                    \
+  HS_SLAB_GLOBAL_BASE();                        \
+  HS_SLAB_GLOBAL_OFFSET();                      \
+  const uint gmem_idx = gmem_base + gmem_offset
+
+#define HS_SLAB_GLOBAL_IDX_IN()                 \
+  HS_SLAB_GLOBAL_IDX();                         \
+  const uint gmem_in_idx = kv_offset_in + gmem_idx
+
+#define HS_SLAB_GLOBAL_IDX_OUT()                        \
+  HS_SLAB_GLOBAL_IDX();                                 \
+  const uint gmem_out_idx = kv_offset_out + gmem_idx
+
+#define HS_SLAB_GLOBAL_IDX_IN_OUT()                        \
+  HS_SLAB_GLOBAL_IDX();                                    \
+  const uint gmem_in_idx  = kv_offset_in  + gmem_idx;      \
+  const uint gmem_out_idx = kv_offset_out + gmem_idx
+
+//
+//
+//
+
+#define HS_SLAB_GLOBAL_LOAD_IN(_row_idx)                        \
+  HS_KV_IN_LOAD(gmem_in_idx + HS_SLAB_THREADS * _row_idx)
+
+#define HS_SLAB_GLOBAL_LOAD_OUT(_row_idx)                       \
+  HS_KV_OUT_LOAD(gmem_out_idx + HS_SLAB_THREADS * _row_idx)
+
+#define HS_SLAB_GLOBAL_STORE_OUT(_row_idx,_kv)                          \
+  HS_KV_OUT_STORE((gmem_out_idx + HS_SLAB_THREADS * _row_idx),_kv)
 
 //
 // SLAB LOCAL
 //
 
 #define HS_SLAB_LOCAL_L(offset)                 \
-    smem.m[smem_l_idx + (offset)]
+  smem.m[smem_l_idx + (offset)]
 
 #define HS_SLAB_LOCAL_R(offset)                 \
-    smem.m[smem_r_idx + (offset)]
+  smem.m[smem_r_idx + (offset)]
 
 //
 // SLAB LOCAL VERTICAL LOADS
@@ -170,8 +250,8 @@
     HS_SUBGROUP_ID() * (HS_SLAB_THREADS * slab_count) +                 \
     HS_SUBGROUP_LANE_ID()
 
-#define HS_BC_GLOBAL_LOAD_L(slab_idx)        \
-  HS_VOUT_LOAD(gmem_l_idx + (HS_SLAB_THREADS * slab_idx))
+#define HS_BC_GLOBAL_LOAD_L(slab_idx)                           \
+  HS_KV_OUT_LOAD(gmem_l_idx + (HS_SLAB_THREADS * slab_idx))
 
 //
 // SLAB FLIP AND HALF PREAMBLES
@@ -189,12 +269,12 @@
 
 #else
 
-#define HS_SLAB_FLIP_PREAMBLE(mask)                                     \
-  const uint flip_lane_mask = mask;                                     \
+#define HS_SLAB_FLIP_PREAMBLE(mask)                                                     \
+  const uint flip_lane_mask = mask;                                                     \
   const bool t_lt           = gl_LocalInvocationID.x < (gl_LocalInvocationID.x ^ mask)
 
-#define HS_SLAB_HALF_PREAMBLE(mask)                                     \
-  const uint half_lane_mask = mask;                                     \
+#define HS_SLAB_HALF_PREAMBLE(mask)                                                     \
+  const uint half_lane_mask = mask;                                                     \
   const bool t_lt           = gl_LocalInvocationID.x < (gl_LocalInvocationID.x ^ mask)
 
 #endif
@@ -331,8 +411,8 @@
   const uint span_off    = gl_GlobalInvocationID.x;                     \
   const uint span_l      = span_base + span_off
 
-#define HS_FM_PREAMBLE(half_span)                                       \
-  HS_HM_PREAMBLE(half_span);                                            \
+#define HS_FM_PREAMBLE(half_span)                                                       \
+  HS_HM_PREAMBLE(half_span);                                                            \
   const uint span_r      = span_base + span_stride * (half_span + 1) - span_off - 1
 
 //
@@ -343,29 +423,67 @@
   (span_l + span_stride * stride_idx)
 
 #define HS_XM_GLOBAL_LOAD_L(stride_idx)         \
-  HS_VOUT_LOAD(HS_XM_GLOBAL_L(stride_idx))
+  HS_KV_OUT_LOAD(HS_XM_GLOBAL_L(stride_idx))
 
-#define HS_XM_GLOBAL_STORE_L(stride_idx,reg)    \
-  HS_VOUT_STORE(HS_XM_GLOBAL_L(stride_idx),reg)
+#define HS_XM_GLOBAL_STORE_L(stride_idx,reg)            \
+  HS_KV_OUT_STORE(HS_XM_GLOBAL_L(stride_idx),reg)
 
 #define HS_FM_GLOBAL_R(stride_idx)              \
   (span_r + span_stride * stride_idx)
 
 #define HS_FM_GLOBAL_LOAD_R(stride_idx)         \
-  HS_VOUT_LOAD(HS_FM_GLOBAL_R(stride_idx))
+  HS_KV_OUT_LOAD(HS_FM_GLOBAL_R(stride_idx))
 
-#define HS_FM_GLOBAL_STORE_R(stride_idx,reg)    \
-  HS_VOUT_STORE(HS_FM_GLOBAL_R(stride_idx),reg)
+#define HS_FM_GLOBAL_STORE_R(stride_idx,reg)            \
+  HS_KV_OUT_STORE(HS_FM_GLOBAL_R(stride_idx),reg)
 
 //
-// This snarl of macros is for transposing a "slab" of sorted elements
-// into linear order.
+//
+//
+
+#define HS_FILL_IN_BODY()                                               \
+  HS_SLAB_GLOBAL_BASE();                                                \
+  HS_SLAB_GLOBAL_OFFSET();                                              \
+  uint kv_count_base = kv_count & ~(HS_SLAB_THREADS-1);                 \
+  uint gmem_in_idx   = kv_offset_in + gmem_offset;                      \
+  if (gmem_base >= kv_count_base)                                       \
+    {                                                                   \
+      gmem_in_idx += gmem_base;                                         \
+    }                                                                   \
+  else                                                                  \
+    {                                                                   \
+      gmem_in_idx += kv_count_base;                                     \
+      if (gmem_in_idx >= (kv_offset_in + kv_count)) {                   \
+        HS_KV_IN_STORE(gmem_in_idx,HS_KEY_VAL_MAX);                     \
+        gmem_in_idx += HS_SLAB_THREADS;                                 \
+      }                                                                 \
+    }                                                                   \
+  const uint gmem_in_max = gmem_base + kv_offset_in + HS_SLAB_KEYS;     \
+  while (gmem_in_idx < gmem_in_max)                                     \
+    {                                                                   \
+      HS_KV_IN_STORE(gmem_in_idx,HS_KEY_VAL_MAX);                       \
+      gmem_in_idx += HS_SLAB_THREADS;                                   \
+    }
+
+#define HS_FILL_OUT_BODY()                                                 \
+  HS_SLAB_GLOBAL_IDX();                                                    \
+  uint       gmem_out_idx = kv_offset_out + gmem_idx;                      \
+  const uint gmem_out_max = gmem_base + kv_offset_out + HS_SLAB_KEYS;      \
+  while (gmem_out_idx < gmem_out_max)                                      \
+    {                                                                      \
+      HS_KV_OUT_STORE(gmem_out_idx,HS_KEY_VAL_MAX);                        \
+      gmem_out_idx += HS_SLAB_THREADS;                                     \
+    }
+
+//
+// This snarl of macros is for transposing a serpentine-ordered "slab"
+// of sorted elements into linear order.
 //
 // This can occur as the last step in hs_sort() or via a custom kernel
 // that inspects the slab and then transposes and stores it to memory.
 //
 // The slab format can be inspected more efficiently than a linear
-// arrangement.
+// arrangement so is useful for post-sort operations.
 //
 // The prime example is detecting when adjacent keys (in sort order)
 // have differing high order bits ("key changes").  The index of each
@@ -379,10 +497,10 @@
 #define HS_TRANSPOSE_DECL(prefix,row)  const HS_KEY_TYPE HS_TRANSPOSE_REG(prefix,row)
 #define HS_TRANSPOSE_PRED(level)       is_lo_##level
 
-#define HS_TRANSPOSE_TMP_REG(prefix_curr,row_ll,row_ur)       \
+#define HS_TRANSPOSE_TMP_REG(prefix_curr,row_ll,row_ur) \
   prefix_curr##row_ll##_##row_ur
 
-#define HS_TRANSPOSE_TMP_DECL(prefix_curr,row_ll,row_ur)      \
+#define HS_TRANSPOSE_TMP_DECL(prefix_curr,row_ll,row_ur)                \
   const HS_KEY_TYPE HS_TRANSPOSE_TMP_REG(prefix_curr,row_ll,row_ur)
 
 #define HS_TRANSPOSE_STAGE(level)                       \
@@ -407,7 +525,8 @@
     HS_TRANSPOSE_TMP_REG(prefix_curr,row_ll,row_ur);
 
 #define HS_TRANSPOSE_REMAP(prefix,row_from,row_to)                      \
-  HS_VOUT_STORE((gmem_idx + ((row_to-1) << HS_SLAB_WIDTH_LOG2)),HS_TRANSPOSE_REG(prefix,row_from));
+  HS_KV_OUT_STORE(gmem_out_idx + ((row_to-1) << HS_SLAB_WIDTH_LOG2),    \
+                  HS_TRANSPOSE_REG(prefix,row_from));
 
 //
 //

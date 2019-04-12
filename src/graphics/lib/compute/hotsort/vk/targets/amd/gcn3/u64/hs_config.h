@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//
-// Copyright 2016 Google Inc.
-//
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-//
-
 #ifndef HS_GLSL_ONCE
 #define HS_GLSL_ONCE
 
@@ -19,8 +12,8 @@
 #define HS_SLAB_HEIGHT          8
 #define HS_SLAB_KEYS            (HS_SLAB_WIDTH * HS_SLAB_HEIGHT)
 #define HS_REG_LAST(c)          c##8
-#define HS_KEY_WORDS            2
-#define HS_VAL_WORDS            0
+#define HS_KEY_DWORDS           2
+#define HS_VAL_DWORDS           0
 #define HS_BS_SLABS             16
 #define HS_BS_SLABS_LOG2_RU     4
 #define HS_BC_SLABS_LOG2_MAX    4

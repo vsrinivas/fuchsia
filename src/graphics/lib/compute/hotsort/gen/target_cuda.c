@@ -135,7 +135,7 @@ hsg_target_cuda(struct hsg_target       * const target,
 
         // allocate files
         target->state->header = fopen("hs_cuda_config.h","wb");
-        target->state->source = fopen((config->type.words == 1) ?
+        target->state->source = fopen((config->type.dwords == 1) ?
                                       "hs_cuda_u32.cu" : "hs_cuda_u64.cu",
                                       "wb");
 
@@ -156,8 +156,8 @@ hsg_target_cuda(struct hsg_target       * const target,
                 "#define HS_SLAB_KEYS            (HS_SLAB_WIDTH * HS_SLAB_HEIGHT)\n"
                 "#define HS_REG_LAST(c)          c##%u                           \n"
                 "#define HS_KEY_TYPE_PRETTY      %s                              \n"
-                "#define HS_KEY_WORDS            %u                              \n"
-                "#define HS_VAL_WORDS            0                               \n"
+                "#define HS_KEY_DWORDS           %u                              \n"
+                "#define HS_VAL_DWORDS           0                               \n"
                 "#define HS_BS_SLABS             %u                              \n"
                 "#define HS_BS_SLABS_LOG2_RU     %u                              \n"
                 "#define HS_BC_SLABS_LOG2_MAX    %u                              \n"
@@ -173,8 +173,8 @@ hsg_target_cuda(struct hsg_target       * const target,
                 config->warp.lanes_log2,
                 config->thread.regs,
                 config->thread.regs,
-                (config->type.words == 1) ? "u32"      : "u64",
-                config->type.words,
+                (config->type.dwords == 1) ? "u32"      : "u64",
+                config->type.dwords,
                 merge->warps,
                 msb_idx_u32(pow2_ru_u32(merge->warps)),
                 bc_max,

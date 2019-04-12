@@ -24,7 +24,11 @@ HS_GLSL_VERSION(460)
 HS_GLSL_EXT_REQUIRE(GL_KHR_shader_subgroup_basic)
 HS_GLSL_EXT_REQUIRE(GL_KHR_shader_subgroup_shuffle)
 
-#if HS_KEY_WORDS == 2
+//
+//
+//
+
+#if HS_KEY_DWORDS == 2
 HS_GLSL_EXT_REQUIRE(GL_ARB_gpu_shader_int64)
 #endif
 

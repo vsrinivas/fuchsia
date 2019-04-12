@@ -25,8 +25,8 @@
 
 #if 1
 
-#define HS_SUBGROUP_PREAMBLE()                                          \
-  const uint hs_subgroup_id      = gl_LocalInvocationID.x / HS_SLAB_THREADS; \
+#define HS_SUBGROUP_PREAMBLE()                                                          \
+  const uint hs_subgroup_id      = gl_LocalInvocationID.x / HS_SLAB_THREADS;            \
   const uint hs_subgroup_lane_id = gl_LocalInvocationID.x & (HS_SLAB_THREADS-1);
 
 #define HS_SUBGROUP_ID()        hs_subgroup_id
@@ -45,9 +45,9 @@
 // CHOOSE A COMPARE-EXCHANGE IMPLEMENTATION
 //
 
-#if   (HS_KEY_WORDS == 1)
+#if   (HS_KEY_DWORDS == 1)
 #define HS_CMP_XCHG(a,b)  HS_CMP_XCHG_V0(a,b)
-#elif (HS_KEY_WORDS == 2)
+#elif (HS_KEY_DWORDS == 2)
 #define HS_CMP_XCHG(a,b)  HS_CMP_XCHG_V1(a,b)
 #endif
 
@@ -55,9 +55,9 @@
 // CHOOSE A CONDITIONAL MIN/MAX IMPLEMENTATION
 //
 
-#if   (HS_KEY_WORDS == 1)
+#if   (HS_KEY_DWORDS == 1)
 #define HS_COND_MIN_MAX(lt,a,b) HS_COND_MIN_MAX_V0(lt,a,b)
-#elif (HS_KEY_WORDS == 2)
+#elif (HS_KEY_DWORDS == 2)
 #define HS_COND_MIN_MAX(lt,a,b) HS_COND_MIN_MAX_V0(lt,a,b)
 #endif
 

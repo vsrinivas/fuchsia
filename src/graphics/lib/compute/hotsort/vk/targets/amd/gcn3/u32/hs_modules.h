@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//
-// Copyright 2016 Google Inc.
-//
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-//
-
 #include "hs_bs_0.len.xxd"
 ,
 #include "hs_bs_0.spv.xxd"
@@ -72,6 +65,14 @@
 #include "hs_hm_1.len.xxd"
 ,
 #include "hs_hm_1.spv.xxd"
+,
+#include "hs_fill_in.len.xxd"
+,
+#include "hs_fill_in.spv.xxd"
+,
+#include "hs_fill_out.len.xxd"
+,
+#include "hs_fill_out.spv.xxd"
 ,
 #include "hs_transpose.len.xxd"
 ,

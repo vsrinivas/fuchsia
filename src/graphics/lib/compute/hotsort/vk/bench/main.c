@@ -18,6 +18,7 @@
 #include "common/macros.h"
 #include "common/vk/vk_assert.h"
 #include "common/vk/vk_cache.h"
+#include "common/vk/vk_find_mem_type_idx.h"
 
 //
 //
@@ -320,44 +321,6 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
 //
 //
 
-uint32_t
-vk_find_mem_type_idx(VkPhysicalDeviceMemoryProperties const * phy_device_mem_props,
-                     uint32_t                         const   compatible_mem_types,
-                     VkMemoryPropertyFlags            const   required_mem_props,
-                     bool                             const   abort)
-{
-  //
-  // FIXME -- jump between indices in the memoryTypeBits mask
-  //
-  uint32_t const count = phy_device_mem_props->memoryTypeCount;
-
-  for (uint32_t index=0; index<count; index++)
-    {
-      // acceptable memory type for this resource?
-      if ((compatible_mem_types & (1<<index)) == 0)
-        continue;
-
-      // otherwise, find first match...
-      VkMemoryPropertyFlags const common_props =
-        phy_device_mem_props->memoryTypes[index].propertyFlags & required_mem_props;
-
-      if (common_props == required_mem_props)
-        return index;
-    }
-
-  if (abort)
-    {
-      fprintf(stderr,"Memory type not found: %X\n",required_mem_props);
-      exit(EXIT_FAILURE);
-    }
-
-  return UINT32_MAX;
-}
-
-//
-//
-//
-
 #ifdef NDEBUG
 #define HS_BENCH_LOOPS   100
 #define HS_BENCH_WARMUP  100
@@ -620,9 +583,9 @@ main(int argc, char const * argv[])
   //
   // get the pipeline cache
   //
-  VkPipelineCache pipeline_cache;
+  VkPipelineCache pc;
 
-  vk_pipeline_cache_create(device,NULL,".vk_cache",&pipeline_cache);
+  vk_pipeline_cache_create(device,NULL,".vk_cache",&pc);
 
   //
   // create a descriptor set pool
@@ -643,25 +606,108 @@ main(int argc, char const * argv[])
     .pPoolSizes    = dps
   };
 
-  VkDescriptorPool desc_pool;
+  VkDescriptorPool dp;
 
   vk(CreateDescriptorPool(device,
                           &dpci,
                           NULL, // allocator
-                          &desc_pool));
+                          &dp));
 
   //
-  // create HotSort device instance
+  // create descriptor set layout
   //
-  struct hs_vk * hs = hs_vk_create(hs_target,
-                                   device,
-                                   NULL,
-                                   pipeline_cache);
-  //
-  // create a HotSort descriptor set for this thread
-  //
-  VkDescriptorSet hs_ds = hs_vk_ds_alloc(hs,desc_pool);
+  VkDescriptorSetLayoutCreateInfo const dscli = {
+    .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+    .pNext        = NULL,
+    .flags        = 0,
+    .bindingCount = 2, // 0:vout[], 1:vin[]
+    .pBindings    = (VkDescriptorSetLayoutBinding[]) {
+      {
+        .binding            = 0, // vout
+        .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount    = 1,
+        .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
+        .pImmutableSamplers = NULL
+      },
+      {
+        .binding            = 1, // vin
+        .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount    = 1,
+        .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
+        .pImmutableSamplers = NULL
+      }
+    }
+  };
 
+  VkDescriptorSetLayout dsl;
+
+  vk(CreateDescriptorSetLayout(device,
+                               &dscli,
+                               NULL, // allocator
+                               &dsl));
+
+  //
+  // create pipeline layout
+  //
+  VkPipelineLayoutCreateInfo const plci = {
+    .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    .pNext                  = NULL,
+    .flags                  = 0,
+    .setLayoutCount         = 1,
+    .pSetLayouts            = &dsl,
+    .pushConstantRangeCount = 1,
+    .pPushConstantRanges    = (VkPushConstantRange[]){
+      {
+        .stageFlags = HS_VK_PUSH_CONSTANT_RANGE_STAGE_FLAGS,
+        .offset     = HS_VK_PUSH_CONSTANT_RANGE_OFFSET,
+        .size       = HS_VK_PUSH_CONSTANT_RANGE_SIZE
+      }
+    }
+  };
+
+  VkPipelineLayout pl;
+
+  vk(CreatePipelineLayout(device,
+                          &plci,
+                          NULL, // allocator
+                          &pl));
+
+  //
+  // create a descriptor set
+  //
+  VkDescriptorSetAllocateInfo const dsai = {
+    .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .pNext              = NULL,
+    .descriptorPool     = dp,
+    .descriptorSetCount = 1,
+    .pSetLayouts        = &dsl
+  };
+
+  VkDescriptorSet ds;
+
+  vk(AllocateDescriptorSets(device,&dsai,&ds));
+
+  //
+  // create HotSort instance
+  //
+  struct hs_vk_ds_locations const ds_locations =
+    {
+      .in = {
+        .set     = 0,
+        .binding = 1
+      },
+      .out = {
+        .set     = 0,
+        .binding = 0
+      }
+    };
+
+  struct hs_vk * const hs = hs_vk_create(device,
+                                         NULL,
+                                         pc,
+                                         pl,
+                                         &ds_locations,
+                                         hs_target);
   //
   // create a command pool for this thread
   //
@@ -777,8 +823,7 @@ main(int argc, char const * argv[])
     .allocationSize  = mr_vin.size,
     .memoryTypeIndex = vk_find_mem_type_idx(&phy_device_mem_props,
                                             mr_vin.memoryTypeBits,
-                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                            true)
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
   };
 
   VkMemoryAllocateInfo const mai_sorted_rand = {
@@ -788,8 +833,7 @@ main(int argc, char const * argv[])
     .memoryTypeIndex = vk_find_mem_type_idx(&phy_device_mem_props,
                                             mr_sorted.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                            true)
+                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
   };
 
   VkDeviceMemory mem_vin, mem_vout, mem_sorted, mem_rand;
@@ -879,6 +923,52 @@ main(int argc, char const * argv[])
   };
 
   //
+  // update the descriptor set
+  //
+  VkDescriptorBufferInfo const dbi[] = {
+    {
+      .buffer = vout,
+      .offset = 0,
+      .range  = VK_WHOLE_SIZE
+    },
+    {
+      .buffer = vin,
+      .offset = 0,
+      .range  = VK_WHOLE_SIZE
+    }
+  };
+
+  VkWriteDescriptorSet const wds[] = {
+    {
+      .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext            = NULL,
+      .dstSet           = ds,
+      .dstBinding       = 0,
+      .dstArrayElement  = 0,
+      .descriptorCount  = 2,
+      .descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      .pImageInfo       = NULL,
+      .pBufferInfo      = dbi,
+      .pTexelBufferView = NULL
+    }
+  };
+
+  vkUpdateDescriptorSets(device,
+                         ARRAY_LENGTH_MACRO(wds),
+                         wds,
+                         0,
+                         NULL);
+
+  //
+  // buffer offsets
+  //
+  struct hs_vk_ds_offsets const offsets =
+    {
+      .in  = 0UL,
+      .out = 0UL
+    };
+
+  //
   // labels
   //
   fprintf(stdout,
@@ -955,15 +1045,21 @@ main(int argc, char const * argv[])
       //
       // bind the vin/vout buffers early
       //
-      hs_vk_ds_bind(hs,hs_ds,cb,vin,vout);
+      vkCmdBindDescriptorSets(cb,
+                              VK_PIPELINE_BIND_POINT_COMPUTE,
+                              pl,
+                              0,
+                              1,
+                              &ds,
+                              0,
+                              NULL);
 
       //
       // append sorting commands
       //
-      hs_vk_sort(hs,
-                 cb,
-                 vin,0,0,
-                 vout,0,0,
+      hs_vk_sort(cb,
+                 hs,
+                 &offsets,
                  count,
                  count_padded_in,
                  count_padded_out,
@@ -1145,15 +1241,20 @@ main(int argc, char const * argv[])
               1000.0 * count         / (timestamp_period * elapsed_ns_min)); // mkeys / sec - max
     }
 
-  // reset the descriptor pool
-  vk(ResetDescriptorPool(device,desc_pool,0));
-
   //
   // cleanup
   //
 
+  vk(ResetDescriptorPool(device,dp,0)); // implicitly frees descriptor sets
+
+  vkDestroyDescriptorPool(device,dp,NULL);
+
+  vkDestroyDescriptorSetLayout(device,dsl,NULL);
+
+  vkDestroyPipelineLayout(device,pl,NULL);
+
   // release shared HotSort state
-  hs_vk_release(hs);
+  hs_vk_release(device,NULL,hs);
 
   // destroy the vin/vout buffers (before device memory)
   vkDestroyBuffer(device,vin,   NULL);
@@ -1171,15 +1272,12 @@ main(int argc, char const * argv[])
   free(rand_h);
   free(sorted_h);
 
-  // destroy the descriptor pool
-  vkDestroyDescriptorPool(device,desc_pool,NULL);
-
   // destroy remaining...
   vkDestroyQueryPool(device,query_pool,NULL);
   vkFreeCommandBuffers(device,cmd_pool,1,&cb);
   vkDestroyCommandPool(device,cmd_pool,NULL);
 
-  vk_pipeline_cache_destroy(device,NULL,".vk_cache",pipeline_cache);
+  vk_pipeline_cache_destroy(device,NULL,".vk_cache",pc);
 
   vkDestroyDevice(device,NULL);
 

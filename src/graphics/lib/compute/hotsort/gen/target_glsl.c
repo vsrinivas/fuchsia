@@ -169,8 +169,8 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "#define HS_SLAB_HEIGHT          %u                              \n"
                 "#define HS_SLAB_KEYS            (HS_SLAB_WIDTH * HS_SLAB_HEIGHT)\n"
                 "#define HS_REG_LAST(c)          c##%u                           \n"
-                "#define HS_KEY_WORDS            %u                              \n"
-                "#define HS_VAL_WORDS            0                               \n"
+                "#define HS_KEY_DWORDS           %u                              \n"
+                "#define HS_VAL_DWORDS           0                               \n"
                 "#define HS_BS_SLABS             %u                              \n"
                 "#define HS_BS_SLABS_LOG2_RU     %u                              \n"
                 "#define HS_BC_SLABS_LOG2_MAX    %u                              \n"
@@ -186,7 +186,7 @@ hsg_target_glsl(struct hsg_target       * const target,
                 config->warp.lanes_log2,
                 config->thread.regs,
                 config->thread.regs,
-                config->type.words,
+                config->type.dwords,
                 merge->warps,
                 msb_idx_u32(pow2_ru_u32(merge->warps)),
                 bc_max,
@@ -254,6 +254,54 @@ hsg_target_glsl(struct hsg_target       * const target,
       free(target->state);
       break;
 
+    case HSG_OP_TYPE_FILL_IN_KERNEL_PROTO:
+      {
+        fprintf(target->state->modules,
+                "#include \"hs_fill_in.len.xxd\"\n,\n"
+                "#include \"hs_fill_in.spv.xxd\"\n,\n");
+
+        target->state->source = fopen("hs_fill_in.comp","w+");
+
+        hsg_copyright(target->state->source);
+
+        hsg_macros(target->state->source);
+
+        fprintf(target->state->source,
+                "HS_FILL_IN_KERNEL_PROTO()\n");
+      }
+      break;
+
+    case HSG_OP_TYPE_FILL_IN_KERNEL_BODY:
+      {
+        fprintf(target->state->source,
+                "HS_FILL_IN_BODY()\n");
+      }
+      break;
+
+    case HSG_OP_TYPE_FILL_OUT_KERNEL_PROTO:
+      {
+        fprintf(target->state->modules,
+                "#include \"hs_fill_out.len.xxd\"\n,\n"
+                "#include \"hs_fill_out.spv.xxd\"\n,\n");
+
+        target->state->source = fopen("hs_fill_out.comp","w+");
+
+        hsg_copyright(target->state->source);
+
+        hsg_macros(target->state->source);
+
+        fprintf(target->state->source,
+                "HS_FILL_OUT_KERNEL_PROTO()\n");
+      }
+      break;
+
+    case HSG_OP_TYPE_FILL_OUT_KERNEL_BODY:
+      {
+        fprintf(target->state->source,
+                "HS_FILL_OUT_BODY()\n");
+      }
+      break;
+
     case HSG_OP_TYPE_TRANSPOSE_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
@@ -277,7 +325,7 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "HS_SUBGROUP_PREAMBLE();\n");
 
         fprintf(target->state->source,
-                "HS_SLAB_GLOBAL_PREAMBLE();\n");
+                "HS_SLAB_GLOBAL_IDX_OUT();\n");
       }
       break;
 
@@ -330,7 +378,7 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "HS_SUBGROUP_PREAMBLE();\n");
 
         fprintf(target->state->source,
-                "HS_SLAB_GLOBAL_PREAMBLE();\n");
+                "HS_SLAB_GLOBAL_IDX_IN_OUT();\n");
       }
       break;
 
@@ -375,7 +423,7 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "HS_SUBGROUP_PREAMBLE()\n");
 
         fprintf(target->state->source,
-                "HS_SLAB_GLOBAL_PREAMBLE();\n");
+                "HS_SLAB_GLOBAL_IDX_OUT();\n");
       }
       break;
 
@@ -449,17 +497,20 @@ hsg_target_glsl(struct hsg_target       * const target,
 
     case HSG_OP_TYPE_BX_REG_GLOBAL_LOAD:
       {
-        static char const * const vstr[] = { "vin", "vout" };
+        static char const * const sgl_str[] = {
+          "HS_SLAB_GLOBAL_LOAD_IN",
+          "HS_SLAB_GLOBAL_LOAD_OUT",
+        };
 
         fprintf(target->state->source,
-                "HS_KEY_TYPE r%-3u = HS_SLAB_GLOBAL_LOAD(%s,%u);\n",
-                ops->n,vstr[ops->v],ops->n-1);
+                "HS_KEY_TYPE r%-3u = %s(%u);\n",
+                ops->n,sgl_str[ops->v],ops->n-1);
       }
       break;
 
     case HSG_OP_TYPE_BX_REG_GLOBAL_STORE:
       fprintf(target->state->source,
-              "HS_SLAB_GLOBAL_STORE(%u,r%u);\n",
+              "HS_SLAB_GLOBAL_STORE_OUT(%u,r%u);\n",
               ops->n-1,ops->n);
       break;
 

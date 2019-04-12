@@ -25,9 +25,9 @@
 // CHOOSE A COMPARE-EXCHANGE IMPLEMENTATION
 //
 
-#if   (HS_KEY_WORDS == 1)
+#if   (HS_KEY_DWORDS == 1)
 #define HS_CMP_XCHG(a,b)  HS_CMP_XCHG_V0(a,b)
-#elif (HS_KEY_WORDS == 2)
+#elif (HS_KEY_DWORDS == 2)
 #define HS_CMP_XCHG(a,b)  HS_CMP_XCHG_V3(a,b)
 #endif
 
@@ -35,9 +35,9 @@
 // CHOOSE A CONDITIONAL MIN/MAX IMPLEMENTATION
 //
 
-#if   (HS_KEY_WORDS == 1)
+#if   (HS_KEY_DWORDS == 1)
 #define HS_COND_MIN_MAX(lt,a,b) HS_COND_MIN_MAX_V0(lt,a,b)
-#elif (HS_KEY_WORDS == 2)
+#elif (HS_KEY_DWORDS == 2)
 #define HS_COND_MIN_MAX(lt,a,b) HS_COND_MIN_MAX_V0(lt,a,b)
 #endif
 

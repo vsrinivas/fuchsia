@@ -46,6 +46,12 @@ hsg_op_type_string[] =
 #define TARGET_BEGIN()                    (struct hsg_op){ HSG_OP_TYPE_TARGET_BEGIN                             }
 #define TARGET_END()                      (struct hsg_op){ HSG_OP_TYPE_TARGET_END                               }
 
+#define FILL_IN_KERNEL_PROTO()            (struct hsg_op){ HSG_OP_TYPE_FILL_IN_KERNEL_PROTO                     }
+#define FILL_IN_KERNEL_BODY()             (struct hsg_op){ HSG_OP_TYPE_FILL_IN_KERNEL_BODY                      }
+
+#define FILL_OUT_KERNEL_PROTO()           (struct hsg_op){ HSG_OP_TYPE_FILL_OUT_KERNEL_PROTO                    }
+#define FILL_OUT_KERNEL_BODY()            (struct hsg_op){ HSG_OP_TYPE_FILL_OUT_KERNEL_BODY                     }
+
 #define TRANSPOSE_KERNEL_PROTO()          (struct hsg_op){ HSG_OP_TYPE_TRANSPOSE_KERNEL_PROTO                   }
 #define TRANSPOSE_KERNEL_PREAMBLE()       (struct hsg_op){ HSG_OP_TYPE_TRANSPOSE_KERNEL_PREAMBLE                }
 #define TRANSPOSE_KERNEL_BODY()           (struct hsg_op){ HSG_OP_TYPE_TRANSPOSE_KERNEL_BODY                    }
@@ -153,7 +159,7 @@ struct hsg_config hsg_config =
     },
 
     .type   = {
-      .words        = 2
+      .dwords       = 2
     }
   };
 
@@ -218,7 +224,7 @@ hsg_config_init_shared()
   // workgroup so all the previously written logic to support this
   // issue is being removed.
   //
-  uint32_t const bs_keys = hsg_config.block.smem_bs / (hsg_config.type.words * sizeof(uint32_t));
+  uint32_t const bs_keys = hsg_config.block.smem_bs / (hsg_config.type.dwords * sizeof(uint32_t));
 
   hsg_config.warp.skpw_bs = bs_keys / hsg_merge[0].warps;
 }
@@ -234,7 +240,7 @@ hsg_merge_levels_init_shared(struct hsg_merge * const merge)
     // The provided smem_bs size will be allocated for each sorting block.
     //
     uint32_t const bs_threads   = merge->warps << hsg_config.warp.lanes_log2;
-    uint32_t const bs_keys      = hsg_config.block.smem_bs / (hsg_config.type.words * sizeof(uint32_t));
+    uint32_t const bs_keys      = hsg_config.block.smem_bs / (hsg_config.type.dwords * sizeof(uint32_t));
     uint32_t const bs_kpt       = bs_keys / bs_threads;
     uint32_t const bs_kpt_mod   = (bs_kpt / hsg_config.block.warps_mod) * hsg_config.block.warps_mod;
     uint32_t const bs_rows_even = bs_kpt_mod & ~1; // must be even because flip merge only works on row pairs
@@ -270,7 +276,7 @@ hsg_merge_levels_init_shared(struct hsg_merge * const merge)
     uint32_t const bc_block_smem = MIN_MACRO(uint32_t,bc_block_max,hsg_config.block.smem_bs);
 
     // what is the max amount of shared in each possible bc block config?
-    uint32_t const bc_keys       = bc_block_smem / (hsg_config.type.words * sizeof(uint32_t));
+    uint32_t const bc_keys       = bc_block_smem / (hsg_config.type.dwords * sizeof(uint32_t));
     uint32_t const bc_kpt        = bc_keys / bc_threads;
     uint32_t const bc_kpt_mod    = (bc_kpt / hsg_config.block.warps_mod) * hsg_config.block.warps_mod;
 
@@ -418,7 +424,7 @@ hsg_merge_levels_hint(struct hsg_merge * const merge, bool const autotune)
           hsg_config.thread.xtra = n_max - merge->rows_bs;
 
           uint32_t const r_total = hsg_config.thread.regs + hsg_config.thread.xtra;
-          uint32_t const r_limit = (hsg_config.type.words == 1) ? 120 : 58;
+          uint32_t const r_limit = (hsg_config.type.dwords == 1) ? 120 : 58;
 
           if (r_total <= r_limit)
             {
@@ -659,6 +665,48 @@ hsg_bx_warp_store(struct hsg_op * ops)
 
   for (uint32_t r=1; r<=n; r++)
     ops = hsg_op(ops,BX_REG_GLOBAL_STORE(r));
+
+  return ops;
+}
+
+//
+//
+//
+
+static
+struct hsg_op *
+hsg_warp_fill_in(struct hsg_op * ops)
+{
+  // func proto
+  ops = hsg_op(ops,FILL_IN_KERNEL_PROTO());
+
+  // begin
+  ops = hsg_begin(ops);
+
+  // body
+  ops = hsg_op(ops,FILL_IN_KERNEL_BODY());
+
+  // ... done!
+  ops = hsg_end(ops);
+
+  return ops;
+}
+
+static
+struct hsg_op *
+hsg_warp_fill_out(struct hsg_op * ops)
+{
+  // func proto
+  ops = hsg_op(ops,FILL_OUT_KERNEL_PROTO());
+
+  // begin
+  ops = hsg_begin(ops);
+
+  // body
+  ops = hsg_op(ops,FILL_OUT_KERNEL_BODY());
+
+  // ... done!
+  ops = hsg_end(ops);
 
   return ops;
 }
@@ -1520,7 +1568,7 @@ main(int argc, char * argv[])
           break;
 
         case 't':
-          hsg_config.type.words       = atoi(optarg);
+          hsg_config.type.dwords      = atoi(optarg);
           break;
 
         case 'f':
@@ -1605,7 +1653,7 @@ main(int argc, char * argv[])
         break;
 
       fprintf(stderr,">>> Generating: %1u %5u %5u %3u %3u ...\n",
-              hsg_config.type.words,
+              hsg_config.type.dwords,
               hsg_config.block.smem_bs,
               hsg_config.block.smem_bc,
               hsg_config.thread.regs,
@@ -1655,6 +1703,12 @@ main(int argc, char * argv[])
   // GENERATE MERGE KERNELS
   //
   ops = hsg_xm_merge_all(ops);
+
+  //
+  // GENERATE FILL KERNELS
+  //
+  ops = hsg_warp_fill_in(ops);
+  ops = hsg_warp_fill_out(ops);
 
   //
   // GENERATE TRANSPOSE KERNEL
