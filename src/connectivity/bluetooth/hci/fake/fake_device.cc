@@ -11,13 +11,13 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "src/connectivity/bluetooth/core/bt-host/testing/fake_device.h"
+#include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 
-#include "fake-device.h"
+#include "fake_device.h"
 
 using ::bt::common::DeviceAddress;
 using ::bt::testing::FakeController;
-using ::bt::testing::FakeDevice;
+using ::bt::testing::FakePeer;
 
 namespace bthci_fake {
 
@@ -75,7 +75,7 @@ zx_status_t Device::Bind() {
   fake_device_ = fbl::AdoptRef(new FakeController());
   fake_device_->set_settings(settings);
 
-  // A Sample LE remote device for le-scan to pick up.
+  // A Sample LE remote peer for le-scan to pick up.
   // TODO(BT-229): add tooling for adding/removing fake devices
   const auto kAdvData0 = bt::common::CreateStaticByteBuffer(
       // Flags
@@ -86,23 +86,23 @@ zx_status_t Device::Bind() {
 
       // Complete local name
       0x05, 0x09, 'F', 'a', 'k', 'e');
-  auto device = std::make_unique<FakeDevice>(kAddress0, true, true);
-  device->SetAdvertisingData(kAdvData0);
-  fake_device_->AddDevice(std::move(device));
+  auto peer = std::make_unique<FakePeer>(kAddress0, true, true);
+  peer->SetAdvertisingData(kAdvData0);
+  fake_device_->AddPeer(std::move(peer));
 
-  // A Sample BR/EDR remote device to interact with.
-  device = std::make_unique<FakeDevice>(kAddress1, false, false);
+  // A Sample BR/EDR remote peer to interact with.
+  peer = std::make_unique<FakePeer>(kAddress1, false, false);
   // A Toy Game
-  device->set_class_of_device(bt::common::DeviceClass({0x14, 0x08, 0x00}));
-  fake_device_->AddDevice(std::move(device));
+  peer->set_class_of_device(bt::common::DeviceClass({0x14, 0x08, 0x00}));
+  fake_device_->AddPeer(std::move(peer));
 
-  // Add a LE device that always fails to connect.
+  // Add a LE peer that always fails to connect.
   // TODO(BT-229): Allow this to be created programmatically by
   // clients of this driver.
-  device = std::make_unique<FakeDevice>(kAddress2, true, true);
-  device->SetAdvertisingData(kAdvData0);
-  device->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
-  fake_device_->AddDevice(std::move(device));
+  peer = std::make_unique<FakePeer>(kAddress2, true, true);
+  peer->SetAdvertisingData(kAdvData0);
+  peer->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
+  fake_device_->AddPeer(std::move(peer));
 
   loop_.StartThread("bt_hci_fake");
 

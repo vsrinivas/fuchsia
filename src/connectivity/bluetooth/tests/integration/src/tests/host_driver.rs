@@ -56,8 +56,8 @@ pub async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> 
     await!(test_state.expect(expectation::host_driver::discovering(true)))?;
 
     // The host should discover a fake peer.
-    // TODO(NET-1457): The name is currently hard-coded in
-    //   garnet/drivers/bluetooth/hci/fake/fake-device.cpp:89.
+    // TODO(BT-229): The name is currently hard-coded in
+    //   src/connectivity/bluetooth/hci/fake/fake_device.cc:89.
     // Configure this dynamically when it is supported.
     let new_device = expectation::peer::name("Fake");
     await!(test_state.expect_peer(None, new_device))?;

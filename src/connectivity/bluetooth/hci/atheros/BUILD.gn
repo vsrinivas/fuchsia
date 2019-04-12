@@ -10,9 +10,9 @@ driver_module("driver") {
   output_name = "bt-hci-atheros"
 
   sources = [
-    "device.cpp",
+    "device.cc",
     "device.h",
-    "driver.cpp",
+    "driver.cc",
     "logging.h",
   ]
 

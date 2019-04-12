@@ -10,9 +10,9 @@ driver_module("driver") {
   testonly = true
 
   sources = [
-    "driver.cpp",
-    "fake-device.cpp",
-    "fake-device.h",
+    "driver.cc",
+    "fake_device.cc",
+    "fake_device.h",
   ]
 
   deps = [
