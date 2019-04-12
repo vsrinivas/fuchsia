@@ -64,18 +64,6 @@ zx_status_t RemoveHWBreakpoint(uint64_t address,
   return ZX_OK;
 }
 
-zx_status_t ReadDebugRegs(const zx::thread& thread,
-                          zx_thread_state_debug_regs_t* debug_regs) {
-  return thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, debug_regs,
-                           sizeof(zx_thread_state_debug_regs_t));
-}
-
-zx_status_t WriteDebugRegs(const zx::thread& thread,
-                           const zx_thread_state_debug_regs_t& debug_regs) {
-  return thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                            sizeof(zx_thread_state_debug_regs_t));
-}
-
 debug_ipc::NotifyException::Type DecodeESR(uint32_t esr) {
   uint32_t ec = Arm64ExtractECFromESR(esr);
   switch (ec) {

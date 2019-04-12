@@ -26,6 +26,12 @@ enum class LogCategory {
   // Associated with general Debug Agent events.
   kAgent,
 
+  // Associated with low-level arm64 events.
+  kArchArm64,
+
+  // Associated with low-level x64 events.
+  kArchx64,
+
   // Associated with the lifetime of breakpoints.
   kBreakpoint,
 

@@ -112,6 +112,18 @@ class DebuggedThread {
     kSendNotification  // Send client notification like normal.
   };
 
+  void HandleSingleStep(debug_ipc::NotifyException*,
+                        zx_thread_state_general_regs*);
+  void HandleSoftwareBreakpoint(debug_ipc::NotifyException*,
+                                zx_thread_state_general_regs*);
+  void HandleHardwareBreakpoint(debug_ipc::NotifyException*,
+                                zx_thread_state_general_regs*);
+  void HandleGeneralException(debug_ipc::NotifyException*,
+                              zx_thread_state_general_regs*);
+
+  void SendExceptionNotification(debug_ipc::NotifyException*,
+                                 zx_thread_state_general_regs*);
+
   // Handles a software breakpoint exception, updating the state as necessary.
   // If the address corresponds to a breakpoint we have set, it will call
   // UpdateForHitProcessBreakpoint (see below).

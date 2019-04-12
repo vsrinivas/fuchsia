@@ -37,8 +37,11 @@ zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>&,
 
 // Debug functions -------------------------------------------------------------
 
-void PrintGeneralRegisters(const zx_thread_state_general_regs&);
-void PrintDebugRegisters(const zx_thread_state_debug_regs_t&);
+std::string GeneralRegistersToString(const zx_thread_state_general_regs&);
+
+std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
+
+std::string DR6ToString(uint64_t dr6);
 
 }  // namespace arch
 }  // namespace debug_agent

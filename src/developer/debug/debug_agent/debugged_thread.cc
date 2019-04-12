@@ -79,13 +79,39 @@ DebuggedThread::~DebuggedThread() = default;
 void DebuggedThread::OnException(uint32_t type) {
   suspend_reason_ = SuspendReason::kException;
 
-  debug_ipc::NotifyException notify;
-  notify.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
+  debug_ipc::NotifyException exception;
+  exception.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
 
   DEBUG_LOG(Thread) << "Thread " << koid_ << ": Received exception "
                     << ExceptionTypeToString(type) << ", interpreted as "
-                    << debug_ipc::NotifyException::TypeToString(notify.type);
+                    << debug_ipc::NotifyException::TypeToString(exception.type);
 
+  zx_thread_state_general_regs regs;
+  thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+
+  switch (exception.type) {
+    case debug_ipc::NotifyException::Type::kSingleStep:
+      return HandleSingleStep(&exception, &regs);
+    case debug_ipc::NotifyException::Type::kSoftware:
+      return HandleSoftwareBreakpoint(&exception, &regs);
+    case debug_ipc::NotifyException::Type::kHardware:
+      return HandleHardwareBreakpoint(&exception, &regs);
+    case debug_ipc::NotifyException::Type::kGeneral:
+    // TODO(donosoc): Should synthetic be general or invalid?
+    case debug_ipc::NotifyException::Type::kSynthetic:
+      return HandleGeneralException(&exception, &regs);
+    case debug_ipc::NotifyException::Type::kNone:
+    case debug_ipc::NotifyException::Type::kLast:
+      break;
+  }
+
+  FXL_NOTREACHED() << "Invalid exception notification type: "
+                   << static_cast<uint32_t>(exception.type);
+}
+
+void DebuggedThread::HandleSingleStep(
+    debug_ipc::NotifyException* exception,
+    zx_thread_state_general_regs* regs) {
   if (current_breakpoint_) {
     // The current breakpoint is set only when stopped at a breakpoint or when
     // single-stepping over one. We're not going to get an exception for a
@@ -94,7 +120,7 @@ void DebuggedThread::OnException(uint32_t type) {
     // was from a normal completion of the breakpoint step, or whether
     // something else went wrong while stepping.
     bool completes_bp_step =
-        current_breakpoint_->BreakpointStepHasException(koid_, notify.type);
+        current_breakpoint_->BreakpointStepHasException(koid_, exception->type);
     current_breakpoint_ = nullptr;
     if (completes_bp_step &&
         run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
@@ -112,65 +138,65 @@ void DebuggedThread::OnException(uint32_t type) {
     current_breakpoint_ = nullptr;
   }
 
-  zx_thread_state_general_regs regs;
-  thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-
-  switch (type) {
-    case ZX_EXCP_SW_BREAKPOINT:
-      notify.type = debug_ipc::NotifyException::Type::kSoftware;
-      if (UpdateForSoftwareBreakpoint(&regs, &notify.hit_breakpoints) ==
-          OnStop::kIgnore)
-        return;
-      break;
-    case ZX_EXCP_HW_BREAKPOINT: {
-      if (notify.type == debug_ipc::NotifyException::Type::kSingleStep) {
-        if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
-          // This could be due to a race where the user was previously single
-          // stepping and then requested a continue before the single stepping
-          // completed. It could also be a breakpoint that was deleted while
-          // in the process of single-stepping over it. In both cases, the
-          // least confusing thing is to resume automatically.
-          ResumeForRunMode();
-          return;
-        }
-
-        // When stepping in a range, automatically continue as long as we're
-        // still in range.
-        if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
-            *arch::ArchProvider::Get().IPInRegs(&regs) >=
-                step_in_range_begin_ &&
-            *arch::ArchProvider::Get().IPInRegs(&regs) < step_in_range_end_) {
-          ResumeForRunMode();
-          return;
-        }
-      } else if (notify.type == debug_ipc::NotifyException::Type::kHardware) {
-        if (UpdateForHardwareBreakpoint(&regs, &notify.hit_breakpoints) ==
-            OnStop::kIgnore)
-          return;
-      } else {
-        FXL_NOTREACHED() << "Unexpected hw exception type: "
-                         << static_cast<uint32_t>(notify.type);
-      }
-      break;
-    }
-    default:
-      notify.type = debug_ipc::NotifyException::Type::kGeneral;
-      break;
+  if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
+    // This could be due to a race where the user was previously single
+    // stepping and then requested a continue before the single stepping
+    // completed. It could also be a breakpoint that was deleted while
+    // in the process of single-stepping over it. In both cases, the
+    // least confusing thing is to resume automatically.
+    ResumeForRunMode();
+    return;
   }
 
-  notify.process_koid = process_->koid();
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, &regs,
-                   &notify.thread);
+  // When stepping in a range, automatically continue as long as we're
+  // still in range.
+  if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
+      *arch::ArchProvider::Get().IPInRegs(regs) >= step_in_range_begin_ &&
+      *arch::ArchProvider::Get().IPInRegs(regs) < step_in_range_end_) {
+    ResumeForRunMode();
+    return;
+  }
 
-  // Send notification.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyException(notify, &writer);
-  debug_agent_->stream()->Write(writer.MessageComplete());
+  SendExceptionNotification(exception, regs);
+}
+
+void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+  if (UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints) ==
+      OnStop::kIgnore)
+    return;
+
+  SendExceptionNotification(exception, regs);
+}
+
+void DebuggedThread::HandleHardwareBreakpoint(
+    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+  if (UpdateForHardwareBreakpoint(regs, &exception->hit_breakpoints) ==
+      OnStop::kIgnore)
+    return;
+
+  SendExceptionNotification(exception, regs);
+}
+
+void DebuggedThread::HandleGeneralException(
+    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+  SendExceptionNotification(exception, regs);
+}
+
+void DebuggedThread::SendExceptionNotification(
+    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+  exception->process_koid = process_->koid();
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs,
+                   &exception->thread);
 
   // Keep the thread suspended for the client.
 
   // TODO(brettw) suspend other threads in the process and other debugged
   // processes as desired.
+
+  // Send notification.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyException(*exception, &writer);
+  debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
@@ -188,7 +214,6 @@ DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
 
   if (suspend_reason_ == SuspendReason::kOther)
     return SuspendResult::kSuspended;
-
 
   DEBUG_LOG(Thread) << "Suspending thread " << koid_;
 

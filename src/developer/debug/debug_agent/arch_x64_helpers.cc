@@ -6,8 +6,10 @@
 
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/shared/arch_x86.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 namespace arch {
@@ -117,36 +119,51 @@ zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
 
 // Debug functions -------------------------------------------------------------
 
-void PrintGeneralRegisters(const zx_thread_state_general_regs& regs) {
-  FXL_LOG(INFO) << "General regs: " << std::endl
-                << "rax: 0x" << std::hex << regs.rax << std::endl
-                << "rbx: 0x" << std::hex << regs.rbx << std::endl
-                << "rcx: 0x" << std::hex << regs.rcx << std::endl
-                << "rdx: 0x" << std::hex << regs.rdx << std::endl
-                << "rsi: 0x" << std::hex << regs.rsi << std::endl
-                << "rdi: 0x" << std::hex << regs.rdi << std::endl
-                << "rbp: 0x" << std::hex << regs.rbp << std::endl
-                << "rsp: 0x" << std::hex << regs.rsp << std::endl
-                << "r8: 0x" << std::hex << regs.r8 << std::endl
-                << "r9: 0x" << std::hex << regs.r9 << std::endl
-                << "r10: 0x" << std::hex << regs.r10 << std::endl
-                << "r11: 0x" << std::hex << regs.r11 << std::endl
-                << "r12: 0x" << std::hex << regs.r12 << std::endl
-                << "r13: 0x" << std::hex << regs.r13 << std::endl
-                << "r14: 0x" << std::hex << regs.r14 << std::endl
-                << "r15: 0x" << std::hex << regs.r15 << std::endl
-                << "rip: 0x" << std::hex << regs.rip << std::endl
-                << "rflags: 0x" << std::hex << regs.rflags;
+std::string GeneralRegistersToString(const zx_thread_state_general_regs& regs) {
+  std::stringstream ss;
+  ss << "General regs: " << std::endl
+     << "rax: 0x" << std::hex << regs.rax << std::endl
+     << "rbx: 0x" << std::hex << regs.rbx << std::endl
+     << "rcx: 0x" << std::hex << regs.rcx << std::endl
+     << "rdx: 0x" << std::hex << regs.rdx << std::endl
+     << "rsi: 0x" << std::hex << regs.rsi << std::endl
+     << "rdi: 0x" << std::hex << regs.rdi << std::endl
+     << "rbp: 0x" << std::hex << regs.rbp << std::endl
+     << "rsp: 0x" << std::hex << regs.rsp << std::endl
+     << "r8: 0x" << std::hex << regs.r8 << std::endl
+     << "r9: 0x" << std::hex << regs.r9 << std::endl
+     << "r10: 0x" << std::hex << regs.r10 << std::endl
+     << "r11: 0x" << std::hex << regs.r11 << std::endl
+     << "r12: 0x" << std::hex << regs.r12 << std::endl
+     << "r13: 0x" << std::hex << regs.r13 << std::endl
+     << "r14: 0x" << std::hex << regs.r14 << std::endl
+     << "r15: 0x" << std::hex << regs.r15 << std::endl
+     << "rip: 0x" << std::hex << regs.rip << std::endl
+     << "rflags: 0x" << std::hex << regs.rflags;
+
+  return ss.str();
 }
 
-void PrintDebugRegisters(const zx_thread_state_debug_regs_t& regs) {
-  FXL_LOG(INFO) << "Regs: " << std::endl
-                << "DR0: 0x" << std::hex << regs.dr[0] << std::endl
-                << "DR1: 0x" << std::hex << regs.dr[1] << std::endl
-                << "DR2: 0x" << std::hex << regs.dr[2] << std::endl
-                << "DR3: 0x" << std::hex << regs.dr[3] << std::endl
-                << "DR6: 0x" << std::hex << regs.dr6 << std::endl
-                << "DR7: 0x" << std::hex << regs.dr7 << std::endl;
+std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
+  std::stringstream ss;
+  ss << "Regs: " << std::endl
+     << "DR0: 0x" << std::hex << regs.dr[0] << std::endl
+     << "DR1: 0x" << std::hex << regs.dr[1] << std::endl
+     << "DR2: 0x" << std::hex << regs.dr[2] << std::endl
+     << "DR3: 0x" << std::hex << regs.dr[3] << std::endl
+     << "DR6: " << DR6ToString(regs.dr6) << std::endl
+     << "DR7: 0x" << std::hex << regs.dr7 << std::endl;
+
+  return ss.str();
+}
+
+std::string DR6ToString(uint64_t dr6) {
+  return fxl::StringPrintf(
+      "0x%lx: B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d", dr6,
+      X86_FLAG_VALUE(dr6, Dr6B0), X86_FLAG_VALUE(dr6, Dr6B1),
+      X86_FLAG_VALUE(dr6, Dr6B2), X86_FLAG_VALUE(dr6, Dr6B3),
+      X86_FLAG_VALUE(dr6, Dr6BD), X86_FLAG_VALUE(dr6, Dr6BS),
+      X86_FLAG_VALUE(dr6, Dr6BT));
 }
 
 }  // namespace arch

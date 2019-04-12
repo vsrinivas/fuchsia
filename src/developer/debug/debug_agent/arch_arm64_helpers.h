@@ -38,10 +38,6 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // Decodes the ESR provided by zircon for this exception.
 debug_ipc::NotifyException::Type DecodeESR(uint32_t esr);
 
-zx_status_t ReadDebugRegs(const zx::thread&, zx_thread_state_debug_regs_t*);
-zx_status_t WriteDebugRegs(const zx::thread&,
-                           const zx_thread_state_debug_regs&);
-
 // Useful function for debugging to keep around.
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 

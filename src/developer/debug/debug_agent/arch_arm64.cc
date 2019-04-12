@@ -24,16 +24,19 @@ namespace {
 debug_ipc::NotifyException::Type DecodeHWException(
     const DebuggedThread& thread) {
   zx_thread_state_debug_regs_t debug_regs;
-  zx_status_t status = ReadDebugRegs(thread.thread(), &debug_regs);
+  zx_status_t status =
+      thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                                 sizeof(zx_thread_state_debug_regs_t));
   if (status != ZX_OK)
     return debug_ipc::NotifyException::Type::kNone;
 
   auto decoded_type = DecodeESR(debug_regs.esr);
 
-  DEBUG_LOG(Thread) << "Decoded ESR 0x" << std::hex << debug_regs.esr
-                    << " (EC: 0x" << Arm64ExtractECFromESR(debug_regs.esr)
-                    << ") as "
-                    << debug_ipc::NotifyException::TypeToString(decoded_type);
+  DEBUG_LOG(ArchArm64) << "Decoded ESR 0x" << std::hex << debug_regs.esr
+                       << " (EC: 0x" << Arm64ExtractECFromESR(debug_regs.esr)
+                       << ") as "
+                       << debug_ipc::NotifyException::TypeToString(
+                              decoded_type);
 
   if (decoded_type == debug_ipc::NotifyException::Type::kSingleStep ||
       decoded_type == debug_ipc::NotifyException::Type::kHardware) {
@@ -264,53 +267,52 @@ debug_ipc::NotifyException::Type HardwareNotificationType(
 
 zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
                                               uint64_t address) {
-  // TODO(donosoc): Will assume the thread is stopped. In order to make the
-  //                installation robust, we need to stop the thread (if it's not
-  //                currently stopped) and them resume it after the breakpoint
-  //                is installed.
+  FXL_DCHECK(thread);
+  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = ReadDebugRegs(*thread, &debug_regs);
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                              sizeof(zx_thread_state_debug_regs_t));
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG(Breakpoint) << "Before uninstalling HW breakpoint: " << std::endl
-                        << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "Before installing HW breakpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
   status = SetupHWBreakpoint(address, &debug_regs);
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG(Breakpoint) << "After uninstalling HW breakpoint: " << std::endl
-                        << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "After installing HW breakpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
-  return WriteDebugRegs(*thread, debug_regs);
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(zx_thread_state_debug_regs_t));
 }
 
 zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
                                                 uint64_t address) {
   FXL_DCHECK(thread);
-  // TODO(donosoc): Will assume the thread is stopped. In order to make the
-  //                installation robust, we need to stop the thread (if it's not
-  //                currently stopped) and them resume it after the breakpoint
-  //                is installed.
+  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = ReadDebugRegs(*thread, &debug_regs);
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(zx_thread_state_debug_regs_t));
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG(Breakpoint) << "Before uninstalling HW breakpoint: " << std::endl
-                        << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "Before uninstalling HW breakpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
   status = RemoveHWBreakpoint(address, &debug_regs);
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG(Breakpoint) << "After uninstalling HW breakpoint: " << std::endl
-                        << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "After uninstalling HW breakpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
-  return WriteDebugRegs(*thread, debug_regs);
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                            sizeof(zx_thread_state_debug_regs_t));
 }
 
 zx_status_t ArchProvider::InstallWatchpoint(zx::thread*,

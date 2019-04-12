@@ -14,7 +14,7 @@ class ProcessBreakpoint;
 
 class HardwareBreakpoint {
  public:
-  HardwareBreakpoint(ProcessBreakpoint*);
+  explicit HardwareBreakpoint(ProcessBreakpoint*);
   ~HardwareBreakpoint();
 
   // Checks if any of the installations need to be added/removed.

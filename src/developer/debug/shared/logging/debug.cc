@@ -69,6 +69,10 @@ const char* LogCategoryToString(LogCategory category) {
   switch (category) {
     case LogCategory::kAgent:
       return "Agent";
+    case LogCategory::kArchArm64:
+      return "arm64";
+    case LogCategory::kArchx64:
+      return "x64";
     case LogCategory::kBreakpoint:
       return "Breakpoint";
     case LogCategory::kJob:
