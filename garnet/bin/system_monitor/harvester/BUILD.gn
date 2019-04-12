@@ -29,10 +29,10 @@ executable("bin") {
   deps = [
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:protos",
-    "//garnet/public/lib/component/cpp",
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/task-utils",
   ]

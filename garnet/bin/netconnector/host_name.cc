@@ -5,11 +5,11 @@
 #include "garnet/bin/netconnector/host_name.h"
 
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <limits.h>
 #include <unistd.h>
 
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/component/cpp/startup_context.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 
@@ -32,15 +32,13 @@ class NetstackClient {
   }
 
  private:
-  NetstackClient()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {
+  NetstackClient() : context_(sys::ComponentContext::Create()) {
     FXL_DCHECK(context_);
-    netstack_ =
-        context_->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
+    netstack_ = context_->svc()->Connect<fuchsia::netstack::Netstack>();
     FXL_DCHECK(netstack_);
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::netstack::NetstackPtr netstack_;
 };
 

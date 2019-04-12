@@ -5,15 +5,15 @@
 #ifndef LIB_NETCONNECTOR_CPP_NET_STUB_RESPONDER_H_
 #define LIB_NETCONNECTOR_CPP_NET_STUB_RESPONDER_H_
 
+#include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <memory>
 #include <unordered_set>
 
-#include <fuchsia/netconnector/cpp/fidl.h>
-
-#include "lib/component/cpp/startup_context.h"
+#include "lib/svc/cpp/service_namespace.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
-#include "lib/svc/cpp/service_namespace.h"
 
 namespace netconnector {
 
@@ -25,11 +25,11 @@ class NetStubResponder {
   // Constructor. |actual| must outlive this.
   NetStubResponder(const fidl::InterfacePtr<TInterface>& actual,
                    const std::string& service_name,
-                   component::StartupContext* startup_context)
+                   sys::ComponentContext* component_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
     FXL_DCHECK(!service_name.empty());
-    FXL_DCHECK(startup_context);
+    FXL_DCHECK(component_context);
 
     service_namespace_.AddServiceForName(
         [this](zx::channel channel) {
@@ -39,8 +39,8 @@ class NetStubResponder {
         service_name);
 
     fuchsia::netconnector::NetConnectorPtr connector =
-        startup_context->ConnectToEnvironmentService<
-            fuchsia::netconnector::NetConnector>();
+        component_context->svc()
+            ->Connect<fuchsia::netconnector::NetConnector>();
 
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());

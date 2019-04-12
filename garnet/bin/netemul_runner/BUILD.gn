@@ -69,8 +69,8 @@ source_set("src") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/netemul/network:network_service",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
   ]

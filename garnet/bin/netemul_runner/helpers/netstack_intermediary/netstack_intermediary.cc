@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <vector>
+#include "netstack_intermediary.h"
 
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
@@ -9,23 +9,21 @@
 #include <zircon/device/ethernet.h>
 #include <zircon/status.h>
 
-#include "netstack_intermediary.h"
+#include <vector>
 
 static constexpr netemul::EthernetConfig eth_config = {.buff_size = 2048,
                                                        .nbufs = 256};
 
 NetstackIntermediary::NetstackIntermediary(std::string network_name)
     : NetstackIntermediary(std::move(network_name),
-                           component::StartupContext::CreateFromStartupInfo()) {
-}
+                           sys::ComponentContext::Create()) {}
 
 NetstackIntermediary::NetstackIntermediary(
-    std::string network_name,
-    std::unique_ptr<component::StartupContext> context)
+    std::string network_name, std::unique_ptr<sys::ComponentContext> context)
     : network_name_(std::move(network_name)),
       context_(std::move(context)),
       executor_(async_get_default_dispatcher()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void NetstackIntermediary::SetInterfaceAddress(
@@ -100,7 +98,7 @@ NetstackIntermediary::GetNetwork(std::string network_name) {
   auto net_mgr =
       std::make_shared<fuchsia::netemul::network::NetworkManagerPtr>();
 
-  context_->ConnectToEnvironmentService(netc->NewRequest());
+  context_->svc()->Connect(netc->NewRequest());
 
   (*netc)->GetNetworkManager(net_mgr->NewRequest());
   (*net_mgr)->GetNetwork(

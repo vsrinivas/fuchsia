@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_SERVICE_H_
+#define SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_SERVICE_H_
 
 #include <fuchsia/overnet/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+
 #include "src/connectivity/overnet/overnetstack/overnet_app.h"
 
 namespace overnetstack {
@@ -33,3 +36,5 @@ class Service final : public fuchsia::overnet::Overnet,
 };
 
 }  // namespace overnetstack
+
+#endif  // SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_SERVICE_H_

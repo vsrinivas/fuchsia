@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/overnetstack/overnet_app.h"
+
 #include <fuchsia/overnet/cpp/fidl.h>
+
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
 #include "src/connectivity/overnet/overnetstack/bound_channel.h"
 #include "src/connectivity/overnet/overnetstack/bound_socket.h"
@@ -11,8 +13,7 @@
 namespace overnetstack {
 
 OvernetApp::OvernetApp(overnet::Timer* timer)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      timer_(timer) {}
+    : component_context_(sys::ComponentContext::Create()), timer_(timer) {}
 
 OvernetApp::~OvernetApp() {}
 

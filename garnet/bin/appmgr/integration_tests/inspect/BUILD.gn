@@ -26,7 +26,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/inspect",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -40,7 +40,7 @@ executable("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/inspect",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -71,7 +71,6 @@ executable("test-vmo") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/inspect:reader",
     "//garnet/public/lib/inspect/testing",
     "//sdk/lib/sys/cpp",

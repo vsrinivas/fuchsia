@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include "managed_launcher.h"
-#include <lib/component/cpp/testing/test_util.h>
+
 #include <lib/fdio/io.h>
 #include <lib/fsl/io/fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <zircon/status.h>
+
 #include "garnet/lib/cmx/cmx.h"
 #include "garnet/lib/process/process_builder.h"
 #include "managed_environment.h"

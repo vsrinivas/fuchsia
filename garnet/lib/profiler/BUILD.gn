@@ -62,8 +62,8 @@ source_set("profiler_lib") {
 
   deps = [
     ":profiler_headers",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",

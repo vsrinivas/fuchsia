@@ -257,8 +257,8 @@ if (target_cpu == "arm64") {
       "tests/manual/test_amlogic_codec_factory.cc",
     ]
     deps = [
-      "//garnet/public/lib/component/cpp",
       "//sdk/fidl/fuchsia.mediacodec",
+      "//sdk/lib/sys/cpp",
       "//zircon/public/lib/async-loop-cpp",
     ]
   }

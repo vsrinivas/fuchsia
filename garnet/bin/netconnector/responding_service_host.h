@@ -5,14 +5,14 @@
 #ifndef GARNET_BIN_NETCONNECTOR_RESPONDING_SERVICE_HOST_H_
 #define GARNET_BIN_NETCONNECTOR_RESPONDING_SERVICE_HOST_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <unordered_map>
 
-#include <fuchsia/sys/cpp/fidl.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netconnector {
 

@@ -19,7 +19,6 @@ executable("bin") {
   ]
   deps = [
     "//garnet/public/lib/async_promise",
-    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/inspect-vmo",
   ]
   public_deps = [

@@ -6,7 +6,8 @@
 #define GARNET_BIN_NETEMUL_RUNNER_SANDBOX_SERVICE_H_
 
 #include <fuchsia/netemul/sandbox/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include "sandbox.h"
 
 namespace netemul {

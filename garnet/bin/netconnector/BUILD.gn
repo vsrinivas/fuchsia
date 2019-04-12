@@ -33,7 +33,6 @@ executable("bin") {
   deps = [
     "//garnet/bin/media/util",
     "//garnet/lib/inet",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/svc/cpp",
@@ -41,6 +40,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.netconnector",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

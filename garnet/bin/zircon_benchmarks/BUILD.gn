@@ -34,8 +34,8 @@ executable("bin") {
   ]
   deps = [
     ":fidl_interface",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/inspect",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

@@ -4,17 +4,18 @@
 
 #include "garnet/lib/profiler/fuchsia/profiler_log_listener.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <zircon/sanitizer.h>
+
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <zircon/sanitizer.h>
-
-ProfilerLogListener::ProfilerLogListener(fit::function<void()> all_done) : all_done_(std::move(all_done)), binding_(this), log_os_(&log_buffer_) {
+ProfilerLogListener::ProfilerLogListener(fit::function<void()> all_done)
+    : all_done_(std::move(all_done)), binding_(this), log_os_(&log_buffer_) {
   binding_.Bind(log_listener_.NewRequest());
 }
 
@@ -32,7 +33,8 @@ void ProfilerLogListener::LogMany(
 
 static const char termination_message[] = "{{{done}}}";
 
-ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const std::string& log_line) {
+ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(
+    const std::string& log_line) {
   if (log_line.compare(0, 3, "{{{") == 0 &&
       log_line.compare(log_line.size() - 3, 3, "}}}") == 0) {
     const std::string s = log_line.substr(3, log_line.size() - 6);
@@ -47,7 +49,7 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const s
     if (tokens[0].compare("module") == 0 && tokens.size() == 5) {
       if (mmap_entry_.size() != 0) {
         printf("module out of step\n");
-        return ERROR; // "module out of step";
+        return ERROR;  // "module out of step";
       }
       mmap_entry_.push_back(tokens);
       return MODULE;
@@ -62,7 +64,7 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const s
       return DONE;
     } else {
       printf("unexpected token: %s\n", tokens[0].c_str());
-      return ERROR; // "unexpected token";
+      return ERROR;  // "unexpected token";
     }
   } else if (log_line.compare(0, 5, "dso: ") == 0) {
     std::string s = log_line.substr(5, log_line.size() - 5);
@@ -86,7 +88,7 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const s
       }
     } else {
       printf("unexpected DSO structure\n");
-      return ERROR; // "unexpected DSO structure";
+      return ERROR;  // "unexpected DSO structure";
     }
 
     for (unsigned int i = 1; i < mmap_entry_.size(); i++) {
@@ -104,14 +106,14 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(const s
                     : mmap[5].compare("rx") == 0
                           ? "r-xp"
                           : mmap[5].compare("rwx") == 0
-                                ? "rwxp" // Can you actually do this?
+                                ? "rwxp"  // Can you actually do this?
                                 : "---p";
 
-      log_os_ << std::hex << std::setfill('0') << std::setw(12) << address << '-'
-              << std::setw(12) << address + size << " " << access << " "
+      log_os_ << std::hex << std::setfill('0') << std::setw(12) << address
+              << '-' << std::setw(12) << address + size << " " << access << " "
               << std::setw(8) << std::setfill('0') << offset << " "
-              << "00:00" << std::setw(4) << std::setfill(' ') << std::dec << module
-              << " " << name << '\n';
+              << "00:00" << std::setw(4) << std::setfill(' ') << std::dec
+              << module << " " << name << '\n';
     }
 
     mmap_entry_.clear();
@@ -132,12 +134,11 @@ void ProfilerLogListener::Log(fuchsia::logger::LogMessage log) {
 void ProfilerLogListener::Done() {}
 
 bool ProfilerLogListener::ConnectToLogger(
-    component::StartupContext* startup_context, zx_koid_t pid) {
+    sys::ComponentContext* component_context, zx_koid_t pid) {
   if (!log_listener_) {
     return false;
   }
-  auto log_service =
-      startup_context->ConnectToEnvironmentService<fuchsia::logger::Log>();
+  auto log_service = component_context->svc()->Connect<fuchsia::logger::Log>();
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
@@ -173,9 +174,9 @@ std::string CollectProfilerLog() {
       loop_.Quit();
     });
 
-    auto startup_context =
-        component::StartupContext::CreateFromStartupInfo();
-    log_listener->ConnectToLogger(startup_context.get(), GetCurrentProcessKoid());
+    auto component_context = sys::ComponentContext::Create();
+    log_listener->ConnectToLogger(component_context.get(),
+                                  GetCurrentProcessKoid());
 
     // Trigger mmap log
     __sanitizer_log_write(termination_message, sizeof(termination_message) - 1);

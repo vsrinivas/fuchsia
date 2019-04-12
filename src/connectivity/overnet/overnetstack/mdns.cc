@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/overnetstack/mdns.h"
+
+#include <fbl/ref_counted.h>
 #include <fuchsia/mdns/cpp/fidl.h>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/mdns/formatting.h"
 #include "src/connectivity/overnet/lib/labels/node_id.h"
 #include "src/connectivity/overnet/overnetstack/fuchsia_port.h"
@@ -14,9 +17,8 @@ static const char* kServiceName =
     "__overnet__mdns__test__1db2_6473_a3b1_500c__._udp.";
 
 static fuchsia::mdns::ControllerPtr Connect(
-    component::StartupContext* startup_context, const char* why) {
-  auto svc =
-      startup_context->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+    sys::ComponentContext* component_context, const char* why) {
+  auto svc = component_context->svc()->Connect<fuchsia::mdns::Controller>();
   svc.set_error_handler([why](zx_status_t status) {
     FXL_LOG(DFATAL) << why << " mdns failure: " << zx_status_get_string(status);
   });
@@ -28,10 +30,10 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
  public:
   Impl(UdpNub* nub) : nub_(nub), subscriber_binding_(this) {}
 
-  void Begin(component::StartupContext* startup_context) {
+  void Begin(sys::ComponentContext* component_context) {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
-    auto svc = Connect(startup_context, "Introducer");
+    auto svc = Connect(component_context, "Introducer");
     fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
 
     subscriber_binding_.Bind(subscriber_handle.NewRequest());
@@ -193,7 +195,7 @@ MdnsIntroducer::MdnsIntroducer(OvernetApp* app, UdpNub* udp_nub)
 overnet::Status MdnsIntroducer::Start() {
   auto impl = fbl::MakeRefCounted<Impl>(udp_nub_);
   impl_ = std::move(impl);
-  impl_->Begin(app_->startup_context());
+  impl_->Begin(app_->component_context());
   return overnet::Status::Ok();
 }
 
@@ -201,8 +203,8 @@ MdnsIntroducer::~MdnsIntroducer() {}
 
 class MdnsAdvertisement::Impl {
  public:
-  Impl(component::StartupContext* startup_context, UdpNub* nub)
-      : controller_(Connect(startup_context, "Advertisement")),
+  Impl(sys::ComponentContext* component_context, UdpNub* nub)
+      : controller_(Connect(component_context, "Advertisement")),
         node_id_(nub->node_id()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
@@ -227,7 +229,7 @@ MdnsAdvertisement::MdnsAdvertisement(OvernetApp* app, UdpNub* udp_nub)
     : app_(app), udp_nub_(udp_nub) {}
 
 overnet::Status MdnsAdvertisement::Start() {
-  impl_.reset(new Impl(app_->startup_context(), udp_nub_));
+  impl_.reset(new Impl(app_->component_context(), udp_nub_));
   return overnet::Status::Ok();
 }
 

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_OVERNET_APP_H_
+#define SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_OVERNET_APP_H_
 
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
+
 #include <memory>
-#include "lib/component/cpp/startup_context.h"
+
 #include "src/connectivity/overnet/lib/endpoint/router_endpoint.h"
 #include "src/connectivity/overnet/lib/environment/timer.h"
 
@@ -83,8 +86,8 @@ class OvernetApp final {
   // Accessors for well known objects.
 
   overnet::RouterEndpoint* endpoint() { return &endpoint_; }
-  component::StartupContext* startup_context() const {
-    return startup_context_.get();
+  sys::ComponentContext* component_context() const {
+    return component_context_.get();
   }
   overnet::Timer* timer() { return timer_; }
   overnet::NodeId node_id() const { return node_id_; }
@@ -100,7 +103,7 @@ class OvernetApp final {
  private:
   static overnet::NodeId GenerateNodeId();
 
-  const std::unique_ptr<component::StartupContext> startup_context_;
+  const std::unique_ptr<sys::ComponentContext> component_context_;
   overnet::Timer* const timer_;
   const overnet::NodeId node_id_ = GenerateNodeId();
   overnet::RouterEndpoint endpoint_{timer_, node_id_, true};
@@ -109,3 +112,5 @@ class OvernetApp final {
 };
 
 }  // namespace overnetstack
+
+#endif  // SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_OVERNET_APP_H_

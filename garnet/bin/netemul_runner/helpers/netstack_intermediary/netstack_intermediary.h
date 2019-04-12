@@ -5,18 +5,20 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_HELPERS_NETSTACK_INTERMEDIARY_NETSTACK_INTERMEDIARY_H_
 #define GARNET_BIN_NETEMUL_RUNNER_HELPERS_NETSTACK_INTERMEDIARY_NETSTACK_INTERMEDIARY_H_
 
-#include <mutex>
-#include <vector>
-
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <garnet/public/lib/netemul/network/ethernet_client.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async_promise/executor.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <mutex>
+#include <vector>
+
+#include "src/lib/fxl/macros.h"
 
 // NetstackIntermediary implements only the Netstack methods that are used by
 // Machina guests. Rather than creating an ethernet device and associating it
@@ -82,7 +84,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
 
  protected:
   NetstackIntermediary(std::string network_name,
-                       std::unique_ptr<component::StartupContext> context);
+                       std::unique_ptr<sys::ComponentContext> context);
 
  private:
   fit::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>>
@@ -94,7 +96,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   std::unique_ptr<netemul::EthernetClient> eth_client_;
   fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint> fake_ep_;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   async::Executor executor_;
   fit::scope scope_;
 

@@ -4,7 +4,6 @@
 
 #include "garnet/bin/netconnector/responding_service_host.h"
 
-#include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"
 

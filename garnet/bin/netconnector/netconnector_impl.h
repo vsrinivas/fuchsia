@@ -5,15 +5,16 @@
 #ifndef GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
 #define GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
@@ -23,7 +24,6 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
 #include "garnet/lib/inet/ip_port.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 
@@ -93,7 +93,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
 
   NetConnectorParams* params_;
   fit::closure quit_callback_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   std::string host_name_;
   fidl::BindingSet<fuchsia::netconnector::NetConnector> bindings_;
   Listener listener_;

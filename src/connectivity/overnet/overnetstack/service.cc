@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/overnetstack/service.h"
+
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
 
 namespace overnetstack {
@@ -10,7 +11,7 @@ namespace overnetstack {
 Service::Service(OvernetApp* app) : app_(app) {}
 
 overnet::Status Service::Start() {
-  app_->startup_context()->outgoing().AddPublicService(
+  app_->component_context()->outgoing()->AddPublicService(
       bindings_.GetHandler(this));
   return overnet::Status::Ok();
 }

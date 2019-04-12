@@ -15,7 +15,6 @@ executable("bin") {
     "test_runner.cc",
   ]
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",

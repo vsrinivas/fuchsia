@@ -15,13 +15,13 @@ executable("netstack_intermediary") {
 
   deps = [
     "//garnet/public/lib/async_promise:async_promise",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netemul/fidl:network",
     "//garnet/public/lib/netemul/network:ethertap",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

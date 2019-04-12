@@ -5,8 +5,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/startup_context.h>
-
+#include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 
 // This test is currently manual because it needs to talk to the main
@@ -36,13 +35,13 @@ void test_factory() {
   //     creating problems.
   fidl_loop.StartThread("FIDL_thread");
 
-  std::unique_ptr<component::StartupContext> startup_context;
-  // Use FIDL thread to run CreateFromStartupInfo(), since it uses the calling
+  std::unique_ptr<sys::ComponentContext> component_context;
+  // Use FIDL thread to run Create(), since it uses the calling
   // thread's default async_t, and we don't want to be accidentally doing
   // FIDL requests from the main thread, so we use
   // kAsyncLoopConfigNoAttachToThread above.
-  PostSerial(fidl_loop.dispatcher(), [&startup_context] {
-    startup_context = component::StartupContext::CreateFromStartupInfo();
+  PostSerial(fidl_loop.dispatcher(), [&component_context] {
+    component_context = sys::ComponentContext::Create();
   });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
@@ -56,11 +55,10 @@ void test_factory() {
   // won't be any longer, so call from FIDL thread instead.
   PostSerial(
       fidl_loop.dispatcher(),
-      [&startup_context,
+      [&component_context,
        request = codec_factory.NewRequest(fidl_loop.dispatcher())]() mutable {
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
-                std::move(request));
+        component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(
+            std::move(request));
       });
 
   fuchsia::media::StreamProcessorPtr codec;

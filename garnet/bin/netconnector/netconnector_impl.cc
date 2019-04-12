@@ -4,12 +4,13 @@
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
 
-#include <iostream>
-
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
+
+#include <iostream>
 
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"
@@ -29,23 +30,23 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
                                    fit::closure quit_callback)
     : params_(params),
       quit_callback_(std::move(quit_callback)),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      component_context_(sys::ComponentContext::Create()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent
       // to obtain a user environment. A RespondingServiceHost should be
       // created with that environment so that responding services are
       // launched in the correct environment.
-      responding_service_host_(startup_context_->environment()),
+      responding_service_host_(
+          component_context_->svc()->Connect<fuchsia::sys::Environment>()),
       mdns_subscriber_binding_(this) {
   FXL_DCHECK(quit_callback_);
 
   if (!params->listen()) {
     // Start the listener.
     fuchsia::netconnector::NetConnectorSyncPtr net_connector;
-    startup_context_->ConnectToEnvironmentService(net_connector.NewRequest());
+    component_context_->svc()->Connect(net_connector.NewRequest());
     fuchsia::mdns::ControllerPtr mdns_service =
-        startup_context_
-            ->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+        component_context_->svc()->Connect<fuchsia::mdns::Controller>();
 
     if (params_->mdns_verbose()) {
       mdns_service->DEPRECATEDSetVerbose(true);
@@ -72,7 +73,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
   }
 
   // Running as listener.
-  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
@@ -110,8 +111,7 @@ void NetConnectorImpl::StartListener() {
   });
 
   mdns_controller_ =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+      component_context_->svc()->Connect<fuchsia::mdns::Controller>();
 
   host_name_ = GetHostName();
 
