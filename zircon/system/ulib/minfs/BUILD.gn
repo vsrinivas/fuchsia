@@ -12,6 +12,8 @@ library("minfs") {
     "allocator/metadata.cpp",
     "allocator/storage.cpp",
     "bcache.cpp",
+    "directory.cpp",
+    "file.cpp",
     "fsck.cpp",
     "minfs.cpp",
     "superblock.cpp",

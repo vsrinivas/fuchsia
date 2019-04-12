@@ -64,7 +64,7 @@ public:
 
     // Remove |requested| reserved elements and give them to |other_promise|.
     // The reserved count belonging to the Allocator does not change.
-    void Split(size_t requested, AllocatorPromise* other_promise);
+    void GiveBlocks(size_t requested, AllocatorPromise* other_promise);
 
     size_t GetReserved() const { return reserved_; }
 #endif

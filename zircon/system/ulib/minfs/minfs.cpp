@@ -32,6 +32,7 @@
 
 #include <utility>
 
+#include "file.h"
 #include "minfs-private.h"
 
 namespace minfs {
@@ -314,31 +315,22 @@ zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
     // TODO(planders): Move this check to Journal enqueue.
     ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
-
-    // First, we take the transaction's metadata updates, and pass them back to the writeback
-    // buffer.
-    //
-    // This begins the pipeline of "actually writing these updates out to persistent storage".
-    zx_status_t status = EnqueueWork(transaction->RemoveWork());
-
-    // Next, we begin processing data updates in a background thread.
-    fbl::RefPtr<DataAssignableVnode> vnode = transaction->TakeTargetVnode();
-    transaction.reset();
-    if (vnode != nullptr) {
-        // NOTE: This is only ever true for non-directory vnodes.
-        // TODO: Make this a compile-time validation.
-        assigner_->EnqueueAllocation(std::move(vnode));
-    }
-    return status;
-#else
-    return EnqueueWork(transaction->RemoveWork());
 #endif
+    // Take the transaction's metadata updates, and pass them back to the writeback buffer.
+    // This begins the pipeline of "actually writing these updates out to persistent storage".
+    return EnqueueWork(transaction->RemoveWork());
 }
 
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
     if (assigner_ != nullptr) {
-        assigner_->EnqueueCallback(std::move(closure));
+        // This callback will be processed after all "delayed data" operations have completed:
+        // this is why we "enqueue a callback" that will later "enqueue a callback" somewhere
+        // else.
+        auto cb = [closure = std::move(closure)](TransactionalFs* minfs) mutable {
+            minfs->EnqueueCallback(std::move(closure));
+        };
+        assigner_->EnqueueCallback(std::move(cb));
     } else {
         // If Minfs is read-only (data block assigner has not been initialized), immediately
         // resolve the callback.
@@ -378,7 +370,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
     TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
 
 #ifdef __Fuchsia__
-    vn->CancelDataWriteback();
+    vn->CancelPendingWriteback();
 #endif
 
     inodes_->Free(transaction->GetWork(), vn->GetIno());

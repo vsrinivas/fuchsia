@@ -47,9 +47,8 @@ public:
     bool IsPending(blk_t block_num) const { return block_map_.GetOne(block_num); }
 
     // Sets |block_num| in the block_map_. |allocated| indicates whether the block at |block_num|
-    // was previously allocated. Returns true if the block_num was set in the map (i.e., it was not
-    // set in the map initially).
-    bool SetPending(blk_t block_num, bool allocated);
+    // was previously allocated.
+    void SetPending(blk_t block_num, bool allocated);
 
     // Clears |block_num| from the block_map_. |allocated| indicates whether the block at
     // |block_num| was previously allocated. Returns true if the block_num was cleared from the map
@@ -67,9 +66,13 @@ public:
     void SetNodeSize(blk_t size) { node_size_ = size; }
 
 private:
-    // Number of blocks to be allocated which were not previously allocated.
-    // Note that this may not be the same as the number of bits stored in the block_map_.
-    // This is used to return the expected allocated count to the client in GetAttr.
+    // Number of additional blocks to be allocated on behalf of the vnode.
+    //
+    // For example, when writing to a block which has already been allocated to a file,
+    // we will allocate a "different" block, but simultenously free the old data block.
+    // This results in a net "block change" of zero blocks.
+    //
+    // This size should always be less than or equal to |block_map_.size()|.
     blk_t new_blocks_ = 0;
 
     // The expected size of the vnode after all blocks in block_map_ have been allocated.

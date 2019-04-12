@@ -9,55 +9,27 @@
 #endif
 
 #include <fbl/condition_variable.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <minfs/writeback.h>
 #include "allocator/allocator.h"
 
 #include <optional>
-#include <variant>
-
-using SyncCallback = fs::Vnode::SyncCallback;
 
 // The maximum number of tasks that can be enqueued at a time.
 constexpr uint32_t kMaxQueued = 16;
 
 namespace minfs {
 
-class DataAssignableVnode;
 class TransactionalFs;
-class VnodeMinfs;
 
-// Represents a data block allocation task to be processed by the async DataBlockAssigner thread.
-// Also queues sync callbacks to be passed on to the writeback thread.
-// This class is moveable, but not copyable or assignable.
-class DataTask {
-public:
-    // Initialize an invalid task.
-    DataTask() = default;
-    // Initializes the task with |vnode| which needs data blocks to be assigned.
-    DataTask(fbl::RefPtr<DataAssignableVnode> vnode);
-    // Initializes the task with |callback| to be passed on to the writeback queue once all pending
-    // data block allocations are complete.
-    DataTask(SyncCallback callback);
-    DataTask(const DataTask&) = delete;
-    DataTask(DataTask&& other) = default;
-    DataTask& operator=(const DataTask&) = delete;
-    DataTask& operator=(DataTask&& other) = default;
-    ~DataTask() = default;
+using TaskCallback = fbl::Function<void(TransactionalFs* minfs)>;
 
-    // Uses |minfs| to process the task.
-    // For a Vnode, this allocates data blocks which were reserved previously.
-    // For a SyncCallback, this sends the callback to the Minfs' writeback queue.
-    void Process(TransactionalFs* minfs);
-
-private:
-    // Variant which may contain either a Vnode with data blocks to be allocated, or a sync
-    // callback to be passed to the writeback queue.
-    std::variant<fbl::RefPtr<DataAssignableVnode>, SyncCallback> vnode_or_callback_;
-};
-
-// Asynchronously processes pending DataTasks.
+// A generic, circular buffer of tasks.
+//
 // This class is not assignable, copyable, or moveable.
+//
+// TODO: Rename. The interface has nothing to do with "data blocks" or "assignment".
 class DataBlockAssigner {
 public:
     static zx_status_t Create(TransactionalFs* minfs, fbl::unique_ptr<DataBlockAssigner>* out);
@@ -69,14 +41,10 @@ public:
     DataBlockAssigner& operator=(DataBlockAssigner&&) = delete;
     ~DataBlockAssigner();
 
-    // Enqueues a Vnode to be updated. This may only be invoked once until a call to Process() is
-    // made.
+    // Enqueue a unit of work to be processed by in a background thread.
+    //
     // This operation is thread-safe.
-    void EnqueueAllocation(fbl::RefPtr<DataAssignableVnode> vnode);
-
-    // Enqueues a SyncCallback.
-    // This operation is thread-safe.
-    void EnqueueCallback(SyncCallback closure);
+    void EnqueueCallback(TaskCallback task);
 
     // Returns true if any tasks are waiting for resources to become available.
     bool TasksWaiting() const;
@@ -91,7 +59,7 @@ private:
 
     // Reserves and returns the next task in the queue. If the queue is full (count == kMaxQueued),
     // blocks until a slot becomes available.
-    void ReserveTask(DataTask&& task) __TA_REQUIRES(lock_);
+    void ReserveTask(TaskCallback task) __TA_REQUIRES(lock_);
 
     // If the queue is full, sync until at least one task becomes available.
     void EnsureQueueSpace() __TA_REQUIRES(lock_);
@@ -107,7 +75,7 @@ private:
     // A circular buffer acting as a queue for DataTasks waiting to be processed. |start_|
     // indicates the index of the first task in the queue, and |count_| indicates the total number
     // of tasks waiting in the queue.
-    std::optional<DataTask> task_queue_[kMaxQueued] __TA_GUARDED(lock_);
+    std::optional<TaskCallback> task_queue_[kMaxQueued] __TA_GUARDED(lock_);
 
     uint32_t start_ __TA_GUARDED(lock_) = 0;
     uint32_t count_ __TA_GUARDED(lock_) = 0;

@@ -102,7 +102,6 @@ public:
         // Unreserve all reserved inodes/blocks while the lock is still held.
         inode_promise_.Cancel();
         block_promise_.Cancel();
-        ZX_ASSERT(scheduled_vnode_ == nullptr);
     }
 
     void InitWork() {
@@ -160,24 +159,15 @@ public:
     }
 
     // Removes |requested| blocks from block_promise_ and gives them to |other_promise|.
-    void SplitBlockPromise(size_t requested, AllocatorPromise* other_promise) {
+    void GiveBlocksToPromise(size_t requested, AllocatorPromise* other_promise) {
         ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
-        block_promise_.Split(requested, other_promise);
+        block_promise_.GiveBlocks(requested, other_promise);
     }
 
     // Removes |requested| blocks from |other_promise| and gives them to block_promise_.
     void MergeBlockPromise(AllocatorPromise* other_promise) {
-        other_promise->Split(other_promise->GetReserved(), &block_promise_);
+        other_promise->GiveBlocks(other_promise->GetReserved(), &block_promise_);
     }
-
-    void SetTargetVnode(fbl::RefPtr<DataAssignableVnode> vnode) {
-        ZX_ASSERT(scheduled_vnode_.get() == nullptr);
-        scheduled_vnode_ = std::move(vnode);
-    }
-
-    bool HasTargetVnode() const { return scheduled_vnode_ != nullptr; }
-
-    fbl::RefPtr<DataAssignableVnode> TakeTargetVnode() { return std::move(scheduled_vnode_); }
 #endif
 
 private:
@@ -190,9 +180,6 @@ private:
     fbl::unique_ptr<WritebackWork> data_work_;
     AllocatorPromise inode_promise_;
     AllocatorPromise block_promise_;
-
-    // Vnode which has been scheduled for a data block allocation.
-    fbl::RefPtr<DataAssignableVnode> scheduled_vnode_;
 };
 
 } // namespace minfs

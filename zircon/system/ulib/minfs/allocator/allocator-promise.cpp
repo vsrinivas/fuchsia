@@ -54,7 +54,7 @@ void AllocatorPromise::SwapCommit(WriteTxn* txn) {
     allocator_->SwapCommit({}, txn);
 }
 
-void AllocatorPromise::Split(size_t requested, AllocatorPromise* other_promise) {
+void AllocatorPromise::GiveBlocks(size_t requested, AllocatorPromise* other_promise) {
     ZX_DEBUG_ASSERT(requested <= reserved_);
     ZX_DEBUG_ASSERT(other_promise != nullptr);
 

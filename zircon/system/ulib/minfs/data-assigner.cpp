@@ -7,24 +7,6 @@
 
 namespace minfs {
 
-DataTask::DataTask(fbl::RefPtr<DataAssignableVnode> vnode) : vnode_or_callback_(std::move(vnode)) {
-    ZX_DEBUG_ASSERT(std::get<fbl::RefPtr<DataAssignableVnode>>(vnode_or_callback_) != nullptr);
-}
-
-DataTask::DataTask(SyncCallback callback) : vnode_or_callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT(std::get<SyncCallback>(vnode_or_callback_));
-}
-
-void DataTask::Process(TransactionalFs* minfs) {
-    if (auto vnode = std::get_if<fbl::RefPtr<DataAssignableVnode>>(&vnode_or_callback_)) {
-        (*vnode)->AllocateData();
-    } else if (auto callback = std::get_if<SyncCallback>(&vnode_or_callback_)) {
-        minfs->EnqueueCallback(std::move(*callback));
-    } else {
-        ZX_ASSERT(false);
-    }
-}
-
 DataBlockAssigner::~DataBlockAssigner() {
     if (thrd_) {
         {
@@ -56,17 +38,9 @@ zx_status_t DataBlockAssigner::Create(TransactionalFs* minfs,
     return ZX_OK;
 }
 
-void DataBlockAssigner::EnqueueCallback(SyncCallback callback) {
-    ZX_ASSERT(callback);
+void DataBlockAssigner::EnqueueCallback(TaskCallback task) {
     fbl::AutoLock lock(&lock_);
-    ReserveTask(DataTask(std::move(callback)));
-    data_cvar_.Signal();
-}
-
-void DataBlockAssigner::EnqueueAllocation(fbl::RefPtr<DataAssignableVnode> vnode) {
-    ZX_ASSERT(vnode != nullptr);
-    fbl::AutoLock lock(&lock_);
-    ReserveTask(DataTask(std::move(vnode)));
+    ReserveTask(std::move(task));
     data_cvar_.Signal();
 }
 
@@ -77,12 +51,13 @@ bool DataBlockAssigner::TasksWaiting() const {
 
 void DataBlockAssigner::ProcessNext() {
     ZX_DEBUG_ASSERT(!IsEmpty());
-    std::optional<DataTask> task;
+    std::optional<TaskCallback> task;
     task_queue_[start_].swap(task);
     ZX_DEBUG_ASSERT(task.has_value());
 
     lock_.Release();
-    task->Process(minfs_);
+    (*task)(minfs_);
+    task = nullptr;
     lock_.Acquire();
 
     if (waiting_ > 0) {
@@ -94,7 +69,7 @@ void DataBlockAssigner::ProcessNext() {
     count_--;
 }
 
-void DataBlockAssigner::ReserveTask(DataTask&& task) {
+void DataBlockAssigner::ReserveTask(TaskCallback task) {
     EnsureQueueSpace();
     ZX_DEBUG_ASSERT(count_ < kMaxQueued);
     count_++;

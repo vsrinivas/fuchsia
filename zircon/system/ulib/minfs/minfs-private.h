@@ -147,7 +147,7 @@ public:
     // Enqueues a WritebackWork for processing.
     virtual zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) = 0;
 
-    // Complete a transaction by persisting its contents to disk.
+    // Enqueues a metadata transaction by persisting its contents to disk.
     virtual zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
 
     virtual Bcache* GetMutableBcache() = 0;
@@ -239,6 +239,11 @@ public:
         __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
+    // Hands off a work unit to be completed by the "data assigner" thread.
+    void EnqueueDataTask(TaskCallback callback) {
+        assigner_->EnqueueCallback(std::move(callback));
+    }
+
     // Returns the capacity of the writeback buffer, in blocks.
     size_t WritebackCapacity() const {
         ZX_DEBUG_ASSERT(writeback_ != nullptr);

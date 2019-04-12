@@ -35,18 +35,12 @@ blk_t PendingAllocationData::GetLongestRange() const {
     return block_count;
 }
 
-bool PendingAllocationData::SetPending(blk_t block_num, bool allocated) {
+void PendingAllocationData::SetPending(blk_t block_num, bool allocated) {
     size_t initial_bits = block_map_.num_bits();
     ZX_ASSERT(block_map_.SetOne(block_num) == ZX_OK);
-    if (block_map_.num_bits() > initial_bits) {
-        if (!allocated) {
-            new_blocks_++;
-        }
-
-        return true;
+    if (block_map_.num_bits() > initial_bits && !allocated) {
+        new_blocks_++;
     }
-
-    return false;
 }
 
 bool PendingAllocationData::ClearPending(blk_t block_num, bool allocated) {

@@ -18,7 +18,6 @@
 #include <lib/zx/vmo.h>
 #include <minfs/writeback-async.h>
 
-#include "data-assigner.h"
 #include "vnode-allocation.h"
 #endif
 
@@ -44,47 +43,18 @@ namespace minfs {
 class MinfsChecker;
 class Minfs;
 
-struct DirectoryOffset {
-    size_t off = 0;      // Offset in directory of current record
-    size_t off_prev = 0; // Offset in directory of previous record
-};
-
-struct DirArgs {
-    fbl::StringPiece name;
-    ino_t ino;
-    uint32_t type;
-    uint32_t reclen;
-    Transaction* transaction;
-    DirectoryOffset offs;
-};
-
-// This class exists as an interface into the VnodeMinfs for processing pending data block
-// allocations. Defining this separately allows VnodeMinfs to be substituted for a simpler version
-// in unit testing, and also prevents clients from abusing other parts of the VnodeMinfs public API.
-class DataAssignableVnode : public fs::Vnode, public fbl::Recyclable<DataAssignableVnode> {
+// An abstract Vnode class contains the following:
+//
+// - A VMO, holding the in-memory representation of data stored persistently.
+// - An inode, holding the root of this node's metadata.
+//
+// This class is capable of writing, reading, and truncating the node's data
+// in a linear block-address space.
+class VnodeMinfs : public fs::Vnode,
+                   public fbl::SinglyLinkedListable<VnodeMinfs*>,
+                   public fbl::Recyclable<VnodeMinfs> {
 public:
-    DataAssignableVnode() = default;
-    virtual ~DataAssignableVnode() = default;
-
-    virtual void fbl_recycle() = 0;
-
-#ifdef __Fuchsia__
-    // Allocate all data blocks pending in |allocation_state_|.
-    virtual void AllocateData() = 0;
-
-protected:
-    // Describes pending allocation data for the vnode. This should only be accessed while a valid
-    // Transaction object is held, as it may be modified asynchronously by the DataBlockAssigner
-    // thread.
-    PendingAllocationData allocation_state_;
-#endif
-};
-
-class VnodeMinfs final : public DataAssignableVnode,
-                         public fbl::SinglyLinkedListable<VnodeMinfs*>,
-                         public fbl::Recyclable<VnodeMinfs> {
-public:
-    ~VnodeMinfs();
+    virtual ~VnodeMinfs();
 
     // Allocates a new Vnode and initializes the in-memory inode structure given the type, where
     // type is one of:
@@ -100,9 +70,7 @@ public:
     // Doesn't update create / modify times of the node.
     static zx_status_t Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out);
 
-    bool IsDirectory() const final { return inode_.magic == kMinfsMagicDir; }
     bool IsUnlinked() const { return inode_.link_count == 0; }
-    zx_status_t CanUnlink() const;
 
     const Inode* GetInode() const { return &inode_; }
     ino_t GetIno() const { return ino_; }
@@ -118,6 +86,10 @@ public:
         inode_.last_inode = ino;
     }
 
+    void AddLink() {
+        inode_.link_count++;
+    }
+
     static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
     // fs::Vnode interface (invoked publicly).
@@ -128,25 +100,79 @@ public:
     zx_status_t Close() final;
 
     // fbl::Recyclable interface.
-    void fbl_recycle() final;
+    void fbl_recycle() override;
+
+    // Queries the underlying vnode to ask if it may be unlinked.
+    //
+    // If the response is not ZX_OK, operations to unlink (or rename on top of) this
+    // vnode will fail.
+    virtual zx_status_t CanUnlink() const = 0;
+
+    // Returns the current block count of the vnode.
+    virtual blk_t GetBlockCount() const = 0;
+
+    // Returns the total size of the vnode.
+    virtual uint64_t GetSize() const = 0;
+
+    // Sets the new size of the vnode.
+    // Should update the in-memory representation of the Vnode, but not necessarily
+    // write it out to persistent storage.
+    //
+    // TODO: Upgrade internal size to 64-bit integer.
+    virtual void SetSize(uint32_t new_size) = 0;
+
+    // Accesses a block in the vnode at |vmo_offset| relative to the start of the file,
+    // which was previously at the device offset |dev_offset|.
+    //
+    // If the block was not previously allocated, |dev_offset| is zero.
+    // |*out_dev_offset| must contain the new value of the device offset to use when writing
+    // to this part of the Vnode. By default, it is set to |dev_offset|.
+    //
+    // |*out_dev_offset| may be passed to |IssueWriteback| as |dev_offset|.
+    virtual void AcquireWritableBlock(Transaction* transaction, blk_t vmo_offset,
+                                      blk_t dev_offset, blk_t* out_dev_offset) = 0;
+
+    // Deletes the block at |vmo_offset| within the file, corresponding to on-disk
+    // block |dev_offset| (zero if unallocated).
+    virtual void DeleteBlock(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
 
 #ifdef __Fuchsia__
+    // Instructs the Vnode to write out |count| blocks of the vnode, starting at local
+    // offset |vmo_offset|, corresponding to on-disk offset |dev_offset|.
+    virtual void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
+                                blk_t count) = 0;
+
+    // Queries the node, returning |true| if the node has an in-flight operation on |vmo_offset|
+    // that has not yet been enqueued to the writeback pipeline.
+    virtual bool HasPendingAllocation(blk_t vmo_offset) = 0;
+
+    // Instructs the node to cancel all pending writeback operations that have not yet been
+    // enqueued to the writeback pipeline.
+    //
+    // This method is used exclusively when deleting nodes.
+    virtual void CancelPendingWriteback() = 0;
+
     // Minfs FIDL interface.
     zx_status_t GetMetrics(fidl_txn_t* transaction);
     zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* transaction);
     zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
 
-    // Allocate all data blocks pending in |allocation_state_|.
-    void AllocateData() final;
-
 #endif
     Minfs* Vfs() { return fs_; }
 
+    // Local implementations of read, write, and truncate functions which
+    // may operate on either files or directories.
+    zx_status_t ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
+                             size_t* actual);
+    zx_status_t ReadExactInternal(Transaction* transaction, void* data, size_t len, size_t off);
+    zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len,
+                              size_t off, size_t* actual);
+    zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+                                   size_t off);
+    zx_status_t TruncateInternal(Transaction* transaction, size_t len);
+
     // TODO: The following methods should be made private:
 #ifdef __Fuchsia__
-    void CancelDataWriteback() {
-        DataAssignableVnode::allocation_state_.Reset(inode_.size);
-    }
     zx_status_t InitIndirectVmo();
     // Reads the block at |offset| in memory.
     // Assumes that vmo_indirect_ has already been initialized
@@ -161,89 +187,30 @@ public:
     // Update the vnode's inode and write it to disk.
     void InodeSync(WritebackWork* wb, uint32_t flags);
 
-private:
+    // Decrements the inode link count to a vnode.
+    // Writes the inode back to |transaction|.
+    //
+    // If the link count becomes zero, the node either:
+    // 1) Calls |Purge()| (if no open fds exist), or
+    // 2) Adds itself to the "unlinked list", to be purged later.
+    void RemoveInodeLink(Transaction* transaction);
+
+    // TODO(smklein): These operations and members are protected as a historical artifact
+    // of "File + Directory + Vnode" being a single class. They should be transitioned to
+    // private.
+protected:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
 
     VnodeMinfs(Minfs* fs);
 
     // fs::Vnode interface.
-    zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-    zx_status_t Write(const void* data, size_t len, size_t offset,
-                      size_t* out_actual) final;
-    zx_status_t Append(const void* data, size_t len, size_t* out_end,
-                       size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Setattr(const vnattr_t* a) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                        size_t* out_actual) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
-                       uint32_t mode) final;
-    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-    zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
-                       fbl::StringPiece oldname, fbl::StringPiece newname,
-                       bool src_must_be_dir, bool dst_must_be_dir) final;
-    zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
-    zx_status_t Truncate(size_t len) final;
 #ifdef __Fuchsia__
     zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-
-    // Transfers |requested| blocks from the provided |transaction|'s block promise and gives them
-    // to the allocation_state_'s block promise. Additionally adds the vnode to |transaction| to be
-    // processed later. |transaction| must be non-null and possess an initialized block promise
-    // with at least as many reserved blocks as |block_count|.
-    void ScheduleAllocation(Transaction* transaction, blk_t block_count);
 #endif
-
-    // Internal functions
-    zx_status_t ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
-                             size_t* actual);
-    zx_status_t ReadExactInternal(Transaction* transaction, void* data, size_t len, size_t off);
-    zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len,
-                              size_t off, size_t* actual);
-    zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
-                                   size_t off);
-    zx_status_t TruncateInternal(Transaction* transaction, size_t len);
-    // Lookup which can traverse '..'
-    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
-
-    // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
-    // Traces the path from newdir back to the root inode.
-    zx_status_t CheckNotSubdirectory(fbl::RefPtr<VnodeMinfs> newdir);
-
-    using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
-
-    // Enumerates directories.
-    zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
-
-    // Directory callback functions.
-    //
-    // The following functions are passable to |ForEachDirent|, which reads the parent directory,
-    // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
-    // information passed to the initial call of |ForEachDirent|.
-    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
-    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
-    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, Dirent*,
-                                                 DirArgs*);
-    static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs>, Dirent*,
-                                                   DirArgs*);
-    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, Dirent*,
-                                                 DirArgs*);
-    static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs>, Dirent*, DirArgs*);
-
-    // Appends a new directory at the specified offset within |args|. This requires a prior call to
-    // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
-    // the same |args| that were passed into DirentCallbackFindSpace.
-    zx_status_t AppendDirent(DirArgs* args);
-
-    zx_status_t UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child,
-                            Dirent* de, DirectoryOffset* offs);
-    // Remove the link to a vnode (referring to inodes exclusively).
-    // Has no impact on direntries (or parent inode).
-    void RemoveInodeLink(Transaction* transaction);
 
     // Although file sizes don't need to be block-aligned, the underlying VMO is
     // always kept at a size which is a multiple of |kMinfsBlockSize|.
@@ -252,25 +219,54 @@ private:
     // assumed that any space between |inode_.size| and the nearest block is
     // filled with zeroes in the internal VMO. This function validates that
     // assumption.
-    void ValidateVmoTail(blk_t inode_size) const;
+    void ValidateVmoTail(uint64_t inode_size) const;
 
     enum class BlockOp {
+        // Read skips unallocated indirect blocks, setting all output |bno| values to zero.
         kRead,
-        kWrite,
+        // Delete avoids accessing indirect blocks, but additionally releases indirect blocks
+        // (and doubly indirect blocks) if all contained blocks have been freed.
+        //
+        // |out_dev_offset| must be zero for all callbacks invoked via this operation.
         kDelete,
+        // Write ensures all indirect blocks are allocated before accessing the underlying |bno|.
+        // Acquiring a block via "kWrite" may cause additional writeback traffic to update
+        // the metadata itself.
+        kWrite,
+        // Swap is identical to write: It ensures all indirect blocks are allocated
+        // before being accessed.
         kSwap,
     };
 
-    struct BlockOpArgs {
-        BlockOpArgs(blk_t start, blk_t count, blk_t* bnos)
-            : start(start), count(count), bnos(bnos) {
-                // Initialize output array to 0 in case the indirect block(s) containing these bnos
-                // do not exist
-                if (bnos) {
-                    memset(bnos, 0, sizeof(blk_t) * count);
-                }
-            }
+    // Callback for block operations. Called exclusively on "leaf node" blocks: indirect blocks
+    // are considered metadata, and handled internally by the "BlockOp" functions.
+    //
+    // |vmo_offset|: Block address relative to start of Vnode.
+    // |dev_offset|: Previous absolute block address at this node. Zero if unallocated.
+    // |out_dev_offset|: A new, optional output value. Set to |dev_offset| by default.
+    //            Will alter the results of |bno| returned via |ApplyOperation|.
+    using BlockOpCallback = fbl::Function<void(blk_t vmo_offset,
+                                               blk_t dev_offset,
+                                               blk_t* out_dev_offset)>;
 
+    // Arguments to invoke |callback| on all local nodes of the file in [start, start + count).
+    //
+    // Collects result blocks in |bnos|.
+    struct BlockOpArgs {
+        BlockOpArgs(Transaction* transaction, BlockOp op, BlockOpCallback callback, blk_t start,
+                    blk_t count, blk_t* bnos)
+            : transaction(transaction), op(op), callback(std::move(callback)), start(start),
+              count(count), bnos(bnos) {
+            // Initialize output array to 0 in case the indirect block(s)
+            // containing these bnos do not exist.
+            if (bnos) {
+                memset(bnos, 0, sizeof(blk_t) * count);
+            }
+        }
+
+        Transaction* transaction;
+        BlockOp op;
+        BlockOpCallback callback;
         blk_t start;
         blk_t count;
         blk_t* bnos;
@@ -375,15 +371,27 @@ private:
     // Perform operation |op| on blocks as specified by |params|
     // The BlockOp methods should not be called directly
     // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-    zx_status_t ApplyOperation(Transaction* transaction, BlockOp op, BlockOpArgs* params);
-    zx_status_t BlockOpDirect(Transaction* transaction, DirectArgs* params);
-    zx_status_t BlockOpIndirect(Transaction* transaction, IndirectArgs* params);
-    zx_status_t BlockOpDindirect(Transaction* transaction, DindirectArgs* params);
+    zx_status_t ApplyOperation(BlockOpArgs* params);
+    zx_status_t BlockOpDirect(BlockOpArgs* op_args, DirectArgs* params);
+    zx_status_t BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* params);
+    zx_status_t BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* params);
+
+    // Ensures that the indirect vmo is large enough to reference a block at
+    // relative block address |n| within the file.
+    zx_status_t EnsureIndirectVmoSize(blk_t n);
 
     // Get the disk block 'bno' corresponding to the 'n' block
-    // If 'transaction' is non-null, new blocks are allocated for all un-allocated bnos.
-    // This can be extended to retrieve multiple contiguous blocks in one call
-    zx_status_t BlockGet(Transaction* transaction, blk_t n, blk_t* bno);
+    //
+    // May or may not allocate |bno|; certain Vnodes (like File) delay allocation
+    // until writeback, and will return a sentinel value of zero.
+    //
+    // TODO: Use types to represent that |bno|, as an output, is optional.
+    zx_status_t BlockGetWritable(Transaction* transaction, blk_t n, blk_t* bno);
+
+    // Get the disk block 'bno' corresponding to relative block address |n| within the file.
+    // Does not allocate any blocks, direct or indirect, to acquire this block.
+    zx_status_t BlockGetReadable(blk_t n, blk_t* bno);
+
     // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
     // This can be extended to return indices of deleted bnos, or to delete a specific number of
@@ -397,31 +405,8 @@ private:
     // - Are fully unlinked (link count == 0)
     void Purge(Transaction* transaction);
 
-    // Returns the current block count of the vnode. Must be accessed with |transaction| to ensure
-    // that the count isn't modified asynchronously.
-    blk_t GetBlockCount(const Transaction& transaction) const;
-
-    // Returns current size of vnode.
-    blk_t GetSize() const;
-
-    // Sets current size of vnode.
-    void SetSize(blk_t new_size);
-
 #ifdef __Fuchsia__
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-
-    // For data vnodes, if the pending size differs from the actual inode size, resolve them by
-    // setting the inode size to the pending size.
-    void ResolveSize() {
-        if (!IsDirectory() && inode_.size != allocation_state_.GetNodeSize()) {
-            inode_.size = allocation_state_.GetNodeSize();
-        }
-    }
-
-    // For all direct blocks in the range |start| to |start + count|, reserve specific blocks in
-    // the allocator to be swapped in at the time the old blocks are swapped out. Indirect blocks
-    // are expected to have been allocated previously.
-    zx_status_t BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
 
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
@@ -449,6 +434,7 @@ private:
     // Clears the block at |bno| on disk.
     void ClearIndirectBlock(blk_t bno);
 #endif
+    uint32_t FdCount() const { return fd_count_; }
 
     Minfs* const fs_;
 #ifdef __Fuchsia__

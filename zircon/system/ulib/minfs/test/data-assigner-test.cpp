@@ -83,23 +83,12 @@ private:
 };
 
 // Mock Vnode class to be used in DataBlockAssigner tests.
-class MockVnodeMinfs : public DataAssignableVnode, public fbl::Recyclable<MockVnodeMinfs> {
+class MockVnode : public fbl::RefCounted<MockVnode> {
 public:
-    MockVnodeMinfs(MockMinfs* minfs) : minfs_(minfs), recycled_(nullptr) {}
-    ~MockVnodeMinfs() = default;
+    MockVnode(MockMinfs* minfs) : minfs_(minfs) {}
+    ~MockVnode() = default;
 
-    void fbl_recycle() final {
-        if (recycled_ != nullptr) {
-            *recycled_ = true;
-        }
-    }
-
-    void SetRecycled(bool* recycled) {
-        recycled_ = recycled;
-        *recycled_ = false;
-    }
-
-    void AllocateData() final {
+    void AllocateData() {
         fbl::unique_ptr<Transaction> transaction;
         ZX_ASSERT(minfs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
         reserved_ = 0;
@@ -112,17 +101,9 @@ public:
 
     blk_t GetReserved() const { return reserved_; }
 
-    bool IsDirectory() const { return false; }
-
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-        info->tag = fuchsia_io_NodeInfoTag_service;
-        return ZX_OK;
-    }
-
 private:
     MockMinfs* minfs_;
     blk_t reserved_ = 0;
-    bool* recycled_;
 };
 
 class DataAssignerTest {
@@ -148,18 +129,23 @@ public:
     }
 
     // Generates a new Vnode with |reserve_count| blocks reserved.
-    void GenerateVnode(uint32_t reserve_count, fbl::RefPtr<MockVnodeMinfs>* out) {
-        fbl::RefPtr<MockVnodeMinfs> mock_vnode = fbl::AdoptRef(new MockVnodeMinfs(&minfs_));
+    void GenerateVnode(uint32_t reserve_count, fbl::RefPtr<MockVnode>* out) {
+        fbl::RefPtr<MockVnode> mock_vnode = fbl::AdoptRef(new MockVnode(&minfs_));
         ASSERT_NO_FATAL_FAILURES(mock_vnode->Reserve(reserve_count));
         *out = std::move(mock_vnode);
     }
 
-    void EnqueueAllocation(fbl::RefPtr<MockVnodeMinfs> vnode) {
-        assigner_->EnqueueAllocation(std::move(vnode));
+    void EnqueueAllocation(fbl::RefPtr<MockVnode> vnode) {
+        assigner_->EnqueueCallback([vnode = std::move(vnode)](TransactionalFs*) mutable {
+            vnode->AllocateData();
+        });
     }
 
     void EnqueueCallback(SyncCallback callback) {
-        assigner_->EnqueueCallback(std::move(callback));
+        auto cb = [callback = std::move(callback)](TransactionalFs* fs) mutable {
+            fs->EnqueueCallback(std::move(callback));
+        };
+        assigner_->EnqueueCallback(std::move(cb));
     }
 
     zx_status_t Pause() {
@@ -197,7 +183,7 @@ public:
             result = status;
         };
 
-        assigner_->EnqueueCallback(std::move(callback));
+        EnqueueCallback(std::move(callback));
         cvar.Wait(&mutex);
         return result;
     }
@@ -209,26 +195,11 @@ private:
     fbl::unique_ptr<DataBlockAssigner> assigner_;
 };
 
-TEST(DataAssignerTest, CheckVnodeRecycled) {
-    fbl::unique_ptr<DataAssignerTest> test;
-    ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode;
-    ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(1, &mock_vnode));
-    fbl::RefPtr<DataAssignableVnode> data_vnode = fbl::WrapRefPtr(mock_vnode.get());
-    bool recycled;
-    mock_vnode->SetRecycled(&recycled);
-    ASSERT_FALSE(recycled);
-    mock_vnode.reset();
-    ASSERT_FALSE(recycled);
-    data_vnode.reset();
-    ASSERT_TRUE(recycled);
-}
-
 // Simple test which enqueues and processes a data block allocation for a single vnode.
 TEST(DataAssignerTest, ProcessSingleNode) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode;
+    fbl::RefPtr<MockVnode> mock_vnode;
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(10, &mock_vnode));
     ASSERT_EQ(10, mock_vnode->GetReserved());
     test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
@@ -240,7 +211,7 @@ TEST(DataAssignerTest, ProcessSingleNode) {
 TEST(DataAssignerTest, EnqueueMany) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode[kMaxQueued];
+    fbl::RefPtr<MockVnode> mock_vnode[kMaxQueued];
 
     for (unsigned i = 0; i < kMaxQueued; i++) {
         ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(kMaxQueued * i, &mock_vnode[i]));
@@ -258,7 +229,7 @@ TEST(DataAssignerTest, EnqueueMany) {
 TEST(DataAssignerTest, EnqueueFull) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode[kMaxQueued];
+    fbl::RefPtr<MockVnode> mock_vnode[kMaxQueued];
 
     ASSERT_OK(test->Pause());
 
@@ -283,7 +254,7 @@ TEST(DataAssignerTest, EnqueueFull) {
 
     // The assigner queue is full, but attempt to enqueue a new allocation anyway. This will block
     // until the process_thread frees up space within the assigner.
-    fbl::RefPtr<MockVnodeMinfs> another_vnode;
+    fbl::RefPtr<MockVnode> another_vnode;
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(1, &another_vnode));
     test->EnqueueAllocation(std::move(another_vnode));
     int result;
@@ -318,7 +289,7 @@ TEST(DataAssignerTest, EnqueueWait) {
     // tasks to be enqueued.
     ASSERT_OK(test->Sync());
 
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode;
+    fbl::RefPtr<MockVnode> mock_vnode;
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(10, &mock_vnode));
     test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
 
@@ -330,7 +301,7 @@ TEST(DataAssignerTest, EnqueueWait) {
 TEST(DataAssignerTest, DestructAssigner) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode[kMaxQueued];
+    fbl::RefPtr<MockVnode> mock_vnode[kMaxQueued];
 
     for (unsigned i = 0; i < kMaxQueued; i++) {
         ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(kMaxQueued * i, &mock_vnode[i]));
@@ -348,7 +319,7 @@ TEST(DataAssignerTest, DestructAssigner) {
 TEST(DataAssignerTest, DestructVnode) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode;
+    fbl::RefPtr<MockVnode> mock_vnode;
     ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(1, &mock_vnode));
     test->EnqueueAllocation(fbl::WrapRefPtr(mock_vnode.get()));
     mock_vnode.reset();

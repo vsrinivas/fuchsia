@@ -109,7 +109,7 @@ TEST(AllocatorTest, InitializeSplit) {
 
     // Now split the full promise with the uninit promise, and check that it becomes initialized.
     AllocatorPromise uninit_promise;
-    full_promise.Split(1, &uninit_promise);
+    full_promise.GiveBlocks(1, &uninit_promise);
     ASSERT_TRUE(uninit_promise.IsInitialized());
     ASSERT_EQ(full_promise.GetReserved(), kTotalElements - 1);
     ASSERT_EQ(uninit_promise.GetReserved(), 1);
@@ -165,7 +165,7 @@ TEST(AllocatorTest, SplitInitialized) {
     ASSERT_EQ(allocator->GetAvailable(), 0);
 
     // Now split the first promise's reservation with the second.
-    first_promise.Split(1, &second_promise);
+    first_promise.GiveBlocks(1, &second_promise);
     ASSERT_EQ(second_promise.GetReserved(), second_count + 1);
     ASSERT_EQ(first_promise.GetReserved(), first_count - 1);
     ASSERT_EQ(allocator->GetAvailable(), 0);
@@ -193,7 +193,7 @@ TEST(AllocatorTest, TestSplitUninitialized) {
     ASSERT_GT(first_count, 0);
     ASSERT_GT(second_count, 0);
     ASSERT_FALSE(second_promise.IsInitialized());
-    first_promise.Split(second_count, &second_promise);
+    first_promise.GiveBlocks(second_count, &second_promise);
     ASSERT_TRUE(second_promise.IsInitialized());
     ASSERT_EQ(second_promise.GetReserved(), second_count);
     ASSERT_EQ(first_promise.GetReserved(), first_count);
