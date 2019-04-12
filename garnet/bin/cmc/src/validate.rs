@@ -147,7 +147,11 @@ impl<'a> ValidationContext<'a> {
         prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("offer", offer)?;
-
+        let from_caps = cml::CHILD_RE.captures(&offer.from);
+        let from_child = match &from_caps {
+            Some(caps) => Some(&caps[0]),
+            None => None,
+        };
         let mut prev_targets = HashSet::new();
         for to in offer.to.iter() {
             // Check that any referenced child in the target name is valid.
@@ -159,13 +163,24 @@ impl<'a> ValidationContext<'a> {
                     )));
                 }
             }
+
+            // Check that the capability is not being re-offered to a target that exposed it.
+            if let Some(from_child) = &from_child {
+                if from_child == &to.dest {
+                    return Err(Error::validate(format!(
+                        "Offer target \"{}\" is same as source", &to.dest,
+                    )));
+                }
+            }
+
+            // Perform common target validation.
             self.validate_target("offer", offer, to, &mut prev_targets, prev_target_paths)?;
         }
         Ok(())
     }
 
     /// Validates that a source capability is valid, i.e. that any referenced child is valid.
-    /// - |keyword| is the keyword for the clause ("offer" or "expose").
+    /// - `keyword` is the keyword for the clause ("offer" or "expose").
     fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
     where
         T: cml::FromClause + cml::CapabilityClause,
@@ -184,12 +199,12 @@ impl<'a> ValidationContext<'a> {
 
     /// Validates that a target is valid, i.e. that it does not duplicate the path of any capability
     /// and any referenced child is valid.
-    /// - |keyword| is the keyword for the clause ("offer" or "expose").
-    /// - |source_obj| is the object containing the source capability info. This is needed for the
+    /// - `keyword` is the keyword for the clause ("offer" or "expose").
+    /// - `source_obj` is the object containing the source capability info. This is needed for the
     ///   default path.
-    /// - |target_obj| is the object containing the target capability info.
-    /// - |prev_target| holds target names collected for this source capability so far.
-    /// - |prev_target_paths| holds target paths collected so far.
+    /// - `target_obj` is the object containing the target capability info.
+    /// - `prev_target` holds target names collected for this source capability so far.
+    /// - `prev_target_paths` holds target paths collected so far.
     fn validate_target<T, U>(
         &self,
         keyword: &str,
@@ -1127,19 +1142,23 @@ mod tests {
                 "offer": [
                     {
                         "service": "/svc/fuchsia.logger.Log",
-                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "to": [
                             {
-                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-"
-                            }
-                        ]
+                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-to",
+                            },
+                        ],
                     }
                 ],
                 "children": [
                     {
-                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "uri": "https://www.google.com/gmail"
-                    }
+                    },
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-to",
+                        "uri": "https://www.google.com/gmail"
+                    },
                 ]
             }),
             result = Ok(()),
@@ -1223,6 +1242,21 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0/dest")),
+        },
+        test_cml_offer_target_equals_from => {
+            input = json!({
+                "offer": [ {
+                    "service": "/svc/fuchsia.logger.Log",
+                    "from": "#logger",
+                    "to": [
+                        { "dest": "#logger", "as": "/svc/fuchsia.logger.SysLog", },
+                    ],
+                } ],
+                "children": [ {
+                    "name": "logger", "uri": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                } ],
+            }),
+            result = Err(Error::validate("Offer target \"#logger\" is same as source")),
         },
         test_cml_offer_duplicate_target_paths => {
             input = json!({

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_sys2::{
-        ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation, RelativeId,
-    },
+    fidl_fuchsia_sys2 as fsys,
     lazy_static::lazy_static,
     regex::Regex,
     std::collections::{HashMap, HashSet},
@@ -27,6 +25,7 @@ pub enum Error {
     DuplicateField(String, String, String),
     InvalidField(String, String),
     FieldTooLong(String, String),
+    OfferTargetEqualsSource(String),
     InvalidChild(String, String),
     RelativeIdMissingChild(),
     RelativeIdExtraneousChild(String),
@@ -57,6 +56,10 @@ impl Error {
         Error::FieldTooLong(decl_type.into(), keyword.into())
     }
 
+    pub fn offer_target_equals_source(decl_type: impl Into<String>) -> Self {
+        Error::OfferTargetEqualsSource(decl_type.into())
+    }
+
     pub fn invalid_child(decl_type: impl Into<String>, child: impl Into<String>) -> Self {
         Error::InvalidChild(decl_type.into(), child.into())
     }
@@ -80,6 +83,9 @@ impl fmt::Display for Error {
             Error::DuplicateField(d, k, v) => write!(f, "\"{}\" is a duplicate {} {}", v, d, k),
             Error::InvalidField(d, k) => write!(f, "{} has invalid {}", d, k),
             Error::FieldTooLong(d, k) => write!(f, "{}'s {} is too long", d, k),
+            Error::OfferTargetEqualsSource(d) => {
+                write!(f, "OfferTarget \"{}\" is same as source", d)
+            }
             Error::InvalidChild(d, c) => {
                 write!(f, "\"{}\" is referenced in {} but it does not appear in children", c, d)
             }
@@ -121,13 +127,13 @@ impl fmt::Display for ErrorList {
 /// - That all semantically required fields are present
 /// - That a child_name referenced in a RelativeId actually exists in the list of children
 /// - That there are no duplicate target ptahs
-pub fn validate(decl: &ComponentDecl) -> Result<(), ErrorList> {
+pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext { decl, all_children: HashSet::new(), errors: vec![] };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
 }
 
 struct ValidationContext<'a> {
-    decl: &'a ComponentDecl,
+    decl: &'a fsys::ComponentDecl,
     all_children: HashSet<&'a str>,
     errors: Vec<Error>,
 }
@@ -177,7 +183,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_child(&mut self, child: &'a ChildDecl) {
+    fn validate_child(&mut self, child: &'a fsys::ChildDecl) {
         let name = child.name.as_ref();
         if NAME.check(name, "ChildDecl", "name", &mut self.errors) {
             let name: &str = name.unwrap();
@@ -193,7 +199,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_expose(
         &mut self,
-        expose: &'a ExposeDecl,
+        expose: &'a fsys::ExposeDecl,
         prev_target_paths: &mut HashSet<&'a str>,
     ) {
         if expose.type_.is_none() {
@@ -202,17 +208,15 @@ impl<'a> ValidationContext<'a> {
         PATH.check(expose.source_path.as_ref(), "ExposeDecl", "source_path", &mut self.errors);
         if expose.source.is_none() {
             self.errors.push(Error::missing_field("ExposeDecl", "source"));
-        } else if let Ok((relation, child_name)) =
-            self.extract_relative_id(expose.source.as_ref().unwrap())
-        {
-            match relation {
-                Relation::Myself => {}
-                Relation::Child => {}
+        } else if let Ok(relative_id) = RelativeId::new(self, expose.source.as_ref().unwrap()) {
+            match relative_id.relation {
+                fsys::Relation::Myself => {}
+                fsys::Relation::Child => {}
                 _ => {
                     self.errors.push(Error::invalid_field("ExposeDecl source", "relative_id"));
                 }
             };
-            if let Some(child) = child_name {
+            if let Some(child) = relative_id.child_name {
                 let child: &str = child;
                 if !self.all_children.contains(child) {
                     self.errors.push(Error::invalid_child("ExposeDecl source", child));
@@ -228,33 +232,36 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_offer(&mut self, offer: &'a OfferDecl, prev_target_paths: &mut PathMap<'a>) {
+    fn validate_offer(&mut self, offer: &'a fsys::OfferDecl, prev_target_paths: &mut PathMap<'a>) {
         if offer.type_.is_none() {
             self.errors.push(Error::missing_field("OfferDecl", "type"));
         }
         PATH.check(offer.source_path.as_ref(), "OfferDecl", "source_path", &mut self.errors);
         if offer.source.is_none() {
             self.errors.push(Error::missing_field("OfferDecl", "source"));
-        } else if let Ok((_, child_name)) = self.extract_relative_id(offer.source.as_ref().unwrap())
-        {
-            if let Some(child) = child_name {
-                let child: &str = child;
-                if !self.all_children.contains(child) {
-                    self.errors.push(Error::invalid_child("OfferDecl source", child));
+        }
+        let relative_id = match offer.source.as_ref() {
+            Some(r) => RelativeId::new(self, r).ok(),
+            None => None,
+        };
+        if let Some(relative_id) = relative_id.as_ref() {
+            if let Some(child_name) = relative_id.child_name {
+                if !self.all_children.contains(child_name) {
+                    self.errors.push(Error::invalid_child("OfferDecl source", child_name));
                 }
             }
         }
-        if offer.targets.is_none() {
-            self.errors.push(Error::missing_field("OfferDecl", "targets"));
+        if let Some(targets) = &offer.targets {
+            self.validate_targets(relative_id.as_ref(), targets, prev_target_paths);
         } else {
-            let targets = offer.targets.as_ref().unwrap();
-            self.validate_targets(targets, prev_target_paths);
+            self.errors.push(Error::missing_field("OfferDecl", "targets"));
         }
     }
 
     fn validate_targets(
         &mut self,
-        targets: &'a Vec<OfferTarget>,
+        source: Option<&RelativeId>,
+        targets: &'a Vec<fsys::OfferTarget>,
         prev_target_paths: &mut PathMap<'a>,
     ) {
         if targets.is_empty() {
@@ -280,6 +287,7 @@ impl<'a> ValidationContext<'a> {
                 if !self.all_children.contains(child_name) {
                     self.errors.push(Error::invalid_child("OfferTarget", child_name));
                 }
+
                 let paths_for_target =
                     prev_target_paths.entry(child_name.to_string()).or_insert(HashSet::new());
                 if !paths_for_target.insert(target_path) {
@@ -289,43 +297,59 @@ impl<'a> ValidationContext<'a> {
                         target_path,
                     ));
                 }
+
+                if let Some(source) = source {
+                    if let Some(source_child) = source.child_name {
+                        if source_child == child_name {
+                            self.errors.push(Error::offer_target_equals_source(child_name));
+                        }
+                    }
+                }
             }
         }
     }
+}
 
-    /// extract_relative_id() returns Err(()) and pushes any errors onto |self.errors| on failure.
-    fn extract_relative_id(
-        &mut self,
-        relative_id: &'a RelativeId,
-    ) -> Result<(Relation, Option<&'a String>), ()> {
+struct RelativeId<'a> {
+    relation: fsys::Relation,
+    child_name: Option<&'a str>,
+}
+
+impl<'a> RelativeId<'a> {
+    /// new() returns Err(()) and pushes any errors onto `ctx.errors` on failure.
+    fn new(
+        ctx: &mut ValidationContext,
+        relative_id: &'a fsys::RelativeId,
+    ) -> Result<RelativeId<'a>, ()> {
         if relative_id.relation.is_none() {
-            self.errors.push(Error::missing_field("RelativeId", "relation"));
+            ctx.errors.push(Error::missing_field("RelativeId", "relation"));
             return Err(());
         }
         match relative_id.relation.unwrap() {
-            Relation::Child => {
+            fsys::Relation::Child => {
                 if relative_id.child_name.is_none() {
-                    self.errors.push(Error::relative_id_missing_child());
+                    ctx.errors.push(Error::relative_id_missing_child());
                     return Err(());
                 } else {
                     if !NAME.check(
                         relative_id.child_name.as_ref(),
                         "RelativeId",
                         "child_name",
-                        &mut self.errors,
+                        &mut ctx.errors,
                     ) {
                         return Err(());
                     }
                 }
-                Ok((Relation::Child, Some(relative_id.child_name.as_ref().unwrap())))
+                let child_name = relative_id.child_name.as_ref().map(|s| &**s);
+                Ok(RelativeId { relation: fsys::Relation::Child, child_name })
             }
-            r => {
+            relation => {
                 if relative_id.child_name.is_some() {
                     let child_name: &str = relative_id.child_name.as_ref().unwrap();
-                    self.errors.push(Error::relative_id_extraneous_child(child_name));
+                    ctx.errors.push(Error::relative_id_extraneous_child(child_name));
                     return Err(());
                 }
-                Ok((r, None))
+                Ok(RelativeId { relation, child_name: None })
             }
         }
     }
@@ -827,6 +851,32 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::empty_field("OfferDecl", "targets"),
+            ])),
+        },
+        test_validate_offer_target_equals_from => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![OfferDecl{
+                    type_: Some(CapabilityType::Service),
+                    source_path: Some("/svc/logger".to_string()),
+                    source: Some(RelativeId{
+                        relation: Some(Relation::Child),
+                        child_name: Some("logger".to_string()),
+                    }),
+                    targets: Some(vec![OfferTarget{
+                        target_path: Some("/svc/logger".to_string()),
+                        child_name: Some("logger".to_string()),
+                    }]),
+                }]);
+                decl.children = Some(vec![ChildDecl{
+                    name: Some("logger".to_string()),
+                    uri: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(StartupMode::Lazy),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::offer_target_equals_source("logger"),
             ])),
         },
         test_validate_offer_target_duplicate_path => {
