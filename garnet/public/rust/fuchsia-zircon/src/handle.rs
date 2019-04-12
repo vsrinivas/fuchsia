@@ -111,13 +111,13 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
         self.inner.raw_handle()
     }
 
-    pub fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
+    pub fn duplicate(&self, rights: Rights) -> Result<T, Status> {
         let mut out = 0;
         let status = unsafe {
             sys::zx_handle_duplicate(
                 self.raw_handle(), rights.bits(), &mut out)
         };
-        ok(status).map(|()| Handle(out))
+        ok(status).map(|()| T::from(Handle(out)))
     }
 
     pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
