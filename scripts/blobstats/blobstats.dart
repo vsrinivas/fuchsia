@@ -13,6 +13,7 @@ const lz4Compression = "lz4-compression";
 const zstdCompression = "zstd-compression";
 const humanReadable = "human-readable";
 const output = "output";
+const image = "image";
 
 class Blob {
   String hash;
@@ -465,6 +466,7 @@ Future main(List<String> args) async {
   final parser = new ArgParser()
     ..addFlag("help", help: "give this help")
     ..addOption(output, abbr: "o", help: "Directory to output report to")
+    ..addOption(image, help: "The image for which to show the stats")
     ..addFlag(lz4Compression,
         abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
     ..addFlag(zstdCompression,
@@ -491,8 +493,12 @@ Future main(List<String> args) async {
   }
 
   var stats = new BlobStats(Directory.current, outputDir, suffix);
-  await stats.addManifest("blob.manifest");
-  await stats.addBlobSizes("blob.sizes");
+  var prefix = "";
+  if (argResults[image] != null) {
+    prefix = "${argResults[image]}_";
+  }
+  await stats.addManifest("${prefix}blob.manifest");
+  await stats.addBlobSizes("${prefix}blob.sizes");
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats.computeStats();
   stats.printBlobs(40);

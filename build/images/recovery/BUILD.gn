@@ -7,10 +7,16 @@ import("//build/images/assemble_system.gni")
 import("//garnet/build/pkgfs.gni")
 
 recovery_packages = [
-  "//garnet/bin/appmgr",
-  "//garnet/bin/run",
-  "//garnet/bin/sysmgr",
-  get_label_info(pkgfs_package_label, "label_no_toolchain"),
+  "//garnet/go/src/amber:pkgfs",
+  "//garnet/packages/prod:amber",
+  "//garnet/packages/prod:build_info",
+  "//garnet/packages/prod:netcfg",
+  "//garnet/packages/prod:netstack",
+  "//garnet/packages/prod:runtime",
+  "//garnet/packages/prod:wlancfg",
+  "//garnet/packages/prod:wlanstack",
+  "//src/recovery/ui",
+  pkgfs_package_label,
 ]
 
 shell_commands("shell-commands") {

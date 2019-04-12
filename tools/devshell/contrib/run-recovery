@@ -7,7 +7,7 @@
 ##
 ## Run "fx build recovery_image" first.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"

@@ -8,6 +8,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
+import("//garnet/build/pkgfs.gni")
 
 # Assembles a Fuchsia system.
 #
@@ -139,6 +140,7 @@ template("assemble_system") {
     deps = [
       ":base_packages",
       ":system_image.meta",
+      pkgfs_package_label,
     ]
   }
 
@@ -149,6 +151,7 @@ template("assemble_system") {
       ":blob.manifest",
     ]
     blob_image_path = "$target_out_dir/$target_name"
+    blob_size_list = "$root_build_dir/${image_name}_blob.sizes"
     outputs = [
       blob_image_path,
     ]
@@ -159,6 +162,8 @@ template("assemble_system") {
     tool = "blobfs"
     args = [
       "--depfile",
+      "--sizes",
+      rebase_path(blob_size_list, root_build_dir),
       "--compress",
       rebase_path(blob_image_path, root_build_dir),
       "create",
@@ -180,15 +185,64 @@ template("assemble_system") {
     ]
   }
 
+  action("devmgr_config.txt") {
+    visibility = [ ":*" ]
+    testonly = true
+    script = "//build/images/manifest.py"
+    outputs = [
+      "$target_out_dir/$target_name",
+    ]
+    pkgfs = "bin/" + pkgfs_binary_name
+    pkgfs_label = pkgfs_package_label
+    pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
+                        get_label_info(pkgfs_label, "name")
+    pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
+    system_image_merkleroot = "$target_out_dir/system_image.meta/meta.far.merkle"
+
+    deps = [
+      ":system_image.meta",
+      pkgfs_label,
+    ]
+
+    sources = [
+      pkgfs_blob_manifest,
+      system_image_merkleroot,
+    ]
+
+    args = [
+      "--output=" + rebase_path(outputs[0], root_build_dir),
+      "--entry=devmgr.require-system=true",
+
+      "--contents",
+      "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
+      "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
+      "--no-contents",
+      "--reset-rewrite",
+
+      "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
+      "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+      "--reset-rewrite",
+    ]
+  }
+
   zbi(image_name) {
     testonly = true
     deps = [
+      ":devmgr_config.txt",
       ":fvm.blk",
       ":system_image.manifest",
     ]
     inputs = [
       boot_manifest,
       zircon_kernel_zbi,
+    ]
+    manifest = [
+      {
+        outputs = [
+          "config/devmgr",
+        ]
+        sources = get_target_outputs(":devmgr_config.txt")
+      },
     ]
 
     if (netboot) {
