@@ -25,8 +25,10 @@
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/status_utils.h"
+#include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "src/lib/fxl/logging.h"
 
+using cobalt::CobaltEventBuilder;
 using cobalt::StatusToString;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::Logger_Sync;
@@ -249,41 +251,45 @@ std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
 
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(
     const zx_info_kmem_stats_t& stats, const std::chrono::seconds& uptime) {
-  auto time_since_boot_event_code = GetUpTimeEventCode(uptime);
+  typedef FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown Breakdown;
+
+  auto builder =
+      std::move(CobaltEventBuilder(
+                    fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId)
+                    .with_event_code_at(1, GetUpTimeEventCode(uptime)));
+
   std::vector<CobaltEvent> events;
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::TotalBytes,
-      std::move(time_since_boot_event_code), stats.total_bytes, &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::UsedBytes,
-      std::move(time_since_boot_event_code),
-      stats.total_bytes - stats.free_bytes, &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::FreeBytes,
-      std::move(time_since_boot_event_code), stats.free_bytes, &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::VmoBytes,
-      std::move(time_since_boot_event_code), stats.vmo_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::
-                     KernelFreeHeapBytes,
-                 std::move(time_since_boot_event_code), stats.free_heap_bytes,
-                 &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::MmuBytes,
-      std::move(time_since_boot_event_code), stats.mmu_overhead_bytes, &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::IpcBytes,
-      std::move(time_since_boot_event_code), stats.ipc_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::
-                     KernelTotalHeapBytes,
-                 std::move(time_since_boot_event_code), stats.total_heap_bytes,
-                 &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::WiredBytes,
-      std::move(time_since_boot_event_code), stats.wired_bytes, &events);
-  AddCobaltEvent(
-      FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::OtherBytes,
-      std::move(time_since_boot_event_code), stats.other_bytes, &events);
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::TotalBytes)
+                       .as_memory_usage(stats.total_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::UsedBytes)
+                       .as_memory_usage(stats.total_bytes - stats.free_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::FreeBytes)
+                       .as_memory_usage(stats.free_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::VmoBytes)
+                       .as_memory_usage(stats.vmo_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::KernelFreeHeapBytes)
+                       .as_memory_usage(stats.free_heap_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::MmuBytes)
+                       .as_memory_usage(stats.mmu_overhead_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::IpcBytes)
+                       .as_memory_usage(stats.ipc_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::KernelTotalHeapBytes)
+                       .as_memory_usage(stats.total_heap_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::WiredBytes)
+                       .as_memory_usage(stats.wired_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code_at(0, Breakdown::OtherBytes)
+                       .as_memory_usage(stats.other_bytes));
+
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
@@ -320,44 +326,44 @@ SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
   }
 }
 
-void SystemMetricsDaemon::AddCobaltEvent(
-    const FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown&
-        memory_breakdown,
-    const FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot&
-        time_since_boot,
-    const int64_t& value, std::vector<CobaltEvent>* events) {
-  CobaltEvent event;
-  event.metric_id = fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId;
-  event.event_codes.push_back(memory_breakdown);
-  event.event_codes.push_back(time_since_boot);
-  event.payload.set_memory_bytes_used(value);
-  events->push_back(std::move(event));
-  return;
-}
-
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(
     const zx_info_kmem_stats_t& stats) {
+  typedef FuchsiaMemoryExperimentalEventCode Breakdown;
+
   std::vector<CobaltEvent> events;
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::TotalBytes,
-                 stats.total_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::UsedBytes,
-                 stats.total_bytes - stats.free_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::FreeBytes,
-                 stats.free_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::VmoBytes, stats.vmo_bytes,
-                 &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::KernelFreeHeapBytes,
-                 stats.free_heap_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::MmuBytes,
-                 stats.mmu_overhead_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::IpcBytes, stats.ipc_bytes,
-                 &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::KernelTotalHeapBytes,
-                 stats.total_heap_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::WiredBytes,
-                 stats.wired_bytes, &events);
-  AddCobaltEvent(FuchsiaMemoryExperimentalEventCode::OtherBytes,
-                 stats.other_bytes, &events);
+  auto builder = CobaltEventBuilder(
+      fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId);
+
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::TotalBytes)
+                       .as_memory_usage(stats.total_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::UsedBytes)
+                       .as_memory_usage(stats.total_bytes - stats.free_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::FreeBytes)
+                       .as_memory_usage(stats.free_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::VmoBytes)
+                       .as_memory_usage(stats.vmo_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::KernelFreeHeapBytes)
+                       .as_memory_usage(stats.free_heap_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::MmuBytes)
+                       .as_memory_usage(stats.mmu_overhead_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::IpcBytes)
+                       .as_memory_usage(stats.ipc_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::KernelTotalHeapBytes)
+                       .as_memory_usage(stats.total_heap_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::WiredBytes)
+                       .as_memory_usage(stats.wired_bytes));
+  events.push_back(builder.Clone()
+                       .with_event_code(Breakdown::OtherBytes)
+                       .as_memory_usage(stats.other_bytes));
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
@@ -365,17 +371,6 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(
                       "returned status="
                    << StatusToString(status);
   }
-  return;
-}
-
-void SystemMetricsDaemon::AddCobaltEvent(
-    const FuchsiaMemoryExperimentalEventCode& memory_breakdown,
-    const int64_t& value, std::vector<CobaltEvent>* events) {
-  CobaltEvent event;
-  event.metric_id = fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId;
-  event.event_codes.push_back(memory_breakdown);
-  event.payload.set_memory_bytes_used(value);
-  events->push_back(std::move(event));
   return;
 }
 

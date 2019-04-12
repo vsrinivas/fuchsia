@@ -115,29 +115,11 @@ class SystemMetricsDaemon {
   fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot
   GetUpTimeEventCode(const std::chrono::seconds& uptime);
 
-  // Helper function to add a CobaltEvent instance into events vector.
-  void AddCobaltEvent(
-      const fuchsia_system_metrics::
-          FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown&
-              memory_breakdown,
-      const fuchsia_system_metrics::
-          FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot&
-              time_since_boot,
-      const int64_t& value, std::vector<fuchsia::cobalt::CobaltEvent>* events);
-
   // TODO(PT-128) To be removed after we start populating
   // fuchsia_memory_experimental_2.
   // Helper function to call Cobalt logger's LogCobaltEvent to log
   // information in one zx_info_kmem_stats_t stats data point.
   void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats);
-
-  // TODO(PT-128) To be removed after we start populating
-  // fuchsia_memory_experimental_2.
-  // Helper function to add a CobaltEvent instance into events vector.
-  void AddCobaltEvent(
-      const fuchsia_system_metrics::FuchsiaMemoryExperimentalEventCode&
-          memory_breakdown,
-      const int64_t& value, std::vector<fuchsia::cobalt::CobaltEvent>* events);
 
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;

@@ -29,6 +29,7 @@ source_set("system_metrics_daemon_lib") {
     "//src/cobalt/bin/utils:clock",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
