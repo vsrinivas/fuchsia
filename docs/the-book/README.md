@@ -63,7 +63,6 @@ also provides core drivers and Fuchsia's libc implementation.
  - [Escher (physically-based renderer)][escher]
  - [Scenic (compositor)][scenic]
  - [Input manager][input-manager]
- - [View manager][view-manager]
  - [Flutter (UI toolkit)][flutter]
 
 ## Media
@@ -108,5 +107,4 @@ also provides core drivers and Fuchsia's libc implementation.
 [escher]: /garnet/public/lib/escher/
 [scenic]: /garnet/docs/ui/scenic.md
 [input-manager]: /garnet/docs/ui/input.md
-[view-manager]: /garnet/bin/ui/view_manager/
 [flutter]: https://flutter.io/

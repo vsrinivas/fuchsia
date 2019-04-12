@@ -18,7 +18,7 @@ fuchsia.git. Currently, we have small number of petal repositories but will
 "promote" areas into separate petal repositories as the system stabilizes.
 
 The products directory contains a list of products that you can build. Some
-products are quite small and build quickly (e.g., the [base](/products/base.gni)
+products are quite small and build quickly (e.g., the [core](/products/core.gni)
 product), whereas others are more elaborate (e.g., the
 [workstation](/products/workstation.gni) product).
 

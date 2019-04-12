@@ -1,5 +1,7 @@
 # Flutter Module Development
 
+TODO(MS-2346): Update documentation below.
+
 This directory demonstrates how you create modules with Dart and Flutter. At the
 moment this document assumes that every module gets built as part of the core
 fuchsia build and included in the bootfs.
@@ -31,9 +33,7 @@ basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=hel
 
 # Basics
 
-A flutter module is a flutter app which use [ModuleDriver](
-https://fuchsia.googlesource.com/topaz/+/master/public/lib/app_driver/dart/lib/src/module_driver.dart)
-.
+A flutter module is a flutter app which uses ModuleDriver.
 
 Below we reproduce the contents of `main()` from that example:
 
