@@ -30,6 +30,8 @@ namespace {
 constexpr zx::duration kDefaultTimeout = zx::sec(5);
 constexpr zx::duration kDefaultPollInterval = zx::usec(100);
 
+constexpr uint32_t kThreadWakeAllCount = std::numeric_limits<uint32_t>::max();
+
 // Poll until the user provided Callable |should_stop| tells us to stop by
 // returning true.
 template <typename Callable>
@@ -62,45 +64,6 @@ public:
     TestThread& operator=(const TestThread&) = delete;
     TestThread& operator=(TestThread&&) = delete;
     ~TestThread() { Shutdown(); }
-
-    static bool AssertWokeThreadCount(const TestThread threads[], uint32_t total_thread_count,
-                                      uint32_t target_woke_count) {
-        BEGIN_HELPER;
-
-        ASSERT_LE(target_woke_count, total_thread_count);
-
-        auto CountWoken = [&threads, total_thread_count]() -> uint32_t {
-            uint32_t ret = 0;
-            for (uint32_t i = 0; i < total_thread_count; ++i) {
-                if (threads[i].HasWaitReturned()) {
-                    ++ret;
-                }
-            }
-            return ret;
-        };
-
-        // Wait forever until we achieve the target count.  If threads are not
-        // waking up as they should, the test framework should eventually kill
-        // us.
-        uint32_t woken;
-        do {
-            woken = CountWoken();
-        } while (woken < target_woke_count);
-
-        ASSERT_EQ(CountWoken(), target_woke_count);
-
-        // Wait an arbitrary amount of time to be sure that no one else wakes
-        // up.
-        //
-        // TODO(johngro) : It would be really nice if we didn't have to have an
-        // arbitrary wait here.  Unfortunately, I'm not sure that there is any
-        // amount of time that we can wait and prove that a thread might not
-        // spuriously wake up in the future.
-        zx::nanosleep(zx::deadline_after(zx::msec(300)));
-        ASSERT_EQ(CountWoken(), target_woke_count);
-
-        END_HELPER;
-    }
 
     bool Start(zx_futex_t* futex_addr, zx::duration timeout = zx::duration::infinite()) {
         BEGIN_HELPER;
@@ -300,6 +263,45 @@ private:
     std::atomic<State> state_{State::kWaitingToStart};
 };
 
+bool AssertWokeThreadCount(const TestThread threads[], uint32_t total_thread_count,
+                           uint32_t target_woke_count) {
+    BEGIN_HELPER;
+
+    ASSERT_LE(target_woke_count, total_thread_count);
+
+    auto CountWoken = [&threads, total_thread_count]() -> uint32_t {
+        uint32_t ret = 0;
+        for (uint32_t i = 0; i < total_thread_count; ++i) {
+            if (threads[i].HasWaitReturned()) {
+                ++ret;
+            }
+        }
+        return ret;
+    };
+
+    // Wait forever until we achieve the target count.  If threads are not
+    // waking up as they should, the test framework should eventually kill
+    // us.
+    uint32_t woken;
+    do {
+        woken = CountWoken();
+    } while (woken < target_woke_count);
+
+    ASSERT_EQ(CountWoken(), target_woke_count);
+
+    // Wait an arbitrary amount of time to be sure that no one else wakes
+    // up.
+    //
+    // TODO(johngro) : It would be really nice if we didn't have to have an
+    // arbitrary wait here.  Unfortunately, I'm not sure that there is any
+    // amount of time that we can wait and prove that a thread might not
+    // spuriously wake up in the future.
+    zx::nanosleep(zx::deadline_after(zx::msec(300)));
+    ASSERT_EQ(CountWoken(), target_woke_count);
+
+    END_HELPER;
+}
+
 static bool TestFutexWaitValueMismatch() {
     BEGIN_TEST;
     int32_t futex_value = 123;
@@ -356,11 +358,11 @@ bool TestFutexWakeup() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value, kThreadWakeAllCount);
         thread.Shutdown();
     });
 
-    ASSERT_EQ(zx_futex_wake(&futex_value, std::numeric_limits<int>::max()), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value, kThreadWakeAllCount), ZX_OK);
     ASSERT_TRUE(thread.WaitThreadWoken());
     ASSERT_EQ(thread.wait_result(), ZX_OK);
     ASSERT_TRUE(thread.Shutdown());
@@ -378,7 +380,7 @@ bool TestFutexWakeupLimit() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value, kThreadWakeAllCount);
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -393,12 +395,11 @@ bool TestFutexWakeupLimit() {
     // Test that exactly two threads wake up from the queue.  We do not know
     // which threads are going to wake up, just that two threads are going to
     // wake up.
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 2));
+    ASSERT_TRUE(AssertWokeThreadCount(threads, fbl::count_of(threads), 2));
 
     // Clean up: Wake the remaining threads so that they can exit.
-    ASSERT_EQ(zx_futex_wake(&futex_value, std::numeric_limits<int>::max()), ZX_OK);
-    ASSERT_TRUE(
-        TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
+    ASSERT_EQ(zx_futex_wake(&futex_value, kThreadWakeAllCount), ZX_OK);
+    ASSERT_TRUE(AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_EQ(t.wait_result(), ZX_OK);
@@ -421,8 +422,8 @@ bool TestFutexWakeupAddress() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
-        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value1, kThreadWakeAllCount);
+        zx_futex_wake(&futex_value2, kThreadWakeAllCount);
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -431,16 +432,16 @@ bool TestFutexWakeupAddress() {
     ASSERT_TRUE(threads[0].Start(&futex_value1));
     ASSERT_TRUE(threads[1].Start(&futex_value2));
 
-    ASSERT_EQ(zx_futex_wake(&dummy_value, std::numeric_limits<int>::max()), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&dummy_value, kThreadWakeAllCount), ZX_OK);
     ASSERT_TRUE(threads[0].AssertThreadBlockedOnFutex());
     ASSERT_TRUE(threads[1].AssertThreadBlockedOnFutex());
 
-    ASSERT_EQ(zx_futex_wake(&futex_value1, std::numeric_limits<int>::max()), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value1, kThreadWakeAllCount), ZX_OK);
     ASSERT_TRUE(threads[0].WaitThreadWoken());
     ASSERT_TRUE(threads[1].AssertThreadBlockedOnFutex());
 
     // Clean up: Wake the remaining thread so that it can exit.
-    ASSERT_EQ(zx_futex_wake(&futex_value2, std::numeric_limits<int>::max()), ZX_OK);
+    ASSERT_EQ(zx_futex_wake(&futex_value2, kThreadWakeAllCount), ZX_OK);
     ASSERT_TRUE(threads[1].WaitThreadWoken());
 
     for (auto& t : threads) {
@@ -480,8 +481,8 @@ bool TestFutexRequeue() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
-        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value1, kThreadWakeAllCount);
+        zx_futex_wake(&futex_value2, kThreadWakeAllCount);
         for (auto& t : threads) {
             t.Shutdown();
         }
@@ -495,17 +496,16 @@ bool TestFutexRequeue() {
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
 
     // 3 of the threads should have been woken.
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 3));
+    ASSERT_TRUE(AssertWokeThreadCount(threads, fbl::count_of(threads), 3));
 
     // Since 2 of the threads should have been requeued, waking all the
     // threads on futex_value2 should wake 2 more threads.
-    ASSERT_EQ(zx_futex_wake(&futex_value2, std::numeric_limits<int>::max()), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), 5));
+    ASSERT_EQ(zx_futex_wake(&futex_value2, kThreadWakeAllCount), ZX_OK);
+    ASSERT_TRUE(AssertWokeThreadCount(threads, fbl::count_of(threads), 5));
 
     // Clean up: Wake the remaining thread so that it can exit.
     ASSERT_EQ(zx_futex_wake(&futex_value1, 1), ZX_OK);
-    ASSERT_TRUE(
-        TestThread::AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
+    ASSERT_TRUE(AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
 
     for (auto& t : threads) {
         ASSERT_TRUE(t.Shutdown());
@@ -527,16 +527,16 @@ bool TestFutexRequeueUnqueuedOnTimeout() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
-        zx_futex_wake(&futex_value2, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value1, kThreadWakeAllCount);
+        zx_futex_wake(&futex_value2, kThreadWakeAllCount);
         for (auto& t : threads) {
             t.Shutdown();
         }
     });
 
     ASSERT_TRUE(threads[0].Start(&futex_value1, zx::msec(300)));
-    zx_status_t rc = zx_futex_requeue(&futex_value1, 0, 100, &futex_value2,
-                                      std::numeric_limits<int>::max(), ZX_HANDLE_INVALID);
+    zx_status_t rc = zx_futex_requeue(&futex_value1, 0, 100, &futex_value2, kThreadWakeAllCount,
+                                      ZX_HANDLE_INVALID);
     ASSERT_EQ(rc, ZX_OK, "Error in requeue");
     ASSERT_TRUE(threads[1].Start(&futex_value2));
 
@@ -580,7 +580,7 @@ bool TestFutexThreadKilled() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value1, kThreadWakeAllCount);
         thread.Shutdown();
     });
 
@@ -611,7 +611,7 @@ static bool TestFutexThreadSuspended() {
 
     // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
     auto cleanup = fbl::MakeAutoCall([&]() {
-        zx_futex_wake(&futex_value1, std::numeric_limits<int>::max());
+        zx_futex_wake(&futex_value1, kThreadWakeAllCount);
         thread.Shutdown();
     });
 
@@ -629,7 +629,7 @@ static bool TestFutexThreadSuspended() {
     ASSERT_TRUE(thread.AssertThreadBlockedOnFutex());
 
     ASSERT_EQ(zx_futex_wake(&futex_value1, 1), ZX_OK);
-    ASSERT_TRUE(TestThread::AssertWokeThreadCount(&thread, 1, 1));
+    ASSERT_TRUE(AssertWokeThreadCount(&thread, 1, 1));
     ASSERT_TRUE(thread.Shutdown());
 
     cleanup.cancel();
@@ -649,8 +649,8 @@ static bool TestFutexMisaligned() {
     zx_futex_t* const futex = &buffer.futex[0];
     zx_futex_t* const futex_2 = &buffer.futex[1];
     ASSERT_GT(alignof(zx_futex_t), 1);
-    ASSERT_NE((uintptr_t)futex % alignof(zx_futex_t), 0);
-    ASSERT_NE((uintptr_t)futex_2 % alignof(zx_futex_t), 0);
+    ASSERT_NE(reinterpret_cast<uintptr_t>(futex) % alignof(zx_futex_t), 0);
+    ASSERT_NE(reinterpret_cast<uintptr_t>(futex_2) % alignof(zx_futex_t), 0);
 
     // zx_futex_requeue might check the waited-for value before it
     // checks the second futex's alignment, so make sure the call is
@@ -684,7 +684,7 @@ public:
     void Signal() {
         if (signaled_ == 0) {
             signaled_ = 1;
-            zx_futex_wake(&signaled_, std::numeric_limits<uint32_t>::max());
+            zx_futex_wake(&signaled_, kThreadWakeAllCount);
         }
     }
 
