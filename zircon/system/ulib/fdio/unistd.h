@@ -16,6 +16,8 @@
 
 #define fd_to_io(n) fdio_unsafe_fd_to_io(n)
 
+__BEGIN_CDECLS
+
 int fdio_status_to_errno(zx_status_t status);
 zx_status_t errno_to_fdio_status(int16_t out_code);
 
@@ -41,3 +43,5 @@ static inline int ERRNO(int e) {
     errno = e;
     return -1;
 }
+
+__END_CDECLS

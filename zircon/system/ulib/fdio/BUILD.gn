@@ -19,7 +19,7 @@ library("fdio") {
   ]
   shared = true
   sources = [
-    "bsdsocket.c",
+    "bsdsocket.cpp",
     "fd.cpp",
     "fdio.c",
     "get-vmo.c",

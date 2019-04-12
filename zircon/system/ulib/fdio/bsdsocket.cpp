@@ -90,7 +90,12 @@ int socket(int domain, int type, int protocol) {
     // We're going to manage blocking on the client side, so always ask the
     // provider for a non-blocking socket.
     status = fuchsia_net_SocketProviderSocket(
-        socket_provider, domain, type | SOCK_NONBLOCK, protocol, &out_code, &socket);
+        socket_provider,
+        static_cast<int16_t>(domain),
+        static_cast<int16_t>(type) | SOCK_NONBLOCK,
+        static_cast<int16_t>(protocol),
+        &out_code,
+        &socket);
     if (status != ZX_OK) {
         return ERROR(status);
     }
@@ -215,7 +220,7 @@ int listen(int fd, int backlog) {
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlListen(
-        socket->socket, backlog, &out_code);
+        socket->socket, static_cast<int16_t>(backlog), &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -230,7 +235,7 @@ int listen(int fd, int backlog) {
 }
 
 __EXPORT
-int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
+int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
             int flags) {
     if (flags & ~SOCK_NONBLOCK) {
         return ERRNO(EINVAL);
@@ -260,7 +265,9 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         // We're going to manage blocking on the client side, so always ask the
         // provider for a non-blocking socket.
         status = fuchsia_net_SocketControlAccept(
-            socket->socket, flags | SOCK_NONBLOCK, &out_code);
+            socket->socket,
+            static_cast<int16_t>(flags) | SOCK_NONBLOCK,
+            &out_code);
         if (status != ZX_OK) {
             break;
         }
@@ -338,7 +345,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             return ERRNO(out_code);
         }
         memcpy(addr, buf, MIN(*len, actual));
-        *len = actual;
+        *len = static_cast<socklen_t>(actual);
     }
 
     fdio_t* accepted_io = fdio_socket_create_stream(accepted, IOFLAG_SOCKET_CONNECTED);
@@ -451,7 +458,7 @@ int getaddrinfo(const char* __restrict node,
         struct addrinfo ai;
         struct sockaddr_storage addr_storage;
     };
-    struct res_entry* entry = calloc(nres, sizeof(struct res_entry));
+    struct res_entry* entry = static_cast<res_entry*>(calloc(nres, sizeof(struct res_entry)));
 
     for (uint8_t i = 0; i < nres; i++) {
         entry[i].ai.ai_flags    = ai[i].flags;
@@ -516,7 +523,7 @@ void freeaddrinfo(struct addrinfo* res) {
 }
 
 __EXPORT
-int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
+int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
     if (len == NULL || addr == NULL) {
         return ERRNO(EINVAL);
     }
@@ -540,12 +547,12 @@ int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(out_code);
     }
     memcpy(addr, buf, MIN(*len, actual));
-    *len = actual;
+    *len = static_cast<socklen_t>(actual);
     return out_code;
 }
 
 __EXPORT
-int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
+int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
     if (len == NULL || addr == NULL) {
         return ERRNO(EINVAL);
     }
@@ -569,13 +576,13 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(out_code);
     }
     memcpy(addr, buf, MIN(*len, actual));
-    *len = actual;
+    *len = static_cast<socklen_t>(actual);
     return out_code;
 }
 
 __EXPORT
-int getsockopt(int fd, int level, int optname, void* restrict optval,
-               socklen_t* restrict optlen) {
+int getsockopt(int fd, int level, int optname, void* __restrict optval,
+               socklen_t* __restrict optlen) {
     const zxs_socket_t* socket = NULL;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
@@ -585,7 +592,12 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
     int16_t out_code;
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetSockOpt(
-        socket->socket, level, optname, &out_code, optval, *optlen,
+        socket->socket,
+        static_cast<int16_t>(level),
+        static_cast<int16_t>(optname),
+        &out_code,
+        static_cast<uint8_t*>(optval),
+        *optlen,
         &actual);
     fdio_release(io);
     if (status != ZX_OK) {
@@ -594,7 +606,7 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
     if (out_code) {
         return ERRNO(out_code);
     }
-    *optlen = actual;
+    *optlen = static_cast<socklen_t>(actual);
     return out_code;
 }
 
@@ -609,7 +621,12 @@ int setsockopt(int fd, int level, int optname, const void* optval,
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlSetSockOpt(
-        socket->socket, level, optname, optval, optlen, &out_code);
+        socket->socket,
+        static_cast<int16_t>(level),
+        static_cast<int16_t>(optname),
+        static_cast<uint8_t*>(const_cast<void*>(optval)),
+        optlen,
+        &out_code);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
