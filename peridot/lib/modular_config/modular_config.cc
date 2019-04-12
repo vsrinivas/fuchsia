@@ -50,6 +50,13 @@ ModularConfigReader::GetSessionmgrConfig() {
   return sessionmgr_config;
 }
 
+fuchsia::modular::internal::SessionmgrConfig
+ModularConfigReader::GetDefaultSessionmgrConfig() {
+  fuchsia::modular::internal::SessionmgrConfig sessionmgr_config;
+  XdrRead("\"\"", &sessionmgr_config, XdrSessionmgrConfig);
+  return sessionmgr_config;
+}
+
 std::string ModularConfigReader::GetConfigAsString(
     const std::string& config_name) {
   // Check that config file exists

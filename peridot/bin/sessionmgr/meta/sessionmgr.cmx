@@ -3,6 +3,9 @@
         "binary": "bin/sessionmgr"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.ledger.cloud.CloudProvider",

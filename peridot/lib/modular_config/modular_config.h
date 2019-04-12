@@ -22,9 +22,12 @@ class ModularConfigReader {
   // table
   fuchsia::modular::internal::SessionmgrConfig GetSessionmgrConfig();
 
+  // Returns a SessionmgrConfig with all default values
+  fuchsia::modular::internal::SessionmgrConfig GetDefaultSessionmgrConfig();
+
  private:
-  // Reads startup.config into a string if the file exists. Otherwise, returns a
-  // string containing two quotes, representing an empty JSON structure.
+  // Reads startup.config into a string if the file exists. Otherwise, returns
+  // a string containing two quotes, representing an empty JSON structure.
   std::string GetConfigAsString(const std::string& config_name);
 };
 

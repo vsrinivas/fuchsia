@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,8 +13,11 @@
 #include <src/lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
 
+#include <memory>
+
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
+#include "peridot/lib/modular_config/modular_config.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
     const bool enable_cobalt, async_dispatcher_t* dispatcher,
@@ -27,26 +28,65 @@ fit::deferred_action<fit::closure> SetupCobalt(
   return modular::InitializeCobalt(dispatcher, startup_context);
 }
 
-int main(int argc, const char** argv) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+void OverrideConfigFromCommandLine(
+    fxl::CommandLine command_line,
+    fuchsia::modular::internal::SessionmgrConfig* config) {
+  if (command_line.HasOption("enable_cobalt")) {
+    config->set_enable_cobalt(command_line.GetOptionValueWithDefault(
+                                  "enable_cobalt", "true") == "true");
+  }
 
-  fuchsia::modular::internal::SessionmgrConfig config;
-  config.set_enable_cobalt(command_line.GetOptionValueWithDefault(
-                               "enable_statistics", "true") == "true");
-  config.set_enable_story_shell_preload(
-      command_line.GetOptionValueWithDefault("enable_story_shell_preload",
-                                             "true") == "true");
-  config.set_use_memfs_for_ledger(
-      command_line.HasOption("use_memfs_for_ledger"));
+  if (command_line.HasOption("enable_story_shell_preload")) {
+    config->set_enable_story_shell_preload(
+        command_line.GetOptionValueWithDefault("enable_story_shell_preload",
+                                               "true") == "true");
+  }
+
+  if (command_line.HasOption("use_memfs_for_ledger")) {
+    config->set_use_memfs_for_ledger(true);
+  }
 
   if (command_line.HasOption("no_cloud_provider_for_ledger")) {
-    config.set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
+    config->set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
   } else if (command_line.HasOption("use_cloud_provider_from_environment")) {
-    config.set_cloud_provider(
+    config->set_cloud_provider(
         fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT);
-  } else {
-    config.set_cloud_provider(
-        fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE);
+  }
+
+  if (command_line.HasOption("startup_agents")) {
+    auto startup_agents = fxl::SplitStringCopy(
+        command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
+        fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    config->set_startup_agents(std::move(startup_agents));
+  }
+
+  if (command_line.HasOption("session_agents")) {
+    auto session_agents = fxl::SplitStringCopy(
+        command_line.GetOptionValueWithDefault("session_agents", ""), ",",
+        fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    config->set_session_agents(std::move(session_agents));
+  }
+}
+
+int main(int argc, const char** argv) {
+  // Read configurations from file. This sets default values for any
+  // configurations that aren't specified in the configuration.
+  modular::ModularConfigReader config_reader;
+  fuchsia::modular::internal::SessionmgrConfig config =
+      config_reader.GetSessionmgrConfig();
+
+  if (argc > 1) {
+    // Read command line arguments if they exist.
+    auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+    // use_default_config is an indication from basemgr that sessionmgr is being
+    // launched in a test scenario and that we should use default configs rather
+    // than reading product configs from file.
+    if (command_line.HasOption("use_default_config")) {
+      config = config_reader.GetDefaultSessionmgrConfig();
+    }
+
+    OverrideConfigFromCommandLine(command_line, &config);
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -56,16 +96,6 @@ int main(int argc, const char** argv) {
 
   auto cobalt_cleanup = SetupCobalt(
       (config.enable_cobalt()), std::move(loop.dispatcher()), context.get());
-
-  auto startup_agents = fxl::SplitStringCopy(
-      command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
-      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-  config.set_startup_agents(std::move(startup_agents));
-
-  auto session_agents = fxl::SplitStringCopy(
-      command_line.GetOptionValueWithDefault("session_agents", ""), ",",
-      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-  config.set_session_agents(std::move(session_agents));
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       context->outgoing().deprecated_services(),

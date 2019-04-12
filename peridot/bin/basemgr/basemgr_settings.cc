@@ -4,11 +4,12 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 
-#include <string>
-
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
+
+#include <string>
+
 #include "src/lib/files/file.h"
 
 namespace modular {
@@ -75,7 +76,14 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       base_shell.mutable_args()->push_back("--use_test_runner");
     }
     sessionmgr.mutable_args()->push_back("--enable_story_shell_preload=false");
-    sessionmgr.mutable_args()->push_back("--enable_statistics=false");
+    sessionmgr.mutable_args()->push_back("--enable_cobalt=false");
+
+    // Sessionmgr will always read product configurations and override configs
+    // that are passed as flags. Until we transition our tests to use the
+    // modular config system, we will use the flag use_default_config to
+    // indicate to sessionmgr that we are running in a test scenario and that we
+    // need default sessionmgr configurations.
+    sessionmgr.mutable_args()->push_back("--use_default_config");
     test_name = FindTestName(session_shell.url(), &session_shell.args());
     disable_statistics = true;
     no_minfs = true;
