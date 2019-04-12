@@ -272,7 +272,7 @@ void XdcServer::Run() {
         }
 
         // poll expects an array of pollfds.
-        int num = poll(&poll_fds_[0], poll_fds_.size(), -1 /* timeout */);
+        int num = poll(&poll_fds_[0], static_cast<nfds_t>(poll_fds_.size()), -1 /* timeout */);
         if (num < 0) {
             fprintf(stderr, "poll failed, err: %s\n", strerror(errno));
             break;
