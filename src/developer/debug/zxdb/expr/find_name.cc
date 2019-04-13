@@ -149,7 +149,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
   // Now search that node for anything with the given prefix. This also handles
   // the exact match case because an exact match will be the first thing found
   // with a prefix search. NameMatches() will handle the difference.
-  std::string last_comp = looking_for.components().back().GetName(false, false);
+  std::string last_comp = looking_for.components().back().GetName(false);
   auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
   while (cur != end && results->size() < options.max_results &&
          NameMatches(options, cur->first, last_comp)) {
@@ -176,8 +176,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
       return VisitResult::kContinue;
 
     // Now search that node for anything that could be a template.
-    std::string last_comp =
-        looking_for.components().back().GetName(false, false);
+    std::string last_comp = looking_for.components().back().GetName(false);
     last_comp.push_back('<');
     auto [cur, end] = template_walker.current()->FindPrefix(last_comp);
     if (cur != end) {
@@ -228,7 +227,7 @@ FoundName FindName(const FindNameContext& context,
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const Identifier& looking_for, std::vector<FoundName>* results) {
-  if (context.block && !looking_for.InGlobalNamespace()) {
+  if (context.block && looking_for.qualification() == Identifier::kRelative) {
     // Search for local variables and function parameters.
     FindLocalVariable(options, context.block, looking_for, results);
     if (results->size() >= options.max_results)
@@ -393,7 +392,8 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     bool search_containing,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
-  if (!current_scope.empty() && !looking_for.InGlobalNamespace()) {
+  if (!current_scope.empty() &&
+      looking_for.qualification() == Identifier::kRelative) {
     // Unless the input identifier is fully qualified, start the search in the
     // current context.
     walker.WalkIntoClosest(current_scope);

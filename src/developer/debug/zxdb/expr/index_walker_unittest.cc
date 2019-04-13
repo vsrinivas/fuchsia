@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/index_walker.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 
 namespace zxdb {
 
 TEST(IndexWalker, ComponentMatchesNameOnly) {
-  Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprTokenType::kName, "Foo", 0));
+  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kName, "Foo", 0),
       ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
       ExprToken(ExprTokenType::kGreater, ">", 100));
 
@@ -30,14 +30,13 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
 }
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
-  Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprTokenType::kName, "Foo", 0));
+  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kName, "Foo", 0),
       ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
       ExprToken(ExprTokenType::kGreater, ">", 100));
   Identifier::Component foo_empty_template_comp(
-      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kName, "Foo", 0),
       ExprToken(ExprTokenType::kLess, "<", 10), {},
       ExprToken(ExprTokenType::kGreater, ">", 100));
 
@@ -61,10 +60,9 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
 
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.
 TEST(IndexWalker, ComponentMatches) {
-  Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprTokenType::kName, "Foo", 0));
+  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kName, "Foo", 0),
       ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
       ExprToken(ExprTokenType::kGreater, ">", 100));
 
@@ -118,12 +116,12 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(&root, walker.current());
 
   // Walk to the "Foo" component.
-  EXPECT_TRUE(walker.WalkInto(Identifier::Component(false, "Foo")));
+  EXPECT_TRUE(walker.WalkInto(Identifier::Component("Foo")));
   EXPECT_EQ(foo_node, walker.current());
 
-  // Walk to the "NotPresent" component, this time specify a separator. The
-  // current location should be unchanged.
-  EXPECT_FALSE(walker.WalkInto(Identifier::Component(true, "NotFound")));
+  // Walk to the "NotPresent" component. The current location should be
+  // unchanged.
+  EXPECT_FALSE(walker.WalkInto(Identifier::Component("NotFound")));
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar<int,char>" identifier.
@@ -137,7 +135,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar" node.
-  EXPECT_TRUE(walker.WalkInto(Identifier::Component(false, "Bar")));
+  EXPECT_TRUE(walker.WalkInto(Identifier::Component("Bar")));
   EXPECT_EQ(bar_node, walker.current());
 
   // Parse the Barf identifier for the following two tests. This one has a

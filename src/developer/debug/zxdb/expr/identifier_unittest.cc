@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/identifier.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
@@ -15,22 +16,19 @@ TEST(Identifier, GetName) {
   EXPECT_TRUE(unqualified.GetAsIndexComponents().empty());
 
   // Single name with no "::" at the beginning.
-  unqualified.AppendComponent(ExprToken(),
-                              ExprToken(ExprTokenType::kName, "First", 2));
+  unqualified.AppendComponent(ExprToken(ExprTokenType::kName, "First", 2));
   EXPECT_EQ("First", unqualified.GetFullName());
-  std::vector<std::string> expected_index = { "First" };
+  std::vector<std::string> expected_index = {"First"};
   EXPECT_EQ(expected_index, unqualified.GetAsIndexComponents());
 
   // Single name with a "::" at the beginning.
-  Identifier qualified;
-  qualified.AppendComponent(ExprToken(ExprTokenType::kColonColon, "::", 0),
-                            ExprToken(ExprTokenType::kName, "First", 2));
+  Identifier qualified(Identifier::kGlobal,
+                       ExprToken(ExprTokenType::kName, "First", 2));
   EXPECT_EQ("::First", qualified.GetFullName());
   EXPECT_EQ(expected_index, qualified.GetAsIndexComponents());
 
   // Append some template stuff.
-  qualified.AppendComponent(ExprToken(ExprTokenType::kColonColon, "::", 7),
-                            ExprToken(ExprTokenType::kName, "Second", 9),
+  qualified.AppendComponent(ExprToken(ExprTokenType::kName, "Second", 9),
                             ExprToken(ExprTokenType::kLess, "<", 15),
                             {"int", "Foo"},
                             ExprToken(ExprTokenType::kGreater, ">", 24));
@@ -40,7 +38,6 @@ TEST(Identifier, GetName) {
 }
 
 TEST(Identifier, GetScope) {
-  ExprToken colon_colon(ExprTokenType::kColonColon, "::", 0);
   ExprToken name1(ExprTokenType::kName, "Name1", 100);
   ExprToken name2(ExprTokenType::kName, "Name2", 100);
   ExprToken name3(ExprTokenType::kName, "Name3", 100);
@@ -50,49 +47,35 @@ TEST(Identifier, GetScope) {
   EXPECT_EQ("", empty.GetScope().GetDebugName());
 
   // "::" -> "::".
-  Identifier scope_only(Identifier::Component(colon_colon, ExprToken()));
-  EXPECT_EQ("::,\"\"", scope_only.GetScope().GetDebugName());
+  Identifier scope_only(Identifier::kGlobal);
+  EXPECT_EQ("::", scope_only.GetScope().GetDebugName());
 
   // "Name1" -> "".
-  Identifier name_only(Identifier::Component(ExprToken(), name1));
+  Identifier name_only(Identifier::kRelative, Identifier::Component(name1));
   EXPECT_EQ("", name_only.GetScope().GetDebugName());
 
   // ::Name1" -> "::".
-  Identifier scoped_name(Identifier::Component(colon_colon, name1));
-  EXPECT_EQ("::,\"\"", scoped_name.GetScope().GetDebugName());
+  Identifier scoped_name(Identifier::kGlobal, Identifier::Component(name1));
+  EXPECT_EQ("::", scoped_name.GetScope().GetDebugName());
 
   // "Name1::Name2" -> "Name1".
-  Identifier two_names(Identifier::Component(ExprToken(), name1));
-  two_names.AppendComponent(Identifier::Component(colon_colon, name2));
+  Identifier two_names(Identifier::kRelative, Identifier::Component(name1));
+  two_names.AppendComponent(Identifier::Component(name2));
   EXPECT_EQ("\"Name1\"", two_names.GetScope().GetDebugName());
 
   // "::Name1::Name2" -> "::Name1".
-  Identifier two_scoped_names(Identifier::Component(colon_colon, name1));
-  two_scoped_names.AppendComponent(Identifier::Component(colon_colon, name2));
-  EXPECT_EQ("::,\"Name1\"", two_scoped_names.GetScope().GetDebugName());
+  Identifier two_scoped_names(Identifier::kGlobal,
+                              Identifier::Component(name1));
+  two_scoped_names.AppendComponent(Identifier::Component(name2));
+  EXPECT_EQ("::\"Name1\"", two_scoped_names.GetScope().GetDebugName());
 
   // "Name1::Name2::Name3" -> "Name1::Name2".
-  Identifier three_scoped_names(Identifier::Component(ExprToken(), name1));
-  three_scoped_names.AppendComponent(Identifier::Component(colon_colon, name2));
-  three_scoped_names.AppendComponent(Identifier::Component(colon_colon, name3));
-  EXPECT_EQ("\"Name1\"; ::,\"Name2\"",
+  Identifier three_scoped_names(Identifier::kRelative,
+                                Identifier::Component(name1));
+  three_scoped_names.AppendComponent(Identifier::Component(name2));
+  three_scoped_names.AppendComponent(Identifier::Component(name3));
+  EXPECT_EQ("\"Name1\"; ::\"Name2\"",
             three_scoped_names.GetScope().GetDebugName());
-}
-
-TEST(Identifier, InGlobalNamespace) {
-  Identifier empty;
-  EXPECT_FALSE(empty.InGlobalNamespace());
-
-  Identifier non_global;
-  non_global.AppendComponent(Identifier::Component(
-      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0)));
-  EXPECT_FALSE(non_global.InGlobalNamespace());
-
-  Identifier global;
-  global.AppendComponent(
-      Identifier::Component(ExprToken(ExprTokenType::kColonColon, "::", 0),
-                            ExprToken(ExprTokenType::kName, "Foo", 0)));
-  EXPECT_TRUE(global.InGlobalNamespace());
 }
 
 TEST(Identifier, FromString) {
@@ -119,7 +102,7 @@ TEST(Identifier, FromString) {
   EXPECT_FALSE(complex_err.has_error());
   EXPECT_EQ(
       "\"std\"; "
-      "::,"
+      "::"
       "\"unordered_map\","
       "<\"std::__2::basic_string<char>\", "
       "\"unsigned long\", "

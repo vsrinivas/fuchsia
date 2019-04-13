@@ -42,37 +42,25 @@ class Identifier {
     Component();
 
     // Constructor for names without templates.
-    Component(ExprToken separator, ExprToken name)
-        : separator_(std::move(separator)), name_(std::move(name)) {}
+    explicit Component(ExprToken name) : name_(std::move(name)) {}
 
     // Constructor for names without templates for use by tests that hard-code
     // values.
-    Component(bool has_separator, const std::string& name)
-        : name_(ExprTokenType::kName, name, 0) {
-      if (has_separator)
-        separator_ = ExprToken(ExprTokenType::kColonColon, "::", 0);
-    }
+    Component(const std::string& name) : name_(ExprTokenType::kName, name, 0) {}
 
     // Constructor for names with templates. The contents will be a
     // vector of somewhat-normalized type string in between the <>.
-    Component(ExprToken separator, ExprToken name, ExprToken template_begin,
+    Component(ExprToken name, ExprToken template_begin,
               std::vector<std::string> template_contents,
               ExprToken template_end)
-        : separator_(std::move(separator)),
-          name_(std::move(name)),
+        : name_(std::move(name)),
           template_begin_(std::move(template_begin)),
           template_contents_(std::move(template_contents)),
           template_end_(std::move(template_end)) {}
 
-    bool has_separator() const {
-      return separator_.type() != ExprTokenType::kInvalid;
-    }
     bool has_template() const {
       return template_begin_.type() != ExprTokenType::kInvalid;
     }
-
-    const ExprToken& separator() const { return separator_; }
-    void set_separator(ExprToken t) { separator_ = std::move(t); }
 
     const ExprToken& name() const { return name_; }
     void set_name(ExprToken n) { name_ = std::move(n); }
@@ -91,13 +79,9 @@ class Identifier {
     // C++, or in our debug format for unit test format checking (the name and
     // each template parameter will be separately quoted so we can check the
     // parsing).
-    //
-    // include_separator controls whether the "::" is included in the result or
-    // not.
-    std::string GetName(bool include_debug, bool include_separator) const;
+    std::string GetName(bool include_debug) const;
 
    private:
-    ExprToken separator_;
     ExprToken name_;
 
     ExprToken template_begin_;
@@ -105,13 +89,22 @@ class Identifier {
     ExprToken template_end_;
   };
 
-  Identifier() = default;
+  // Identifiers can be explicitly global qualified ("::foo" in C++) or without
+  // global qualification ("foo" or "Foo::Bar" in C++). Note that relative
+  // can still include class or namespace qualifications.
+  enum Qualification { kGlobal, kRelative };
 
-  // Makes a simple identifier with a standalone name.
+  explicit Identifier(Qualification qual = kRelative) : qualification_(qual) {}
+
+  // Makes a simple identifier with a standalone name. Without the
+  // qualification means relative.
   explicit Identifier(ExprToken name);
+  Identifier(Qualification qual, ExprToken name);
 
-  // Makes an identifier from a single component.
+  // Makes an identifier from a single component. Without the
+  // qualification means relative.
   explicit Identifier(Component comp);
+  Identifier(Qualification qual, Component comp);
 
   // Attempts to parse the given string as an identifier. Returns either a
   // set Err or the resulting Identifier when the Err is not set.
@@ -119,36 +112,39 @@ class Identifier {
 
   // Makes an identifier over a range of components.
   template <class InputIterator>
-  Identifier(InputIterator first, InputIterator last)
-      : components_(first, last) {}
+  Identifier(Qualification qual, InputIterator first, InputIterator last)
+      : qualification_(qual), components_(first, last) {}
 
   std::vector<Component>& components() { return components_; }
   const std::vector<Component>& components() const { return components_; }
 
-  bool empty() const { return components_.empty(); }
+  bool empty() const {
+    return components_.empty() && qualification_ == kRelative;
+  }
 
   void AppendComponent(Component c);
-  void AppendComponent(ExprToken separator, ExprToken name);
-  void AppendComponent(ExprToken separator, ExprToken name,
-                       ExprToken template_begin,
+  void AppendComponent(ExprToken name);
+  void AppendComponent(ExprToken name, ExprToken template_begin,
                        std::vector<std::string> template_contents,
                        ExprToken template_end);
 
   // Appends the components from the other identifier to this one.
   void Append(Identifier other);
 
-  // Returns a new identifier that's the scope of this one. The scope is
-  // everything but the last identifier.
-  //
-  // If there is only one component, the resulting identifier will either be
-  // empty (if the component has no separator, e.g. "Foo" becomes ""), or
-  // contain only a separator (if the component has a separator, e.g. "::Foo"
-  // becomes "::" and "::" becomes itself).
-  Identifier GetScope() const;
+  Qualification qualification() const { return qualification_; }
 
-  // Returns true if this identifier begins with "::" and as such can only be
-  // resolved in the global namespace.
-  bool InGlobalNamespace() const;
+  // Returns a new identifier that's the scope of this one. The scope is
+  // everything but the last component. The qualification remains unchanged.
+  //
+  // If there is only one component, the resulting identifier will be empty
+  // (still leaving the qualification unchanged). Examples:
+  //   "foo::bar::baz"   -> "foo::bar"
+  //   "::foo::bar::baz" -> "::foo::bar"
+  //   "foo"             -> ""
+  //   ""                -> ""
+  //   "::foo"           -> "::"
+  //   "::"              -> "::"
+  Identifier GetScope() const;
 
   // Returns the full name with all components concatenated together.
   std::string GetFullName() const;
@@ -164,6 +160,11 @@ class Identifier {
   // This is the format used in the ModuleSymbolIndex for lookup.
   std::vector<std::string> GetAsIndexComponents() const;
 
+  // Returns the separator string for components. This is currently always "::"
+  // but is exposed here as a getter to avoid hardcoding it everywhere and to
+  // allow us to do language-specific separators in the future.
+  const char* GetSeparator() const;
+
   // In many contexts (like function parameters and local variables) the name
   // can't have any :: or template parameters and can have only one component.
   // If this identifier satisfies this requirement, a pointer to the single
@@ -176,6 +177,8 @@ class Identifier {
  private:
   // Backend for the name getters.
   std::string GetName(bool include_debug) const;
+
+  Qualification qualification_ = kRelative;
 
   std::vector<Component> components_;
 };

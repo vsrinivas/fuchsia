@@ -325,8 +325,8 @@ TEST_F(ExprParserTest, AndOr) {
 
 TEST_F(ExprParserTest, Identifiers) {
   EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
-  EXPECT_EQ("IDENTIFIER(::,\"foo\")\n", GetParseString("::foo"));
-  EXPECT_EQ("IDENTIFIER(::,\"foo\"; ::,\"bar\")\n",
+  EXPECT_EQ("IDENTIFIER(::\"foo\")\n", GetParseString("::foo"));
+  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"bar\")\n",
             GetParseString("::foo :: bar"));
 
   auto result = Parse("::");
@@ -360,7 +360,7 @@ TEST_F(ExprParserTest, FunctionCall) {
   EXPECT_EQ("FUNCTIONCALL(\"Call\")\n", GetParseString("Call()"));
 
   // Scoped call with namespaces and templates.
-  EXPECT_EQ(R"(FUNCTIONCALL("ns"; ::,"Foo",<"int">; ::,"GetCurrent"))"
+  EXPECT_EQ(R"(FUNCTIONCALL("ns"; ::"Foo",<"int">; ::"GetCurrent"))"
             "\n",
             GetParseString("ns::Foo<int>::GetCurrent()"));
 
@@ -419,7 +419,7 @@ TEST_F(ExprParserTest, Templates) {
             "\n",
             GetParseString("foo< Foo,5 >"));
   EXPECT_EQ(
-      R"(IDENTIFIER("std"; ::,"map",<"Key", "Value", "std::less<Key>", "std::allocator<std::pair<Key const, Value>>">; ::,"insert"))"
+      R"(IDENTIFIER("std"; ::"map",<"Key", "Value", "std::less<Key>", "std::allocator<std::pair<Key const, Value>>">; ::"insert"))"
       "\n",
       GetParseString("std::map<Key, Value, std::less<Key>, "
                      "std::allocator<std::pair<Key const, Value>>>::insert"));
@@ -495,9 +495,8 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
             parser().err().msg());
 
   // Good type name.
-  EXPECT_EQ(
-      "FUNCTIONCALL(\"Namespace\"; ::,\"Template\",<\"int\">; ::,\"fn\")\n",
-      GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
+  EXPECT_EQ("FUNCTIONCALL(\"Namespace\"; ::\"Template\",<\"int\">; ::\"fn\")\n",
+            GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
 }
 
 TEST_F(ExprParserTest, TrueFalse) {

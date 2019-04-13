@@ -456,6 +456,8 @@ std::string DescribeInputLocation(const InputLocation& location) {
   return std::string();
 }
 
+// This annoyingly duplicates Identifier::GetName but is required to get
+// syntax highlighting for all the components.
 OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
   const auto& [err, identifier] = Identifier::FromString(str);
   if (err.has_error()) {
@@ -464,12 +466,14 @@ OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
   }
 
   OutputBuffer result;
+  if (identifier.qualification() == Identifier::kGlobal)
+    result.Append(identifier.GetSeparator());
 
   const auto& comps = identifier.components();
   for (size_t i = 0; i < comps.size(); i++) {
     const auto& comp = comps[i];
-    if (comp.has_separator())
-      result.Append("::");
+    if (i > 0)
+      result.Append(identifier.GetSeparator());
 
     // Name.
     if (bold_last && i == comps.size() - 1)

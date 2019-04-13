@@ -10,10 +10,9 @@
 #include <string_view>
 
 #include "src/developer/debug/zxdb/common/err.h"
-//#include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -92,7 +91,7 @@ bool IndexWalker::WalkInto(const Identifier& ident) {
 }
 
 bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
-  if (ident.InGlobalNamespace())
+  if (ident.qualification() == Identifier::kGlobal)
     path_.resize(1);  // Only keep the root.
 
   for (const auto& comp : ident.components()) {

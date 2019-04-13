@@ -242,8 +242,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         }
 
         mode = kColonColon;
-        result.ident.AppendComponent(token, ExprToken());  // Append "::".
-        result.type = nullptr;                             // No longer a type.
+        if (result.ident.empty())  // Globally qualified (starts with "::").
+          result.ident = Identifier(Identifier::kGlobal);
+        result.type = nullptr;  // No longer a type.
         break;
       }
 
@@ -285,8 +286,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         // Construct a replacement for the last component of the identifier
         // with the template arguments added.
         Identifier::Component& back = result.ident.components().back();
-        back = Identifier::Component(back.separator(), back.name(), token,
-                                     std::move(list), template_end);
+        back = Identifier::Component(back.name(), token, std::move(list),
+                                     template_end);
 
         // The thing we just made is either a type or a name, look it up.
         if (name_lookup_callback_) {
@@ -327,8 +328,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           // Found an identifier name with nothing before it.
           result.ident = Identifier(token);
         } else if (mode == kColonColon) {
-          FXL_DCHECK(!result.ident.components().empty());
-          result.ident.components().back().set_name(cur_token());
+          result.ident.AppendComponent(cur_token());
         } else {
           // Anything else like "std::vector foo" or "foo bar".
           SetError(token, "Unexpected identifier, did you forget an operator?");

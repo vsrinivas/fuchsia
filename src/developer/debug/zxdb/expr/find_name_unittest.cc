@@ -192,9 +192,10 @@ TEST(FindName, FindLocalVariable) {
   EXPECT_EQ(var_value.get(), found.variable());
 
   // Find "::value" should match nothing.
-  Identifier value_global_ident(Identifier::Component(
-      ExprToken(ExprTokenType::kColonColon, "::", 0),
-      ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0)));
+  Identifier value_global_ident(
+      Identifier::kGlobal,
+      Identifier::Component(
+          ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0)));
   found = FindName(function_context, value_global_ident);
   EXPECT_FALSE(found);
 
@@ -396,8 +397,8 @@ TEST(FindName, FindIndexedNameInModule) {
   // Now do the same search but globally qualify the input "::var" which should
   // match only the toplevel one.
   Identifier var_global_ident(
-      Identifier::Component(ExprToken(ExprTokenType::kColonColon, "::", 0),
-                            ExprToken(ExprTokenType::kName, kVarName, 0)));
+      Identifier::kGlobal,
+      Identifier::Component(ExprToken(ExprTokenType::kName, kVarName, 0)));
   found.clear();
   FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_global_ident, true,
                           &found);
@@ -544,7 +545,7 @@ TEST(FindName, FindTemplateName) {
   FindNameOptions all_types(FindNameOptions::kAllKinds);
   std::vector<FoundName> found_vect;
   FindName(context, all_types, template_not_name, &found_vect);
-  EXPECT_EQ(1u, found_vect.size());
+  ASSERT_EQ(1u, found_vect.size());
   EXPECT_EQ(FoundName::kType, found_vect[0].kind());
 
   // Now search only for templates, "TemplateNot" should not be found.

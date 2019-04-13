@@ -10,14 +10,8 @@
 
 namespace zxdb {
 
-std::string Identifier::Component::GetName(bool include_debug, bool include_separator) const {
+std::string Identifier::Component::GetName(bool include_debug) const {
   std::string result;
-
-  if (include_separator && has_separator()) {
-    result += separator().value();
-    if (include_debug)
-      result.push_back(',');
-  }
 
   if (include_debug)
     result.push_back('"');
@@ -46,11 +40,19 @@ std::string Identifier::Component::GetName(bool include_debug, bool include_sepa
   return result;
 }
 
-Identifier::Identifier(ExprToken name) {
-  components_.emplace_back(ExprToken(), std::move(name));
+Identifier::Identifier(ExprToken name)
+    : Identifier(kRelative, std::move(name)) {}
+
+Identifier::Identifier(Qualification qual, ExprToken name)
+    : qualification_(qual) {
+  components_.emplace_back(std::move(name));
 }
 
-Identifier::Identifier(Component comp) {
+Identifier::Identifier(Component comp)
+    : Identifier(kRelative, std::move(comp)) {}
+
+Identifier::Identifier(Qualification qual, Component comp)
+    : qualification_(qual) {
   components_.push_back(std::move(comp));
 }
 
@@ -80,17 +82,16 @@ void Identifier::AppendComponent(Component c) {
   components_.push_back(std::move(c));
 }
 
-void Identifier::AppendComponent(ExprToken separator, ExprToken name) {
-  components_.emplace_back(std::move(separator), std::move(name));
+void Identifier::AppendComponent(ExprToken name) {
+  components_.emplace_back(std::move(name));
 }
 
-void Identifier::AppendComponent(ExprToken separator, ExprToken name,
-                                 ExprToken template_begin,
+void Identifier::AppendComponent(ExprToken name, ExprToken template_begin,
                                  std::vector<std::string> template_contents,
                                  ExprToken template_end) {
-  components_.emplace_back(
-      std::move(separator), std::move(name), std::move(template_begin),
-      std::move(template_contents), std::move(template_end));
+  components_.emplace_back(std::move(name), std::move(template_begin),
+                           std::move(template_contents),
+                           std::move(template_end));
 }
 
 void Identifier::Append(Identifier other) {
@@ -99,51 +100,51 @@ void Identifier::Append(Identifier other) {
 }
 
 Identifier Identifier::GetScope() const {
-  if (components_.empty())
-    return Identifier();
-  if (components_.size() == 1) {
-    if (components_[0].has_separator())
-      return Identifier(Component(components_[0].separator(), ExprToken()));
-    return Identifier();
-  }
-  return Identifier(components_.begin(), components_.end() - 1);
-}
-
-bool Identifier::InGlobalNamespace() const {
-  if (components_.empty())
-    return false;
-  return components_[0].has_separator();
+  if (components_.size() <= 1)
+    return Identifier(qualification_);
+  return Identifier(qualification_, components_.begin(), components_.end() - 1);
 }
 
 std::string Identifier::GetFullName() const { return GetName(false); }
 
 std::string Identifier::GetDebugName() const { return GetName(true); }
 
+// TODO(brettw) remove this function when Identifier can be used everywhere.
 std::vector<std::string> Identifier::GetAsIndexComponents() const {
   std::vector<std::string> result;
   result.reserve(components_.size());
   for (const auto& c : components_)
-    result.push_back(c.GetName(false, false));
+    result.push_back(c.GetName(false));
   return result;
 }
+
+const char* Identifier::GetSeparator() const { return "::"; }
 
 const std::string* Identifier::GetSingleComponentName() const {
   if (components_.size() != 1)
     return nullptr;
-  if (components_[0].has_separator() || components_[0].has_template())
+  if (qualification_ == kGlobal || components_[0].has_template())
     return nullptr;
   return &components_[0].name().value();
 }
 
 std::string Identifier::GetName(bool include_debug) const {
   std::string result;
+
+  if (qualification_ == kGlobal)
+    result += GetSeparator();
+
   bool first = true;
   for (const auto& c : components_) {
-    if (first)
+    if (first) {
       first = false;
-    else if (include_debug)
-      result += "; ";
-    result += c.GetName(include_debug, true);
+    } else {
+      if (include_debug)
+        result += "; ";
+      result += GetSeparator();
+    }
+
+    result += c.GetName(include_debug);
   }
   return result;
 }
