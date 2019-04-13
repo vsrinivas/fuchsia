@@ -456,7 +456,7 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_vmo_create_child(
+    pub fn zx_vmo_clone(
         handle: zx_handle_t,
         options: u32,
         offset: u64,

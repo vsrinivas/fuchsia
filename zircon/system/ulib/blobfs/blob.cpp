@@ -691,9 +691,8 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
     // was requested.
     const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
     zx::vmo clone;
-    if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
-                                              merkle_bytes, inode_.blob_size,
-                                              &clone)) != ZX_OK) {
+    if ((status = mapping_.vmo().clone(ZX_VMO_CLONE_COPY_ON_WRITE, merkle_bytes, inode_.blob_size,
+                                       &clone)) != ZX_OK) {
         return status;
     }
 

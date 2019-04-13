@@ -225,17 +225,17 @@ zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) 
     return vmo->SetMappingCachePolicy(cache_policy);
 }
 
-// zx_status_t zx_vmo_create_child
-zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options,
-                                 uint64_t offset, uint64_t size,
-                                 user_out_handle* out_handle) {
+// zx_status_t zx_vmo_clone
+zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
+                          uint64_t offset, uint64_t size,
+                          user_out_handle* out_handle) {
     LTRACEF("handle %x options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
             handle, options, offset, size);
 
     auto up = ProcessDispatcher::GetCurrent();
 
     zx_status_t status;
-    fbl::RefPtr<VmObject> child_vmo;
+    fbl::RefPtr<VmObject> clone_vmo;
     zx_rights_t in_rights;
 
     {
@@ -246,19 +246,17 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options,
             return status;
 
         // clone the vmo into a new one
-        status = vmo->CreateChild(options, offset, size,
-                                  in_rights & ZX_RIGHT_GET_PROPERTY,  &child_vmo);
+        status = vmo->Clone(options, offset, size, in_rights & ZX_RIGHT_GET_PROPERTY,  &clone_vmo);
         if (status != ZX_OK)
             return status;
 
-        DEBUG_ASSERT(child_vmo);
+        DEBUG_ASSERT(clone_vmo);
     }
 
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t default_rights;
-    zx_status_t result = VmObjectDispatcher::Create(ktl::move(child_vmo),
-                                                    &dispatcher, &default_rights);
+    zx_status_t result = VmObjectDispatcher::Create(ktl::move(clone_vmo), &dispatcher, &default_rights);
     if (result != ZX_OK)
         return result;
 
@@ -267,7 +265,7 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options,
     // GET/SET_PROPERTY so the user can set ZX_PROP_NAME on the new clone.
     zx_rights_t rights =
         in_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
-    if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
+    if (options & ZX_VMO_CLONE_COPY_ON_WRITE) {
         rights &= ~ZX_RIGHT_EXECUTE;
         rights |= ZX_RIGHT_WRITE;
     }

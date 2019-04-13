@@ -345,10 +345,10 @@ typedef struct zx_info_vmo {
     // The size of this VMO.
     uint64_t size_bytes;
 
-    // If this VMO is a child, the koid of its parent. Otherwise, zero.
+    // If this VMO is a clone, the koid of its parent. Otherwise, zero.
     zx_koid_t parent_koid;
 
-    // The number of children of this VMO, if any.
+    // The number of clones of this VMO, if any.
     size_t num_children;
 
     // The number of times this VMO is currently mapped into VMARs.
@@ -567,11 +567,11 @@ typedef struct zx_info_vmo {
     // would consume if mapped.
     uint64_t size_bytes;
 
-    // If this VMO is a child , the koid of its parent. Otherwise, zero.
-    // See |flags| for the type of child.
+    // If this VMO is a clone, the koid of its parent. Otherwise, zero.
+    // See |flags| for the type of clone.
     zx_koid_t parent_koid;
 
-    // The number of child of this VMO, if any.
+    // The number of clones of this VMO, if any.
     size_t num_children;
 
     // The number of times this VMO is currently mapped into VMARs.

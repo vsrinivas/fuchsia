@@ -91,7 +91,7 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size) {
 
   while (state->KeepRunning()) {
     zx::vmo clone;
-    ZX_ASSERT(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone) ==
+    ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
               ZX_OK);
     state->NextStep();
   }
@@ -114,7 +114,7 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size,
   if (do_write) {
     while (state->KeepRunning()) {
       zx::vmo clone;
-      ZX_ASSERT(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone) ==
+      ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
                 ZX_OK);
       state->NextStep();
       ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
@@ -123,7 +123,7 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size,
   } else {
     while (state->KeepRunning()) {
       zx::vmo clone;
-      ZX_ASSERT(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone) ==
+      ZX_ASSERT(vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, copy_size, &clone) ==
                 ZX_OK);
       state->NextStep();
       ZX_ASSERT(vmo.read(buffer.data(), 0, copy_size) == ZX_OK);

@@ -62,7 +62,7 @@ zx_status_t VnodeVmo::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
 
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
         zx_handle_t tmp_vmo;
-        status = zx_vmo_create_child(vmo_, ZX_VMO_CHILD_COPY_ON_WRITE, offset_, length_, &tmp_vmo);
+        status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &tmp_vmo);
         if (status < 0)
             return status;
 

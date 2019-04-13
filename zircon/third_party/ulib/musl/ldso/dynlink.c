@@ -1016,8 +1016,8 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
                 }
             } else {
                 // Get a writable (lazy) copy of the portion of the file VMO.
-                status = _zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
-                                              off_start, data_size, &map_vmo);
+                status = _zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
+                                       off_start, data_size, &map_vmo);
                 if (status == ZX_OK && map_size > data_size) {
                     // Extend the writable VMO to cover the .bss pages too.
                     // These pages will be zero-filled, not copied from the

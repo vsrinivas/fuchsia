@@ -983,7 +983,7 @@ static bool vmo_lookup_clone_test() {
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
     fbl::RefPtr<VmObject> clone;
-    status = vmo->CreateCowClone(false, 0, alloc_size, false, &clone);
+    status = vmo->CloneCOW(false, 0, alloc_size, false, &clone);
     ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
     ASSERT_TRUE(clone, "vmobject creation\n");
 

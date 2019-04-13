@@ -154,14 +154,7 @@ impl Player {
         let buffer =
             zx::Vmo::create_with_opts(zx::VmoOptions::NON_RESIZABLE, DEFAULT_BUFFER_LEN as u64)?;
 
-        stream_source.add_payload_buffer(
-            0,
-            buffer.create_child(
-                zx::VmoChildOptions::COPY_ON_WRITE,
-                0,
-                DEFAULT_BUFFER_LEN as u64,
-            )?,
-        )?;
+        stream_source.add_payload_buffer(0, buffer.clone(0, DEFAULT_BUFFER_LEN as u64)?)?;
 
         let mut player_event_stream = player.take_event_stream();
 

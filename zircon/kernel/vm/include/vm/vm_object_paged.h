@@ -80,10 +80,6 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return GetRootPageSourceLocked() != nullptr;
     }
-    ChildType child_type() const override {
-        Guard<fbl::Mutex> guard{&lock_};
-        return parent_ ? ChildType::kCowClone : ChildType::kNotChild;
-    }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -116,8 +112,8 @@ public:
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    zx_status_t CreateCowClone(bool resizable, uint64_t offset, uint64_t size, bool copy_name,
-                               fbl::RefPtr<VmObject>* child_vmo) override
+    zx_status_t CloneCOW(bool resizable, uint64_t offset, uint64_t size, bool copy_name,
+                         fbl::RefPtr<VmObject>* clone_vmo) override
         // Calls a Locked method of the child, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -168,7 +164,7 @@ private:
     void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
     fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
-        // Walks the parent chain to get the root page source, which confuses analysis.
+        // Walks the clone chain to get the root page source, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // internal check if any pages in a range are pinned

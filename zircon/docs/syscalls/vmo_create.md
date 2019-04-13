@@ -47,11 +47,11 @@ The following rights will be set on the handle by default:
 [object_set_property](object_set_property.md).
 
 The *options* field can be 0 or **ZX_VMO_NON_RESIZABLE** to create a VMO
-that cannot change size. Children of a non-resizable VMO can be resized.
+that cannot change size. Clones of a non-resizable VMO can be resized.
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
-inactive whenever a child of the VMO is created and becomes active again when
-all children have been destroyed and no mappings of those children into address
+inactive whenever a clone of the VMO is created and becomes active again when
+all clones have been destroyed and no mappings of those clones into address
 spaces exist.
 
 ## RIGHTS
@@ -77,7 +77,7 @@ In a future build this error will no longer occur.
 ## SEE ALSO
 
  - [`zx_vmar_map()`]
- - [`zx_vmo_create_child()`]
+ - [`zx_vmo_clone()`]
  - [`zx_vmo_get_size()`]
  - [`zx_vmo_op_range()`]
  - [`zx_vmo_read()`]
@@ -88,7 +88,7 @@ In a future build this error will no longer occur.
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_vmar_map()`]: vmar_map.md
-[`zx_vmo_create_child()`]: vmo_create_child.md
+[`zx_vmo_clone()`]: vmo_clone.md
 [`zx_vmo_get_size()`]: vmo_get_size.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
 [`zx_vmo_read()`]: vmo_read.md

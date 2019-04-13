@@ -174,15 +174,16 @@ public:
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
-    virtual zx_status_t CreateCowClone(bool resizable,
-                                       uint64_t offset, uint64_t size, bool copy_name,
-                                       fbl::RefPtr<VmObject>* child_vmo) {
+    virtual zx_status_t CloneCOW(bool resizable,
+                                 uint64_t offset, uint64_t size, bool copy_name,
+                                 fbl::RefPtr<VmObject>* clone_vmo) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Returns true if this VMO is a child VMO.
-    enum ChildType { kNotChild, kCowClone };
-    virtual ChildType child_type() const = 0;
+    // Returns true if this VMO was created via CloneCOW().
+    // TODO: If more types of clones appear, replace this with a method that
+    // returns an enum rather than adding a new method for each clone type.
+    bool is_cow_clone() const;
 
     // Get a pointer to the page structure and/or physical address at the specified offset.
     // valid flags are VMM_PF_FLAG_*.
