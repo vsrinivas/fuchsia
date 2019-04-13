@@ -17,11 +17,16 @@
 namespace scenic_impl {
 namespace gfx {
 
-DefaultFrameScheduler::DefaultFrameScheduler(const Display* display)
+DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
+                                             inspect::Object inspect_object)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
+      inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
+
+  inspect_frame_number_ =
+      inspect_object_.CreateUIntMetric("frame_number", 0);
 }
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}

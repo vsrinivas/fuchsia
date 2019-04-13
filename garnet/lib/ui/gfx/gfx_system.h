@@ -21,6 +21,7 @@ class Compositor;
 class GfxSystem : public TempSystemDelegate {
  public:
   static constexpr TypeId kTypeId = kGfx;
+  static const char* kName;
 
   explicit GfxSystem(SystemContext context,
                      std::unique_ptr<DisplayManager> display_manager);

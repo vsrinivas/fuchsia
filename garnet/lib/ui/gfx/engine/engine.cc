@@ -43,8 +43,10 @@ void CommandContext::Flush() {
 
 Engine::Engine(sys::ComponentContext* component_context,
                std::unique_ptr<FrameScheduler> frame_scheduler,
+               std::unique_ptr<SessionManager> session_manager,
                DisplayManager* display_manager,
-               escher::EscherWeakPtr weak_escher)
+               escher::EscherWeakPtr weak_escher,
+               inspect::Object inspect_object)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
@@ -55,18 +57,21 @@ Engine::Engine(sys::ComponentContext* component_context,
           std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher()->command_buffer_sequencer())),
-      session_manager_(std::make_unique<SessionManager>()),
+      session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
       imported_memory_type_index_(GetImportedMemoryTypeIndex(
           escher()->vk_physical_device(), escher()->vk_device())),
       has_vulkan_(escher_ && escher_->vk_device()),
       command_context_(CreateCommandContext(/* frame number */ 0)),
+      inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
+  FXL_DCHECK(session_manager_);
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
   InitializeFrameScheduler();
+  InitializeInspectObjects();
 }
 
 Engine::Engine(
@@ -93,12 +98,32 @@ Engine::Engine(
   FXL_DCHECK(display_manager_);
 
   InitializeFrameScheduler();
+  InitializeInspectObjects();
 }
 
 void Engine::InitializeFrameScheduler() {
   auto weak = weak_factory_.GetWeakPtr();
   frame_scheduler_->SetDelegate(FrameSchedulerDelegate{
       /* FrameRenderer */ weak, /* SessionUpdater */ weak});
+}
+
+void Engine::InitializeInspectObjects() {
+  inspect_scene_dump_ =
+      inspect_object_.CreateLazyStringProperty("scene_dump", [this] {
+        if (scene_graph_.compositors().empty()) {
+          return std::string("(no compositors)");
+        }
+        std::ostringstream output;
+        output << std::endl;
+        for (auto& c : scene_graph_.compositors()) {
+          output << "========== BEGIN COMPOSITOR DUMP ======================"
+                 << std::endl;
+          DumpVisitor visitor(output);
+          c->Accept(&visitor);
+          output << "============ END COMPOSITOR DUMP ======================";
+        }
+        return output.str();
+      });
 }
 
 // Helper for RenderFrame().  Generate a mapping between a Compositor's Layer
@@ -375,17 +400,16 @@ void Engine::CleanupEscher() {
     // Wait long enough to give GPU work a chance to finish.
     const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
-    async::PostDelayedTask(
-        async_get_default_dispatcher(),
-        [weak = weak_factory_.GetWeakPtr()] {
-          if (weak) {
-            // Recursively reschedule if cleanup is
-            // incomplete.
-            weak->escher_cleanup_scheduled_ = false;
-            weak->CleanupEscher();
-          }
-        },
-        kCleanupDelay);
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [weak = weak_factory_.GetWeakPtr()] {
+                             if (weak) {
+                               // Recursively reschedule if cleanup is
+                               // incomplete.
+                               weak->escher_cleanup_scheduled_ = false;
+                               weak->CleanupEscher();
+                             }
+                           },
+                           kCleanupDelay);
   }
 }
 

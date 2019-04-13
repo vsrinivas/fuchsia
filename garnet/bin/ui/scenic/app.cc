@@ -23,8 +23,10 @@
 
 namespace scenic_impl {
 
-App::App(sys::ComponentContext* app_context, fit::closure quit_callback)
-    : scenic_(std::make_unique<Scenic>(app_context, std::move(quit_callback))) {
+App::App(sys::ComponentContext* app_context, inspect::Object inspect_object,
+         fit::closure quit_callback)
+    : scenic_(std::make_unique<Scenic>(app_context, std::move(inspect_object),
+                                       std::move(quit_callback))) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(
       std::make_unique<gfx::DisplayManager>());

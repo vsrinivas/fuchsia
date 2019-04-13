@@ -15,7 +15,8 @@ namespace scenic_impl {
 
 class App {
  public:
-  explicit App(sys::ComponentContext* app_context, fit::closure quit_callback);
+  explicit App(sys::ComponentContext* app_context,
+               inspect::Object inspect_object, fit::closure quit_callback);
 
  private:
   std::unique_ptr<Scenic> scenic_;

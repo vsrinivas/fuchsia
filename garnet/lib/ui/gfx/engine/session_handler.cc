@@ -15,12 +15,14 @@ namespace gfx {
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                SessionContext session_context,
                                EventReporter* event_reporter,
-                               ErrorReporter* error_reporter)
+                               ErrorReporter* error_reporter,
+                               inspect::Object inspect_object)
     : TempSessionDelegate(std::move(dispatcher_context)),
 
       session_(std::make_unique<Session>(
           command_dispatcher_context()->session_id(),
-          std::move(session_context), event_reporter, error_reporter)) {}
+          std::move(session_context), event_reporter, error_reporter,
+          std::move(inspect_object))) {}
 
 void SessionHandler::Present(
     uint64_t presentation_time, std::vector<zx::event> acquire_fences,

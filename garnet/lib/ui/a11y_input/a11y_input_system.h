@@ -11,6 +11,7 @@ namespace a11y_input {
 class A11yInputSystem : public System {
  public:
   static constexpr TypeId kTypeId = kA11yInput;
+  static const char* kName;
 
   explicit A11yInputSystem(SystemContext context,
                            bool initialized_after_construction);

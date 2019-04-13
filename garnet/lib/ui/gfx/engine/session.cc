@@ -55,7 +55,8 @@ fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
 }  // anonymous namespace
 
 Session::Session(SessionId id, SessionContext session_context,
-                 EventReporter* event_reporter, ErrorReporter* error_reporter)
+                 EventReporter* event_reporter, ErrorReporter* error_reporter,
+                 inspect::Object inspect_object)
     : id_(id),
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),
@@ -68,8 +69,17 @@ Session::Session(SessionId id, SessionContext session_context,
                          session_context_.escher_resource_recycler,
                          session_context_.escher_image_factory}),
       resources_(error_reporter),
+      inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter);
+
+  inspect_resource_count_ =
+      inspect_object_.CreateUIntMetric("resource_count", 0);
+  inspect_last_applied_update_presentation_time_ =
+      inspect_object_.CreateUIntMetric("last_applied_update_presentation_time",
+                                       0);
+  inspect_last_requested_presentation_time_ =
+      inspect_object_.CreateUIntMetric("last_requested_presentation_time", 0);
 }
 
 Session::~Session() {
@@ -149,6 +159,8 @@ bool Session::ScheduleUpdate(
              std::move(acquire_fence_set), std::move(release_events),
              std::move(callback)});
 
+  inspect_last_requested_presentation_time_.Set(requested_presentation_time);
+
   return true;
 }
 
@@ -219,6 +231,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
 
     // TODO(SCN-1202): gather statistics about how close the actual
     // presentation_time was to the requested time.
+    inspect_last_applied_update_presentation_time_.Set(
+        last_applied_update_presentation_time_);
+    inspect_resource_count_.Set(resource_count_);
   }
 
   // TODO(SCN-1219): Unify with other session updates.

@@ -28,6 +28,7 @@ source_set("scenic") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

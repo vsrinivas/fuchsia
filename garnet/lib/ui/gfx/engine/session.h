@@ -5,10 +5,11 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 
-#include <vector>
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/inspect/inspect.h>
+
+#include <vector>
 
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
@@ -49,7 +50,8 @@ class Session {
 
   Session(SessionId id, SessionContext context,
           EventReporter* event_reporter = EventReporter::Default(),
-          ErrorReporter* error_reporter = ErrorReporter::Default());
+          ErrorReporter* error_reporter = ErrorReporter::Default(),
+          inspect::Object inspect_object = inspect::Object());
   virtual ~Session();
 
   // Apply the operation to the current session state.  Return true if
@@ -192,6 +194,11 @@ class Session {
   // Tracks the number of method calls for tracing.
   uint64_t scheduled_update_count_ = 0;
   uint64_t applied_update_count_ = 0;
+
+  inspect::Object inspect_object_;
+  inspect::UIntMetric inspect_resource_count_;
+  inspect::UIntMetric inspect_last_applied_update_presentation_time_;
+  inspect::UIntMetric inspect_last_requested_presentation_time_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

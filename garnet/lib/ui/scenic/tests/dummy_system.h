@@ -13,6 +13,7 @@ namespace test {
 class DummySystem : public System {
  public:
   static constexpr TypeId kTypeId = kDummySystem;
+  static const char* kName;
 
   explicit DummySystem(SystemContext context,
                        bool initialized_after_construction = true);

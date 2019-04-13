@@ -6,6 +6,8 @@
 
 namespace scenic_impl {
 
+const char* SketchySystem::kName = "SketchySystem";
+
 SketchySystem::SketchySystem(SystemContext context, gfx::GfxSystem* gfx_system)
     : System(std::move(context)), gfx_system_(gfx_system) {}
 

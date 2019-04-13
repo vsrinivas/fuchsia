@@ -20,6 +20,8 @@
 namespace scenic_impl {
 namespace gfx {
 
+const char* GfxSystem::kName = "GfxSystem";
+
 GfxSystem::GfxSystem(SystemContext context,
                      std::unique_ptr<DisplayManager> display_manager)
     : TempSystemDelegate(std::move(context), false),
@@ -55,11 +57,15 @@ CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(context()->app_context(),
-                                  std::make_unique<DefaultFrameScheduler>(
-                                      display_manager_->default_display()),
-                                  display_manager_.get(),
-                                  escher_->GetWeakPtr());
+  return std::make_unique<Engine>(
+      context()->app_context(),
+      std::make_unique<DefaultFrameScheduler>(
+          display_manager_->default_display(),
+          context()->inspect_object()->CreateChild("FrameScheduler")),
+      std::make_unique<SessionManager>(
+          context()->inspect_object()->CreateChild("SessionManager")),
+      display_manager_.get(), escher_->GetWeakPtr(),
+      context()->inspect_object()->CreateChild("Engine"));
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {

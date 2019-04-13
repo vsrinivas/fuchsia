@@ -34,6 +34,8 @@
 namespace scenic_impl {
 namespace input {
 
+const char* InputSystem::kName = "InputSystem";
+
 using InputCommand = fuchsia::ui::input::Command;
 using Phase = fuchsia::ui::input::PointerEventPhase;
 using ScenicCommand = fuchsia::ui::scenic::Command;

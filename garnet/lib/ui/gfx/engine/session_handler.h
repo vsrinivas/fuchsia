@@ -5,12 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 
-#include "garnet/lib/ui/gfx/engine/session.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
-
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/inspect/inspect.h>
+
 #include "garnet/lib/ui/gfx/engine/engine.h"
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
@@ -30,7 +31,8 @@ class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context,
                  SessionContext session_context, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter);
+                 ErrorReporter* error_reporter,
+                 inspect::Object inspect_object = inspect::Object());
   ~SessionHandler() = default;
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }

@@ -13,6 +13,7 @@
 #include <lib/escher/shape/rounded_rect_factory.h>
 #include <lib/escher/vk/image_factory.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <set>
@@ -73,7 +74,9 @@ class Engine : public SessionUpdater, public FrameRenderer {
  public:
   Engine(sys::ComponentContext* component_context,
          std::unique_ptr<FrameScheduler> frame_scheduler,
-         DisplayManager* display_manager, escher::EscherWeakPtr escher);
+         std::unique_ptr<SessionManager> session_manager,
+         DisplayManager* display_manager, escher::EscherWeakPtr escher,
+         inspect::Object inspect_object);
 
   ~Engine() override = default;
 
@@ -162,6 +165,9 @@ class Engine : public SessionUpdater, public FrameRenderer {
  private:
   void InitializeFrameScheduler();
 
+  // Initialize all inspect::Objects, so that the Engine state can be observed.
+  void InitializeInspectObjects();
+
   // Creates a command context.
   CommandContext CreateCommandContext(uint64_t frame_number_for_tracing);
 
@@ -233,6 +239,9 @@ class Engine : public SessionUpdater, public FrameRenderer {
   std::queue<OnPresentedCallback> pending_callbacks_;
 
   CommandContext command_context_;
+
+  inspect::Object inspect_object_;
+  inspect::LazyStringProperty inspect_scene_dump_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

@@ -89,7 +89,7 @@ class SessionManagerForTest : public SessionManager {
       // If tests instances of reporters were provided at SessionManager
       // creation, those are used instead of the ones provided here
       EventReporter* error_reporter,
-      ErrorReporter* event_reporter) const override;
+      ErrorReporter* event_reporter) override;
 
  private:
   EventReporter* event_reporter_;

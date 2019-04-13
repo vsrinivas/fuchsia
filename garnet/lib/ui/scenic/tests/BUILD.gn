@@ -23,6 +23,7 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -37,6 +38,7 @@ source_set("dummy_system") {
   ]
   deps = [
     "//garnet/lib/ui/scenic",
+    "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.ui.scenic",
   ]
 }
@@ -48,6 +50,7 @@ source_set("mocks") {
   ]
   deps = [
     ":dummy_system",
+    "//garnet/public/lib/inspect",
     "//garnet/lib/ui/gfx",
   ]
 }

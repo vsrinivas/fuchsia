@@ -5,11 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_DEFAULT_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_DEFAULT_FRAME_SCHEDULER_H_
 
-#include <queue>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/inspect/inspect.h>
 #include <lib/zx/time.h>
+
+#include <queue>
+
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "src/lib/fxl/macros.h"
@@ -26,7 +28,9 @@ class Display;
 // concerning the frame scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(const Display* display);
+  explicit DefaultFrameScheduler(
+      const Display* display,
+      inspect::Object inspect_object = inspect::Object());
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
@@ -109,6 +113,9 @@ class DefaultFrameScheduler : public FrameScheduler {
   std::priority_queue<SessionUpdate, std::vector<SessionUpdate>,
                       std::greater<SessionUpdate>>
       updatable_sessions_;
+
+  inspect::Object inspect_object_;
+  inspect::UIntMetric inspect_frame_number_;
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 

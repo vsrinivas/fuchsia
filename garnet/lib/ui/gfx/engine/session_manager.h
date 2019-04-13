@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_
 
+#include <lib/inspect/inspect.h>
+
 #include <unordered_map>
 
 #include "garnet/lib/ui/gfx/engine/session_context.h"
@@ -27,7 +29,7 @@ class SessionHandler;
 // particular presentation time.
 class SessionManager {
  public:
-  SessionManager() = default;
+  explicit SessionManager(inspect::Object inspect_object = inspect::Object());
 
   virtual ~SessionManager() = default;
 
@@ -56,11 +58,13 @@ class SessionManager {
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       CommandDispatcherContext dispatcher_context,
       SessionContext session_context, SessionId session_id,
-      EventReporter* event_reporter, ErrorReporter* error_reporter) const;
+      EventReporter* event_reporter, ErrorReporter* error_reporter);
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;
   size_t session_count_ = 0;
+
+  inspect::Object inspect_object_;
 };
 
 }  // namespace gfx

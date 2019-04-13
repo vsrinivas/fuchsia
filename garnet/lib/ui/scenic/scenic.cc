@@ -11,8 +11,11 @@
 
 namespace scenic_impl {
 
-Scenic::Scenic(sys::ComponentContext* app_context, fit::closure quit_callback)
-    : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
+Scenic::Scenic(sys::ComponentContext* app_context,
+               inspect::Object inspect_object, fit::closure quit_callback)
+    : app_context_(app_context),
+      quit_callback_(std::move(quit_callback)),
+      inspect_object_(std::move(inspect_object)) {
   FXL_DCHECK(app_context_);
 
   app_context->outgoing()->AddPublicService(scenic_bindings_.GetHandler(this));

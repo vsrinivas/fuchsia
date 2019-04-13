@@ -14,6 +14,9 @@
 namespace scenic_impl {
 namespace gfx {
 
+SessionManager::SessionManager(inspect::Object inspect_object)
+    : inspect_object_(std::move(inspect_object)) {}
+
 SessionHandler* SessionManager::FindSessionHandler(SessionId id) const {
   auto it = session_handlers_.find(id);
   if (it != session_handlers_.end()) {
@@ -43,10 +46,12 @@ CommandDispatcherUniquePtr SessionManager::CreateCommandDispatcher(
 std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
     CommandDispatcherContext dispatcher_context, SessionContext session_context,
     SessionId session_id, EventReporter* event_reporter,
-    ErrorReporter* error_reporter) const {
+    ErrorReporter* error_reporter) {
+  auto inspect_object = inspect_object_.CreateChild("Session-" + std::to_string(session_id));
   return std::make_unique<SessionHandler>(std::move(dispatcher_context),
                                           std::move(session_context),
-                                          event_reporter, error_reporter);
+                                          event_reporter, error_reporter,
+                                          std::move(inspect_object));
 }
 
 void SessionManager::InsertSessionHandler(SessionId session_id,

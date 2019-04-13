@@ -8,6 +8,7 @@
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 #include "src/lib/fxl/macros.h"
@@ -27,10 +28,12 @@ class Session;
 class SystemContext final {
  public:
   explicit SystemContext(sys::ComponentContext* app_context,
+                         inspect::Object inspect_object,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
   sys::ComponentContext* app_context() const { return app_context_; }
+  inspect::Object* inspect_object() { return &inspect_object_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
@@ -38,6 +41,7 @@ class SystemContext final {
  private:
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
+  inspect::Object inspect_object_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates

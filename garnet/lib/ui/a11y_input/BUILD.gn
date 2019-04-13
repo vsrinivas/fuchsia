@@ -10,5 +10,6 @@ source_set("a11y_input") {
 
   deps = [
     "//garnet/lib/ui/scenic",
+    "//garnet/public/lib/inspect",
   ]
 }

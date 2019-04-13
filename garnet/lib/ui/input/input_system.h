@@ -28,6 +28,7 @@ namespace input {
 class InputSystem : public System {
  public:
   static constexpr TypeId kTypeId = kInput;
+  static const char* kName;
 
   explicit InputSystem(SystemContext context, gfx::GfxSystem* scenic);
   virtual ~InputSystem() = default;

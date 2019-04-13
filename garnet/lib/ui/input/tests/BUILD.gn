@@ -27,6 +27,7 @@ executable("unittests") {
     "//garnet/lib/ui/gfx/tests:testing_deps",
     "//garnet/lib/ui/input",
     "//garnet/lib/ui/scenic/tests:testing_deps",
+    "//garnet/public/lib/inspect",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.scenic",

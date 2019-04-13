@@ -7,6 +7,8 @@
 namespace scenic_impl {
 namespace test {
 
+const char* DummySystem::kName = "DummySystem";
+
 DummySystem::DummySystem(SystemContext context,
                          bool initialized_after_construction)
     : System(std::move(context), initialized_after_construction) {}

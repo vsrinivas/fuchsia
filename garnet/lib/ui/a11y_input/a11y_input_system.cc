@@ -3,6 +3,8 @@
 namespace scenic_impl {
 namespace a11y_input {
 
+const char* A11yInputSystem::kName = "A11yInputSystem";
+
 A11yInputSystem::A11yInputSystem(SystemContext context,
                                  bool initialized_after_construction)
     : System(std::move(context), initialized_after_construction) {

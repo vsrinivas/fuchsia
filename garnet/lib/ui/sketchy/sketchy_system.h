@@ -14,6 +14,7 @@ namespace scenic_impl {
 class SketchySystem : public System {
  public:
   static constexpr TypeId kTypeId = kSketchy;
+  static const char* kName;
 
   SketchySystem(SystemContext context, gfx::GfxSystem* scenic);
   ~SketchySystem() override;

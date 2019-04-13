@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 
 #include <set>
 
@@ -25,7 +26,7 @@ class Clock;
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
   explicit Scenic(sys::ComponentContext* app_context,
-                  fit::closure quit_callback);
+                  inspect::Object inspect_object, fit::closure quit_callback);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -74,6 +75,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
+  inspect::Object inspect_object_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
@@ -101,9 +103,10 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
   FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
-  SystemT* system =
-      new SystemT(SystemContext(app_context_, quit_callback_.share()),
-                  std::forward<Args>(args)...);
+  SystemT* system = new SystemT(
+      SystemContext(app_context_, inspect_object_.CreateChild(SystemT::kName),
+                    quit_callback_.share()),
+      std::forward<Args>(args)...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
 
   // Listen for System to be initialized if it isn't already.

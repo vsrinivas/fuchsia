@@ -70,7 +70,7 @@ SessionManagerForTest::SessionManagerForTest(EventReporter* event_reporter,
 std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
     CommandDispatcherContext dispatcher_context, SessionContext session_context,
     SessionId session_id, EventReporter* event_reporter,
-    ErrorReporter* error_reporter) const {
+    ErrorReporter* error_reporter) {
   return std::make_unique<SessionHandlerForTest>(
       std::move(dispatcher_context), std::move(session_context),
       event_reporter_ ? event_reporter_ : event_reporter,

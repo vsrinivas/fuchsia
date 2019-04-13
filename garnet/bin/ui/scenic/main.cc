@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fsl/syslogger/init.h>
+#include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
 
@@ -26,7 +27,17 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> app_context(
       sys::ComponentContext::Create());
 
-  scenic_impl::App app(app_context.get(), [&loop] { loop.Quit(); });
+  // Set up an inspect::Object to inject into the App.
+  auto object_dir = component::ObjectDir(component::Object::Make("objects"));
+  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings;
+  app_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
+      fuchsia::inspect::Inspect::Name_,
+      std::make_unique<vfs::Service>(
+          inspect_bindings.GetHandler(object_dir.object().get())));
+
+  scenic_impl::App app(app_context.get(),
+                       inspect::Object(std::move(object_dir)),
+                       [&loop] { loop.Quit(); });
 
   loop.Run();
 

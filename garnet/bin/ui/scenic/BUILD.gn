@@ -10,7 +10,7 @@
 declare_args() {
   enable_value_subsystem = false
   enable_gfx_subsystem = true
-  enable_sketchy_subsystem = true
+  enable_sketchy_subsystem = false
   enable_input_subsystem = true
 }
 
@@ -23,6 +23,7 @@ executable("scenic") {
 
   deps = [
     "//garnet/bin/ui/scenic:base_deps",
+    "//garnet/public/lib/inspect",
   ]
   defines = []
 

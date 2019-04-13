@@ -13,8 +13,6 @@
 
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
-#include "garnet/lib/ui/scenic/scenic.h"
-#include "garnet/lib/ui/scenic/system.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/command_line.h"
