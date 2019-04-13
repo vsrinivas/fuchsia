@@ -50,6 +50,25 @@ source_set("crt1") {
 if (toolchain.base_environment == "user" &&
     current_toolchain == toolchain.shlib &&
     toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
+  write_file("$root_build_dir/legacy-sysroot-$current_cpu.gni",
+             {
+               zircon_legacy_sysroot = {
+                 include_dirs = [
+                   "//zircon/system/public",
+                   "//zircon/system/ulib/zircon/include",
+                   "//zircon/third_party/ulib/musl/include",
+                   rebase_path(root_gen_dir, root_build_dir),
+                 ]
+                 crt1 = rebase_path(
+                         get_label_info(":crt1(${toolchain.label})",
+                                        "target_out_dir") + "/crt1.Scrt1.cpp.o",
+                         root_build_dir)
+                 libc = rebase_path("$target_out_dir/libc.so.debug",
+                                    root_build_dir)
+               }
+             },
+             "scope")
+
   legacy_pkg("c-$current_cpu.pkg") {
     contents = [
       "[package]",

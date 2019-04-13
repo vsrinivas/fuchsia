@@ -162,7 +162,6 @@ template("go_build") {
 
     if (is_fuchsia) {
       deps += [
-        "//sdk:zircon_sysroot_export",
         "//third_party/go:go_runtime",
         "//zircon/public/lib/fdio",
       ]
@@ -172,12 +171,16 @@ template("go_build") {
         # is brittle.
         "--include-dir",
         rebase_path("//zircon/system/ulib/fdio/include"),
+        "--include-dir",
+        rebase_path("//zircon/third_party/ulib/musl/include"),
+        "--include-dir",
+        rebase_path("//zircon/system/public"),
         "--go-root",
         rebase_path("$host_tools_dir/goroot"),
       ]
 
       foreach(target, zircon_legacy_targets) {
-        if (target.target_name == "fdio") {
+        if (target.target_name == "zircon" || target.target_name == "fdio") {
           _libs = target.libs
           lib = _libs[0]
           assert(_libs == [ lib ])
