@@ -10,6 +10,5 @@ source_set("platform") {
   ]
   deps = [
     "$zx/kernel/lib/console",
-    "$zx/system/ulib/zxcpp",
   ]
 }

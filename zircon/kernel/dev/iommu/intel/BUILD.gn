@@ -23,7 +23,6 @@ library("intel") {
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/zxcpp",
   ]
   public_deps = [
     # dev/iommu/intel.h has #include <fbl/ref_ptr.h>.

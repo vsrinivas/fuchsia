@@ -13,6 +13,5 @@ In particular, this library does not depend on libfbl.a or libzx.a.
 It also does not link against the C++ standard library.
 
 Some of the object files in this library require an implementation of the
-placement new operators. These implementations are typically provided by the
-C++ standard library, but they can also be provided by other libraries
-(e.g., libzxcpp).
+placement new operators from the standard library's <new> header file.
+These are usually implemented as inlines in the header.

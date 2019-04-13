@@ -8,6 +8,8 @@ source_set("libc") {
     "atoi.c",
     "bsearch.c",
     "cxa_atexit.cpp",
+    "cxa_pure_virtual.cpp",
+    "cxx_allocator.cpp",
     "eabi.c",
     "errno.c",
     "printf.c",

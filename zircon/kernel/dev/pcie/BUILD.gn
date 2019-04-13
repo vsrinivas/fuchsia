@@ -26,7 +26,6 @@ library("pcie") {
     "$zx/kernel/lib/pci",
     "$zx/kernel/vm:headers",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/zxcpp",
   ]
   public_deps = [
     # <dev/pcie_platform.h> has #include <dev/interrupt.h>.
