@@ -183,7 +183,6 @@ zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr,
         .gpio_count = static_cast<uint32_t>(dr->gpio_count()),
         .i2c_channel_count = static_cast<uint32_t>(dr->i2c_channel_count()),
         .clk_count = static_cast<uint32_t>(dr->clk_count()),
-        .power_domain_count = static_cast<uint32_t>(dr->power_domain_count()),
         .bti_count = static_cast<uint32_t>(dr->bti_count()),
         .smc_count = static_cast<uint32_t>(dr->smc_count()),
         .metadata_count = static_cast<uint32_t>(dr->metadata_count() + dr->boot_metadata_count()),
@@ -395,65 +394,6 @@ zx_status_t PlatformDevice::RpcClockDisable(const DeviceResources* dr, uint32_t 
     return bus_->clk()->Disable(dr->clk(index).clk);
 }
 
-zx_status_t PlatformDevice::RpcPowerDomainEnable(const DeviceResources* dr, uint32_t index) {
-    if (bus_->power() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= dr->power_domain_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->power()->EnablePowerDomain(dr->power_domain(index).power_domain);
-}
-
-zx_status_t PlatformDevice::RpcPowerDomainDisable(const DeviceResources* dr, uint32_t index) {
-    if (bus_->power() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= dr->power_domain_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->power()->DisablePowerDomain(dr->power_domain(index).power_domain);
-}
-
-zx_status_t PlatformDevice::RpcPowerDomainGetStatus(const DeviceResources* dr, uint32_t index,
-                                                    power_domain_status_t* status) {
-    if (bus_->power() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= dr->power_domain_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->power()->GetPowerDomainStatus(dr->power_domain(index).power_domain, status);
-}
-
-zx_status_t PlatformDevice::RpcPowerDomainReadPmicCtrlReg(const DeviceResources* dr, uint32_t index,
-                                                          uint32_t reg_addr, uint32_t* value) {
-    if (bus_->power() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= dr->power_domain_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->power()->ReadPmicCtrlReg(dr->power_domain(index).power_domain, reg_addr, value);
-}
-
-zx_status_t PlatformDevice::RpcPowerDomainWritePmicCtrlReg(const DeviceResources* dr,
-                                                           uint32_t index, uint32_t reg_addr,
-                                                           uint32_t value) {
-    if (bus_->power() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= dr->power_domain_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->power()->WritePmicCtrlReg(dr->power_domain(index).power_domain, reg_addr, value);
-}
-
 zx_status_t PlatformDevice::RpcSysmemConnect(zx::channel allocator_request) {
     if (bus_->sysmem() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -596,37 +536,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         default:
             zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_POWER: {
-        auto req = reinterpret_cast<rpc_power_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu (POWER)\n", __FUNCTION__, actual, sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-
-        auto resp = reinterpret_cast<rpc_power_rsp_t*>(&resp_buf);
-        resp_len = sizeof(*resp);
-        switch (req_header->op) {
-        case POWER_ENABLE:
-            status = RpcPowerDomainEnable(dr, req->index);
-            break;
-        case POWER_DISABLE:
-            status = RpcPowerDomainDisable(dr, req->index);
-            break;
-        case POWER_GET_STATUS:
-            status = RpcPowerDomainGetStatus(dr, req->index, &resp->status);
-            break;
-        case POWER_WRITE_PMIC_CTRL_REG:
-            status = RpcPowerDomainWritePmicCtrlReg(dr, req->index, req->reg_addr, req->reg_value);
-            break;
-        case POWER_READ_PMIC_CTRL_REG:
-            status = RpcPowerDomainReadPmicCtrlReg(dr, req->index, req->reg_addr, &resp->reg_value);
-            break;
-        default:
-            zxlogf(ERROR, "%s: unknown Power op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;

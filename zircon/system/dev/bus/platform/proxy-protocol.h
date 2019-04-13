@@ -7,7 +7,6 @@
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/powerimpl.h>
 
 namespace platform_bus {
 
@@ -139,28 +138,6 @@ enum {
 struct rpc_clk_req_t {
     platform_proxy_req_t header;
     uint32_t index;
-};
-
-// ZX_PROTOCOL_POWER proxy support.
-enum {
-    POWER_ENABLE,
-    POWER_DISABLE,
-    POWER_GET_STATUS,
-    POWER_WRITE_PMIC_CTRL_REG,
-    POWER_READ_PMIC_CTRL_REG,
-};
-
-struct rpc_power_req_t {
-    platform_proxy_req_t header;
-    uint32_t index;
-    uint32_t reg_addr;
-    uint32_t reg_value;
-};
-
-struct rpc_power_rsp_t {
-    platform_proxy_rsp_t header;
-    power_domain_status_t status;
-    uint32_t reg_value;
 };
 
 // ZX_PROTOCOL_SYSMEM proxy support.

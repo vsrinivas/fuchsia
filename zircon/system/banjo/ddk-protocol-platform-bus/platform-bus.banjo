@@ -36,10 +36,6 @@ struct PbusClk {
     uint32 clk;
 };
 
-struct PbusPowerDomain {
-    uint32 power_domain;
-};
-
 struct PbusBti {
     uint32 iommu_index;
     uint32 bti_id;
@@ -82,7 +78,6 @@ struct PbusDev {
     vector<PbusGpio> gpio;
     vector<PbusI2cChannel> i2c_channel;
     vector<PbusClk> clk;
-    vector<PbusPowerDomain> power_domain;
     vector<PbusBti> bti;
     vector<PbusSmc> smc;
     vector<PbusMetadata> metadata;

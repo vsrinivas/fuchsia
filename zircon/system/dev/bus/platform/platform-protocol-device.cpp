@@ -160,7 +160,6 @@ zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
         .gpio_count = static_cast<uint32_t>(resources_.gpio_count()),
         .i2c_channel_count = static_cast<uint32_t>(resources_.i2c_channel_count()),
         .clk_count = static_cast<uint32_t>(resources_.clk_count()),
-        .power_domain_count = static_cast<uint32_t>(resources_.power_domain_count()),
         .bti_count = static_cast<uint32_t>(resources_.bti_count()),
         .smc_count = static_cast<uint32_t>(resources_.smc_count()),
         .metadata_count = static_cast<uint32_t>(resources_.metadata_count()),
