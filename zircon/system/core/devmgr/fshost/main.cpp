@@ -22,7 +22,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "fshost.h"
+#include "fs-manager.h"
 
 namespace devmgr {
 namespace {

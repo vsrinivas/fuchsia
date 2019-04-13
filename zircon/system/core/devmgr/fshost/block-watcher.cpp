@@ -37,7 +37,7 @@
 
 #include <utility>
 
-#include "fshost.h"
+#include "fs-manager.h"
 
 namespace devmgr {
 namespace {
