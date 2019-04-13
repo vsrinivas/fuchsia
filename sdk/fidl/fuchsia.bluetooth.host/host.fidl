@@ -125,6 +125,18 @@ protocol Host {
     // error Status will be returned and neither transport will be connected.
     Connect(string device_id) -> (fuchsia.bluetooth.Status status);
 
+    /// Deletes a peer from the Bluetooth host. If the peer is connected, it
+    /// will be disconnected, then OnDeviceUpdated will be sent. No
+    /// OnBondRemoved will be sent. |device_id| will no longer to refer to any
+    /// peer, even if the same device is discovered again.
+    ///
+    /// Returns a success only if the peer was found and it contained bond data
+    /// that was deleted.
+    ///
+    /// TODO(BT-824): Delete peer immediately, not eventually.
+    /// TODO(BT-562): Respond when disconnection completes, not immediately.
+    Forget(string device_id) -> (fuchsia.bluetooth.Status status);
+
     // Enable or disable a passive LE background scan. When enabled, the bt-host
     // device will continuously perform a passive LE scan in the background when
     // no device discovery sessions are active and accept connection requests from
@@ -145,8 +157,6 @@ protocol Host {
         fuchsia.bluetooth.control.OutputCapabilityType output,
         fuchsia.bluetooth.control.PairingDelegate? delegate);
 
-    // TODO(NET-1148): Add Forget() method to remove a device from the cache.
-
     // Adds existing bonded devices to the host. The host will be configured to automatically connect
     // to these devices when they are in range and connectable. Future connections will be encrypted
     // using the provided bonding data.
@@ -165,6 +175,6 @@ protocol Host {
     // Notifies when bonding data for a device has been updated.
     -> OnNewBondingData(BondingData data);
 
-    // TODO(NET-1148): Introduce a "OnBondRemoved()" event to notify when existing
+    // TODO(BT-194): Introduce a "OnBondRemoved()" event to notify when existing
     // keys become stale.
 };
