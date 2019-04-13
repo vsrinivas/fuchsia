@@ -9,7 +9,7 @@ declare_args() {
 
   # Specifies whether Scenic uses the new "PaperRenderer2" when
   # rendering Scenes with fuchsia.ui.gfx.ShadowTechnique.UNSHADOWED.
-  scenic_use_new_renderer = false
+  scenic_use_new_renderer = true
 }
 
 config("common_include_dirs") {

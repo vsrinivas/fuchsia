@@ -184,9 +184,15 @@ PaperShapeCache::~PaperShapeCache() { FXL_DCHECK(!uploader_); }
 
 void PaperShapeCache::BeginFrame(BatchGpuUploader* uploader,
                                  uint64_t frame_number) {
-  FXL_DCHECK(uploader && !uploader_ && frame_number >= frame_number_);
+  FXL_DCHECK(uploader && !uploader_);
   uploader_ = uploader;
-  frame_number_ = frame_number;
+
+  // Workaround because Scenic Screenshotter always uses frame #0.
+  if (frame_number > 0) {
+    FXL_DCHECK(frame_number >= frame_number_)
+        << "old/new frame#: " << frame_number_ << "/" << frame_number;
+    frame_number_ = frame_number;
+  }
 }
 
 void PaperShapeCache::EndFrame() {

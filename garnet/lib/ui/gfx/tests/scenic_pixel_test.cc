@@ -2,34 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <map>
-#include <string>
-#include <vector>
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+// clang-format off
+#include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
+#include <lib/escher/hmd/pose_buffer.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
-#include "lib/escher/hmd/pose_buffer.h"
+
+#include <map>
+#include <string>
+#include <vector>
 
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
 #include "garnet/testing/views/test_view.h"
-
-#include "garnet/lib/ui/util/glm_workaround.h"
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 namespace {
 

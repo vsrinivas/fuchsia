@@ -212,7 +212,9 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(
     Hash pipeline_hash, Hash draw_hash, float depth) {
   // Depth must be non-negative, otherwise comparing the bit representations
   // won't work.
-  FXL_DCHECK(depth >= 0) << " is: " << depth;
+  if (depth < 0.f) {
+    depth = 0.f;
+  }
 
   // Prioritize minimizing pipeline changes over depth-sorting; both are more
   // important than minimizing mesh/texture state changes (in practice, almost
@@ -235,7 +237,9 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewTranslucent(
     Hash pipeline_hash, Hash draw_hash, float depth) {
   // Depth must be non-negative, otherwise comparing the bit representations
   // won't work.
-  FXL_DCHECK(depth >= 0) << " is: " << depth;
+  if (depth < 0.f) {
+    depth = 0.f;
+  }
 
   // Prioritize back-to-front order over state changes.
   uint64_t depth_key(glm::floatBitsToUint(depth) ^ 0xffffffffu);
