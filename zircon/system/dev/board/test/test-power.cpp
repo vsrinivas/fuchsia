@@ -40,9 +40,9 @@ zx_status_t TestBoard::PowerInit() {
     power_dev.metadata_list = power_metadata;
     power_dev.metadata_count = countof(power_metadata);
 
-    zx_status_t status = pbus_.DeviceAdd(&power_dev);
+    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
 

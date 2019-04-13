@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/powerimpl.h>
@@ -49,12 +50,23 @@ private:
 };
 
 zx_status_t TestPowerDevice::Init() {
-    auto status = DdkAdd("power");
+    pbus_protocol_t pbus;
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s DdkAdd failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
         return status;
     }
-    return ZX_OK;
+    power_impl_protocol_t power_proto = {
+        .ops = &power_impl_protocol_ops_,
+        .ctx = this,
+    };
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto,
+                                    sizeof(power_proto));
+     if (status != ZX_OK) {
+        zxlogf(ERROR, "%s pbus_register_protocol failed %d\n", __func__, status);
+         return status;
+     }
+     return ZX_OK;
 }
 
 zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
