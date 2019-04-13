@@ -32,30 +32,32 @@ const (
 
 const (
 	// Special image names recognized by fuchsia's netsvc.
+	authorizedKeysNetsvcName = "<<image>>authorized_keys"
+	bootloaderNetsvcName     = "<<image>>bootloader.img"
 	cmdlineNetsvcName        = "<<netboot>>cmdline"
-	kernelNetsvcName         = "<<netboot>>kernel.bin"
-	fvmNetsvcName            = "<<image>>sparse.fvm"
 	efiNetsvcName            = "<<image>>efi.img"
+	fvmNetsvcName            = "<<image>>sparse.fvm"
 	kerncNetsvcName          = "<<image>>kernc.img"
+	kernelNetsvcName         = "<<netboot>>kernel.bin"
+	vbmetaANetsvcName        = "<<image>>vbmetaa.img"
+	vbmetaBNetsvcName        = "<<image>>vbmetab.img"
 	zirconANetsvcName        = "<<image>>zircona.img"
 	zirconBNetsvcName        = "<<image>>zirconb.img"
 	zirconRNetsvcName        = "<<image>>zirconr.img"
-	vbmetaANetsvcName        = "<<image>>vbmetaa.img"
-	vbmetaBNetsvcName        = "<<image>>vbmetab.img"
-	authorizedKeysNetsvcName = "<<image>>authorized_keys"
 )
 
 // Maps bootserver argument to a corresponding netsvc name.
 var bootserverArgToName = map[string]string{
-	"--fvm":     fvmNetsvcName,
-	"--efi":     efiNetsvcName,
-	"--kernc":   kerncNetsvcName,
-	"--zircona": zirconANetsvcName,
-	"--zirconb": zirconBNetsvcName,
-	"--zirconr": zirconRNetsvcName,
-	"--vbmetaa": vbmetaANetsvcName,
-	"--vbmetab": vbmetaBNetsvcName,
-	"--boot":    kernelNetsvcName,
+	"--boot":       kernelNetsvcName,
+	"--bootloader": bootloaderNetsvcName,
+	"--efi":        efiNetsvcName,
+	"--fvm":        fvmNetsvcName,
+	"--kernc":      kerncNetsvcName,
+	"--vbmetaa":    vbmetaANetsvcName,
+	"--vbmetab":    vbmetaBNetsvcName,
+	"--zircona":    zirconANetsvcName,
+	"--zirconb":    zirconBNetsvcName,
+	"--zirconr":    zirconRNetsvcName,
 }
 
 // Maps netsvc name to the index at which the corresponding file should be transferred if
@@ -64,15 +66,16 @@ var bootserverArgToName = map[string]string{
 var transferOrder = map[string]int{
 	cmdlineNetsvcName:        1,
 	fvmNetsvcName:            2,
-	efiNetsvcName:            3,
-	kerncNetsvcName:          4,
-	zirconANetsvcName:        5,
-	zirconBNetsvcName:        6,
-	zirconRNetsvcName:        7,
-	vbmetaANetsvcName:        8,
-	vbmetaBNetsvcName:        9,
-	authorizedKeysNetsvcName: 10,
-	kernelNetsvcName:         11,
+	bootloaderNetsvcName:     3,
+	efiNetsvcName:            4,
+	kerncNetsvcName:          5,
+	zirconANetsvcName:        6,
+	zirconBNetsvcName:        7,
+	zirconRNetsvcName:        8,
+	vbmetaANetsvcName:        9,
+	vbmetaBNetsvcName:        10,
+	authorizedKeysNetsvcName: 11,
+	kernelNetsvcName:         12,
 }
 
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
