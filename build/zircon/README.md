@@ -1,35 +1,33 @@
 GN support for Zircon
 =====================
 
-This folder contains utilities that help Zircon artifacts better integrate into
-the GN build without having to manually maintain GN build files in sync with the
-existing `rules.mk` build files specific to Zircon.
-It also makes it so that targets in upper layers don't need to know about the
-structure of Zircon's output directory in order to use Zircon build artifacts,
-as knowledge of that structure is confined within the generated GN build files.
+TODO(BLD-353): This will go away when the build is fully unified.
+
+Code in //build/config/fuchsia/zircon.gni populates the
+[`//zircon/public`](../../zircon/public) directory tree with links to
+[`template.gn`](template.gn).  This code generates targets for its
+directory based on instructions written as JSON by the Zircon `gn gen`
+step.  That code uses the `.gni` files here.
 
 ### Process
 
-The main build file [`//build/gn/BUILD.gn`](../gn/BUILD.gn) calls the
-[`//build/zircon/create_gn_rules.py`](create_gn_rules.py) script to produce
-`BUILD.gn` files for Zircon.
-
-That script uses a special, fast build of Zircon (`make packages`) to generate
-manifests for artifacts that are meant to be consumed by upper layers of the
-Fuchsia stack. These manifest are then turned into GN build files under
-[`//zircon/public`][zircon-public] whose targets other parts of the codebase
-can depend on.
-
-This script is run early in the build process, before any other build file gets
-evaluated. This ensure that non-Zircon build files can safely depend on the
+The main build file [`//BUILD.gn`](../../BUILD.gn) imports
+[`//build/config/fuchsia/zircon.gni`](../config/fuchsia/zircon.gni).
+That makes that GN code run before all other evaluation in `gn gen`.
+This ensures that non-Zircon build files can safely depend on the
 generated targets.
 
-In order to keep the generated build files up-to-date, that process is repeated
-every time a file changes under `//zircon`.
+This early GN code has the side effect of populating the `//zircon/public`
+subdirectories with `BUILD.gn` files that are links to
+[`template.gn`](template.gn).  This happens on every `gn gen` run, but all
+it does is maintain those directories of `BUILD.gn` links.  So multiple
+separate Fuchsia builds can refer to multiple separate Zircon builds
+without mutual interference, as long as they are referring to the same
+Zircon source tree so there's the same set of `//zircon/public`
+subdirectories to populate.
 
-Note that the generated GN files should only depend on the Zircon source code.
-Invoking the Fuchsia build with different parameters on the same codebase should
-produce identical files.
-
-
-[zircon-public]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/public/
+Each file uses its portion of the instructions written as JSON by the
+Zircon `gn gen` step to define all the appropriate targets for that
+directory.  Hence, the actual operation of each
+`//zircon/public/.../BUILD.gn` file is controlled by the particular Zircon
+build attached to the Fuchsia build, but the files themselves are fixed.

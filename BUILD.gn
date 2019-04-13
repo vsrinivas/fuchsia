@@ -31,32 +31,6 @@ declare_args() {
   universe_package_labels = []
 }
 
-# Collect the source files that are dependencies of the create_gn_rules.py
-# script, below.  Unfortunately, exec_script cannot use a depfile produced
-# by the script and only supports a separately computed list of dependencies.
-zircon_files =
-    exec_script("//build/zircon/list_source_files.py", [], "list lines")
-
-supporting_templates = [
-  "//build/zircon/header.mako",
-  "//build/zircon/sysroot.mako",
-]
-
-# The following script generates GN build files for Zircon objects.  It is
-# placed before everything else so that //zircon targets are available in
-# due time.  See //build/zircon/README.md for more details.
-exec_script("//build/zircon/create_gn_rules.py",
-            [
-              "--out",
-              rebase_path("//zircon/public"),
-              "--zircon-build",
-              rebase_path(zircon_root_build_dir),
-              "--zircon-manifest",
-              rebase_path("$zircon_root_build_dir/export/manifest-$target_cpu"),
-            ],
-            "",
-            zircon_files + supporting_templates)
-
 # Write a file that can be sourced by `fx`.  This file is produced
 # by `gn gen` and is not known to Ninja at all, so it has nothing to
 # do with the build itself.  Its sole purpose is to leave bread

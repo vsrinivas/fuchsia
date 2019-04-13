@@ -128,7 +128,7 @@ if $TOOLS_ONLY; then
 else
   NINJA_CMD+=(legacy-host_tests)
   for arch in "${ARCHLIST[@]}"; do
-    NINJA_CMD+=("manifest-$arch")
+    NINJA_CMD+=("legacy-$arch")
   done
 fi
 

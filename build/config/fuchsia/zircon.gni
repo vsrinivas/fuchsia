@@ -17,6 +17,10 @@ zircon_tools_dir = "$zircon_root_build_dir/tools"
 zircon_legacy_targets =
     read_file("$zircon_root_build_dir/legacy-$target_cpu.json", "json")
 
+# See //zircon/public/sysroot/BUILD.gn and //build/config/fuchsia/BUILD.gn.
+zircon_legacy_sysroot =
+    read_file("$zircon_root_build_dir/legacy_sysroot-$target_cpu.json", "json")
+
 if (current_toolchain == default_toolchain) {
   # By GN evaluation order this is roughly the first thing that happens at
   # all and it's synchronous so after this point we can read in files

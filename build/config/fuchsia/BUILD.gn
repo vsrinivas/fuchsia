@@ -83,14 +83,23 @@ config("compiler_sysroot") {
   # Rather than using --sysroot and populating a sysroot per se, use
   # specific compiler switches to find the C library and its headers from
   # the Zircon build and source tree directly.
-  import("$zircon_root_build_dir/legacy-sysroot-$current_cpu.gni")
+  sysroot_include_dirs = []
+  foreach(entry, zircon_legacy_sysroot) {
+    if (defined(entry.include_dirs)) {
+      sysroot_include_dirs += entry.include_dirs
+    } else if (defined(entry.libc)) {
+      sysroot_libc = entry.libc
+    } else if (defined(entry.crt1)) {
+      sysroot_crt1 = entry.crt1
+    }
+  }
 
   # Point the preprocessor at the include directories.  Use -idirafter
   # so they come in the same place in the search order as the --sysroot
   # include directory would: after the compiler-supplied headers,
   # allowing those to override and wrap libc headers via #include_next.
   cflags = []
-  foreach(dir, zircon_legacy_sysroot.include_dirs) {
+  foreach(dir, sysroot_include_dirs) {
     cflags += [
       "-idirafter",
       rebase_path(dir, root_build_dir, zircon_root_build_dir),
@@ -121,8 +130,8 @@ config("compiler_sysroot") {
   # when they change.  This forces recompiles too since this config()
   # applies to all compilation targets and not just linking ones, but this
   # code only changes when touching core Zircon library sources.
-  libc = rebase_path(zircon_legacy_sysroot.libc, "", zircon_root_build_dir)
-  crt1 = rebase_path(zircon_legacy_sysroot.crt1, "", zircon_root_build_dir)
+  libc = rebase_path(sysroot_libc, "", zircon_root_build_dir)
+  crt1 = rebase_path(sysroot_crt1, "", zircon_root_build_dir)
   inputs = [
     libc,
     crt1,

@@ -4,7 +4,6 @@
 
 import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -189,21 +188,22 @@ if (current_toolchain == default_toolchain) {
       }
     }
 
+    build_api_module("legacy_sysroot-$cpu") {
+      testonly = true
+      data_keys = [ "legacy_sysroot" ]
+      walk_keys = [ "legacy_barrier" ]
+      deps = legacy_deps
+      foreach(dep, legacy_cpu_deps) {
+        deps += [ "$dep-$cpu" ]
+      }
+    }
+
     environment_redirect("all-ulib-$cpu") {
       testonly = true
       cpu = cpu
       environment_label = "$zx/public/gn/toolchain:user"
       deps = [
         "$zx/system/ulib",
-      ]
-    }
-
-    legacy_pkg("manifest-$cpu") {
-      testonly = true
-      data_keys = [ "legacy_pkg_manifest" ]
-      walk_keys = [ "legacy_barrier" ]
-      deps = [
-        ":legacy-$cpu",
       ]
     }
 

@@ -32,7 +32,6 @@ json_generator_tests_*.txt
 /public/banjo/
 /public/fidl/
 /public/lib/
-/public/sysroot/
 /public/tool/
 .idea/
 CMakeLists.txt

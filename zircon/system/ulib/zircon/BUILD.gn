@@ -77,8 +77,50 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     # This doesn't get normal default deps on libc.
     no_implicit_deps = true
 
+    # TODO(BLD-353): The SDK exports this as part of the sysroot rather
+    # than as an independent library.  Legacy integration likewise does not
+    # use a //zircon/public/lib/zircon buts instead uses libs=["zircon"].
+    # See //zircon/public/sysroot.
     metadata = {
-      # TODO(BLD-353): This is not actually for the SDK.
+      legacy_sysroot = [
+        {
+          include_dirs = rebase_path([
+                                       "include",
+                                       root_gen_dir,
+                                     ],
+                                     root_build_dir)
+        },
+        {
+          sdk = {
+            include_dir = rebase_path(root_gen_dir, root_build_dir)
+            headers = [
+              "zircon/syscalls/definitions.h",
+              # Note not included in SDK: "zircon/syscalls/definitions.rs",
+            ]
+          }
+        },
+        {
+          sdk = {
+            include_dir = rebase_path("include", root_build_dir)
+            headers = [ "zircon/status.h" ]
+          }
+        },
+        {
+          sdk = {
+            source = rebase_path("$target_out_dir/libzircon.so", root_build_dir)
+            link = "lib/libzircon.so"
+          }
+        },
+        {
+          sdk = {
+            source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                 root_build_dir)
+            debug = "debug/libzircon.so"
+          }
+        },
+      ]
+
+      # TODO(BLD-353): This is not actually for the SDK (see above).
       # This is special-cased so no //zircon/public/lib/zircon gets
       # made, but //build/config/fuchsia:compiler_sysroot can look up
       # the metadata to find the right lib_dirs.

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
-
 library("c") {
   shared = true
   static = false
@@ -24,10 +22,314 @@ library("c") {
   # Suppress the ${toolchain.implicit_deps} that points back to here.
   no_implicit_deps = true
 
-  if (toolchain.base_environment == "user" &&
-      current_toolchain == toolchain.shlib &&
-      toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
-    deps += [ ":c-$current_cpu.pkg" ]
+  # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
+  metadata = {
+    legacy_sysroot = [
+      {
+        libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+      },
+      {
+        include_dirs = [
+          "//zircon/system/public",
+          "//zircon/system/ulib/zircon/include",
+          "//zircon/third_party/ulib/musl/include",
+        ]
+      },
+      {
+        sdk = {
+          include_dir = "//zircon/system/public"
+          headers = [
+            "zircon/assert.h",
+            "zircon/boot/bootdata.h",
+            "zircon/boot/driver-config.h",
+            "zircon/boot/e820.h",
+            "zircon/boot/image.h",
+            "zircon/boot/multiboot.h",
+            "zircon/boot/netboot.h",
+            "zircon/boot/sysconfig.h",
+            "zircon/compiler.h",
+            "zircon/driver/binding.h",
+            "zircon/errors.h",
+            "zircon/features.h",
+            "zircon/fidl.h",
+            "zircon/hw/gpt.h",
+            "zircon/hw/i2c.h",
+            "zircon/hw/pci.h",
+            "zircon/hw/usb.h",
+            "zircon/hw/usb/audio.h",
+            "zircon/hw/usb/cdc.h",
+            "zircon/hw/usb/dfu.h",
+            "zircon/hw/usb/hid.h",
+            "zircon/hw/usb/hub.h",
+            "zircon/hw/usb/ums.h",
+            "zircon/hw/usb/video.h",
+            "zircon/limits.h",
+            "zircon/listnode.h",
+            "zircon/pixelformat.h",
+            "zircon/process.h",
+            "zircon/processargs.h",
+            "zircon/rights.h",
+            "zircon/syscalls.abigen",
+            "zircon/syscalls.h",
+            "zircon/syscalls/debug.h",
+            "zircon/syscalls/exception.h",
+            "zircon/syscalls/hypervisor.h",
+            "zircon/syscalls/iommu.h",
+            "zircon/syscalls/log.h",
+            "zircon/syscalls/object.h",
+            "zircon/syscalls/pci.h",
+            "zircon/syscalls/policy.h",
+            "zircon/syscalls/port.h",
+            "zircon/syscalls/profile.h",
+            "zircon/syscalls/resource.h",
+            "zircon/syscalls/smc.h",
+            "zircon/syscalls/system.h",
+            "zircon/syscalls/types.h",
+            "zircon/time.h",
+            "zircon/tls.h",
+            "zircon/types.h",
+
+            # Note: Most of zircon/device is excluded from SDKs.
+            # TODO(FIDL-273,ZX-2503): remove this allowlist.
+            "zircon/device/audio.h",
+            "zircon/device/ioctl-wrapper.h",  # Needed by zircon/device/ramdisk.h
+            "zircon/device/ioctl.h",  # Needed by zircon/device/ramdisk.h
+          ]
+        }
+      },
+      {
+        sdk = {
+          include_dir = "//zircon/third_party/ulib/musl/include"
+          headers = [
+            "alloca.h",
+            "ar.h",
+            "arpa/ftp.h",
+            "arpa/inet.h",
+            "arpa/nameser.h",
+            "arpa/nameser_compat.h",
+            "arpa/telnet.h",
+            "arpa/tftp.h",
+            "assert.h",
+            "bits/aarch64/endian.h",
+            "bits/aarch64/fenv.h",
+            "bits/aarch64/float.h",
+            "bits/aarch64/io.h",
+            "bits/aarch64/ioctl.h",
+            "bits/aarch64/ipc.h",
+            "bits/aarch64/reg.h",
+            "bits/aarch64/setjmp.h",
+            "bits/aarch64/signal.h",
+            "bits/aarch64/stat.h",
+            "bits/alltypes.h",
+            "bits/endian.h",
+            "bits/errno.h",
+            "bits/fcntl.h",
+            "bits/fenv.h",
+            "bits/float.h",
+            "bits/io.h",
+            "bits/ioctl.h",
+            "bits/ipc.h",
+            "bits/limits.h",
+            "bits/msg.h",
+            "bits/null.h",
+            "bits/poll.h",
+            "bits/posix.h",
+            "bits/reg.h",
+            "bits/resource.h",
+            "bits/sem.h",
+            "bits/setjmp.h",
+            "bits/shm.h",
+            "bits/signal.h",
+            "bits/socket.h",
+            "bits/stat.h",
+            "bits/statfs.h",
+            "bits/termios.h",
+            "bits/x86_64/endian.h",
+            "bits/x86_64/fenv.h",
+            "bits/x86_64/float.h",
+            "bits/x86_64/io.h",
+            "bits/x86_64/ioctl.h",
+            "bits/x86_64/ipc.h",
+            "bits/x86_64/reg.h",
+            "bits/x86_64/setjmp.h",
+            "bits/x86_64/signal.h",
+            "bits/x86_64/stat.h",
+            "byteswap.h",
+            "complex.h",
+            "cpio.h",
+            "crypt.h",
+            "ctype.h",
+            "dirent.h",
+            "dlfcn.h",
+            "elf.h",
+            "endian.h",
+            "err.h",
+            "errno.h",
+            "fcntl.h",
+            "features.h",
+            "fenv.h",
+            "float.h",
+            "fmtmsg.h",
+            "fnmatch.h",
+            "ftw.h",
+            "getopt.h",
+            "glob.h",
+            "grp.h",
+            "iconv.h",
+            "ifaddrs.h",
+            "inttypes.h",
+            "iso646.h",
+            "langinfo.h",
+            "libgen.h",
+            "limits.h",
+            "link.h",
+            "locale.h",
+            "malloc.h",
+            "math.h",
+            "memory.h",
+            "monetary.h",
+            "net/ethernet.h",
+            "net/if.h",
+            "net/if_arp.h",
+            "net/route.h",
+            "netdb.h",
+            "netinet/ether.h",
+            "netinet/icmp6.h",
+            "netinet/if_ether.h",
+            "netinet/igmp.h",
+            "netinet/in.h",
+            "netinet/in_systm.h",
+            "netinet/ip.h",
+            "netinet/ip6.h",
+            "netinet/ip_icmp.h",
+            "netinet/tcp.h",
+            "netinet/udp.h",
+            "netpacket/packet.h",
+            "nl_types.h",
+            "paths.h",
+            "poll.h",
+            "pthread.h",
+            "pwd.h",
+            "regex.h",
+            "resolv.h",
+            "sched.h",
+            "search.h",
+            "semaphore.h",
+            "setjmp.h",
+            "signal.h",
+            "spawn.h",
+            "stdio.h",
+            "stdlib.h",
+            "stdnoreturn.h",
+            "string.h",
+            "strings.h",
+            "stropts.h",
+            "sys/acct.h",
+            "sys/auxv.h",
+            "sys/dir.h",
+            "sys/errno.h",
+            "sys/eventfd.h",
+            "sys/fcntl.h",
+            "sys/file.h",
+            "sys/fsuid.h",
+            "sys/io.h",
+            "sys/ioctl.h",
+            "sys/ipc.h",
+            "sys/klog.h",
+            "sys/mman.h",
+            "sys/mount.h",
+            "sys/msg.h",
+            "sys/mtio.h",
+            "sys/param.h",
+            "sys/personality.h",
+            "sys/poll.h",
+            "sys/quota.h",
+            "sys/random.h",
+            "sys/reboot.h",
+            "sys/reg.h",
+            "sys/select.h",
+            "sys/sem.h",
+            "sys/shm.h",
+            "sys/signal.h",
+            "sys/signalfd.h",
+            "sys/socket.h",
+            "sys/stat.h",
+            "sys/statfs.h",
+            "sys/statvfs.h",
+            "sys/stropts.h",
+            "sys/swap.h",
+            "sys/syslog.h",
+            "sys/termios.h",
+            "sys/time.h",
+            "sys/timeb.h",
+            "sys/timerfd.h",
+            "sys/times.h",
+            "sys/timex.h",
+            "sys/ttydefaults.h",
+            "sys/types.h",
+            "sys/ucontext.h",
+            "sys/uio.h",
+            "sys/un.h",
+            "sys/utsname.h",
+            "sys/vfs.h",
+            "sys/wait.h",
+            "sysexits.h",
+            "syslog.h",
+            "tar.h",
+            "termios.h",
+            "threads.h",
+            "time.h",
+            "uchar.h",
+            "ucontext.h",
+            "unistd.h",
+            "utime.h",
+            "values.h",
+            "wait.h",
+            "wchar.h",
+            "wctype.h",
+            "wordexp.h",
+            "zircon/dlfcn.h",
+            "zircon/sanitizer.h",
+            "zircon/threads.h",
+          ]
+        }
+      },
+      {
+        sdk = {
+          source = rebase_path("$target_out_dir/libc.so", root_build_dir)
+          link = "lib/libc.so"
+        }
+      },
+      {
+        sdk = {
+          source = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+          debug = "debug/libc.so"
+        }
+      },
+      {
+        sdk = {
+          source = rebase_path("$target_out_dir/libc.so", root_build_dir)
+          dist = "dist/lib/ld.so.1"
+        }
+      },
+    ]
+    foreach(lib,
+            [
+              "libdl.so",
+              "libm.so",
+              "libpthread.so",
+              "librt.so",
+            ]) {
+      legacy_sysroot += [
+        {
+          sdk = {
+            source =
+                rebase_path("$zx/third_party/ulib/musl/lib.ld", root_build_dir)
+            link = "lib/$lib"
+          }
+        },
+      ]
+    }
   }
 }
 
@@ -43,355 +345,17 @@ source_set("crt1") {
   # worthwhile to have PLT entries for main or __libc_start_main, since
   # they are always used eagerly anyway.
   cflags = [ "-fno-plt" ]
-}
 
-# TODO(BLD-353): The generic kludgery can't handle the weirdness here.
-# So emit the pkg file directly.
-if (toolchain.base_environment == "user" &&
-    current_toolchain == toolchain.shlib &&
-    toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
-  write_file("$root_build_dir/legacy-sysroot-$current_cpu.gni",
-             {
-               zircon_legacy_sysroot = {
-                 include_dirs = [
-                   "//zircon/system/public",
-                   "//zircon/system/ulib/zircon/include",
-                   "//zircon/third_party/ulib/musl/include",
-                   rebase_path(root_gen_dir, root_build_dir),
-                 ]
-                 crt1 = rebase_path(
-                         get_label_info(":crt1(${toolchain.label})",
-                                        "target_out_dir") + "/crt1.Scrt1.cpp.o",
-                         root_build_dir)
-                 libc = rebase_path("$target_out_dir/libc.so.debug",
-                                    root_build_dir)
-               }
-             },
-             "scope")
-
-  legacy_pkg("c-$current_cpu.pkg") {
-    contents = [
-      "[package]",
-      "name=c",
-      "type=lib",
-      "arch=$zircon_cpu",
-    ]
-
-    contents += [ "[includes]" ]
-    musl_headers = [
-      "alloca.h",
-      "ar.h",
-      "arpa/ftp.h",
-      "arpa/inet.h",
-      "arpa/nameser.h",
-      "arpa/nameser_compat.h",
-      "arpa/telnet.h",
-      "arpa/tftp.h",
-      "assert.h",
-      "bits/aarch64/endian.h",
-      "bits/aarch64/fenv.h",
-      "bits/aarch64/float.h",
-      "bits/aarch64/io.h",
-      "bits/aarch64/ioctl.h",
-      "bits/aarch64/ipc.h",
-      "bits/aarch64/reg.h",
-      "bits/aarch64/setjmp.h",
-      "bits/aarch64/signal.h",
-      "bits/aarch64/stat.h",
-      "bits/alltypes.h",
-      "bits/endian.h",
-      "bits/errno.h",
-      "bits/fcntl.h",
-      "bits/fenv.h",
-      "bits/float.h",
-      "bits/io.h",
-      "bits/ioctl.h",
-      "bits/ipc.h",
-      "bits/limits.h",
-      "bits/msg.h",
-      "bits/null.h",
-      "bits/poll.h",
-      "bits/posix.h",
-      "bits/reg.h",
-      "bits/resource.h",
-      "bits/sem.h",
-      "bits/setjmp.h",
-      "bits/shm.h",
-      "bits/signal.h",
-      "bits/socket.h",
-      "bits/stat.h",
-      "bits/statfs.h",
-      "bits/termios.h",
-      "bits/x86_64/endian.h",
-      "bits/x86_64/fenv.h",
-      "bits/x86_64/float.h",
-      "bits/x86_64/io.h",
-      "bits/x86_64/ioctl.h",
-      "bits/x86_64/ipc.h",
-      "bits/x86_64/reg.h",
-      "bits/x86_64/setjmp.h",
-      "bits/x86_64/signal.h",
-      "bits/x86_64/stat.h",
-      "byteswap.h",
-      "complex.h",
-      "cpio.h",
-      "crypt.h",
-      "ctype.h",
-      "dirent.h",
-      "dlfcn.h",
-      "elf.h",
-      "endian.h",
-      "err.h",
-      "errno.h",
-      "fcntl.h",
-      "features.h",
-      "fenv.h",
-      "float.h",
-      "fmtmsg.h",
-      "fnmatch.h",
-      "ftw.h",
-      "getopt.h",
-      "glob.h",
-      "grp.h",
-      "iconv.h",
-      "ifaddrs.h",
-      "inttypes.h",
-      "iso646.h",
-      "langinfo.h",
-      "libgen.h",
-      "limits.h",
-      "link.h",
-      "locale.h",
-      "malloc.h",
-      "math.h",
-      "memory.h",
-      "monetary.h",
-      "net/ethernet.h",
-      "net/if.h",
-      "net/if_arp.h",
-      "net/route.h",
-      "netdb.h",
-      "netinet/ether.h",
-      "netinet/icmp6.h",
-      "netinet/if_ether.h",
-      "netinet/igmp.h",
-      "netinet/in.h",
-      "netinet/in_systm.h",
-      "netinet/ip.h",
-      "netinet/ip6.h",
-      "netinet/ip_icmp.h",
-      "netinet/tcp.h",
-      "netinet/udp.h",
-      "netpacket/packet.h",
-      "nl_types.h",
-      "paths.h",
-      "poll.h",
-      "pthread.h",
-      "pwd.h",
-      "regex.h",
-      "resolv.h",
-      "sched.h",
-      "search.h",
-      "semaphore.h",
-      "setjmp.h",
-      "signal.h",
-      "spawn.h",
-      "stdio.h",
-      "stdlib.h",
-      "stdnoreturn.h",
-      "string.h",
-      "strings.h",
-      "stropts.h",
-      "sys/acct.h",
-      "sys/auxv.h",
-      "sys/dir.h",
-      "sys/errno.h",
-      "sys/eventfd.h",
-      "sys/fcntl.h",
-      "sys/file.h",
-      "sys/fsuid.h",
-      "sys/io.h",
-      "sys/ioctl.h",
-      "sys/ipc.h",
-      "sys/klog.h",
-      "sys/mman.h",
-      "sys/mount.h",
-      "sys/msg.h",
-      "sys/mtio.h",
-      "sys/param.h",
-      "sys/personality.h",
-      "sys/poll.h",
-      "sys/quota.h",
-      "sys/random.h",
-      "sys/reboot.h",
-      "sys/reg.h",
-      "sys/select.h",
-      "sys/sem.h",
-      "sys/shm.h",
-      "sys/signal.h",
-      "sys/signalfd.h",
-      "sys/socket.h",
-      "sys/stat.h",
-      "sys/statfs.h",
-      "sys/statvfs.h",
-      "sys/stropts.h",
-      "sys/swap.h",
-      "sys/syslog.h",
-      "sys/termios.h",
-      "sys/time.h",
-      "sys/timeb.h",
-      "sys/timerfd.h",
-      "sys/times.h",
-      "sys/timex.h",
-      "sys/ttydefaults.h",
-      "sys/types.h",
-      "sys/ucontext.h",
-      "sys/uio.h",
-      "sys/un.h",
-      "sys/utsname.h",
-      "sys/vfs.h",
-      "sys/wait.h",
-      "sysexits.h",
-      "syslog.h",
-      "tar.h",
-      "termios.h",
-      "threads.h",
-      "time.h",
-      "uchar.h",
-      "ucontext.h",
-      "unistd.h",
-      "utime.h",
-      "values.h",
-      "wait.h",
-      "wchar.h",
-      "wctype.h",
-      "wordexp.h",
-      "zircon/dlfcn.h",
-      "zircon/sanitizer.h",
-      "zircon/threads.h",
-    ]
-    foreach(file, musl_headers) {
-      contents += [ "$file=SOURCE/third_party/ulib/musl/include/$file" ]
-    }
-
-    public_headers = [
-      "zircon/assert.h",
-      "zircon/boot/bootdata.h",
-      "zircon/boot/driver-config.h",
-      "zircon/boot/e820.h",
-      "zircon/boot/image.h",
-      "zircon/boot/multiboot.h",
-      "zircon/boot/netboot.h",
-      "zircon/boot/sysconfig.h",
-      "zircon/compiler.h",
-      "zircon/device/audio-codec.h",
-      "zircon/device/audio.h",
-      "zircon/device/block.h",
-      "zircon/device/bt-hci.h",
-      "zircon/device/display-controller.h",
-      "zircon/device/ethernet.h",
-      "zircon/device/intel-hda.h",
-      "zircon/device/ioctl-wrapper.h",
-      "zircon/device/ioctl.h",
-      "zircon/device/ktrace.h",
-      "zircon/device/media-codec.h",
-      "zircon/device/midi.h",
-      "zircon/device/nand.h",
-      "zircon/device/qmi-transport.h",
-      "zircon/device/scpi.h",
-      "zircon/device/serial.h",
-      "zircon/device/usb-peripheral-test.h",
-      "zircon/device/usb-peripheral.h",
-      "zircon/device/vfs.h",
-      "zircon/driver/binding.h",
-      "zircon/errors.h",
-      "zircon/features.h",
-      "zircon/fidl.h",
-      "zircon/hw/gpt.h",
-      "zircon/hw/i2c.h",
-      "zircon/hw/pci.h",
-      "zircon/hw/usb.h",
-      "zircon/hw/usb/audio.h",
-      "zircon/hw/usb/cdc.h",
-      "zircon/hw/usb/dfu.h",
-      "zircon/hw/usb/hid.h",
-      "zircon/hw/usb/hub.h",
-      "zircon/hw/usb/ums.h",
-      "zircon/hw/usb/video.h",
-      "zircon/limits.h",
-      "zircon/listnode.h",
-      "zircon/pixelformat.h",
-      "zircon/process.h",
-      "zircon/processargs.h",
-      "zircon/rights.h",
-      "zircon/syscalls.abigen",
-      "zircon/syscalls.h",
-      "zircon/syscalls/debug.h",
-      "zircon/syscalls/exception.h",
-      "zircon/syscalls/hypervisor.h",
-      "zircon/syscalls/iommu.h",
-      "zircon/syscalls/log.h",
-      "zircon/syscalls/object.h",
-      "zircon/syscalls/pci.h",
-      "zircon/syscalls/policy.h",
-      "zircon/syscalls/port.h",
-      "zircon/syscalls/profile.h",
-      "zircon/syscalls/resource.h",
-      "zircon/syscalls/smc.h",
-      "zircon/syscalls/system.h",
-      "zircon/syscalls/types.h",
-      "zircon/time.h",
-      "zircon/tls.h",
-      "zircon/types.h",
-    ]
-    foreach(file, public_headers) {
-      contents += [ "$file=SOURCE/system/public/$file" ]
-    }
-
-    vdso_headers = [
-      "zircon/syscalls/definitions.h",
-      "zircon/syscalls/definitions.rs",
-    ]
-    foreach(file, vdso_headers) {
-      contents += [ "$file=BUILD/" +
-                    rebase_path("$root_gen_dir/$file", root_build_dir) ]
-    }
-    contents +=
-        [ "zircon/status.h=SOURCE/system/ulib/zircon/include/zircon/status.h" ]
-
-    contents += [ "[lib]" ]
-
-    debug_libs = [
-      "$target_out_dir/libc.so",
-      get_label_info("$zx/system/ulib/zircon", "target_out_dir") +
-          "/libzircon.so",
-    ]
-    foreach(lib, debug_libs) {
-      contents += [
-        "debug/" + get_path_info(lib, "file") + "=BUILD/" +
-            rebase_path("$lib.debug", root_build_dir),
-        "lib/" + get_path_info(lib, "file") + "=BUILD/" +
-            rebase_path("$lib.debug", root_build_dir),
-      ]
-    }
-
-    dummy_libs = [
-      "libdl.so",
-      "libm.so",
-      "libpthread.so",
-      "librt.so",
-    ]
-    foreach(lib, dummy_libs) {
-      contents += [ "lib/$lib=SOURCE/third_party/ulib/musl/lib.ld" ]
-    }
-
-    contents += [
-      "lib/Scrt1.o=BUILD/" +
-          rebase_path(get_label_info(":crt1(${toolchain.label})",
-                                     "target_out_dir") + "/crt1.Scrt1.cpp.o",
-                      root_build_dir),
-      "dist/lib/ld.so.1=BUILD/" +
-          rebase_path("$target_out_dir/libc.so", root_build_dir),
+  # TODO(BLD-353): temporary kludges
+  metadata = {
+    legacy_sysroot = [
+      {
+        crt1 = rebase_path("$target_out_dir/crt1.Scrt1.cpp.o", root_build_dir)
+        sdk = {
+          source = crt1
+          link = "lib/Scrt1.o"
+        }
+      },
     ]
   }
 }
