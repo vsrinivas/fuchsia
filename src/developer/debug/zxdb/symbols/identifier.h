@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_token.h"
 
 namespace zxdb {
 
@@ -92,10 +91,6 @@ class Identifier {
   // qualification means relative.
   explicit Identifier(Component comp);
   Identifier(Qualification qual, Component comp);
-
-  // Attempts to parse the given string as an identifier. Returns either a
-  // set Err or the resulting Identifier when the Err is not set.
-  static std::pair<Err, Identifier> FromString(const std::string& input);
 
   // Makes an identifier over a range of components.
   template <class InputIterator>

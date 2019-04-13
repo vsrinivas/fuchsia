@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -72,60 +72,6 @@ TEST(Identifier, GetScope) {
   three_scoped_names.AppendComponent(name3);
   EXPECT_EQ("\"Name1\"; ::\"Name2\"",
             three_scoped_names.GetScope().GetDebugName());
-}
-
-TEST(Identifier, FromString) {
-  // Empty input.
-  auto [empty_err, empty_ident] = Identifier::FromString("");
-  EXPECT_TRUE(empty_err.has_error());
-  EXPECT_EQ("No input to parse.", empty_err.msg());
-  EXPECT_EQ("", empty_ident.GetDebugName());
-
-  // Normal word.
-  auto [word_err, word_ident] = Identifier::FromString("foo");
-  EXPECT_FALSE(word_err.has_error()) << word_err.msg();
-  EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
-
-  // Complicated identifier (copied from STL).
-  auto [complex_err, complex_ident] = Identifier::FromString(
-      "std::unordered_map<"
-      "std::__2::basic_string<char>, "
-      "unsigned long, "
-      "std::__2::hash<std::__2::basic_string<char> >, "
-      "std::__2::equal_to<std::__2::basic_string<char> >, "
-      "std::__2::allocator<std::__2::pair<const std::__2::basic_string<char>, "
-      "unsigned long> >>");
-  EXPECT_FALSE(complex_err.has_error());
-  EXPECT_EQ(
-      "\"std\"; "
-      "::"
-      "\"unordered_map\","
-      "<\"std::__2::basic_string<char>\", "
-      "\"unsigned long\", "
-      "\"std::__2::hash<std::__2::basic_string<char>>\", "
-      "\"std::__2::equal_to<std::__2::basic_string<char>>\", "
-      "\"std::__2::allocator<std::__2::pair<"
-      "const std::__2::basic_string<char>, unsigned long>>\">",
-      complex_ident.GetDebugName());
-}
-
-TEST(Identifier, FromStringError) {
-  // Error from input.
-  auto [bad_err, bad_ident] = Identifier::FromString("Foo<Bar");
-  EXPECT_TRUE(bad_err.has_error());
-  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.",
-            bad_err.msg());
-  EXPECT_EQ("", bad_ident.GetDebugName());
-}
-
-// "PLT" breakpoints are breakpoints set on ELF imports rather than DWARF
-// symbols. We need to be able to parse them as an identifier even though it's
-// not a valid C++ name. This can be changed in the future if we have a better
-// way of identifying these.
-TEST(Identifier, PltName) {
-  auto [err, ident] = Identifier::FromString("__stack_chk_fail@plt");
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ("\"__stack_chk_fail@plt\"", ident.GetDebugName());
 }
 
 }  // namespace zxdb

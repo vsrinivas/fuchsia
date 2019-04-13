@@ -9,6 +9,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
@@ -73,7 +74,7 @@ enum GetNamedValueAsync { kQuitLoop, kSynchronous };
 void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
                    const std::string& name, GetNamedValueAsync async,
                    ValueResult* result) {
-  auto [err, ident] = Identifier::FromString(name);
+  auto [err, ident] = ExprParser::ParseIdentifier(name);
   ASSERT_FALSE(err.has_error());
 
   eval_context->GetNamedValue(

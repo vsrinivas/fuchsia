@@ -10,6 +10,7 @@
 #include <string_view>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/lib/fxl/logging.h"
@@ -129,7 +130,7 @@ bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
 // static
 bool IndexWalker::ComponentMatchesTemplateOnly(
     const std::string& index_string, const Identifier::Component& comp) {
-  auto [err, index_ident] = Identifier::FromString(index_string);
+  auto [err, index_ident] = ExprParser::ParseIdentifier(index_string);
   if (err.has_error())
     return false;
 

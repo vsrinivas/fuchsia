@@ -7,11 +7,12 @@
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
@@ -419,7 +420,7 @@ TEST(FindName, FindTypeName) {
   // have child types and everything is found via the index.
   Identifier child_type_name(kChildTypeName);
   auto [err, full_child_type_name] =
-      Identifier::FromString("GlobalType::ChildType");
+      ExprParser::ParseIdentifier("GlobalType::ChildType");
   ASSERT_FALSE(err.has_error());
   auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   child_type->set_assigned_name(kChildTypeName);

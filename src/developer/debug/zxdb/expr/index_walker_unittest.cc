@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/index_walker.h"
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 
 namespace zxdb {
@@ -113,7 +114,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar<int,char>" identifier.
-  auto [err1, bar_int_char] = Identifier::FromString("Bar < int , char >");
+  auto [err1, bar_int_char] = ExprParser::ParseIdentifier("Bar < int , char >");
   EXPECT_FALSE(err1.has_error()) << err1.msg();
   EXPECT_TRUE(walker.WalkInto(bar_int_char));
   EXPECT_EQ(bar_int_char_node, walker.current());
@@ -128,13 +129,13 @@ TEST(IndexWalker, WalkInto) {
 
   // Parse the Barf identifier for the following two tests. This one has a
   // toplevel scope.
-  auto [err2, barf] = Identifier::FromString("::Foo::Barf<int>");
+  auto [err2, barf] = ExprParser::ParseIdentifier("::Foo::Barf<int>");
   EXPECT_FALSE(err2.has_error()) << err2.msg();
 
   // Walk to the "Foo::Bar9<int>" with copying the walker.
   {
     IndexWalker nested_walker(walker);
-    auto [err2, bar9] = Identifier::FromString(":: Foo :: Bar9 < int >");
+    auto [err2, bar9] = ExprParser::ParseIdentifier(":: Foo :: Bar9 < int >");
     EXPECT_FALSE(err2.has_error()) << err2.msg();
     EXPECT_TRUE(nested_walker.WalkInto(bar9));
     EXPECT_EQ(bar9_node, nested_walker.current());

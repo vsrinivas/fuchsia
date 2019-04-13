@@ -25,10 +25,11 @@
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
@@ -351,7 +352,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "symbol to look up.");
   }
 
-  auto [err, identifier] = Identifier::FromString(cmd.args()[0]);
+  auto [err, identifier] = ExprParser::ParseIdentifier(cmd.args()[0]);
   if (err.has_error())
     return err;
 

@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/identifier.h"
-
-#include "src/developer/debug/zxdb/expr/expr_node.h"
-#include "src/developer/debug/zxdb/expr/expr_parser.h"
-#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
 
@@ -54,28 +50,6 @@ Identifier::Identifier(Component comp)
 Identifier::Identifier(Qualification qual, Component comp)
     : qualification_(qual) {
   components_.push_back(std::move(comp));
-}
-
-// static
-std::pair<Err, Identifier> Identifier::FromString(const std::string& input) {
-  ExprTokenizer tokenizer(input);
-  if (!tokenizer.Tokenize())
-    return std::make_pair(tokenizer.err(), Identifier());
-
-  ExprParser parser(tokenizer.TakeTokens());
-  auto root = parser.Parse();
-  if (!root)
-    return std::make_pair(parser.err(), Identifier());
-
-  auto identifier_node = root->AsIdentifier();
-  if (!identifier_node) {
-    return std::make_pair(Err("Input did not parse as an identifier."),
-                          Identifier());
-  }
-
-  return std::make_pair(
-      Err(),
-      const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier());
 }
 
 void Identifier::AppendComponent(Component c) {

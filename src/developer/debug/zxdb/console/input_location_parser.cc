@@ -14,10 +14,11 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -90,7 +91,7 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
   }
 
   // Anything else, assume its an identifier.
-  auto [ident_err, ident] = Identifier::FromString(input);
+  auto [ident_err, ident] = ExprParser::ParseIdentifier(input);
   if (ident_err.has_error())
     return ident_err;
 
@@ -197,8 +198,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
                                     location);
 }
 
-void CompleteInputLocation(const Command& command,
-                           const std::string& prefix,
+void CompleteInputLocation(const Command& command, const std::string& prefix,
                            std::vector<std::string>* completions) {
   if (!command.target())
     return;
@@ -206,7 +206,8 @@ void CompleteInputLocation(const Command& command,
   // TODO(brettw) prioritize the current module when it's known (when there is
   // a current frame with symbol information). Factor priotization code from
   // find_name.cc
-  for (const ModuleSymbols* mod : command.target()->GetSymbols()->GetModuleSymbols()) {
+  for (const ModuleSymbols* mod :
+       command.target()->GetSymbols()->GetModuleSymbols()) {
     const ModuleSymbolIndex& index = mod->GetIndex();
     auto files = index.FindFilePrefixes(prefix);
 

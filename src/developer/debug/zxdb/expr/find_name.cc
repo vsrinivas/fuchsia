@@ -5,13 +5,14 @@
 #include "src/developer/debug/zxdb/expr/find_name.h"
 
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/index_walker.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
@@ -248,7 +249,8 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
     Identifier current_scope;
     if (context.block) {
       if (const Function* function = context.block->GetContainingFunction()) {
-        auto [err, func_name] = Identifier::FromString(function->GetFullName());
+        auto [err, func_name] =
+            ExprParser::ParseIdentifier(function->GetFullName());
         if (!err.has_error())
           current_scope = func_name.GetScope();
       }
@@ -331,7 +333,7 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
         // Index node iteration for this class' scope.
         if (OptionsRequiresIndex(options)) {
           auto [err, container_name] =
-              Identifier::FromString(cur_collection->GetFullName());
+              ExprParser::ParseIdentifier(cur_collection->GetFullName());
           if (!err.has_error()) {
             // Don't search previous scopes (pass |search_containing| = false).
             // If a class derives from a class in another namespace, that

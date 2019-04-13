@@ -29,6 +29,10 @@ class ExprParser {
   // ad error_token()
   fxl::RefPtr<ExprNode> Parse();
 
+  // Attempts to parse the given string as an identifier. Returns either a
+  // set Err or the resulting Identifier when the Err is not set.
+  static std::pair<Err, Identifier> ParseIdentifier(const std::string& input);
+
   // The result of parsing. Since this does not have access to the initial
   // string, it will not indicate context for the error. That can be generated
   // from the error_token() if desired.

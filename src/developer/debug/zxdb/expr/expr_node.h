@@ -11,7 +11,7 @@
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

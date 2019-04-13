@@ -22,12 +22,13 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -459,7 +460,7 @@ std::string DescribeInputLocation(const InputLocation& location) {
 // This annoyingly duplicates Identifier::GetName but is required to get
 // syntax highlighting for all the components.
 OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
-  const auto& [err, identifier] = Identifier::FromString(str);
+  const auto& [err, identifier] = ExprParser::ParseIdentifier(str);
   if (err.has_error()) {
     // Not parseable as an identifier, just write the string.
     return OutputBuffer(str);

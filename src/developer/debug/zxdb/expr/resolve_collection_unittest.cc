@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -35,7 +37,7 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 // containing value.
 Err ResolveMemberFromString(const ExprValue& base, const std::string& name,
                             ExprValue* out) {
-  auto [err, ident] = Identifier::FromString(name);
+  auto [err, ident] = ExprParser::ParseIdentifier(name);
   if (err.has_error())
     return err;
 

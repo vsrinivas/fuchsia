@@ -6,7 +6,7 @@
 
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
 

@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {

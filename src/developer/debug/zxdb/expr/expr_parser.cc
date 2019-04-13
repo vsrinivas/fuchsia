@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -151,6 +152,29 @@ fxl::RefPtr<ExprNode> ExprParser::Parse() {
     return nullptr;
   }
   return result;
+}
+
+// static
+std::pair<Err, Identifier> ExprParser::ParseIdentifier(
+    const std::string& input) {
+  ExprTokenizer tokenizer(input);
+  if (!tokenizer.Tokenize())
+    return std::make_pair(tokenizer.err(), Identifier());
+
+  ExprParser parser(tokenizer.TakeTokens());
+  auto root = parser.Parse();
+  if (!root)
+    return std::make_pair(parser.err(), Identifier());
+
+  auto identifier_node = root->AsIdentifier();
+  if (!identifier_node) {
+    return std::make_pair(Err("Input did not parse as an identifier."),
+                          Identifier());
+  }
+
+  return std::make_pair(
+      Err(),
+      const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier());
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {

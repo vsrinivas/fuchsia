@@ -7,7 +7,7 @@
 #include <string_view>
 #include <utility>
 
-#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
 

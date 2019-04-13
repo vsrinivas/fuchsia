@@ -615,4 +615,58 @@ TEST_F(ExprParserTest, CppCast) {
   EXPECT_EQ("Expected type name before end of input.", parser().err().msg());
 }
 
+TEST_F(ExprParserTest, ParseIdentifier) {
+  // Empty input.
+  auto [empty_err, empty_ident] = ExprParser::ParseIdentifier("");
+  EXPECT_TRUE(empty_err.has_error());
+  EXPECT_EQ("No input to parse.", empty_err.msg());
+  EXPECT_EQ("", empty_ident.GetDebugName());
+
+  // Normal word.
+  auto [word_err, word_ident] = ExprParser::ParseIdentifier("foo");
+  EXPECT_FALSE(word_err.has_error()) << word_err.msg();
+  EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
+
+  // Complicated identifier (copied from STL).
+  auto [complex_err, complex_ident] = ExprParser::ParseIdentifier(
+      "std::unordered_map<"
+      "std::__2::basic_string<char>, "
+      "unsigned long, "
+      "std::__2::hash<std::__2::basic_string<char> >, "
+      "std::__2::equal_to<std::__2::basic_string<char> >, "
+      "std::__2::allocator<std::__2::pair<const std::__2::basic_string<char>, "
+      "unsigned long> >>");
+  EXPECT_FALSE(complex_err.has_error());
+  EXPECT_EQ(
+      "\"std\"; "
+      "::"
+      "\"unordered_map\","
+      "<\"std::__2::basic_string<char>\", "
+      "\"unsigned long\", "
+      "\"std::__2::hash<std::__2::basic_string<char>>\", "
+      "\"std::__2::equal_to<std::__2::basic_string<char>>\", "
+      "\"std::__2::allocator<std::__2::pair<"
+      "const std::__2::basic_string<char>, unsigned long>>\">",
+      complex_ident.GetDebugName());
+}
+
+TEST_F(ExprParserTest, FromStringError) {
+  // Error from input.
+  auto [bad_err, bad_ident] = ExprParser::ParseIdentifier("Foo<Bar");
+  EXPECT_TRUE(bad_err.has_error());
+  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.",
+            bad_err.msg());
+  EXPECT_EQ("", bad_ident.GetDebugName());
+}
+
+// "PLT" breakpoints are breakpoints set on ELF imports rather than DWARF
+// symbols. We need to be able to parse them as an identifier even though it's
+// not a valid C++ name. This can be changed in the future if we have a better
+// way of identifying these.
+TEST_F(ExprParserTest, PltName) {
+  auto [err, ident] = ExprParser::ParseIdentifier("__stack_chk_fail@plt");
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ("\"__stack_chk_fail@plt\"", ident.GetDebugName());
+}
+
 }  // namespace zxdb
