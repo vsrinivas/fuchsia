@@ -59,7 +59,6 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
         }
         __builtin_unreachable();
     case fidl::kFidlTypeStructPointer:
-    case fidl::kFidlTypeTablePointer:
     case fidl::kFidlTypeUnionPointer:
         return sizeof(uint64_t);
     case fidl::kFidlTypeHandle:
@@ -150,10 +149,6 @@ private:
                 table_state.present_count = 0;
                 table_state.ordinal = 0;
                 break;
-            case fidl::kFidlTypeTablePointer:
-                state = kStateTablePointer;
-                table_pointer_state.table_type = fidl_type->coded_table_pointer.table_type;
-                break;
             case fidl::kFidlTypeUnion:
                 state = kStateUnion;
                 union_state.types = fidl_type->coded_union.types;
@@ -169,6 +164,7 @@ private:
                 xunion_state.fields = fidl_type->coded_xunion.fields;
                 xunion_state.field_count = fidl_type->coded_xunion.field_count;
                 xunion_state.inside_envelope = false;
+                xunion_state.nullable = fidl_type->coded_xunion.nullable;
                 break;
             case fidl::kFidlTypeArray:
                 state = kStateArray;
@@ -274,7 +270,6 @@ private:
             kStateStruct,
             kStateStructPointer,
             kStateTable,
-            kStateTablePointer,
             kStateUnion,
             kStateUnionPointer,
             kStateXUnion,
@@ -317,9 +312,6 @@ private:
                 bool inside_envelope;
             } table_state;
             struct {
-                const fidl::FidlCodedTable* table_type;
-            } table_pointer_state;
-            struct {
                 // Array of coding table corresponding to each union variant.
                 // The union tag counts upwards from 0 without breaks; hence it can be used to
                 // index into the |types| array.
@@ -339,6 +331,7 @@ private:
                 // When true, the walker is currently working within an envelope, or equivalently,
                 // |EnterEnvelope| was successful.
                 bool inside_envelope;
+                bool nullable;
             } xunion_state;
             struct {
                 const fidl_type_t* element;
@@ -539,20 +532,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             }
             continue;
         }
-        case Frame::kStateTablePointer: {
-            if (*PtrTo<Ptr<fidl_vector_t>>(frame->position) == nullptr) {
-                Pop();
-                continue;
-            }
-            auto status = visitor.VisitPointer(frame->position,
-                                               PtrTo<Ptr<void>>(frame->position),
-                                               static_cast<uint32_t>(sizeof(fidl_vector_t)),
-                                               &frame->position);
-            FIDL_STATUS_GUARD(status);
-            const fidl::FidlCodedTable* coded_table = frame->table_pointer_state.table_type;
-            *frame = Frame(coded_table, frame->position);
-            continue;
-        }
         case Frame::kStateUnion: {
             auto union_tag = *PtrTo<fidl_union_tag_t>(frame->position);
             if (union_tag >= frame->union_state.type_count) {
@@ -603,6 +582,10 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 if (envelope_ptr->data != nullptr || envelope_ptr->num_bytes != 0 ||
                     envelope_ptr->num_handles != 0) {
                     visitor.OnError("xunion with zero as ordinal must be empty");
+                    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+                }
+                if (!frame->xunion_state.nullable) {
+                    visitor.OnError("non-nullable xunion is absent");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                 }
                 Pop();

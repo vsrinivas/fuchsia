@@ -162,3 +162,65 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   }
 }
 
+TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
+  fidl::test::misc::InlineXUnionInStruct input = {};
+  std::string empty_str = "";
+  input.before = fidl::StringView(empty_str.size(), &empty_str[0]);
+  input.after = fidl::StringView(empty_str.size(), &empty_str[0]);
+
+  std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+  fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
+  auto linearize_result = fidl::Linearize(&input, std::move(bytes));
+  EXPECT_STREQ(linearize_result.error,
+               "non-nullable xunion is absent");
+  EXPECT_EQ(linearize_result.status, ZX_ERR_INVALID_ARGS);
+}
+
+TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
+  std::vector<uint8_t> encoded_bytes = std::vector<uint8_t>{
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "before"
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // null xunion header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope data absent
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "after"
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
+      'b',  'e',  'f',  'o',  'r',  'e',               // "before" string
+      0x00, 0x00,                                      // 2 bytes of padding
+      'a',  'f',  't',  'e',  'r',                     // "after" string
+      0x00, 0x00, 0x00,                                // 3 bytes of padding
+  };
+  fidl::EncodedMessage<fidl::test::misc::InlineXUnionInStruct> encoded_msg(
+    fidl::BytePart(&encoded_bytes[0],
+                   static_cast<uint32_t>(encoded_bytes.size()),
+                   static_cast<uint32_t>(encoded_bytes.size())));
+  auto decode_result = fidl::Decode(std::move(encoded_msg));
+  EXPECT_STREQ(decode_result.error,
+               "non-nullable xunion is absent");
+  EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+}
+
+TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
+  std::vector<uint8_t> encoded_bytes = std::vector<uint8_t>{
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "before"
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // null xunion header
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "after"
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
+      'b',  'e',  'f',  'o',  'r',  'e',               // "before" string
+      0x00, 0x00,                                      // 2 bytes of padding
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope content
+      'a',  'f',  't',  'e',  'r',                     // "after" string
+      0x00, 0x00, 0x00,                                // 3 bytes of padding
+  };
+  fidl::EncodedMessage<fidl::test::misc::InlineXUnionInStruct> encoded_msg(
+    fidl::BytePart(&encoded_bytes[0],
+                   static_cast<uint32_t>(encoded_bytes.size()),
+                   static_cast<uint32_t>(encoded_bytes.size())));
+  auto decode_result = fidl::Decode(std::move(encoded_msg));
+  EXPECT_STREQ(decode_result.error,
+               "xunion with zero as ordinal must be empty");
+  EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+}

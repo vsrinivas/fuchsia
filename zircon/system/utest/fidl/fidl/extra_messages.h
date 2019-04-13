@@ -23,6 +23,7 @@ extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
+extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
@@ -99,6 +100,11 @@ constexpr uint32_t kSampleXUnionRawIntOrdinal = 319709411;
 struct SampleXUnionStruct {
     FIDL_ALIGNDECL
     SampleXUnion xu;
+};
+
+struct SampleNullableXUnionStruct {
+    FIDL_ALIGNDECL
+    SampleXUnion opt_xu;
 };
 
 } // namespace fidl

@@ -266,12 +266,6 @@ TEST(XUnion, SimpleTable) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
-TEST(XUnion, SerializeAndDeserializeEmpty) {
-  SampleXUnion input;
-
-  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
-}
-
 TEST(XUnion, SerializeAndDeserializeInt32) {
   SampleXUnion input;
   input.set_i(0xdeadbeef);

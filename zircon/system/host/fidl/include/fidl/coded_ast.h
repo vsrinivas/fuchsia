@@ -80,12 +80,10 @@ struct Type {
         kInterfaceHandle,
         kRequestHandle,
         kStruct,
-        kStructPointer,
         kTable,
-        kTablePointer,
         kUnion,
-        kUnionPointer,
         kXUnion,
+        kPointer,
         kMessage,
         kInterface,
         kArray,
@@ -135,80 +133,56 @@ struct RequestHandleType : public Type {
     const types::Nullability nullability;
 };
 
+struct PointerType : public Type {
+    PointerType(std::string name, const Type* type)
+        : Type(Kind::kPointer, std::move(name), 8u, CodingNeeded::kAlways),
+          element_type(type) {}
+
+    const Type* element_type;
+};
+
 struct StructType : public Type {
-    StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string pointer_name,
-               std::string qname)
+    StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
         : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kAlways),
-          fields(std::move(fields)), pointer_name(std::move(pointer_name)),
-          qname(std::move(qname)) {}
+          fields(std::move(fields)), qname(std::move(qname)) {}
 
     std::vector<StructField> fields;
-    std::string pointer_name;
     std::string qname;
-    bool referenced_by_pointer = false;
-};
-
-struct StructPointerType : public Type {
-    StructPointerType(std::string name, const StructType* struct_type)
-        : Type(Kind::kStructPointer, std::move(name), 8u, CodingNeeded::kAlways),
-          struct_type(struct_type) {}
-
-    const StructType* struct_type;
-};
-
-struct TableType : public Type {
-    TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string pointer_name,
-              std::string qname)
-        : Type(Kind::kTable, std::move(name), size, CodingNeeded::kAlways),
-          fields(std::move(fields)), pointer_name(std::move(pointer_name)),
-          qname(std::move(qname)) {}
-
-    std::vector<TableField> fields;
-    std::string pointer_name;
-    std::string qname;
-    bool referenced_by_pointer = false;
-};
-
-struct TablePointerType : public Type {
-    TablePointerType(std::string name, const TableType* table_type)
-        : Type(Kind::kTablePointer, std::move(name), 8u, CodingNeeded::kAlways),
-          table_type(table_type) {}
-
-    const TableType* table_type;
+    PointerType* maybe_reference_type = nullptr;
 };
 
 struct UnionType : public Type {
     UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size,
-              std::string pointer_name, std::string qname)
+              std::string qname)
         : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kAlways), types(std::move(types)),
-          data_offset(data_offset), pointer_name(std::move(pointer_name)), qname(std::move(qname)) {
+          data_offset(data_offset), qname(std::move(qname)) {
     }
 
     std::vector<const Type*> types;
     const uint32_t data_offset;
-    std::string pointer_name;
     std::string qname;
-    bool referenced_by_pointer = false;
+    PointerType* maybe_reference_type = nullptr;
 };
 
-struct UnionPointerType : public Type {
-    UnionPointerType(std::string name, const UnionType* union_type)
-        : Type(Kind::kUnionPointer, std::move(name), 8u, CodingNeeded::kAlways),
-          union_type(union_type) {}
+struct TableType : public Type {
+    TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname)
+        : Type(Kind::kTable, std::move(name), size, CodingNeeded::kAlways),
+          fields(std::move(fields)), qname(std::move(qname)) {}
 
-    const UnionType* union_type;
+    std::vector<TableField> fields;
+    std::string qname;
 };
 
 struct XUnionType : public Type {
-    XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname)
+    XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
+               types::Nullability nullability)
         : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kAlways),
-          fields(std::move(fields)),
-          qname(std::move(qname)) {
-    }
+          fields(std::move(fields)), qname(std::move(qname)), nullability(nullability) {}
 
     std::vector<XUnionField> fields;
     const std::string qname;
-    bool referenced_by_pointer = false;
+    types::Nullability nullability;
+    XUnionType* maybe_reference_type = nullptr;
 };
 
 struct MessageType : public Type {

@@ -1555,13 +1555,13 @@ bool validate_nested_struct_recursion_too_deep_error() {
     END_TEST;
 }
 
-bool validate_valid_empty_xunion() {
+bool validate_valid_empty_nullable_xunion() {
     BEGIN_TEST;
 
-    SampleXUnionStruct message = {};
+    SampleNullableXUnionStruct message = {};
 
     const char* error = nullptr;
-    auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
+    auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                                 sizeof(fidl_xunion_t), 0, &error);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
@@ -1569,14 +1569,29 @@ bool validate_valid_empty_xunion() {
     END_TEST;
 }
 
-bool validate_empty_xunion_nonzero_ordinal() {
+bool validate_empty_nonnullable_xunion() {
     BEGIN_TEST;
 
     SampleXUnionStruct message = {};
-    message.xu.header.tag = kSampleXUnionIntStructOrdinal;
 
     const char* error = nullptr;
     auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
+                                sizeof(fidl_xunion_t), 0, &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error, error);
+    EXPECT_STR_EQ(error, "non-nullable xunion is absent");
+
+    END_TEST;
+}
+
+bool validate_empty_nullable_xunion_nonzero_ordinal() {
+    BEGIN_TEST;
+
+    SampleNullableXUnionStruct message = {};
+    message.opt_xu.header.tag = kSampleXUnionIntStructOrdinal;
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                                 sizeof(fidl_xunion_t), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error, error);
@@ -1598,6 +1613,26 @@ bool validate_nonempty_xunion_zero_ordinal() {
     const char* error = nullptr;
     auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                                 sizeof(SampleXUnionStruct), 0, &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error, error);
+    EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
+
+    END_TEST;
+}
+
+bool validate_nonempty_nullable_xunion_zero_ordinal() {
+    BEGIN_TEST;
+
+    SampleNullableXUnionStruct message = {};
+    message.opt_xu.header.envelope = (fidl_envelope_t) {
+        .num_bytes = 8,
+        .num_handles = 0,
+        .presence = FIDL_ALLOC_PRESENT
+    };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
+                                sizeof(SampleNullableXUnionStruct), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error, error);
     EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
@@ -1682,9 +1717,11 @@ RUN_TEST(validate_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)
 
 BEGIN_TEST_CASE(xunions)
-RUN_TEST(validate_valid_empty_xunion)
-RUN_TEST(validate_empty_xunion_nonzero_ordinal)
+RUN_TEST(validate_valid_empty_nullable_xunion)
+RUN_TEST(validate_empty_nonnullable_xunion)
+RUN_TEST(validate_empty_nullable_xunion_nonzero_ordinal)
 RUN_TEST(validate_nonempty_xunion_zero_ordinal)
+RUN_TEST(validate_nonempty_nullable_xunion_zero_ordinal)
 END_TEST_CASE(xunions)
 
 } // namespace

@@ -25,9 +25,9 @@
 
 namespace fidl {
 
-enum FidlNullability : uint32_t {
-    kNonnullable = 0u,
-    kNullable = 1u,
+enum FidlNullability : bool {
+    kNonnullable = false,
+    kNullable = true,
 };
 
 constexpr inline uint64_t FidlAlign(uint32_t offset) {
@@ -93,7 +93,6 @@ enum FidlTypeTag : uint32_t {
     kFidlTypeHandle,
     kFidlTypeVector,
     kFidlTypeTable,
-    kFidlTypeTablePointer,
     kFidlTypeXUnion,
 };
 
@@ -141,13 +140,6 @@ struct FidlCodedTable {
         : fields(fields), field_count(field_count), name(name) {}
 };
 
-struct FidlCodedTablePointer {
-    const FidlCodedTable* const table_type;
-
-    constexpr explicit FidlCodedTablePointer(const FidlCodedTable* table_type)
-        : table_type(table_type) {}
-};
-
 // Unlike structs, union members do not have different offsets, so this points
 // to an array of |fidl_type*| rather than |FidlStructField|.
 //
@@ -175,10 +167,12 @@ struct FidlCodedUnionPointer {
 struct FidlCodedXUnion {
     const uint32_t field_count;
     const FidlXUnionField* const fields;
+    const FidlNullability nullable;
     const char* name; // may be nullptr if omitted at compile time
 
-    constexpr FidlCodedXUnion(uint32_t field_count, const FidlXUnionField* fields, const char* name)
-        : field_count(field_count), fields(fields), name(name) {}
+    constexpr FidlCodedXUnion(uint32_t field_count, const FidlXUnionField* fields,
+                              FidlNullability nullable, const char* name)
+        : field_count(field_count), fields(fields), nullable(nullable), name(name) {}
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at
@@ -256,7 +250,6 @@ struct fidl_type {
         const fidl::FidlCodedStruct coded_struct;
         const fidl::FidlCodedStructPointer coded_struct_pointer;
         const fidl::FidlCodedTable coded_table;
-        const fidl::FidlCodedTablePointer coded_table_pointer;
         const fidl::FidlCodedUnion coded_union;
         const fidl::FidlCodedUnionPointer coded_union_pointer;
         const fidl::FidlCodedXUnion coded_xunion;
@@ -277,9 +270,6 @@ struct fidl_type {
 
     constexpr fidl_type(fidl::FidlCodedTable coded_table) noexcept
         : type_tag(fidl::kFidlTypeTable), coded_table(coded_table) {}
-
-    constexpr fidl_type(fidl::FidlCodedTablePointer coded_table_pointer) noexcept
-        : type_tag(fidl::kFidlTypeTablePointer), coded_table_pointer(coded_table_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedUnion coded_union) noexcept
         : type_tag(fidl::kFidlTypeUnion), coded_union(coded_union) {}

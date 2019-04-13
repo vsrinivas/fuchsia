@@ -87,9 +87,8 @@ struct Vectors {
     ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_some_struct->kind);
     auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
     ASSERT_EQ(0, type_some_struct_struct->fields.size());
-    ASSERT_STR_EQ("example_SomeStructPointer", type_some_struct_struct->pointer_name.c_str());
     ASSERT_STR_EQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
-    ASSERT_FALSE(type_some_struct_struct->referenced_by_pointer);
+    ASSERT_NULL(type_some_struct_struct->maybe_reference_type);
 
     ASSERT_EQ(2, gen.coded_types().size());
 
@@ -248,7 +247,74 @@ xunion MyXUnion {
     auto xunion_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field1.type);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field1_primitive->subtype);
     ASSERT_STR_EQ("example/MyXUnion", type_xunion_xunion->qname.c_str());
-    ASSERT_FALSE(type_xunion_xunion->referenced_by_pointer);
+    ASSERT_EQ(fidl::types::Nullability::kNonnullable, type_xunion_xunion->nullability);
+    ASSERT_NULL(type_xunion_xunion->maybe_reference_type);
+
+    END_TEST;
+}
+
+bool CodedTypesOfNullableXUnions() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+xunion MyXUnion {
+  bool foo;
+  int32 bar;
+};
+
+struct Wrapper {
+  MyXUnion? xu;
+};
+
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(3, gen.coded_types().size());
+
+    auto type0 = gen.coded_types().at(0).get();
+    ASSERT_STR_EQ("int32", type0->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
+    auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
+
+    auto type1 = gen.coded_types().at(1).get();
+    ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+    auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
+
+    auto type2 = gen.coded_types().at(2).get();
+    ASSERT_STR_EQ("example_MyXUnionNullableRef", type2->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type2->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type2->kind);
+    auto type_nullable_xunion_xunion =
+        static_cast<const fidl::coded::XUnionType*>(type2);
+    ASSERT_EQ(fidl::types::Nullability::kNullable, type_nullable_xunion_xunion->nullability);
+
+    auto name_xunion = fidl::flat::Name(library.library(), "MyXUnion");
+    auto type_xunion = gen.CodedTypeFor(&name_xunion);
+    ASSERT_NONNULL(type_xunion);
+    ASSERT_STR_EQ("example_MyXUnion", type_xunion->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_xunion->kind);
+    auto type_xunion_xunion =
+        static_cast<const fidl::coded::XUnionType*>(type_xunion);
+    ASSERT_EQ(type_xunion_xunion->maybe_reference_type, type_nullable_xunion_xunion);
+    ASSERT_TRUE(type_nullable_xunion_xunion->qname == type_xunion_xunion->qname);
+    ASSERT_EQ(fidl::types::Nullability::kNonnullable, type_xunion_xunion->nullability);
+
+    const auto& fields_nullable = type_nullable_xunion_xunion->fields;
+    const auto& fields = type_xunion_xunion->fields;
+    ASSERT_EQ(fields_nullable.size(), fields.size());
+    for (size_t i = 0; i< fields_nullable.size(); i++) {
+        ASSERT_EQ(fields_nullable[i].ordinal, fields[i].ordinal);
+        ASSERT_EQ(fields_nullable[i].type, fields[i].type);
+    }
 
     END_TEST;
 }
@@ -301,7 +367,6 @@ table MyTable {
     auto table_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(table_field1.type);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, table_field1_primitive->subtype);
     ASSERT_STR_EQ("example/MyTable", type_table_table->qname.c_str());
-    ASSERT_FALSE(type_table_table->referenced_by_pointer);
 
     END_TEST;
 }
@@ -315,6 +380,7 @@ RUN_TEST(CodedTypesOfVectors);
 RUN_TEST(CodedTypesOfInterface);
 RUN_TEST(CodedTypesOfRequestOfInterface);
 RUN_TEST(CodedTypesOfXUnions);
+RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
 
 END_TEST_CASE(coded_types_generator_tests)

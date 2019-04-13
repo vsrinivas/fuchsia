@@ -107,21 +107,16 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
             if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
             auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
-            coded_struct_type->referenced_by_pointer = true;
-            coded_types_.push_back(std::make_unique<coded::StructPointerType>(
-                coded_struct_type->pointer_name, coded_struct_type));
+            auto struct_pointer_type = std::make_unique<coded::PointerType>(
+                NamePointer(coded_struct_type->coded_name), coded_struct_type);
+            coded_struct_type->maybe_reference_type = struct_pointer_type.get();
+            coded_types_.push_back(std::move(struct_pointer_type));
             return coded_types_.back().get();
         }
         case coded::Type::Kind::kTable: {
-            // Tables were compiled as part of decl compilation,
-            // but we may now need to generate the TablePointer.
-            if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
-            auto coded_table_type = static_cast<coded::TableType*>(coded_type);
-            coded_table_type->referenced_by_pointer = true;
-            coded_types_.push_back(std::make_unique<coded::TablePointerType>(
-                coded_table_type->pointer_name, coded_table_type));
-            return coded_types_.back().get();
+            // Tables cannot be nullable, nothing to do.
+            assert(identifier_type->nullability != types::Nullability::kNullable);
+            break;
         }
         case coded::Type::Kind::kUnion: {
             // Unions were compiled as part of decl compilation,
@@ -129,17 +124,27 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
             if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
             auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
-            coded_union_type->referenced_by_pointer = true;
-            coded_types_.push_back(std::make_unique<coded::UnionPointerType>(
-                coded_union_type->pointer_name, coded_union_type));
+            auto union_pointer_type = std::make_unique<coded::PointerType>(
+                NamePointer(coded_union_type->coded_name), coded_union_type);
+            coded_union_type->maybe_reference_type = union_pointer_type.get();
+            coded_types_.push_back(std::move(union_pointer_type));
             return coded_types_.back().get();
         }
         case coded::Type::Kind::kXUnion: {
-            // Do nothing here: there's no need to generate a XUnionPointer,
-            // since nullable XUnions (for which we'd normally use a
-            // XUnionPointer) have the same encoding representation as
-            // non-optional XUnions.
-            break;
+            // XUnions were compiled as part of decl compilation,
+            // but we may now need to generate a nullable counterpart.
+            if (identifier_type->nullability != types::Nullability::kNullable)
+                break;
+            auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
+            assert(coded_xunion_type->nullability != types::Nullability::kNullable);
+            auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
+                coded_xunion_type->coded_name + "NullableRef",
+                coded_xunion_type->fields,
+                coded_xunion_type->qname,
+                types::Nullability::kNullable);
+            coded_xunion_type->maybe_reference_type = nullable_xunion_type.get();
+            coded_types_.push_back(std::move(nullable_xunion_type));
+            return coded_types_.back().get();
         }
         case coded::Type::Kind::kInterface: {
             auto iter = interface_type_map_.find(identifier_type);
@@ -157,9 +162,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
             // These are from enums. We don't need to do anything with them.
             break;
         case coded::Type::Kind::kInterfaceHandle:
-        case coded::Type::Kind::kStructPointer:
-        case coded::Type::Kind::kTablePointer:
-        case coded::Type::Kind::kUnionPointer:
+        case coded::Type::Kind::kPointer:
         case coded::Type::Kind::kMessage:
         case coded::Type::Kind::kRequestHandle:
         case coded::Type::Kind::kHandle:
@@ -349,12 +352,11 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kTable: {
         auto table_decl = static_cast<const flat::Table*>(decl);
         std::string table_name = NameCodedTable(table_decl);
-        std::string pointer_name = NamePointer(table_name);
         named_coded_types_.emplace(
             &decl->name,
             std::make_unique<coded::TableType>(std::move(table_name), std::vector<coded::TableField>(),
                                                table_decl->typeshape.Size(),
-                                               std::move(pointer_name), NameName(table_decl->name, ".", "/")));
+                                               NameName(table_decl->name, ".", "/")));
         break;
     }
     case flat::Decl::Kind::kStruct: {
@@ -362,34 +364,32 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         if (struct_decl->anonymous)
             break;
         std::string struct_name = NameCodedStruct(struct_decl);
-        std::string pointer_name = NamePointer(struct_name);
         named_coded_types_.emplace(
             &decl->name,
             std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::StructField>(),
                                                 struct_decl->typeshape.Size(),
-                                                std::move(pointer_name), NameName(struct_decl->name, ".", "/")));
+                                                NameName(struct_decl->name, ".", "/")));
         break;
     }
     case flat::Decl::Kind::kUnion: {
         auto union_decl = static_cast<const flat::Union*>(decl);
         std::string union_name = NameCodedUnion(union_decl);
-        std::string pointer_name = NamePointer(union_name);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::UnionType>(
                              std::move(union_name), std::vector<const coded::Type*>(),
                              union_decl->membershape.Offset(), union_decl->typeshape.Size(),
-                             std::move(pointer_name), NameName(union_decl->name, ".", "/")));
+                             NameName(union_decl->name, ".", "/")));
         break;
     }
     case flat::Decl::Kind::kXUnion: {
         auto xunion_decl = static_cast<const flat::XUnion*>(decl);
         std::string xunion_name = NameCodedXUnion(xunion_decl);
-        std::string pointer_name = NamePointer(xunion_name);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::XUnionType>(
                              std::move(xunion_name),
                              std::vector<coded::XUnionField>(),
-                             NameName(xunion_decl->name, ".", "/")));
+                             NameName(xunion_decl->name, ".", "/"),
+                             types::Nullability::kNonnullable));
         break;
     }
     }

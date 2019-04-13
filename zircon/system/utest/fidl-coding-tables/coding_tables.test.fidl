@@ -27,5 +27,6 @@ protocol Coding {
     // Various trickery to avoid directly refering a xunion/table inline,
     // which is not supported in the C bindings.
     MyXUnion(MyXUnion? x);
-    MyTable(vector<MyTable> t);
+    VectorOfMyTable(vector<MyTable> t);
+    VectorOfMyXUnion(vector<MyXUnion> x);
 };

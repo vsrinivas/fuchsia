@@ -585,8 +585,8 @@ bool linearize_xunion_empty_invariant_empty() {
     BEGIN_TEST;
 
     // Non-zero ordinal with empty envelope is an error
-    SampleXUnionStruct xunion = {};
-    xunion.xu.header = (fidl_xunion_t) {
+    SampleNullableXUnionStruct xunion = {};
+    xunion.opt_xu.header = (fidl_xunion_t) {
         .tag = kSampleXUnionIntStructOrdinal,
         .padding = 0,
         .envelope = {}
@@ -596,7 +596,7 @@ bool linearize_xunion_empty_invariant_empty() {
     const char* error = nullptr;
     zx_status_t status;
     uint32_t actual_num_bytes = 0;
-    status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable,
+    status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable,
                             &xunion,
                             buffer,
                             buf_size,
@@ -616,8 +616,8 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
     IntStruct int_struct = {
         .v = 100
     };
-    SampleXUnionStruct xunion = {};
-    xunion.xu.header = (fidl_xunion_t) {
+    SampleNullableXUnionStruct xunion = {};
+    xunion.opt_xu.header = (fidl_xunion_t) {
         .tag = 0,
         .padding = 0,
         .envelope = (fidl_envelope_t) {
@@ -631,7 +631,7 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
     const char* error = nullptr;
     zx_status_t status;
     uint32_t actual_num_bytes = 0;
-    status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable,
+    status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable,
                             &xunion,
                             buffer,
                             buf_size,

@@ -170,9 +170,33 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
     Emit(&tables_file_, static_cast<uint32_t>(xunion_type.fields.size()));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, NameFields(xunion_type.coded_name));
+    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, xunion_type.nullability);
     Emit(&tables_file_, ", \"");
     Emit(&tables_file_, xunion_type.qname);
     Emit(&tables_file_, "\"));\n\n");
+}
+
+void TablesGenerator::Generate(const coded::PointerType& pointer) {
+    switch (pointer.element_type->kind) {
+    case coded::Type::Kind::kStruct:
+        Emit(&tables_file_, "static const fidl_type_t ");
+        Emit(&tables_file_, NameTable(pointer.coded_name));
+        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(&");
+        Emit(&tables_file_, NameTable(pointer.element_type->coded_name));
+        Emit(&tables_file_, ".coded_struct));\n");
+        break;
+    case coded::Type::Kind::kUnion:
+        Emit(&tables_file_, "static const fidl_type_t ");
+        Emit(&tables_file_, NameTable(pointer.coded_name));
+        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(&");
+        Emit(&tables_file_, NameTable(pointer.element_type->coded_name));
+        Emit(&tables_file_, ".coded_union));\n");
+        break;
+    default:
+        assert(false && "Invalid pointer element type.");
+        break;
+    }
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
@@ -349,36 +373,6 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
     Emit(&tables_file_, ")");
 }
 
-void TablesGenerator::GeneratePointerIfNeeded(const coded::StructType& struct_type) {
-    if (struct_type.referenced_by_pointer) {
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(struct_type.pointer_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(&");
-        Emit(&tables_file_, NameTable(struct_type.coded_name));
-        Emit(&tables_file_, ".coded_struct));\n");
-    }
-}
-
-void TablesGenerator::GeneratePointerIfNeeded(const coded::TableType& table_type) {
-    if (table_type.referenced_by_pointer) {
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(table_type.pointer_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedTablePointer(&");
-        Emit(&tables_file_, NameTable(table_type.coded_name));
-        Emit(&tables_file_, ".coded_table));\n");
-    }
-}
-
-void TablesGenerator::GeneratePointerIfNeeded(const coded::UnionType& union_type) {
-    if (union_type.referenced_by_pointer) {
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(union_type.pointer_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(&");
-        Emit(&tables_file_, NameTable(union_type.coded_name));
-        Emit(&tables_file_, ".coded_union));\n");
-    }
-}
-
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
     Emit(&tables_file_, "extern const fidl_type_t ");
     Emit(&tables_file_, NameTable(struct_type.coded_name));
@@ -408,6 +402,7 @@ std::ostringstream TablesGenerator::Produce() {
 
     GenerateFilePreamble();
 
+    // Generate forward declarations of coding tables for named container declarations.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
         auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
         if (!coded_type)
@@ -432,26 +427,33 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
+    // Generate coding table definitions necessary for nullable types.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
         auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
-        case coded::Type::Kind::kStruct:
-            GeneratePointerIfNeeded(*static_cast<const coded::StructType*>(coded_type));
+        case coded::Type::Kind::kStruct: {
+            const auto& struct_type = *static_cast<const coded::StructType*>(coded_type);
+            if (auto pointer_type = struct_type.maybe_reference_type; pointer_type) {
+                Generate(*pointer_type);
+            }
             break;
-        case coded::Type::Kind::kTable:
-            GeneratePointerIfNeeded(*static_cast<const coded::TableType*>(coded_type));
+        }
+        case coded::Type::Kind::kUnion: {
+            const auto& union_type = *static_cast<const coded::UnionType*>(coded_type);
+            if (auto pointer_type = union_type.maybe_reference_type; pointer_type) {
+                Generate(*pointer_type);
+            }
             break;
-        case coded::Type::Kind::kUnion:
-            GeneratePointerIfNeeded(*static_cast<const coded::UnionType*>(coded_type));
+        }
+        case coded::Type::Kind::kXUnion: {
+            // Nullable xunions have the same wire representation as non-nullable ones,
+            // hence have the same fields and dependencies in their coding tables.
+            // As such, we will generate them in the next phase, to maintain the correct
+            // declaration order.
             break;
-        case coded::Type::Kind::kXUnion:
-            // Do nothing here: there's no need to generate a XUnionPointer,
-            // since nullable XUnions (for which we'd normally use a
-            // XUnionPointer) have the same encoding representation as
-            // non-optional XUnions.
-            break;
+        }
         default:
             break;
         }
@@ -465,14 +467,19 @@ std::ostringstream TablesGenerator::Produce() {
 
         switch (coded_type->kind) {
         case coded::Type::Kind::kStruct:
-        case coded::Type::Kind::kStructPointer:
         case coded::Type::Kind::kTable:
-        case coded::Type::Kind::kTablePointer:
         case coded::Type::Kind::kUnion:
-        case coded::Type::Kind::kUnionPointer:
-        case coded::Type::Kind::kXUnion:
+        case coded::Type::Kind::kPointer:
             // These are generated in the next phase.
             break;
+        case coded::Type::Kind::kXUnion: {
+            auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type.get());
+            if (xunion_type.nullability != types::Nullability::kNullable) {
+                break; // Non-nullable xunions are generated in the next phase.
+            }
+            Generate(xunion_type);
+            break;
+        }
         case coded::Type::Kind::kInterface:
             // Nothing to generate for interfaces. We've already moved the
             // messages from the interface into coded_types_ directly.
@@ -507,7 +514,11 @@ std::ostringstream TablesGenerator::Produce() {
         }
     }
 
+    Emit(&tables_file_, "\n");
+
+    // Generate coding table definitions for named container declarations.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
+        // Definition will be generated elsewhere.
         if (decl->name.library() != coded_types_generator_.library())
             continue;
 
@@ -524,11 +535,15 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kUnion:
             Generate(*static_cast<const coded::UnionType*>(coded_type));
             break;
-        case coded::Type::Kind::kXUnion:
-            Generate(*static_cast<const coded::XUnionType*>(coded_type));
+        case coded::Type::Kind::kXUnion: {
+            auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
+            if (xunion_type.nullability == types::Nullability::kNonnullable) {
+                Generate(xunion_type);
+            }
             break;
+        }
         default:
-            continue;
+            break;
         }
     }
 

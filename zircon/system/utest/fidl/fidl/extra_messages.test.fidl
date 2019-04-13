@@ -71,3 +71,7 @@ xunion SampleXUnion {
 struct SampleXUnionStruct {
     SampleXUnion xu;
 };
+
+struct SampleNullableXUnionStruct {
+    SampleXUnion? opt_xu;
+};

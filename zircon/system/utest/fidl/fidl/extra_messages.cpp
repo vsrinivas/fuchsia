@@ -13,6 +13,7 @@ extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
+extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 
 
@@ -37,6 +38,14 @@ const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fi
 static const fidl_type_t HandlehandlenonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, ::fidl::kNonnullable));
 
 static const fidl_type_t VectorHandlehandlenonnullable2nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&HandlehandlenonnullableTable, 2, 4, ::fidl::kNonnullable));
+
+static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionNullableRefFields[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,319709411),
+    ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050),
+    ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270)
+};
+const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3, fidl_test_coding_SampleXUnionNullableRefFields, ::fidl::kNullable, "fidl.test.coding/SampleXUnion"));
+
 
 static const ::fidl::FidlStructField fidl_test_coding_StructWithManyHandlesFields[] = {
     ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0),
@@ -87,7 +96,12 @@ static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionFields[] = {
     ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050),
     ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270)
 };
-const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3, fidl_test_coding_SampleXUnionFields, "fidl.test.coding/SampleXUnion"));
+const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3, fidl_test_coding_SampleXUnionFields, ::fidl::kNonnullable, "fidl.test.coding/SampleXUnion"));
+
+static const ::fidl::FidlStructField fidl_test_coding_SampleNullableXUnionStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionNullableRefTable, 0)
+};
+const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleNullableXUnionStructFields, 1, 24, "fidl.test.coding/SampleNullableXUnionStruct"));
 
 static const ::fidl::FidlStructField fidl_test_coding_SampleXUnionStructFields[] = {
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0)

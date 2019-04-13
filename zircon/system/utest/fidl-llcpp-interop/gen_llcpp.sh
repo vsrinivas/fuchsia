@@ -10,12 +10,12 @@ FIDLC=${FUCHSIA_DIR}out/default/host_x64/fidlc
 FIDLGEN=${FUCHSIA_DIR}out/default/host_x64/fidlgen
 
 if [ ! -x "${FIDLC}" ]; then
-    echo "error: fidlc missing; did you fx clean-build x64?" 1>&2
+    echo "error: fidlc missing; did you fx clean-build?" 1>&2
     exit 1
 fi
 
 if [ ! -x "${FIDLGEN}" ]; then
-    echo "error: fidlgen missing; did you fx clean-build x64?" 1>&2
+    echo "error: fidlgen missing; did you fx clean-build?" 1>&2
     exit 1
 fi
 
