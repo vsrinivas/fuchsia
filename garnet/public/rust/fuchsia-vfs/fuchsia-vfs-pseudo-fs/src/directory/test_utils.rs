@@ -12,7 +12,15 @@
 
 #[doc(hidden)]
 pub mod reexport {
-    pub use fuchsia_zircon::Status;
+    pub use {
+        fidl_fuchsia_io::{
+            WatchedEvent, WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE,
+            WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
+            WATCH_MASK_REMOVED,
+        },
+        fuchsia_async::Channel,
+        fuchsia_zircon::{self as zx, MessageBuf, Status},
+    };
 }
 
 use {
@@ -70,8 +78,8 @@ pub fn run_server_client_with_mode<GetClientRes>(
     );
 
     let client = get_client(client_proxy);
-
     let future = server.join(client);
+
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
     //
@@ -124,7 +132,6 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
     };
 
     let client = get_client(open_requests_tx);
-
     let future = server_wrapper.join(client);
 
     // As our clients are async generators, we need to pin this future explicitly.
@@ -173,7 +180,7 @@ impl DirentsSameInodeBuilder {
 #[macro_export]
 macro_rules! assert_rewind {
     ($proxy:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::directory::test_utils::reexport::*;
 
         let status = await!($proxy.rewind()).expect("rewind failed");
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -189,4 +196,58 @@ macro_rules! open_as_file_assert_content {
         assert_read!(file, $expected_content);
         assert_close!(file);
     };
+}
+
+#[macro_export]
+macro_rules! assert_watch {
+    ($proxy:expr, $mask:expr) => {{
+        use $crate::directory::test_utils::reexport::*;
+
+        let (watcher_client, watcher_server) = zx::Channel::create().unwrap();
+        let watcher_client = Channel::from_channel(watcher_client).unwrap();
+
+        let status = await!($proxy.watch($mask, 0, watcher_server)).expect("watch failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        watcher_client
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_watcher_one_message_watched_events {
+    ($watcher:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
+        use $crate::directory::test_utils::reexport::*;
+
+        let mut buf = MessageBuf::new();
+        await!($watcher.recv_msg(&mut buf)).unwrap();
+
+        let (bytes, handles) = buf.split();
+        assert_eq!(
+            handles.len(),
+            0,
+            "Received buffer with handles.\n\
+             Handle count: {}\n\
+             Buffer: {:X?}",
+            handles.len(),
+            bytes
+        );
+
+        let expected = &mut vec![];
+        $({
+            let type_ = assert_watcher_one_message_watched_events!(@expand_event_type $type);
+            let name = Vec::<u8>::from($name);
+            assert!(name.len() <= std::u8::MAX as usize);
+
+            expected.push(type_);
+            expected.push(name.len() as u8);
+            expected.extend_from_slice(&name);
+        })*
+
+        assert_eq!(bytes, *expected, "Received buffer does not match the expected");
+    }};
+
+    (@expand_event_type EXISTING) => { WATCH_EVENT_EXISTING };
+    (@expand_event_type IDLE) => { WATCH_EVENT_IDLE };
+    (@expand_event_type ADDED) => { WATCH_EVENT_ADDED };
+    (@expand_event_type REMOVED) => { WATCH_EVENT_REMOVED };
 }

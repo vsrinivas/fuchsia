@@ -191,10 +191,12 @@ impl<'entries> Simple<'entries> {
                 } else {
                     let channel = Channel::from_channel(watcher)?;
 
-                    let mut names = self.entries.keys();
+                    let names = self.entries.keys();
+                    let dot = ".".to_string();
+                    let mut entries = iter::once(&dot).chain(names);
                     let status = self
                         .watchers
-                        .add(&mut names, mask, channel)
+                        .add(&mut entries, mask, channel)
                         .map(|()| Status::OK)
                         .unwrap_or_else(|err| match err {
                             WatchersAddError::NameTooLong => panic!(
@@ -526,7 +528,8 @@ mod tests {
             DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeAttributes, NodeInfo,
             DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
             MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
+            WATCH_MASK_REMOVED,
         },
         fuchsia_zircon::sys::ZX_OK,
         futures::SinkExt,
@@ -1323,5 +1326,109 @@ mod tests {
                 assert_close!(root);
             },
         );
+    }
+
+    #[test]
+    fn watch_empty() {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
+
+            assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn watch_non_empty() {
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
+
+            assert_watcher_one_message_watched_events!(
+                watcher_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn watch_two_watchers() {
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher1_client = assert_watch!(root, mask);
+
+            assert_watcher_one_message_watched_events!(
+                watcher1_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
+
+            let watcher2_client = assert_watch!(root, mask);
+
+            assert_watcher_one_message_watched_events!(
+                watcher2_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn watch_with_mask() {
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
+
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+
+            assert_close!(root);
+        });
     }
 }

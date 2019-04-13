@@ -253,40 +253,27 @@ impl WatcherConnection {
         //
         // For now this code duplicates what the C++ version is doing:
         //
-        //     https://fuchsia.googlesource.com/zircon/+/1dcb46aa1c4001e9d1d68b8ff5d8fae0c00fbb49/system/ulib/fs/watcher.cpp
+        //     https://fuchsia.googlesource.com/fuchsia/+/ef9c451ba83a3ece22cad66b9dcfb446be291966/zircon/system/ulib/fs/watcher.cpp
         //
         // There is no Transaction wrapping the messages, as for the full blown FIDL events.
 
         let mut res = Ok(());
 
         let buffer = &mut vec![];
-        let (bytes, handles) = (&mut vec![], &mut vec![]);
-        for mut event in events {
+        for event in events {
+            let name = event.name;
+
             // Make an attempt to send as many names as possible, skipping those that exceed the
             // limit.
-            if event.name.len() >= MAX_FILENAME as usize {
+            if name.len() >= MAX_FILENAME as usize {
                 if res.is_ok() {
                     res = Err(ConnectionSendError::NameTooLong);
                 }
                 continue;
             }
 
-            // `len` has to match the length of the `name` field.  There is no reason to allow the
-            // caller to specify anything but 0 here.  We make sure `name` is bounded above, and
-            // now we can actually calculate correct value for `len`.
-            assert_eq!(event.len, 0);
-            event.len = event.name.len() as u8;
-
-            // Keep bytes and handles across loop iterations, to reduce reallocations.
-            bytes.clear();
-            handles.clear();
-            fidl::encoding::Encoder::encode(bytes, handles, &mut event)
-                .map_err(ConnectionSendError::FIDL)?;
-            if handles.len() > 0 {
-                panic!("WatchedEvent struct is not expected to contain any handles")
-            }
-
-            if buffer.len() + bytes.len() >= fidl_fuchsia_io::MAX_BUF as usize {
+            // Make sure we have room in our buffer for the next event.
+            if buffer.len() + (2 + name.len()) > fidl_fuchsia_io::MAX_BUF as usize {
                 self.channel
                     .write(&*buffer, &mut vec![])
                     .map_err(fidl::Error::ServerResponseWrite)?;
@@ -294,7 +281,17 @@ impl WatcherConnection {
                 buffer.clear();
             }
 
-            buffer.append(bytes);
+            // `len` has to match the length of the `name` field.  There is no reason to allow the
+            // caller to specify anything but 0 here.  We make sure `name` is bounded above, and
+            // now we can actually calculate correct value for `len`.
+            debug_assert_eq!(event.len, 0);
+
+            // We are going to encode the file name length as u8.
+            debug_assert!(u8::max_value() as u64 >= MAX_FILENAME);
+
+            buffer.push(event.event);
+            buffer.push(name.len() as u8);
+            buffer.extend_from_slice(&*name);
         }
 
         if buffer.len() > 0 {

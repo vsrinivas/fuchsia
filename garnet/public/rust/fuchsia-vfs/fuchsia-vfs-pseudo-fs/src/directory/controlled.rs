@@ -500,6 +500,7 @@ mod tests {
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeInfo, NodeMarker,
             DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+            WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
         },
         proc_macro_hack::proc_macro_hack,
     };
@@ -824,6 +825,110 @@ mod tests {
 
                 open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
                 open_as_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
+
+                assert_close!(root);
+            },
+        );
+    }
+
+    #[test]
+    fn watch_addition() {
+        let controller;
+        let root = pseudo_directory! {
+            "etc" => controlled_pseudo_directory! {
+                controller ->
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+            },
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            (controller, root),
+            async move |controller, root| {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+
+                open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
+                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+
+                let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+                let watch_mask =
+                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+                let watcher = assert_watch!(etc, watch_mask);
+
+                assert_watcher_one_message_watched_events!(
+                    watcher,
+                    { EXISTING, "." },
+                    { EXISTING, "passwd" },
+                    { EXISTING, "ssh" },
+                );
+                assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
+
+                {
+                    let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
+                    await!(controller.add_entry("fstab", fstab)).unwrap();
+                }
+
+                assert_watcher_one_message_watched_events!(watcher, { ADDED, "fstab" });
+
+                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+
+                assert_close!(root);
+            },
+        );
+    }
+
+    #[test]
+    fn watch_removal() {
+        let controller;
+        let root = pseudo_directory! {
+            "etc" => controlled_pseudo_directory! {
+                controller ->
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+            },
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            (controller, root),
+            async move |controller, root| {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+
+                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+
+                let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+                let watch_mask =
+                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+                let watcher = assert_watch!(etc, watch_mask);
+
+                assert_watcher_one_message_watched_events!(
+                    watcher,
+                    { EXISTING, "." },
+                    { EXISTING, "fstab" },
+                    { EXISTING, "passwd" },
+                );
+                assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
+
+                let o_passwd = await!(controller.remove_entry_res("passwd")).unwrap();
+                match o_passwd {
+                    None => panic!("remove_entry_res() did not find 'passwd'"),
+                    Some(passwd) => {
+                        let entry_info = passwd.entry_info();
+                        assert_eq!(entry_info, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE));
+                    }
+                }
+
+                assert_watcher_one_message_watched_events!(watcher, { REMOVED, "passwd" });
+
+                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+                open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
                 assert_close!(root);
             },
