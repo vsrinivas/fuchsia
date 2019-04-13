@@ -200,7 +200,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 
 	var devices []*target.DeviceTarget
 	for _, config := range configs {
-		device, err := target.NewDeviceTarget(config, opts)
+		device, err := target.NewDeviceTarget(ctx, config, opts)
 		if err != nil {
 			return err
 		}

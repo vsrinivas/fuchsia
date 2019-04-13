@@ -20,7 +20,6 @@ import (
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/runner"
-	"fuchsia.googlesource.com/tools/serial"
 	"fuchsia.googlesource.com/tools/sshutil"
 
 	"github.com/google/subcommands"
@@ -39,7 +38,7 @@ type Target interface {
 	IPv4Addr() (net.IP, error)
 
 	// Serial returns the serial device associated with the target for serial i/o.
-	Serial() string
+	Serial() io.ReadWriteCloser
 
 	// SSHKey returns the private key corresponding an authorized SSH key of the target.
 	SSHKey() string
@@ -216,7 +215,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	var targets []Target
 	for _, obj := range objs {
-		t, err := DeriveTarget(obj, opts)
+		t, err := DeriveTarget(ctx, obj, opts)
 		if err != nil {
 			return err
 		}
@@ -237,36 +236,32 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer syslog.Close()
 	}
 
-	if t.Serial() != "" && r.serialLogFile != "" {
-		serialLog, err := os.Create(r.serialLogFile)
-		if err != nil {
-			return err
-		}
-		defer serialLog.Close()
-
-		serialDevice, err := serial.Open(t.Serial())
-		if err != nil {
-			return fmt.Errorf("unable to open %s: %v", t.Serial(), err)
-		}
-		defer serialDevice.Close()
-
-		// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
-		// output file.  This should give us everything since Zedboot boot, and new messages should
-		// be written to directly to the serial port without needing to tail with `dlog -f`.
-		if _, err = io.WriteString(serialDevice, "\ndlog\n"); err != nil {
-			logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
-		}
-
-		go func() {
-			_, err := io.Copy(serialLog, serialDevice)
+	if t.Serial() != nil {
+		if r.serialLogFile != "" {
+			serialLog, err := os.Create(r.serialLogFile)
 			if err != nil {
-				logger.Errorf(ctx, "failed to write serial log: %v", err)
+				return err
 			}
-		}()
+			defer serialLog.Close()
 
-		// Modify the zirconArgs passed to the kernel on boot to enable serial logging on x64.
+			// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
+			// output file.  This should give us everything since Zedboot boot, and new messages should
+			// be written to directly to the serial port without needing to tail with `dlog -f`.
+			if _, err = io.WriteString(t.Serial(), "\ndlog\n"); err != nil {
+				logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
+			}
+
+			go func() {
+				_, err := io.Copy(serialLog, t.Serial())
+				if err != nil {
+					logger.Errorf(ctx, "failed to write serial log: %v", err)
+				}
+			}()
+			r.zirconArgs = append(r.zirconArgs, "kernel.bypass-debuglog=true")
+		}
+		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 		// arm64 devices should already be enabling kernel.serial at compile time.
-		r.zirconArgs = append(r.zirconArgs, "kernel.bypass-debuglog=true", "kernel.serial=legacy")
+		r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 	}
 
 	defer func() {
@@ -311,7 +306,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-func DeriveTarget(obj []byte, opts target.Options) (Target, error) {
+func DeriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
 	type typed struct {
 		Type string `json:"type"`
 	}
@@ -332,7 +327,7 @@ func DeriveTarget(obj []byte, opts target.Options) (Target, error) {
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid device config found: %v", err)
 		}
-		t, err := target.NewDeviceTarget(cfg, opts)
+		t, err := target.NewDeviceTarget(ctx, cfg, opts)
 		return t, err
 	default:
 		return nil, fmt.Errorf("unknown type found: %q", x.Type)

@@ -101,8 +101,8 @@ func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
 }
 
 // Serial returns the serial device associated with the target for serial i/o.
-func (t *QEMUTarget) Serial() string {
-	return ""
+func (t *QEMUTarget) Serial() io.ReadWriteCloser {
+	return nil
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be pavet.

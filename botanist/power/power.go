@@ -6,6 +6,7 @@ package power
 
 import (
 	"context"
+	"io"
 
 	"fuchsia.googlesource.com/tools/botanist/power/amt"
 	"fuchsia.googlesource.com/tools/botanist/power/wol"
@@ -45,11 +46,30 @@ type Client struct {
 	Password string `json:"password"`
 }
 
+type Rebooter interface {
+	reboot() error
+}
+
+type SshRebooter struct {
+	nodename string
+	signers  []ssh.Signer
+}
+
+type SerialRebooter struct {
+	serial io.ReadWriter
+}
+
 // RebootDevice attempts to reboot the specified device into recovery, and
 // additionally uses the given configuration to reboot the device if specified.
-func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
+func (c Client) RebootDevice(signers []ssh.Signer, nodename string, serial io.ReadWriter) error {
+	var rebooter Rebooter
+	if serial != nil {
+		rebooter = NewSerialRebooter(serial)
+	} else {
+		rebooter = NewSSHRebooter(nodename, signers)
+	}
 	// Always attempt to soft reboot the device to recovery.
-	err := rebootRecovery(nodename, signers)
+	err := rebooter.reboot()
 	if err != nil {
 		logger.Warningf(context.Background(), "soft reboot failed: %v", err)
 	}
@@ -65,20 +85,32 @@ func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 	}
 }
 
-func rebootRecovery(nodeName string, signers []ssh.Signer) error {
-	// Invoke `dm reboot-recovery` with a 2 second delay in the background, then exit the SSH shell.
-	// This prevents the SSH connection hanging waiting for `dm reboot-recovery to return.`
-	return sendCommand(nodeName, "{ sleep 2; dm reboot-recovery; } >/dev/null & exit", signers)
+func NewSerialRebooter(serial io.ReadWriter) *SerialRebooter {
+	return &SerialRebooter{
+		serial: serial,
+	}
 }
 
-func sendCommand(nodeName, command string, signers []ssh.Signer) error {
-	config, err := sshutil.DefaultSSHConfigFromSigners(signers...)
+func NewSSHRebooter(nodename string, signers []ssh.Signer) *SshRebooter {
+	return &SshRebooter{
+		nodename: nodename,
+		signers:  signers,
+	}
+}
+
+func (s *SerialRebooter) reboot() error {
+	_, err := io.WriteString(s.serial, "\ndm reboot-recovery\n")
+	return err
+}
+
+func (s *SshRebooter) reboot() error {
+	config, err := sshutil.DefaultSSHConfigFromSigners(s.signers...)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	client, err := sshutil.ConnectToNode(ctx, nodeName, config)
+	client, err := sshutil.ConnectToNode(ctx, s.nodename, config)
 	if err != nil {
 		return err
 	}
@@ -92,7 +124,9 @@ func sendCommand(nodeName, command string, signers []ssh.Signer) error {
 
 	defer session.Close()
 
-	err = session.Start(command)
+	// Invoke `dm reboot-recovery` with a 2 second delay in the background, then exit the SSH shell.
+	// This prevents the SSH connection from hanging waiting for `dm reboot-recovery` to return.
+	err = session.Start("{ sleep 2; dm reboot-recovery; } >/dev/null & exit")
 	if err != nil {
 		return err
 	}

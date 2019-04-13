@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"time"
@@ -16,8 +17,10 @@ import (
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/botanist/power"
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/netutil"
+	"fuchsia.googlesource.com/tools/serial"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -71,10 +74,11 @@ type DeviceTarget struct {
 	config  DeviceConfig
 	opts    Options
 	signers []ssh.Signer
+	serial  io.ReadWriteCloser
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
-func NewDeviceTarget(config DeviceConfig, opts Options) (*DeviceTarget, error) {
+func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*DeviceTarget, error) {
 	// If an SSH key is specified in the options, prepend it the configs list so that it
 	// corresponds to the authorized key that would be paved.
 	if opts.SSHKey != "" {
@@ -84,10 +88,21 @@ func NewDeviceTarget(config DeviceConfig, opts Options) (*DeviceTarget, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse out signers from private keys: %v", err)
 	}
+	var s io.ReadWriteCloser
+	if config.Serial != "" {
+		s, err = serial.Open(config.Serial)
+		if err != nil {
+			// TODO(IN-????): This should be returned as an error, but we don't want to fail any
+			// test runs for misconfigured serial until it is actually required to complete certain
+			// tasks.
+			logger.Errorf(ctx, "unable to open %s: %v", config.Serial, err)
+		}
+	}
 	return &DeviceTarget{
 		config:  config,
 		opts:    opts,
 		signers: signers,
+		serial:  s,
 	}, nil
 }
 
@@ -106,8 +121,8 @@ func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
 }
 
 // Serial returns the serial device associated with the target for serial i/o.
-func (t *DeviceTarget) Serial() string {
-	return t.config.Serial
+func (t *DeviceTarget) Serial() io.ReadWriteCloser {
+	return t.serial
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be paved.
@@ -155,8 +170,11 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 
 // Restart restarts the target.
 func (t *DeviceTarget) Restart(ctx context.Context) error {
+	if t.serial != nil {
+		defer t.serial.Close()
+	}
 	if t.config.Power != nil {
-		if err := t.config.Power.RebootDevice(t.signers, t.Nodename()); err != nil {
+		if err := t.config.Power.RebootDevice(t.signers, t.Nodename(), t.serial); err != nil {
 			return fmt.Errorf("failed to reboot the device: %v", err)
 		}
 	}
