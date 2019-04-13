@@ -25,7 +25,7 @@ struct Empty {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved = 0;
+  uint8_t __reserved{};
 };
 
 }  // namespace name

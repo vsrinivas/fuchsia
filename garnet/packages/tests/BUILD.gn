@@ -299,6 +299,7 @@ group("all") {
     "//garnet/packages/tests:fidl_compatibility_test_bin",
     "//garnet/packages/tests:fidl_compatibility_test_server_cpp",
     "//garnet/packages/tests:fidl_compatibility_test_server_go",
+    "//garnet/packages/tests:fidl_compatibility_test_server_llcpp",
     "//garnet/packages/tests:fidl_compatibility_test_server_rust",
     "//garnet/packages/tests:fidl_llcpp_conformance_test",
     "//garnet/packages/tests:fidlcat",
@@ -766,6 +767,7 @@ group("fidl_compatibility_test") {
     "//garnet/packages/tests:fidl_compatibility_test_bin",
     "//garnet/packages/tests:fidl_compatibility_test_server_cpp",
     "//garnet/packages/tests:fidl_compatibility_test_server_go",
+    "//garnet/packages/tests:fidl_compatibility_test_server_llcpp",
     "//garnet/packages/tests:fidl_compatibility_test_server_rust",
   ]
 }
@@ -1097,6 +1099,13 @@ group("fidl_compatibility_test_server_cpp") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp",
+  ]
+}
+
+group("fidl_compatibility_test_server_llcpp") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_llcpp",
   ]
 }
 

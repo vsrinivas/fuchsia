@@ -41,7 +41,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved = 0;
+  uint8_t __reserved{};
 };
 
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
@@ -117,7 +117,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved = 0;
+  uint8_t __reserved{};
 };
 
 
