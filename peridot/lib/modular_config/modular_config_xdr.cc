@@ -19,7 +19,6 @@ void XdrBaseShellConfig(
   xdr->FieldWithDefault(modular_config::kUrl,
                         data->mutable_app_config()->mutable_url(), has_url,
                         std::string(modular_config::kDefaultBaseShellUrl));
-  FXL_LOG(INFO) << data->app_config().url();
   data->mutable_app_config()->set_args(std::vector<std::string>());
 
   bool has_keep_alive_after_login = data->has_keep_alive_after_login();

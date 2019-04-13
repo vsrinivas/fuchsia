@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -21,6 +19,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
@@ -49,8 +49,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |config| Configs that are parsed from command line. These will be read from
   // a configuration file with the completion of MF-10. Used to configure
   // the modular framework environment.
-  // |session_shell_configs| Settings relevant to session shells. Used to
-  // configure session shells that are launched.
   // |launcher| Environment service for creating component instances.
   // |presenter| Service to initialize the presentation.
   // |device_settings_manager| Service to look-up whether device needs factory
@@ -58,8 +56,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
       fuchsia::modular::internal::BasemgrConfig config,
-      const std::vector<fuchsia::modular::internal::SessionShellMapEntry>&
-          session_shell_configs,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -142,13 +138,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // Used to configure which session shell component to launch.
   fuchsia::modular::AppConfig session_shell_config_;
 
-  // |session_shell_configs_| contains the session shell's presentation
-  // settings. |active_session_shell_configs_index_| indicates which settings
-  // in |session_shell_configs_| is currently active. If
-  // |session_shell_configs_| is empty, a default session shell config
-  // is used instead.
-  const std::vector<fuchsia::modular::internal::SessionShellMapEntry>&
-      session_shell_configs_;
+  // |active_session_shell_configs_index_| indicates which settings
+  // in |config_.session_shell_map()| is currently active.
   std::vector<fuchsia::modular::internal::SessionShellConfig>::size_type
       active_session_shell_configs_index_{};
 

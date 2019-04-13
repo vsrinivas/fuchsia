@@ -10,40 +10,28 @@
 
 #include <string>
 
+#include "peridot/lib/modular_config/modular_config_constants.h"
 #include "src/lib/files/file.h"
 
 namespace modular {
 
-namespace {
-#ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kAutoLoginToGuest = true;
-#else
-constexpr bool kAutoLoginToGuest = false;
-#endif
-
-}  // namespace
-
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   base_shell.set_url(command_line.GetOptionValueWithDefault(
-      "base_shell",
-      "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
-      "dev_base_shell.cmx"));
+      modular_config::kBaseShell, modular_config::kDefaultBaseShellUrl));
   story_shell.set_url(command_line.GetOptionValueWithDefault(
-      "story_shell", "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"));
+      modular_config::kStoryShell, modular_config::kDefaultStoryShellUrl));
   sessionmgr.set_url(command_line.GetOptionValueWithDefault(
-      "sessionmgr",
-      "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx"));
+      modular_config::kSessionmgrConfigName, modular_config::kSessionmgrUrl));
   session_shell.set_url(command_line.GetOptionValueWithDefault(
-      "session_shell",
-      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-      "ermine_session_shell.cmx"));
+      modular_config::kSessionShell, modular_config::kDefaultSessionShellUrl));
 
-  use_session_shell_for_story_shell_factory =
-      command_line.HasOption("use_session_shell_for_story_shell_factory");
+  use_session_shell_for_story_shell_factory = command_line.HasOption(
+      modular_config::kUseSessionShellForStoryShellFactory);
 
-  disable_statistics = command_line.HasOption("disable_statistics");
-  no_minfs = command_line.HasOption("no_minfs");
-  test = command_line.HasOption("test");
+  disable_statistics =
+      command_line.HasOption(modular_config::kDisableStatistics);
+  no_minfs = command_line.HasOption(modular_config::kNoMinfs);
+  test = command_line.HasOption(modular_config::kTest);
 
   // This flag will be exposed with the completion of MF-10. For now, we will
   // set it based on the test flag.
@@ -52,24 +40,28 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   keep_base_shell_alive_after_login = test;
 
   run_base_shell_with_test_runner =
-      command_line.GetOptionValueWithDefault("run_base_shell_with_test_runner",
-                                             "true") == "true"
+      command_line.GetOptionValueWithDefault(
+          modular_config::kRunBaseShellWithTestRunner, modular_config::kTrue) ==
+              modular_config::kTrue
           ? true
           : false;
-  enable_presenter = command_line.HasOption("enable_presenter");
+  enable_presenter = command_line.HasOption(modular_config::kEnablePresenter);
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault("base_shell_args", ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(
+                     modular_config::kBaseShellArgs, ""),
                  base_shell.mutable_args());
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault("story_shell_args", ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(
+                     modular_config::kStoryShellArgs, ""),
                  story_shell.mutable_args());
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(
+                     modular_config::kSessionmgrArgs, ""),
                  sessionmgr.mutable_args());
 
-  ParseShellArgs(
-      command_line.GetOptionValueWithDefault("session_shell_args", ""),
-      session_shell.mutable_args());
+  ParseShellArgs(command_line.GetOptionValueWithDefault(
+                     modular_config::kSessionShellArgs, ""),
+                 session_shell.mutable_args());
 
   if (test) {
     if (run_base_shell_with_test_runner) {
@@ -103,19 +95,7 @@ BasemgrSettings::CreateBasemgrConfig() {
   config.set_test(test);
   config.set_test_name(test_name);
 
-  // When auto-login to guest is specified, we use dev_base_shell with user
-  // specified such that a persistent guest user is created on first-time boot.
-  if (kAutoLoginToGuest) {
-    fuchsia::modular::internal::AppConfig override_base_shell;
-    override_base_shell.set_url(
-        "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
-        "dev_base_shell.cmx");
-    override_base_shell.mutable_args()->push_back("--user=persistent_guest");
-    config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
-  } else {
-    config.mutable_base_shell()->set_app_config(std::move(base_shell));
-  }
-
+  config.mutable_base_shell()->set_app_config(std::move(base_shell));
   config.mutable_base_shell()->set_keep_alive_after_login(
       keep_base_shell_alive_after_login);
 
@@ -123,6 +103,13 @@ BasemgrSettings::CreateBasemgrConfig() {
   session_shell_entry.set_name(session_shell.url());
   session_shell_entry.mutable_config()->set_app_config(
       std::move(session_shell));
+  // Set default presenter settings
+  session_shell_entry.mutable_config()->set_display_usage(
+      fuchsia::ui::policy::DisplayUsage::kUnknown);
+  session_shell_entry.mutable_config()->set_screen_height(
+      std::numeric_limits<float>::signaling_NaN());
+  session_shell_entry.mutable_config()->set_screen_width(
+      std::numeric_limits<float>::signaling_NaN());
   config.mutable_session_shell_map()->push_back(std::move(session_shell_entry));
 
   config.mutable_story_shell()->set_app_config(std::move(story_shell));

@@ -23,7 +23,7 @@ executable_package("sessionmgr") {
   deps = [
     ":component_context",
     ":focus",
-    ":new_modular_apis", # Compile the new APIs to validate them while they are under review.
+    ":new_modular_apis",  # Compile the new APIs to validate them while they are under review.
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",

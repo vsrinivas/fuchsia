@@ -9,6 +9,8 @@ namespace modular_config {
 
 inline constexpr char kBasemgrConfigName[] = "basemgr";
 inline constexpr char kSessionmgrConfigName[] = "sessionmgr";
+inline constexpr char kSessionmgrUrl[] =
+    "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
 inline constexpr char kStartupConfigPath[] = "/config/data/startup.config";
 inline constexpr char kTrue[] = "true";
 
@@ -57,9 +59,19 @@ inline constexpr char kStoryShellUrl[] = "story_shell_url";
 inline constexpr char kUrl[] = "url";
 inline constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
 
-// Cloud provider constants. These will be deprecated.
+// Various config constants that will be deprecated in favor for the new names.
+inline constexpr char kBaseShellArgs[] = "base_shell_args";
+inline constexpr char kStoryShell[] = "story_shell";
+inline constexpr char kStoryShellArgs[] = "story_shell_args";
+inline constexpr char kSessionShell[] = "session_shell";
+inline constexpr char kSessionShellArgs[] = "session_shell_args";
+inline constexpr char kSessionmgrArgs[] = "sessionmgr_args";
+inline constexpr char kDisableStatistics[] = "disable_statistics";
 inline constexpr char kNoCloudProviderForLedger[] =
     "no_cloud_provider_for_ledger";
+inline constexpr char kNoMinfs[] = "no_minfs";
+inline constexpr char kRunBaseShellWithTestRunner[] =
+    "run_base_shell_with_test_runner";
 inline constexpr char kUseCloudProviderFromEnvironment[] =
     "use_cloud_provider_from_environment";
 

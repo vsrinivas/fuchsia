@@ -37,7 +37,12 @@ struct TypeConverter<fuchsia::modular::AppConfig,
       const fuchsia::modular::internal::AppConfig& config) {
     fuchsia::modular::AppConfig app_config;
     app_config.url = config.url().c_str();
-    app_config.args = fidl::To<fidl::VectorPtr<std::string>>(config.args());
+
+    if (config.args().empty()) {
+      app_config.args = fidl::VectorPtr<std::string>();
+    } else {
+      app_config.args = fidl::To<fidl::VectorPtr<std::string>>(config.args());
+    }
 
     return app_config;
   }
@@ -68,8 +73,6 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 BasemgrImpl::BasemgrImpl(
     fuchsia::modular::internal::BasemgrConfig config,
-    const std::vector<fuchsia::modular::internal::SessionShellMapEntry>&
-        session_shell_configs,
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -77,7 +80,6 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::auth::account::AccountManagerPtr account_manager,
     fit::function<void()> on_shutdown)
     : config_(std::move(config)),
-      session_shell_configs_(session_shell_configs),
       launcher_(launcher),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
@@ -363,12 +365,12 @@ void BasemgrImpl::SelectNextSessionShell(
     return;
   }
 
-  if (session_shell_configs_.empty()) {
+  if (config_.session_shell_map().empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
     callback();
     return;
   }
-  auto shell_count = session_shell_configs_.size();
+  auto shell_count = config_.session_shell_map().size();
   if (shell_count <= 1) {
     FXL_DLOG(INFO)
         << "Only one session shell has been defined so switch is disabled";
@@ -390,48 +392,25 @@ void BasemgrImpl::SelectNextSessionShell(
 
 fuchsia::modular::internal::SessionShellConfig
 BasemgrImpl::GetActiveSessionShellConfig() {
-  if (active_session_shell_configs_index_ >= session_shell_configs_.size()) {
-    FXL_LOG(ERROR) << "Active session shell index is "
-                   << active_session_shell_configs_index_ << ", but only "
-                   << session_shell_configs_.size()
-                   << " session shell configs exist.";
-    fuchsia::modular::internal::SessionShellConfig default_config;
-    default_config.set_display_usage(
-        fuchsia::ui::policy::DisplayUsage::kUnknown);
-    default_config.set_screen_height(
-        std::numeric_limits<float>::signaling_NaN());
-    default_config.set_screen_width(
-        std::numeric_limits<float>::signaling_NaN());
-    return CloneStruct(default_config);
-  }
-
-  return CloneStruct(
-      session_shell_configs_[active_session_shell_configs_index_].config());
+  return CloneStruct(config_.session_shell_map()
+                         .at(active_session_shell_configs_index_)
+                         .config());
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
-  // The session shell settings overrides the session_shell flag passed via
-  // command line, except in integration tests. TODO(MF-113): Consolidate
-  // the session shell settings.
-  fuchsia::modular::AppConfig session_shell_config;
-  if (config_.test() || session_shell_configs_.empty()) {
-    session_shell_config = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
-        config_.session_shell_map().at(0).config().app_config()));
-  } else {
-    const auto& settings =
-        session_shell_configs_[active_session_shell_configs_index_];
-    session_shell_config.url = settings.name();
-  }
-
-  session_shell_config_ = std::move(session_shell_config);
+  session_shell_config_ = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
+      config_.session_shell_map()
+          .at(active_session_shell_configs_index_)
+          .config()
+          .app_config()));
 }
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // If there are no session shell settings specified, default to showing
     // setup.
-    if (!config_.test() &&
-        active_session_shell_configs_index_ >= session_shell_configs_.size()) {
+    if (!config_.test() && active_session_shell_configs_index_ >=
+                               config_.session_shell_map().size()) {
       StartBaseShell();
       return;
     }
