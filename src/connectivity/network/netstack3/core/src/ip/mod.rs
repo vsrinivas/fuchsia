@@ -7,7 +7,6 @@
 mod forwarding;
 mod icmp;
 mod igmp;
-pub(crate) mod ndp;
 mod types;
 
 // It's ok to `pub use` rather `pub(crate) use` here because the items in
@@ -70,20 +69,6 @@ pub(crate) struct IpLayerState {
 struct IpLayerStateInner<I: Ip> {
     forward: bool,
     table: ForwardingTable<I>,
-}
-
-/// The identifier for timer events in the IP layer.
-#[derive(Copy, Clone, PartialEq)]
-pub(crate) enum IpLayerTimerId {
-    /// A timer event in the IP layer relating to NDP operations.
-    Ndp(ndp::NdpTimerId),
-}
-
-/// Handle a timer event firing in the IP layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLayerTimerId) {
-    match id {
-        IpLayerTimerId::Ndp(inner_id) => ndp::handle_timeout(ctx, inner_id),
-    }
 }
 
 // TODO(joshlf): Once we support multiple extension headers in IPv6, we will

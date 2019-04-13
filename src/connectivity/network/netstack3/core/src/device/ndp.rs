@@ -19,9 +19,8 @@
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
 use crate::device::ethernet::EthernetNdpDevice;
-use crate::device::DeviceId;
-use crate::ip::types::IpProto;
-use crate::ip::{send_ip_packet_from_device, IpAddress, IpLayerTimerId, Ipv6, Ipv6Addr};
+use crate::device::{DeviceId, DeviceLayerTimerId};
+use crate::ip::{IpAddress, IpProto, Ipv6, Ipv6Addr};
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisment, NeighborSolicitation, Options,
 };
@@ -98,15 +97,27 @@ pub(crate) trait NdpDevice: Sized {
         address: &Ipv6Addr,
     ) -> bool;
 
-    /// Send a packet in a device layer frame.
+    /// Send a packet in a device layer frame to a destination `LinkAddress`.
     ///
-    /// `send_ipv6_frame` accepts a device ID, a destination hardware address,
-    /// and a `Serializer`. It computes the routing information, serializes the
-    /// request in a device layer frame, and sends it.
-    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+    /// `send_ipv6_frame_to` accepts a device ID, a destination hardware
+    /// address, and a `Serializer`. Implementers are expected simply to form
+    /// a link-layer frame and encapsulate the provided IPv6 body.
+    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
         device_id: u64,
         dst: Self::LinkAddress,
+        body: S,
+    ) -> Result<(), MtuError<S::InnerError>>;
+
+    /// Send a packet in a device layer frame.
+    ///
+    /// `send_ipv6_frame` accepts a device ID, a next hop IP address, and a
+    /// `Serializer`. Implementers must resolve the destination link-layer
+    /// address from the provided `next_hop` IPv6 address.
+    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), MtuError<S::InnerError>>;
 
@@ -171,7 +182,7 @@ impl NdpTimerId {
 
 impl From<NdpTimerId> for TimerId {
     fn from(v: NdpTimerId) -> Self {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::Ndp(v)))
+        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp(v)))
     }
 }
 
@@ -217,6 +228,8 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     // An IPv6 multicast address should always be sent on a broadcast
     // link address.
     if lookup_addr.is_multicast() {
+        // TODO(brunodalbo): this is currently out of spec, we need to form a
+        //  MAC multicast from the lookup address conforming to RFC 2464.
         return Some(ND::BROADCAST);
     }
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
@@ -355,34 +368,32 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 ) {
     debug!("send_neighbor_advertisement from {:?} to {:?}", device_addr, dst_ip);
     debug_assert!(device_addr.is_valid_unicast());
+    // TODO(brunodalbo) we're currently asserting that dst_ip is a valid unicast
+    //  as we build on other NDP features (such as unsolicited neighbor
+    //  advertisements, this assertion will become a change in the packet
+    //  building logic below.
+    debug_assert!(dst_ip.is_valid_unicast());
 
     // TODO(brunodalbo) if we're a router, flags must also set FLAG_ROUTER.
     let flags = if solicited { NeighborAdvertisment::FLAG_SOLICITED } else { 0x00 };
-    // We must call into the higher level send_ip_packet_from_device function
-    // because it is not guaranteed that we have actually saved the link layer
-    // address of the destination ip. Typically, the solicitation request will
-    // carry that information, but it is not necessary. So it is perfectly valid
-    // that trying to send this advertisement will end up triggering a neighbor
+    // We must call into the higher level send_ipv6_frame function because it is
+    // not guaranteed that we have actually saved the link layer address of the
+    // destination ip. Typically, the solicitation request will carry that
+    // information, but it is not necessary. So it is perfectly valid that
+    // trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
     let src_ll = ND::get_link_layer_addr(ctx, device_id);
-    send_ip_packet_from_device(
-        ctx,
-        ND::get_device_id(device_id),
-        device_addr,
-        dst_ip,
-        dst_ip,
-        IpProto::Icmpv6,
-        ndp::OptionsSerializer::<_>::new(
-            [NdpOption::TargetLinkLayerAddress(src_ll.bytes())].iter(),
-        )
+    let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
+    let body = ndp::OptionsSerializer::<_>::new(options.iter())
         .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             device_addr,
             dst_ip,
             IcmpUnusedCode,
             NeighborAdvertisment::new(flags, device_addr),
-        )),
-    )
-    .unwrap_or_else(|e| debug!("Failed to send neighbor advertisement: {:?}", e));
+        ))
+        .encapsulate(Ipv6PacketBuilder::new(device_addr, dst_ip, 1, IpProto::Icmpv6));
+    ND::send_ipv6_frame(ctx, device_id, dst_ip, body)
+        .unwrap_or_else(|e| debug!("Failed to send neighbor advertisement: {:?}", e));
 }
 
 /// Helper function to send ndp packet over an NdpDevice
@@ -397,7 +408,7 @@ fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
 ) where
     M: IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>,
 {
-    ND::send_ipv6_frame(
+    ND::send_ipv6_frame_to(
         ctx,
         device_id,
         link_addr,
@@ -617,7 +628,7 @@ mod tests {
         let body = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(local_ip(), remote_ip(), IcmpUnusedCode, req),
         );
-        send_ip_packet_from_device(
+        crate::ip::send_ip_packet_from_device(
             net.context("local"),
             device_id,
             local_ip(),

@@ -6,6 +6,7 @@
 
 pub(crate) mod arp;
 pub(crate) mod ethernet;
+pub(crate) mod ndp;
 
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -125,12 +126,14 @@ impl Default for DeviceLayerState {
 pub(crate) enum DeviceLayerTimerId {
     /// A timer event in the ARP layer with a protocol type of IPv4
     ArpIpv4(arp::ArpTimerId<Ipv4Addr>),
+    Ndp(ndp::NdpTimerId),
 }
 
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     match id {
         DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timeout(ctx, inner_id),
+        DeviceLayerTimerId::Ndp(inner_id) => ndp::handle_timeout(ctx, inner_id),
     }
 }
 

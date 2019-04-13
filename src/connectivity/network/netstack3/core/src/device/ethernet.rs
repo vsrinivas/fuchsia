@@ -12,9 +12,9 @@ use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
+use crate::device::{ndp, ndp::NdpState};
 use crate::device::{DeviceId, FrameDestination};
-use crate::ip::ndp::NdpState;
-use crate::ip::{ndp, AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
@@ -290,9 +290,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
 
     #[ipv6addr]
     let dst_mac = {
-        if let Some(dst_mac) =
-            crate::ip::ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr)
-        {
+        if let Some(dst_mac) = ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr) {
             Ok(dst_mac)
         } else {
             Err(IpAddr::V6(local_addr))
@@ -442,7 +440,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     addr: Ipv6Addr,
     mac: Mac,
 ) {
-    crate::ip::ndp::insert_neighbor::<D, EthernetNdpDevice>(ctx, device_id, addr, mac)
+    ndp::insert_neighbor::<D, EthernetNdpDevice>(ctx, device_id, addr, mac)
 }
 
 fn get_device_state<D: EventDispatcher>(
@@ -559,7 +557,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             || state.mac.to_ipv6_link_local(None) == *address
     }
 
-    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
         device_id: u64,
         dst: Mac,
@@ -572,6 +570,15 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             .map_err(|(err, _)| err)?;
         ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         Ok(())
+    }
+
+    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        next_hop: Ipv6Addr,
+        body: S,
+    ) -> Result<(), MtuError<S::InnerError>> {
+        send_ip_frame(ctx, device_id, next_hop, body).map_err(|e| e.0)
     }
 
     fn get_device_id(id: u64) -> DeviceId {

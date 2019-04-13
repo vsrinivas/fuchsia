@@ -10,9 +10,9 @@ use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::device::{DeviceId, FrameDestination};
+use crate::device::{ndp, DeviceId, FrameDestination};
 use crate::ip::{
-    ndp, send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
