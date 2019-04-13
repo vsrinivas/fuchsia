@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "src/developer/debug/shared/message_loop_target.h"
-
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
+
+#include "src/developer/debug/shared/message_loop_target.h"
 
 namespace debug_ipc {
 
@@ -29,9 +29,6 @@ class MessageLoopZircon : public MessageLoopTarget {
 
   Type GetType() const override { return Type::kZircon; }
   bool SupportsFidl() const override { return false; }
-
-  // Runs until timeout. Mostly used in tests.
-  void RunUntilTimeout(zx::duration timeout);
 
   // Returns the current message loop or null if there isn't one.
   static MessageLoopZircon* Current();
@@ -57,6 +54,7 @@ class MessageLoopZircon : public MessageLoopTarget {
   struct WatchInfo;
 
   // MessageLoop protected implementation.
+  uint64_t GetMonotonicNowNS() const override;
   void RunImpl() override;
   void StopWatching(int id) override;
   // Triggers an event signaling that there is a pending event.

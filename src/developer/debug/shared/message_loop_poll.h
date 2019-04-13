@@ -30,6 +30,7 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   struct WatchInfo;
 
   // MessageLoop protected implementation.
+  uint64_t GetMonotonicNowNS() const override;
   void RunImpl() override;
   void StopWatching(int id) override;
   void SetHasTasks() override;

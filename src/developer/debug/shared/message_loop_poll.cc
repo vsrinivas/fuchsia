@@ -6,10 +6,12 @@
 
 #include <fcntl.h>
 #include <poll.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
 
-#include "src/lib/fxl/build_config.h"
 #include "src/lib/files/eintr_wrapper.h"
+#include "src/lib/fxl/build_config.h"
 
 namespace debug_ipc {
 
@@ -118,6 +120,15 @@ MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd,
   return WatchHandle(this, watch_id);
 }
 
+uint64_t MessageLoopPoll::GetMonotonicNowNS() const {
+  struct timespec ts;
+
+  int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
+  FXL_DCHECK(!ret);
+
+  return static_cast<uint64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+}
+
 void MessageLoopPoll::RunImpl() {
   std::vector<pollfd> poll_vect;
   std::vector<size_t> map_indices;
@@ -128,11 +139,31 @@ void MessageLoopPoll::RunImpl() {
     FXL_DCHECK(!poll_vect.empty());
     FXL_DCHECK(poll_vect.size() == map_indices.size());
 
-    poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), -1);
+    int poll_timeout;
+    uint64_t delay = DelayNS();
+    if (delay == MessageLoop::kMaxDelay) {
+      poll_timeout = -1;
+    } else {
+      delay += 999999;
+      delay /= 1000000;
+      poll_timeout = static_cast<int>(delay);
+    }
+
+    int res = poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()),
+                   poll_timeout);
+    FXL_DCHECK(res >= 0 || errno == EINTR)
+        << "poll() failed: " << strerror(errno);
+
     for (size_t i = 0; i < poll_vect.size(); i++) {
       if (poll_vect[i].revents)
         OnHandleSignaled(poll_vect[i].fd, poll_vect[i].revents, map_indices[i]);
     }
+
+    // Process one pending task. If there are more set us to wake up again.
+    // ProcessPendingTask must be called with the lock held.
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (ProcessPendingTask())
+      SetHasTasks();
   }
 }
 
@@ -159,10 +190,8 @@ void MessageLoopPoll::OnFDReadable(int fd) {
   int nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
   FXL_DCHECK(nread == 1);
 
-  // ProcessPendingTask must be called with the lock held.
-  std::lock_guard<std::mutex> guard(mutex_);
-  if (ProcessPendingTask())
-    SetHasTasks();
+  // This is just here to wake us up and run the loop again. We don't need to
+  // actually respond to the data.
 }
 
 void MessageLoopPoll::SetHasTasks() {

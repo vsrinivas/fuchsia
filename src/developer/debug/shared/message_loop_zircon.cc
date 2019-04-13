@@ -11,10 +11,10 @@
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/socket_watcher.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 
@@ -327,15 +327,11 @@ void MessageLoopZircon::HandleException(zx_port_packet_t packet) {
   }
 }
 
-void MessageLoopZircon::RunUntilTimeout(zx::duration timeout) {
-  // Init should have been called.
-  FXL_DCHECK(Current() == this);
-  zx_port_packet_t packet;
-  zx_status_t status = port_.wait(zx::deadline_after(timeout), &packet);
-  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
-  if (status == ZX_OK) {
-    HandleException(packet);
-  }
+uint64_t MessageLoopZircon::GetMonotonicNowNS() const {
+  zx::time ret;
+  zx::clock::get(&ret);
+
+  return ret.get();
 }
 
 // Previously, the approach was to first look for C++ tasks and when handled
@@ -355,8 +351,16 @@ void MessageLoopZircon::RunImpl() {
   // Init should have been called.
   FXL_DCHECK(Current() == this);
 
+  zx::time time;
+  uint64_t delay = DelayNS();
+  if (delay == MessageLoop::kMaxDelay) {
+    time = zx::time::infinite();
+  } else {
+    time = zx::deadline_after(zx::nsec(delay));
+  }
+
   zx_port_packet_t packet;
-  while (!should_quit() && port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
+  while (!should_quit() && port_.wait(time, &packet) == ZX_OK) {
     // We check first for pending C++ tasks. If an event was handled, it will
     // signal the associated zx::event in order to trigger the port once more
     // (this is the way we process an enqueued event). If there is no enqueued

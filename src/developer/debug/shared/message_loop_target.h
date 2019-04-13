@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "src/developer/debug/shared/message_loop.h"
-
 #include <lib/zx/thread.h>
+
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace debug_ipc {
 
@@ -49,9 +49,6 @@ class MessageLoopTarget : public MessageLoop {
   // Fidl requires a special dispatcher to be setup. Not all message loops
   // support it.
   virtual bool SupportsFidl() const = 0;
-
-  // Runs until timeout. Mostly used in tests.
-  void RunUntilTimeout(zx::duration timeout);
 
   // Returns the current message loop or null if there isn't one.
   static MessageLoopTarget* Current();

@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include "src/developer/debug/shared/event_handlers.h"
-#include "src/developer/debug/shared/message_loop_target.h"
-
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
+
+#include <vector>
+
+#include "src/developer/debug/shared/event_handlers.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 
 namespace debug_ipc {
 
@@ -45,9 +45,6 @@ class MessageLoopAsync : public MessageLoopTarget {
   bool SupportsFidl() const override { return true; }
 
   void Cleanup() override;
-
-  // Runs until timeout. Mostly used in tests.
-  void RunUntilTimeout(zx::duration timeout);
 
   // Returns the current message loop or null if there isn't one.
   static MessageLoopAsync* Current();
@@ -89,6 +86,7 @@ class MessageLoopAsync : public MessageLoopTarget {
   const WatchInfo* FindWatchInfo(int id) const;
 
   // MessageLoop protected implementation.
+  uint64_t GetMonotonicNowNS() const override;
   void RunImpl() override;
   void StopWatching(int id) override;
   // Triggers an event signaling that there is a pending event.

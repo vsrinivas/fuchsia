@@ -6,8 +6,10 @@
 
 #include <deque>
 #include <functional>
+#include <limits>
 #include <map>
 #include <mutex>
+#include <vector>
 
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/lib/fxl/macros.h"
@@ -62,6 +64,12 @@ class MessageLoop {
 
   void PostTask(FileLineFunction file_line, std::function<void()> fn);
 
+  // Set a task to run after a certain number of miliseconds have elapsed.
+  // Granularity is hard to guarantee but the timer shouldn't fire earlier than
+  // expected.
+  void PostTimer(FileLineFunction file_line, uint64_t delta_ms,
+                 std::function<void()> fn);
+
   // Starts watching the given file descriptor in the given mode. Returns
   // a WatchHandle that scopes the watch operation (when the handle is
   // destroyed the watcher is unregistered).
@@ -77,7 +85,12 @@ class MessageLoop {
   virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
 
  protected:
+  static constexpr uint64_t kMaxDelay = std::numeric_limits<uint64_t>::max();
+
   virtual void RunImpl() = 0;
+
+  // Get the value of a monotonic clock in nanoseconds.
+  virtual uint64_t GetMonotonicNowNS() const = 0;
 
   // Used by WatchHandle to unregister a watch. Can be called from any thread
   // without the lock held.
@@ -97,6 +110,9 @@ class MessageLoop {
   // task execution and exit if true.
   bool should_quit() const { return should_quit_; }
 
+  // How much time we should wait before waking up again to process timers.
+  uint64_t DelayNS() const;
+
   // Style guide says this should be private and we should have a protected
   // getter, but that makes the thread annotations much more complicated.
   std::mutex mutex_;
@@ -110,6 +126,23 @@ class MessageLoop {
   };
 
   std::deque<Task> task_queue_;
+
+  struct Timer {
+    Task task;
+
+    // Expiration time in nanoseconds. The time is absolute and compares to
+    // GetMonotonicNowNS.
+    uint64_t expiry;
+  };
+  std::vector<Timer> timers_;
+
+  static bool CompareTimers(const Timer& a, const Timer& b) {
+    return a.expiry >= b.expiry;
+  }
+
+  // Expiration time of the timer which will expire soonest. Returns an upper
+  // bound if there are no timers set.
+  uint64_t NextExpiryNS() const;
 
   bool should_quit_ = false;
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "gtest/gtest.h"
@@ -18,13 +19,42 @@
 namespace debug_ipc {
 
 // This test either passes or hangs forever because the post didn't work.
-// TODO(brettw) add a timeout when timers are supported in the message loop.
+// We could add a timer timeout, but if regular task posting doesn't work it's
+// not clear why timer tasks would.
 TEST(MessageLoop, PostQuit) {
   PlatformMessageLoop loop;
   loop.Init();
 
   loop.PostTask(FROM_HERE, [loop_ptr = &loop]() { loop_ptr->QuitNow(); });
   loop.Run();
+
+  loop.Cleanup();
+}
+
+TEST(MessageLoop, TimerQuit) {
+  const uint64_t kNano = 1000000000;
+
+  PlatformMessageLoop loop;
+  loop.Init();
+
+  struct timespec start;
+  ASSERT_FALSE(clock_gettime(CLOCK_MONOTONIC, &start));
+
+  loop.PostTimer(FROM_HERE, 50, [loop_ptr = &loop]() { loop_ptr->QuitNow(); });
+  loop.Run();
+
+  struct timespec end;
+  ASSERT_FALSE(clock_gettime(CLOCK_MONOTONIC, &end));
+  ASSERT_GE(end.tv_sec, start.tv_sec);
+
+  uint64_t nsec = (end.tv_sec - start.tv_sec) * kNano;
+  nsec += end.tv_nsec;
+  nsec -= start.tv_nsec;
+
+  EXPECT_GE(nsec, 50u);
+
+  // If we test an upper bound for nsec this test could potentially be flaky.
+  // We don't actually make any guarantees about the upper bound anyway.
 
   loop.Cleanup();
 }

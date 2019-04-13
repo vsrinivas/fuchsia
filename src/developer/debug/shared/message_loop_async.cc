@@ -4,12 +4,11 @@
 
 #include "src/developer/debug/shared/message_loop_async.h"
 
-#include <stdio.h>
-
 #include <lib/fdio/io.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <stdio.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/shared/event_handlers.h"
@@ -361,15 +360,11 @@ void MessageLoopAsync::HandleException(const ExceptionHandler& handler,
   }
 }
 
-void MessageLoopAsync::RunUntilTimeout(zx::duration timeout) {
-  // Init should have been called.
-  FXL_DCHECK(Current() == this);
-  zx_status_t status;
-  status = loop_.ResetQuit();
-  FXL_DCHECK(status != ZX_ERR_BAD_STATE);
-  status = loop_.Run(zx::deadline_after(timeout));
-  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT)
-      << "Expected ZX_OK || ZX_ERR_TIMED_OUT, got " << ZxStatusToString(status);
+uint64_t MessageLoopAsync::GetMonotonicNowNS() const {
+  zx::time ret;
+  zx::clock::get(&ret);
+
+  return ret.get();
 }
 
 // Previously, the approach was to first look for C++ tasks and when handled
@@ -390,11 +385,31 @@ void MessageLoopAsync::RunImpl() {
   FXL_DCHECK(Current() == this);
   zx_status_t status;
 
-  status = loop_.ResetQuit();
-  FXL_DCHECK(status != ZX_ERR_BAD_STATE);
-  status = loop_.Run();
-  FXL_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED)
-      << "Expected ZX_OK || ZX_ERR_CANCELED, got " << ZxStatusToString(status);
+  zx::time time;
+  uint64_t delay = DelayNS();
+  if (delay == MessageLoop::kMaxDelay) {
+    time = zx::time::infinite();
+  } else {
+    time = zx::deadline_after(zx::nsec(delay));
+  }
+
+  for (;;) {
+    status = loop_.ResetQuit();
+    FXL_DCHECK(status != ZX_ERR_BAD_STATE);
+    status = loop_.Run(time);
+    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_CANCELED ||
+               status == ZX_ERR_TIMED_OUT)
+        << "Expected ZX_OK || ZX_ERR_CANCELED || ZX_ERR_TIMED_OUT, got "
+        << ZxStatusToString(status);
+
+    if (status != ZX_ERR_TIMED_OUT) {
+      return;
+    }
+
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (ProcessPendingTask())
+      SetHasTasks();
+  }
 }
 
 void MessageLoopAsync::QuitNow() {

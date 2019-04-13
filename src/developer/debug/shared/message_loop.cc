@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 
+#include <algorithm>
+
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/lib/fxl/logging.h"
 
@@ -51,15 +53,65 @@ void MessageLoop::PostTask(FileLineFunction file_line,
     SetHasTasks();
 }
 
+void MessageLoop::PostTimer(FileLineFunction file_line, uint64_t delta_ms,
+                            std::function<void()> fn) {
+  constexpr uint64_t kMsToNs = 1000000;
+
+  bool needs_awaken;
+  uint64_t expiry = delta_ms * kMsToNs + GetMonotonicNowNS();
+
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    needs_awaken = task_queue_.empty() && NextExpiryNS() > expiry;
+    timers_.push_back({{std::move(file_line), std::move(fn)}, expiry});
+    std::push_heap(timers_.begin(), timers_.end(), &CompareTimers);
+  }
+  if (needs_awaken)
+    SetHasTasks();
+}
+
+uint64_t MessageLoop::DelayNS() const {
+  // NextExpiry will return kMaxDelay if there are no timers queued.
+  uint64_t expiry = NextExpiryNS();
+  if (expiry == kMaxDelay) {
+    return kMaxDelay;
+  }
+
+  // We check how much more time we need to wait.
+  uint64_t now = GetMonotonicNowNS();
+  if (expiry > now) {
+    return expiry - now;
+  }
+
+  return 0;
+}
+
+uint64_t MessageLoop::NextExpiryNS() const {
+  if (timers_.empty()) {
+    return kMaxDelay;
+  }
+
+  return timers_[0].expiry;
+}
+
 void MessageLoop::QuitNow() { should_quit_ = true; }
 
 bool MessageLoop::ProcessPendingTask() {
   // This function will be called with the mutex held.
-  if (task_queue_.empty())
+  if (task_queue_.empty() && DelayNS() > 0) {
     return false;
+  }
 
-  Task task = std::move(task_queue_.front());
-  task_queue_.pop_front();
+  Task task;
+  if (!task_queue_.empty()) {
+    task = std::move(task_queue_.front());
+    task_queue_.pop_front();
+  } else {
+    std::pop_heap(timers_.begin(), timers_.end(), &CompareTimers);
+    task = std::move(timers_.back().task);
+    timers_.pop_back();
+  }
+
   {
     mutex_.unlock();
     {
