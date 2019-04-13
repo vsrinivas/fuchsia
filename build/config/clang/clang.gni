@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+default_clang_prefix =
+    rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
+
 declare_args() {
   # The default clang toolchain provided by the buildtools. This variable is
   # additionally consumed by the Go toolchain.
-  clang_prefix =
-      rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
+  clang_prefix = default_clang_prefix
 }
 
 if (current_cpu == "arm64") {

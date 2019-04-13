@@ -91,7 +91,6 @@ FUCHSIA_BUILD_DIR    - The path to the current Fuchsia build directory
 FUCHSIA_DIR          - The path to the root of the Fuchsia source tree
 FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
 ZIRCON_BUILDROOT     - The path to the Zircon build directory
-ZIRCON_BUILD_DIR     - The path to the architecture-specific subdirectory of the Zircon build
 ZIRCON_TOOLS_DIR     - The path to the Zircon host-tools build directory.
 ```
 

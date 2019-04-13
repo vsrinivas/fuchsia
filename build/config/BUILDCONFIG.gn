@@ -640,6 +640,9 @@ if (toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
     if (selector != "$selector") {
       # It's a scope, not a string.  Just use it as is.
       select_variant_canonical += [ selector ]
+    } else if (selector == "gcc" || selector == "clang") {
+      # Ignore these as special cases.  They're just here to be
+      # passed through in zircon_args.
     } else {
       # It's a string, not a scope.  Expand the shortcut.
       # If there is a slash, this is "shortcut/output_name".

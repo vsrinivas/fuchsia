@@ -14,6 +14,13 @@ declare_args() {
   # what images to build rather than a single "everything" image that needs
   # to be pared down.
   tests_in_image = true
+
+  # Defines the `//:default` target: what `ninja` with no arguments does.
+  default_deps = [
+    ":ids",
+    ":images",
+    ":tools",
+  ]
 }
 
 # Build the native host tools intended for developer use.
@@ -248,11 +255,7 @@ if (current_toolchain == default_toolchain) {
 
 group("default") {
   testonly = true
-  deps = [
-    ":ids",
-    ":images",
-    ":tools",
-  ]
+  deps = default_deps
 }
 
 group("all-cpu") {

@@ -3,10 +3,75 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/toolchain/goma.gni")
+
+_zircon_variants = []
+foreach(selector, select_variant) {
+  if (selector == "$selector") {
+    _zircon_variants += [ selector ]
+  }
+}
 
 declare_args() {
-  # This is $root_build_dir in the Zircon GN build.
-  zircon_root_build_dir = "//out/build-zircon"
+  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+  # This is included in the default value of [`zircon_args`](#zircon_args) so
+  # you can set this to add things there without wiping out the defaults.
+  # When you set `zircon_args` directly, then this has no effect at all.
+  # Arguments you set here override any arguments in the default `zircon_args`.
+  # There is no way to append to a value from the defaults.
+  zircon_extra_args = {
+  }
+}
+
+declare_args() {
+  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+  # The default passes through GOMA settings and
+  # [`select_variant`](#select_variant) shorthand selectors.
+  zircon_args = {
+    use_goma = use_goma
+    goma_dir = goma_dir
+    if (clang_prefix != default_clang_prefix) {
+      # Propagate a custom value to override Zircon's default.  But don't
+      # propagate the default because Zircon has proper incremental build
+      # dependencies on toolchain updates only if it knows it's using the
+      # prebuilt.
+      clang_tool_dir = clang_prefix
+    }
+    variants = _zircon_variants
+    default_deps = [ ":legacy-$target_cpu" ]
+    forward_variables_from(zircon_extra_args, "*")
+  }
+}
+
+# This is $root_build_dir in the Zircon GN build.
+# **NOTE!** This is not a subdirectory of $root_build_dir because that
+# makes GN insist that it understand where all files in there come from.
+# We instead require that users (or `fx build`) run ninja in
+# $zircon_root_build_dir before running ninja in $root_build_dir.
+zircon_root_build_dir = "${root_build_dir}.zircon"
+
+# The Zircon GN is completely a puppet of this build.  This gen runs that gen.
+if (current_toolchain == default_toolchain) {
+  # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
+  # the first thing that happens at all and it's synchronous so after this
+  # point we can read in files written by this gen step.
+  exec_script(
+      "//buildtools/gn",
+      [
+        "gen",
+        "-q",
+        "--root=" + rebase_path("//zircon", root_build_dir),
+        "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
+            "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
+            "# zircon_args = { ... } to replace the defaults above.$0x0a" +
+            "forward_variables_from($zircon_args, \"*\")",
+        rebase_path(zircon_root_build_dir, root_build_dir),
+      ])
+
+  exec_script("//build/zircon/populate_zircon_public.py",
+              [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
+              "",
+              [ "$zircon_root_build_dir/legacy_dirs.json" ])
 }
 
 # The top-level `tools` Ninja target in Zircon puts the tool binaries here.
@@ -20,16 +85,6 @@ zircon_legacy_targets =
 # See //zircon/public/sysroot/BUILD.gn and //build/config/fuchsia/BUILD.gn.
 zircon_legacy_sysroot =
     read_file("$zircon_root_build_dir/legacy_sysroot-$target_cpu.json", "json")
-
-if (current_toolchain == default_toolchain) {
-  # By GN evaluation order this is roughly the first thing that happens at
-  # all and it's synchronous so after this point we can read in files
-  # written by this gen step.
-  exec_script("//build/zircon/populate_zircon_public.py",
-              [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
-              "",
-              [ "$zircon_root_build_dir/legacy_dirs.json" ])
-}
 
 # The `gn gen` stage of the Zircon GN build writes this file.
 # It's a list of {name=... path=... type=...} scopes.

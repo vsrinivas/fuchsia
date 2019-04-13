@@ -43,7 +43,7 @@ function main {
     fi
     for d in ${FUCHSIA_DIR}/out/*; do
       local build_dir="${d##"${FUCHSIA_DIR}"/}"
-      if [[ "${build_dir}" != "out/build-zircon" && "${build_dir}" != "${current}" ]]; then
+      if [[ "${build_dir}" != out/*.zircon && "${build_dir}" != "${current}" ]]; then
         echo "${build_dir}"
       fi
     done

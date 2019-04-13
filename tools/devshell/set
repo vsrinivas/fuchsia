@@ -9,7 +9,6 @@
 ##               [--release] [--build-dir BUILDDIR]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--with-base GNLABEL1,GNLABEL2,...]
-##               [--zircon-arg ARG]
 ##
 ## where PRODUCT is an entry from `//products` or `//vendor/*/products` and
 ## BOARD is an entry from `//boards` or `//vendor/*/boards`. Use the
@@ -94,11 +93,6 @@
 ##                         or the --with-base argument can be provided multiple
 ##                         times.
 ##
-## Deprecated flags:
-##
-##   --zircon-arg ARG      Additional arguments to pass to build-zircon.sh.
-##                         Can be given multiple times.
-##
 ## Example:
 ##
 ##   $ fx set core.x64 --with //bundles:tests
@@ -182,7 +176,6 @@ function main {
   local gn_after_args=""
   local base=()
   local universe=()
-  local zircon_args=(-v -g)
   local build_dir=
   local variant=
   local use_goma
@@ -205,15 +198,6 @@ function main {
           return 1
         fi
         IFS=, universe+=("$2")
-        shift
-        ;;
-      --zircon-arg)
-        fx-warn "--zircon-arg is deprecated, common use case is no longer required"
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        zircon_args+=("$2")
         shift
         ;;
       --netboot)
@@ -356,7 +340,6 @@ function main {
   # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
     gn_args+=" use_goma=true goma_dir=\"${goma_dir}\""
-    zircon_args+=(use_goma=true "goma_dir=\"${goma_dir}\"")
   elif [[ "${ccache}" -eq 1 ]]; then
     gn_args+=" use_ccache=true"
   fi
@@ -387,9 +370,6 @@ universe_package_labels+=["
 
   gn_args+="${gn_after_args}"
 
-  # Zircon's `gn gen` phase has to be done before Fuchsia's `gn gen`.
-  # The former produces the legacy-$cpu.json file consumed by the latter.
-  "${FUCHSIA_DIR}/scripts/build-zircon.sh" "${zircon_args[@]}"
   "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
                                   "${gn_switches[@]}" --args="${gn_args}" "$@"
 

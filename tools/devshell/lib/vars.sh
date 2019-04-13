@@ -89,8 +89,7 @@ function fx-build-config-load {
 
   export FUCHSIA_BUILD_DIR FUCHSIA_ARCH
 
-  export ZIRCON_BUILDROOT="${ZIRCON_BUILDROOT:-${FUCHSIA_OUT_DIR}/build-zircon}"
-  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${ZIRCON_BUILDROOT}/build-${FUCHSIA_ARCH}}"
+  export ZIRCON_BUILDROOT="${FUCHSIA_BUILD_DIR%/}.zircon"
   export ZIRCON_TOOLS_DIR="${ZIRCON_BUILDROOT}/tools"
 
   return 0

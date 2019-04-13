@@ -115,7 +115,7 @@ func needFuchsiaBuildDir() {
 
 func needZirconBuildDir() {
 	if *zirconBuildDir == "" {
-		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILD_DIR")
+		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILDROOT")
 	}
 }
 
@@ -131,7 +131,7 @@ func main() {
 
 	if *bootloader == "" {
 		needZirconBuildDir()
-		*bootloader = filepath.Join(*zirconBuildDir, "../efi-x64-clang/bootx64.efi")
+		*bootloader = filepath.Join(*zirconBuildDir, "efi-x64-clang/bootx64.efi")
 	}
 	if _, err := os.Stat(*bootloader); err != nil {
 		log.Fatalf("cannot read %q: %s", *bootloader, err)

@@ -11,5 +11,9 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-fx-command-run build-zircon
+echo >&2 '*** DEPRECATION WARNING ***'
+echo >&2 'NOTE! `fx full-build` is obsolete and will be removed soon.'
+echo >&2 'Use plain `fx build` instead.  See `fx help build` for details.'
+echo >&2 'Now running `fx build`...'
+
 fx-command-run build

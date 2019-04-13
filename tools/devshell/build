@@ -5,14 +5,65 @@
 
 ### Run Ninja to build Fuchsia
 
-## usage: fx build [ninja arguments ...]
+## usage: fx build [-SWITCH...] [zircon/TARGET | TARGET ...]
+##
+## This runs Ninja, usually twice: once for Zircon and once for Fuchsia.
+## With no explicit targets, Zircon Ninja builds its default targets and
+## then Fuchsia Ninja builds its default targets.
+##
+## For each `zircon/TARGET` argument, `TARGET` is passed to Zircon Ninja.
+## For each other `TARGET` argument, `TARGET` is passed to Fuchsia Ninja.
+## If all the target arguments are `zircon/TARGET`, Fuchsia Ninja is not run.
+##
+## Switch arguments are passed through to Ninja (same switches for both).
 ## Run `fx build -h` to see Ninja argument details.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
+function run-ninja {
+  # Use a subshell because fx-cmd-locked locks until exit, not function return.
+  (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@") || exit
+}
+
 function main {
-  fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" -C "${FUCHSIA_BUILD_DIR}" "$@"
+  local arg switches=() zircon_targets=() fuchsia_targets=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      # These Ninja switches take an argument.
+      -[Cfjkldtv])
+        switches+=("$1" "$2")
+        shift
+        continue
+        ;;
+      -*)
+        switches+=("$1")
+        ;;
+      zircon/*)
+        zircon_targets+=("${1#zircon/}")
+        any_zircon=true
+        ;;
+      *)
+        fuchsia_targets+=("$1")
+        any_fuchsia=true
+        ;;
+    esac
+    shift
+  done
+
+  # Build requested Zircon targets.
+  # Add default if building any Fuchsia targets.
+  if [ ${#fuchsia_targets[@]} -ne 0 ]; then
+    zircon_targets+=(default)
+  fi
+  run-ninja -C "${ZIRCON_BUILDROOT}" "${switches[@]}" "${zircon_targets[@]}"
+
+  # If there were explicit Zircon targets and no other explicit targets,
+  # the Zircon run was enough by itself.  Otherwise Zircon default is
+  # a prerequisite for any Fuchsia target (including implicit default).
+  if [ ${#fuchsia_targets[@]} -ne 0 -o ${#zircon_targets[@]} -eq 0 ]; then
+    run-ninja -C "${FUCHSIA_BUILD_DIR}" "${switches[@]}" "${fuchsia_targets[@]}"
+  fi
 }
 
 main "$@"
