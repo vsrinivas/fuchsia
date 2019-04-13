@@ -43,6 +43,7 @@ source_set("ffmpeg") {
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
   ]
 

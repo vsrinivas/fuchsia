@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
 
 # The `gn gen` stage of the Zircon GN build writes this file.
 # It's a list of {name=... path=... type=...} scopes.
-zircon_images = read_file("$zircon_root_build_dir/images.json", "json")
+zircon_images = read_file("$zircon_root_build_dir/legacy_images.json", "json")
 
 foreach(image, zircon_images) {
   if (image.name == "kernel" && image.type == "zbi" &&

@@ -36,20 +36,13 @@ common_pieces = {
 
 # The default version for the normal case.
 library("trace-engine") {
-  forward_variables_from(common_pieces, "*")
+  forward_variables_from(common_pieces, "*", [ "public_deps" ])
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
 
   shared = true
   static = false
   sdk = "shared"
-  sdk_headers = [
-    "trace-engine/buffer_internal.h",
-    "trace-engine/context.h",
-    "trace-engine/fields.h",
-    "trace-engine/handler.h",
-    "trace-engine/instrumentation.h",
-    "trace-engine/types.h",
-  ]
+  sdk_headers = []
 }
 
 # A special version for programs and shared libraries that can't use

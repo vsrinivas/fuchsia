@@ -51,10 +51,10 @@ def main():
     parser.add_argument('--verbose', help='Tell the go tool to be verbose about what it is doing',
                         action='store_true')
     parser.add_argument('--package', help='The package name', required=True)
-    parser.add_argument('--shared-libs-root', help='Path to the build shared libraries',
-                        required=False)
-    parser.add_argument('--fdio-include', help='Path to the FDIO include directory',
-                        required=False)
+    parser.add_argument('--include-dir', help='-isystem path to add',
+                        action='append', default=[])
+    parser.add_argument('--lib-dir', help='-L path to add',
+                        action='append', default=[])
     parser.add_argument('--vet', help='Run go vet',
                         action='store_true')
     args = parser.parse_args()
@@ -141,9 +141,8 @@ def main():
         cflags.append('--target=' + args.target)
     ldflags = cflags[:]
 
-    if args.current_os == 'fuchsia':
-        cflags.append('-I' + args.fdio_include)
-        ldflags.append('-L' + args.shared_libs_root)
+    cflags += ['-isystem' + dir for dir in args.include_dir]
+    ldflags += ['-L' + dir for dir in args.lib_dir]
 
     env['CGO_CFLAGS'] = env['CGO_CPPFLAGS'] = env['CGO_CXXFLAGS'] = ' '.join(cflags)
     env['CGO_LDFLAGS'] = ' '.join(ldflags)

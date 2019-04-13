@@ -315,6 +315,10 @@ template("library") {
     # meant to be very clean, just to do what works in the legacy build.
     sdk = invoker.sdk
     sdk_headers = invoker.sdk_headers
+    if (sdk != false) {
+      assert(static || shared,
+             "Public library(\"$_library_name\") must be static or shared")
+    }
   } else {
     sdk = false
     sdk_headers = []
@@ -340,6 +344,135 @@ template("library") {
   # A specialized toolchain might not support shared libraries.
   shared = shared && defined(toolchain.shlib)
 
+  # TODO(BLD-353): temporary hacks
+  if (sdk != false && toolchain.environment == "user" &&
+      current_toolchain == toolchain.shlib ==
+      (sdk == "shared" || (shared && sdk == "source"))) {
+    sdk_deps = []
+    if (defined(invoker.public_deps)) {
+      foreach(label, invoker.public_deps) {
+        if (get_label_info(label, "name") == "headers" ||
+            get_path_info(get_label_info(label, "name"), "extension") ==
+            "headers" ||
+            get_path_info(get_label_info(label, "dir"), "dir") ==
+            "$zx/system/banjo") {
+          sdk_deps += [ label ]
+        }
+      }
+    }
+    if (sdk != "shared" && defined(invoker.deps)) {
+      sdk_deps += invoker.deps
+    }
+
+    install_files = []
+    debug_files = []
+    if (sdk != "source") {
+      if (defined(invoker.output_prefix_override) &&
+          invoker.output_prefix_override) {
+        libfile = _library_name
+      } else {
+        libfile = "lib$_library_name"
+      }
+      libfile = "$target_out_dir/$libfile"
+      if (sdk == "static") {
+        libs_file = "${libfile}.a"
+      } else {
+        libs_file = "${libfile}.so"
+        install_files += [
+          {
+            source = rebase_path(libs_file, root_build_dir)
+            dest = "dist/" + get_path_info(libs_file, "file")
+          },
+        ]
+        debug_files += [ rebase_path("${libs_file}.debug", root_build_dir) ]
+      }
+      install_files += [
+        {
+          source = rebase_path(libs_file, root_build_dir)
+          dest = "lib/" + get_path_info(libs_file, "file")
+        },
+      ]
+    }
+
+    legacy_metadata = {
+      legacy_dirs = [ "lib/$_library_name" ]
+      legacy_targets = [
+        {
+          _label = get_label_info(":$_library_name", "label_with_toolchain")
+          forward_variables_from(invoker, [ "testonly" ])
+          import = "//build/zircon/zircon_library.gni"
+          target_type = "zircon_library"
+          target_name = _library_name
+          dir = "//zircon/" + rebase_path("include", "//")
+          include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
+          headers = sdk_headers
+          if (sdk == "source") {
+            source_dir = "//zircon/" + rebase_path(".", "$zx/")
+            sources = []
+            foreach(file, rebase_path(invoker.sources, "$zx/")) {
+              sources += [ "//zircon/$file" ]
+            }
+          } else {
+            libs = [ rebase_path(libs_file, root_build_dir) ]
+          }
+          deps = []
+          public_deps = []
+          foreach(dep, sdk_deps) {
+            if (get_label_info(dep, "name") == "c") {
+              dep = get_label_info(dep, "dir")
+              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              dep = get_label_info(dep, "name")
+              deps += [ "//zircon/public/fidl/${dep}:${dep}_c" ]
+            } else if (get_label_info(dep, "name") == "c.headers") {
+              dep = get_label_info(dep, "dir")
+              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              dep = get_label_info(dep, "name")
+              public_deps += [ "//zircon/public/fidl/${dep}:${dep}_c" ]
+            } else if (get_label_info(dep, "name") == "headers") {
+              dep = get_path_info(get_label_info(dep, "dir"), "name")
+              if (dep != "c") {
+                public_deps += [ "//zircon/public/lib/$dep" ]
+              }
+            } else if (get_path_info(get_label_info(dep, "name"),
+                                     "extension") == "headers") {
+              dep = get_path_info(get_label_info(dep, "name"), "name")
+              if (dep != "c") {
+                public_deps += [ "//zircon/public/lib/$dep" ]
+              }
+            } else {
+              if (get_path_info(get_label_info(dep, "dir"), "dir") ==
+                  "$zx/system/banjo") {
+                dep = get_path_info(get_label_info(dep, "dir"), "name")
+                deps += [ "//zircon/public/banjo/$dep" ]
+              } else if (get_label_info(dep, "name") == "static" ||
+                         get_label_info(dep, "name") == "shared") {
+                dep = get_path_info(get_label_info(dep, "dir"), "name")
+                deps += [ "//zircon/public/lib/$dep" ]
+              } else {
+                dep = get_path_info(get_label_info(dep, "name"), "name")
+                if (dep != "common") {
+                  deps += [ "//zircon/public/lib/$dep" ]
+                }
+              }
+            }
+          }
+          if (deps + public_deps + [ "//zircon/public/lib/zircon" ] -
+              [ "//zircon/public/lib/zircon" ] != deps + public_deps) {
+            lib_dirs = [ rebase_path(
+                    get_label_info("$zx/system/ulib/zircon(${toolchain.shlib})",
+                                   "target_out_dir"),
+                    root_build_dir) ]
+          }
+          install = install_files
+          debug = debug_files
+        },
+      ]
+    }
+  } else if (!is_host && !is_kernel && (static || shared)) {
+    legacy_metadata = {
+    }
+  }
+
   # Empty libraries are useless, so do a source set instead.
   # TODO(crbug.com/gn/16): Empty library works OK and the source_set
   # case tickles a GN bug.  Remove `&& false` when the bug is fixed.
@@ -360,16 +493,6 @@ template("library") {
           public_deps = []
         }
         public_deps += [ ":${_library_name}.headers" ]
-
-        # TODO(BLD-353): temporary hack
-        if (sdk != false && !static && !shared &&
-            toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
-          if (!defined(data_deps)) {
-            data_deps = []
-          }
-          data_deps +=
-              [ ":$_library_name-$current_cpu.pkg(${toolchain.label})" ]
-        }
       }
     }
   } else if (is_host) {
@@ -397,10 +520,18 @@ template("library") {
                              "*",
                              _library_params + [
                                    "data_deps",
+                                   "metadata",  # TODO(BLD-353): see below
                                    "install_path",
                                    "public_deps",
                                    "visibility",
                                  ])
+      metadata = {
+        # TODO(BLD-353): temporary hacks
+        forward_variables_from(legacy_metadata, "*")
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+      }
       if (!defined(deps)) {
         deps = []
       }
@@ -507,20 +638,6 @@ template("library") {
           ":${_library_name}.static",
         ]
       }
-
-      # TODO(BLD-353): temporary hack
-      if (sdk != false && toolchain.environment == "user" &&
-          toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
-        if (sdk == "shared") {
-          data_deps = [
-            ":$_library_name-$current_cpu.pkg(${toolchain.shlib})",
-          ]
-        } else {
-          data_deps = [
-            ":$_library_name-$current_cpu.pkg(${toolchain.label})",
-          ]
-        }
-      }
     }
   }
 
@@ -613,160 +730,6 @@ template("library") {
           public_deps = [
             ":${_library_name}.shared",
           ]
-        }
-      }
-    }
-  }
-
-  # TODO(BLD-353): temporary hacks
-  if (sdk != false &&
-      (toolchain.environment == "user" || (!shared && !static))) {
-    if (sdk == "static") {
-      assert(static,
-             "$target_name must have static=true to have sdk=\"static\"")
-    } else if (sdk == "shared") {
-      assert(shared || !defined(toolchain.shlib),
-             "$target_name must have shared=true to have sdk=\"shared\"")
-    } else {
-      assert(sdk == "source",
-             "$target_name sdk=\"$sdk\" not static, shared, or source")
-    }
-    if (toolchain.tags + [ "gcc" ] - [ "gcc" ] != [] ||
-        (defined(toolchain.shlib) &&
-         ((sdk == "shared" && current_toolchain != toolchain.shlib) ||
-          (sdk != "shared" && current_toolchain == toolchain.shlib)))) {
-      sdk = false
-    }
-    if (sdk != false) {
-      import("$zx/public/gn/legacy_pkg.gni")
-      legacy_pkg("$target_name-$current_cpu.pkg") {
-        contents = [
-          "[package]",
-          "name=$_library_name",
-          "type=lib",
-        ]
-        if (sdk == "source") {
-          contents += [
-            "arch=src",
-            "[src]",
-          ]
-          foreach(file, invoker.sources) {
-            contents += [ rebase_path(file, ".") + "=SOURCE/" +
-                          rebase_path(file, "//") ]
-          }
-        } else {
-          contents += [
-            "arch=$zircon_cpu",
-            "[lib]",
-          ]
-          if (sdk == "static") {
-            if (defined(invoker.output_prefix_override) &&
-                invoker.output_prefix_override) {
-              contents += [ "lib/${_library_name}.a=BUILD/" +
-                            rebase_path("$target_out_dir/${_library_name}.a",
-                                        root_build_dir) ]
-            } else {
-              contents += [ "lib/lib${_library_name}.a=BUILD/" +
-                            rebase_path("$target_out_dir/lib${_library_name}.a",
-                                        root_build_dir) ]
-            }
-          } else {
-            soname = "lib${_library_name}.so"
-            contents += [
-              "debug/$soname=BUILD/" +
-                  rebase_path("$target_out_dir/$soname.debug", root_build_dir),
-              "lib/$soname=BUILD/" +
-                  rebase_path("$target_out_dir/$soname.debug", root_build_dir),
-            ]
-            if (defined(invoker.install_path)) {
-              install_path = invoker.install_path
-            } else {
-              install_path = "lib/${toolchain.libprefix}lib${_library_name}.so"
-            }
-            if (install_path != false) {
-              contents +=
-                  [ "dist/$install_path=BUILD/" +
-                    rebase_path("$target_out_dir/$soname", root_build_dir) ]
-            }
-          }
-        }
-        contents += [ "[includes]" ]
-        foreach(file, invoker.sdk_headers) {
-          contents += [ rebase_path(file, ".") + "=SOURCE/" +
-                        rebase_path(file, "//", "include") ]
-        }
-        sdk_deps = []
-        if (defined(invoker.public_deps)) {
-          sdk_deps += invoker.public_deps
-        }
-        if (sdk != "shared" && defined(invoker.deps)) {
-          sdk_deps += invoker.deps
-        }
-        if (sdk_deps != []) {
-          banjo_deps = []
-          fidl_deps = []
-          lib_deps = []
-          foreach(label, sdk_deps) {
-            if (get_path_info(get_label_info(label, "dir"), "dir") ==
-                "$zx/system/banjo") {
-              banjo_deps += [ get_label_info(label, "name") ]
-            } else if (get_label_info(label, "name") == "c.headers" ||
-                       (get_label_info(label, "name") == "c" &&
-                        get_path_info(get_label_info(label, "dir"), "dir") ==
-                        "$zx/system/fidl")) {
-              assert(get_path_info(get_label_info(label, "dir"), "dir") ==
-                     "$zx/system/fidl")
-              fidl_deps +=
-                  [ get_path_info(get_label_info(label, "dir"), "name") ]
-            } else if (get_label_info(label, "name") !=
-                       "generated-public-headers" &&
-                       (get_label_info(label, "dir") != "$zx/system/ulib/fbl" ||
-                        get_label_info(":$target_name", "dir") !=
-                        "$zx/system/ulib/trace-engine")) {
-              if (get_path_info(get_label_info(label, "name"), "extension") ==
-                  "headers") {
-                lib_deps +=
-                    [ get_path_info(get_label_info(label, "name"), "name") ]
-              } else if (get_label_info(label, "name") == "headers") {
-                lib_deps +=
-                    [ get_path_info(get_label_info(label, "dir"), "name") ]
-              } else if (get_path_info(get_label_info(label, "name"), "name") !=
-                         "common" &&
-                         get_label_info(label, "name") != "static") {
-                lib_deps += [ get_label_info(label, "name") ]
-              }
-            }
-          }
-          if (lib_deps != []) {
-            # Uniquify.
-            unique_lib_deps = []
-            foreach(dep, lib_deps) {
-              unique_lib_deps += [ dep ]
-              unique_lib_deps -= [ dep ]
-              unique_lib_deps += [ dep ]
-            }
-            contents += [ "[deps]" ] + unique_lib_deps
-          }
-          if (banjo_deps != []) {
-            # Uniquify.
-            unique_banjo_deps = []
-            foreach(dep, banjo_deps) {
-              unique_banjo_deps += [ dep ]
-              unique_banjo_deps -= [ dep ]
-              unique_banjo_deps += [ dep ]
-            }
-            contents += [ "[banjo-deps]" ] + unique_banjo_deps
-          }
-          if (fidl_deps != []) {
-            # Uniquify.
-            unique_fidl_deps = []
-            foreach(dep, fidl_deps) {
-              unique_fidl_deps += [ dep ]
-              unique_fidl_deps -= [ dep ]
-              unique_fidl_deps += [ dep ]
-            }
-            contents += [ "[fidl-deps]" ] + unique_fidl_deps
-          }
         }
       }
     }

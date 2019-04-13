@@ -9,15 +9,20 @@ library("simple-audio-stream") {
     "simple-audio-stream.cpp",
   ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-audio:c.headers",
+    "$zx/system/ulib/ddktl:headers",
+    "$zx/system/ulib/dispatcher-pool:headers",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
     "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zx",
-  ]
-  deps = [
-    "$zx/system/ulib/audio-driver-proto",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
   ]
 }

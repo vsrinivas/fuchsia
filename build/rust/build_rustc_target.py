@@ -107,9 +107,11 @@ def main():
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
                         required=True)
-    parser.add_argument("--shared-libs-root",
-                        help="Path to the location of shared libraries",
-                        required=True)
+    parser.add_argument("--lib-dir",
+                        help="Link path for binary libraries",
+                        action='append', default=[])
+    parser.add_argument("--lib-dir-file",
+                        help="File of --lib-dir directory names, one per line")
     parser.add_argument("--first-party-crate-root",
                         help="Path to directory containing the libs for first-party dependencies",
                         required=True)
@@ -164,6 +166,10 @@ def main():
     else:
         warnings_flag = "-Dwarnings"
 
+    if args.lib_dir_file:
+        with open(args.lib_dir_file) as f:
+            args.lib_dir += [line.strip() for line in f.readlines()]
+
     call_args = [
         args.rustc,
         args.crate_root,
@@ -174,10 +180,10 @@ def main():
         "--target=%s" % args.target,
         "-Copt-level=%s" % args.opt_level,
         "-Cdebuginfo=%s" % args.symbol_level,
-        "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
         "-Zallow-features=%s" % ",".join(args.unstable_rust_features or [])
     ]
+    call_args += ["-Lnative=%s" % dir for dir in args.lib_dir]
     if args.features:
         for feature in args.features:
             call_args += ["--cfg", "feature=\"%s\"" % feature]

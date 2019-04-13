@@ -314,6 +314,33 @@ template("rustc_artifact") {
 
   cargo_toml_dir = "$target_gen_dir/$target_name"
 
+  # Collect the lib_dirs we should be getting from //zircon/public/lib deps.
+  zircon_lib_dirs_file = "$target_gen_dir/${build_target_name}_zircon_libs"
+  extra_args = [
+    "--lib-dir-file",
+    rebase_path(zircon_lib_dirs_file),
+  ]
+  extra_deps = [ ":${build_target_name}_zircon_libs" ]
+  extra_inputs = [ zircon_lib_dirs_file ]
+  generated_file("${build_target_name}_zircon_libs") {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":$build_target_name" ]
+    deps = [
+      third_party_build,
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
+    outputs = [
+      zircon_lib_dirs_file,
+    ]
+    data_keys = [ "zircon_lib_dirs" ]
+    output_conversion = "list lines"
+  }
+
   # Declare the action target that performs the build itself
   action(build_target_name) {
     script = "//build/rust/build_rustc_target.py"
@@ -405,9 +432,9 @@ template("rustc_artifact") {
       ]
     }
 
-    args += rust_build_args
-    deps += rust_build_deps
-    inputs += rust_build_inputs
+    args += rust_build_args + extra_args
+    deps += rust_build_deps + extra_deps
+    inputs += rust_build_inputs + extra_inputs
 
     if (with_lto != "none") {
       args += [

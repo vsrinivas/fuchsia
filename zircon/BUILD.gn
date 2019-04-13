@@ -182,6 +182,7 @@ if (current_toolchain == default_toolchain) {
     build_api_module("legacy-$cpu") {
       testonly = true
       data_keys = [ "legacy_targets" ]
+      walk_keys = [ "legacy_barrier" ]
       deps = legacy_deps
       foreach(dep, legacy_cpu_deps) {
         deps += [ "$dep-$cpu" ]
@@ -200,9 +201,9 @@ if (current_toolchain == default_toolchain) {
     legacy_pkg("manifest-$cpu") {
       testonly = true
       data_keys = [ "legacy_pkg_manifest" ]
+      walk_keys = [ "legacy_barrier" ]
       deps = [
         ":legacy-$cpu",
-        ":tools",
       ]
     }
 
@@ -337,6 +338,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       "$zx/system/core",
       "$zx/system/dev",
       "$zx/system/uapp",
+      "$zx/system/ulib",
       "$zx/third_party/uapp",
     ]
   }
@@ -357,7 +359,12 @@ foreach(cpu, standard_fuchsia_cpus) {
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
     deps = [
-      ":legacy-deps-$cpu",
+      "$zx/bootloader",
+      "$zx/kernel",
+      "$zx/system/core",
+      "$zx/system/dev",
+      "$zx/system/uapp",
+      "$zx/third_party/uapp",
     ]
     if (tests_in_image) {
       deps += [ "$zx/system/utest" ]
@@ -450,9 +457,16 @@ build_api_module("images") {
   deps = [
     ":all-cpu",
   ]
+}
 
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
+# TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
+# GN build.
+build_api_module("legacy_images") {
+  testonly = true
+  data_keys = [ "images" ]
+  deps = [
+    ":tools",
+  ]
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
   }

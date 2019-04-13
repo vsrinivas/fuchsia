@@ -7,18 +7,18 @@ library("fidl_base") {
   sdk = "source"
   sdk_headers = [
     "lib/fidl/coding.h",
-    "lib/fidl/cpp/message.h",
-    "lib/fidl/cpp/string_view.h",
-    "lib/fidl/cpp/message_part.h",
-    "lib/fidl/cpp/message_builder.h",
     "lib/fidl/cpp/builder.h",
+    "lib/fidl/cpp/message.h",
     "lib/fidl/cpp/message_buffer.h",
+    "lib/fidl/cpp/message_builder.h",
+    "lib/fidl/cpp/message_part.h",
+    "lib/fidl/cpp/string_view.h",
     "lib/fidl/cpp/vector_view.h",
-    "lib/fidl/internal_callable_traits.h",
-    "lib/fidl/internal.h",
-    "lib/fidl/walker.h",
-    "lib/fidl/visitor.h",
     "lib/fidl/envelope_frames.h",
+    "lib/fidl/internal.h",
+    "lib/fidl/internal_callable_traits.h",
+    "lib/fidl/visitor.h",
+    "lib/fidl/walker.h",
   ]
   sources = [
     "builder.cpp",

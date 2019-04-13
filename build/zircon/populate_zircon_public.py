@@ -18,6 +18,7 @@ TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'template.gn')
 PUBLIC_DIRS = set([
     'banjo',
     'fidl',
+    'lib',
     'tool',
 ])
 

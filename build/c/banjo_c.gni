@@ -47,6 +47,9 @@ template("banjo_c_target") {
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/c:banjo_gen_config" ]
 
+    # The generated headers #include ddktl headers.
+    public_configs += [ "//zircon/public/lib/ddktl:ddktl.config" ]
+
     deps += [
       ":${main_target_name}_c_compile($banjo_toolchain)",
       ":${main_target_name}_cpp_compile($banjo_toolchain)",

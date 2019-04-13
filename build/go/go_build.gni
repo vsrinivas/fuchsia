@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -139,9 +140,8 @@ template("go_build") {
       current_os,
       "--binname",
       output_name,
-      "--shared-libs-root",
-      rebase_path(
-          get_label_info("//default($shlib_toolchain)", "root_out_dir")),
+      "--lib-dir",
+      rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--go-cache",
       gocache_dir,
       "--cc",
@@ -161,22 +161,33 @@ template("go_build") {
     }
 
     if (is_fuchsia) {
-      deps += [ "//third_party/go:go_runtime" ]
-
       deps += [
         "//sdk:zircon_sysroot_export",
+        "//third_party/go:go_runtime",
         "//zircon/public/lib/fdio",
       ]
 
-      # GN provides no way to propagate include paths like this, so, this is brittle:
-      fdio_include = rebase_path("//zircon/system/ulib/fdio/include")
-
       args += [
-        "--fdio-include",
-        fdio_include,
+        # GN provides no way to propagate include paths like this, so, this
+        # is brittle.
+        "--include-dir",
+        rebase_path("//zircon/system/ulib/fdio/include"),
         "--go-root",
         rebase_path("$host_tools_dir/goroot"),
       ]
+
+      foreach(target, zircon_legacy_targets) {
+        if (target.target_name == "fdio") {
+          _libs = target.libs
+          lib = _libs[0]
+          assert(_libs == [ lib ])
+          _libs = []
+          args += [
+            "--lib-dir",
+            rebase_path(get_path_info("$zircon_root_build_dir/$lib", "dir")),
+          ]
+        }
+      }
     } else {
       args += [
         "--go-root",

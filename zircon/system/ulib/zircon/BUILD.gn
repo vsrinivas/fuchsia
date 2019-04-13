@@ -34,7 +34,6 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
   }
 
   library("zircon") {
-    # TODO(BLD-353): Legacy export for this is handled in $zx/system/ulib/c.
     shared = true
     static = false
 

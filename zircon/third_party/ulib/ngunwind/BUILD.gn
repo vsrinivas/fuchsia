@@ -16,7 +16,7 @@ library("ngunwind") {
   # Unfortunately ngunwind is used directly by
   # //src/developer/debug/debug_agent.
   # TODO(mcgrathr): Give inspector an API debug_agent can use instead.
-  visibility += [ "$zx/system/ulib" ]
+  visibility += [ "$zx/third_party/ulib" ]
   sdk = "static"
   sdk_headers = [
     "ngunwind/private/compiler.h",

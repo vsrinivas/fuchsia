@@ -28,6 +28,10 @@ if (current_toolchain == default_toolchain) {
                                root_build_dir)
           },
         ]
+
+        # This contributes its manifest to images.json, but we don't want it
+        # to contribute its libraries to legacy-$cpu.json.
+        legacy_barrier = []
       }
     }
 
@@ -48,10 +52,11 @@ if (current_cpu != "") {
   group("ulib") {
     testonly = true
     deps = [
+      "$zx/system/dev/audio/lib/simple-audio-stream",
       "$zx/system/dev/lib/broadcom",
       "$zx/system/dev/lib/usb",
       "$zx/system/fidl/fuchsia-net-stack:c",
-      "$zx/third_party/ulib/ngunwind",
+      "$zx/third_party/ulib",
       "async",
       "async-loop",
       "async-testutils",
@@ -139,6 +144,7 @@ if (current_cpu != "") {
       "trace",
       "trace:trace-with-static-engine",
       "trace-engine",
+      "trace-engine:trace-engine-headers-for-reader",
       "trace-provider",
       "trace-provider:trace-provider-fdio-connect",
       "trace-provider:trace-provider-with-static-engine",

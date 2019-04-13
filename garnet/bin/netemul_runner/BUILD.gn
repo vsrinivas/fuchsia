@@ -73,6 +73,8 @@ source_set("src") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fs",
   ]
 }
 

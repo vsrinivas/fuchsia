@@ -39,6 +39,8 @@ driver_module("virtual_audio_driver") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/simple-audio-stream",

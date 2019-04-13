@@ -22,6 +22,7 @@ driver_module("driver") {
     "//zircon/public/banjo/ddk-protocol-usb",
     "//zircon/public/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth_c",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

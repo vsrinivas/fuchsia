@@ -32,7 +32,6 @@ library("fs") {
   static = true
 
   public_deps = [
-    "$zx/system/ulib/async:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio:headers",
   ]
@@ -69,6 +68,7 @@ library("fs") {
       "watcher.cpp",
     ]
     public_deps += [
+      "$zx/system/ulib/async:headers",
       "$zx/system/ulib/zx:headers",
 
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
@@ -89,6 +89,7 @@ library("fs") {
       "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/cobalt-client",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
@@ -104,70 +105,72 @@ library("fs") {
   }
 }
 
-# TODO(mcgrathr): This is for libdriver.so to include so it won't get
-# libtrace-engine.so.  Figure out a better way to handle this.
-library("fs-for-driver") {
-  visibility = [
-    ":*",
-    "$zx/system/core/devmgr/devhost:*",
-  ]
-  sources = [
-    "block-txn.cpp",
-    "connection.cpp",
-    "handler.cpp",
-    "lazy-dir.cpp",
-    "managed-vfs.cpp",
-    "metrics.cpp",
-    "mount.cpp",
-    "pseudo-dir.cpp",
-    "pseudo-file.cpp",
-    "remote-dir.cpp",
-    "service.cpp",
-    "synchronous-vfs.cpp",
-    "unmount.cpp",
-    "vfs.cpp",
-    "vmo-file.cpp",
-    "vnode.cpp",
-    "watcher.cpp",
-  ]
+if (is_fuchsia) {
+  # TODO(mcgrathr): This is for libdriver.so to include so it won't get
+  # libtrace-engine.so.  Figure out a better way to handle this.
+  library("fs-for-driver") {
+    visibility = [
+      ":*",
+      "$zx/system/core/devmgr/devhost:*",
+    ]
+    sources = [
+      "block-txn.cpp",
+      "connection.cpp",
+      "handler.cpp",
+      "lazy-dir.cpp",
+      "managed-vfs.cpp",
+      "metrics.cpp",
+      "mount.cpp",
+      "pseudo-dir.cpp",
+      "pseudo-file.cpp",
+      "remote-dir.cpp",
+      "service.cpp",
+      "synchronous-vfs.cpp",
+      "unmount.cpp",
+      "vfs.cpp",
+      "vmo-file.cpp",
+      "vnode.cpp",
+      "watcher.cpp",
+    ]
 
-  # Uncomment to enable FS_TRACE_DEBUG-level logging
-  # defines = [ "FS_TRACE_DEBUG_ENABLED" ]
+    # Uncomment to enable FS_TRACE_DEBUG-level logging
+    # defines = [ "FS_TRACE_DEBUG_ENABLED" ]
 
-  public_deps = [
-    "$zx/system/ulib/async:headers",
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/fdio:headers",
-    "$zx/system/ulib/zx:headers",
+    public_deps = [
+      "$zx/system/ulib/async:headers",
+      "$zx/system/ulib/fbl:headers",
+      "$zx/system/ulib/fdio:headers",
+      "$zx/system/ulib/zx:headers",
 
-    # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
-    "$zx/system/fidl/fuchsia-io:c.headers",
+      # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
+      "$zx/system/fidl/fuchsia-io:c.headers",
 
-    # <fs/metrics.h> has #include <cobalt-client/cpp/collector.h>.
-    "$zx/system/ulib/cobalt-client:headers",
+      # <fs/metrics.h> has #include <cobalt-client/cpp/collector.h>.
+      "$zx/system/ulib/cobalt-client:headers",
 
-    # <fs/trace.h> has #include <trace/event.h>.
-    "$zx/system/ulib/trace:headers",
-  ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/cobalt-client",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace:trace-driver",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
-  ]
+      # <fs/trace.h> has #include <trace/event.h>.
+      "$zx/system/ulib/trace:headers",
+    ]
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    deps = [
+      "$zx/system/fidl/fuchsia-cobalt:c",
+      "$zx/system/fidl/fuchsia-io:c",
+      "$zx/system/fidl/fuchsia-mem:c",
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/cobalt-client",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fzl",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/trace:trace-driver",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zircon-internal",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
 }

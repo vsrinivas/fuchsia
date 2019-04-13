@@ -42,6 +42,7 @@ driver_module("iwlwifi_driver") {
     "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
   ]
 }
 

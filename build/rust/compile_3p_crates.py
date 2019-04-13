@@ -83,9 +83,9 @@ def main():
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
                         required=False)
-    parser.add_argument("--shared-libs-root",
+    parser.add_argument("--lib-dir",
                         help="Path to the location of shared libraries",
-                        required=False)
+                        action='append', default=[])
     parser.add_argument("--cipd-version",
                         help="CIPD version of Rust toolchain",
                         required=False)
@@ -112,11 +112,10 @@ def main():
             "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
             "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
         ]
-        if args.sysroot and args.shared_libs_root:
-            rustflags += [
-                "-Clink-arg=--sysroot=" + args.sysroot,
-                "-Lnative=" + args.shared_libs_root,
-            ]
+        if args.sysroot:
+            rustflags.append("-Clink-arg=--sysroot=" + args.sysroot)
+        for dir in args.lib_dir:
+            rustflags.append("-Lnative=" + dir)
     else:
         if args.target.startswith("aarch64"):
             rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
@@ -140,8 +139,9 @@ def main():
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
     env["CC"] = clang_c_compiler
-    if args.sysroot and args.shared_libs_root:
-        env["CFLAGS"] = "--sysroot=%s -L %s" % (args.sysroot, args.shared_libs_root)
+    if args.sysroot:
+        env["CFLAGS"] = " ".join(["--sysroot=" + args.sysroot] +
+                                 ["-L" + dir for dir in args.lib_dir])
     env["CXX"] = os.path.join(args.clang_prefix, "clang++")
     env["AR"] = os.path.join(args.clang_prefix, "llvm-ar")
     env["RANLIB"] = os.path.join(args.clang_prefix, "llvm-ranlib")

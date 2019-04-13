@@ -53,14 +53,9 @@ def main():
     extra_files = []
     if args.file_list:
         with open(args.file_list, 'r') as file_list_file:
-            for line in file_list_file.readlines():
-                extra_files.append(line.strip().split('=', 1))
-    files = []
-    for destination, source in itertools.chain(args.file, extra_files):
-        files.append({
-            'source': source,
-            'destination': destination,
-        })
+            extra_files = [line.strip().split('=', 1)
+                           for line in file_list_file.readlines()]
+    files = dict(itertools.chain(args.file, extra_files))
 
     atoms.update([Atom({
         'id': args.id,
@@ -68,7 +63,8 @@ def main():
         'gn-label': args.gn_label,
         'category': args.category,
         'deps': sorted(list(deps)),
-        'files': files,
+        'files': [{'source': source, 'destination': destination}
+                  for destination, source in files.iteritems()],
         'type': args.type,
     })])
 

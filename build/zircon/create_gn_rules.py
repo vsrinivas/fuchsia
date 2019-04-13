@@ -150,131 +150,6 @@ def generate_build_file(path, template_name, data, context):
         build_file.write(contents)
 
 
-class SourceLibrary(object):
-    '''Represents a library built from sources.
-
-       Convenience storage object to be consumed by Mako templates.'''
-
-    def __init__(self, name):
-        self.name = name
-        self.includes = {}
-        self.include_dirs = set()
-        self.sources = {}
-        self.deps = []
-        self.sdk_deps = []
-        self.fidl_deps = []
-        self.banjo_deps = []
-        self.libs = set()
-        self.depends_on_zircon = False
-
-
-def generate_source_library(package, context):
-    '''Generates the build glue for a library whose sources are provided.'''
-    lib_name = package['package']['name']
-    data = SourceLibrary(lib_name)
-
-    # Includes.
-    for name, path in package.get('includes', {}).iteritems():
-        (file, folder) = extract_file(name, path, context)
-        data.includes[name] = '//%s' % file
-        data.include_dirs.add('//%s' % folder)
-        if lib_name in LIBRARIES_BEING_MOVED:
-            data.include_dirs.add('//%s/lib' % folder)
-
-    # Source files.
-    for name, path in package.get('src', {}).iteritems():
-        (file, _) = extract_file(name, path, context)
-        data.sources[name] = '//%s' % file
-
-    # Dependencies.
-    data.deps += filter_deps(package.get('deps', []))
-    data.deps += filter_deps(package.get('static-deps', []))
-    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
-    data.banjo_deps = filter_deps(package.get('banjo-deps', []))
-    data.sdk_deps = filter_sdk_deps(data.deps)
-
-    # Special hack for zircon library dependency: enables special codegen
-    # in template depending on whether we're building on Fuchsia or not.
-    data.depends_on_zircon = 'zircon' in package.get('deps', [])
-
-    # Generate the build file.
-    build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
-    generate_build_file(build_path, 'source_library.mako', data, context)
-
-
-class CompiledLibrary(object):
-    '''Represents a library already compiled by the Zircon build.
-
-       Convenience storage object to be consumed by Mako templates.'''
-
-    def __init__(self, name, with_sdk_headers):
-        self.name = name
-        self.includes = {}
-        self.include_dirs = set()
-        self.deps = []
-        self.sdk_deps = []
-        self.fidl_deps = []
-        self.banjo_deps = []
-        self.lib_name = ''
-        self.has_impl_prebuilt = False
-        self.impl_prebuilt = ''
-        self.prebuilt = ''
-        self.debug_prebuilt = ''
-        self.with_sdk_headers = with_sdk_headers
-
-
-def generate_compiled_library(package, context):
-    '''Generates the build glue for a prebuilt library.'''
-    lib_name = package['package']['name']
-    data = CompiledLibrary(lib_name,
-                           lib_name not in LIBRARIES_WITHOUT_SDK_HEADERS)
-
-    # Includes.
-    for name, path in package.get('includes', {}).iteritems():
-        (file, folder) = extract_file(name, path, context)
-        data.include_dirs.add('//%s' % folder)
-        data.includes[name] = '//%s' % file
-
-    # Lib.
-    libs = package.get('lib', {})
-    if len(libs) == 1:
-        # Static library.
-        is_shared = False
-        (name, path) = libs.items()[0]
-        (file, _) = extract_file(name, path, context)
-        data.prebuilt = '//%s' % file
-        data.lib_name = os.path.basename(name)
-    # TODO(jamesr): Delete the == 2 path once Zircon rolls up through all layers
-    elif len(libs) == 2 or len(libs) == 3:
-        # Shared library.
-        is_shared = True
-        for name, path in libs.iteritems():
-            (file, _) = extract_file(name, path, context)
-            if 'debug/' in name:
-                data.debug_prebuilt = '//%s' % file
-                data.lib_name = os.path.basename(name)
-            elif 'dist/lib' in name:
-                data.has_impl_prebuilt = True
-                data.impl_prebuilt = '//%s' % file
-            else:
-                data.prebuilt = '//%s' % file
-    else:
-        raise Exception('Too many files for %s: %s' % (lib_name,
-                                                       ', '.join(libs.keys())))
-
-    # Dependencies.
-    data.deps += filter_deps(package.get('deps', []))
-    data.deps += filter_deps(package.get('static-deps', []))
-    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
-    data.banjo_deps = filter_deps(package.get('banjo-deps', []))
-    data.sdk_deps = filter_sdk_deps(data.deps)
-
-    # Generate the build file.
-    template = 'shared_library.mako' if is_shared else 'static_library.mako'
-    build_path = os.path.join(context.out_dir, 'lib', lib_name, 'BUILD.gn')
-    generate_build_file(build_path, template, data, context)
-
-
 class Sysroot(object):
     '''Represents the sysroot created by Zircon.
 
@@ -356,7 +231,6 @@ def main():
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
-    shutil.rmtree(os.path.join(out_dir, 'lib'), True)
     shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
     debug = args.debug
 
@@ -391,17 +265,8 @@ def main():
         if name in SYSROOT_PACKAGES:
             print('Ignoring sysroot part: %s' % name)
             continue
-        if type == 'lib':
-            if arch == 'src':
-                type = 'source'
-                generate_source_library(package, context)
-            else:
-                type = 'prebuilt'
-                generate_compiled_library(package, context)
-        else:
-            print('(%s) Unsupported package type: %s/%s, skipping'
-                  % (name, type, arch))
-            continue
+        print('(%s) Unsupported package type: %s/%s, skipping'
+              % (name, type, arch))
         if debug:
             print('Processed %s (%s)' % (name, type))
 
