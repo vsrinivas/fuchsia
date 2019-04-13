@@ -40,7 +40,7 @@ protocol Peripheral {
     StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status status);
 
     // Called when a remote central device has connected to a connectable advertisement.
-    // Provides a GATT client handle which can be used to interact with GATT service
+    // TODO(BT-839): Provide a GATT client handle which can be used to interact with GATT service
     // on the central device.
     //
     // When this is called, the Advertisement will have stopped, and StartAdvertising
