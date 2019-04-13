@@ -62,12 +62,6 @@ public:
         return status;
     }
 
-    // Transitional shim, for non-breaking migrations to create_child().
-    zx_status_t clone(uint32_t options, uint64_t offset, uint64_t size,
-                      vmo* result) const {
-      return create_child(options, offset, size, result);
-    }
-
     zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size,
                          void* buffer, size_t buffer_size) const {
         return zx_vmo_op_range(get(), op, offset, size, buffer, buffer_size);
