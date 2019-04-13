@@ -23,14 +23,10 @@ executable("netstack_integration_test") {
     "//garnet/public/lib/netstack/c",
     "//sdk/fidl/fuchsia.net.filter",
     "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest_main",
-    "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
     "//zircon/public/fidl/fuchsia-net-stack",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
 }

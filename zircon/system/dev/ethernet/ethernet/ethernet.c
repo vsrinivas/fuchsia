@@ -685,8 +685,6 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         edev->state |= ETHDEV_RUNNING;
         list_delete(&edev->node);
         list_add_tail(&edev0->list_active, &edev->node);
-        // TODO - After we get IGMP, don't automatically set multicast promisc true
-        eth_set_multicast_promisc_locked(edev, true);
         // Trigger the status signal so the client will query the status at the start.
         zx_object_signal_peer(edev->rx_fifo, 0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
     } else {

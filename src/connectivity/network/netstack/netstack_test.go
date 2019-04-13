@@ -32,25 +32,8 @@ const (
 func TestNicName(t *testing.T) {
 	ns := newNetstack(t)
 
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
-		TB:                t,
-		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
-		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
-		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-			return int32(zx.ErrOk), &ethernet.Fifos{
-				TxDepth: 1,
-			}, nil
-		},
-		GetStatusImpl: func() (uint32, error) {
-			return uint32(eth.LinkUp), nil
-		},
-		SetIoBufferImpl: func(zx.VMO) (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-		StartImpl: func() (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-	})
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +44,7 @@ func TestNicName(t *testing.T) {
 	ifs.mu.Unlock()
 }
 
-func TestNicStartedByDefault(t *testing.T) {
+func TestNotStartedByDefault(t *testing.T) {
 	ns := newNetstack(t)
 
 	startCalled := false
@@ -71,13 +54,31 @@ func TestNicStartedByDefault(t *testing.T) {
 		return int32(zx.ErrOk), nil
 	}
 
-	_, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
-	if err != nil {
+	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
 		t.Fatal(err)
 	}
 
 	if startCalled {
 		t.Error("expected no calls to ethernet.Device.Start by addEth")
+	}
+}
+
+func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
+	ns := newNetstack(t)
+
+	multicastPromiscuousModeEnabled := false
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	eth.ConfigMulticastSetPromiscuousModeImpl = func(enabled bool) (int32, error) {
+		multicastPromiscuousModeEnabled = enabled
+		return int32(zx.ErrOk), nil
+	}
+
+	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+		t.Fatal(err)
+	}
+
+	if !multicastPromiscuousModeEnabled {
+		t.Error("expected a call to ConfigMulticastSetPromiscuousMode(true) by addEth")
 	}
 }
 
@@ -88,6 +89,7 @@ func TestDhcpConfiguration(t *testing.T) {
 	ipAddressConfig.SetDhcp(true)
 
 	d := deviceForAddEth(ethernet.Info{}, t)
+	d.StopImpl = func() error { return nil }
 	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +171,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{}, t)
+	d.StopImpl = func() error { return nil }
 	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
@@ -275,10 +278,8 @@ func newNetstack(t *testing.T) *Netstack {
 // Reports the passed in ethernet.Info when Device#GetInfo is called.
 func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
 	return ethernetext.Device{
-		TB: t,
-		GetInfoImpl: func() (ethernet.Info, error) {
-			return info, nil
-		},
+		TB:                t,
+		GetInfoImpl:       func() (ethernet.Info, error) { return info, nil },
 		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
 		GetStatusImpl: func() (uint32, error) {
 			return uint32(eth.LinkUp), nil
@@ -294,8 +295,8 @@ func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
 		StartImpl: func() (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
-		StopImpl: func() error {
-			return nil
+		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
+			return int32(zx.ErrOk), nil
 		},
 	}
 }

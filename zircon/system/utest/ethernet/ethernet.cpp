@@ -742,25 +742,6 @@ static bool EthernetSetPromiscClearOnCloseTest() {
     END_TEST;
 }
 
-// Since we don't have IGMP, multicast promiscuous is on by default. Multicast-related tests
-// need to turn it off. This test establishes that this is happening correctly. When IGMP is
-// added and promisc-by-default is turned off, this test will fail. When that happens, delete
-// the code related to EthernetOpenInfo.multicast.
-static bool EthernetClearMulticastPromiscTest() {
-    BEGIN_TEST;
-    EthertapClient tap;
-    EthernetClient client;
-    EthernetOpenInfo info(__func__);
-    info.options = fuchsia_hardware_ethertap_OPT_REPORT_PARAM;
-    ASSERT_TRUE(OpenFirstClientHelper(&tap, &client, info));
-
-    ASSERT_EQ(ZX_OK, client.MulticastInitForTest());
-    EXPECT_TRUE(tap.ExpectSetParam(ETHMAC_SETPARAM_MULTICAST_PROMISC, 0, 0, nullptr, "promisc off"));
-
-    ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
-    END_TEST;
-}
-
 static bool EthernetMulticastRejectsUnicastAddress() {
     BEGIN_TEST;
     EthertapClient tap;
@@ -1027,7 +1008,6 @@ END_TEST_CASE(EthernetSetupTests)
 BEGIN_TEST_CASE(EthernetConfigTests)
 RUN_TEST_MEDIUM(EthernetSetPromiscMultiClientTest)
 RUN_TEST_MEDIUM(EthernetSetPromiscClearOnCloseTest)
-RUN_TEST_MEDIUM(EthernetClearMulticastPromiscTest)
 RUN_TEST_MEDIUM(EthernetMulticastRejectsUnicastAddress)
 RUN_TEST_MEDIUM(EthernetMulticastSetsAddresses)
 RUN_TEST_MEDIUM(EthernetMulticastPromiscOnOverflow)

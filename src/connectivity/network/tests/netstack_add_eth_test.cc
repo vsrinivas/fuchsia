@@ -2,28 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/ethernet.h>
-#include <fbl/auto_call.h>
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <inttypes.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/netemul/network/ethernet_client.h>
 #include <lib/netemul/network/ethertap_client.h>
-#include <lib/netemul/network/ethertap_types.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/zx/socket.h>
 #include <zircon/status.h>
-#include <zircon/types.h>
-
-#include <fcntl.h>
-#include <stdio.h>
-#include <string>
 
 #include "gtest/gtest.h"
 

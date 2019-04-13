@@ -65,6 +65,9 @@ func TestEndpoint_WritePacket(t *testing.T) {
 		SetClientNameImpl: func(string) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
+		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
 	}
 
 	outDevice := baseDevice

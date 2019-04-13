@@ -35,6 +35,9 @@ func TestClient_AllocForSend(t *testing.T) {
 		SetClientNameImpl: func(string) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
+		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
 	}
 
 	saturateArena := func() (func() error, uint32) {
@@ -48,9 +51,7 @@ func TestClient_AllocForSend(t *testing.T) {
 				TxDepth: txDepth,
 			}, nil
 		}
-		d.StopImpl = func() error {
-			return nil
-		}
+		d.StopImpl = func() error { return nil }
 		c, err := eth.NewClient(t.Name(), "topo", &d, arena)
 		if err != nil {
 			t.Fatal(err)
