@@ -18,7 +18,9 @@ namespace dsi_mt {
 namespace {
 constexpr uint32_t kWMemCommand = 0x3C;
 constexpr uint32_t kBusyTimeout = 500000; // from vendor
+constexpr uint32_t kReadTimeout = 20; // Unit: ms
 constexpr uint32_t kMaxPayloadLength = 64;
+constexpr uint32_t kMaxReadResponse = 12;
 
 // MIPI-PHY Related constants based on spec
 constexpr uint32_t kTrailOffset = 0xa;
@@ -333,8 +335,7 @@ zx_status_t DsiMt::DsiImplSendCmd(const mipi_dsi_cmd_t* cmd_list, size_t cmd_cou
         case MIPI_DSI_DT_GEN_SHORT_READ_1:
         case MIPI_DSI_DT_GEN_SHORT_READ_2:
         case MIPI_DSI_DT_DCS_READ_0:
-            DSI_ERROR("DSI Read is not supported yet\n");
-            status = ZX_ERR_NOT_SUPPORTED;
+            status = Read(cmd);
             break;
         default:
             DSI_ERROR("Unsupported/Invalid DSI Command type %d\n", cmd.dsi_data_type);
@@ -342,10 +343,11 @@ zx_status_t DsiMt::DsiImplSendCmd(const mipi_dsi_cmd_t* cmd_list, size_t cmd_cou
         }
 
         if (status != ZX_OK) {
-            DSI_ERROR("Something went wrong is sending command\n");
+            DSI_ERROR("Something went wrong in sending command\n");
+            DsiImplPrintDsiRegisters();
+            break;
         }
     }
-
     return status;
 }
 
@@ -528,6 +530,141 @@ zx_status_t DsiMt::WaitForIdle() {
 
     // clear register
     stat_reg.FromValue(0).WriteTo(&(*dsi_mmio_));
+    return ZX_OK;
+}
+
+zx_status_t DsiMt::WaitForRxReady() {
+    int timeout = kReadTimeout;
+    auto stat_reg = DsiIntStaReg::Get();
+
+    while (!stat_reg.ReadFrom(&(*dsi_mmio_)).lprx_rd_rdy() && timeout--) {
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    }
+
+    if (timeout <= 0) {
+        DSI_ERROR("Timeout! DSI remains busy\n");
+        // TODO(payamm): perform reset and dump registers
+        return ZX_ERR_TIMED_OUT;
+    }
+
+    // clear register
+    stat_reg.FromValue(0).WriteTo(&(*dsi_mmio_));
+    return ZX_OK;
+}
+
+zx_status_t DsiMt::Read(const mipi_dsi_cmd_t& cmd) {
+    if ((cmd.rsp_data_list == nullptr) || (cmd.pld_data_count > 2) ||
+        (cmd.pld_data_count > 0 && cmd.pld_data_list == nullptr)) {
+        DSI_ERROR("Invalid read command packet\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (cmd.rsp_data_count > kMaxReadResponse) {
+        DSI_ERROR("Expected Read exceeds %d\n", kMaxReadResponse);
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    // Make sure DSI is not busy
+    zx_status_t status = WaitForIdle();
+    if (status != ZX_OK) {
+        DSI_ERROR("Could not send command (%d)\n", status);
+        return status;
+    }
+
+    auto cmdq_reg = CmdQReg::Get(0).FromValue(0);
+
+    // Check whether max return packet size should be set
+    if (cmd.flags & MIPI_DSI_CMD_FLAGS_SET_MAX) {
+        // We will set the max return size as rlen
+        cmdq_reg.set_data_id(MIPI_DSI_DT_SET_MAX_RET_PKT);
+        cmdq_reg.set_type(TYPE_SHORT);
+        cmdq_reg.set_data_0(static_cast<uint32_t>(cmd.rsp_data_count) & 0xFF);
+        cmdq_reg.set_data_1((static_cast<uint32_t>(cmd.rsp_data_count) >> 8) & 0xFF);
+        cmdq_reg.WriteTo(&(*dsi_mmio_));
+        DsiCmdqSizeReg::Get().FromValue(0).set_cmdq_reg_size(1).WriteTo(&(*dsi_mmio_));
+        StartDsi();
+        status = WaitForIdle();
+        if (status != ZX_OK) {
+            DSI_ERROR("Command did not complete (%d)\n", status);
+            return status;
+        }
+    }
+
+    // Make sure DSI is not busy
+    status = WaitForIdle();
+    if (status != ZX_OK) {
+        DSI_ERROR("Could not send command (%d)\n", status);
+        return status;
+    }
+
+    // Setup the read packet
+    cmdq_reg.set_reg_value(0);
+    cmdq_reg.set_type(TYPE_SHORT);
+    cmdq_reg.set_data_id(cmd.dsi_data_type);
+    cmdq_reg.set_bta(1);
+    if (cmd.pld_data_count >= 1) {
+        cmdq_reg.set_data_0(cmd.pld_data_list[0]);
+    }
+    if (cmd.pld_data_count == 2) {
+        cmdq_reg.set_data_1(cmd.pld_data_list[1]);
+    }
+    cmdq_reg.WriteTo(&(*dsi_mmio_));
+    DsiCmdqSizeReg::Get().FromValue(0).set_cmdq_reg_size(1).WriteTo(&(*dsi_mmio_));
+
+    DsiRackReg::Get().ReadFrom(&(*dsi_mmio_)).set_rack(1).WriteTo(&(*dsi_mmio_));
+
+    DsiIntStaReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_lprx_rd_rdy(1)
+        .set_cmd_done(1)
+        .WriteTo(&(*dsi_mmio_));
+
+    StartDsi();
+
+    // Wait for read to finish
+    status = WaitForRxReady();
+    if (status != ZX_OK) {
+        DSI_ERROR("Read not completed\n");
+        return status;
+    }
+
+    DsiRackReg::Get().ReadFrom(&(*dsi_mmio_)).set_rack(1).WriteTo(&(*dsi_mmio_));
+
+    // store a local copy of the response registers.
+    uint32_t read_buf[3];
+    read_buf[0] = DsiRxData47Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value();
+    read_buf[1] = DsiRxData8bReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value();
+    read_buf[2] = DsiRxDataCReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value();
+
+    // Determine response type first
+    auto rx_data_reg03 = DsiRxData03Reg::Get().ReadFrom(&(*dsi_mmio_));
+    switch(rx_data_reg03.byte0()) {
+    case MIPI_DSI_RSP_GEN_SHORT_1:
+    case MIPI_DSI_RSP_GEN_SHORT_2:
+    case MIPI_DSI_RSP_DCS_SHORT_1:
+    case MIPI_DSI_RSP_DCS_SHORT_2:
+        // For short response, byte1 and 2 contain the returned value
+        if (cmd.rsp_data_count >= 1) {
+            cmd.rsp_data_list[0] = static_cast<uint8_t>(rx_data_reg03.byte1());
+        }
+        if (cmd.rsp_data_count == 2) {
+            cmd.rsp_data_list[1] = static_cast<uint8_t>(rx_data_reg03.byte2());
+        }
+        break;
+    case MIPI_DSI_RSP_GEN_LONG:
+    case MIPI_DSI_RSP_DCS_LONG:
+    {
+        // For long responses, <byte2><byte1> contains the response bytes
+        size_t rsp_count = rx_data_reg03.byte2() << 8 | rx_data_reg03.byte1();
+        size_t actual_read = (rsp_count < cmd.rsp_data_count)? rsp_count : cmd.rsp_data_count;
+        memcpy(cmd.rsp_data_list, read_buf, actual_read);
+    }
+        break;
+    default:
+        DSI_ERROR("Invalid Response Type\n");
+        break;
+    }
+
     return ZX_OK;
 }
 

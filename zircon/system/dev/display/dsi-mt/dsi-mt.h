@@ -69,6 +69,7 @@ private:
     void DsiReset();
     void StartDsi();
     zx_status_t WaitForIdle();
+    zx_status_t WaitForRxReady();
     zx_status_t Write(const mipi_dsi_cmd_t& cmd);
     zx_status_t Read(const mipi_dsi_cmd_t& cmd);
     zx_status_t SendCmd(const mipi_dsi_cmd_t& cmd);

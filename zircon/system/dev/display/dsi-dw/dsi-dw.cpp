@@ -610,7 +610,7 @@ zx_status_t DsiDw::WaitforBtaAck() {
 zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
     // Sanity check payload data and size
     if ((cmd.pld_data_count > 2) ||
-        (cmd.pld_data_count > 0 && cmd.pld_data_list == NULL) ||
+        (cmd.pld_data_count > 0 && cmd.pld_data_list == nullptr) ||
         (cmd.dsi_data_type & MIPI_DSI_DT_GEN_SHORT_WRITE_0) != MIPI_DSI_DT_GEN_SHORT_WRITE_0) {
         DSI_ERROR("Invalid Gen short cmd sent\n");
         return ZX_ERR_INVALID_ARGS;
@@ -632,7 +632,7 @@ zx_status_t DsiDw::GenWriteShort(const mipi_dsi_cmd_t& cmd) {
 zx_status_t DsiDw::DcsWriteShort(const mipi_dsi_cmd_t& cmd) {
     // Sanity check payload data and size
     if ((cmd.pld_data_count > 1) ||
-        (cmd.pld_data_list == NULL) ||
+        (cmd.pld_data_list == nullptr) ||
         (cmd.dsi_data_type & MIPI_DSI_DT_DCS_SHORT_WRITE_0) != MIPI_DSI_DT_DCS_SHORT_WRITE_0) {
         DSI_ERROR("Invalid DCS short command\n");
         return ZX_ERR_INVALID_ARGS;
@@ -658,7 +658,7 @@ zx_status_t DsiDw::GenWriteLong(const mipi_dsi_cmd_t& cmd) {
     ZX_DEBUG_ASSERT(cmd.pld_data_count < kMaxPldFifoDepth);
     size_t ts = cmd.pld_data_count; // initial transfer size
 
-    if (ts > 0 && cmd.pld_data_list == NULL) {
+    if (ts > 0 && cmd.pld_data_list == nullptr) {
         DSI_ERROR("Invalid generic long write command\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -707,8 +707,8 @@ zx_status_t DsiDw::GenRead(const mipi_dsi_cmd_t& cmd) {
     zx_status_t status = ZX_OK;
 
     // valid cmd packet
-    if ((cmd.rsp_data_list == NULL) || (cmd.pld_data_count > 2) ||
-        (cmd.pld_data_count > 0 && cmd.pld_data_list == NULL)) {
+    if ((cmd.rsp_data_list == nullptr) || (cmd.pld_data_count > 2) ||
+        (cmd.pld_data_count > 0 && cmd.pld_data_list == nullptr)) {
         DSI_ERROR("Invalid generic read command\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -805,13 +805,13 @@ zx_status_t DsiDw::SendCmd(const mipi_dsi_cmd_t& cmd) {
     case MIPI_DSI_DT_GEN_SHORT_READ_0:
     case MIPI_DSI_DT_GEN_SHORT_READ_1:
     case MIPI_DSI_DT_GEN_SHORT_READ_2:
+    case MIPI_DSI_DT_DCS_READ_0:
         status = GenRead(cmd);
         break;
     case MIPI_DSI_DT_DCS_SHORT_WRITE_0:
     case MIPI_DSI_DT_DCS_SHORT_WRITE_1:
         status = DcsWriteShort(cmd);
         break;
-    case MIPI_DSI_DT_DCS_READ_0:
     default:
         DSI_ERROR("Unsupported/Invalid DSI Command type %d\n", cmd.dsi_data_type);
         status = ZX_ERR_INVALID_ARGS;

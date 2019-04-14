@@ -53,6 +53,14 @@
 #define MIPI_DSI_DT_RGB_888                     (0x3E)
 #define MIPI_DSI_DT_UNKNOWN                     (0xFF)
 
+// MIPI-DSI Response Types
+#define MIPI_DSI_RSP_GEN_SHORT_1                (0x11)
+#define MIPI_DSI_RSP_GEN_SHORT_2                (0x12)
+#define MIPI_DSI_RSP_GEN_LONG                   (0x1A)
+#define MIPI_DSI_RSP_DCS_LONG                   (0x1C)
+#define MIPI_DSI_RSP_DCS_SHORT_1                (0x21)
+#define MIPI_DSI_RSP_DCS_SHORT_2                (0x22)
+
 #define MIPI_DSI_NO_ACK                         (0)
 #define MIPI_DSI_ACK                            (1)
 

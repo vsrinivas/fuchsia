@@ -12,6 +12,9 @@
 #define DCS_CMD (0xFE)
 #define GEN_CMD (0xFD)
 
+constexpr uint8_t kId1Reg = 0xDA;
+constexpr uint8_t kId2Reg = 0xDC;
+
 namespace mt8167s_display {
 
 namespace {
@@ -229,6 +232,35 @@ constexpr uint8_t lcd_init_sequence_ILI9881C[] = {
 };
 } // namespace
 
+zx_status_t Lcd::GetDisplayId() {
+
+    uint8_t id1;
+    uint8_t id2;
+    zx_status_t status = ZX_OK;
+
+    // Create the command using mipi-dsi library
+    mipi_dsi_cmd_t cmd[2];
+    status = mipi_dsi::MipiDsi::CreateCommand(&kId1Reg, 1, &id1, 1, COMMAND_DCS, &cmd[0]);
+    if (status != ZX_OK) {
+        DISP_ERROR("Invalid command (%d)\n", status);
+        return status;
+    }
+
+    status = mipi_dsi::MipiDsi::CreateCommand(&kId2Reg, 1, &id2, 1, COMMAND_DCS, &cmd[1]);
+    if (status != ZX_OK) {
+        DISP_ERROR("Invalid command (%d)\n", status);
+        return status;
+    }
+
+    if ((status = dsiimpl_.SendCmd(cmd, 2)) != ZX_OK) {
+        DISP_ERROR("Could not read out Display ID\n");
+        return status;
+    }
+
+    DISP_INFO("Display ID: 0x%x, 0x%x\n", id1, id2);
+    return status;
+}
+
 zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
     zx_status_t status = ZX_OK;
     size_t i;
@@ -283,6 +315,7 @@ zx_status_t Lcd::Enable() {
         return ZX_OK;
     }
 
+    GetDisplayId();
     // load table
     zx_status_t status;
     if (panel_type_ == PANEL_ILI9881C) {
@@ -321,6 +354,7 @@ zx_status_t Lcd::Init() {
         gpio_.Write(1);
         zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     }
+
     initialized_ = true;
     return ZX_OK;
 }
