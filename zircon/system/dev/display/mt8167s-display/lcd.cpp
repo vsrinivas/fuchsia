@@ -14,6 +14,8 @@
 
 constexpr uint8_t kId1Reg = 0xDA;
 constexpr uint8_t kId2Reg = 0xDC;
+constexpr uint16_t panel1_id = 0xA1A1;
+constexpr uint16_t panel2_id = 0xB1B1;
 
 namespace mt8167s_display {
 
@@ -29,7 +31,19 @@ constexpr uint8_t lcd_shutdown_sequence[] = {
     DELAY_CMD,150,
 };
 
-constexpr uint8_t lcd_init_sequence_ST7701S[] = {
+constexpr uint8_t lcd_init_sequence_ST7701S_1[] = {
+    DCS_CMD,6,0xFF,0x77,0x01,0x00,0x00,0x00,
+    DCS_CMD,1,0x11,
+    DELAY_CMD,120,
+    DCS_CMD,6,0xFF,0x77,0x01,0x00,0x00,0x10,
+    DCS_CMD,17,0xB0,0x40,0xC9,0x8F,0x0D,0x11,0x07,0x02,0x09,0x09,0x1F,0x04,0x50,0x0F,0xE4,0x29,0xDF,
+    DCS_CMD,17,0xB1,0x40,0xCB,0xD3,0x11,0x8F,0x04,0x00,0x08,0x07,0x1C,0x06,0x53,0x12,0x63,0xEB,0xDF,
+    DCS_CMD,6,0xFF,0x77,0x01,0x00,0x00,0x00,
+    DCS_CMD,1,0x29,
+    DELAY_CMD,20,
+};
+
+constexpr uint8_t lcd_init_sequence_ST7701S_2[] = {
     DCS_CMD,1,0x11,
     DELAY_CMD,120,
     DCS_CMD,1,0x29,
@@ -232,7 +246,7 @@ constexpr uint8_t lcd_init_sequence_ILI9881C[] = {
 };
 } // namespace
 
-zx_status_t Lcd::GetDisplayId() {
+zx_status_t Lcd::GetDisplayId(uint16_t& id) {
 
     uint8_t id1;
     uint8_t id2;
@@ -256,8 +270,8 @@ zx_status_t Lcd::GetDisplayId() {
         DISP_ERROR("Could not read out Display ID\n");
         return status;
     }
-
-    DISP_INFO("Display ID: 0x%x, 0x%x\n", id1, id2);
+    id = static_cast<uint16_t>((id1 << 8) | id2);
+    DISP_INFO("Display ID: 0x%x\n", id);
     return status;
 }
 
@@ -315,24 +329,39 @@ zx_status_t Lcd::Enable() {
         return ZX_OK;
     }
 
-    GetDisplayId();
     // load table
     zx_status_t status;
     if (panel_type_ == PANEL_ILI9881C) {
         status = LoadInitTable(lcd_init_sequence_ILI9881C,
                                sizeof(lcd_init_sequence_ILI9881C));
     } else if (panel_type_ == PANEL_ST7701S) {
-        status = LoadInitTable(lcd_init_sequence_ST7701S,
-                               sizeof(lcd_init_sequence_ST7701S));
+        // There are two types are panels. Identify them
+        uint16_t id;
+        status = GetDisplayId(id);
+        if (status == ZX_OK) {
+            if (id == panel1_id) {
+                status = LoadInitTable(lcd_init_sequence_ST7701S_1,
+                                       sizeof(lcd_init_sequence_ST7701S_1));
+            } else if (id == panel2_id) {
+                status = LoadInitTable(lcd_init_sequence_ST7701S_2,
+                                       sizeof(lcd_init_sequence_ST7701S_2));
+            } else {
+                status = ZX_ERR_NOT_SUPPORTED;
+            }
+        } else {
+            DISP_ERROR("Could not read display ID\n");
+        }
     } else {
-        DISP_ERROR("Unsupported panel detected\n");
         status = ZX_ERR_NOT_SUPPORTED;
     }
 
     if (status == ZX_OK) {
         // LCD is on now.
         enabled_ = true;
+    } else {
+        DISP_ERROR("Unsupported panel detected\n");
     }
+
     return status;
 }
 
@@ -354,7 +383,6 @@ zx_status_t Lcd::Init() {
         gpio_.Write(1);
         zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     }
-
     initialized_ = true;
     return ZX_OK;
 }

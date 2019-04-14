@@ -25,7 +25,7 @@ public:
 
 private:
     zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
-    zx_status_t GetDisplayId();
+    zx_status_t GetDisplayId(uint16_t& id);
 
     const ddk::DsiImplProtocolClient            dsiimpl_;
     const ddk::GpioProtocolClient               gpio_;
