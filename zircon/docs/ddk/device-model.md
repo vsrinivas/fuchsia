@@ -285,7 +285,7 @@ Now, we unplug this USB WLAN device.
 ```
 
 * The wlan_phy has no open connections, but still has child devices (wlan_mac_0 and wlan_mac_1).
-  Once they have both been `release()`'d, its refcount finally reaches zero and its release()
+  Once they have both been released, its refcount finally reaches zero and its release()
   method is invoked.
 
 ```c
