@@ -51,6 +51,11 @@ function main {
     shift
   done
 
+  if [ ! -d "$ZIRCON_BUILDROOT" ]; then
+    echo >&2 "Re-running gn gen first (missing $ZIRCON_BUILDROOT)"
+    fx-gen || return
+  fi
+
   # Build requested Zircon targets.
   # Add default if building any Fuchsia targets.
   if [ ${#fuchsia_targets[@]} -ne 0 ]; then

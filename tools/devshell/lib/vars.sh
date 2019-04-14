@@ -54,7 +54,6 @@ function fx-gen {
     (
       set -ex
       cd "${FUCHSIA_DIR}"
-      "${FUCHSIA_DIR}/scripts/build-zircon.sh" -g
       "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}"
     ) || return 1
 }
