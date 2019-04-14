@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -275,8 +276,7 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   // Look up an identifier that's not present.
-  auto present = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprTokenType::kName, "present", 0));
+  auto present = fxl::MakeRefCounted<IdentifierExprNode>("present");
   bool called = false;
   Err out_err;
   ExprValue out_value;

@@ -10,11 +10,8 @@
 namespace zxdb {
 
 TEST(IndexWalker, ComponentMatchesNameOnly) {
-  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
-  Identifier::Component foo_template_comp(
-      ExprToken(ExprTokenType::kName, "Foo", 0),
-      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprTokenType::kGreater, ">", 100));
+  Identifier::Component foo_comp("Foo");
+  Identifier::Component foo_template_comp("Foo", {"A", "b"});
 
   // Simple name-only comparisons.
   EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo", foo_comp));
@@ -30,15 +27,9 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
 }
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
-  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
-  Identifier::Component foo_template_comp(
-      ExprToken(ExprTokenType::kName, "Foo", 0),
-      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprTokenType::kGreater, ">", 100));
-  Identifier::Component foo_empty_template_comp(
-      ExprToken(ExprTokenType::kName, "Foo", 0),
-      ExprToken(ExprTokenType::kLess, "<", 10), {},
-      ExprToken(ExprTokenType::kGreater, ">", 100));
+  Identifier::Component foo_comp("Foo");
+  Identifier::Component foo_template_comp("Foo", {"A", "b"});
+  Identifier::Component foo_empty_template_comp("Foo", {});
 
   // Neither inputs have templates (should be a match).
   EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_comp));
@@ -60,11 +51,8 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
 
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.
 TEST(IndexWalker, ComponentMatches) {
-  Identifier::Component foo_comp(ExprToken(ExprTokenType::kName, "Foo", 0));
-  Identifier::Component foo_template_comp(
-      ExprToken(ExprTokenType::kName, "Foo", 0),
-      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprTokenType::kGreater, ">", 100));
+  Identifier::Component foo_comp("Foo");
+  Identifier::Component foo_template_comp("Foo", {"A", "b"});
 
   EXPECT_TRUE(IndexWalker::ComponentMatches("Foo", foo_comp));
   EXPECT_FALSE(IndexWalker::ComponentMatches("Foo<>", foo_comp));

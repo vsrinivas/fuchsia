@@ -477,14 +477,13 @@ OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
 
     // Name.
     if (bold_last && i == comps.size() - 1)
-      result.Append(Syntax::kHeading, comp.name().value());
+      result.Append(Syntax::kHeading, comp.name());
     else
-      result.Append(Syntax::kNormal, comp.name().value());
+      result.Append(Syntax::kNormal, comp.name());
 
     // Template.
     if (comp.has_template()) {
-      std::string t_string;
-      t_string += comp.template_begin().value();
+      std::string t_string("<");
 
       for (size_t t_i = 0; t_i < comp.template_contents().size(); t_i++) {
         if (t_i > 0)
@@ -492,7 +491,7 @@ OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
         t_string += comp.template_contents()[t_i];
       }
 
-      t_string += comp.template_end().value();
+      t_string.push_back('>');
       result.Append(Syntax::kComment, std::move(t_string));
     }
   }

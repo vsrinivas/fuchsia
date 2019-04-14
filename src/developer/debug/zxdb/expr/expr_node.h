@@ -264,7 +264,7 @@ class IdentifierExprNode : public ExprNode {
   IdentifierExprNode() = default;
 
   // Simple one-name identifier.
-  IdentifierExprNode(const ExprToken& name) : ident_(name){};
+  IdentifierExprNode(std::string name) : ident_(std::move(name)) {}
 
   IdentifierExprNode(Identifier id) : ident_(std::move(id)) {}
   ~IdentifierExprNode() override = default;

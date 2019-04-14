@@ -42,7 +42,7 @@ bool IndexWalker::WalkUp() {
 bool IndexWalker::WalkInto(const Identifier::Component& comp) {
   const ModuleSymbolIndexNode* node = path_.back();
 
-  const std::string& comp_name = comp.name().value();
+  const std::string& comp_name = comp.name();
   if (comp_name.empty())
     return true;  // No-op.
 
@@ -113,7 +113,7 @@ bool IndexWalker::ComponentMatches(const std::string& index_string,
 // static
 bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
                                            const Identifier::Component& comp) {
-  const std::string& comp_name = comp.name().value();
+  const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
 

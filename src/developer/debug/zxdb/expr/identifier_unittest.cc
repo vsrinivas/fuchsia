@@ -16,31 +16,27 @@ TEST(Identifier, GetName) {
   EXPECT_TRUE(unqualified.GetAsIndexComponents().empty());
 
   // Single name with no "::" at the beginning.
-  unqualified.AppendComponent(ExprToken(ExprTokenType::kName, "First", 2));
+  unqualified.AppendComponent("First");
   EXPECT_EQ("First", unqualified.GetFullName());
   std::vector<std::string> expected_index = {"First"};
   EXPECT_EQ(expected_index, unqualified.GetAsIndexComponents());
 
   // Single name with a "::" at the beginning.
-  Identifier qualified(Identifier::kGlobal,
-                       ExprToken(ExprTokenType::kName, "First", 2));
+  Identifier qualified(Identifier::kGlobal, "First");
   EXPECT_EQ("::First", qualified.GetFullName());
   EXPECT_EQ(expected_index, qualified.GetAsIndexComponents());
 
   // Append some template stuff.
-  qualified.AppendComponent(ExprToken(ExprTokenType::kName, "Second", 9),
-                            ExprToken(ExprTokenType::kLess, "<", 15),
-                            {"int", "Foo"},
-                            ExprToken(ExprTokenType::kGreater, ">", 24));
+  qualified.AppendComponent("Second", {"int", "Foo"});
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
   expected_index.push_back("Second<int, Foo>");
   EXPECT_EQ(expected_index, qualified.GetAsIndexComponents());
 }
 
 TEST(Identifier, GetScope) {
-  ExprToken name1(ExprTokenType::kName, "Name1", 100);
-  ExprToken name2(ExprTokenType::kName, "Name2", 100);
-  ExprToken name3(ExprTokenType::kName, "Name3", 100);
+  std::string name1("Name1");
+  std::string name2("Name2");
+  std::string name3("Name3");
 
   // "" -> "".
   Identifier empty;
@@ -72,8 +68,8 @@ TEST(Identifier, GetScope) {
   // "Name1::Name2::Name3" -> "Name1::Name2".
   Identifier three_scoped_names(Identifier::kRelative,
                                 Identifier::Component(name1));
-  three_scoped_names.AppendComponent(Identifier::Component(name2));
-  three_scoped_names.AppendComponent(Identifier::Component(name3));
+  three_scoped_names.AppendComponent(name2);
+  three_scoped_names.AppendComponent(name3);
   EXPECT_EQ("\"Name1\"; ::\"Name2\"",
             three_scoped_names.GetScope().GetDebugName());
 }

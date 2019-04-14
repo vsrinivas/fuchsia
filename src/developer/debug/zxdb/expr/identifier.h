@@ -42,38 +42,25 @@ class Identifier {
     Component();
 
     // Constructor for names without templates.
-    explicit Component(ExprToken name) : name_(std::move(name)) {}
-
-    // Constructor for names without templates for use by tests that hard-code
-    // values.
-    Component(const std::string& name) : name_(ExprTokenType::kName, name, 0) {}
+    explicit Component(std::string name)
+        : name_(std::move(name)), has_template_(false) {}
 
     // Constructor for names with templates. The contents will be a
-    // vector of somewhat-normalized type string in between the <>.
-    Component(ExprToken name, ExprToken template_begin,
-              std::vector<std::string> template_contents,
-              ExprToken template_end)
+    // vector of somewhat-normalized type string in between the <>. This always
+    // generates a template even if the contents are empty (meaning "name<>");
+    Component(std::string name, std::vector<std::string> template_contents)
         : name_(std::move(name)),
-          template_begin_(std::move(template_begin)),
-          template_contents_(std::move(template_contents)),
-          template_end_(std::move(template_end)) {}
+          has_template_(true),
+          template_contents_(std::move(template_contents)) {}
 
-    bool has_template() const {
-      return template_begin_.type() != ExprTokenType::kInvalid;
-    }
+    bool has_template() const { return has_template_; }
 
-    const ExprToken& name() const { return name_; }
-    void set_name(ExprToken n) { name_ = std::move(n); }
+    const std::string& name() const { return name_; }
+    // void set_name(std::string n) { name_ = std::move(n); }
 
-    // This will be kInvalid if there is no template on this component.
-    // The begin and end are the <> tokens, and the contents is the normalized
-    // string in between. Note that the contents may not exactly match the
-    // input string (some whitespace may be removed).
-    const ExprToken& template_begin() const { return template_begin_; }
     const std::vector<std::string>& template_contents() const {
       return template_contents_;
     }
-    const ExprToken& template_end() const { return template_end_; }
 
     // Returns this component, either as a string as it would be represented in
     // C++, or in our debug format for unit test format checking (the name and
@@ -82,11 +69,11 @@ class Identifier {
     std::string GetName(bool include_debug) const;
 
    private:
-    ExprToken name_;
+    std::string name_;
 
-    ExprToken template_begin_;
+    bool has_template_;
+
     std::vector<std::string> template_contents_;
-    ExprToken template_end_;
   };
 
   // Identifiers can be explicitly global qualified ("::foo" in C++) or without
@@ -98,8 +85,8 @@ class Identifier {
 
   // Makes a simple identifier with a standalone name. Without the
   // qualification means relative.
-  explicit Identifier(ExprToken name);
-  Identifier(Qualification qual, ExprToken name);
+  explicit Identifier(std::string name);
+  Identifier(Qualification qual, std::string name);
 
   // Makes an identifier from a single component. Without the
   // qualification means relative.
@@ -123,10 +110,9 @@ class Identifier {
   }
 
   void AppendComponent(Component c);
-  void AppendComponent(ExprToken name);
-  void AppendComponent(ExprToken name, ExprToken template_begin,
-                       std::vector<std::string> template_contents,
-                       ExprToken template_end);
+  void AppendComponent(std::string name);
+  void AppendComponent(std::string name,
+                       std::vector<std::string> template_contents);
 
   // Appends the components from the other identifier to this one.
   void Append(Identifier other);

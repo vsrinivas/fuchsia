@@ -15,14 +15,14 @@ std::string Identifier::Component::GetName(bool include_debug) const {
 
   if (include_debug)
     result.push_back('"');
-  result += name().value();
+  result += name_;
   if (include_debug)
     result.push_back('"');
 
   if (has_template()) {
     if (include_debug)
       result.push_back(',');
-    result += template_begin().value();
+    result.push_back('<');
 
     for (size_t i = 0; i < template_contents().size(); i++) {
       if (i > 0)
@@ -35,15 +35,15 @@ std::string Identifier::Component::GetName(bool include_debug) const {
       if (include_debug)
         result.push_back('"');
     }
-    result += template_end().value();
+    result.push_back('>');
   }
   return result;
 }
 
-Identifier::Identifier(ExprToken name)
+Identifier::Identifier(std::string name)
     : Identifier(kRelative, std::move(name)) {}
 
-Identifier::Identifier(Qualification qual, ExprToken name)
+Identifier::Identifier(Qualification qual, std::string name)
     : qualification_(qual) {
   components_.emplace_back(std::move(name));
 }
@@ -82,16 +82,13 @@ void Identifier::AppendComponent(Component c) {
   components_.push_back(std::move(c));
 }
 
-void Identifier::AppendComponent(ExprToken name) {
+void Identifier::AppendComponent(std::string name) {
   components_.emplace_back(std::move(name));
 }
 
-void Identifier::AppendComponent(ExprToken name, ExprToken template_begin,
-                                 std::vector<std::string> template_contents,
-                                 ExprToken template_end) {
-  components_.emplace_back(std::move(name), std::move(template_begin),
-                           std::move(template_contents),
-                           std::move(template_end));
+void Identifier::AppendComponent(std::string name,
+                                 std::vector<std::string> template_contents) {
+  components_.emplace_back(std::move(name), std::move(template_contents));
 }
 
 void Identifier::Append(Identifier other) {
@@ -125,7 +122,7 @@ const std::string* Identifier::GetSingleComponentName() const {
     return nullptr;
   if (qualification_ == kGlobal || components_[0].has_template())
     return nullptr;
-  return &components_[0].name().value();
+  return &components_[0].name();
 }
 
 std::string Identifier::GetName(bool include_debug) const {

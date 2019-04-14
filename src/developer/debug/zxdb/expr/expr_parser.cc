@@ -278,16 +278,14 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           return ParseNameResult();
 
         // Ending ">".
-        const ExprToken& template_end =
-            Consume(ExprTokenType::kGreater, "Expected '>' to match.");
+        Consume(ExprTokenType::kGreater, "Expected '>' to match.");
         if (has_error())
           return ParseNameResult();
 
         // Construct a replacement for the last component of the identifier
         // with the template arguments added.
         Identifier::Component& back = result.ident.components().back();
-        back = Identifier::Component(back.name(), token, std::move(list),
-                                     template_end);
+        back = Identifier::Component(back.name(), std::move(list));
 
         // The thing we just made is either a type or a name, look it up.
         if (name_lookup_callback_) {
@@ -326,9 +324,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           return ParseNameResult();
         } else if (mode == kBegin) {
           // Found an identifier name with nothing before it.
-          result.ident = Identifier(token);
+          result.ident = Identifier(token.value());
         } else if (mode == kColonColon) {
-          result.ident.AppendComponent(cur_token());
+          result.ident.AppendComponent(cur_token().value());
         } else {
           // Anything else like "std::vector foo" or "foo bar".
           SetError(token, "Unexpected identifier, did you forget an operator?");

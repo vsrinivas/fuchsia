@@ -20,7 +20,7 @@ namespace {
 // beginning with "Type" is a type.
 FoundName TestLookupName(const Identifier& ident) {
   const Identifier::Component& comp = ident.components().back();
-  const std::string& name = comp.name().value();
+  const std::string& name = comp.name();
 
   if (StringBeginsWith(name, "Namespace"))
     return FoundName(FoundName::kNamespace);
