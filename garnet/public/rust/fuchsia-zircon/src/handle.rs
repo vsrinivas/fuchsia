@@ -262,6 +262,10 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     fn from_handle_based<H: HandleBased>(h: H) -> Self {
         Self::from_handle(h.into_handle())
     }
+
+    fn is_invalid_handle(&self) -> bool {
+        self.as_handle_ref().is_invalid()
+    }
 }
 
 /// A trait implemented by all handles for objects which have a peer.
