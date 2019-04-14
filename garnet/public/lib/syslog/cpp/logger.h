@@ -5,12 +5,12 @@
 #ifndef LIB_SYSLOG_CPP_LOGGER_H_
 #define LIB_SYSLOG_CPP_LOGGER_H_
 
+#include <lib/syslog/global.h>
+
 #include <initializer_list>
 #include <ostream>
 #include <sstream>
 #include <string>
-
-#include <lib/syslog/global.h>
 
 namespace syslog {
 namespace internal {
@@ -37,6 +37,15 @@ class LogMessage {
 
   LogMessage(const LogMessage&) = delete;
   LogMessage& operator=(const LogMessage&) = delete;
+};
+
+// LogFirstNState is used by the macro FX_LOGS_FIRST_N below.
+class LogFirstNState {
+ public:
+  bool ShouldLog(int n);
+
+ private:
+  std::atomic<int32_t> counter_{0};
 };
 
 }  // namespace internal
@@ -98,6 +107,33 @@ zx_status_t InitLogger();
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 #define FX_LOGS(severity) FX_LOGST(severity, nullptr)
+
+// Writes a message to the global logger, the first |n| times that any callsite
+// of this macro is invoked. |n| should be a positive integer literal. If a
+// single callsite is invoked by multiple threads it is possible that the
+// number of times the message is written could be greater than |n| but will
+// never be greater than n-1 + #(calling threads).
+// |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
+//
+// Implementation notes:
+// The outer for loop is a trick to allow us to introduce a new scope and
+// introduce the variable |syslog_internal_do_log| into that scope. It
+// executes exactly once.
+//
+// The inner for loop is a trick to allow us to introduce a new scope
+// and introduce the static variable |syslog_internal_state| into that
+// new scope. It executes either zero or one times.
+//
+// C++ does not allow us to introduce two new variables into
+// a single for loop scope and we need |syslog_internal_do_log| so that
+// the inner for loop doesn't execute twice.
+#define FX_LOGS_FIRST_N(severity, n)                                    \
+  for (bool syslog_internal_do_log = true; syslog_internal_do_log;      \
+       syslog_internal_do_log = false)                                  \
+    for (static syslog::internal::LogFirstNState syslog_internal_state; \
+         syslog_internal_do_log && syslog_internal_state.ShouldLog(n);  \
+         syslog_internal_do_log = false)                                \
+  FX_LOGS(severity)
 
 // Writes a message to the global logger.
 // |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,

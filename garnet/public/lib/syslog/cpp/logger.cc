@@ -44,5 +44,19 @@ LogMessage::~LogMessage() {
   }
 }
 
+// Note that this implementation allows a data race on counter_, but
+// we consider that harmless because, as specified by the comments on
+// FX_LOGS_FIRST_N, we allow for the possibility that the message might get
+// logged more than |n| times if a single callsite of that macro is invoked by
+// multiple threads.
+bool LogFirstNState::ShouldLog(int n) {
+  const int32_t counter_value = counter_.load(std::memory_order_relaxed);
+  if (counter_value < n) {
+    counter_.store(counter_value + 1, std::memory_order_relaxed);
+    return true;
+  }
+  return false;
+}
+
 }  // namespace internal
 }  // namespace syslog

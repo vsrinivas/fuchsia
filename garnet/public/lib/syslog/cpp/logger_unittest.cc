@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
+#include "lib/syslog/cpp/logger.h"
 
-#include <lib/zx/socket.h>
+#include <fcntl.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
+#include <lib/zx/socket.h>
 
 #include "gtest/gtest.h"
-#include "lib/syslog/cpp/logger.h"
 
 __BEGIN_CDECLS
 
@@ -46,10 +46,13 @@ inline zx_status_t init_helper(zx_handle_t handle, const char** tags,
   return fx_log_init_with_config(&config);
 }
 
-void output_compare_helper(zx::socket local, fx_log_severity_t severity,
-                           const char* msg, const char** tags, int num_tags) {
+// This version of output_compare_helper takes |local| by pointer so that
+// a caller can invoke it more than once on the same socket.
+void output_compare_helper_ptr(zx::socket* local, fx_log_severity_t severity,
+                               const char* msg, const char** tags,
+                               int num_tags) {
   fx_log_packet_t packet;
-  ASSERT_EQ(ZX_OK, local.read(0, &packet, sizeof(packet), nullptr));
+  ASSERT_EQ(ZX_OK, local->read(0, &packet, sizeof(packet), nullptr));
   EXPECT_EQ(severity, packet.metadata.severity);
   int pos = 0;
   for (int i = 0; i < num_tags; i++) {
@@ -63,6 +66,11 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity,
   ASSERT_EQ(0, packet.data[pos]);
   pos++;
   EXPECT_TRUE(ends_with(packet.data + pos, msg)) << (packet.data + pos);
+}
+
+void output_compare_helper(zx::socket local, fx_log_severity_t severity,
+                           const char* msg, const char** tags, int num_tags) {
+  output_compare_helper_ptr(&local, severity, msg, tags, num_tags);
 }
 
 TEST(LogInit, Init) {
@@ -94,14 +102,14 @@ TEST(Logger, WithSeverityMacro) {
 
 static zx_status_t GetAvailableBytes(const zx::socket& socket,
                                      size_t* out_available) {
-    zx_info_socket_t info = {};
-    zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info),
-                                         nullptr, nullptr);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_available = info.rx_buf_available;
-    return ZX_OK;
+  zx_info_socket_t info = {};
+  zx_status_t status =
+      socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_available = info.rx_buf_available;
+  return ZX_OK;
 }
 
 TEST(Logger, LogSeverity) {
@@ -184,6 +192,28 @@ TEST(Logger, VLogWithTag) {
 
   FX_VLOGST(1, tags[0]) << msg;
   output_compare_helper(std::move(local), -1, msg, tags, 1);
+}
+
+// We invoke FX_LOGS_FIRST_N(msg, 31) 100 times and check that the message
+// was logged exactly 31 times.
+TEST(Logger, LogFirstN) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "test message";
+  for (auto i = 0; i < 100; i++) {
+    FX_LOGS_FIRST_N(ERROR, 31) << msg;
+  }
+
+  // Check that we can read 31 copies of |msg| from |local|.
+  for (auto i = 0; i < 31; i++) {
+    output_compare_helper_ptr(&local, FX_LOG_ERROR, msg, nullptr, 0);
+  }
+  // Check there are no more available bytes.
+  size_t outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
 }
 
 }  // namespace
