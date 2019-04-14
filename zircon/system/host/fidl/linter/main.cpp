@@ -46,7 +46,6 @@ void Usage(const std::string& argv0) {
 }
 
 bool Lint(const fidl::SourceFile& source_file,
-          fidl::linter::LintingTreeVisitor::Options& options,
           fidl::ErrorReporter* error_reporter, std::string& output) {
     fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
@@ -54,9 +53,13 @@ bool Lint(const fidl::SourceFile& source_file,
     if (!parser.Ok()) {
         return false;
     }
-    fidl::linter::LintingTreeVisitor visitor(options, error_reporter);
-    visitor.OnFile(ast);
-    return error_reporter->warnings().size() == 0;
+    fidl::Findings findings;
+    fidl::linter::Linter linter;
+    if (linter.Lint(ast, &findings)) {
+        return true;
+    }
+    fidl::utils::WriteFindingsToErrorReporter(findings, error_reporter);
+    return false;
 }
 
 } // namespace
@@ -81,13 +84,6 @@ int main(int argc, char* argv[]) {
         FailWithUsage(args[0], "No files provided\n");
     }
 
-    fidl::linter::LintingTreeVisitor::Options options;
-    // Until we have a strategy for configuration, hard code specific in-tree
-    // options.
-    options.add_permitted_library_prefix("fuchsia");
-    options.add_permitted_library_prefix("fidl");
-    options.add_permitted_library_prefix("test");
-
     fidl::SourceManager source_manager;
 
     // Process filenames.
@@ -100,7 +96,7 @@ int main(int argc, char* argv[]) {
     fidl::ErrorReporter error_reporter;
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
-        if (!Lint(*source_file, options, &error_reporter, output)) {
+        if (!Lint(*source_file, &error_reporter, output)) {
             // In the formattter, we do not print the report if there are only
             // warnings.
             error_reporter.PrintReports();

@@ -54,6 +54,10 @@ private:
     size_t size_;
 };
 
+// Adds an overloaded "<<" operator that allows StringView objects to be
+// writted to standard C++ output streams.
+std::ostream& operator<<(std::ostream& os, const StringView& string_view);
+
 } // namespace fidl
 
 #endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_STRING_VIEW_H_

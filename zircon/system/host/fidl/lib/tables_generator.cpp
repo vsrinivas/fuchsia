@@ -12,11 +12,6 @@ namespace {
 
 constexpr auto kIndent = "    ";
 
-std::ostream& operator<<(std::ostream& stream, StringView view) {
-    stream.rdbuf()->sputn(view.data(), view.size());
-    return stream;
-}
-
 void Emit(std::ostream* file, StringView data) {
     *file << data;
 }

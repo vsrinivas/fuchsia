@@ -5,203 +5,79 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 
-#include <optional>
-#include <regex>
+#include <set>
 
-#include "error_reporter.h"
-#include "tree_visitor.h"
+#include <fidl/check_def.h>
+#include <fidl/findings.h>
+#include <fidl/linting_tree_callbacks.h>
+#include <fidl/tree_visitor.h>
+#include <fidl/utils.h>
 
 namespace fidl {
 namespace linter {
 
-class IdentifierTokenizer;
+// The primary business logic for lint-checks on a FIDL file is implemented in
+// the |Linter| class.
+class Linter {
 
-// This class allows users to check an identifier to see whether it matches a
-// given regexp.  It contains additional logic to work with the linting tool.
-class IdentifierChecker {
 public:
-    // |description| is a description for this check (e.g., "upper snake case").
-    //
-    // |tokenizer| is an instance of IdentifierToken.  Implementations of this
-    // class may use it to enable the Recommend() method to provide useful
-    // values when input is simply capitalized incorrectly (for example,
-    // kFooBarBaz can be broken into Foo, Bar, and Baz, at which point we might
-    // know that we want FOO_BAR_BAZ instead.
-    //
-    // |error_reporter| is the object to use to log warnings, when non-compliant
-    // identifiers are found.
-    IdentifierChecker(const std::string& description,
-                      const IdentifierTokenizer& tokenizer,
-                      fidl::ErrorReporter* error_reporter)
-        : description_(description),
-          tokenizer_(&tokenizer),
-          error_reporter_(error_reporter) {}
+    // On initialization, the |Linter| constructs the |CheckDef|
+    // objects with associated check logic (lambdas registered via
+    // |CheckCallbacks|).
+    Linter();
 
-    // |tokenizer| is an instance of IdentifierToken.  Implementations of this
-    // class may use it to enable the Recommend() method to provide useful
-    // values when input is simply capitalized incorrectly (for example,
-    // kFooBarBaz can be broken into Foo, Bar, and Baz, at which point we might
-    // know that we want FOO_BAR_BAZ instead.
-    //
-    // |error_reporter| is the object to use to log warnings, when non-compliant
-    // identifiers are found.
-    IdentifierChecker(const IdentifierTokenizer& tokenizer,
-                      fidl::ErrorReporter* error_reporter)
-        : tokenizer_(&tokenizer),
-          error_reporter_(error_reporter) {}
-
-    // Check returns true if the identifier matches the pattern given to
-    // IdentifierChecker, and false otherwise.
-    virtual bool Check(const std::string& identifier) const = 0;
-
-    // WarnOnMismatch logs a warning to the error reporter if the given
-    // identifier does not match the pattern given to the constructor.
-    void WarnOnMismatch(fidl::raw::Identifier& identifier);
-
-    // WarnOnMismatch logs a warning to the error reporter if the given
-    // identifier does not match the pattern given to the constructor.
-    void WarnOnMismatch(std::string& identifier, SourceLocation location);
-
-    // Returns a user-friendly description for this check (e.g., upper camel case).
-    const std::string Description() { return description_; }
-
-    // Potentially returns a recommended alternative token to the given
-    // identifier.  The default implementation returns an empty optional -
-    // implementations of this class may choose to implement recommendations.
-    virtual std::optional<std::string> Recommend(std::string& id) {
-        return {};
-    }
-
-protected:
-    std::string description_;
-
-    const IdentifierTokenizer* tokenizer_;
-    fidl::ErrorReporter* error_reporter_;
-};
-
-class RegexIdentifierChecker : public IdentifierChecker {
-public:
-    // |description| is a descriptive description for this check (e.g., "upper snake case").
-    //
-    // |pattern| is the (std::regex-friendly) pattern that we check the
-    // identifier against for compliance.
-    //
-    // |tokenizer| is an instance of IdentifierToken.  Implementations of this
-    // class may use it to enable the Recommend() method to provide useful
-    // values when input is simply capitalized incorrectly (for example,
-    // kFooBarBaz can be broken into Foo, Bar, and Baz, at which point we might
-    // know that we want FOO_BAR_BAZ instead.
-    //
-    // |error_reporter| is the object to use to log warnings, when non-compliant
-    // identifiers are found.
-    RegexIdentifierChecker(const std::string& description,
-                           const std::string& pattern,
-                           const IdentifierTokenizer& tokenizer,
-                           fidl::ErrorReporter* error_reporter)
-        : IdentifierChecker(description + " (Pattern: " + pattern + ")",
-                            tokenizer, error_reporter),
-          pattern_(pattern) {}
-
-    // Check returns true if the identifier matches the pattern given to
-    // IdentifierChecker, and false otherwise.
-    virtual bool Check(const std::string& identifier) const {
-        std::cmatch match;
-        return std::regex_match(identifier.c_str(), match, pattern_);
-    }
-
-protected:
-    std::regex pattern_;
-};
-
-// An implementation of RegexIdentifierChecker that checks for UpperCamelCase
-// compliance.
-class UpperCamelCaseChecker : public RegexIdentifierChecker {
-public:
-    // Should probably special-case various allowable single-letter word
-    // combinations.
-    UpperCamelCaseChecker(const IdentifierTokenizer& tokenizer,
-                          fidl::ErrorReporter* error_reporter)
-        : RegexIdentifierChecker("upper camel case", "(?:[A-Z][a-z0-9]+)+", tokenizer, error_reporter) {}
-
-    std::optional<std::string> Recommend(std::string& id) override;
-};
-
-// An implementation of RegexIdentifierChecker that checks for UPPER_SNAKE_CASE
-// compliance.
-class UpperSnakeCaseChecker : public RegexIdentifierChecker {
-public:
-    UpperSnakeCaseChecker(const IdentifierTokenizer& tokenizer,
-                          fidl::ErrorReporter* error_reporter)
-        : RegexIdentifierChecker("upper snake case", "[A-Z]+(_[A-Z0-9]+)*", tokenizer, error_reporter) {}
-
-    std::optional<std::string> Recommend(std::string& id) override;
-};
-
-// An implementation of IdentifierChecker that requires the string / identifier
-// being checked to start with one of the provided prefixes.
-class PrefixChecker : public IdentifierChecker {
-public:
-    PrefixChecker(std::vector<std::string> allowed_prefixes,
-                  const IdentifierTokenizer& tokenizer,
-                  fidl::ErrorReporter* error_reporter);
-
-    virtual ~PrefixChecker() {}
-    virtual bool Check(const std::string& identifier) const;
+    // Calling Lint() invokes the callbacks for elements
+    // of the given |SourceFile|. If a check fails, the callback generates a
+    // |Finding| and adds it to the given Findings (vector of Finding).
+    // Lint() is not thread-safe.
+    // Returns true if no new findings were generated.
+    bool Lint(std::unique_ptr<raw::File> const& parsed_source,
+              Findings* findings);
 
 private:
-    std::vector<std::string> allowed_prefixes_;
-};
+    const std::set<std::string>& permitted_library_prefixes() const;
+    std::string permitted_library_prefixes_as_string() const;
 
-// This is a class whose implementations make an attempt to break the given
-// identifier into individual tokens.  For example, CamelCaseIdentifier might be
-// broken into a vector containing "Camel", "Case", and "Identifier".
-class IdentifierTokenizer {
-public:
-    IdentifierTokenizer(fidl::ErrorReporter* error_reporter)
-        : upper_camel_case_(*this, error_reporter) {}
+    const CheckDef& DefineCheck(std::string check_id,
+                                std::string message_template);
 
-    std::vector<std::string> Tokenize(std::string& identifier) const;
+    template <typename... Args>
+    Finding& AddFinding(Args&&... args) const;
 
-private:
-    const UpperCamelCaseChecker upper_camel_case_;
-};
+    template <typename SourceElementSubtypeRefOrPtr>
+    const Finding& AddFinding(
+        const SourceElementSubtypeRefOrPtr& element,
+        const CheckDef& check,
+        Substitutions substitutions = {},
+        std::string suggestion_template = "",
+        std::string replacement_template = "") const;
 
-// A tree visitor that runs lint checks against the contents of each node.
-// Nodes which own an identifier or a compound identifier should override the
-// default visitor, in order to invoke contextual checks on those identifiers.
-class LintingTreeVisitor : public fidl::raw::TreeVisitor {
-public:
-    class Options {
-        friend class LintingTreeVisitor;
+    // Add a finding for an invalid identifier, and suggested replacement
+    template <typename SourceElementSubtypeRefOrPtr>
+    const Finding& AddReplaceIdFinding(
+        const SourceElementSubtypeRefOrPtr& element,
+        const CheckDef& check,
+        std::string id,
+        std::string replacement) const;
 
-    public:
-        void add_permitted_library_prefix(std::string prefix);
-
-    private:
-        std::vector<std::string> permitted_library_prefixes_;
+    std::set<std::string> permitted_library_prefixes_ = {
+        "fuchsia",
+        "fidl",
+        "test",
     };
 
-    LintingTreeVisitor(const Options& options, fidl::ErrorReporter* error_reporter);
+    std::vector<CheckDef> checks_;
+    LintingTreeCallbacks callbacks_;
 
-    void OnFile(std::unique_ptr<fidl::raw::File> const& element) override;
-
-    void OnConstDeclaration(std::unique_ptr<fidl::raw::ConstDeclaration> const& element) override;
-
-    void OnInterfaceDeclaration(std::unique_ptr<fidl::raw::InterfaceDeclaration> const& element) override;
-
-    void OnUsing(std::unique_ptr<fidl::raw::Using> const& element) override;
-
-private:
-    IdentifierTokenizer tokenizer_;
-    RegexIdentifierChecker legal_library_name_;
-    RegexIdentifierChecker single_identifier_;
-    UpperSnakeCaseChecker upper_snake_case_;
-    RegexIdentifierChecker lower_snake_case_;
-    UpperCamelCaseChecker upper_camel_case_;
-    std::optional<PrefixChecker> prefix_checker_;
+    // Pointer to the current "Findings" object, passed to the Lint() method,
+    // for the diration of the Visit() to lint a given FIDL file. When the
+    // Visit() is over, |current_findings_| is reset to nullptr.
+    // As a result, Lint() is single-threaded. The variable could be changed
+    // to thread-local, but in general this class has not been reviewed for
+    // thread-safety characteristics, and it is not currently deemed necessary.
+    Findings* current_findings_ = nullptr;
 };
 
 } // namespace linter
 } // namespace fidl
-
 #endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_

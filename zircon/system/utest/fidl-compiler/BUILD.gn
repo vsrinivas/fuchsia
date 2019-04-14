@@ -59,6 +59,7 @@ if (current_toolchain == default_toolchain) {
       "formatter_tests.cpp",
       "json_generator_tests.cpp",
       "lint_tests.cpp",
+      "lint_findings_tests.cpp",
       "max_bytes_multipass_tests.cpp",
       "max_bytes_tests.cpp",
       "max_handle_tests.cpp",

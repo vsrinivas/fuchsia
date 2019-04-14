@@ -68,18 +68,19 @@ public:
                library_->Compile();
     }
 
-    bool Lint(fidl::linter::LintingTreeVisitor::Options& options) {
+    bool Lint(fidl::Findings* findings) {
         auto ast = parser_.Parse();
         if (!parser_.Ok())
             return false;
-        fidl::linter::LintingTreeVisitor visitor(options, error_reporter_);
-        visitor.OnFile(ast);
-        return true;
+        fidl::linter::Linter linter;
+        return linter.Lint(ast, findings);
     }
 
     bool Lint() {
-        fidl::linter::LintingTreeVisitor::Options options;
-        return Lint(options);
+        fidl::Findings findings;
+        bool passed = Lint(&findings);
+        fidl::utils::WriteFindingsToErrorReporter(findings, error_reporter_);
+        return passed;
     }
 
     std::string GenerateJSON() {
@@ -169,8 +170,37 @@ public:
         return library_.get();
     }
 
-    fidl::SourceFile source_file() {
+    fidl::SourceFile source_file() const {
         return source_file_;
+    }
+
+    std::string filename() const {
+        return source_file().filename();
+    }
+
+    std::string FileData() const {
+        return source_file().data();
+    }
+
+    std::string FileLocation(std::string within, std::string to_find) const {
+        std::istringstream lines(within);
+        std::string line;
+        size_t line_number = 0;
+        while (std::getline(lines, line)) {
+            line_number++;
+            size_t column_index = line.find(to_find);
+            if (column_index != std::string::npos) {
+                std::stringstream position;
+                position << filename() << ":" << line_number << ":" << (column_index + 1);
+                return position.str();
+            }
+        }
+        assert(false); // Bug in test
+        return "never reached";
+    }
+
+    std::string FileLocation(std::string to_find) const {
+        return FileLocation(FileData(), to_find);
     }
 
     const std::vector<std::string>& errors() const {

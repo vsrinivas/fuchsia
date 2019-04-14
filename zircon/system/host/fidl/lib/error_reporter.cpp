@@ -57,6 +57,18 @@ std::string Format(std::string qualifier, const SourceLocation& location,
     return error;
 }
 
+void ErrorReporter::AddError(std::string formatted_message) {
+    errors_.push_back(std::move(formatted_message));
+}
+
+void ErrorReporter::AddWarning(std::string formatted_message) {
+    if (warnings_as_errors_) {
+        AddError(formatted_message);
+    } else {
+        warnings_.push_back(std::move(formatted_message));
+    }
+}
+
 // ReportError records an error with the location, message, source line, and
 // position indicator.
 //
@@ -65,27 +77,39 @@ std::string Format(std::string qualifier, const SourceLocation& location,
 //        ^
 void ErrorReporter::ReportError(const SourceLocation& location, StringView message) {
     auto error = Format("error", location, message);
-    errors_.push_back(std::move(error));
+    AddError(std::move(error));
 }
 
-// ReportError records an error with the location, message, source line,
+// Records an error with the location, message, source line,
 // position indicator, and tildes under the token reported.
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
+void ErrorReporter::ReportErrorWithSquiggle(
+    const SourceLocation& location, StringView message) {
+    auto token_data = location.data();
+    auto error = Format("error", location, message, token_data.size());
+    AddError(std::move(error));
+}
+
+// ReportError records an error with the location, message, source line,
+// position indicator, and tildes under the token reported.
+// Uses the given Token to get its location, and then calls
+// ReportErrortLocationWithSquiggle()
+//
+//     filename:line:col: error: message
+//     sourceline
+//        ^~~~
 void ErrorReporter::ReportError(const Token& token, StringView message) {
-    auto token_location = token.location();
-    auto token_data = token_location.data();
-    auto error = Format("error", token_location, message, token_data.size());
-    errors_.push_back(std::move(error));
+    ReportErrorWithSquiggle(token.location(), message);
 }
 
 // ReportError records the provided message.
 void ErrorReporter::ReportError(StringView message) {
     std::string error("error: ");
     error.append(message);
-    errors_.push_back(std::move(error));
+    AddError(std::move(error));
 }
 
 // ReportWarning records a warning with the location, message, source line, and
@@ -95,12 +119,21 @@ void ErrorReporter::ReportError(StringView message) {
 //     sourceline
 //        ^
 void ErrorReporter::ReportWarning(const SourceLocation& location, StringView message) {
-    if (warnings_as_errors_) {
-        ReportError(location, message);
-        return;
-    }
-    auto error = Format("warning", location, message);
-    warnings_.push_back(std::move(error));
+    auto warning = Format("warning", location, message);
+    AddWarning(std::move(warning));
+}
+
+// Records a warning with the location, message, source line,
+// position indicator, and tildes under the token reported.
+//
+//     filename:line:col: warning: message
+//     sourceline
+//        ^~~~
+void ErrorReporter::ReportWarningWithSquiggle(
+    const SourceLocation& location, StringView message) {
+    auto token_data = location.data();
+    auto warning = Format("warning", location, message, token_data.size());
+    AddWarning(std::move(warning));
 }
 
 void ErrorReporter::PrintReports() {

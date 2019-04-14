@@ -196,13 +196,13 @@ void InterfaceDeclaration::Accept(TreeVisitor& visitor) {
     }
     visitor.OnIdentifier(identifier);
     for (auto superinterface = superinterfaces.begin();
-        superinterface != superinterfaces.end();
-        ++superinterface) {
+         superinterface != superinterfaces.end();
+         ++superinterface) {
         visitor.OnComposeProtocol(*superinterface);
     }
     for (auto method = methods.begin();
-        method != methods.end();
-        ++method) {
+         method != methods.end();
+         ++method) {
         visitor.OnInterfaceMethod(*method);
     }
 }

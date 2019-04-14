@@ -2,235 +2,309 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/linter.h"
+#include <fidl/linter.h>
 
 #include <algorithm>
-#include <sstream>
+#include <iostream>
+#include <regex>
+#include <set>
+
+#include <lib/fit/function.h>
+
+#include <fidl/findings.h>
+#include <fidl/raw_ast.h>
+#include <fidl/utils.h>
 
 namespace fidl {
 namespace linter {
 
-namespace {
+#define CHECK_CASE(CASE, IDENTIFIER)          \
+    assert(IDENTIFIER != nullptr);            \
+    std::string id = to_string(IDENTIFIER);   \
+    if (!utils::is_##CASE##_case(id)) {       \
+        linter.AddReplaceIdFinding(           \
+            IDENTIFIER, check,                \
+            id, utils::to_##CASE##_case(id)); \
+    }
 
-std::string IdentifierToString(fidl::raw::Identifier& identifier) {
-    return std::string(identifier.end_.data().data(), identifier.end_.data().size());
+const std::set<std::string>& Linter::permitted_library_prefixes() const {
+    return permitted_library_prefixes_;
 }
 
-std::string CompoundName(std::unique_ptr<fidl::raw::CompoundIdentifier>& library_name) {
-    std::string compound_name;
-    for (auto id_it = library_name->components.begin();
-         id_it != library_name->components.end();
-         ++id_it) {
-        compound_name.append(IdentifierToString(**id_it));
-        if (id_it != library_name->components.end() - 1) {
-            compound_name += ".";
+std::string Linter::permitted_library_prefixes_as_string() const {
+    std::ostringstream ss;
+    bool first = true;
+    for (auto& prefix : permitted_library_prefixes()) {
+        if (!first) {
+            ss << " | ";
         }
+        ss << prefix;
+        first = false;
     }
-    return compound_name;
+    return ss.str();
 }
 
-} // anonymous namespace
-
-void IdentifierChecker::WarnOnMismatch(std::string& id, SourceLocation location) {
-    if (!Check(id)) {
-        std::string error = "Identifier\n    ";
-        error.append(id);
-        error.append("\nis not ");
-        error.append(description_);
-        error.append("\n");
-        std::optional<std::string> recommendation = Recommend(id);
-        if (recommendation) {
-            error.append("Did you mean:\n    ");
-            error.append(*recommendation);
-        }
-        error_reporter_->ReportWarning(location, error);
-    }
+// Returns itself. Overloaded to support alternative type references by
+// pointer and unique_ptr as needed.
+static const fidl::raw::SourceElement& GetElementAsRef(
+    const fidl::raw::SourceElement& source_element) {
+    return source_element;
 }
 
-void IdentifierChecker::WarnOnMismatch(fidl::raw::Identifier& identifier) {
-    std::string id = IdentifierToString(identifier);
-    WarnOnMismatch(id, identifier.start_.location());
+static const fidl::raw::SourceElement& GetElementAsRef(
+    const fidl::raw::SourceElement* element) {
+    return GetElementAsRef(*element);
 }
 
-// Many, many people will either a) lower-case the first letter, or b) get the
-// rules for acronyms wrong.  This tries to detect that situation and provide a
-// useful suggestion.
-std::optional<std::string> UpperCamelCaseChecker::Recommend(std::string& id) {
-    std::string test = id;
-    // Just uppercase the first letter.
-    test[0] = static_cast<char>(
-        std::toupper(static_cast<unsigned char>(test[0])));
-
-    // Look for a sequence of three or more uppercase letters.  Lowercase
-    // everything between the first and last (0, n).
-    std::smatch sm;
-    std::regex re("[A-Z][A-Z]+[A-Z]");
-    while (std::regex_search(test, sm, re)) {
-        std::string new_test = sm.prefix();
-        std::string match = sm[0];
-        new_test += match[0];
-        for (size_t i = 1; i + 1 < match.size(); i++) {
-            new_test += static_cast<char>(
-                std::tolower(static_cast<unsigned char>(match[i])));
-        }
-        new_test += match[match.size() - 1];
-        new_test.append(sm.suffix());
-        test = new_test;
-    }
-
-    // If it passes, it's a good recommendation.  Maybe.
-    if (Check(test)) {
-        return test;
-    }
-    return {};
+// Returns the pointed-to element as a reference.
+template <typename SourceElementSubtype>
+const fidl::raw::SourceElement& GetElementAsRef(
+    const std::unique_ptr<SourceElementSubtype>& element_ptr) {
+    static_assert(
+        std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
+        "Template parameter type is not derived from SourceElement");
+    return GetElementAsRef(element_ptr.get());
 }
 
-LintingTreeVisitor::LintingTreeVisitor(const Options& options, fidl::ErrorReporter* error_reporter)
-    : tokenizer_(error_reporter),
-      legal_library_name_("a legal library name", "^((?!(common|service|util|base|f.l|zx[a-z]*)).)*$", tokenizer_, error_reporter),
-      single_identifier_("single identifier", "[a-z][a-z0-9]*", tokenizer_, error_reporter),
-      upper_snake_case_(tokenizer_, error_reporter),
-      lower_snake_case_("lower snake case", "[a-z0-9]+(_[a-z0-9]+)*", tokenizer_, error_reporter),
-      upper_camel_case_(tokenizer_, error_reporter) {
-    if (options.permitted_library_prefixes_.size() != 0) {
-        prefix_checker_ = std::make_optional<PrefixChecker>(
-            options.permitted_library_prefixes_,
-            tokenizer_, error_reporter);
-    }
+// Convert the SourceElement (start- and end-tokens within the SourceFile)
+// to a StringView, spanning from the beginning of the start token, to the end
+// of the end token. The three methods support classes derived from
+// SourceElement, by reference, pointer, or unique_ptr.
+static StringView to_string_view(const fidl::raw::SourceElement& element) {
+    auto start_string = element.start_.data();
+    const char* start_ptr = start_string.data();
+    auto end_string = element.end_.data();
+    const char* end_ptr = end_string.data() + end_string.size();
+    size_t size = static_cast<size_t>(end_ptr - start_ptr);
+    return StringView(start_ptr, size);
 }
 
-std::vector<std::string> IdentifierTokenizer::Tokenize(
-    std::string& identifier) const {
-    // This makes a best effort attempt to break the identifier into separate
-    // tokens.
-    std::vector<std::string> vs;
-    size_t i = 0;
-    if (identifier[0] == 'k' && upper_camel_case_.Check(identifier.substr(1))) {
-        // Weird special case for kCamelCase, used by C++ consts, and
-        // erroneously for FIDL consts sometimes.
-        i++;
-    }
+static StringView to_string_view(const fidl::raw::SourceElement* element) {
+    return to_string_view(*element);
+}
 
-    // Right now, the strategy is to have three categories:
-    // 1. upper
-    // 2. lower
-    // 3. non-letter
-    // You are allowed to go from upper to lower, but no other transition is
-    // allowed. For each character in the string, identify its category. If the
-    // current token category can transition to the new character's category,
-    // append the character to the token, otherwise create a new token
-    // consisting of just the character.
-    enum State { UPPER,
-                 LOWER,
-                 NON_LETTER };
-    State previous = NON_LETTER;
-    while (i < identifier.size()) {
-        if (std::isupper(identifier[i])) {
-            if (previous != UPPER) {
-                vs.push_back(std::string(1, identifier[i]));
-            } else {
-                vs.back().push_back(identifier[i]);
-            }
-            previous = UPPER;
-        } else if (std::islower(identifier[i]) || std::isdigit(identifier[i])) {
-            if (previous != UPPER && previous != LOWER) {
-                vs.push_back(std::string(1, identifier[i]));
-            } else {
-                vs.back().push_back(identifier[i]);
-            }
-            previous = LOWER;
+template <typename SourceElementSubtype>
+StringView to_string_view(
+    const std::unique_ptr<SourceElementSubtype>& element_ptr) {
+    static_assert(
+        std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
+        "Template parameter type is not derived from SourceElement");
+    return to_string_view(element_ptr.get());
+}
+
+// Convert the SourceElement to a std::string, using the method described above
+// for StringView.
+static std::string to_string(const fidl::raw::SourceElement& element) {
+    return to_string_view(element);
+}
+
+static std::string to_string(const fidl::raw::SourceElement* element) {
+    return to_string_view(*element);
+}
+
+template <typename SourceElementSubtype>
+std::string to_string(
+    const std::unique_ptr<SourceElementSubtype>& element_ptr) {
+    static_assert(
+        std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
+        "Template parameter type is not derived from SourceElement");
+    return to_string(element_ptr.get());
+}
+
+// Add a finding with |Finding| constructor arguments.
+// This function is const because the Findings (TreeVisitor) object
+// is not modified. It's Findings object (not owned) is updated.
+template <typename... Args>
+Finding& Linter::AddFinding(Args&&... args) const {
+    assert(current_findings_ != nullptr);
+    return current_findings_->emplace_back(std::forward<Args>(args)...);
+}
+
+// Add a finding with optional suggestion and replacement
+template <typename SourceElementSubtypeRefOrPtr>
+const Finding& Linter::AddFinding(
+    const SourceElementSubtypeRefOrPtr& element,
+    const CheckDef& check,
+    Substitutions substitutions,
+    std::string suggestion_template,
+    std::string replacement_template) const {
+    auto& finding = AddFinding(
+        GetElementAsRef(element).location(),
+        check.id(), check.message_template().Substitute(substitutions));
+    if (suggestion_template.size() > 0) {
+        if (replacement_template.size() == 0) {
+            finding.SetSuggestion(
+                TemplateString(suggestion_template).Substitute(substitutions));
         } else {
-            previous = NON_LETTER;
-        }
-        i++;
-    }
-
-    return vs;
-}
-
-// Break into tokens, recommend UpperSnakeCase version of tokens.
-std::optional<std::string> UpperSnakeCaseChecker::Recommend(
-    std::string& identifier) {
-    std::vector<std::string> tokens = tokenizer_->Tokenize(identifier);
-
-    // identifiers must start with [a-zA-Z], which means there should always be
-    // some token.
-    assert(tokens.size() != 0);
-
-    std::string recommendation = "";
-    for (size_t i = 0; i < tokens.size(); i++) {
-        std::string token = tokens[i];
-        std::transform(token.begin(), token.end(), token.begin(), ::toupper);
-        recommendation.append(token);
-        if (i + 1 != tokens.size()) {
-            recommendation += '_';
+            finding.SetSuggestion(
+                TemplateString(suggestion_template).Substitute(substitutions),
+                TemplateString(replacement_template).Substitute(substitutions));
         }
     }
-    return recommendation;
+    return finding;
 }
 
-PrefixChecker::PrefixChecker(std::vector<std::string> allowed_prefixes,
-                             const IdentifierTokenizer& tokenizer,
-                             fidl::ErrorReporter* error_reporter)
-    : IdentifierChecker(tokenizer, error_reporter),
-      allowed_prefixes_(allowed_prefixes) {
-    description_ = "one of : [";
-    for (auto prefix_it = allowed_prefixes.begin();
-         prefix_it != allowed_prefixes.end();
-         ++prefix_it) {
-        description_.append(*prefix_it);
-        if (prefix_it + 1 != allowed_prefixes.end()) {
-            description_.append(", ");
-        }
-    }
-    description_.append("]");
+// Add a finding for an invalid identifier, and suggested replacement
+template <typename SourceElementSubtypeRefOrPtr>
+const Finding& Linter::AddReplaceIdFinding(
+    const SourceElementSubtypeRefOrPtr& element,
+    const CheckDef& check,
+    std::string id,
+    std::string replacement) const {
+    return AddFinding(
+        element,
+        check,
+        {
+            {"IDENTIFIER", id},
+            {"REPLACEMENT", replacement},
+        },
+        "change '${IDENTIFIER}' to '${REPLACEMENT}'",
+        "${REPLACEMENT}");
 }
 
-bool PrefixChecker::Check(const std::string& identifier) const {
-    for (auto& prefix : allowed_prefixes_) {
-        if (identifier.find(prefix.c_str(), 0, prefix.size()) == 0) {
-            return true;
-        }
+const CheckDef& Linter::DefineCheck(std::string check_id,
+                                    std::string message_template) {
+    checks_.emplace_back(check_id, TemplateString(message_template));
+    return checks_.back();
+}
+
+// Returns true if no new findings were generated
+bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source,
+                  Findings* findings) {
+    size_t initial_findings_count = findings->size();
+    current_findings_ = findings;
+    callbacks_.Visit(parsed_source);
+    current_findings_ = nullptr;
+    if (findings->size() == initial_findings_count) {
+        return true;
     }
     return false;
 }
 
-void LintingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {
-    for (auto id_it = element->library_name->components.begin();
-         id_it != element->library_name->components.end();
-         ++id_it) {
-        auto id = **id_it;
-        single_identifier_.WarnOnMismatch(id);
-        legal_library_name_.WarnOnMismatch(id);
-    }
-    if (prefix_checker_) {
-        std::string full_library_name = CompoundName(element->library_name);
-        prefix_checker_->WarnOnMismatch(full_library_name,
-                                        element->library_name->components[0]->start_.location());
-    }
-    element->Accept(*this);
-}
+Linter::Linter()
+    : callbacks_(LintingTreeCallbacks()) {
 
-void LintingTreeVisitor::OnConstDeclaration(std::unique_ptr<fidl::raw::ConstDeclaration> const& element) {
-    upper_snake_case_.WarnOnMismatch(*(element->identifier));
-    element->Accept(*this);
-}
+    callbacks_.OnUsing(
+        [& linter = *this,
+         check = DefineCheck(
+             "invalid-case-for-primitive-alias",
+             "Primitive aliases must be named in lower_snake_case")]
+        //
+        (const raw::Using& element) {
+            if (element.maybe_alias != nullptr) {
+                CHECK_CASE(lower_snake, element.maybe_alias)
+            }
+        });
 
-void LintingTreeVisitor::OnInterfaceDeclaration(std::unique_ptr<fidl::raw::InterfaceDeclaration> const& element) {
-    upper_camel_case_.WarnOnMismatch(*(element->identifier));
-    element->Accept(*this);
-}
+    callbacks_.OnConstDeclaration(
+        [& linter = *this,
+         check = DefineCheck(
+             "invalid-case-for-constant",
+             "Constants must be named in ALL_CAPS_SNAKE_CASE")]
+        //
+        (const raw::ConstDeclaration& element) {
+            CHECK_CASE(upper_snake, element.identifier)
+        });
 
-void LintingTreeVisitor::OnUsing(std::unique_ptr<fidl::raw::Using> const& element) {
-    if (element->maybe_alias) {
-        lower_snake_case_.WarnOnMismatch(*(element->maybe_alias));
-    }
-    element->Accept(*this);
-}
+    callbacks_.OnEnumMember(
+        [& linter = *this,
+         check = DefineCheck(
+             "invalid-case-for-enum-member",
+             "Enum members must be named in ALL_CAPS_SNAKE_CASE")]
+        //
+        (const raw::EnumMember& element) {
+            CHECK_CASE(upper_snake, element.identifier)
+        });
 
-void LintingTreeVisitor::Options::add_permitted_library_prefix(
-    std::string prefix) {
-    permitted_library_prefixes_.push_back(prefix);
+    callbacks_.OnInterfaceDeclaration(
+        [& linter = *this,
+         check = DefineCheck(
+             "invalid-case-for-protocol",
+             "Protocols must be named in UpperCamelCase")]
+        //
+        (const raw::InterfaceDeclaration& element) {
+            CHECK_CASE(upper_camel, element.identifier)
+        });
+
+    callbacks_.OnFile(
+        [& linter = *this,
+         check = DefineCheck(
+             "disallowed-library-name-component",
+             "Library names must not contain the following components: common, service, util, base, f<letter>l, zx<word>")]
+        //
+        (const raw::File& element) {
+            static const std::regex disallowed_library_component(
+                R"(^(common|service|util|base|f[a-z]l|zx\w*)$)");
+            for (const auto& component : element.library_name->components) {
+                if (std::regex_match(to_string(component),
+                                     disallowed_library_component)) {
+                    linter.AddFinding(component, check);
+                    break;
+                }
+            }
+        });
+
+    callbacks_.OnFile(
+        [& linter = *this,
+         check = DefineCheck(
+             "wrong-prefix-for-platform-source-library",
+             "FIDL library name is not currently allowed")]
+        //
+        (const raw::File& element) {
+            auto& prefix_component =
+                element.library_name->components.front();
+            std::string prefix = to_string(prefix_component);
+            if (linter.permitted_library_prefixes_.find(prefix) ==
+                linter.permitted_library_prefixes_.end()) {
+                // TODO(fxb/FIDL-547): Implement more specific test,
+                // comparing proposed library prefix to actual
+                // source path.
+                std::string replacement = "fuchsia, perhaps?";
+                linter.AddFinding(
+                    element.library_name, check,
+                    {
+                        {"ORIGINAL", prefix},
+                        {"REPLACEMENT", replacement},
+                    },
+                    "change '${ORIGINAL}' to ${REPLACEMENT}",
+                    "${REPLACEMENT}");
+            }
+        });
+
+    auto& invalid_case_for_decl_member = DefineCheck(
+        "invalid-case-for-decl-member",
+        "Structs, unions, and tables members must be named in lower_snake_case");
+
+    callbacks_.OnStructMember(
+        [& linter = *this,
+         check = invalid_case_for_decl_member]
+        //
+        (const raw::StructMember& element) {
+            CHECK_CASE(lower_snake, element.identifier)
+        });
+    callbacks_.OnUnionMember(
+        [& linter = *this,
+         check = invalid_case_for_decl_member]
+        //
+        (const raw::UnionMember& element) {
+            CHECK_CASE(lower_snake, element.identifier)
+        });
+    callbacks_.OnXUnionMember(
+        [& linter = *this,
+         check = invalid_case_for_decl_member]
+        //
+        (const raw::XUnionMember& element) {
+            CHECK_CASE(lower_snake, element.identifier)
+        });
+    callbacks_.OnTableMember(
+        [& linter = *this,
+         check = invalid_case_for_decl_member]
+        //
+        (const raw::TableMember& element) {
+            if (element.maybe_used != nullptr) {
+                CHECK_CASE(lower_snake, element.maybe_used->identifier)
+            }
+        });
 }
 
 } // namespace linter

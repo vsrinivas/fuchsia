@@ -23,8 +23,12 @@ if (defined(zx)) {
       "lib/source_file.cpp",
       "lib/source_location.cpp",
       "lib/source_manager.cpp",
+      "lib/string_view.cpp",
       "lib/tables_generator.cpp",
+      "lib/template_string.cpp",
       "lib/tree_visitor.cpp",
+      "lib/linting_tree_callbacks.cpp",
+      "lib/utils.cpp",
       "lib/virtual_source_file.cpp",
     ]
     public_deps = [

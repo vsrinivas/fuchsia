@@ -224,11 +224,11 @@ public:
 class TypeConstructor final : public SourceElement {
 public:
     TypeConstructor(SourceElement const& element,
-        std::unique_ptr<CompoundIdentifier> identifier,
-        std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-        std::unique_ptr<types::HandleSubtype> maybe_handle_subtype,
-        std::unique_ptr<Constant> maybe_size,
-        types::Nullability nullability)
+                    std::unique_ptr<CompoundIdentifier> identifier,
+                    std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
+                    std::unique_ptr<types::HandleSubtype> maybe_handle_subtype,
+                    std::unique_ptr<Constant> maybe_size,
+                    types::Nullability nullability)
         : SourceElement(element.start_, element.end_),
           identifier(std::move(identifier)),
           maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
@@ -374,7 +374,7 @@ public:
         : SourceElement(element), attributes(std::move(attributes)),
           ordinal(std::move(ordinal)), identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)),
-          maybe_error_ctor(std::move(maybe_error_ctor)) { }
+          maybe_error_ctor(std::move(maybe_error_ctor)) {}
 
     void Accept(TreeVisitor& visitor);
 

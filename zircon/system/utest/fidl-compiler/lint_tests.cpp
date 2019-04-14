@@ -34,12 +34,12 @@ bool const_names_bad() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
-library a;
+library fuchsia.a;
 
 const uint64 bad_CONST = 1234;
 
 )FIDL");
-    ASSERT_TRUE(library.Lint());
+    ASSERT_FALSE(library.Lint());
     ASSERT_WARNINGS(1, library, "bad_CONST");
     END_TEST;
 }
@@ -48,12 +48,12 @@ bool const_names_kconst() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
-library a;
+library fuchsia.a;
 
 const uint64 kAllIsCalm = 1234;
 
 )FIDL");
-    ASSERT_TRUE(library.Lint());
+    ASSERT_FALSE(library.Lint());
     ASSERT_WARNINGS(1, library, "kAllIsCalm");
     const auto& warnings = library.warnings();
     ASSERT_STR_STR(warnings[0].c_str(), "ALL_IS_CALM",
@@ -64,7 +64,7 @@ const uint64 kAllIsCalm = 1234;
 bool const_names_good() {
     BEGIN_TEST;
     TestLibrary library_yes(R"FIDL(
-library a;
+library fuchsia.a;
 
 const uint64 GOOD_CONST = 1234;
 
@@ -79,11 +79,11 @@ bool protocol_names_bad() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
-library a;
+library fuchsia.a;
 
 protocol URLLoader {};
 )FIDL");
-    ASSERT_TRUE(library.Lint());
+    ASSERT_FALSE(library.Lint());
     ASSERT_WARNINGS(1, library, "URLLoader");
     const auto& warnings = library.warnings();
     ASSERT_STR_STR(warnings[0].c_str(), "UrlLoader", "Correct suggestion UrlLoader not found");
@@ -95,7 +95,7 @@ bool protocol_names_good() {
     BEGIN_TEST;
 
     TestLibrary functioning(R"FIDL(
-library a;
+library fuchsia.a;
 
 protocol UrlLoader {};
 )FIDL");
@@ -105,25 +105,13 @@ protocol UrlLoader {};
     END_TEST;
 }
 
-bool library_names_bad_name() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library a_b;
-)FIDL");
-    ASSERT_TRUE(library.Lint());
-    ASSERT_WARNINGS(1, library, "a_b");
-
-    END_TEST;
-}
-
 bool library_names_banned_name() {
     BEGIN_TEST;
 
     TestLibrary banned(R"FIDL(
-library zxsocket;
+library fuchsia.zxsocket;
 )FIDL");
-    ASSERT_TRUE(banned.Lint());
+    ASSERT_FALSE(banned.Lint());
     ASSERT_WARNINGS(1, banned, "zxsocket");
 
     END_TEST;
@@ -133,12 +121,12 @@ bool using_names_bad() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
-library a;
+library fuchsia.a;
 
 using foo as bad_USING;
 
 )FIDL");
-    ASSERT_TRUE(library.Lint());
+    ASSERT_FALSE(library.Lint());
     ASSERT_WARNINGS(1, library, "bad_USING");
     END_TEST;
 }
@@ -147,7 +135,7 @@ bool using_names_good() {
     BEGIN_TEST;
 
     TestLibrary library_yes(R"FIDL(
-library a;
+library fuchsia.a;
 
 using foo as good_using;
 using bar as baz;
@@ -159,36 +147,6 @@ using bar as baz;
     END_TEST;
 }
 
-bool library_name_prefix_good() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library shibboleth.b.c;
-
-)FIDL");
-    fidl::linter::LintingTreeVisitor::Options options;
-    options.add_permitted_library_prefix("shibboleth");
-    ASSERT_TRUE(library.Lint());
-    ASSERT_WARNINGS(0, library, "");
-
-    END_TEST;
-}
-
-bool library_name_prefix_bad() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library shibboleth.b.c;
-
-)FIDL");
-    fidl::linter::LintingTreeVisitor::Options options;
-    options.add_permitted_library_prefix("metasyntax");
-    ASSERT_TRUE(library.Lint());
-    ASSERT_WARNINGS(1, library, "shibboleth");
-
-    END_TEST;
-}
-
 } // namespace
 
 BEGIN_TEST_CASE(lint_test)
@@ -196,7 +154,7 @@ RUN_TEST(const_names_bad)
 RUN_TEST(const_names_good)
 RUN_TEST(protocol_names_bad)
 RUN_TEST(protocol_names_good)
-RUN_TEST(library_names_bad_name)
+// RUN_TEST(library_names_bad_name)
 RUN_TEST(library_names_banned_name)
 RUN_TEST(using_names_bad)
 RUN_TEST(using_names_good)

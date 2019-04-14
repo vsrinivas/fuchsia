@@ -15,6 +15,8 @@ namespace raw {
 // and override behaviors with the ones you want.
 class TreeVisitor {
 public:
+    virtual ~TreeVisitor() = default;
+
     virtual void OnSourceElementStart(const SourceElement& element) {
     }
     virtual void OnSourceElementEnd(const SourceElement& element) {

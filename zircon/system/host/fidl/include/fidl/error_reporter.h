@@ -27,15 +27,20 @@ public:
               num_warnings_(reporter->warnings().size()) {}
         bool NoNewErrors() { return num_errors_ == reporter_->errors().size(); }
         bool NoNewWarning() { return num_warnings_ == reporter_->warnings().size(); }
+
     private:
         const ErrorReporter* reporter_;
         const size_t num_errors_;
         const size_t num_warnings_;
     };
 
+    void ReportErrorWithSquiggle(const SourceLocation& location,
+                                 StringView message);
     void ReportError(const SourceLocation& location, StringView message);
     void ReportError(const Token& token, StringView message);
     void ReportError(StringView message);
+    void ReportWarningWithSquiggle(const SourceLocation& location,
+                                   StringView message);
     void ReportWarning(const SourceLocation& location, StringView message);
     void PrintReports();
     Counts Checkpoint() const { return Counts(this); }
@@ -44,6 +49,9 @@ public:
     void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
 
 private:
+    void AddError(std::string formatted_message);
+    void AddWarning(std::string formatted_message);
+
     bool warnings_as_errors_;
     std::vector<std::string> errors_;
     std::vector<std::string> warnings_;
