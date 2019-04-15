@@ -1,10 +1,9 @@
 ## Tools
 
-- `fx rolling-commits` - displays the commits not yet rolled to a given layer
-- `fx rolling-commits --layer <layer>`
+- `fx pending-commits` - displays the commits not yet rolled to global
+  integration
 
 ## Dashboards
 
-- [Repo and roller builders](https://luci-milo.appspot.com/p/fuchsia)
-- [Build status dashboard](https://fuchsia-dashboard.appspot.com/)
+- [Builders](https://luci-milo.appspot.com/p/fuchsia)
 - [Dashboard component](https://fuchsia.googlesource.com/topaz/+/master/app/dashboard/)

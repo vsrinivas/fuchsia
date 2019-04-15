@@ -47,7 +47,7 @@ difference.
 
 The workflow for re-building and re-deploying using `fx` is slightly different:
 
-1.  Check the [build waterfall dashboard](https://fuchsia-dashboard.appspot.com/).
+1.  Check the [build dashboard](https://luci-milo.appspot.com/p/fuchsia).
     Helps ensure that HEAD is in a good state to pull.
 1.  `jiri update`
     Fetches the latest code.
