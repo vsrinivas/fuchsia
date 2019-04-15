@@ -21,7 +21,7 @@ use {
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
         task::Waker,
-        Poll,
+        Future, FutureExt, Poll,
     },
     std::{io::Write, iter, mem, pin::Pin},
 };
@@ -68,6 +68,22 @@ pub struct FileConnection {
     was_written: bool,
 }
 
+pub enum InitialConnectionState<BufferFut>
+where
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+{
+    Failed,
+    Pending(FileConnectionFuture<BufferFut>),
+    Ready(StreamFuture<FileConnection>),
+}
+
+/// BufferResult is the result of the InitBuffer for connect_async. It is essentially an option, but
+/// with a more descriptive name and branches.
+pub enum BufferResult<R> {
+    Future(R),
+    Empty,
+}
+
 impl FileConnection {
     /// Initialized a file connection, checking flags and sending an `OnOpen` event if necessary.
     /// Returns a [`FileConnection`] object as a [`StreamFuture`], or in the case of an error, sends
@@ -86,7 +102,7 @@ impl FileConnection {
         writable: bool,
         capacity: u64,
         init_buffer: InitBuffer,
-    ) -> Option<StreamFuture<FileConnection>>
+    ) -> Option<StreamFuture<Self>>
     where
         InitBuffer: FnOnce(u32) -> Result<(Vec<u8>, bool), Status>,
     {
@@ -107,6 +123,78 @@ impl FileConnection {
             }
         };
 
+        Self::create_connection(
+            flags,
+            protection_attributes,
+            server_end,
+            capacity,
+            buffer,
+            was_written,
+        )
+    }
+
+    pub fn connect_async<InitBuffer, OnReadRes>(
+        parent_flags: u32,
+        flags: u32,
+        protection_attributes: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+        readable: bool,
+        writable: bool,
+        capacity: u64,
+        init_buffer: InitBuffer,
+    ) -> InitialConnectionState<OnReadRes>
+    where
+        InitBuffer: FnOnce(u32) -> (BufferResult<OnReadRes>, bool),
+        OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    {
+        let flags =
+            match new_connection_validate_flags(parent_flags, flags, mode, readable, writable) {
+                Ok(updated) => updated,
+                Err(status) => {
+                    send_on_open_with_error(flags, server_end, status);
+                    return InitialConnectionState::Failed;
+                }
+            };
+
+        let (maybe_buffer_future, was_written) = init_buffer(flags);
+
+        if let BufferResult::Future(buffer_future) = maybe_buffer_future {
+            // if we are making a future, init buffer will be returning false for was_written. see
+            // FileConnectionFuture for details.
+            debug_assert!(!was_written, "init_buffer returned was_written == true");
+            let fut = FileConnectionFuture::new(
+                flags,
+                protection_attributes,
+                server_end,
+                capacity,
+                buffer_future,
+            );
+            InitialConnectionState::Pending(fut)
+        } else {
+            match Self::create_connection(
+                flags,
+                protection_attributes,
+                server_end,
+                capacity,
+                vec![],
+                was_written,
+            ) {
+                None => InitialConnectionState::Failed,
+                Some(conn) => InitialConnectionState::Ready(conn),
+            }
+        }
+    }
+
+    // pub(self) so that FileConnectionFuture can use it too.
+    pub(self) fn create_connection(
+        flags: u32,
+        protection_attributes: u32,
+        server_end: ServerEnd<NodeMarker>,
+        capacity: u64,
+        buffer: Vec<u8>,
+        was_written: bool,
+    ) -> Option<StreamFuture<Self>> {
         // As we report all errors on `server_end`, if we failed to send an error in there, there
         // is nowhere to send it to.
         let (requests, control_handle) =
@@ -443,5 +531,82 @@ impl Stream for FileConnection {
 
     fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         self.requests.poll_next_unpin(lw)
+    }
+}
+
+/// A wrapping future for the result of an on_read function call. It transforms the on_read return
+/// value into a FileConnection, and thus stores all the necessary additional information for that
+/// transformation.
+///
+/// When creating a file connection, this future hard codes was_written to be false. At this point, a
+/// bunch of situations are handled for us. The fact that this future exists means -
+///  - on_read exists
+///  - the file permissions are marked as readable
+///  - we aren't truncating the file
+/// The only time during connection creation that we expect was_written to be set to true is when we
+/// are truncating, so hard-coding was_written to false is fine.
+pub struct FileConnectionFuture<BufferFut>
+where
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+{
+    flags: u32,
+    protection_attributes: u32,
+    server_end: Option<ServerEnd<NodeMarker>>,
+    capacity: u64,
+    res: BufferFut,
+}
+
+impl<BufferFut> FileConnectionFuture<BufferFut>
+where
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+{
+    pub fn new(
+        flags: u32,
+        protection_attributes: u32,
+        server_end: ServerEnd<NodeMarker>,
+        capacity: u64,
+        buffer_future: BufferFut,
+    ) -> Self {
+        FileConnectionFuture {
+            flags,
+            protection_attributes,
+            server_end: Some(server_end),
+            capacity,
+            res: buffer_future,
+        }
+    }
+}
+
+impl<BufferFut> Future for FileConnectionFuture<BufferFut>
+where
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+{
+    type Output = Option<StreamFuture<FileConnection>>;
+
+    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+        match self.res.poll_unpin(waker) {
+            Poll::Ready(Ok(buf)) => {
+                // unwrap is "safe" in that it only happens when we are returning Poll::Ready, which
+                // means any subsequent calls to poll can do nasty things (like panic!)
+                let server_end = self.server_end.take().unwrap();
+                let conn = FileConnection::create_connection(
+                    self.flags,
+                    self.protection_attributes,
+                    server_end,
+                    self.capacity,
+                    buf,
+                    false,
+                );
+                Poll::Ready(conn)
+            }
+            // if on_read returns an error, we want to attempt to signal that something went wrong.
+            Poll::Ready(Err(status)) => {
+                // same reasoning here as above for the safety of unwrapping this value.
+                let server_end = self.server_end.take().unwrap();
+                send_on_open_with_error(self.flags, server_end, status);
+                Poll::Ready(None)
+            }
+            Poll::Pending => Poll::Pending,
+        }
     }
 }

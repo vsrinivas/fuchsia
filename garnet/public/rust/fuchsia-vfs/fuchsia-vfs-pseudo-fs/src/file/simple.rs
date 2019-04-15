@@ -491,7 +491,10 @@ mod tests {
 
     #[test]
     fn read_only_read_no_status() {
-        run_server_client_with_open_requests_channel(
+        let exec = fasync::Executor::new().expect("Executor creation failed");
+
+        run_server_client_with_open_requests_channel_and_executor(
+            exec,
             read_only(|| Ok(b"Read only test".to_vec())),
             async move |mut open_sender| {
                 let (proxy, server_end) =
@@ -500,6 +503,13 @@ mod tests {
                 let flags = OPEN_RIGHT_READABLE;
                 await!(open_sender.send((flags, 0, server_end))).unwrap();
                 assert_no_event!(proxy);
+                // NOTE: logic added after `assert_no_event!` will not currently be run. this test
+                // will need to be updated after ZX-3923 is completed.
+            },
+            |run_until_stalled_assert| {
+                // we don't expect the server to complete, it's waiting for an event that will never
+                // come (and we don't ever actually close the file).
+                run_until_stalled_assert(false);
             },
         );
     }
@@ -1518,17 +1528,9 @@ mod tests {
 
                 await!(client1.join(client2));
             },
-            |run_until_stalled| {
+            |run_until_stalled_assert| {
                 let mut run_and_check_read_count = |expected_count, should_complete: bool| {
-                    if !should_complete {
-                        if let Poll::Ready(((), ())) = run_until_stalled() {
-                            panic!("Future should not complete");
-                        }
-                    } else {
-                        if let Poll::Pending = run_until_stalled() {
-                            panic!("Future did not complete as expected");
-                        }
-                    }
+                    run_until_stalled_assert(should_complete);
                     assert_eq!(read_count.load(Ordering::Relaxed), expected_count);
                 };
 

@@ -20,7 +20,9 @@ use {
 /// A helper to run a pseudo fs server and a client that needs to talk to this server.  This
 /// function will create a channel and will pass the client side to `get_client`, while the server
 /// side will be passed into an `open()` method on the server.  The server and the client will then
-/// be executed on the same single threaded executor until they both stall.
+/// be executed on the same single threaded executor until they both stall, then it is asserted that
+/// execution is complete and the future has returned. The server is wrapped in a wrapper that will
+/// return if `is_terminated` returns true.
 ///
 /// `flags` is passed into the `open()` call.
 ///
@@ -41,13 +43,51 @@ pub fn run_server_client<GetClientRes>(
 pub fn run_server_client_with_mode<GetClientRes>(
     flags: u32,
     mode: u32,
-    mut server: impl DirectoryEntry,
+    server: impl DirectoryEntry,
     get_client: impl FnOnce(FileProxy) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let mut exec = fasync::Executor::new().expect("Executor creation failed");
+    let exec = fasync::Executor::new().expect("Executor creation failed");
 
+    run_server_client_with_mode_and_executor(
+        flags,
+        mode,
+        exec,
+        server,
+        get_client,
+        |run_until_stalled_assert| run_until_stalled_assert(true),
+    )
+}
+
+/// Similar to [`run_server_client()`], except that it allows you to provide an executor and control
+/// the execution of the futures. A closure is taken, which is given a reference to
+/// run_until_stalled, and asserts that the future either completed or it didn't, depending on the
+/// provided boolean.
+pub fn run_server_client_with_executor<GetClientRes>(
+    flags: u32,
+    exec: fasync::Executor,
+    server: impl DirectoryEntry,
+    get_client: impl FnOnce(FileProxy) -> GetClientRes,
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+) where
+    GetClientRes: Future<Output = ()>,
+{
+    run_server_client_with_mode_and_executor(flags, 0, exec, server, get_client, executor);
+}
+
+/// Similar to [`run_server_client()`], adding the additional functionality of
+/// [`run_server_client_with_mode()`] and [`run_server_client_with_executor()`].
+pub fn run_server_client_with_mode_and_executor<GetClientRes>(
+    flags: u32,
+    mode: u32,
+    mut exec: fasync::Executor,
+    mut server: impl DirectoryEntry,
+    get_client: impl FnOnce(FileProxy) -> GetClientRes,
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+) where
+    GetClientRes: Future<Output = ()>,
+{
     let (client_proxy, server_end) =
         create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -55,7 +95,19 @@ pub fn run_server_client_with_mode<GetClientRes>(
 
     let client = get_client(client_proxy);
 
-    let future = server.join(client);
+    // create a wrapper around a server using select!. this lets us poll the server while also
+    // completing the server future if it's is_terminated returns true, even though it's poll will
+    // never return Ready.
+    let server_wrapper = async move {
+        loop {
+            select! {
+                x = server => unreachable(x),
+                complete => break,
+            }
+        }
+    };
+
+    let future = server_wrapper.join(client);
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
     //
@@ -67,7 +119,22 @@ pub fn run_server_client_with_mode<GetClientRes>(
     // As our clients are async generators, we need to pin this future explicitly.
     // All async generators are !Unpin by default.
     pin_mut!(future);
-    let _ = exec.run_until_stalled(&mut future);
+    let mut obj = LocalFutureObj::new(future);
+    executor(&mut |should_complete| {
+        if should_complete {
+            assert_eq!(
+                exec.run_until_stalled(&mut obj),
+                Poll::Ready(((), ())),
+                "future did not complete"
+            );
+        } else {
+            assert_eq!(
+                exec.run_until_stalled(&mut obj),
+                Poll::Pending,
+                "future was not expected to complete"
+            );
+        }
+    });
 }
 
 /// Similar to [`run_server_client()`] but does not automatically connect the server and the client
@@ -88,8 +155,8 @@ pub fn run_server_client_with_open_requests_channel<GetClientRes>(
         exec,
         server,
         get_client,
-        |run_until_stalled| {
-            let _ = run_until_stalled();
+        |run_until_stalled_assert| {
+            run_until_stalled_assert(true);
         },
     );
 }
@@ -98,18 +165,22 @@ pub fn run_server_client_with_open_requests_channel<GetClientRes>(
 /// execution order.  This is necessary when the test needs to make sure that both the server and the
 /// client have reached a particular point.  In order to control the execution you would want to
 /// share a oneshot channel or a queue between your test code and the executor closures.  The
-/// executor closure get a `run_until_stalled` as an argument.  It can use those channels and
-/// `run_until_stalled` to control the execution process of the client and the server.
+/// executor closure get a `run_until_stalled_assert` as an argument.  It can use those channels and
+/// `run_until_stalled_assert` to control the execution process of the client and the server.
+/// `run_until_stalled_assert` asserts whether or not the future completed on that run according to
+/// the provided boolean argument.
 ///
 /// For example, a client that wants to make sure that it receives a particular response from the
 /// server by certain point, in case the response is asynchronous.
+///
+/// The server is wrapped in an async block that returns if it's `is_terminated` method returns true.
 ///
 /// See [`file::simple::mock_directory_with_one_file_and_two_connections`] for a usage example.
 pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
     mut exec: fasync::Executor,
     mut server: impl DirectoryEntry,
     get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut() -> Poll<((), ())>),
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -141,5 +212,19 @@ pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
     // All async generators are !Unpin by default.
     pin_mut!(future);
     let mut obj = LocalFutureObj::new(future);
-    executor(&mut || exec.run_until_stalled(&mut obj));
+    executor(&mut |should_complete| {
+        if should_complete {
+            assert_eq!(
+                exec.run_until_stalled(&mut obj),
+                Poll::Ready(((), ())),
+                "future did not complete"
+            );
+        } else {
+            assert_eq!(
+                exec.run_until_stalled(&mut obj),
+                Poll::Pending,
+                "future was not expected to complete"
+            );
+        }
+    });
 }

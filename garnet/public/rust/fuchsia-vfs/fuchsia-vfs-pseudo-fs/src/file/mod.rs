@@ -9,6 +9,7 @@ use {
     libc::{S_IRUSR, S_IWUSR},
 };
 
+pub mod asynchronous;
 pub mod simple;
 
 /// A base trait for all the pseudo files.  Most clients will probably just use the DirectoryEntry
