@@ -29,21 +29,24 @@ nand-loader --num-blocks 128
 
 Options:
   --page-size (-p) xxx : NAND page size. Default: 4096.
+  --oob-size (-o) xxx : NAND OOB size. Default: 8.
   --block-size (-b) xxx : NAND pages per block. Default: 64.
   --num-blocks (-n) xxx : number of NAND blocks. Not valid with an image file.
 )""";
 
 struct Config {
-    const char* path;
-    uint32_t page_size;
-    uint32_t block_size;
-    uint32_t num_blocks;
+    const char* path = nullptr;
+    uint32_t page_size = 4096;
+    uint32_t oob_size = 8;
+    uint32_t block_size = 64;
+    uint32_t num_blocks = 0;
 };
 
 bool GetOptions(int argc, char** argv, Config* config) {
     while (true) {
         struct option options[] = {
             {"page-size", required_argument, nullptr, 'p'},
+            {"oob-size", required_argument, nullptr, 'o'},
             {"block-size", required_argument, nullptr, 'b'},
             {"num-blocks", required_argument, nullptr, 'n'},
             {"help", no_argument, nullptr, 'h'},
@@ -57,6 +60,9 @@ bool GetOptions(int argc, char** argv, Config* config) {
         switch (c) {
         case 'p':
             config->page_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+            break;
+        case 'o':
+            config->oob_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
             break;
         case 'b':
             config->block_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
@@ -101,7 +107,7 @@ fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
     info.pages_per_block = config.block_size;
     info.num_blocks = config.num_blocks;
     info.ecc_bits = 8;
-    info.oob_size = 8;
+    info.oob_size = config.oob_size;
     info.nand_class = fuchsia_hardware_nand_Class_FTL;
     return info;
 }
@@ -157,7 +163,7 @@ bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* dev
 }  // namespace
 
 int main(int argc, char** argv) {
-    Config config = {nullptr, 4096, 64, 0};
+    Config config;
     if (!GetOptions(argc, argv, &config)) {
         printf("%s\n", kUsageMessage);
         return -1;
