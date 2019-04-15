@@ -147,7 +147,9 @@ void App::ConnectToService(const std::string& service_name,
   if (status == ZX_OK) {
     status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));
   }
-  FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+  }
 }
 
 void App::RegisterSingleton(std::string service_name,
