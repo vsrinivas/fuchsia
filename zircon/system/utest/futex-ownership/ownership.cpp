@@ -908,13 +908,53 @@ static bool OwnerExitTest() {
     ASSERT_EQ(res, ZX_OK);
     ASSERT_EQ(koid, the_owner.koid());
 
-    // OK, now let the owner thread exit.  Ownership of the futex should become
+    // OK, now let the owner thread exit and wait for ownership of the futex to become
     // automatically released.
+    //
+    // Note: We cannot actually synchronize with this operation with a
+    // simple thrd_join for a number of reasons.
+    //
+    // 1) A successful join on a thread in the zircon C runtime only
+    //    establishes that the thread has entered into the kernel for the
+    //    last time, never to return again.  The thread _will_ achieve
+    //    eventually death at some point in the future, but there is no
+    //    guarantee that it has done so yet.
+    //
+    // 2) Final ownership of the OwnedWaitQueue used by the futex is
+    //    released when the kernel portion of the thread achieves kernel
+    //    thread state of THREAD_DEATH.  This is a different state from the
+    //    observable user-mode thread state, which becomes
+    //    ZX_THREAD_STATE_DEATH at the very last instant before the thread
+    //    enters the thread lock and transitions the kernel state to
+    //    THREAD_DEATH (releasing ownership in the process).
+    //
+    // 3) The only real way to synchronize with achieving kernel
+    //    THREAD_DEATH is during destruction of the kernel ThreadDispatcher
+    //    object.  Unfortunately, simply closing the very last user-mode
+    //    handle to the thread is no guarantee of this either as the kernel
+    //    also holds references the ThreadDispatcher is certain situations.
+    //
+    // So, the only real choice here is to just wait.  We know that since we
+    // have signalled the thread to exit, and we have successfully joined
+    // the thread, that it is only a matter of time before it actually
+    // exits.  If something goes wrong here, either our local (absurdly large)
+    // timeout will fire, or the test framework watchdog will fire.
     ASSERT_EQ(the_owner.Stop(), ZX_OK);
-    koid = ~ZX_KOID_INVALID;
-    res = zx_futex_get_owner(&the_futex, &koid);
+
+    res = ZX_ERR_INTERNAL;
+    ASSERT_TRUE(WaitFor(ZX_SEC(10), [&the_futex, &res]() -> bool {
+        zx_koid_t koid = ~ZX_KOID_INVALID;
+        res = zx_futex_get_owner(&the_futex, &koid);
+
+        // If we fail to fetch the ownership info, stop waiting.
+        if (res != ZX_OK) {
+            return true;
+        }
+
+        // We are done if the futex owner is now INVALID.
+        return (koid == ZX_KOID_INVALID);
+    }));
     ASSERT_EQ(res, ZX_OK);
-    ASSERT_EQ(koid, ZX_KOID_INVALID);
 
     // Release our waiter thread and shut down.
     res = zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
@@ -936,9 +976,5 @@ RUN_TEST(WakeOwnershipTest<OpType::kRequeue>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kStandard>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kRequeue>);
 RUN_TEST(RequeueOwnershipTest);
-// TODO(johngro): Re-enable this test once the root cause of FLK-153 has been
-// tracked down and squashed.
-#if 0
 RUN_TEST(OwnerExitTest);
-#endif
 END_TEST_CASE(futex_ownership_tests)
