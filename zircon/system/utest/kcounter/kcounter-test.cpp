@@ -89,7 +89,7 @@ bool test_counters() {
     };
 
     constexpr counters::Descriptor kExpected[] = {
-        {"counters.magic", counters::Type::kSum},
+        {"init.target.time.msec", counters::Type::kSum},
         {"handles.duped", counters::Type::kSum},
         {"handles.live", counters::Type::kSum},
         {"handles.made", counters::Type::kSum},
@@ -116,10 +116,6 @@ bool test_counters() {
                 }
             }
             EXPECT_GT(value, 0, ref.name);
-            if (!strcmp(ref.name, "counters.magic")) {
-                EXPECT_EQ(value, counters::DescriptorVmo::kMagic,
-                          "counters.magic");
-            }
         }
     }
 

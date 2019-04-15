@@ -53,6 +53,8 @@ namespace {
 // gives details about the image's size and layout.
 extern "C" const char userboot_image[];
 
+KCOUNTER(init_time, "init.userboot.time.msec")
+
 class UserbootImage : private RoDso {
 public:
     explicit UserbootImage(const VDso* vdso)
@@ -474,6 +476,8 @@ static zx_status_t attempt_userboot() {
         printf("userboot: failed to start initial thread: %d\n", status);
         return status;
     }
+
+    init_time.Add(current_time() / 1000000LL);
 
     return ZX_OK;
 }

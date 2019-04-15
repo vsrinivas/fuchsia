@@ -16,6 +16,7 @@
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <utility>
+#include <zircon/compiler.h>
 #include <zircon/status.h>
 
 namespace {
@@ -297,7 +298,17 @@ int main(int argc, char** argv) {
                                entry.type == counters::Type::kSum ? "" : ")",
                                value);
                     } else {
-                        printf("%" PRId64 "\n", value);
+                        int64_t ev_per_nsec = 0;
+                        if (unlikely(mul_overflow(value, 1000000000LL, &ev_per_nsec))) {
+                            printf("%" PRId64 " [rate overflow]\n", value);
+                        } else {
+                            auto rate = ev_per_nsec / zx_clock_get_monotonic();
+                            if (rate != 0) {
+                                printf("%" PRId64 " [%" PRId64 "/sec]\n", value, rate);
+                            } else {
+                                printf("%" PRId64 "\n", value);
+                            }
+                        }
                     }
                 }
             }
