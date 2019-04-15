@@ -7,6 +7,10 @@
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 
+#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/zx/bti.h>
+
 #include <algorithm>
 
 namespace goldfish {
@@ -14,7 +18,11 @@ namespace {
 
 const char* kTag = "goldfish-pipe";
 
-constexpr size_t RW_BUFFER_SIZE = 8192;
+constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
+
+constexpr zx_signals_t SIGNALS =
+    fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE |
+    fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE;
 
 } // namespace
 
@@ -49,12 +57,18 @@ zx_status_t Instance::Bind() {
         return status;
     }
 
-    status = io_buffer_.Init(bti_.get(), RW_BUFFER_SIZE,
-                             IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = SetBufferSize(DEFAULT_BUFFER_SIZE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: io_buffer_init failed: %d\n", kTag, status);
+        zxlogf(ERROR, "%s: failed to set initial buffer size\n", kTag);
         return status;
     }
+
+    status = zx::event::create(0, &buffer_.event);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to set initial buffer size\n", kTag);
+        return status;
+    }
+    buffer_.event.signal(0, SIGNALS);
 
     zx::vmo vmo;
     goldfish_pipe_signal_value_t signal_cb = {Instance::OnSignal, this};
@@ -85,26 +99,125 @@ zx_status_t Instance::Bind() {
     return DdkAdd("pipe", DEVICE_ADD_INSTANCE);
 }
 
+zx_status_t Instance::FidlSetBufferSize(uint64_t size, fidl_txn_t* txn) {
+    TRACE_DURATION("gfx", "Instance::FidlSetBufferSize", "size", size);
+
+    zx_status_t status = SetBufferSize(size);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to set buffer size: %lu\n", kTag, size);
+        return status;
+    }
+
+    return fuchsia_hardware_goldfish_pipe_DeviceSetBufferSize_reply(txn,
+                                                                    status);
+}
+
+zx_status_t Instance::FidlSetEvent(zx_handle_t event_handle) {
+    TRACE_DURATION("gfx", "Instance::FidlSetEvent");
+
+    zx::event event(event_handle);
+    if (!event.is_valid()) {
+        zxlogf(ERROR, "%s: invalid event\n", kTag);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_handle_t observed = 0;
+    zx_status_t status =
+        zx_object_wait_one(buffer_.event.get(), SIGNALS, 0, &observed);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to transfer observed signals: %d\n", kTag,
+               status);
+        return status;
+    }
+
+    buffer_.event = std::move(event);
+    buffer_.event.signal(SIGNALS, observed);
+    return ZX_OK;
+}
+
+zx_status_t Instance::FidlGetBuffer(fidl_txn_t* txn) {
+    TRACE_DURATION("gfx", "Instance::FidlGetBuffer");
+
+    zx::vmo vmo;
+    zx_status_t status = buffer_.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_vmo_duplicate failed: %d\n", kTag, status);
+        return status;
+    }
+
+    return fuchsia_hardware_goldfish_pipe_DeviceGetBuffer_reply(txn, ZX_OK,
+                                                                vmo.release());
+}
+
+zx_status_t Instance::FidlRead(size_t count, zx_off_t offset, fidl_txn_t* txn) {
+    TRACE_DURATION("gfx", "Instance::FidlRead", "count", count);
+
+    if ((offset + count) > buffer_.size)
+        return ZX_ERR_INVALID_ARGS;
+
+    size_t actual;
+    zx_status_t status = Read(buffer_.phys + offset, count, &actual);
+    return fuchsia_hardware_goldfish_pipe_DeviceRead_reply(txn, status, actual);
+}
+
+zx_status_t Instance::FidlWrite(size_t count, zx_off_t offset,
+                                fidl_txn_t* txn) {
+    TRACE_DURATION("gfx", "Instance::FidlWrite", "count", count);
+
+    if ((offset + count) > buffer_.size)
+        return ZX_ERR_INVALID_ARGS;
+
+    size_t actual;
+    zx_status_t status = Write(buffer_.phys + offset, count, &actual);
+    return fuchsia_hardware_goldfish_pipe_DeviceWrite_reply(txn, status,
+                                                            actual);
+}
+
 zx_status_t Instance::DdkRead(void* buf, size_t buf_len, zx_off_t off,
                               size_t* actual) {
     TRACE_DURATION("gfx", "Instance::DdkRead", "buf_len", buf_len);
 
-    size_t count = std::min(buf_len, RW_BUFFER_SIZE);
-    zx_status_t status =
-        Transfer(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                 DEV_STATE_READABLE, io_buffer_.phys(), count, actual);
-    memcpy(buf, io_buffer_.virt(), *actual);
-    return status;
+    size_t count = std::min(buf_len, buffer_.size);
+    zx_status_t status = Read(buffer_.phys, count, actual);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = buffer_.vmo.read(buf, 0, *actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_vmo_read failed %d size: %zu\n", kTag, status,
+               *actual);
+        return status;
+    }
+    return ZX_OK;
 }
 
 zx_status_t Instance::DdkWrite(const void* buf, size_t buf_len, zx_off_t off,
                                size_t* actual) {
     TRACE_DURATION("gfx", "Instance::DdkWrite", "buf_len", buf_len);
 
-    size_t count = std::min(buf_len, RW_BUFFER_SIZE);
-    memcpy(io_buffer_.virt(), buf, count);
-    return Transfer(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                    DEV_STATE_WRITABLE, io_buffer_.phys(), count, actual);
+    size_t count = std::min(buf_len, buffer_.size);
+    zx_status_t status = buffer_.vmo.write(buf, 0, count);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_vmo_write failed %d size: %zu\n", kTag, status,
+               count);
+        return status;
+    }
+    return Write(buffer_.phys, count, actual);
+}
+
+zx_status_t Instance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    using Binder = fidl::Binder<Instance>;
+
+    static const fuchsia_hardware_goldfish_pipe_Device_ops_t kOps = {
+        .SetBufferSize = Binder::BindMember<&Instance::FidlSetBufferSize>,
+        .SetEvent = Binder::BindMember<&Instance::FidlSetEvent>,
+        .GetBuffer = Binder::BindMember<&Instance::FidlGetBuffer>,
+        .Read = Binder::BindMember<&Instance::FidlRead>,
+        .Write = Binder::BindMember<&Instance::FidlWrite>,
+    };
+
+    return fuchsia_hardware_goldfish_pipe_Device_dispatch(this, txn, msg,
+                                                          &kOps);
 }
 
 zx_status_t Instance::DdkClose(uint32_t flags) {
@@ -119,19 +232,66 @@ void Instance::DdkRelease() {
 void Instance::OnSignal(void* ctx, int32_t flags) {
     TRACE_DURATION("gfx", "Instance::OnSignal", "flags", flags);
 
-    auto instance = static_cast<Instance*>(ctx);
+    zx_signals_t dev_state_set = 0;
+    zx_signals_t state_set = 0;
     if (flags & PIPE_WAKE_FLAG_CLOSED) {
-        instance->SetState(DEV_STATE_HANGUP);
+        dev_state_set = DEV_STATE_HANGUP;
+        state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_HANGUP;
     }
     if (flags & PIPE_WAKE_FLAG_READ) {
-        instance->SetState(DEV_STATE_READABLE);
+        dev_state_set = DEV_STATE_READABLE;
+        state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE;
     }
     if (flags & PIPE_WAKE_FLAG_WRITE) {
-        instance->SetState(DEV_STATE_WRITABLE);
+        dev_state_set = DEV_STATE_WRITABLE;
+        state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE;
     }
+
+    auto instance = static_cast<Instance*>(ctx);
+    instance->SetState(dev_state_set);
+    instance->buffer_.event.signal(0, state_set);
+}
+
+zx_status_t Instance::SetBufferSize(size_t size) {
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create_contiguous(bti_, size, 0, &vmo);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_vmo_create_contiguous failed %d size: %zu\n",
+               kTag, status, size);
+        return status;
+    }
+
+    zx_paddr_t phys;
+    zx::pmt pmt;
+    status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, 0, size, &phys,
+                      1, &pmt);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_bti_pin failed %d size: %zu\n", kTag, status,
+               size);
+        return status;
+    }
+
+    buffer_.vmo = std::move(vmo);
+    buffer_.pmt = std::move(pmt);
+    buffer_.size = size;
+    buffer_.phys = phys;
+    return ZX_OK;
+}
+
+zx_status_t Instance::Read(zx_paddr_t paddr, size_t count, size_t* actual) {
+    return Transfer(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
+                    fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
+                    DEV_STATE_READABLE, paddr, count, actual);
+}
+
+zx_status_t Instance::Write(zx_paddr_t paddr, size_t count, size_t* actual) {
+    return Transfer(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
+                    fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
+                    DEV_STATE_WRITABLE, paddr, count, actual);
 }
 
 zx_status_t Instance::Transfer(int32_t cmd, int32_t wake_cmd,
+                               zx_signals_t state_clr,
                                zx_signals_t dev_state_clr, zx_paddr_t paddr,
                                size_t count, size_t* actual) {
     TRACE_DURATION("gfx", "Instance::Transfer", "count", count);
@@ -164,6 +324,7 @@ zx_status_t Instance::Transfer(int32_t cmd, int32_t wake_cmd,
     // Remove device state and request an interrupt that will indicate
     // that the pipe is again readable/writable.
     ClearState(dev_state_clr);
+    buffer_.event.signal(state_clr, 0);
 
     buffer->id = id_;
     buffer->cmd = wake_cmd;

@@ -1,0 +1,43 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.goldfish.pipe;
+
+using zx;
+
+/// Signal that will be active on event handle if the Read() method
+/// will return data.
+const uint32 SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+
+/// Signal that will be active on event handle if the Write() method
+/// will accept data.
+const uint32 SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
+
+/// Signal that will be active on event handle if the device has been
+/// disconnected.
+const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
+
+[Layout = "Simple"]
+protocol Device {
+    /// Request new IO buffer size. Can fail if out of memory. Discards
+    /// contents of existing buffer on success. Leaves existing buffer
+    /// intact on failure.
+    SetBufferSize(uint64 size) -> (zx.status res);
+
+    /// Set event used to signal device state. Discards existing event
+    /// after having transferred device state to the new event.
+    SetEvent(handle<event> event);
+
+    /// Acquire VMO for IO buffer. Can be called multiple times. Each call
+    /// returns a new handle to the VMO.
+    GetBuffer() -> (zx.status res, handle<vmo>? vmo);
+
+    /// Attempt to read up to count bytes into IO buffer at specified offset.
+    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not readable.
+    Read(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
+
+    /// Writes up to count bytes from the IO buffer at specified offset.
+    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not writable.
+    Write(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
+};
