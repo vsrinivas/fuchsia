@@ -6,21 +6,18 @@ library fuchsia.hardware.pty;
 
 using zx;
 
-/// A PTY (pseudoterminal) emulates terminal devices, with a
-/// "server" side (which represents the keyboard+monitor side
-/// of the terminal and is obtained by opening /dev/misc/ptmx)
-/// and a number of "client" sides which are obtained by doing
-/// an open_at(server_pty_fd, "0", O_RDWR) or
-/// open_at(client_0_fd, "#", O_RDWR).
+/// A PTY (pseudoterminal) emulates terminal devices, with a "server" side
+/// (which represents the keyboard+monitor side of the terminal and is obtained
+/// by opening /dev/misc/ptmx) and a number of "client" sides which are obtained
+/// by calling |OpenClient|.
 ///
-/// Client PTYs are identified by the unsigned number used in
-/// the open_at().  The first Client PTY *must* be 0, and it is
-/// the only Client PTY that is allowed to create additional
-/// Client PTYs, receive Events, etc.  It is the Controlling PTY.
+/// Client PTYs are identified by the |id| used in the |OpenClient| call. The
+/// first Client PTY *must* be 0, and it is the only Client PTY that is allowed
+/// to create additional Client PTYs, receive Events, etc. It is the
+/// Controlling PTY.
 
-/// When Feature Raw is enabled, OOB Events like ^c, ^z, etc
-/// are not generated.  Instead the character is read from the
-/// read() input path.
+/// When Feature Raw is enabled, OOB Events like ^c, ^z, etc are not generated.
+/// Instead the character is read from the read() input path.
 const uint32 FEATURE_RAW = 1;
 
 struct WindowSize {
@@ -37,8 +34,7 @@ const uint32 EVENT_SUSPEND   = 4;
 /// All events
 const uint32 EVENT_MASK      = 7;
 
-/// When an event is pending, this signal is asserted
-/// on the Controlling Client PTY
+/// When an event is pending, this signal is asserted on the Controlling PTY.
 const uint32 SIGNAL_EVENT = 0x02000000; // DEVICE_SIGNAL_OOB
 
 [Layout = "Simple"]
