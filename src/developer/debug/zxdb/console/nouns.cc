@@ -589,13 +589,13 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
 // Symbol Servers --------------------------------------------------------------
 
 const char kSymServerShortHelp[] =
-    "sym-server / ss: Select or list symbol servers.";
+    "sym-server: Select or list symbol servers.";
 const char kSymServerHelp[] =
     R"(sym-server [ <id> [ <command> ... ] ]
 
   Selects or lists symbol servers.
 
-  By itself, "sym-server" or "ss" will list all symbol servers with their IDs.
+  By itself, "sym-server" will list all symbol servers with their IDs.
 
   With an ID following it ("sym-server 3"), selects that symbol server as the
   current active symbol server. This symbol server will apply by default for
@@ -765,7 +765,7 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
                                        kGlobalHelp, CommandGroup::kNone);
   (*nouns)[Noun::kSymServer] =
       NounRecord({"sym-server"}, kSymServerShortHelp, kSymServerHelp,
-                 CommandGroup::kSymbols);
+                 CommandGroup::kSymbol);
   (*nouns)[Noun::kJob] =
       NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
 }

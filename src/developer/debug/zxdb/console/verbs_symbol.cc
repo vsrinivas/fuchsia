@@ -802,20 +802,20 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kList] = std::move(list);
   (*verbs)[Verb::kSymInfo] =
       VerbRecord(&DoSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
-                 CommandGroup::kQuery);
+                 CommandGroup::kSymbol);
 
   // sym-stat
   VerbRecord sym_stat(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
-                      CommandGroup::kQuery);
+                      CommandGroup::kSymbol);
   sym_stat.switches.emplace_back(kDumpIndexSwitch, false, "dump-index", 0);
   (*verbs)[Verb::kSymStat] = std::move(sym_stat);
 
   (*verbs)[Verb::kSymNear] =
       VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
-                 kSymNearHelp, CommandGroup::kQuery);
+                 kSymNearHelp, CommandGroup::kSymbol);
 
   VerbRecord search(&DoSymSearch, {"sym-search"}, kSymSearchShortHelp,
-                    kSymSearchHelp, CommandGroup::kQuery);
+                    kSymSearchHelp, CommandGroup::kSymbol);
   search.switches.emplace_back(kSymSearchListAll, false, "--all", 'a');
   search.switches.emplace_back(kSymSearchUnfold, false, "unfold", 'u');
   (*verbs)[Verb::kSymSearch] = std::move(search);

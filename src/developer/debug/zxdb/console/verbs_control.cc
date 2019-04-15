@@ -95,7 +95,7 @@ std::string GetReference() {
 
   help += FormatGroupHelp("General", &groups[CommandGroup::kGeneral]);
   help += FormatGroupHelp("Process", &groups[CommandGroup::kProcess]);
-  help += FormatGroupHelp("Symbols", &groups[CommandGroup::kSymbols]);
+  help += FormatGroupHelp("Symbol", &groups[CommandGroup::kSymbol]);
   help += FormatGroupHelp("Assembly", &groups[CommandGroup::kAssembly]);
   help += FormatGroupHelp("Breakpoint", &groups[CommandGroup::kBreakpoint]);
   help += FormatGroupHelp("Query", &groups[CommandGroup::kQuery]);
