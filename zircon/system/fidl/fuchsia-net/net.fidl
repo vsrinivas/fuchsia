@@ -22,6 +22,17 @@ union IpAddress {
     Ipv6Address ipv6;
 };
 
+/// Endpoint describes an IP address and port. The network protocol associated
+/// with the Endpoint will be known from context or communicated through
+/// additional structures.
+struct Endpoint {
+    /// The IP address of the endpoint.
+    IpAddress addr;
+
+    /// The port number of the endpoint.
+    uint16 port;
+};
+
 /// Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
 /// bits.
 struct Subnet {
