@@ -8,13 +8,27 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
-#include <optional>
-#include <utility>
-
 namespace optee {
 
-SharedMemory::SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionPtr region)
-    : base_vaddr_(base_vaddr), base_paddr_(base_paddr), region_(std::move(region)) {}
+std::optional<SharedMemoryView> SharedMemoryRangeTraits::SliceByVaddr(zx_vaddr_t start,
+                                                                      zx_vaddr_t end) const {
+    if (end <= start || !ContainsVaddr(start) || !ContainsVaddr(end - 1)) {
+        return std::nullopt;
+    }
+
+    zx_off_t offset = start - vaddr();
+    return std::make_optional(SharedMemoryView(start, paddr() + offset, end - start));
+}
+
+std::optional<SharedMemoryView> SharedMemoryRangeTraits::SliceByPaddr(zx_paddr_t start,
+                                                                      zx_paddr_t end) const {
+    if (end <= start || !ContainsPaddr(start) || !ContainsPaddr(end - 1)) {
+        return std::nullopt;
+    }
+
+    zx_off_t offset = start - paddr();
+    return std::make_optional(SharedMemoryView(vaddr() + offset, start, end - start));
+}
 
 zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
                                         size_t shared_mem_size,

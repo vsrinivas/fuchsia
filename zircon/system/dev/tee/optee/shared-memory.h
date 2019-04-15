@@ -5,13 +5,16 @@
 #pragma once
 
 #include <climits>
-#include <lib/mmio/mmio.h>
+#include <functional>
+#include <limits>
+#include <optional>
+#include <utility>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
-#include <limits>
 #include <region-alloc/region-alloc.h>
-#include <utility>
 
 namespace optee {
 
@@ -44,26 +47,91 @@ namespace optee {
 // free it.
 //
 
-class SharedMemory : public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
+class SharedMemoryView;
+
+class SharedMemoryRangeTraits {
+public:
+    constexpr zx_vaddr_t vaddr() const { return vaddr_; }
+    constexpr zx_paddr_t paddr() const { return paddr_; }
+    constexpr size_t size() const { return size_; }
+
+    constexpr bool ContainsVaddr(zx_vaddr_t vaddr) const {
+        return vaddr >= this->vaddr() && vaddr < this->vaddr() + size();
+    }
+
+    constexpr bool ContainsPaddr(zx_paddr_t paddr) const {
+        return paddr >= this->paddr() && paddr < this->paddr() + size();
+    }
+
+    // Gets a subslice of the memory spanning a specified range of virtual addresses.
+    //
+    // Parameters:
+    //  * start: The starting virtual address of the subslice (inclusive).
+    //  * end:   The ending virtual address of the subslice (exclusive).
+    //
+    // Returns:
+    //  * If the given range is valid, an initialized `std::optional` containing the
+    //    `SharedMemoryView` subslice.
+    //  * Otherwise, an uninitialized `std::optional`.
+    std::optional<SharedMemoryView> SliceByVaddr(zx_vaddr_t start, zx_vaddr_t end) const;
+
+    // Gets a subslice of the memory spanning a specified range of physical addresses.
+    //
+    // Parameters:
+    //  * start: The starting physical address of the subslice (inclusive).
+    //  * end:   The ending physical address of the subslice (exclusive).
+    //
+    // Returns:
+    //  * If the given range is valid, an initialized `std::optional` containing the
+    //    `SharedMemoryView` subslice.
+    //  * Otherwise, an uninitialized `std::optional`.
+    std::optional<SharedMemoryView> SliceByPaddr(zx_paddr_t start, zx_paddr_t end) const;
+
+protected:
+    constexpr explicit SharedMemoryRangeTraits(zx_vaddr_t vaddr, zx_paddr_t paddr, size_t size)
+        : vaddr_(vaddr), paddr_(paddr), size_(size) {}
+
+    zx_vaddr_t vaddr_;
+    zx_paddr_t paddr_;
+    size_t size_;
+};
+
+class SharedMemory : public SharedMemoryRangeTraits,
+                     public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
 public:
     using RegionPtr = RegionAllocator::Region::UPtr;
 
-    explicit SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionPtr region);
+    explicit SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionPtr region)
+        : SharedMemoryRangeTraits(base_vaddr + region->base,
+                                  base_paddr + region->base,
+                                  region->size),
+          region_(std::move(region)) {}
 
     // Move only type
     SharedMemory(SharedMemory&&) = default;
     SharedMemory& operator=(SharedMemory&&) = default;
 
-    zx_vaddr_t vaddr() const { return base_vaddr_ + region_->base; }
-    zx_paddr_t paddr() const { return base_paddr_ + region_->base; }
-    size_t size() const { return region_->size; }
-
 private:
-    zx_vaddr_t base_vaddr_;
-    zx_paddr_t base_paddr_;
     // Upon destruction of the SharedMemory object, the RegionPtr will be recycled back to the
     // RegionAllocator by it's destructor.
     RegionPtr region_;
+};
+
+// SharedMemoryView
+//
+// A non-owning view of a slice of `SharedMemory`.
+class SharedMemoryView : public SharedMemoryRangeTraits {
+public:
+    explicit SharedMemoryView(const SharedMemoryView&) = default;
+    explicit SharedMemoryView(const SharedMemory& shared_memory)
+        : SharedMemoryRangeTraits(shared_memory.vaddr(),
+                                  shared_memory.paddr(),
+                                  shared_memory.size()) {}
+
+private:
+    friend class SharedMemoryRangeTraits;
+
+    using SharedMemoryRangeTraits::SharedMemoryRangeTraits; // Inherit constructors
 };
 
 template <typename SharedMemoryPoolTraits>

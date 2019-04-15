@@ -433,9 +433,9 @@ public:
         return mem_size_;
     }
 
-    zx_off_t memory_reference_offset() const {
+    zx_paddr_t memory_reference_paddr() const {
         ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
-        return mem_offset_;
+        return mem_paddr_;
     }
 
     void set_output_ta_size(size_t ta_size) {
@@ -452,7 +452,7 @@ protected:
     TEEC_UUID ta_uuid_;
     uint64_t mem_id_;
     size_t mem_size_;
-    zx_off_t mem_offset_;
+    zx_paddr_t mem_paddr_;
     uint64_t* out_ta_size_;
 
 private:
