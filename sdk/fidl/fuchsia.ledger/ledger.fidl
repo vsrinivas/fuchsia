@@ -10,6 +10,9 @@ using zx;
 // This file contains definitions of interfaces and data structures to access
 // the Fuchsia Ledger.
 
+// Type of the keys in a ledger Page.
+using Key = bytes:256;
+
 /// Response code for ledger operations.
 enum Status : int32 {
     OK = 0;
@@ -33,12 +36,13 @@ enum Status : int32 {
 /// Size in bytes of Page IDs.
 const uint32 kPageIdSize = 16;
 
+/// Type of the identifier of a ledger Page.
 struct PageId {
     array<uint8>:kPageIdSize id;
 };
 
 /// Base interface for all services offered by the Ledger.
-//
+///
 /// In case of an unexpected error on one of the service offered by the Ledger,
 /// the service will close the connected channel, sending a |ledger.Status| as an epitaph.
 ///
@@ -126,7 +130,7 @@ protocol Page {
     /// Change notifications will only contain the entries matching |key_prefix|.
     /// To receive all changes, use an empty |key_prefix|.
     GetSnapshot(request<PageSnapshot> snapshot_request,
-                bytes:256 key_prefix, PageWatcher? watcher);
+                Key key_prefix, PageWatcher? watcher);
 
     // Mutation operations.
 
@@ -148,11 +152,11 @@ protocol Page {
     /// parameter managing the synchronization policy for this value. |Put()| uses
     /// a default priority of |Priority.EAGER|. For the list of available
     /// priorities and their definition, see |Priority|.
-    Put(bytes:256 key, bytes value);
-    PutWithPriority(bytes:256 key, bytes value,
+    Put(Key key, bytes value);
+    PutWithPriority(Key key, bytes value,
                     Priority priority);
-    PutReference(bytes:256 key, Reference reference, Priority priority);
-    Delete(bytes:256 key);
+    PutReference(Key key, Reference reference, Priority priority);
+    Delete(Key key);
 
     // Page level operations.
 
@@ -240,7 +244,7 @@ enum Priority {
 
 /// A pair of key and value.
 struct Entry {
-    bytes:256 key;
+    Key key;
     /// |value| is null and |size| is 0 if the value requested has the LAZY
     /// priority and is not present on the device. Clients must use a Fetch call
     /// to retrieve the contents.
@@ -255,7 +259,7 @@ struct InlinedValue {
 
 /// A pair of key and an inlined value.
 struct InlinedEntry {
-    bytes:256 key;
+    Key key;
     /// |value| is null if the value requested has the LAZY priority and is not
     /// present on the device. Clients must use a Fetch call to retrieve the
     /// contents.
@@ -280,12 +284,12 @@ protocol PageSnapshot {
     /// Only |EAGER| values are guaranteed to be returned inside |entries|.
     /// Missing |LAZY| values can be retrieved over the network using Fetch().
     /// The returned |entries| are sorted by |key|.
-    GetEntries(bytes:256 key_start, Token? token)
+    GetEntries(Key key_start, Token? token)
         -> (Status status, vector<Entry> entries, Token? next_token);
 
     /// Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
     /// fit in a FIDL message.
-    GetEntriesInline(bytes:256 key_start, Token? token)
+    GetEntriesInline(Key key_start, Token? token)
         -> (Status status, vector<InlinedEntry> entries,
             Token? next_token);
 
@@ -299,25 +303,25 @@ protocol PageSnapshot {
     /// returned in the previous call.
     /// The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
     /// as there are more results and |OK| once finished.
-    GetKeys(bytes:256 key_start, Token? token)
-        -> (Status status, vector<bytes:256> keys,
+    GetKeys(Key key_start, Token? token)
+        -> (Status status, vector<Key> keys,
             Token? next_token);
 
     /// Returns the value of a given key.
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
     /// |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
     /// be retrieved over the network using a Fetch() call.
-    Get(bytes:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Get(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Returns the value of a given key if it fits in a FIDL message.
     /// |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
     /// See |Get()| for additional information.
-    GetInline(bytes:256 key) -> (Status status, InlinedValue? value);
+    GetInline(Key key) -> (Status status, InlinedValue? value);
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
     /// is not available).
-    Fetch(bytes:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Fetch(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally, and returns a shared handle of a part of the value of a given
@@ -325,7 +329,7 @@ protocol PageSnapshot {
     /// is less than 0, starts at |-offset| from the end of the value.
     /// Returns at most |max_size| bytes. If |max_size| is less than 0, returns
     /// everything.
-    FetchPartial(bytes:256 key, int64 offset, int64 max_size)
+    FetchPartial(Key key, int64 offset, int64 max_size)
         -> (Status status, fuchsia.mem.Buffer? buffer);
 };
 
@@ -346,7 +350,7 @@ struct PageChange {
     /// List of new and modified entries. |changed_entries| are sorted by |key|.
     vector<Entry> changed_entries;
     /// List of deleted keys, in sorted order.
-    vector<bytes:256> deleted_keys;
+    vector<Key> deleted_keys;
 };
 
 /// Interface to watch changes to a page. The client will receive changes made by
@@ -428,7 +432,7 @@ enum ValueSource {
 /// to the new value. If |source| is not |NEW|, |new_value| and |priority| are
 /// ignored.
 struct MergedValue {
-    bytes:256 key;
+    Key key;
     ValueSource source;
     BytesOrReference? new_value;
     Priority priority;
@@ -440,7 +444,7 @@ struct MergedValue {
 /// was not present in the base, left or right (respectively) branch of the
 /// page.
 struct DiffEntry {
-    bytes:256 key;
+    Key key;
 
     Value? base;
     Value? left;
