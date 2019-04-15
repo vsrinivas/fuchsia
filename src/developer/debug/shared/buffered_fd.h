@@ -32,9 +32,10 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
 
  private:
   // FDWatcher implementation:
-  void OnFDReadable(int fd) override;
-  void OnFDWritable(int fd) override;
-  void OnFDError(int fd) override;
+  void OnFDReady(int fd, bool read, bool write, bool err) override;
+
+  // Error handler
+  void OnFDError();
 
   // StreamBuffer::Writer implementation.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;

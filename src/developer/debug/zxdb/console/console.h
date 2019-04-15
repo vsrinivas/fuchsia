@@ -57,7 +57,7 @@ class Console : public debug_ipc::FDWatcher {
                            CommandCallback callback = nullptr);
 
   // FDWatcher implementation.
-  void OnFDReadable(int fd) override;
+  void OnFDReady(int fd, bool read, bool write, bool err) override;
 
   // Searches for history at $HOME/.zxdb_history and loads it if found.
   bool SaveHistoryFile();

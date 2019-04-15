@@ -5,6 +5,7 @@
 #include "src/developer/debug/shared/buffered_fd.h"
 
 #include <unistd.h>
+
 #include <algorithm>
 
 namespace debug_ipc {
@@ -26,59 +27,67 @@ bool BufferedFD::Init(fxl::UniqueFD fd) {
   return watch_handle_.watching();
 }
 
-void BufferedFD::OnFDReadable(int fd) {
-  // Messages from the client to the agent are typically small so we don't need
-  // a very large buffer.
-  constexpr size_t kBufSize = 1024;
-
-  // Add all available data to the socket buffer.
-  while (true) {
-    std::vector<char> buffer;
-    buffer.resize(kBufSize);
-
-    ssize_t num_read = read(fd_.get(), &buffer[0], kBufSize);
-    if (num_read == 0) {
-      // We asked for data and it had none. Since this assumes async input,
-      // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
-      OnFDError(fd_.get());
-      return;
-    } else if (num_read == -1) {
-      if (errno == EAGAIN) {
-        // No data now.
-        break;
-      } else if (errno == EINTR) {
-        // Try again.
-        continue;
-      } else {
-        // Unrecoverable.
-        OnFDError(fd_.get());
-        return;
-      }
-    } else if (num_read > 0) {
-      buffer.resize(num_read);
-      stream_.AddReadData(std::move(buffer));
-    } else {
-      break;
-    }
-    // TODO(brettw) it would be nice to yield here after reading "a bunch" of
-    // data so this pipe doesn't starve the entire app.
+void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
+  if (writable) {
+    // If we get a writable notifications, we know we were registered for
+    // read/write update. Go back to only readable watching, if the write buffer
+    // is full this will be re-evaluated when the write fails.
+    watch_handle_ = MessageLoop::WatchHandle();
+    watch_handle_ = MessageLoop::Current()->WatchFD(
+        MessageLoop::WatchMode::kRead, fd_.get(), this);
+    stream_.SetWritable();
   }
 
-  if (callback_)
-    callback_();
+  if (readable) {
+    // Messages from the client to the agent are typically small so we don't
+    // need a very large buffer.
+    constexpr size_t kBufSize = 1024;
+
+    // Add all available data to the socket buffer.
+    while (true) {
+      std::vector<char> buffer;
+      buffer.resize(kBufSize);
+
+      ssize_t num_read = read(fd_.get(), &buffer[0], kBufSize);
+      if (num_read == 0) {
+        // We asked for data and it had none. Since this assumes async input,
+        // that means EOF (otherwise it will return -1 and errno will be
+        // EAGAIN).
+        OnFDError();
+        return;
+      } else if (num_read == -1) {
+        if (errno == EAGAIN) {
+          // No data now.
+          break;
+        } else if (errno == EINTR) {
+          // Try again.
+          continue;
+        } else {
+          // Unrecoverable.
+          //
+          OnFDError();
+          return;
+        }
+      } else if (num_read > 0) {
+        buffer.resize(num_read);
+        stream_.AddReadData(std::move(buffer));
+      } else {
+        break;
+      }
+      // TODO(brettw) it would be nice to yield here after reading "a bunch" of
+      // data so this pipe doesn't starve the entire app.
+    }
+
+    if (callback_)
+      callback_();
+  }
+
+  if (err) {
+    OnFDError();
+  }
 }
 
-void BufferedFD::OnFDWritable(int fd) {
-  // If we get a writable notifications, we know we were registered for
-  // read/write update. Go back to only readable watching, if the write buffer
-  // is full this will be re-evaluated when the write fails.
-  watch_handle_ = MessageLoop::WatchHandle();
-  watch_handle_ = MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kRead,
-                                                  fd_.get(), this);
-  stream_.SetWritable();
-}
-
-void BufferedFD::OnFDError(int fd) {
+void BufferedFD::OnFDError() {
   watch_handle_ = MessageLoop::WatchHandle();
   fd_.reset();
   if (error_callback_)
@@ -93,7 +102,7 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
     if (written == 0) {
       // We asked for data and it had none. Since this assumes async input,
       // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
-      OnFDError(fd_.get());
+      OnFDError();
       return 0;
     } else if (written == -1) {
       if (errno == EAGAIN) {
@@ -104,7 +113,7 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
         continue;
       } else {
         // Unrecoverable.
-        OnFDError(fd_.get());
+        OnFDError();
         return 0;
       }
     }

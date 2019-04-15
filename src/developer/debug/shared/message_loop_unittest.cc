@@ -77,7 +77,16 @@ TEST(MessageLoop, WatchPipeFD) {
   class ReadableWatcher : public FDWatcher {
    public:
     explicit ReadableWatcher(MessageLoop* loop) : loop_(loop) {}
-    void OnFDReadable(int fd) override { loop_->QuitNow(); }
+    void OnFDReady(int fd, bool read, bool write, bool err) override {
+      got_read = read;
+      got_write = write;
+      got_err = err;
+      loop_->QuitNow();
+    }
+
+    bool got_read = false;
+    bool got_write = true;
+    bool got_err = true;
 
    private:
     MessageLoop* loop_;
@@ -99,10 +108,14 @@ TEST(MessageLoop, WatchPipeFD) {
     loop.PostTask(FROM_HERE,
                   [write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
 
-    // This will quit on success because the OnFDReadable callback called
-    // QuitNow, or hang forever on failure.
+    // This will quit on success because the OnFDReady callback called QuitNow,
+    // or hang forever on failure.
     // TODO(brettw) add a timeout when timers are supported in the message loop.
     loop.Run();
+
+    EXPECT_TRUE(watcher.got_read);
+    EXPECT_FALSE(watcher.got_write);
+    EXPECT_FALSE(watcher.got_err);
   }
   loop.Cleanup();
 }

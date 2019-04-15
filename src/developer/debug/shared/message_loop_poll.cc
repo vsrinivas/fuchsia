@@ -182,7 +182,11 @@ void MessageLoopPoll::StopWatching(int id) {
   watches_.erase(found);
 }
 
-void MessageLoopPoll::OnFDReadable(int fd) {
+void MessageLoopPoll::OnFDReady(int fd, bool readable, bool, bool) {
+  if (!readable) {
+    return;
+  }
+
   FXL_DCHECK(fd == wakeup_pipe_out_.get());
 
   // Remove and discard the wakeup byte.
@@ -252,35 +256,15 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   const auto& watch_info = it->second;
   FXL_DCHECK(fd == watch_info.fd);
 
-  // Since notifications can cause the watcher to be removed, we need to recheck
-  // everytime if the watch was removed.
-
-  if (events & POLLIN) {
-    FXL_DCHECK(watch_info.mode == WatchMode::kRead ||
-               watch_info.mode == WatchMode::kReadWrite);
-    watch_info.watcher->OnFDReadable(fd);
-
-    // A previous notification could have deleted the WatchHandle.
-    if (!HasWatch(watch_id))
-      return;
-  }
-
-  if (events & POLLOUT) {
-    FXL_DCHECK(watch_info.mode == WatchMode::kWrite ||
-               watch_info.mode == WatchMode::kReadWrite);
-    watch_info.watcher->OnFDWritable(fd);
-
-    // A previous notification could have deleted the notifications
-    if (!HasWatch(watch_id))
-      return;
-  }
-
-  bool event = (events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL);
+  bool error = (events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL);
 #if defined(POLLRDHUP)  // Mac doesn't have this.
-  event = event || (events & POLLRDHUP);
+  error = error || (events & POLLRDHUP);
 #endif
-  if (event)
-    watch_info.watcher->OnFDError(fd);
+
+  bool readable = !!(events & POLLIN);
+  bool writable = !!(events & POLLOUT);
+  if (HasWatch(watch_id))
+    watch_info.watcher->OnFDReady(fd, readable, writable, error);
 }
 
 }  // namespace debug_ipc

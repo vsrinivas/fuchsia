@@ -10,9 +10,7 @@ namespace debug_ipc {
 // communication or storage channel.
 class FDWatcher {
  public:
-  virtual void OnFDReadable(int fd) {}
-  virtual void OnFDWritable(int fd) {}
-  virtual void OnFDError(int fd) {}
+  virtual void OnFDReady(int fd, bool read, bool write, bool err) {}
 };
 
 }  // namespace debug_ipc

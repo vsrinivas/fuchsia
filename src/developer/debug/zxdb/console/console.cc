@@ -205,7 +205,11 @@ Console::Result Console::ProcessInputLine(const std::string& line,
   return result;
 }
 
-void Console::OnFDReadable(int fd) {
+void Console::OnFDReady(int fd, bool readable, bool, bool) {
+  if (!readable) {
+    return;
+  }
+
   char ch;
   while (read(STDIN_FILENO, &ch, 1) > 0) {
     if (line_input_.OnInput(ch)) {

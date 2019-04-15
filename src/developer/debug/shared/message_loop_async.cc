@@ -463,7 +463,7 @@ void MessageLoopAsync::OnFdioSignal(int watch_id, const WatchInfo& info,
 
   if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) ||
       (events & POLLRDHUP)) {
-    info.fd_watcher->OnFDError(info.fd);
+    info.fd_watcher->OnFDReady(info.fd, false, false, true);
 
     // Don't dispatch any other notifications when there's an error. Zircon
     // seems to set readable and writable on error even if there's nothing
@@ -471,25 +471,9 @@ void MessageLoopAsync::OnFdioSignal(int watch_id, const WatchInfo& info,
     return;
   }
 
-  // Since notifications can cause the watcher to be removed, this flag tracks
-  // if anything has been issued and therefore we should re-check the watcher
-  // registration before dereferencing anything.
-  bool sent_notification = false;
-
-  if (events & POLLIN) {
-    info.fd_watcher->OnFDReadable(info.fd);
-    sent_notification = true;
-  }
-
-  if (events & POLLOUT) {
-    if (sent_notification) {
-      std::lock_guard<std::mutex> guard(mutex_);
-      if (watches_.find(watch_id) == watches_.end())
-        return;
-    }
-    info.fd_watcher->OnFDWritable(info.fd);
-    sent_notification = true;
-  }
+  bool readable = !!(events & POLLIN);
+  bool writable = !!(events & POLLOUT);
+  info.fd_watcher->OnFDReady(info.fd, readable, writable, false);
 }
 
 void MessageLoopAsync::RemoveSignalHandler(const async_wait_t* key) {

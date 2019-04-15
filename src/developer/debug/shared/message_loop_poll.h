@@ -36,7 +36,7 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   void SetHasTasks() override;
 
   // FDWatcher implementation (for waking up for posted tasks).
-  void OnFDReadable(int fd) override;
+  void OnFDReady(int fd, bool read, bool write, bool err) override;
 
   // Prepares the pollfd vector with all the handles we will be watching for
   // poll(). The map_indices vector will be of the same length and will contain
