@@ -18,10 +18,6 @@ declare_args() {
   # This list is appended with the list from the product definition and any
   # additional specified packages
   board_packages = []
-
-  # List of GN labels of extra packages to included in OTA images, base system
-  # images, and the distribution repository.
-  extra_package_labels = []
 }
 
 monolith = []
@@ -67,11 +63,6 @@ foreach(pkg, _preprocessed_products.preinstall) {
 available_package_labels = []
 foreach(pkg, _preprocessed_products.available) {
   available_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
-}
-
-# Additional packages that are specified using labels.
-foreach(pkg, extra_package_labels) {
-  monolith_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Every extra GN target the package JSON requests be built on the side.
