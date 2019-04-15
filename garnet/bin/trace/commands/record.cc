@@ -781,17 +781,40 @@ void Record::DoneTrace() {
   }
 }
 
+// Quote elements of |args| as necessary to ensure the result can be correctly
+// parsed by readers. But also do so minimally to maintain the S/N ratio.
+// This is just a log message so the result doesn't need to be executable,
+// this fact to avoid handling various complicated cases like one arg
+// containing a mix of spaces, single quotes, and double quotes.
+static std::string JoinArgsForLogging(
+    const std::vector<std::string>& args) {
+  std::string result;
+
+  for (const auto& arg : args) {
+    if (result.size() > 0) {
+      result += " ";
+    }
+    if (arg.size() == 0) {
+      result += "\"\"";
+    } else if (arg.find(' ') != arg.npos) {
+      result += "{" + arg + "}";
+    } else {
+      result += arg;
+    }
+  }
+
+  return result;
+}
+
 void Record::LaunchApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
 
-  if (FXL_VLOG_IS_ON(1)) {
-    FXL_VLOG(1) << "Launching: " << launch_info.url << " "
-                << fxl::JoinStrings(options_.args, " ");
-  } else {
-    out() << "Launching: " << launch_info.url << std::endl;
-  }
+  // Include the arguments here for when invoked by traceutil: It's useful to
+  // see how the passed command+args ended up after shell processing.
+  FXL_LOG(INFO) << "Launching: " << launch_info.url << " "
+                << JoinArgsForLogging(options_.args);
 
   fuchsia::sys::LauncherPtr launcher;
   context()->svc()->Connect(launcher.NewRequest());
@@ -828,11 +851,9 @@ void Record::LaunchTool() {
   std::vector<std::string> all_args = {options_.app};
   all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
 
-  if (FXL_VLOG_IS_ON(1)) {
-    FXL_VLOG(1) << "Spawning: " << fxl::JoinStrings(all_args, " ");
-  } else {
-    out() << "Spawning: " << options_.app << std::endl;
-  }
+  // Include the arguments here for when invoked by traceutil: It's useful to
+  // see how the passed command+args ended up after shell processing.
+  FXL_LOG(INFO) << "Spawning: " << JoinArgsForLogging(all_args);
 
   zx_handle_t process = Launch(all_args);
   if (process == ZX_HANDLE_INVALID) {

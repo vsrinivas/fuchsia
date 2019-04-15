@@ -88,7 +88,15 @@ func streamTraceOutput(listener net.Listener, traceOutput *os.File, streamStatus
 }
 
 func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutput *os.File) error {
-	cmd := []string{"trace", "record"}
+	cmd := []string{"trace"}
+	// Pass on our verbosity level to trace.
+	if glog.V(2) {
+		cmd = append(cmd, "--verbose=2")
+	} else if glog.V(1) {
+		cmd = append(cmd, "--verbose=1")
+	}
+	cmd = append(cmd, "record")
+
 	if config.Categories == "" {
 		config.Categories = defaultCategories
 	}
