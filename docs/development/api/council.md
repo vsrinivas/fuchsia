@@ -199,7 +199,7 @@ For small API changes, especially incremental refinements to existing APIs, a
 code review is usually sufficient for an API reviewer to give the change
 API-Review+1. However, for larger changes, especially those that expand the API
 surface significantly, the API designer should write an *API Design Document*
-(see [Fuchsia API Design Template](http://go/fuchsia-api-design-template)),
+(see [Fuchsia API Design Template](http://go.corp.google.com/fuchsia-api-design-template)),
 which explains the design of the API, including use cases and examples, as well
 as security and privacy considerations. An API reviewer can always request the
 API designer to write an API Design Document, even for small changes if the API

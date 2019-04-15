@@ -48,7 +48,7 @@ The VIM2 has 3 buttons on the left side of the board. On the board schematic, SW
 Booting Zircon on the VIM2 requires a custom bootloader.
 
 ### [Googlers only]
-Within Google, this can be found at [go/vim2-bootloader](http://go/vim2-bootloader). Download the .bin file and follow the instructions in the document.
+Within Google, this can be found at [go/vim2-bootloader](http://go.corp.google.com/vim2-bootloader). Download the .bin file and follow the instructions in the document.
 
 If you are not at Google, hang on until we make this publicly available.
 

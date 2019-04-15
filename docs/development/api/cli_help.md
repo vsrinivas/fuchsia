@@ -119,7 +119,7 @@ single words. When more than one word is used, separate words with a hyphen
 (`-`), i.e. do not use underscores, camel-case, or run words together.
 
 Aside from the command name there are several kinds of arguments (as described
-in [Fuchsia Tool Requirements](http://go/fuchsia-tool-requirements)).
+in [Fuchsia Tool Requirements](http://go.corp.google.com/fuchsia-tool-requirements)).
 - Exact text
 - Arguments
 - Options (Switches and Keys)
