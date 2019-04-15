@@ -44,7 +44,7 @@ fuchsia/tools/symbolize/${platform} git_revision:b22d440c081f0c8a75936621df9ca7e
 
 # QEMU
 @Subdir qemu
-fuchsia/third_party/qemu/${platform} git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f
+fuchsia/third_party/qemu/${platform} git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f,1
 
 # GN
 # TODO(BLD-341): replace ${os}-${arch=amd64} with ${platform}
