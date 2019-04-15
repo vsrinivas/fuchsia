@@ -65,6 +65,12 @@ static const i2c_channel_t i2c_channels[] = {
         .address = I2C_GOODIX_TOUCH_ADDR,
         // binds as composite device
     },
+    // Light sensor
+    {
+        .bus_id = ASTRO_I2C_A0_0,
+        .address = I2C_AMBIENTLIGHT_ADDR,
+        // binds as composite device
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

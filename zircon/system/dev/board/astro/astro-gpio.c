@@ -82,6 +82,8 @@ static const gpio_pin_t gpio_pins[] = {
     // For touch screen.
     { GPIO_TOUCH_INTERRUPT },
     { GPIO_TOUCH_RESET },
+    // For light sensor.
+    { GPIO_LIGHT_INTERRUPT },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

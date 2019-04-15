@@ -6,10 +6,11 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/composite.h>
 
 #include <hid/descriptor.h>
 
@@ -24,6 +25,7 @@
 #include "tcs3400-regs.h"
 #include "tcs3400.h"
 
+namespace {
 constexpr zx_duration_t INTERRUPTS_HYSTERESIS = ZX_MSEC(100);
 constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 
@@ -37,6 +39,14 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 #define TCS_REARM_IRQ 0x04
 #define TCS_POLL      0x05
 // clang-format on
+
+enum {
+    COMPONENT_I2C,
+    COMPONENT_GPIO,
+    COMPONENT_COUNT,
+};
+
+} // namespace
 
 namespace tcs {
 
@@ -334,12 +344,27 @@ zx_status_t Tcs3400Device::HidbusSetProtocol(uint8_t protocol) {
 }
 
 zx_status_t Tcs3400Device::Bind() {
-    if (device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_) != ZX_OK) {
+    composite_protocol_t composite;
+
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
+        return status;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, fbl::count_of(components), &actual);
+    if (actual != fbl::count_of(components)) {
+        zxlogf(ERROR, "could not get components\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t status;
-    if (device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio_) != ZX_OK) {
+    if (device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c_) != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &gpio_) != ZX_OK) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -423,9 +448,7 @@ void Tcs3400Device::DdkRelease() {
     delete this;
 }
 
-} // namespace tcs
-
-extern "C" zx_status_t tcs3400_bind(void* ctx, zx_device_t* parent) {
+zx_status_t tcs3400_bind(void* ctx, zx_device_t* parent) {
     auto dev = std::make_unique<tcs::Tcs3400Device>(parent);
     auto status = dev->Bind();
     if (status == ZX_OK) {
@@ -434,3 +457,21 @@ extern "C" zx_status_t tcs3400_bind(void* ctx, zx_device_t* parent) {
     }
     return status;
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = tcs3400_bind;
+    return ops;
+}();
+
+} // namespace tcs
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(tcs3400_light, tcs::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMS_TCS3400),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMS_LIGHT),
+ZIRCON_DRIVER_END(tcs3400_light)
+// clang-format on
