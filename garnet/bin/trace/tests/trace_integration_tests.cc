@@ -122,7 +122,7 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   RunAndVerify("data/simple.tspec");
 }
 
-TEST(TwoProvidersTwoEngines, Test) {
+TEST(TwoProvidersTwoEngines, DISABLED_Test) {
   RunAndVerify("data/two_providers_two_engines.tspec");
 }
 
