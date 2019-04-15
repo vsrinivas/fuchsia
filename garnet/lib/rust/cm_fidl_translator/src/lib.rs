@@ -126,10 +126,42 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
 
 impl CmInto<fsys::RelativeId> for cm::Source {
     fn cm_into(self) -> Result<fsys::RelativeId, Error> {
-        Ok(fsys::RelativeId {
-            relation: Some(relation_from_str(&self.relation)?),
-            child_name: self.child_name,
-        })
+        let num_set = self.realm.is_some() as i32
+            + self.myself.is_some() as i32
+            + self.child.is_some() as i32;
+        if num_set > 1 {
+            return Err(Error::parse(format!(
+                "More than one RelativeId variant is set: {:?}",
+                &self
+            )));
+        }
+        if let Some(realm) = self.realm {
+            Ok(fsys::RelativeId::Realm(realm.cm_into()?))
+        } else if let Some(myself) = self.myself {
+            Ok(fsys::RelativeId::Myself(myself.cm_into()?))
+        } else if let Some(child) = self.child {
+            Ok(fsys::RelativeId::Child(child.cm_into()?))
+        } else {
+            Err(Error::parse(format!("No RelativeId variant is set: {:?}", &self)))
+        }
+    }
+}
+
+impl CmInto<fsys::RealmId> for cm::RealmId {
+    fn cm_into(self) -> Result<fsys::RealmId, Error> {
+        Ok(fsys::RealmId { dummy: None })
+    }
+}
+
+impl CmInto<fsys::SelfId> for cm::SelfId {
+    fn cm_into(self) -> Result<fsys::SelfId, Error> {
+        Ok(fsys::SelfId { dummy: None })
+    }
+}
+
+impl CmInto<fsys::ChildId> for cm::ChildId {
+    fn cm_into(self) -> Result<fsys::ChildId, Error> {
+        Ok(fsys::ChildId { name: Some(self.name) })
     }
 }
 
@@ -203,15 +235,6 @@ fn capability_from_str(value: &str) -> Result<fsys::CapabilityType, Error> {
     }
 }
 
-fn relation_from_str(value: &str) -> Result<fsys::Relation, Error> {
-    match value {
-        cm::REALM => Ok(fsys::Relation::Realm),
-        cm::SELF => Ok(fsys::Relation::Myself),
-        cm::CHILD => Ok(fsys::Relation::Child),
-        _ => Err(Error::parse(format!("Unknown relation: {}", value))),
-    }
-}
-
 fn startup_from_str(value: &str) -> Result<fsys::StartupMode, Error> {
     match value {
         cm::LAZY => Ok(fsys::StartupMode::Lazy),
@@ -268,7 +291,7 @@ mod tests {
                     "type": "nothing",
                     "source_path": "/svc/fuchsia.logger.Log",
                     "source": {
-                        "relation": "self"
+                        "myself": {}
                     },
                     "target_path": "/svc/fuchsia.logger.Log"
                 }
@@ -426,8 +449,9 @@ mod tests {
                         "type": "service",
                         "source_path": "/loggers/fuchsia.logger.Log",
                         "source": {
-                            "relation": "child",
-                            "child_name": "logger"
+                            "child": {
+                                "name": "logger"
+                            }
                         },
                         "target_path": "/svc/fuchsia.logger.Log"
                     },
@@ -435,7 +459,7 @@ mod tests {
                         "type": "directory",
                         "source_path": "/volumes/blobfs",
                         "source": {
-                            "relation": "self"
+                            "myself": {}
                         },
                         "target_path": "/volumes/blobfs"
                     }
@@ -453,19 +477,15 @@ mod tests {
                     fsys::ExposeDecl{
                         type_: Some(fsys::CapabilityType::Service),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Child),
-                            child_name: Some("logger".to_string()),
-                        }),
+                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                            name: Some("logger".to_string()),
+                        })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                     fsys::ExposeDecl{
                         type_: Some(fsys::CapabilityType::Directory),
                         source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Myself),
-                            child_name: None,
-                        }),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
@@ -489,7 +509,7 @@ mod tests {
                         "type": "directory",
                         "source_path": "/data/assets",
                         "source": {
-                            "relation": "realm"
+                            "realm": {}
                         },
                         "targets": [
                             {
@@ -506,7 +526,7 @@ mod tests {
                         "type": "directory",
                         "source_path": "/data/config",
                         "source": {
-                            "relation": "self"
+                            "myself": {}
                         },
                         "targets": [
                             {
@@ -519,8 +539,9 @@ mod tests {
                         "type": "service",
                         "source_path": "/svc/fuchsia.logger.Log",
                         "source": {
-                            "relation": "child",
-                            "child_name": "logger"
+                            "child": {
+                                "name": "logger"
+                            }
                         },
                         "targets": [
                             {
@@ -548,10 +569,7 @@ mod tests {
                     fsys::OfferDecl{
                         type_: Some(fsys::CapabilityType::Directory),
                         source_path: Some("/data/assets".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Realm),
-                            child_name: None
-                        }),
+                        source: Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
@@ -566,10 +584,7 @@ mod tests {
                     fsys::OfferDecl{
                         type_: Some(fsys::CapabilityType::Directory),
                         source_path: Some("/data/config".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Myself),
-                            child_name: None
-                        }),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
@@ -580,10 +595,9 @@ mod tests {
                     fsys::OfferDecl{
                         type_: Some(fsys::CapabilityType::Service),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Child),
-                            child_name: Some("logger".to_string()),
-                        }),
+                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                            name: Some("logger".to_string()),
+                        })),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
@@ -695,7 +709,7 @@ mod tests {
                         "type": "directory",
                         "source_path": "/volumes/blobfs",
                         "source": {
-                            "relation": "self"
+                            "myself": {}
                         },
                         "target_path": "/volumes/blobfs"
                     }
@@ -705,8 +719,9 @@ mod tests {
                         "type": "service",
                         "source_path": "/svc/fuchsia.logger.Log",
                         "source": {
-                            "relation": "child",
-                            "child_name": "logger"
+                            "child": {
+                                "name": "logger"
+                            }
                         },
                         "targets": [
                             {
@@ -751,10 +766,7 @@ mod tests {
                     fsys::ExposeDecl{
                         type_: Some(fsys::CapabilityType::Directory),
                         source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Myself),
-                            child_name: None,
-                        }),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
@@ -762,10 +774,9 @@ mod tests {
                     fsys::OfferDecl{
                         type_: Some(fsys::CapabilityType::Service),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::RelativeId{
-                            relation: Some(fsys::Relation::Child),
-                            child_name: Some("logger".to_string()),
-                        }),
+                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                            name: Some("logger".to_string()),
+                        })),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),

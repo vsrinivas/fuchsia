@@ -32,7 +32,6 @@
   },
   "properties": {
     "program": {
-      "$id": "/properties/program",
       "type": "object",
       "title": "Program information",
       "description": "Information required to run the program",
@@ -41,7 +40,6 @@
       ],
       "properties": {
         "binary": {
-          "$id": "/properties/program/properties/binary",
           "type": "string",
           "title": "Program binary",
           "description": "The entry point for an executable",
@@ -50,7 +48,6 @@
           ]
         },
         "args": {
-          "$id": "/properties/program/properties/args",
           "type": "array",
           "title": "Program arguments",
           "description": "The arguments to provide to an executable",
@@ -63,7 +60,6 @@
           ]
         },
         "env": {
-          "$id": "/properties/program/properties/env",
           "type": "object",
           "title": "Environment variables",
           "description": "Environment variables to provide to an executable",
@@ -80,13 +76,11 @@
       }
     },
     "use": {
-      "$id": "/properties/use",
       "type": "array",
       "title": "Used capabilities",
       "description": "Capabilities that will be installed in this component's namespace",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/use/items",
         "type": "object",
         "oneOf": [
           {
@@ -98,7 +92,6 @@
         ],
         "properties": {
           "service": {
-            "$id": "/properties/use/items/properties/service",
             "title": "Used service source path",
             "description": "The path under which a service is offered to this component",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -107,7 +100,6 @@
             ]
           },
           "directory": {
-            "$id": "/properties/use/items/properties/directory",
             "title": "Used directory source path",
             "description": "The path under which a directory is offered to this component",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -116,7 +108,6 @@
             ]
           },
           "as": {
-            "$id": "/properties/use/items/properties/as",
             "title": "Used capability target path",
             "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\".",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -128,13 +119,11 @@
       }
     },
     "expose": {
-      "$id": "/properties/expose",
       "type": "array",
       "title": "Capabilities exposed",
       "description": "Capabilities exposed by this component to its containing realm",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/expose/items",
         "type": "object",
         "required": [
           "from"
@@ -149,7 +138,6 @@
         ],
         "properties": {
           "service": {
-            "$id": "/properties/expose/items/properties/service",
             "title": "Exposed service source path",
             "description": "The path to the service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the service was exposed by the child (if from \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -158,7 +146,6 @@
             ]
           },
           "directory": {
-            "$id": "/properties/expose/items/properties/directory",
             "title": "Exposed directory source path",
             "description": "The path to the directory being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed by the child (if from \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -167,7 +154,6 @@
             ]
           },
           "from": {
-            "$id": "/properties/expose/items/properties/from",
             "title": "Exposed capability source component",
             "pattern": "^(self|#[0-9a-z_\\-\\.]+)$",
             "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
@@ -178,7 +164,6 @@
             ]
           },
           "as": {
-            "$id": "/properties/expose/items/properties/as",
             "title": "Exposed capability target path",
             "description": "The path under which the capability will be exposed. Defaults to \"service\"/\"directory\"",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -190,13 +175,11 @@
       }
     },
     "offer": {
-      "$id": "/properties/offer",
       "type": "array",
       "title": "Offered capabilitys",
       "description": "Capabilities offered by this component to its children",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/offer/items",
         "type": "object",
         "required": [
           "from",
@@ -212,7 +195,6 @@
         ],
         "properties": {
           "service": {
-            "$id": "/properties/offer/items/properties/service",
             "title": "Offered service source path",
             "description": "The path to the service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -221,7 +203,6 @@
             ]
           },
           "directory": {
-            "$id": "/properties/offer/items/properties/directory",
             "title": "Offered directory source path",
             "description": "The path to the directory being offered. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -230,7 +211,6 @@
             ]
           },
           "from": {
-            "$id": "/properties/offer/items/properties/from",
             "title": "Offered capability source component",
             "description": "The component which has the capability to offer. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
@@ -242,21 +222,18 @@
             ]
           },
           "to": {
-            "$id": "/properties/offer/items/properties/to",
             "type": "array",
             "title": "Offered capability targets",
             "description": "The components the capability is being offered to",
             "uniqueItems": true,
             "minItems": 1,
             "items": {
-              "$id": "/properties/offer/items/properties/to/items",
               "type": "object",
               "required": [
                 "dest"
               ],
               "properties": {
                 "dest": {
-                  "$id": "/properties/offer/items/properties/to/items/properties/dest",
                   "title": "Offered capability target component",
                   "description": "The child component to which the capability is being offered, with the syntax \"#$CHILD\".",
                   "pattern": "^#[a-zA-Z0-9_-]+$",
@@ -266,7 +243,6 @@
                   ]
                 },
                 "as": {
-                  "$id": "/properties/offer/items/properties/to/items/properties/as",
                   "title": "Offered capability target path",
                   "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
                   "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
@@ -282,13 +258,11 @@
       }
     },
     "children": {
-      "$id": "/properties/children",
       "type": "array",
       "title": "Child components",
       "description": "The children of this component, including name and launch information",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/children/items",
         "type": "object",
         "required": [
           "name",
@@ -296,7 +270,6 @@
         ],
         "properties": {
           "name": {
-            "$id": "/properties/children/items/properties/name",
             "title": "Child component name",
             "description": "The parent's local name for the child",
             "allOf": [{ "$ref": "#/definitions/child-name-clause" }],
@@ -306,7 +279,6 @@
             ]
           },
           "uri": {
-            "$id": "/properties/children/items/properties/uri",
             "title": "Child component URI",
             "description": "The URI that identifies the child component.",
             "allOf": [{ "$ref": "#/definitions/uri-clause" }],
@@ -315,7 +287,6 @@
             ]
           },
           "startup": {
-            "$id": "/properties/children/items/properties/uri",
             "title": "Startup mode",
             "description": "Conditions that trigger the component to start (defaults to \"lazy\")",
             "allOf": [{ "$ref": "#/definitions/startup-clause" }],
@@ -328,7 +299,6 @@
       }
     },
     "facets": {
-      "$id": "/properties/facets",
       "type": "object",
       "title": "Facets",
       "description": "Freeform dictionary containing third-party metadata"

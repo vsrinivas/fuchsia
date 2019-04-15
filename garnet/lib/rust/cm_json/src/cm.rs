@@ -3,9 +3,6 @@ use serde_json::{Map, Value};
 
 pub const SERVICE: &str = "service";
 pub const DIRECTORY: &str = "directory";
-pub const REALM: &str = "realm";
-pub const SELF: &str = "self";
-pub const CHILD: &str = "child";
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 
@@ -57,13 +54,27 @@ pub struct Child {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Source {
-    pub relation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub child_name: Option<String>,
+    pub realm: Option<RealmId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub myself: Option<SelfId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub child: Option<ChildId>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Target {
     pub target_path: String,
     pub child_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RealmId {}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SelfId {}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChildId {
+    pub name: String,
 }

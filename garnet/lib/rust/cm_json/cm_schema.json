@@ -28,26 +28,51 @@
       "minLength": 1,
       "maxLength": 100
     },
-    "has-valid-child": {
+    "relative-id-clause": {
+      "type": "object",
       "oneOf": [
-        { "properties": { "relation": { "not": { "pattern": "child" } } } },
-        { "required": [ "child_name" ] }
-      ]
+        {
+          "required": [ "realm" ]
+        },
+        {
+          "required": [ "myself" ]
+        },
+        {
+          "required": [ "child" ]
+        }
+      ],
+      "properties": {
+        "realm": {
+          "type": "object",
+          "title": "Component's realm"
+        },
+        "myself": {
+          "type": "object",
+          "title": "Component itself"
+        },
+        "child": {
+          "type": "object",
+          "title": "Component's child",
+          "properties": {
+            "name": {
+              "title": "Child name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        }
+      }
     }
   },
   "properties": {
     "program": {
-      "$id": "/properties/program",
       "type": "object",
       "title": "Program information"
     },
     "uses": {
-      "$id": "/properties/uses",
       "type": "array",
       "title": "Used capabilities",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/uses/items/",
         "type": "object",
         "required": [
           "type",
@@ -56,17 +81,14 @@
         ],
         "properties": {
           "type": {
-            "$id": "/properties/uses/items/properties/type",
             "title": "Used capability type",
             "$ref": "#/definitions/capability-clause"
           },
           "source_path": {
-            "$id": "/properties/uses/items/properties/source_path",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Used capability source path"
           },
           "target_path": {
-            "$id": "/properties/uses/items/properties/target_path",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Used capability target path"
           }
@@ -74,12 +96,10 @@
       }
     },
     "exposes": {
-      "$id": "/properties/exposes",
       "type": "array",
       "title": "Exposed capabilities",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/exposes/items/",
         "type": "object",
         "required": [
           "type",
@@ -89,39 +109,18 @@
         ],
         "properties": {
           "type": {
-            "$id": "/properties/exposes/items/properties/type",
             "title": "Exposed capability type",
             "$ref": "#/definitions/capability-clause"
           },
           "source_path": {
-            "$id": "/properties/exposes/items/properties/source_path",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Exposed capability source path"
           },
           "source": {
-            "$id": "/properties/exposes/items/properties/source",
-            "type": "object",
             "title": "Exposed capability source component",
-            "required": [
-              "relation"
-            ],
-            "allOf": [{ "$ref": "#/definitions/has-valid-child" }],
-            "properties": {
-              "relation": {
-                "$id": "/properties/exposes/items/properties/source/properties/relation",
-                "type": "string",
-                "title": "Exposed capability source component relation",
-                "pattern": "^(self|child)$"
-              },
-              "child_name": {
-                "$id": "/properties/exposes/items/properties/source/properties/child_name",
-                "allOf": [{ "$ref": "#/definitions/name-clause" }],
-                "title": "Exposed capability source component child name"
-              }
-            }
+            "allOf": [ { "$ref": "#/definitions/relative-id-clause" } ]
           },
           "target_path": {
-            "$id": "/properties/exposes/items/properties/target_path",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Exposed capability target path"
           }
@@ -129,12 +128,10 @@
       }
     },
     "offers": {
-      "$id": "/properties/offers",
       "type": "array",
       "title": "Offered capabilities",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/offers/items/",
         "type": "object",
         "required": [
           "type",
@@ -144,45 +141,24 @@
         ],
         "properties": {
           "type": {
-            "$id": "/properties/offers/items/properties/type",
             "title": "Offered capability type",
             "$ref": "#/definitions/capability-clause"
           },
           "source_path": {
-            "$id": "/properties/exposes/items/properties/source_path",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Offered capability source path"
           },
           "source": {
-            "$id": "/properties/exposes/items/properties/source",
             "type": "object",
             "title": "Offered capability source component",
-            "required": [
-              "relation"
-            ],
-            "allOf": [{ "$ref": "#/definitions/has-valid-child" }],
-            "properties": {
-              "relation": {
-                "$id": "/properties/offers/items/properties/source/properties/relation",
-                "type": "string",
-                "title": "Offered capability source component relation",
-                "pattern": "^(self|realm|child)$"
-              },
-              "child_name": {
-                "$id": "/properties/offers/items/properties/source/properties/child_name",
-                "allOf": [{ "$ref": "#/definitions/name-clause" }],
-                "title": "Offered capability source component child name"
-              }
-            }
+            "allOf": [ { "$ref": "#/definitions/relative-id-clause" } ]
           },
           "targets": {
-            "$id": "/properties/offers/items/properties/targets",
             "type": "array",
             "title": "Offered capability targets",
             "uniqueItems": true,
             "minItems": 1,
             "items": {
-              "$id": "/properties/offers/items/properties/targets/items",
               "type": "object",
               "required": [
                 "target_path",
@@ -190,12 +166,10 @@
               ],
               "properties": {
                 "target_path": {
-                  "$id": "/properties/offers/items/properties/targets/items/target_path",
                   "allOf": [{ "$ref": "#/definitions/path-clause" }],
                   "title": "Offered capability target path"
                 },
                 "child_name": {
-                  "$id": "/properties/offers/items/properties/targets/items/child_name",
                   "allOf": [{ "$ref": "#/definitions/name-clause" }],
                   "title": "Offered capability target child name"
                 }
@@ -206,12 +180,10 @@
       }
     },
     "children": {
-      "$id": "/properties/children",
       "type": "array",
       "title": "Child components",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/children/items",
         "type": "object",
         "required": [
           "name",
@@ -220,17 +192,14 @@
         ],
         "properties": {
           "name": {
-            "$id": "/properties/children/items/properties/name",
             "allOf": [{ "$ref": "#/definitions/name-clause" }],
             "title": "Child component name"
           },
           "uri": {
-            "$id": "/properties/children/items/properties/uri",
             "allOf": [{ "$ref": "#/definitions/uri-clause" }],
             "title": "Child component URI"
           },
           "startup": {
-            "$id": "/properties/children/items/properties/startup",
             "allOf": [{ "$ref": "#/definitions/startup-clause" }],
             "title": "Startup mode"
           }
@@ -238,7 +207,6 @@
       }
     },
     "facets": {
-      "$id": "/properties/facets",
       "type": "object",
       "title": "Facets",
       "description": "Freeform dictionary containing third-party metadata"

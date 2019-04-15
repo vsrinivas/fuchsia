@@ -2,8 +2,8 @@ use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
-    CapabilityType, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation,
-    RelativeId, StartupMode, UseDecl,
+    CapabilityType, ChildDecl, ChildId, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget,
+    RelativeId, SelfId, StartupMode, UseDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -30,16 +30,13 @@ fn main() {
         let exposes = vec![ExposeDecl {
             type_: Some(CapabilityType::Directory),
             source_path: Some("/volumes/blobfs".to_string()),
-            source: Some(RelativeId { relation: Some(Relation::Myself), child_name: None }),
+            source: Some(RelativeId::Myself(SelfId { dummy: None })),
             target_path: Some("/volumes/blobfs".to_string()),
         }];
         let offers = vec![OfferDecl {
             type_: Some(CapabilityType::Service),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-            source: Some(RelativeId {
-                relation: Some(Relation::Child),
-                child_name: Some("logger".to_string()),
-            }),
+            source: Some(RelativeId::Child(ChildId { name: Some("logger".to_string()) })),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                 child_name: Some("netstack".to_string()),
@@ -63,10 +60,7 @@ fn main() {
                     key: "author".to_string(),
                     value: Some(Box::new(fd::Value::Str("Fuchsia".to_string()))),
                 },
-                fd::Entry {
-                    key: "year".to_string(),
-                    value: Some(Box::new(fd::Value::Inum(2018))),
-                },
+                fd::Entry { key: "year".to_string(), value: Some(Box::new(fd::Value::Inum(2018))) },
             ],
         };
         ComponentDecl {

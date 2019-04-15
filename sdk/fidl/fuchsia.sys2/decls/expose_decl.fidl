@@ -21,7 +21,7 @@ table ExposeDecl {
 
     /// The provider of the service relative to the component itself.
     ///
-    /// Valid relations: SELF, CHILD.
+    /// Valid relations: self, child.
     3: RelativeId source;
 
     /// The path by which the capability is being exposed.

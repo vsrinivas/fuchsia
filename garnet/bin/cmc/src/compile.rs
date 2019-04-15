@@ -144,9 +144,17 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::Source { relation: "child".to_string(), child_name: Some(child_name.to_string()) }
+        cm::Source {
+            realm: None,
+            myself: None,
+            child: Some(cm::ChildId { name: child_name.to_string() }),
+        }
+    } else if from == "realm" {
+        cm::Source { realm: Some(cm::RealmId {}), myself: None, child: None }
+    } else if from == "self" {
+        cm::Source { realm: None, myself: Some(cm::SelfId {}), child: None }
     } else {
-        cm::Source { relation: from, child_name: None }
+        return Err(Error::internal(format!("invalid \"from\": {}", from)));
     };
     Ok(ret)
 }
@@ -296,8 +304,9 @@ mod tests {
             "type": "service",
             "source_path": "/loggers/fuchsia.logger.Log",
             "source": {
-                "relation": "child",
-                "child_name": "logger"
+                "child": {
+                    "name": "logger"
+                }
             },
             "target_path": "/svc/fuchsia.logger.Log"
         },
@@ -305,7 +314,7 @@ mod tests {
             "type": "directory",
             "source_path": "/volumes/blobfs",
             "source": {
-                "relation": "self"
+                "myself": {}
             },
             "target_path": "/volumes/blobfs"
         }
@@ -359,8 +368,9 @@ mod tests {
             "type": "service",
             "source_path": "/svc/fuchsia.logger.Log",
             "source": {
-                "relation": "child",
-                "child_name": "logger"
+                "child": {
+                    "name": "logger"
+                }
             },
             "targets": [
                 {
@@ -377,7 +387,7 @@ mod tests {
             "type": "directory",
             "source_path": "/data/assets",
             "source": {
-                "relation": "realm"
+                "realm": {}
             },
             "targets": [
                 {
@@ -521,7 +531,7 @@ mod tests {
             "type": "directory",
             "source_path": "/volumes/blobfs",
             "source": {
-                "relation": "self"
+                "myself": {}
             },
             "target_path": "/volumes/blobfs"
         }
@@ -531,8 +541,9 @@ mod tests {
             "type": "service",
             "source_path": "/svc/fuchsia.logger.Log",
             "source": {
-                "relation": "child",
-                "child_name": "logger"
+                "child": {
+                    "name": "logger"
+                }
             },
             "targets": [
                 {

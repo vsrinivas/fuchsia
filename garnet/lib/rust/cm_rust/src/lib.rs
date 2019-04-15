@@ -344,11 +344,11 @@ pub enum RelativeId {
 
 impl FidlIntoNative<RelativeId> for Option<fsys::RelativeId> {
     fn fidl_into_native(self) -> RelativeId {
-        let from = self.unwrap();
-        match from.relation.unwrap() {
-            fsys::Relation::Realm => RelativeId::Realm,
-            fsys::Relation::Myself => RelativeId::Myself,
-            fsys::Relation::Child => RelativeId::Child(from.child_name.unwrap()),
+        match self.unwrap() {
+            fsys::RelativeId::Realm(_) => RelativeId::Realm,
+            fsys::RelativeId::Myself(_) => RelativeId::Myself,
+            fsys::RelativeId::Child(c) => RelativeId::Child(c.name.unwrap()),
+            fsys::RelativeId::__UnknownVariant{..} => { panic!("unknown RelativeId variant") },
         }
     }
 }
@@ -356,16 +356,11 @@ impl FidlIntoNative<RelativeId> for Option<fsys::RelativeId> {
 impl NativeIntoFidl<Option<fsys::RelativeId>> for RelativeId {
     fn native_into_fidl(self) -> Option<fsys::RelativeId> {
         Some(match self {
-            RelativeId::Realm => {
-                fsys::RelativeId { relation: Some(fsys::Relation::Realm), child_name: None }
+            RelativeId::Realm => fsys::RelativeId::Realm(fsys::RealmId { dummy: None }),
+            RelativeId::Myself => fsys::RelativeId::Myself(fsys::SelfId { dummy: None }),
+            RelativeId::Child(child_name) => {
+                fsys::RelativeId::Child(fsys::ChildId { name: Some(child_name) })
             }
-            RelativeId::Myself => {
-                fsys::RelativeId { relation: Some(fsys::Relation::Myself), child_name: None }
-            }
-            RelativeId::Child(child_name) => fsys::RelativeId {
-                relation: Some(fsys::Relation::Child),
-                child_name: Some(child_name),
-            },
         })
     }
 }
@@ -551,31 +546,27 @@ mod tests {
                    },
                ]),
                exposes: Some(vec![
-                    fsys::ExposeDecl {
+                   fsys::ExposeDecl {
                        type_: Some(fsys::CapabilityType::Service),
                        source_path: Some("/svc/mynetstack".to_string()),
-                       source: Some(fsys::RelativeId {
-                           relation: Some(fsys::Relation::Child),
-                           child_name: Some("netstack".to_string()),
-                       }),
+                       source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                           name: Some("netstack".to_string()),
+                       })),
                        target_path: Some("/svc/netstack".to_string()),
-                    },
+                   },
                ]),
                offers: Some(vec![
-                    fsys::OfferDecl {
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/svc/sys_logger".to_string()),
-                        source: Some(fsys::RelativeId {
-                            relation: Some(fsys::Relation::Realm),
-                            child_name: None,
-                        }),
-                        targets: Some(vec![
-                            fsys::OfferTarget{
-                                target_path: Some("/svc/logger".to_string()),
-                                child_name: Some("echo".to_string()),
-                            },
-                        ]),
-                    },
+                   fsys::OfferDecl {
+                       type_: Some(fsys::CapabilityType::Service),
+                       source_path: Some("/svc/sys_logger".to_string()),
+                       source: Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
+                       targets: Some(vec![
+                           fsys::OfferTarget{
+                               target_path: Some("/svc/logger".to_string()),
+                               child_name: Some("echo".to_string()),
+                           },
+                       ]),
+                   },
                ]),
                children: Some(vec![
                     fsys::ChildDecl {
@@ -697,24 +688,17 @@ mod tests {
 
     test_fidl_into_and_from! {
         fidl_into_relative_id_realm => {
-            input = Some(fsys::RelativeId {
-                relation: Some(fsys::Relation::Realm),
-                child_name: None
-            }),
+            input = Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
             result = RelativeId::Realm,
         },
-        fidl_into_relative_id_self => {
-            input = Some(fsys::RelativeId {
-                relation: Some(fsys::Relation::Myself),
-                child_name: None
-            }),
+        fidl_into_relative_id_myself => {
+            input = Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
             result = RelativeId::Myself,
         },
         fidl_into_relative_id_child => {
-            input = Some(fsys::RelativeId {
-                relation: Some(fsys::Relation::Child),
-                child_name: Some("foo".to_string()),
-            }),
+            input = Some(fsys::RelativeId::Child(fsys::ChildId {
+                name: Some("foo".to_string()),
+            })),
             result = RelativeId::Child("foo".to_string()),
         },
     }

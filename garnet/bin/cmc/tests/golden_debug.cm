@@ -14,7 +14,7 @@
             "type": "directory",
             "source_path": "/volumes/blobfs",
             "source": {
-                "relation": "self"
+                "myself": {}
             },
             "target_path": "/volumes/blobfs"
         }
@@ -24,8 +24,9 @@
             "type": "service",
             "source_path": "/svc/fuchsia.logger.Log",
             "source": {
-                "relation": "child",
-                "child_name": "logger"
+                "child": {
+                    "name": "logger"
+                }
             },
             "targets": [
                 {

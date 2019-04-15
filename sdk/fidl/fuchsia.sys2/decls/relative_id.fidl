@@ -4,23 +4,26 @@
 
 library fuchsia.sys2;
 
-/// Specifies a relation from one component to its containing realm, itself,
-/// or one of its children.
-enum Relation {
-  /// This component’s containing realm, i.e. the parent component.
-  REALM = 0;
-  /// This component (the one for this component manifest).
-  // TODO: FIDL(???): Rename to |SELF| once reserved keyword bug is fixed in rust fidl bindings.
-  MYSELF = 1;
-  /// One of this component’s children.
-  CHILD = 2;
+/// Identifies a relative component.
+xunion RelativeId {
+  RealmId realm;
+  SelfId myself;
+  ChildId child;
 };
 
-/// Identifies a relative component.
-table RelativeId {
-  1: Relation relation;
+/// Represents a component’s containing realm, i.e. the parent component.
+table RealmId {
+    // TODO(FIDL-592): Remove once no longer required
+    1: bool dummy;
+};
 
-  /// The name of the child if |relation| == |CHILD|, otherwise the empty
-  /// string.
-  2: string:MAX_CHILD_NAME_LENGTH child_name;
+/// Represents the component itself.
+table SelfId {
+    // TODO(FIDL-592): Remove once no longer required
+    1: bool dummy;
+};
+
+/// Represents one of the component's children.
+table ChildId {
+    1: string:MAX_CHILD_NAME_LENGTH name;
 };

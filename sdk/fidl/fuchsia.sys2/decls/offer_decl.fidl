@@ -22,7 +22,7 @@ table OfferDecl {
 
     /// The provider of the capability relative to the component itself.
     ///
-    /// Valid relations: REALM, SELF, CHILD.
+    /// Valid relations: realm, self, child.
     3: RelativeId source;
 
     /// The list of children to which the capability should be offered.
