@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <gtest/gtest.h>
 #include <wlan/common/channel.h>
 
 namespace wlan {
@@ -14,12 +13,12 @@ namespace {
 namespace wlan_common = ::fuchsia::wlan::common;
 
 class ChannelTest : public ::testing::Test {
-   protected:
+ protected:
 };
 
 TEST_F(ChannelTest, ValidCombo) {
-    std::vector<wlan_channel_t> tvs = {
-        // clang-format off
+  std::vector<wlan_channel_t> tvs = {
+      // clang-format off
         {  1, CBW20,        0},
         { 11, CBW20,        0},
         {  1, CBW40ABOVE,   0},
@@ -44,42 +43,42 @@ TEST_F(ChannelTest, ValidCombo) {
         {161, CBW80P80,    42},
         { 36, CBW160,       0},
         {100, CBW160,       0},
-        // clang-format on
-    };
+      // clang-format on
+  };
 
-    for (auto tv : tvs) {
-        EXPECT_TRUE(IsValidChan(tv));
-    }
+  for (auto tv : tvs) {
+    EXPECT_TRUE(IsValidChan(tv));
+  }
 }
 
 TEST_F(ChannelTest, Equality) {
-    wlan_channel_t lhs{.primary = 1, .cbw = CBW20};
-    wlan_channel_t rhs{.primary = 1, .cbw = CBW20};
-    EXPECT_EQ(true, lhs == rhs);
+  wlan_channel_t lhs{.primary = 1, .cbw = CBW20};
+  wlan_channel_t rhs{.primary = 1, .cbw = CBW20};
+  EXPECT_EQ(true, lhs == rhs);
 
-    rhs.cbw = CBW40;
-    EXPECT_EQ(true, lhs != rhs);
+  rhs.cbw = CBW40;
+  EXPECT_EQ(true, lhs != rhs);
 
-    lhs.cbw = CBW40;
-    EXPECT_EQ(true, lhs == rhs);
+  lhs.cbw = CBW40;
+  EXPECT_EQ(true, lhs == rhs);
 
-    lhs.cbw = CBW40ABOVE;
-    EXPECT_EQ(true, lhs == rhs);
+  lhs.cbw = CBW40ABOVE;
+  EXPECT_EQ(true, lhs == rhs);
 
-    rhs.cbw = CBW40BELOW;
-    EXPECT_EQ(false, lhs == rhs);
+  rhs.cbw = CBW40BELOW;
+  EXPECT_EQ(false, lhs == rhs);
 
-    rhs.cbw = CBW40;
-    rhs.primary = 2;
-    EXPECT_EQ(true, lhs != rhs);
+  rhs.cbw = CBW40;
+  rhs.primary = 2;
+  EXPECT_EQ(true, lhs != rhs);
 
-    lhs.primary = 2;
-    EXPECT_EQ(true, lhs == rhs);
+  lhs.primary = 2;
+  EXPECT_EQ(true, lhs == rhs);
 }
 
 TEST_F(ChannelTest, InvalidCombo) {
-    std::vector<wlan_channel_t> tvs = {
-        // clang-format off
+  std::vector<wlan_channel_t> tvs = {
+      // clang-format off
         {  0, CBW20,        0},
         { 15, CBW20,        0},
         {  8, CBW40ABOVE,   0},
@@ -99,27 +98,27 @@ TEST_F(ChannelTest, InvalidCombo) {
         {149, CBW80P80,   155},
         {132, CBW160,      50},
         // Add more interesting cases
-        // clang-format on
-    };
+      // clang-format on
+  };
 
-    for (auto tv : tvs) {
-        if (IsValidChan(tv)) {
-            printf("Test failed: Should treat this channel invalid:: %s\n",
-                   wlan::common::ChanStrLong(tv).c_str());
-        }
-        EXPECT_FALSE(IsValidChan(tv));
+  for (auto tv : tvs) {
+    if (IsValidChan(tv)) {
+      printf("Test failed: Should treat this channel invalid:: %s\n",
+             wlan::common::ChanStrLong(tv).c_str());
     }
+    EXPECT_FALSE(IsValidChan(tv));
+  }
 }
 
 TEST_F(ChannelTest, Conversion) {
-    struct TestVector {
-        wlan_channel_t ddk;
-        wlan_common::WlanChan fidl;
-        bool is_same;
-    };
+  struct TestVector {
+    wlan_channel_t ddk;
+    wlan_common::WlanChan fidl;
+    bool is_same;
+  };
 
-    std::vector<TestVector> tvs = {
-        // clang-format off
+  std::vector<TestVector> tvs = {
+      // clang-format off
         {{  0, CBW20,      0}, {  0, wlan_common::CBW::CBW20,      0}, true,},
         {{  1, CBW20,      0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
         {{ 11, CBW40BELOW, 0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
@@ -132,26 +131,26 @@ TEST_F(ChannelTest, Conversion) {
         {{  6, CBW40,      0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
         {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
         {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40BELOW, 0}, false,},
-        // clang-format on
-    };
+      // clang-format on
+  };
 
-    for (auto tv : tvs) {
-        auto got_fidl = ToFidl(tv.ddk);
-        EXPECT_EQ(tv.is_same, fidl::Equals(tv.fidl, got_fidl));
+  for (auto tv : tvs) {
+    auto got_fidl = ToFidl(tv.ddk);
+    EXPECT_EQ(tv.is_same, fidl::Equals(tv.fidl, got_fidl));
 
-        auto got_ddk = FromFidl(tv.fidl);
-        EXPECT_EQ(tv.is_same, tv.ddk == got_ddk);
-    }
+    auto got_ddk = FromFidl(tv.fidl);
+    EXPECT_EQ(tv.is_same, tv.ddk == got_ddk);
+  }
 }
 
 TEST_F(ChannelTest, GetCenterChanIdx) {
-    struct TestVector {
-        wlan_channel_t ddk;
-        uint8_t want;
-    };
+  struct TestVector {
+    wlan_channel_t ddk;
+    uint8_t want;
+  };
 
-    std::vector<TestVector> tvs = {
-        // clang-format off
+  std::vector<TestVector> tvs = {
+      // clang-format off
         {{  1, CBW20,      0},   1},
         {{ 11, CBW20,      0},  11},
         {{ 36, CBW20,      0},  36},
@@ -166,23 +165,23 @@ TEST_F(ChannelTest, GetCenterChanIdx) {
         {{ 36, CBW80P80, 122},  42},
         {{ 36, CBW160,     0},  50},
         {{100, CBW160,     0}, 114}
-        // clang-format on
-    };
+      // clang-format on
+  };
 
-    for (auto tv : tvs) {
-        auto got = GetCenterChanIdx(tv.ddk);
-        EXPECT_EQ(tv.want, got);
-    }
+  for (auto tv : tvs) {
+    auto got = GetCenterChanIdx(tv.ddk);
+    EXPECT_EQ(tv.want, got);
+  }
 }
 
 TEST_F(ChannelTest, GetCenterFreq) {
-    struct TestVector {
-        wlan_channel_t ddk;
-        Mhz want;
-    };
+  struct TestVector {
+    wlan_channel_t ddk;
+    Mhz want;
+  };
 
-    std::vector<TestVector> tvs = {
-        // clang-format off
+  std::vector<TestVector> tvs = {
+      // clang-format off
         {{  1, CBW20,      0}, 2412},
         {{  1, CBW40ABOVE, 0}, 2422},
         {{  6, CBW40ABOVE, 0}, 2447},
@@ -194,13 +193,13 @@ TEST_F(ChannelTest, GetCenterFreq) {
         {{ 36, CBW80,      0}, 5210},
         {{ 36, CBW160,     0}, 5250},
         {{161, CBW20,      0}, 5805},
-        // clang-format on
-    };
+      // clang-format on
+  };
 
-    for (auto tv : tvs) {
-        auto got = GetCenterFreq(tv.ddk);
-        EXPECT_EQ(tv.want, got);
-    }
+  for (auto tv : tvs) {
+    auto got = GetCenterFreq(tv.ddk);
+    EXPECT_EQ(tv.want, got);
+  }
 }
 
 }  // namespace

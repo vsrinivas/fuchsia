@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
-#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/join_context.h>
@@ -24,7 +24,8 @@ std::string Describe(const DataFrameHeader& hdr);
 
 std::string Describe(const PHY& phy);
 std::string Describe(const GI& gi);
-std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx = kInvalidTxVectorIdx);
+std::string Describe(const TxVector& tx_vec,
+                     tx_vec_idx_t tx_vec_idx = kInvalidTxVectorIdx);
 std::string Describe(tx_vec_idx_t tx_vec_idx);
 
 std::string HexDump(const uint8_t bytes[], size_t bytes_len);
@@ -73,4 +74,4 @@ std::string Describe(const JoinContext& jc);
 }  // namespace debug
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_DEBUG_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_

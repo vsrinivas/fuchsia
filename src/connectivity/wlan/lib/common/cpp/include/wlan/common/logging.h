@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
-#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 
 #include <cstdint>
 #include <cstdio>
@@ -49,10 +49,12 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 
 #define finspect(args...) wlogf(wlan::kLogFinspect, "[finspect] ", args)
 
-#define wlogf(level, level_prefix, args...)                                       \
-    do {                                                                          \
-        if (level & wlan::kLogLevel) { std::printf("wlan: " level_prefix args); } \
-    } while (false)
+#define wlogf(level, level_prefix, args...)    \
+  do {                                         \
+    if (level & wlan::kLogLevel) {             \
+      std::printf("wlan: " level_prefix args); \
+    }                                          \
+  } while (false)
 
 // clang-format off
 #define errorf(args...)   wlogf(wlan::kLogLevelError, "[E] ", args)
@@ -74,8 +76,9 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
+#define MAC_ADDR_ARGS(a) \
+  ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
 
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_LOGGING_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_

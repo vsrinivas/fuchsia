@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
-#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/packet.h>
@@ -15,70 +15,73 @@ namespace wlan {
 struct OffChannelHandler;
 
 struct OffChannelRequest {
-    wlan_channel_t chan;
-    zx::duration duration;
-    OffChannelHandler* handler;
+  wlan_channel_t chan;
+  zx::duration duration;
+  OffChannelHandler* handler;
 };
 
 struct OffChannelHandler {
-    virtual void BeginOffChannelTime() = 0;
-    virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) = 0;
+  virtual void BeginOffChannelTime() = 0;
+  virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) = 0;
 
-    // Invoked to end current off channel time and switch to another channel.
-    // (a) If switching to an off-channel, fill |next_req| and return `true` to schedule another
-    //     off-channel request.
-    // (b) If switching back on channel, return `false`
-    virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) = 0;
+  // Invoked to end current off channel time and switch to another channel.
+  // (a) If switching to an off-channel, fill |next_req| and return `true` to
+  // schedule another
+  //     off-channel request.
+  // (b) If switching back on channel, return `false`
+  virtual bool EndOffChannelTime(bool interrupted,
+                                 OffChannelRequest* next_req) = 0;
 
-    virtual ~OffChannelHandler() = default;
+  virtual ~OffChannelHandler() = default;
 };
 
 struct OnChannelHandler {
-    virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) = 0;
-    virtual void PreSwitchOffChannel() = 0;
-    virtual void ReturnedOnChannel() = 0;
+  virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) = 0;
+  virtual void PreSwitchOffChannel() = 0;
+  virtual void ReturnedOnChannel() = 0;
 };
 
 class ChannelScheduler {
-   public:
-    ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
-                     fbl::unique_ptr<Timer> timer);
+ public:
+  ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
+                   fbl::unique_ptr<Timer> timer);
 
-    void HandleIncomingFrame(fbl::unique_ptr<Packet>);
+  void HandleIncomingFrame(fbl::unique_ptr<Packet>);
 
-    // Set the 'on' channel. If we are currently on the main channel,
-    // switch to the new main channel.
-    zx_status_t SetChannel(const wlan_channel_t& chan);
+  // Set the 'on' channel. If we are currently on the main channel,
+  // switch to the new main channel.
+  zx_status_t SetChannel(const wlan_channel_t& chan);
 
-    // Return true if we are currently on the main channel
-    bool OnChannel() const { return on_channel_; }
+  // Return true if we are currently on the main channel
+  bool OnChannel() const { return on_channel_; }
 
-    // Switch on channel immediately and ensure that we stay there
-    // at least until |end|
-    void EnsureOnChannel(zx::time end);
+  // Switch on channel immediately and ensure that we stay there
+  // at least until |end|
+  void EnsureOnChannel(zx::time end);
 
-    // Request an off-channel time. Any previously existing request will be dropped.
-    // Off-channel time might not begin immediately.
-    // |request.handler->BeginOffChannelTime| will be called when the off-channel time begins.
-    void RequestOffChannelTime(const OffChannelRequest& request);
+  // Request an off-channel time. Any previously existing request will be
+  // dropped. Off-channel time might not begin immediately.
+  // |request.handler->BeginOffChannelTime| will be called when the off-channel
+  // time begins.
+  void RequestOffChannelTime(const OffChannelRequest& request);
 
-    void HandleTimeout();
+  void HandleTimeout();
 
-   private:
-    void GoOffChannel();
-    void ResetTimer(zx::time deadline);
+ private:
+  void GoOffChannel();
+  void ResetTimer(zx::time deadline);
 
-    OnChannelHandler* on_channel_handler_;
-    DeviceInterface* device_;
-    fbl::unique_ptr<Timer> timer_;
+  OnChannelHandler* on_channel_handler_;
+  DeviceInterface* device_;
+  fbl::unique_ptr<Timer> timer_;
 
-    wlan_channel_t channel_ = {.primary = 1, .cbw = CBW20, .secondary80 = 0};
-    bool on_channel_ = true;
-    bool ensure_on_channel_ = false;
-    bool pending_off_channel_request_ = false;
-    OffChannelRequest off_channel_request_;
+  wlan_channel_t channel_ = {.primary = 1, .cbw = CBW20, .secondary80 = 0};
+  bool on_channel_ = true;
+  bool ensure_on_channel_ = false;
+  bool pending_off_channel_request_ = false;
+  OffChannelRequest off_channel_request_;
 };
 
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
-#define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
 
 #include <fbl/unique_ptr.h>
 #include <wlan/mlme/client/channel_scheduler.h>
@@ -13,9 +13,10 @@
 
 namespace wlan {
 
-fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
-                                                     ChannelScheduler* chan_scheduler);
+fbl::unique_ptr<ClientInterface> CreateDefaultClient(
+    DeviceInterface* device, JoinContext* join_ctx,
+    ChannelScheduler* chan_scheduler);
 
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_

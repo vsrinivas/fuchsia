@@ -5,10 +5,8 @@
 use {
     crate::{simulation_tests::*, *},
     failure::format_err,
-    fidl_fuchsia_wlan_service as fidl_wlan_service,
-    fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async as fasync,
-    fuchsia_component as app,
+    fidl_fuchsia_wlan_service as fidl_wlan_service, fidl_fuchsia_wlan_tap as wlantap,
+    fuchsia_async as fasync, fuchsia_component as app,
     futures::{channel::mpsc, poll, select},
     pin_utils::pin_mut,
     std::collections::HashMap,

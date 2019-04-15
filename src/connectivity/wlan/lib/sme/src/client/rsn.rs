@@ -92,12 +92,12 @@ pub fn get_rsna(
         fidl_sme::Credential::None(_) => {
             ensure!(bss.rsn.is_none(), "password required for secure network, but none provided");
             return Ok(None);
-        },
+        }
         fidl_sme::Credential::Psk(_) | fidl_sme::Credential::Password(_) => {
             ensure!(bss.rsn.is_some(), "password provided for open network, but none expected");
             &bss.rsn.as_ref().unwrap()[..]
-        },
-        _ => bail!("unsupported credential type")
+        }
+        _ => bail!("unsupported credential type"),
     };
 
     // Credentials supplied and BSS is protected.
@@ -127,7 +127,7 @@ fn compute_psk(credential: &fidl_sme::Credential, ssid: &[u8]) -> Result<psk::Ps
         fidl_sme::Credential::Psk(psk) => {
             ensure!(psk.len() == 32, "PSK must be 32 octets but was {}", psk.len());
             Ok(psk.clone().into_boxed_slice())
-        },
+        }
         _ => bail!("unsupported credentials configuration"),
     }
 }

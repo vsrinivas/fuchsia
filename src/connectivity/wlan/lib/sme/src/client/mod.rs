@@ -396,10 +396,7 @@ mod tests {
 
     fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_mlme::BssDescription) {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                bss,
-            },
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
@@ -669,11 +666,11 @@ mod tests {
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
 
         report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
-        
+
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
         expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 });
     }
-        
+
     fn connect_req(ssid: Ssid, credential: fidl_sme::Credential) -> fidl_sme::ConnectRequest {
         fidl_sme::ConnectRequest {
             ssid,

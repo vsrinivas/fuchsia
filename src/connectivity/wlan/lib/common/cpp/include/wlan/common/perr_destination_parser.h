@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
-#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
 
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/element.h>
@@ -13,9 +13,9 @@ namespace wlan {
 namespace common {
 
 struct ParsedPerrDestination {
-    const PerrPerDestinationHeader* header;
-    const MacAddr* ext_addr;  // null if absent
-    const PerrPerDestinationTail* tail;
+  const PerrPerDestinationHeader* header;
+  const MacAddr* ext_addr;  // null if absent
+  const PerrPerDestinationTail* tail;
 };
 
 // Can be used to parse the destination fields of a PERR element.
@@ -36,19 +36,19 @@ struct ParsedPerrDestination {
 //     }
 //
 class PerrDestinationParser {
-   public:
-    explicit PerrDestinationParser(Span<const uint8_t> bytes);
+ public:
+  explicit PerrDestinationParser(Span<const uint8_t> bytes);
 
-    std::optional<ParsedPerrDestination> Next();
+  std::optional<ParsedPerrDestination> Next();
 
-    bool ExtraBytesLeft() const;
+  bool ExtraBytesLeft() const;
 
-   private:
-    BufferReader reader_;
-    bool incomplete_read_ = false;
+ private:
+  BufferReader reader_;
+  bool incomplete_read_ = false;
 };
 
 }  // namespace common
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_

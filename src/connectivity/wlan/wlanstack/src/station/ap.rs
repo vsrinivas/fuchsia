@@ -13,9 +13,9 @@ use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
+use void::Void;
 use wlan_common::RadioConfig;
 use wlan_sme::{ap as ap_sme, DeviceInfo};
-use void::Void;
 
 use crate::stats_scheduler::StatsRequest;
 

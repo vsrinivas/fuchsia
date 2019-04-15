@@ -17,11 +17,11 @@ use log::warn;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
+use void::Void;
 use wlan_sme::{
     timer::{TimeEntry, TimedEvent},
     MlmeRequest, MlmeStream, Station,
 };
-use void::Void;
 
 use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;

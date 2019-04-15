@@ -4,7 +4,7 @@
 
 use futures::ready;
 use futures::stream::{Fuse, Stream, StreamExt};
-use futures::task::{Waker, Poll};
+use futures::task::{Poll, Waker};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
 use std::pin::Pin;

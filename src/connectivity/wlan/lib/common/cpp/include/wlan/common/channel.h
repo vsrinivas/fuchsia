@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CHANNEL_H_
-#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CHANNEL_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-
 #include <wlan/protocol/mac.h>
 
 #include <cstdint>
@@ -48,12 +47,12 @@ std::string ChanStrLong(const wlan_channel_t& chan);
 std::string GetPhyStr(enum PHY phy);
 
 struct Channel {
-    wlan_channel_t chan;
-    // TODO(porce): Validation
-    // TODO(porce): Notation string.
-    // TODO(porce): Center frequencies.
-    // Define the rule to translsate center frequency to/from channel numbering.
-    // See IEEE Std 802.11-2016 19.3.15
+  wlan_channel_t chan;
+  // TODO(porce): Validation
+  // TODO(porce): Notation string.
+  // TODO(porce): Center frequencies.
+  // Define the rule to translsate center frequency to/from channel numbering.
+  // See IEEE Std 802.11-2016 19.3.15
 };
 
 wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
@@ -68,4 +67,4 @@ const char* CbwStr(uint8_t cbw);
 }  // namespace common
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CHANNEL_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_

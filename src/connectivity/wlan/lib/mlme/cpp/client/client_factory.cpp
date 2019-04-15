@@ -9,20 +9,22 @@
 
 namespace wlan {
 
-fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
-                                                     ChannelScheduler* chan_scheduler) {
-    fbl::unique_ptr<Timer> timer;
-    ObjectId timer_id;
-    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-    timer_id.set_mac(join_ctx->bssid().ToU64());
-    auto status = device->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-    if (status != ZX_OK) {
-        errorf("could not create STA timer: %d\n", status);
-        return nullptr;
-    }
-    return std::make_unique<Station>(device, TimerManager<>(std::move(timer)), chan_scheduler,
-                                     join_ctx);
+fbl::unique_ptr<ClientInterface> CreateDefaultClient(
+    DeviceInterface* device, JoinContext* join_ctx,
+    ChannelScheduler* chan_scheduler) {
+  fbl::unique_ptr<Timer> timer;
+  ObjectId timer_id;
+  timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+  timer_id.set_target(to_enum_type(ObjectTarget::kStation));
+  timer_id.set_mac(join_ctx->bssid().ToU64());
+  auto status =
+      device->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+  if (status != ZX_OK) {
+    errorf("could not create STA timer: %d\n", status);
+    return nullptr;
+  }
+  return std::make_unique<Station>(device, TimerManager<>(std::move(timer)),
+                                   chan_scheduler, join_ctx);
 }
 
 }  // namespace wlan

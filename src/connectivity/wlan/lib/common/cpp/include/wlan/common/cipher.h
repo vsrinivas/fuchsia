@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CIPHER_H_
-#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CIPHER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CIPHER_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CIPHER_H_
 
 namespace wlan {
 namespace common {
@@ -45,4 +45,4 @@ const uint8_t kBipCmac256LenBytes = 32;
 }  // namespace common
 }  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_CIPHER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CIPHER_H_

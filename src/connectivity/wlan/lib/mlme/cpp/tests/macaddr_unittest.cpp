@@ -2,103 +2,103 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <array>
 #include <gtest/gtest.h>
-
 #include <wlan/common/macaddr.h>
+
+#include <array>
 
 namespace wlan {
 namespace common {
 namespace {
 
 class MacAddrTest : public ::testing::Test {
-   protected:
+ protected:
 };
 
 TEST_F(MacAddrTest, Some) {
-    MacAddr zero_addr;
+  MacAddr zero_addr;
 
-    zero_addr.Set(kZeroMac);
-    EXPECT_EQ(0x00, zero_addr.byte[0]);
-    EXPECT_EQ(true, zero_addr.IsZero());
+  zero_addr.Set(kZeroMac);
+  EXPECT_EQ(0x00, zero_addr.byte[0]);
+  EXPECT_EQ(true, zero_addr.IsZero());
 
-    MacAddr bcast_addr;
-    bcast_addr.Set(kBcastMac);
-    EXPECT_EQ(0xff, bcast_addr.byte[0]);
-    EXPECT_EQ(true, bcast_addr.IsBcast());
-    EXPECT_EQ(true, bcast_addr.IsMcast());
-    EXPECT_EQ(false, bcast_addr.IsZero());
-    EXPECT_EQ(true, bcast_addr.IsLocalAdmin());
-    EXPECT_EQ(true, bcast_addr > kZeroMac);
-    EXPECT_EQ(false, bcast_addr < kZeroMac);
-    EXPECT_EQ(true, bcast_addr.IsGroupAddr());
+  MacAddr bcast_addr;
+  bcast_addr.Set(kBcastMac);
+  EXPECT_EQ(0xff, bcast_addr.byte[0]);
+  EXPECT_EQ(true, bcast_addr.IsBcast());
+  EXPECT_EQ(true, bcast_addr.IsMcast());
+  EXPECT_EQ(false, bcast_addr.IsZero());
+  EXPECT_EQ(true, bcast_addr.IsLocalAdmin());
+  EXPECT_EQ(true, bcast_addr > kZeroMac);
+  EXPECT_EQ(false, bcast_addr < kZeroMac);
+  EXPECT_EQ(true, bcast_addr.IsGroupAddr());
 
-    MacAddr addr2({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
-    EXPECT_EQ(false, addr2.IsMcast());
-    EXPECT_EQ(false, addr2.IsBcast());
-    EXPECT_EQ(false, addr2.IsZero());
-    EXPECT_EQ(true, addr2 > kZeroMac);
-    EXPECT_EQ(false, addr2 < kZeroMac);
-    EXPECT_EQ(false, addr2 > kBcastMac);
-    EXPECT_EQ(true, addr2 < kBcastMac);
+  MacAddr addr2({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
+  EXPECT_EQ(false, addr2.IsMcast());
+  EXPECT_EQ(false, addr2.IsBcast());
+  EXPECT_EQ(false, addr2.IsZero());
+  EXPECT_EQ(true, addr2 > kZeroMac);
+  EXPECT_EQ(false, addr2 < kZeroMac);
+  EXPECT_EQ(false, addr2 > kBcastMac);
+  EXPECT_EQ(true, addr2 < kBcastMac);
 }
 
 TEST_F(MacAddrTest, Constructors) {
-    uint8_t arr[kMacAddrLen] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
-    MacAddr addr1(arr);
-    MacAddr addr2;
-    addr2.Set(arr);
+  uint8_t arr[kMacAddrLen] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+  MacAddr addr1(arr);
+  MacAddr addr2;
+  addr2.Set(arr);
 
-    std::string str = "01:02:03:04:05:06";
-    MacAddr addr3(str);
-    MacAddr addr4;
-    addr4.Set(str);
+  std::string str = "01:02:03:04:05:06";
+  MacAddr addr3(str);
+  MacAddr addr4;
+  addr4.Set(str);
 
-    MacAddr addr5({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
-    MacAddr addr6("01:02:03:04:05:06");
+  MacAddr addr5({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+  MacAddr addr6("01:02:03:04:05:06");
 
-    MacAddr addr7(addr6);
-    const MacAddr& addr8 = addr7;
-    MacAddr addr9;
-    addr9 = addr8;
+  MacAddr addr7(addr6);
+  const MacAddr& addr8 = addr7;
+  MacAddr addr9;
+  addr9 = addr8;
 
-    ::std::array<uint8_t, 6> fidl_addr;
-    memcpy(fidl_addr.data(), addr8.byte, kMacAddrLen);
-    MacAddr addr10(fidl_addr);
+  ::std::array<uint8_t, 6> fidl_addr;
+  memcpy(fidl_addr.data(), addr8.byte, kMacAddrLen);
+  MacAddr addr10(fidl_addr);
 
-    EXPECT_EQ(true, addr1 == addr2);
-    EXPECT_EQ(false, addr1 != addr2);
-    EXPECT_EQ(true, addr2 == addr3);
-    EXPECT_EQ(true, addr3 == addr4);
-    EXPECT_EQ(true, addr4 == addr5);
-    EXPECT_EQ(true, addr5 == addr6);
-    EXPECT_EQ(true, addr6 == addr7);
-    EXPECT_EQ(true, addr7 == addr1);
-    EXPECT_EQ(true, addr8 == MacAddr(arr));
-    EXPECT_EQ(true, addr9 == addr8);
-    EXPECT_EQ(true, addr10 == addr9);
+  EXPECT_EQ(true, addr1 == addr2);
+  EXPECT_EQ(false, addr1 != addr2);
+  EXPECT_EQ(true, addr2 == addr3);
+  EXPECT_EQ(true, addr3 == addr4);
+  EXPECT_EQ(true, addr4 == addr5);
+  EXPECT_EQ(true, addr5 == addr6);
+  EXPECT_EQ(true, addr6 == addr7);
+  EXPECT_EQ(true, addr7 == addr1);
+  EXPECT_EQ(true, addr8 == MacAddr(arr));
+  EXPECT_EQ(true, addr9 == addr8);
+  EXPECT_EQ(true, addr10 == addr9);
 }
 
 TEST_F(MacAddrTest, Conversion) {
-    uint8_t arr[kMacAddrLen] = {0x00};
+  uint8_t arr[kMacAddrLen] = {0x00};
 
-    MacAddr addr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
-    addr.CopyTo(arr);
+  MacAddr addr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
+  addr.CopyTo(arr);
 
-    EXPECT_EQ(true, arr[0] == 0x11 && arr[1] == 0x22 && arr[2] == 0x33 && arr[3] == 0x44 &&
-                        arr[4] == 0x55 && arr[5] == 0x66);
-    EXPECT_EQ(true, memcmp(addr.byte, arr, kMacAddrLen) == 0);
+  EXPECT_EQ(true, arr[0] == 0x11 && arr[1] == 0x22 && arr[2] == 0x33 &&
+                      arr[3] == 0x44 && arr[4] == 0x55 && arr[5] == 0x66);
+  EXPECT_EQ(true, memcmp(addr.byte, arr, kMacAddrLen) == 0);
 
-    MacAddr addr2;
-    addr2.Set(arr);
-    EXPECT_EQ(true, addr == addr2);
+  MacAddr addr2;
+  addr2.Set(arr);
+  EXPECT_EQ(true, addr == addr2);
 
-    MacAddr addr3(addr.ToU64());
-    EXPECT_EQ(true, addr == addr3);
+  MacAddr addr3(addr.ToU64());
+  EXPECT_EQ(true, addr == addr3);
 
-    uint64_t val = 0x0102030405060708;
-    MacAddr addr4(val);
-    EXPECT_EQ(false, addr == addr4);
+  uint64_t val = 0x0102030405060708;
+  MacAddr addr4(val);
+  EXPECT_EQ(false, addr == addr4);
 }
 
 }  // namespace

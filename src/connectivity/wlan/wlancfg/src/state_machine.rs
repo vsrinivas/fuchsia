@@ -7,7 +7,7 @@ use void::Void;
 use futures::{
     future::{Future, FutureExt, FutureObj},
     ready,
-    task::{Waker, Poll},
+    task::{Poll, Waker},
 };
 use std::{marker::Unpin, pin::Pin};
 

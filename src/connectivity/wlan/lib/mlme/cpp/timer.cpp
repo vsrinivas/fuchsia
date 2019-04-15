@@ -9,21 +9,23 @@
 
 namespace wlan {
 
-Timer::Timer(TimerScheduler* scheduler, uint64_t id) : scheduler_(scheduler), id_(id) {}
+Timer::Timer(TimerScheduler* scheduler, uint64_t id)
+    : scheduler_(scheduler), id_(id) {}
 
 Timer::~Timer() {}
 
 zx_status_t Timer::SetTimer(zx::time deadline) {
-    deadline_ = deadline;
-    return scheduler_->Schedule(this, deadline);
+  deadline_ = deadline;
+  return scheduler_->Schedule(this, deadline);
 }
 
 zx_status_t Timer::CancelTimer() {
-    deadline_ = zx::time();
-    return scheduler_->Cancel(this);
+  deadline_ = zx::time();
+  return scheduler_->Cancel(this);
 }
 
-SystemTimer::SystemTimer(TimerScheduler* scheduler, uint64_t id, zx::timer timer)
+SystemTimer::SystemTimer(TimerScheduler* scheduler, uint64_t id,
+                         zx::timer timer)
     : Timer(scheduler, id), timer_(std::move(timer)) {}
 
 }  // namespace wlan

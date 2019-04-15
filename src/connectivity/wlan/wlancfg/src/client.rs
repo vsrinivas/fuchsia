@@ -1033,7 +1033,7 @@ mod tests {
                     fidl_sme::Credential::Password(password) => {
                         assert_eq!(&expected_password[..], &password[..]);
                     }
-                    _ => panic!("expected password")
+                    _ => panic!("expected password"),
                 }
                 txn.expect("expected a Connect transaction channel")
                     .into_stream()

@@ -15,20 +15,23 @@
 namespace wlan {
 
 struct TimerSchedulerImpl : public TimerScheduler {
-    zx_status_t Schedule(Timer* timer, zx::time deadline) override { return ZX_OK; }
+  zx_status_t Schedule(Timer* timer, zx::time deadline) override {
+    return ZX_OK;
+  }
 
-    zx_status_t Cancel(Timer* timer) override { return ZX_OK; }
+  zx_status_t Cancel(Timer* timer) override { return ZX_OK; }
 };
 
 class TestTimer final : public Timer {
-   public:
-    TestTimer(uint64_t id, timekeeper::TestClock* clock) : Timer(&scheduler_, id), clock_(clock) {}
+ public:
+  TestTimer(uint64_t id, timekeeper::TestClock* clock)
+      : Timer(&scheduler_, id), clock_(clock) {}
 
-    zx::time Now() const override { return clock_->Now(); }
+  zx::time Now() const override { return clock_->Now(); }
 
-   private:
-    timekeeper::TestClock* clock_;
-    TimerSchedulerImpl scheduler_;
+ private:
+  timekeeper::TestClock* clock_;
+  TimerSchedulerImpl scheduler_;
 };
 
 }  // namespace wlan

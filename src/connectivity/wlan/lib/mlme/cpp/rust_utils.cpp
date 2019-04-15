@@ -7,7 +7,8 @@
 namespace wlan {
 
 SequenceManager NewSequenceManager() {
-    return SequenceManager(mlme_sequence_manager_new(), mlme_sequence_manager_delete);
+  return SequenceManager(mlme_sequence_manager_new(),
+                         mlme_sequence_manager_delete);
 }
 
 }  // namespace wlan

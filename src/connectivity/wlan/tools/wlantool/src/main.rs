@@ -172,7 +172,7 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
                 Ok(c) => c,
                 Err(e) => {
                     println!("credential error: {}", e);
-                    return Ok(())
+                    return Ok(());
                 }
             };
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
@@ -295,15 +295,16 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
-fn make_credential(password: Option<String>, psk: Option<String>)
-                   -> Result<fidl_sme::Credential, failure::Error>
-{
+fn make_credential(
+    password: Option<String>,
+    psk: Option<String>,
+) -> Result<fidl_sme::Credential, failure::Error> {
     match (password, psk) {
         (Some(password), None) => Ok(fidl_sme::Credential::Password(password.as_bytes().to_vec())),
         (None, Some(psk)) => {
             let psk = Vec::from_hex(psk).map_err(|_| format_err!("PSK is invalid"))?;
             Ok(fidl_sme::Credential::Psk(psk))
-        },
+        }
         (None, None) => Ok(fidl_sme::Credential::None(fidl_sme::Empty)),
         _ => bail!("cannot use password and PSK at once"),
     }
@@ -609,19 +610,20 @@ mod tests {
         let credential = make_credential(None, None).expect("credential is valid");
         assert_eq!(credential, fidl_sme::Credential::None(fidl_sme::Empty));
 
-        let credential = make_credential(Some("hi".to_string()), None)
-            .expect("credential is valid");
+        let credential =
+            make_credential(Some("hi".to_string()), None).expect("credential is valid");
         assert_eq!(credential, fidl_sme::Credential::Password("hi".as_bytes().to_vec()));
 
         let psk = "f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e";
-        let credential = make_credential(None, Some(psk.to_string()))
-            .expect("credential is valid");
-        assert_eq!(credential, fidl_sme::Credential::Psk(vec![
-            0xf4, 0x2c, 0x6f, 0xc5, 0x2d, 0xf0, 0xeb, 0xef,
-            0x9e, 0xbb, 0x4b, 0x90, 0xb3, 0x8a, 0x5f, 0x90,
-            0x2e, 0x83, 0xfe, 0x1b, 0x13, 0x5a, 0x70, 0xe2,
-            0x3a, 0xed, 0x76, 0x2e, 0x97, 0x10, 0xa1, 0x2e,
-        ]));
+        let credential = make_credential(None, Some(psk.to_string())).expect("credential is valid");
+        assert_eq!(
+            credential,
+            fidl_sme::Credential::Psk(vec![
+                0xf4, 0x2c, 0x6f, 0xc5, 0x2d, 0xf0, 0xeb, 0xef, 0x9e, 0xbb, 0x4b, 0x90, 0xb3, 0x8a,
+                0x5f, 0x90, 0x2e, 0x83, 0xfe, 0x1b, 0x13, 0x5a, 0x70, 0xe2, 0x3a, 0xed, 0x76, 0x2e,
+                0x97, 0x10, 0xa1, 0x2e,
+            ])
+        );
 
         make_credential(Some("hi".to_string()), Some(psk.to_string()))
             .expect_err("credential is invalid");

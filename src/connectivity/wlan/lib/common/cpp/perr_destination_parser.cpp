@@ -7,32 +7,35 @@
 namespace wlan {
 namespace common {
 
-PerrDestinationParser::PerrDestinationParser(Span<const uint8_t> bytes) : reader_(bytes) {}
+PerrDestinationParser::PerrDestinationParser(Span<const uint8_t> bytes)
+    : reader_(bytes) {}
 
 std::optional<ParsedPerrDestination> PerrDestinationParser::Next() {
-    ParsedPerrDestination ret = {};
-    ret.header = reader_.Read<PerrPerDestinationHeader>();
-    if (ret.header == nullptr) { return {}; }
+  ParsedPerrDestination ret = {};
+  ret.header = reader_.Read<PerrPerDestinationHeader>();
+  if (ret.header == nullptr) {
+    return {};
+  }
 
-    if (ret.header->flags.addr_ext()) {
-        ret.ext_addr = reader_.Read<MacAddr>();
-        if (ret.ext_addr == nullptr) {
-            incomplete_read_ = true;
-            return {};
-        }
+  if (ret.header->flags.addr_ext()) {
+    ret.ext_addr = reader_.Read<MacAddr>();
+    if (ret.ext_addr == nullptr) {
+      incomplete_read_ = true;
+      return {};
     }
+  }
 
-    ret.tail = reader_.Read<PerrPerDestinationTail>();
-    if (ret.tail == nullptr) {
-        incomplete_read_ = true;
-        return {};
-    }
+  ret.tail = reader_.Read<PerrPerDestinationTail>();
+  if (ret.tail == nullptr) {
+    incomplete_read_ = true;
+    return {};
+  }
 
-    return {ret};
+  return {ret};
 }
 
 bool PerrDestinationParser::ExtraBytesLeft() const {
-    return incomplete_read_ || reader_.RemainingBytes();
+  return incomplete_read_ || reader_.RemainingBytes();
 }
 
 }  // namespace common
