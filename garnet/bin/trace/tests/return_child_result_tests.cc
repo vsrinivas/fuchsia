@@ -14,7 +14,8 @@ const char kChildPath[] = "/pkg/bin/return_1234";
 
 constexpr const int kChildReturnCode = 1234;
 
-TEST(ReturnChildResult, False) {
+// TODO(FLK-159): Disabled until fixed.
+TEST(ReturnChildResult, DISABLED_False) {
   zx::job job{};  // -> default job
   zx::process child;
   std::vector<std::string> argv{
@@ -28,7 +29,8 @@ TEST(ReturnChildResult, False) {
   EXPECT_EQ(return_code, 0);
 }
 
-TEST(ReturnChildResult, True) {
+// TODO(FLK-159): Disabled until fixed.
+TEST(ReturnChildResult, DISABLED_True) {
   zx::job job{};  // -> default job
   zx::process child;
   std::vector<std::string> argv{
