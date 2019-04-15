@@ -68,6 +68,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-kernel",
   ]

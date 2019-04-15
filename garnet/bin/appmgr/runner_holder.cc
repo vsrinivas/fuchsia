@@ -14,6 +14,7 @@
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/sys/formatting.h"
 #include "lib/fsl/vmo/file.h"
 
 using fuchsia::sys::TerminationReason;
@@ -28,6 +29,7 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
       controller_(std::move(controller)),
       error_handler_(std::move(error_handler)),
       component_id_counter_(0) {
+  auto url = launch_info.url;
   realm->CreateComponent(
       std::move(launch_info), controller_.NewRequest(),
       [this](std::weak_ptr<ComponentControllerImpl> component) {
@@ -35,10 +37,10 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
       });
 
   controller_.events().OnTerminated =
-      [this](int64_t return_code, TerminationReason termination_reason) {
+      [this, url](int64_t return_code, TerminationReason termination_reason) {
         if (termination_reason != TerminationReason::EXITED) {
-          FXL_LOG(ERROR) << "Runner terminating, status "
-                         << fidl::ToUnderlying(termination_reason);
+          FXL_LOG(ERROR) << "Runner (" << url
+                         << ") terminating, reason: " << termination_reason;
         }
         Cleanup();
 
