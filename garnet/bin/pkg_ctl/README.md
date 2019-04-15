@@ -16,3 +16,51 @@ To open a package (and display its contents) by merkle root, run:
 ```
 % pkgctl open $MERKLE_ROOT
 ```
+
+## URI Rewrite Rules
+
+Prior to resolving a fuchsia-pkg URI into a package directory, the package
+resolver will first iterate through its rewrite rules in sequence looking for
+the first rule that matches the given URI and that, when applied to the given
+URI, produces another valid URI. This rewritten URI is the resolved instead and
+the given URI is discarded. If no rules match, the given URI is used as-is.
+
+A rewrite rule must match the entire host of the URI and must prefix match the
+URI's path at a `/` boundary. If the rewrite rule's path doesn't end in a `/`,
+it must match the entire URI path.
+
+## Examples
+
+View all configured rewrite rules:
+```
+% pkgctl rule list
+```
+
+Remove all configured dynamic rewrite rules. Any static rewrite rules cannot be
+removed.
+```
+% pkgctl rule clear
+```
+
+The following set of rewrite rules will redirect the "/rolldice" package from
+"fuchsia.com" to the repository with the hostname "devhost":
+```json
+{
+    "version": "1",
+    "content": [
+        {
+            "host_match": "fuchsia.com",
+            "host_replacement": "devhost",
+            "path_prefix_match": "/rolldice",
+            "path_prefix_replacement": "/rolldice"
+        }
+    ]
+}
+```
+
+Assuming the above rule config were present on a device at `/tmp/rules.json`,
+the following command would replace any configured dynamic rewrite rules with
+the rules contained in `rules.json`:
+```
+% pkgctl rule replace file /tmp/rules.json
+```

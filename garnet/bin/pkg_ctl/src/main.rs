@@ -5,17 +5,22 @@
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 
-use failure::{Error, ResultExt};
+use failure::{Error, Fail, ResultExt};
 use fidl_fuchsia_pkg::{
     PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
 };
 use fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig};
+use fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy};
 use files_async;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
+use fuchsia_uri_rewrite::{Rule as RewriteRule, RuleConfig};
 use fuchsia_zircon as zx;
+use futures::Future;
 use serde_json;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
+use std::fs::File;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -61,12 +66,52 @@ enum Command {
 
     #[structopt(name = "repo", about = "repo subcommands")]
     Repo(RepoCommand),
+
+    #[structopt(name = "rule", about = "manage URI rewrite rules")]
+    Rule(RuleCommand),
 }
 
 #[derive(StructOpt)]
 enum RepoCommand {
     #[structopt(name = "list", about = "list repositories")]
     List,
+}
+
+#[derive(StructOpt)]
+enum RuleCommand {
+    #[structopt(name = "list", about = "list all rules")]
+    List,
+
+    #[structopt(name = "clear", about = "clear all rules")]
+    Clear,
+
+    #[structopt(name = "replace", about = "replace all dynamic rules with the provided rules")]
+    Replace {
+        #[structopt(subcommand)]
+        input_type: RuleConfigInputType,
+    },
+}
+
+#[derive(StructOpt)]
+enum RuleConfigInputType {
+    #[structopt(name = "file")]
+    File {
+        #[structopt(help = "path to rewrite rule config file")]
+        path: PathBuf,
+    },
+
+    #[structopt(name = "json")]
+    Json {
+        #[structopt(
+            help = "JSON encoded rewrite rule config",
+            parse(try_from_str = "parse_rule_config")
+        )]
+        config: RuleConfig,
+    },
+}
+
+fn parse_rule_config(s: &str) -> Result<RuleConfig, serde_json::error::Error> {
+    serde_json::from_str(s)
 }
 
 fn main() -> Result<(), Error> {
@@ -165,8 +210,113 @@ fn main() -> Result<(), Error> {
                     }
                 }
             }
+            Command::Rule(cmd) => {
+                let app = launch(&launcher, pkg_resolver_uri, None)
+                    .context("Failed to launch resolver service")?;
+                let engine = app
+                    .connect_to_service(EngineMarker)
+                    .context("Failed to connect to rewrite engine service")?;
+
+                match cmd {
+                    RuleCommand::List => {
+                        let (iter, iter_server_end) = fidl::endpoints::create_proxy()?;
+                        engine.list(iter_server_end)?;
+
+                        let mut rules = Vec::new();
+                        loop {
+                            let more = await!(iter.next())?;
+                            if more.is_empty() {
+                                break;
+                            }
+                            rules.extend(more);
+                        }
+                        let rules = rules
+                            .into_iter()
+                            .map(|rule| rule.try_into())
+                            .collect::<Result<Vec<RewriteRule>, _>>()?;
+
+                        for rule in rules {
+                            println!("{:#?}", rule);
+                        }
+                    }
+                    RuleCommand::Clear => {
+                        await!(do_transaction(engine, async move |transaction| {
+                            transaction.reset_all()?;
+                            Ok(transaction)
+                        }))?;
+                    }
+                    RuleCommand::Replace { input_type } => {
+                        let RuleConfig::Version1(ref rules) = match input_type {
+                            RuleConfigInputType::File { path } => {
+                                serde_json::from_reader(File::open(path)?)?
+                            }
+                            RuleConfigInputType::Json { config } => config,
+                        };
+
+                        await!(do_transaction(engine, async move |transaction| {
+                            transaction.reset_all()?;
+                            // add() inserts rules as highest priority, so iterate over our
+                            // prioritized list of rules so they end up in the right order.
+                            for rule in rules.iter().rev() {
+                                await!(transaction.add(&mut rule.clone().into()))?;
+                            }
+                            Ok(transaction)
+                        }))?;
+                    }
+                }
+
+                Ok(())
+            }
         }
     };
 
     executor.run_singlethreaded(fut)
+}
+
+#[derive(Debug, Fail)]
+enum EditTransactionError {
+    #[fail(display = "internal fidl error: {}", _0)]
+    Fidl(#[cause] fidl::Error),
+
+    #[fail(display = "commit error: {}", _0)]
+    CommitError(zx::Status),
+}
+
+impl From<fidl::Error> for EditTransactionError {
+    fn from(x: fidl::Error) -> Self {
+        EditTransactionError::Fidl(x)
+    }
+}
+
+/// Perform a rewrite rule edit transaction, retrying as necessary if another edit transaction runs
+/// concurrently.
+///
+/// The given callback `cb` should perform the needed edits to the state of the rewrite rules but
+/// not attempt to `commit()` the transaction. `do_transaction` will internally attempt to commit
+/// the transaction and trigger a retry if necessary.
+async fn do_transaction<T, R>(engine: EngineProxy, cb: T) -> Result<(), EditTransactionError>
+where
+    T: Fn(EditTransactionProxy) -> R,
+    R: Future<Output = Result<EditTransactionProxy, fidl::Error>>,
+{
+    // Make a reasonable effort to retry the edit after a concurrent edit, but don't retry forever.
+    for _ in 0..100 {
+        let (transaction, transaction_server_end) = fidl::endpoints::create_proxy()?;
+        engine.start_edit_transaction(transaction_server_end)?;
+
+        let transaction = await!(cb(transaction))?;
+
+        let status = await!(transaction.commit())?;
+
+        // Retry edit transaction on concurrent edit
+        return match zx::Status::from_raw(status) {
+            zx::Status::OK => Ok(()),
+            zx::Status::UNAVAILABLE => {
+                continue;
+            }
+            status => Err(EditTransactionError::CommitError(status)),
+        };
+    }
+
+    Err(EditTransactionError::CommitError(zx::Status::UNAVAILABLE))
 }
