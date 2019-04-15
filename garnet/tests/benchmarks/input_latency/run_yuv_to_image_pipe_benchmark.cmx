@@ -1,0 +1,24 @@
+{
+    "program": {
+        "binary": "bin/run_yuv_to_image_pipe_benchmark.sh"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracelink.Provider",
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.InputDispatcher",
+            "fuchsia.ui.policy.Presenter"
+        ]
+    }
+}

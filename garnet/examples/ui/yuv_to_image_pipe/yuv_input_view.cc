@@ -56,13 +56,12 @@ void YuvInputView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     }
     case InputEvent::Tag::kPointer: {
       const auto& pointer = event.pointer();
+      trace_flow_id_t trace_id =
+          PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+      TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
       switch (pointer.phase) {
         case PointerEventPhase::DOWN: {
           if (focused_) {
-            const auto& pointer = event.pointer();
-            trace_flow_id_t trace_id =
-                PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
-            TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
             const auto next_image_id_ = GetNextImageId();
             PaintImage(next_image_id_, GetNextPixelMultiplier());
             PresentImage(next_image_id_);

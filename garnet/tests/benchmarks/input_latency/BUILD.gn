@@ -36,6 +36,10 @@ package("garnet_input_latency_benchmarks") {
       dest = "run_simplest_app_benchmark.cmx"
       path = rebase_path(dest)
     },
+    {
+      dest = "run_yuv_to_image_pipe_benchmark.cmx"
+      path = rebase_path(dest)
+    },
   ]
 
   binaries = [
@@ -47,6 +51,11 @@ package("garnet_input_latency_benchmarks") {
       shell = true
       name = "run_simplest_app_benchmark.sh"
       source = rebase_path("run_simplest_app_benchmark.sh")
+    },
+    {
+      shell = true
+      name = "run_yuv_to_image_pipe_benchmark.sh"
+      source = rebase_path("run_yuv_to_image_pipe_benchmark.sh")
     },
   ]
 }

@@ -37,15 +37,30 @@ int main(int argc, const char** argv) {
 
   // TODO(PT-118): Input latency tests are only currently supported on NUC.
   if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
-    constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
-    std::string out_file = benchmarks_runner.MakeTempFile();
-    benchmarks_runner.AddCustomBenchmark(
-        kLabel,
-        {"/bin/run",
-         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
-         "run_simplest_app_benchmark.cmx",
-         "--out_file", out_file, "--benchmark_label", kLabel},
-        out_file);
+    // simplest_app
+    {
+      constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
+      std::string out_file = benchmarks_runner.MakeTempFile();
+      benchmarks_runner.AddCustomBenchmark(
+          kLabel,
+          {"/bin/run",
+           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+           "run_simplest_app_benchmark.cmx",
+           "--out_file", out_file, "--benchmark_label", kLabel},
+          out_file);
+    }
+    // yuv_to_image_pipe
+    {
+      constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
+      std::string out_file = benchmarks_runner.MakeTempFile();
+      benchmarks_runner.AddCustomBenchmark(
+          kLabel,
+          {"/bin/run",
+           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+           "run_yuv_to_image_pipe_benchmark.cmx",
+           "--out_file", out_file, "--benchmark_label", kLabel},
+          out_file);
+    }
   }
 
   AddGraphicsBenchmarks(&benchmarks_runner);
