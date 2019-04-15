@@ -150,20 +150,19 @@ class PageImplTest : public TestWithEnvironment {
   void AddEntries(int entry_count, size_t min_key_size = 0u,
                   size_t min_value_size = 0u) {
     FXL_DCHECK(entry_count <= 10000);
-    page_ptr_->StartTransactionNew();
+    page_ptr_->StartTransaction();
 
     for (int i = 0; i < entry_count; ++i) {
-      page_ptr_->PutNew(convert::ToArray(GetKey(i, min_key_size)),
-                        convert::ToArray(GetValue(i, min_value_size)));
+      page_ptr_->Put(convert::ToArray(GetKey(i, min_key_size)),
+                     convert::ToArray(GetValue(i, min_value_size)));
     }
-    page_ptr_->CommitNew();
+    page_ptr_->Commit();
   }
 
   PageSnapshotPtr GetSnapshot(
       std::vector<uint8_t> prefix = std::vector<uint8_t>()) {
     PageSnapshotPtr snapshot;
-    page_ptr_->GetSnapshotNew(snapshot.NewRequest(), std::move(prefix),
-                              nullptr);
+    page_ptr_->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
   }
 
@@ -191,7 +190,7 @@ TEST_F(PageImplTest, GetId) {
 TEST_F(PageImplTest, PutNoTransaction) {
   std::string key("some_key");
   std::string value("a small value");
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
   EXPECT_EQ(1u, objects.size());
@@ -219,7 +218,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   bool called;
   CreateReferenceStatus status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromBufferNew(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -228,8 +227,8 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   ASSERT_EQ(CreateReferenceStatus::OK, status);
 
   std::string key("some_key");
-  page_ptr_->PutReferenceNew(convert::ToArray(key), std::move(*reference),
-                             Priority::LAZY);
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+                          Priority::LAZY);
 
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
@@ -259,8 +258,8 @@ TEST_F(PageImplTest, PutUnknownReference) {
   zx_status_t status;
   page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
-  page_ptr_->PutReferenceNew(convert::ToArray(key), std::move(*reference),
-                             Priority::LAZY);
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+                          Priority::LAZY);
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::REFERENCE_NOT_FOUND, static_cast<Status>(status));
@@ -284,14 +283,14 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
   // Key too large; message doesn't go through, failing on validation.
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   zx_status_t status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
   status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
@@ -305,7 +304,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   bool called;
   CreateReferenceStatus reference_status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromBufferNew(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &reference_status,
                         &reference));
@@ -319,16 +318,16 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   // Key too large; message doesn't go through, failing on validation.
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
-  page_ptr_->PutReferenceNew(convert::ToArray(key), fidl::Clone(*reference),
-                             Priority::EAGER);
+  page_ptr_->PutReference(convert::ToArray(key), fidl::Clone(*reference),
+                          Priority::EAGER);
   zx_status_t status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
-  page_ptr_->PutReferenceNew(convert::ToArray(key), std::move(*reference),
-                             Priority::EAGER);
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+                          Priority::EAGER);
   status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
@@ -337,7 +336,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
 TEST_F(PageImplTest, DeleteNoTransaction) {
   std::string key("some_key");
 
-  page_ptr_->DeleteNew(convert::ToArray(key));
+  page_ptr_->Delete(convert::ToArray(key));
 
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
@@ -354,7 +353,7 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
 }
 
 TEST_F(PageImplTest, ClearNoTransaction) {
-  page_ptr_->ClearNew();
+  page_ptr_->Clear();
 
   DrainLoop();
   auto objects = fake_storage_->GetObjects();
@@ -384,7 +383,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   bool called;
   CreateReferenceStatus status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromBufferNew(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -397,8 +396,8 @@ TEST_F(PageImplTest, TransactionCommit) {
   //  - PutReference
   //  - Delete
   //  - Commit
-  page_ptr_->StartTransactionNew();
-  page_ptr_->PutNew(convert::ToArray(key1), convert::ToArray(value));
+  page_ptr_->StartTransaction();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value));
 
   {
     DrainLoop();
@@ -429,8 +428,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
   }
 
-  page_ptr_->PutReferenceNew(convert::ToArray(key2), std::move(*reference),
-                             Priority::LAZY);
+  page_ptr_->PutReference(convert::ToArray(key2), std::move(*reference),
+                          Priority::LAZY);
 
   {
     DrainLoop();
@@ -450,7 +449,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
   }
 
-  page_ptr_->DeleteNew(convert::ToArray(key2));
+  page_ptr_->Delete(convert::ToArray(key2));
 
   {
     DrainLoop();
@@ -467,7 +466,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_THAT(it->second->GetData(), Not(Contains(Key(key2))));
   }
 
-  page_ptr_->CommitNew();
+  page_ptr_->Commit();
 
   {
     DrainLoop();
@@ -498,8 +497,8 @@ TEST_F(PageImplTest, TransactionClearCommit) {
   //  - Put key2
   //  - Commit
 
-  page_ptr_->PutNew(convert::ToArray(key1), convert::ToArray(value1));
-  page_ptr_->StartTransactionNew();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1));
+  page_ptr_->StartTransaction();
 
   DrainLoop();
   const std::map<std::string,
@@ -517,7 +516,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     EXPECT_THAT(journal->GetData(), SizeIs(1));
   }
 
-  page_ptr_->ClearNew();
+  page_ptr_->Clear();
 
   {
     DrainLoop();
@@ -527,7 +526,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
     EXPECT_THAT(journal->GetData(), IsEmpty());
   }
 
-  page_ptr_->PutNew(convert::ToArray(key2), convert::ToArray(value2));
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2));
 
   {
     DrainLoop();
@@ -556,7 +555,7 @@ TEST_F(PageImplTest, TransactionClearCommit) {
                                storage::KeyPriority::EAGER}))));
   }
 
-  page_ptr_->CommitNew();
+  page_ptr_->Commit();
 
   {
     DrainLoop();
@@ -581,15 +580,15 @@ TEST_F(PageImplTest, TransactionRollback) {
   //  - Rollback
   //  - StartTransaction
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->RollbackNew();
+  page_ptr_->StartTransaction();
+  page_ptr_->Rollback();
 
   DrainLoop();
   EXPECT_EQ(0u, fake_storage_->GetObjects().size());
 
   // Starting another transaction should now succeed.
   bool called;
-  page_ptr_->StartTransactionNew();
+  page_ptr_->StartTransaction();
   page_ptr_->Sync(callback::SetWhenCalled(&called));
   DrainLoop();
   EXPECT_TRUE(called);
@@ -604,8 +603,8 @@ TEST_F(PageImplTest, NoTwoTransactions) {
   page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->StartTransactionNew();
+  page_ptr_->StartTransaction();
+  page_ptr_->StartTransaction();
 
   DrainLoop();
   EXPECT_TRUE(error_called);
@@ -621,7 +620,7 @@ TEST_F(PageImplTest, NoTransactionCommit) {
   page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
 
-  page_ptr_->CommitNew();
+  page_ptr_->Commit();
 
   DrainLoop();
   EXPECT_TRUE(error_called);
@@ -637,7 +636,7 @@ TEST_F(PageImplTest, NoTransactionRollback) {
   page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
 
-  page_ptr_->RollbackNew();
+  page_ptr_->Rollback();
 
   DrainLoop();
   EXPECT_TRUE(error_called);
@@ -652,7 +651,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   bool called;
   CreateReferenceStatus status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromSocketNew(
+  page_ptr_->CreateReferenceFromSocket(
       value.size(), fsl::WriteStringToSocket(value),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -672,7 +671,7 @@ TEST_F(PageImplTest, CreateReferenceFromBuffer) {
   bool called;
   CreateReferenceStatus status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromBufferNew(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
   DrainLoop();
@@ -688,9 +687,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   std::string lazy_key("another_key");
   std::string lazy_value("a lazy value");
 
-  page_ptr_->PutNew(convert::ToArray(eager_key), convert::ToArray(eager_value));
-  page_ptr_->PutWithPriorityNew(convert::ToArray(lazy_key),
-                                convert::ToArray(lazy_value), Priority::LAZY);
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value));
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -722,9 +721,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   std::string lazy_key("another_key");
   std::string lazy_value("a lazy value");
 
-  page_ptr_->PutNew(convert::ToArray(eager_key), convert::ToArray(eager_value));
-  page_ptr_->PutWithPriorityNew(convert::ToArray(lazy_key),
-                                convert::ToArray(lazy_value), Priority::LAZY);
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value));
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -961,14 +960,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   std::string lazy_key("another_key");
   std::string lazy_value("a lazy value");
 
-  page_ptr_->PutWithPriorityNew(convert::ToArray(lazy_key),
-                                convert::ToArray(lazy_value), Priority::LAZY);
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY);
 
   DrainLoop();
   storage::ObjectIdentifier lazy_object_identifier =
       fake_storage_->GetObjects().begin()->first;
 
-  page_ptr_->PutNew(convert::ToArray(eager_key), convert::ToArray(eager_value));
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value));
 
   DrainLoop();
   fake_storage_->DeleteObjectFromLocal(lazy_object_identifier);
@@ -1003,9 +1002,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   std::string lazy_key("002-another_key");
   std::string lazy_value("a lazy value");
 
-  page_ptr_->PutNew(convert::ToArray(eager_key), convert::ToArray(eager_value));
-  page_ptr_->PutWithPriorityNew(convert::ToArray(lazy_key),
-                                convert::ToArray(lazy_value), Priority::LAZY);
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value));
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY);
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
   bool called;
@@ -1042,9 +1041,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   std::string lazy_key("002-another_key");
   std::string lazy_value("a lazy value");
 
-  page_ptr_->PutNew(convert::ToArray(eager_key), convert::ToArray(eager_value));
-  page_ptr_->PutWithPriorityNew(convert::ToArray(lazy_key),
-                                convert::ToArray(lazy_value), Priority::LAZY);
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value));
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY);
 
   PageSnapshotPtr snapshot = GetSnapshot();
   bool called;
@@ -1081,10 +1080,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   std::string key2("some_key2");
   std::string value2("another value");
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->PutNew(convert::ToArray(key1), convert::ToArray(value1));
-  page_ptr_->PutNew(convert::ToArray(key2), convert::ToArray(value2));
-  page_ptr_->CommitNew();
+  page_ptr_->StartTransaction();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1));
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2));
+  page_ptr_->Commit();
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1154,10 +1153,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   std::string key2("002-some_key2");
   std::string value2("another value");
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->PutNew(convert::ToArray(key1), convert::ToArray(value1));
-  page_ptr_->PutNew(convert::ToArray(key2), convert::ToArray(value2));
-  page_ptr_->CommitNew();
+  page_ptr_->StartTransaction();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1));
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2));
+  page_ptr_->Commit();
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
 
@@ -1195,10 +1194,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   std::string key2("002-some_key2");
   std::string value2("another value");
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->PutNew(convert::ToArray(key1), convert::ToArray(value1));
-  page_ptr_->PutNew(convert::ToArray(key2), convert::ToArray(value2));
-  page_ptr_->CommitNew();
+  page_ptr_->StartTransaction();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1));
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2));
+  page_ptr_->Commit();
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1233,7 +1232,7 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   std::string key("some_key");
   std::string value("a small value");
 
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1267,7 +1266,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   bool called;
   CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
-  page_ptr_->CreateReferenceFromBufferNew(
+  page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(callback::SetWhenCalled(&called),
                         &create_reference_status, &reference));
@@ -1277,8 +1276,8 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
 
   std::string key("some_key");
-  page_ptr_->PutReferenceNew(convert::ToArray(key), std::move(*reference),
-                             Priority::EAGER);
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+                          Priority::EAGER);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1307,8 +1306,8 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   std::string key("some_key");
   std::string value("a small value");
 
-  page_ptr_->PutWithPriorityNew(convert::ToArray(key), convert::ToArray(value),
-                                Priority::LAZY);
+  page_ptr_->PutWithPriority(convert::ToArray(key), convert::ToArray(value),
+                             Priority::LAZY);
 
   DrainLoop();
   storage::ObjectIdentifier lazy_object_identifier =
@@ -1344,7 +1343,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   std::string key("some_key");
   std::string value("a small value");
 
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1382,18 +1381,18 @@ TEST_F(PageImplTest, ParallelPut) {
   PageSnapshotPtr snapshot1;
   PageSnapshotPtr snapshot2;
 
-  page_ptr_->StartTransactionNew();
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value1));
+  page_ptr_->StartTransaction();
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value1));
   DrainLoop();
-  page_ptr2->StartTransactionNew();
-  page_ptr2->PutNew(convert::ToArray(key), convert::ToArray(value2));
-  page_ptr_->CommitNew();
-  page_ptr2->CommitNew();
+  page_ptr2->StartTransaction();
+  page_ptr2->Put(convert::ToArray(key), convert::ToArray(value2));
+  page_ptr_->Commit();
+  page_ptr2->Commit();
 
-  page_ptr_->GetSnapshotNew(snapshot1.NewRequest(),
-                            fidl::VectorPtr<uint8_t>::New(0), nullptr);
-  page_ptr2->GetSnapshotNew(snapshot2.NewRequest(),
-                            fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_ptr_->GetSnapshot(snapshot1.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_ptr2->GetSnapshot(snapshot2.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   Status status;
   fuchsia::mem::BufferPtr actual_value1;
@@ -1427,19 +1426,19 @@ TEST_F(PageImplTest, SerializedOperations) {
 
   bool called[7] = {false, false, false, false, false, false, false};
 
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value1));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value1));
   page_ptr_->Sync(callback::SetWhenCalled(called));
-  page_ptr_->ClearNew();
+  page_ptr_->Clear();
   page_ptr_->Sync(callback::SetWhenCalled(called + 1));
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value2));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value2));
   page_ptr_->Sync(callback::SetWhenCalled(called + 2));
-  page_ptr_->DeleteNew(convert::ToArray(key));
+  page_ptr_->Delete(convert::ToArray(key));
   page_ptr_->Sync(callback::SetWhenCalled(called + 3));
-  page_ptr_->StartTransactionNew();
+  page_ptr_->StartTransaction();
   page_ptr_->Sync(callback::SetWhenCalled(called + 4));
-  page_ptr_->PutNew(convert::ToArray(key), convert::ToArray(value3));
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value3));
   page_ptr_->Sync(callback::SetWhenCalled(called + 5));
-  page_ptr_->CommitNew();
+  page_ptr_->Commit();
   page_ptr_->Sync(callback::SetWhenCalled(called + 6));
 
   // 4 first operations need to be serialized and blocked on commits.

@@ -291,7 +291,7 @@ void BacklogBenchmark::WaitForUploaderUpload() {
       return;
     }
   };
-  uploader_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
+  uploader_page_->SetSyncStateWatcher(sync_watcher_binding_.NewBinding());
 }
 
 void BacklogBenchmark::ConnectReader() {
@@ -330,12 +330,12 @@ void BacklogBenchmark::WaitForReaderDownload() {
       return;
     }
   };
-  reader_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
+  reader_page_->SetSyncStateWatcher(sync_watcher_binding_.NewBinding());
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
-  reader_page_->GetSnapshotNew(reader_snapshot_.NewRequest(),
-                               fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  reader_page_->GetSnapshot(reader_snapshot_.NewRequest(),
+                            fidl::VectorPtr<uint8_t>::New(0), nullptr);
   TRACE_ASYNC_BEGIN("benchmark", "get_all_entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }

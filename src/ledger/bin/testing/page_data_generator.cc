@@ -47,7 +47,7 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
       callback(Status::IO_ERROR);
       return;
     }
-    (*page)->PutWithPriorityNew(std::move(key), std::move(value), priority);
+    (*page)->PutWithPriority(std::move(key), std::move(value), priority);
     callback(Status::OK);
     return;
   }
@@ -57,7 +57,7 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
     callback(Status::IO_ERROR);
     return;
   }
-  (*page)->CreateReferenceFromBufferNew(
+  (*page)->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [page, key = std::move(key), priority, callback = std::move(callback)](
           CreateReferenceStatus status, ReferencePtr reference) mutable {
@@ -66,8 +66,7 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
           callback(Status::IO_ERROR);
           return;
         }
-        (*page)->PutReferenceNew(std::move(key), std::move(*reference),
-                                 priority);
+        (*page)->PutReference(std::move(key), std::move(*reference), priority);
         callback(Status::OK);
       });
 }
@@ -103,7 +102,7 @@ void PageDataGenerator::PutInTransaction(
             keys.begin() + current_key_index + this_transaction_size,
             std::back_inserter(partial_keys));
 
-  (*page)->StartTransactionNew();
+  (*page)->StartTransaction();
   PutMultipleEntries(
       page, std::move(partial_keys), value_size, ref_strategy, priority,
       [this, page, keys = std::move(keys), current_key_index, value_size,
@@ -113,7 +112,7 @@ void PageDataGenerator::PutInTransaction(
           callback(status);
           return;
         }
-        (*page)->CommitNew();
+        (*page)->Commit();
         PutInTransaction(page, std::move(keys),
                          current_key_index + transaction_size, value_size,
                          transaction_size, ref_strategy, priority,

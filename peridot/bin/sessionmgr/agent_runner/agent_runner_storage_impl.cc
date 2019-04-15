@@ -119,8 +119,8 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
     std::string value;
     XdrWrite(&value, &data_, XdrTriggerInfo);
 
-    storage_->page()->PutWithPriorityNew(to_array(key), to_array(value),
-                                         fuchsia::ledger::Priority::EAGER);
+    storage_->page()->PutWithPriority(to_array(key), to_array(value),
+                                      fuchsia::ledger::Priority::EAGER);
     Done(true);
   }
 
@@ -141,7 +141,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
  private:
   void Run() override {
     std::string key = MakeTriggerKey(agent_url_, task_id_);
-    storage_->page()->DeleteNew(to_array(key));
+    storage_->page()->Delete(to_array(key));
     Done(true);
   }
 

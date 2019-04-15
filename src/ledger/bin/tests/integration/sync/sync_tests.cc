@@ -22,7 +22,7 @@ class SyncIntegrationTest : public IntegrationTest {
  protected:
   std::unique_ptr<TestSyncStateWatcher> WatchPageSyncState(PagePtr* page) {
     auto watcher = std::make_unique<TestSyncStateWatcher>();
-    (*page)->SetSyncStateWatcherNew(watcher->NewBinding());
+    (*page)->SetSyncStateWatcher(watcher->NewBinding());
     return watcher;
   }
 
@@ -46,7 +46,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   auto instance1 = NewLedgerAppInstance();
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
-  page1->PutNew(convert::ToArray("Hello"), convert::ToArray("World"));
+  page1->Put(convert::ToArray("Hello"), convert::ToArray("World"));
 
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
@@ -65,8 +65,8 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr);
   std::unique_ptr<InlinedValue> inlined_value;
 
   loop_waiter = NewWaiter();
@@ -107,7 +107,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   int page2_initial_state_change_count =
       page2_state_watcher->state_change_count;
 
-  page1->PutNew(convert::ToArray("Hello"), convert::ToArray("World"));
+  page1->Put(convert::ToArray("Hello"), convert::ToArray("World"));
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -124,8 +124,8 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
       }));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr);
 
   Status status;
   std::unique_ptr<InlinedValue> inlined_value;
@@ -178,13 +178,13 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   loop_waiter = NewWaiter();
-  page1->CreateReferenceFromBufferNew(
+  page1->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(loop_waiter->GetCallback(), &create_reference_status,
                         &reference));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
-  page1->PutReferenceNew(key, *reference, Priority::LAZY);
+  page1->PutReference(key, *reference, Priority::LAZY);
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -197,8 +197,8 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
       }));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr);
   Status status;
   fuchsia::mem::BufferPtr buffer;
   loop_waiter = NewWaiter();
@@ -219,7 +219,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   ASSERT_EQ(buffer->size, 10u);
 
   // Change priority to eager, re-upload.
-  page1->PutReferenceNew(key, *reference, Priority::EAGER);
+  page1->PutReference(key, *reference, Priority::EAGER);
 
   page2_initial_state_change_count = page2_state_watcher->state_change_count;
   // Wait until page1 finishes uploading the changes.
@@ -233,8 +233,8 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
       }));
 
   loop_waiter = NewWaiter();
-  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr);
 
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();

@@ -284,14 +284,14 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
     FlowToken flow{this, &status_};
     status_ = StoryStorage::Status::OK;
 
-    page_client_->page()->CreateReferenceFromBufferNew(
+    page_client_->page()->CreateReferenceFromBuffer(
         std::move(value_), [this, flow, weak_ptr = GetWeakPtr()](
                                fuchsia::ledger::CreateReferenceStatus status,
                                fuchsia::ledger::ReferencePtr reference) {
           if (weak_ptr) {
             if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
               FXL_DCHECK(reference);
-              page_client_->page()->PutReferenceNew(
+              page_client_->page()->PutReference(
                   to_array(key_), std::move(*reference),
                   fuchsia::ledger::Priority::EAGER);
             } else {
@@ -429,9 +429,9 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
               // instance will be deleted by the time this callback is
               // executed.
               if (status == StoryStorage::Status::OK) {
-                page->CommitNew();
+                page->Commit();
               } else {
-                page->RollbackNew();
+                page->Rollback();
               }
               result_call(status);
             }),
@@ -446,7 +446,7 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
     status_ = StoryStorage::Status::OK;
     // This transaction will be either committed or rolled back in the wrapped
     // result call.
-    page()->StartTransactionNew();
+    page()->StartTransaction();
 
     // First verify the type of the data to write matches the existing entity
     // type.
@@ -483,14 +483,14 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
 
   void WriteVmo(fuchsia::mem::Buffer data, const std::string& key,
                 FlowToken flow) {
-    page()->CreateReferenceFromBufferNew(
+    page()->CreateReferenceFromBuffer(
         std::move(data),
         [this, key, flow](fuchsia::ledger::CreateReferenceStatus status,
                           fuchsia::ledger::ReferencePtr reference) {
           if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
             FXL_DCHECK(reference);
-            page()->PutReferenceNew(to_array(key), std::move(*reference),
-                                    fuchsia::ledger::Priority::EAGER);
+            page()->PutReference(to_array(key), std::move(*reference),
+                                 fuchsia::ledger::Priority::EAGER);
           } else {
             FXL_LOG(ERROR) << trace_name() << " "
                            << "SetEntityDataCall.CreateReferenceFromBuffer "

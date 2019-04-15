@@ -23,8 +23,8 @@ PageClient::PageClient(std::string context, LedgerClient* ledger_client,
       page_(ledger_client_->GetPage(this, context_, page_id_)),
       prefix_(std::move(prefix)) {
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshotNew(snapshot.NewRequest(), to_array(prefix_),
-                        binding_.NewBinding());
+  page_->GetSnapshot(snapshot.NewRequest(), to_array(prefix_),
+                     binding_.NewBinding());
 }
 
 PageClient::~PageClient() {
@@ -35,8 +35,8 @@ PageClient::~PageClient() {
 fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
     fit::function<void()> on_error) {
   fuchsia::ledger::PageSnapshotPtr ptr;
-  page_->GetSnapshotNew(ptr.NewRequest(), to_array(prefix_),
-                        nullptr /* page_watcher */);
+  page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_),
+                     nullptr /* page_watcher */);
   return ptr;
 }
 

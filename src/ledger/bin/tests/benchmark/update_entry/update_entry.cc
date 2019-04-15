@@ -130,7 +130,7 @@ void UpdateEntryBenchmark::Run() {
         page_ = std::move(page);
         std::vector<uint8_t> key = generator_.MakeKey(0, key_size_);
         if (transaction_size_ > 0) {
-          page_->StartTransactionNew();
+          page_->StartTransaction();
           page_->Sync([this, key = std::move(key)]() mutable {
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
             RunSingle(0, std::move(key));
@@ -149,7 +149,7 @@ void UpdateEntryBenchmark::RunSingle(int i, std::vector<uint8_t> key) {
 
   std::vector<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_->PutNew(key, std::move(value));
+  page_->Put(key, std::move(value));
   page_->Sync([this, i, key = std::move(key)]() mutable {
     TRACE_ASYNC_END("benchmark", "put", i);
     if (transaction_size_ > 0 &&
@@ -164,7 +164,7 @@ void UpdateEntryBenchmark::RunSingle(int i, std::vector<uint8_t> key) {
 
 void UpdateEntryBenchmark::CommitAndRunNext(int i, std::vector<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->CommitNew();
+  page_->Commit();
   page_->Sync([this, i, key = std::move(key)]() mutable {
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
@@ -173,7 +173,7 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i, std::vector<uint8_t> key) {
       RunSingle(i + 1, std::move(key));
       return;
     }
-    page_->StartTransactionNew();
+    page_->StartTransaction();
     page_->Sync([this, i = i + 1, key = std::move(key)]() mutable {
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
       RunSingle(i, std::move(key));

@@ -225,7 +225,7 @@ void WriteObjectToKey(fuchsia::ledger::Page* page, const std::string& key,
   auto bytes = EncodeForStorage(&value);
   // TODO(thatguy): Calculate if this value is too big for a FIDL message.  If
   // so, fall back on Page.CreateReferenceFromBuffer() and Page.PutReference().
-  page->PutNew(to_array(key), std::move(bytes));
+  page->Put(to_array(key), std::move(bytes));
 }
 
 // Reads the latest device-local state, applies |commands| to it, and then
@@ -283,9 +283,9 @@ fit::promise<> LedgerStoryModelStorage::Load() {
   };
   auto state = std::make_unique<State>();
 
-  page()->GetSnapshotNew(state->page_snapshot.NewRequest(),
-                         fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
-                         nullptr /* watcher */);
+  page()->GetSnapshot(state->page_snapshot.NewRequest(),
+                      fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
+                      nullptr /* watcher */);
   auto key = MakeDeviceKey(device_id_);
   auto read_promise =
       PageSnapshotPromise::GetInline(state->page_snapshot.get(), key)
@@ -342,8 +342,8 @@ fit::promise<> LedgerStoryModelStorage::Execute(
   return fit::make_promise([this, state = state.get(),
                             commands = std::move(
                                 commands)]() mutable -> fit::promise<> {
-           page()->StartTransactionNew();
-           page()->GetSnapshotNew(
+           page()->StartTransaction();
+           page()->GetSnapshot(
                state->page_snapshot.NewRequest(),
                fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
                nullptr /* watcher */);
@@ -376,10 +376,10 @@ fit::promise<> LedgerStoryModelStorage::Execute(
       // Keep |state| alive until execution reaches here. It is not needed in
       // any subsequent continuation functions.
       .inspect([state = std::move(state)](fit::result<>& r) {})
-      .and_then([page = page()] { page->CommitNew(); })
+      .and_then([page = page()] { page->Commit(); })
       .or_else([page = page()] {
         // Even if RollbackTransaction() succeeds, fail the overall task.
-        page->RollbackNew();
+        page->Rollback();
         return fit::error();
       })
       .wrap_with(sequencer_)  // Waits until last Execute() is done.

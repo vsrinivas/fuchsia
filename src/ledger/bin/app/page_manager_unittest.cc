@@ -217,13 +217,13 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   ASSERT_TRUE(called);
   ASSERT_EQ(storage::Status::OK, internal_status);
 
-  page1->PutNew(convert::ToArray("key1"), convert::ToArray("value1"));
+  page1->Put(convert::ToArray("key1"), convert::ToArray("value1"));
 
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
-  page1->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        std::move(watcher));
+  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher));
 
   page1.Unbind();
   page2.Unbind();
@@ -278,7 +278,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_EQ(expected_page_id.id, found_page_id.id);
 
   // Clear should not be executed.
-  page->ClearNew();
+  page->Clear();
 
   fake_page_sync_ptr->on_backlog_downloaded_callback();
   // BindPage callback can now be executed; Clear callback should then be

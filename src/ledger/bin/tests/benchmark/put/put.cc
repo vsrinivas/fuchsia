@@ -179,7 +179,7 @@ void PutBenchmark::Run() {
 
         InitializeKeys([this](std::vector<std::vector<uint8_t>> keys) mutable {
           if (transaction_size_ > 0) {
-            page_->StartTransactionNew();
+            page_->StartTransaction();
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
           }
           BindWatcher(std::move(keys));
@@ -242,8 +242,8 @@ void PutBenchmark::InitializeKeys(
 
 void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
   PageSnapshotPtr snapshot;
-  page_->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        page_watcher_binding_.NewBinding());
+  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     page_watcher_binding_.NewBinding());
   page_->Sync([this, keys = std::move(keys)]() mutable {
     RunSingle(0, std::move(keys));
   });
@@ -282,7 +282,7 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
-    page_->PutNew(std::move(key), std::move(value));
+    page_->Put(std::move(key), std::move(value));
     page_->Sync([trace_event_id, on_done = std::move(on_done)] {
       TRACE_ASYNC_END("benchmark", "put", trace_event_id);
       on_done();
@@ -292,7 +292,7 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
   fsl::SizedVmo vmo;
   FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
-  page_->CreateReferenceFromBufferNew(
+  page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [this, trace_event_id, key = std::move(key),
        on_done = std::move(on_done)](CreateReferenceStatus status,
@@ -303,8 +303,8 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
         }
         TRACE_ASYNC_END("benchmark", "create_reference", trace_event_id);
         TRACE_ASYNC_BEGIN("benchmark", "put_reference", trace_event_id);
-        page_->PutReferenceNew(std::move(key), std::move(*reference),
-                               Priority::EAGER);
+        page_->PutReference(std::move(key), std::move(*reference),
+                            Priority::EAGER);
         page_->Sync([trace_event_id, on_done = std::move(on_done)] {
           TRACE_ASYNC_END("benchmark", "put_reference", trace_event_id);
           TRACE_ASYNC_END("benchmark", "put", trace_event_id);
@@ -317,7 +317,7 @@ void PutBenchmark::CommitAndRunNext(int i, size_t key_number,
                                     std::vector<std::vector<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->CommitNew();
+  page_->Commit();
   page_->Sync([this, i, keys = std::move(keys)]() mutable {
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
@@ -326,7 +326,7 @@ void PutBenchmark::CommitAndRunNext(int i, size_t key_number,
       RunSingle(i + 1, std::move(keys));
       return;
     }
-    page_->StartTransactionNew();
+    page_->StartTransaction();
     page_->Sync([this, i = i + 1, keys = std::move(keys)]() mutable {
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
       RunSingle(i, std::move(keys));

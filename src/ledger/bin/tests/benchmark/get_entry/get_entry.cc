@@ -147,8 +147,8 @@ void GetEntryBenchmark::Populate() {
 
 void GetEntryBenchmark::GetSnapshot() {
   TRACE_ASYNC_BEGIN("benchmark", "get_snapshot", 0);
-  page_->GetSnapshotNew(snapshot_.NewRequest(),
-                        fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_->GetSnapshot(snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr);
   page_->Sync([this] {
     TRACE_ASYNC_END("benchmark", "get_snapshot", 0);
     TRACE_ASYNC_BEGIN("benchmark", "get_keys", 0);

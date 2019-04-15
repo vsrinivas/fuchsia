@@ -110,8 +110,8 @@ TodoApp::TodoApp(async::Loop* loop)
   ledger_->GetRootPage(page_.NewRequest());
 
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                        page_watcher_binding_.NewBinding());
+  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     page_watcher_binding_.NewBinding());
   List(std::move(snapshot));
 
   async::PostTask(loop_->dispatcher(), [this] { Act(); });
@@ -154,7 +154,7 @@ void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
 
 void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshotNew(snapshot.NewRequest(), {}, nullptr);
+  page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(
@@ -166,13 +166,13 @@ void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
 }
 
 void TodoApp::AddNew() {
-  page_->PutNew(MakeKey(), ToArray(generator_.Generate()));
+  page_->Put(MakeKey(), ToArray(generator_.Generate()));
 }
 
 void TodoApp::DeleteOne(std::vector<Key> keys) {
   FXL_DCHECK(keys.size());
   std::uniform_int_distribution<> distribution(0, keys.size() - 1);
-  page_->DeleteNew(std::move(keys.at(distribution(rng_))));
+  page_->Delete(std::move(keys.at(distribution(rng_))));
 }
 
 void TodoApp::Act() {

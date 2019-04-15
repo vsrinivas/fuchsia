@@ -130,8 +130,8 @@ class ReadDataCall : public PageOperation<DataPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshotNew(page_snapshot_.NewRequest(),
-                                 fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(),
+                              fidl::VectorPtr<uint8_t>::New(0), nullptr);
     page_snapshot_->Get(to_array(key_), [this, flow](
                                             fuchsia::ledger::Status status,
                                             fuchsia::mem::BufferPtr value) {
@@ -192,8 +192,8 @@ class ReadAllDataCall : public PageOperation<DataArray> {
   void Run() override {
     FlowToken flow{this, &data_};
 
-    this->page()->GetSnapshotNew(page_snapshot_.NewRequest(), to_array(prefix_),
-                                 nullptr);
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_),
+                              nullptr);
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
@@ -252,7 +252,7 @@ class WriteDataCall : public PageOperation<> {
 
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json, &vmo));
-    page()->CreateReferenceFromBufferNew(
+    page()->CreateReferenceFromBuffer(
         std::move(vmo).ToTransport(),
         [this, weak_ptr = GetWeakPtr(), flow](
             fuchsia::ledger::CreateReferenceStatus status,
@@ -272,8 +272,8 @@ class WriteDataCall : public PageOperation<> {
       return;
     }
 
-    page()->PutReferenceNew(to_array(key_), std::move(*reference),
-                            fuchsia::ledger::Priority::EAGER);
+    page()->PutReference(to_array(key_), std::move(*reference),
+                         fuchsia::ledger::Priority::EAGER);
   }
 
   const std::string key_;
@@ -292,8 +292,8 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshotNew(page_snapshot_.NewRequest(),
-                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page()->GetSnapshot(page_snapshot_.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0), nullptr);
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {

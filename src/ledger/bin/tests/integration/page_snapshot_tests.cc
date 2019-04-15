@@ -36,7 +36,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       PagePtr* page,
       fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
     PageSnapshotPtr snapshot;
-    (*page)->GetSnapshotNew(snapshot.NewRequest(), std::move(prefix), nullptr);
+    (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
   }
 
@@ -99,7 +99,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
@@ -126,7 +126,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   expected_value.resize(100);
 
   PagePtr page = instance->GetTestPage();
-  page->PutNew(convert::ToArray("name"), convert::ToArray(expected_value));
+  page->Put(convert::ToArray("name"), convert::ToArray(expected_value));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   Status status;
@@ -148,8 +148,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 
   // Put the 2 values without waiting for the callbacks.
   PagePtr page = instance->GetTestPage();
-  page->PutNew(convert::ToArray("name"), convert::ToArray(value1));
-  page->PutNew(convert::ToArray("name"), convert::ToArray(value2));
+  page->Put(convert::ToArray("name"), convert::ToArray(value1));
+  page->Put(convert::ToArray("name"), convert::ToArray(value2));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   Status status;
@@ -165,7 +165,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   EXPECT_EQ("Alice",
@@ -222,7 +222,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
       RandomArray(GetRandom(), 20, {0, 1, 1}),
   };
   for (auto& key : keys) {
-    page->PutNew(key, RandomArray(GetRandom(), 50));
+    page->Put(key, RandomArray(GetRandom(), 50));
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -300,7 +300,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   }
 
   for (auto& key : keys) {
-    page->PutNew(key, RandomArray(GetRandom(), 10));
+    page->Put(key, RandomArray(GetRandom(), 10));
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -339,7 +339,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
       RandomArray(GetRandom(), 50),
   };
   for (size_t i = 0; i < N; ++i) {
-    page->PutNew(keys[i], values[i]);
+    page->Put(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -419,7 +419,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   }
 
   for (size_t i = 0; i < N; ++i) {
-    page->PutNew(keys[i], values[i]);
+    page->Put(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -461,7 +461,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   }
 
   for (size_t i = 0; i < N; ++i) {
-    page->PutNew(keys[i], values[i]);
+    page->Put(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -494,7 +494,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
       RandomArray(GetRandom(), 20),
   };
   for (size_t i = 0; i < N; ++i) {
-    page->PutNew(keys[i], values[i]);
+    page->Put(keys[i], values[i]);
   }
 
   // Get a snapshot.
@@ -528,7 +528,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
   CreateReferenceStatus status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocketNew(
+  page->CreateReferenceFromSocket(
       123, StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &status, &reference));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -545,7 +545,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocketNew(
+  page->CreateReferenceFromSocket(
       big_data.size(), StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &create_reference_status,
                         &reference));
@@ -553,8 +553,8 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
 
   // Set the reference under a key.
-  page->PutReferenceNew(convert::ToArray("big data"), std::move(*reference),
-                        Priority::EAGER);
+  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+                     Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -581,7 +581,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromBufferNew(
+  page->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       callback::Capture(waiter->GetCallback(), &create_reference_status,
                         &reference));
@@ -589,8 +589,8 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
 
   // Set the reference under a key.
-  page->PutReferenceNew(convert::ToArray("big data"), std::move(*reference),
-                        Priority::EAGER);
+  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+                     Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -608,7 +608,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
@@ -641,9 +641,9 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   page->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
   // Waiting to sync, otherwise the snapshot requested in the rest of the test
-  // might be bound before |PutNew| has terminated.
+  // might be bound before |Put| has terminated.
   waiter = NewWaiter();
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());

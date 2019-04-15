@@ -30,16 +30,16 @@ class PageMutationTest : public IntegrationTest {
 
   std::vector<Entry> GetEntries() {
     PageSnapshotPtr snapshot;
-    page_->GetSnapshotNew(snapshot.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       nullptr);
     return SnapshotGetEntries(this, &snapshot);
   }
 
   void Put(std::string key, std::string value) {
-    page_->PutNew(convert::ToArray(key), convert::ToArray(value));
+    page_->Put(convert::ToArray(key), convert::ToArray(value));
   }
 
-  void Delete(std::string key) { page_->DeleteNew(convert::ToArray(key)); }
+  void Delete(std::string key) { page_->Delete(convert::ToArray(key)); }
 
  protected:
   std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance> app_instance_;
@@ -62,26 +62,26 @@ TEST_P(PageMutationTest, PutOutsideOfTransaction) {
 }
 
 TEST_P(PageMutationTest, PutInsideOfTransaction) {
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Put("key", "value");
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 
   Put("key2", "value2");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(),
               MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, RollbackTransaction) {
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Put("key", "value");
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 
   Put("key2", "value2");
-  page_->RollbackNew();
+  page_->Rollback();
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 }
@@ -103,11 +103,11 @@ TEST_P(PageMutationTest, DeleteInsideOfTransaction) {
   ASSERT_THAT(GetEntries(),
               MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Delete("key");
   Put("key3", "value3");
   Delete("key3");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), MatchEntries({{"key2", "value2"}}));
 }
@@ -118,7 +118,7 @@ TEST_P(PageMutationTest, ClearOutsideOfTransaction) {
   ASSERT_THAT(GetEntries(),
               MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
-  page_->ClearNew();
+  page_->Clear();
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 }
@@ -129,11 +129,11 @@ TEST_P(PageMutationTest, ClearInsideOfTransaction) {
   ASSERT_THAT(GetEntries(),
               MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Put("key3", "value3");
-  page_->ClearNew();
+  page_->Clear();
   Put("key4", "value4");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), MatchEntries({{"key4", "value4"}}));
 }
@@ -144,13 +144,13 @@ TEST_P(PageMutationTest, MultipleClearCallsInsideOfTransaction) {
   ASSERT_THAT(GetEntries(),
               MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Put("key3", "value3");
-  page_->ClearNew();
+  page_->Clear();
   Put("key4", "value4");
-  page_->ClearNew();
+  page_->Clear();
   Put("key5", "value5");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), MatchEntries({{"key5", "value5"}}));
 }
@@ -159,10 +159,10 @@ TEST_P(PageMutationTest, ClearAndDeleteInsideOfTransaction) {
   Put("key", "value");
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
-  page_->StartTransactionNew();
-  page_->ClearNew();
+  page_->StartTransaction();
+  page_->Clear();
   Delete("key");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 }
@@ -171,10 +171,10 @@ TEST_P(PageMutationTest, DeleteAndClearInsideOfTransaction) {
   Put("key", "value");
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
-  page_->StartTransactionNew();
+  page_->StartTransaction();
   Delete("key");
-  page_->ClearNew();
-  page_->CommitNew();
+  page_->Clear();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), IsEmpty());
 }
@@ -183,10 +183,10 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   Put("key", "value");
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 
-  page_->StartTransactionNew();
-  page_->ClearNew();
+  page_->StartTransaction();
+  page_->Clear();
   Put("key", "value");
-  page_->CommitNew();
+  page_->Commit();
 
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 }

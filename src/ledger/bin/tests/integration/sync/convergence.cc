@@ -257,16 +257,16 @@ class ConvergenceTest
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
                                           std::move(page_snapshot));
-    (*page)->GetSnapshotNew(std::move(page_snapshot_request),
-                            fidl::VectorPtr<uint8_t>::New(0),
-                            std::move(page_watcher));
+    (*page)->GetSnapshot(std::move(page_snapshot_request),
+                         fidl::VectorPtr<uint8_t>::New(0),
+                         std::move(page_watcher));
     return watcher;
   }
 
   std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
-    (*page)->SetSyncStateWatcherNew(watcher->NewBinding());
+    (*page)->SetSyncStateWatcher(watcher->NewBinding());
     return watcher;
   }
 
@@ -327,20 +327,19 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    pages_[i]->StartTransactionNew();
+    pages_[i]->StartTransaction();
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
-      pages_[i]->PutNew(convert::ToArray("value"),
-                        DoubleToArray(distribution(generator)));
+      pages_[i]->Put(convert::ToArray("value"),
+                     DoubleToArray(distribution(generator)));
     } else {
-      pages_[i]->PutNew(convert::ToArray("value"),
-                        data_generator_->MakeValue(50));
+      pages_[i]->Put(convert::ToArray("value"), data_generator_->MakeValue(50));
     }
   }
 
   auto sync_waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (int i = 0; i < num_ledgers_; i++) {
-    pages_[i]->CommitNew();
+    pages_[i]->Commit();
     pages_[i]->Sync(sync_waiter->NewCallback());
   }
 

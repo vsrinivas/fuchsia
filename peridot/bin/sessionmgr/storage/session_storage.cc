@@ -170,12 +170,12 @@ class DeleteStoryCall : public Operation<> {
     ledger_->GetPage(std::make_unique<fuchsia::ledger::PageId>(
                          *std::move(story_data_.mutable_story_page_id())),
                      story_page_.NewRequest());
-    story_page_->ClearNew();
+    story_page_->Clear();
     // Remove the story data in the session page.
-    session_page_->DeleteNew(
+    session_page_->Delete(
         to_array(StoryNameToStoryDataKey(story_data_.story_info().id)));
     // Remove the story snapshot in the session page.
-    session_page_->DeleteNew(
+    session_page_->Delete(
         to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id)));
   }
 
@@ -329,7 +329,7 @@ class WriteSnapshotCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    page_client_->page()->CreateReferenceFromBufferNew(
+    page_client_->page()->CreateReferenceFromBuffer(
         std::move(snapshot_),
         [this, flow](fuchsia::ledger::CreateReferenceStatus status,
                      std::unique_ptr<fuchsia::ledger::Reference> reference) {
@@ -348,7 +348,7 @@ class WriteSnapshotCall : public Operation<> {
 
   void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
                     FlowToken flow) {
-    page_client_->page()->PutReferenceNew(
+    page_client_->page()->PutReference(
         to_array(key_), std::move(*reference),
         // TODO(MI4-1425): Experiment with declaring lazy priority.
         fuchsia::ledger::Priority::EAGER);

@@ -172,7 +172,7 @@ void ConvergenceBenchmark::Run() {
         device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
-    device_context->page_connection->GetSnapshotNew(
+    device_context->page_connection->GetSnapshot(
         snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
         device_context->page_watcher->NewBinding());
     device_context->page_connection->Sync(waiter->NewCallback());
@@ -196,8 +196,7 @@ void ConvergenceBenchmark::Start(int step) {
       remaining_keys_.insert(convert::ToString(key));
     }
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-    devices_[device_id]->page_connection->PutNew(std::move(key),
-                                                 std::move(value));
+    devices_[device_id]->page_connection->Put(std::move(key), std::move(value));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);

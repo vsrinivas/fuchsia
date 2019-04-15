@@ -264,7 +264,7 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
   ledger_client()->ledger()->GetPage(std::move(story_page_id),
                                      story_page.NewRequest());
   done = false;
-  story_page->PutNew(to_array("key"), to_array("value"));
+  story_page->Put(to_array("key"), to_array("value"));
   story_page->Sync([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
@@ -275,8 +275,8 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
 
   // Show that the underlying page is now empty.
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  story_page->GetSnapshotNew(snapshot.NewRequest(), to_array("") /* prefix */,
-                             nullptr /* watcher */);
+  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */,
+                          nullptr /* watcher */);
   done = false;
   snapshot->GetEntries(to_array("") /* key_start */, nullptr /* token */,
                        [&](fuchsia::ledger::Status status,

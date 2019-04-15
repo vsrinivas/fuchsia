@@ -262,8 +262,8 @@ class MessageQueueManager::GetQueueTokenCall
     snapshot_.set_error_handler([](zx_status_t status) {
       FXL_LOG(WARNING) << "Error on snapshot connection";
     });
-    page()->GetSnapshotNew(snapshot_.NewRequest(),
-                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page()->GetSnapshot(snapshot_.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);
@@ -320,8 +320,8 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    page()->GetSnapshotNew(snapshot_.NewRequest(), std::vector<uint8_t>(),
-                           nullptr);
+    page()->GetSnapshot(snapshot_.NewRequest(), std::vector<uint8_t>(),
+                        nullptr);
     std::string key = MakeMessageQueueKey(token_);
     snapshot_->Get(to_array(key), [this, flow](fuchsia::ledger::Status status,
                                                fuchsia::mem::BufferPtr value) {
@@ -411,14 +411,14 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     // queue.
     message_queue_info_.queue_token = GenerateQueueToken();
 
-    page()->StartTransactionNew();
+    page()->StartTransaction();
     const std::string message_queue_token_key =
         MakeMessageQueueTokenKey(message_queue_info_.component_namespace,
                                  message_queue_info_.component_instance_id,
                                  message_queue_info_.queue_name);
 
-    page()->PutNew(to_array(message_queue_token_key),
-                   to_array(message_queue_info_.queue_token));
+    page()->Put(to_array(message_queue_token_key),
+                to_array(message_queue_info_.queue_token));
 
     const std::string message_queue_key =
         MakeMessageQueueKey(message_queue_info_.queue_token);
@@ -426,9 +426,9 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     std::string json;
     XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
 
-    page()->PutNew(to_array(message_queue_key), to_array(json));
+    page()->Put(to_array(message_queue_key), to_array(json));
 
-    page()->CommitNew();
+    page()->Commit();
     FXL_LOG(INFO) << trace_name() << " "
                   << "Created message queue: "
                   << message_queue_info_.queue_token;
@@ -494,15 +494,15 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
               message_queue_info_.queue_name);
 
           // Delete the ledger entries.
-          page()->StartTransactionNew();
+          page()->StartTransaction();
 
-          page()->DeleteNew(to_array(message_queue_key));
+          page()->Delete(to_array(message_queue_key));
 
-          page()->DeleteNew(to_array(message_queue_token_key));
+          page()->Delete(to_array(message_queue_token_key));
 
           message_queue_manager_->ClearMessageQueueStorage(message_queue_info_);
 
-          page()->CommitNew();
+          page()->Commit();
 
           FXL_LOG(INFO) << trace_name() << " "
                         << "Deleted message queue: "
@@ -534,8 +534,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    page()->GetSnapshotNew(snapshot_.NewRequest(),
-                           to_array(message_queues_key_prefix_), nullptr);
+    page()->GetSnapshot(snapshot_.NewRequest(),
+                        to_array(message_queues_key_prefix_), nullptr);
     GetEntries(snapshot_.get(), &component_entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
@@ -567,7 +567,7 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
     }
 
     for (auto& i : keys_to_delete) {
-      page()->DeleteNew(to_array(i));
+      page()->Delete(to_array(i));
     }
 
     message_queue_manager_->ClearMessageQueueStorage(component_namespace_);

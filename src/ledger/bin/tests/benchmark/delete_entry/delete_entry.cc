@@ -149,7 +149,7 @@ void DeleteEntryBenchmark::Populate() {
           return;
         }
         if (transaction_size_ > 0) {
-          page_->StartTransactionNew();
+          page_->StartTransaction();
           page_->Sync([this] {
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
             RunSingle(0);
@@ -173,7 +173,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "delete_entry", i);
-  page_->DeleteNew(std::move(keys_[i]));
+  page_->Delete(std::move(keys_[i]));
   page_->Sync([this, i]() {
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
     if (transaction_size_ > 0 &&
@@ -188,7 +188,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 
 void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->CommitNew();
+  page_->Commit();
   page_->Sync([this, i]() {
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
@@ -197,7 +197,7 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
       RunSingle(i + 1);
       return;
     }
-    page_->StartTransactionNew();
+    page_->StartTransaction();
     page_->Sync([this, i = i + 1]() {
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
       RunSingle(i);
