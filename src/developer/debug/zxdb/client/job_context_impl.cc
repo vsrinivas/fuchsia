@@ -26,6 +26,7 @@ JobContextImpl::JobContextImpl(SystemImpl* system,
       is_implicit_component_root_(is_implicit_component_root),
       impl_weak_factory_(this) {
   settings_.AddObserver(ClientSettings::Job::kFilters, this);
+  settings_.set_name("job");
 }
 
 JobContextImpl::~JobContextImpl() {

@@ -4,23 +4,11 @@
 
 #include "src/developer/debug/zxdb/client/setting_store.h"
 
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
-
-namespace {
-
-StoredSetting CreateStoredSetting(SettingValue value, SettingSchemaItem item,
-                                  SettingSchema::Level level) {
-  StoredSetting setting = {};
-  setting.value = std::move(value);
-  setting.schema_item = std::move(item);
-  setting.level = level;
-  return setting;
-}
-
-}  // namespace
 
 SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema,
                            SettingStore* fallback)
@@ -49,74 +37,59 @@ void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
 // Getters ---------------------------------------------------------------------
 
 bool SettingStore::GetBool(const std::string& key) const {
-  auto setting = GetSetting(key);
-  FXL_DCHECK(setting.value.is_bool());
-  return setting.value.get_bool();
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_bool());
+  return value.get_bool();
 }
 
 int SettingStore::GetInt(const std::string& key) const {
-  auto setting = GetSetting(key);
-  FXL_DCHECK(setting.value.is_int());
-  return setting.value.get_int();
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_int());
+  return value.get_int();
 }
 
 std::string SettingStore::GetString(const std::string& key) const {
-  auto setting = GetSetting(key);
-  FXL_DCHECK(setting.value.is_string());
-  return setting.value.get_string();
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_string());
+  return value.get_string();
 }
 
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
-  auto setting = GetSetting(key);
-  FXL_DCHECK(setting.value.is_list());
-  return setting.value.get_list();
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_list());
+  return value.get_list();
 }
 
-StoredSetting SettingStore::GetSetting(const std::string& key,
-                                       bool return_default) const {
+SettingValue SettingStore::GetValue(const std::string& key) const {
+  return GetSetting(key).value;
+}
+
+Setting SettingStore::GetSetting(const std::string& key) const {
+  // First check if it's in the schema.
+  auto default_setting = schema_->GetSetting(key);
+  if (default_setting.value.is_null())
+    return Setting();
+
   // Check if it already exists. If so, return it.
-  auto it = settings_.find(key);
-  if (it != settings_.end()) {
-    // We found it. We check to see if is within the schema.
-    auto schema_item = schema_->GetItem(key);
-    if (schema_item.value().is_null())
-      return StoredSetting();
-    return CreateStoredSetting(it->second, std::move(schema_item), level());
+  auto it = values_.find(key);
+  if (it != values_.end()) {
+    DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key
+                       << ": " << it->second.ToDebugString();
+    return {std::move(default_setting.info),  it->second};
   }
 
   // We check the fallback SettingStore to see if it has the setting.
-  StoredSetting setting;
   if (fallback_) {
-    // We tell the fallback store not return its default schema value.
-    setting = fallback_->GetSetting(key, false);
+    DEBUG_LOG(Setting) << "Store: " << name_ << ": Going to fallback.";
+    auto setting = fallback_->GetSetting(key);
     if (!setting.value.is_null())
       return setting;
   }
 
-  // None of our fallbacks have this setting, so we check to see if it's within
-  // our schema.
-  auto schema_item = schema_->GetItem(key);
-  if (schema_item.value().is_null())
-    return StoredSetting();
-
-  // We return the schema value only if we were told to.
-  if (!return_default)
-    return StoredSetting();
-  return CreateStoredSetting(schema_item.value(), schema_item,
-                             SettingSchema::Level::kDefault);
-}
-
-std::map<std::string, StoredSetting> SettingStore::GetSettings() const {
-  std::map<std::string, StoredSetting> stored_settings;
-
-  // We iterate over the schema looking for values.
-  for (const auto& [key, schema_item] : schema_->items()) {
-    StoredSetting setting = GetSetting(key);
-    // There should always be a value, at least the default one.
-    FXL_DCHECK(!setting.value.is_null());
-    stored_settings[key] = std::move(setting);
-  }
-  return stored_settings;
+  // No fallback has the schema, we return the default.
+  DEBUG_LOG(Setting) << "Store: " << name_ << ": schema default for " << key
+                     << ": " << default_setting.value.ToDebugString();
+  return default_setting;
 }
 
 bool SettingStore::HasSetting(const std::string& key) const {
@@ -151,7 +124,10 @@ Err SettingStore::SetSetting(const std::string& key, T t) {
     return err;
 
   // We can safely insert or override and notify observers.
-  settings_[key] = SettingValue(std::move(t));
+  auto new_setting = SettingValue(std::move(t));
+  DEBUG_LOG(Setting) << "Store " << name_ << " set " << key << ": "
+                     << new_setting.ToDebugString();
+  values_[key] = std::move(new_setting);
   NotifySettingChanged(key);
 
   return Err();

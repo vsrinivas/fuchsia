@@ -16,8 +16,7 @@ namespace zxdb {
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema =
-      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kThread);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
   return schema;
 }
 

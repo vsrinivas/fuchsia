@@ -58,8 +58,7 @@ static const char* kSymbolCacheDescription =
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema =
-      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kSystem);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription,
                   false);

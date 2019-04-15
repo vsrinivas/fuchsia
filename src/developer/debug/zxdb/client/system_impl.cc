@@ -26,6 +26,8 @@ SystemImpl::SystemImpl(Session* session)
   AddNewJobContext(std::make_unique<JobContextImpl>(this, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
 
+  settings_.set_name("system");
+
   // Forward all messages from the symbol index to our observers. It's OK to
   // bind |this| because the symbol index is owned by |this|.
   symbols_.build_id_index().set_information_callback(

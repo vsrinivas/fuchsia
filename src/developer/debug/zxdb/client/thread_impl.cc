@@ -33,6 +33,7 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
       weak_factory_(this) {
   SetMetadata(record);
   settings_.set_fallback(&process_->target()->settings());
+  settings_.set_name("thread");
 }
 
 ThreadImpl::~ThreadImpl() = default;

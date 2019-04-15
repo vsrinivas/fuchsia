@@ -44,4 +44,29 @@ SettingValue::SettingValue(std::string val)
 SettingValue::SettingValue(std::vector<std::string> val)
     : type(SettingType::kList), value(std::move(val)) {}
 
+std::string SettingValue::ToDebugString() const {
+  std::stringstream ss;
+  ss << "[" << SettingTypeToString(type) << "]: ";
+  switch (type) {
+    case SettingType::kNull:
+      return "<null>";
+    case SettingType::kBoolean:
+      ss << get_bool();
+      break;
+    case SettingType::kInteger:
+      ss << get_int();
+      break;
+    case SettingType::kString:
+      return get_string();
+      break;
+    case SettingType::kList:
+      for (auto& v : get_list()) {
+        ss << v << ", ";
+      }
+      break;
+  }
+
+  return ss.str();
+}
+
 }  // namespace zxdb

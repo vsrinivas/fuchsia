@@ -12,9 +12,8 @@
 
 namespace zxdb {
 
-fxl::RefPtr<SettingSchema> GetSchema(
-    SettingSchema::Level level = SettingSchema::Level::kDefault) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(level);
+fxl::RefPtr<SettingSchema> GetSchema() {
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   schema->AddBool("setting-bool", "Setting bool description");
   schema->AddBool("setting-bool2", "Setting bool description", true);
@@ -37,21 +36,11 @@ fxl::RefPtr<SettingSchema> GetSchema(
   return schema;
 }
 
-TEST(FormatSetting, NotFound) {
-  SettingStore store(GetSchema(), nullptr);
-
-  OutputBuffer out;
-  Err err = FormatSetting(store, "invalid", &out);
-  EXPECT_TRUE(err.has_error());
-}
-
 TEST(FormatSetting, Setting) {
   SettingStore store(GetSchema(), nullptr);
 
-  OutputBuffer out;
-  Err err = FormatSetting(store, "setting-string2", &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-
+  Setting setting = store.GetSetting("setting-string2");
+  OutputBuffer out = FormatSetting(setting);
   EXPECT_EQ(
       "setting-string2\n"
       "\n"
@@ -65,7 +54,7 @@ TEST(FormatSetting, Setting) {
       out.AsString());
 }
 
-TEST(FormatSetting, SchemaItemList) {
+TEST(FormatSetting, List) {
   std::vector<std::string> options = {
       "/some/very/long/and/annoying/path/that/actually/leads/nowhere",
       "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere",
@@ -76,12 +65,11 @@ TEST(FormatSetting, SchemaItemList) {
   Err err = store.SetList("setting-list2", std::move(options));
   EXPECT_FALSE(err.has_error()) << err.msg();
 
-  OutputBuffer out;
-  err = FormatSetting(store, "setting-list2", &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  Setting setting = store.GetSetting("setting-list2");
 
   // clang-format makes this one very hard to read.
   // Leave this text easier.
+  OutputBuffer out = FormatSetting(setting);
   EXPECT_EQ(
       "setting-list2\n"
       "\n"

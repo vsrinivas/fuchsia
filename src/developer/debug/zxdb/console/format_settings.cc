@@ -54,7 +54,7 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
 
 // |add_heading| refers whether it should show the setting name or just list the
 // values.
-void AddSettingToTable(const StoredSetting& setting,
+void AddSettingToTable(const Setting& setting,
                        std::vector<std::vector<OutputBuffer>>* rows,
                        bool add_heading = true) {
   // TODO(donosoc): We need to check what level the setting comes from so we can
@@ -63,7 +63,7 @@ void AddSettingToTable(const StoredSetting& setting,
     // Normal values as just entered as key-value pairs.
     auto& row = rows->emplace_back();
     if (add_heading)
-      row.emplace_back(setting.schema_item.name());
+      row.emplace_back(setting.info.name);
     row.emplace_back(SettingValueToString(setting.value));
   } else {
     // List get special treatment so that we can show them as bullet lists.
@@ -74,7 +74,7 @@ void AddSettingToTable(const StoredSetting& setting,
     if (bullet_list.empty()) {
       auto& row = rows->emplace_back();
       if (add_heading)
-        row.emplace_back(setting.schema_item.name());
+        row.emplace_back(setting.info.name);
       row.emplace_back("<empty>");
     } else {
       for (size_t i = 0; i < bullet_list.size(); i++) {
@@ -82,7 +82,7 @@ void AddSettingToTable(const StoredSetting& setting,
 
         if (add_heading) {
           // The first entry has the setting name.
-          auto title = i == 0 ? OutputBuffer(setting.schema_item.name())
+          auto title = i == 0 ? OutputBuffer(setting.info.name)
                               : OutputBuffer();
           auto it = row.emplace_back(std::move(title));
         }
@@ -94,58 +94,11 @@ void AddSettingToTable(const StoredSetting& setting,
 
 }  // namespace
 
-Err FormatSetting(const SettingStore& store, const std::string& setting_name,
-                  OutputBuffer* out) {
-  if (!store.HasSetting(setting_name))
-    return Err("Could not find setting \"%s\"", setting_name.c_str());
-
-  auto setting = store.GetSetting(setting_name);
-
-  out->Append({Syntax::kHeading, setting.schema_item.name()});
-  out->Append(OutputBuffer("\n"));
-
-  out->Append(setting.schema_item.description());
-  out->Append(OutputBuffer("\n\n"));
-
-  out->Append({Syntax::kHeading, "Type: "});
-  out->Append(SettingTypeToString(setting.schema_item.type()));
-  out->Append("\n\n");
-
-  out->Append({Syntax::kHeading, "Value(s):\n"});
-  out->Append(FormatSettingValue(setting));
-
-  // List have a copy-paste value for setting the value.
-  if (setting.value.is_list()) {
-    out->Append("\n");
-    out->Append({Syntax::kComment,
-                 "See \"help set\" about using the set value for lists.\n"});
-    out->Append(fxl::StringPrintf("Set value: %s",
-                                  SettingValueToString(setting.value).c_str()));
-    out->Append("\n");
-  }
-  return Err();
-}
-
-OutputBuffer FormatSettingValue(const StoredSetting& setting) {
-  FXL_DCHECK(!setting.value.is_null());
-
-  OutputBuffer out;
-  std::vector<std::vector<OutputBuffer>> rows;
-  AddSettingToTable(setting, &rows, false);
-  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &out);
-  return out;
-}
-
 OutputBuffer FormatSettingStore(const SettingStore& store) {
   std::vector<std::vector<OutputBuffer>> rows;
-  for (auto [key, item] : store.schema()->items()) {
-    // Overriden settings are meant to be listen in another schema.
-    if (item.overriden())
-      continue;
-
+  for (auto [key, _] : store.schema()->settings()) {
     auto setting = store.GetSetting(key);
     FXL_DCHECK(!setting.value.is_null());
-
     AddSettingToTable(setting, &rows);
   }
 
@@ -154,25 +107,42 @@ OutputBuffer FormatSettingStore(const SettingStore& store) {
   return table;
 }
 
-const char* SettingSchemaLevelToString(SettingSchema::Level level) {
-  // The return value here should be the noun name that the user will use to
-  // refer to this setting, hence "global" for the System and "process" for the
-  // Target.
-  switch (level) {
-    case SettingSchema::Level::kDefault:
-      return "Default";
-    case SettingSchema::Level::kSystem:
-      return "Global";
-    case SettingSchema::Level::kJob:
-      return "Job";
-    case SettingSchema::Level::kTarget:
-      return "Process";
-    case SettingSchema::Level::kThread:
-      return "Thread";
+OutputBuffer FormatSetting(const Setting& setting) {
+  OutputBuffer out;
+  out.Append({Syntax::kHeading, setting.info.name});
+  out.Append(OutputBuffer("\n"));
+
+  out.Append(setting.info.description);
+  out.Append(OutputBuffer("\n\n"));
+
+  out.Append({Syntax::kHeading, "Type: "});
+  out.Append(SettingTypeToString(setting.value.type));
+  out.Append("\n\n");
+
+  out.Append({Syntax::kHeading, "Value(s):\n"});
+  out.Append(FormatSettingShort(setting));
+
+  // List have a copy-paste value for setting the value.
+  if (setting.value.is_list()) {
+    out.Append("\n");
+    out.Append({Syntax::kComment,
+                "See \"help set\" about using the set value for lists.\n"});
+    out.Append(fxl::StringPrintf("Set value: %s",
+                                 SettingValueToString(setting.value).c_str()));
+    out.Append("\n");
   }
 
-  // Just in case.
-  return "<invalid>";
+  return out;
+}
+
+OutputBuffer FormatSettingShort(const Setting& setting) {
+  FXL_DCHECK(!setting.value.is_null());
+
+  OutputBuffer out;
+  std::vector<std::vector<OutputBuffer>> rows;
+  AddSettingToTable(setting, &rows, false);
+  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &out);
+  return out;
 }
 
 }  // namespace zxdb

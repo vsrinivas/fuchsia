@@ -19,6 +19,11 @@ enum class SettingType : uint32_t {
 };
 const char* SettingTypeToString(SettingType);
 
+struct SettingInfo {
+  std::string name;
+  std::string description;
+};
+
 struct SettingValue {
   SettingValue();   // Creates a kNull type.
   explicit SettingValue(bool);
@@ -45,12 +50,18 @@ struct SettingValue {
   void set_string(std::string v) { value = std::move(v); }
   void set_list(std::vector<std::string> v) { value = std::move(v); }
 
+  std::string ToDebugString() const;
 
   using VariantValue =
       std::variant<bool, int, std::string, std::vector<std::string>>;
 
   SettingType type = SettingType::kNull;
   VariantValue value;
+};
+
+struct Setting {
+  SettingInfo info;
+  SettingValue value;
 };
 
 }  // namespace zxdb

@@ -19,8 +19,7 @@ static const char* kShowStdoutDescription =
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema =
-      fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kTarget);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   schema->AddBool(ClientSettings::System::kShowStdout,
                   kShowStdoutDescription, true);

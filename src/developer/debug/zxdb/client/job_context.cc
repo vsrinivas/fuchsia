@@ -19,7 +19,7 @@ static const char* kFiltersDescription =
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kJob);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
   schema->AddList(ClientSettings::Job::kFilters, kFiltersDescription, {});
   return schema;
 }

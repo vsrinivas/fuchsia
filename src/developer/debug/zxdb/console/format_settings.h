@@ -15,15 +15,12 @@ class Command;
 class Err;
 class OutputBuffer;
 
-// Will err out if the setting is not found in the given store.
-Err FormatSetting(const SettingStore& store, const std::string& setting_name,
-                  OutputBuffer* out);
-
-// Outputs the detailed information about a particular setting.
-OutputBuffer FormatSettingValue(const StoredSetting&);
-
 OutputBuffer FormatSettingStore(const SettingStore& store);
 
-const char* SettingSchemaLevelToString(SettingSchema::Level);
+// Outputs the detailed information about a particular setting.
+OutputBuffer FormatSetting(const Setting&);
+
+// Formats the setting to just show <name>:<value>.
+OutputBuffer FormatSettingShort(const Setting&);
 
 }  // namespace zxdb

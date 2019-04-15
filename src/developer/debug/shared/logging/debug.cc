@@ -83,6 +83,8 @@ const char* LogCategoryToString(LogCategory category) {
       return "Process";
     case LogCategory::kRemoteAPI:
       return "DebugAPI";
+    case LogCategory::kSetting:
+      return "Setting";
     case LogCategory::kTiming:
       return "Timing";
     case LogCategory::kTest:

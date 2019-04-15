@@ -10,7 +10,7 @@
 #include <filesystem>
 
 #include "src/developer/debug/shared/buffered_fd.h"
-#include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -123,6 +123,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     // TODO(donosoc): Do correct category setup.
     debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
     if (options.debug_mode) {
+      debug_ipc::SetDebugMode(true);
       session.system().settings().SetBool(ClientSettings::System::kDebugMode,
                                           true);
     }

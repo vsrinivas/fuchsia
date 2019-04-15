@@ -12,28 +12,26 @@ const char kKey[] = "key";
 const char kName[] = "name";
 const char kDescription[] = "description";
 
-constexpr SettingSchema::Level kLevel = SettingSchema::Level::kDefault;
-
 TEST(SettingSchema, Bool) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   bool value = true;
-  SettingSchemaItem item(kName, kDescription, value);
+  Setting setting{{kName, kDescription}, SettingValue(value)};
 
-  ASSERT_TRUE(item.value().is_bool());
-  EXPECT_TRUE(item.value().get_bool());
+  ASSERT_TRUE(setting.value.is_bool());
+  EXPECT_TRUE(setting.value.get_bool());
 
-  schema->AddSetting(kKey, item);
+  schema->AddSetting(kKey, setting);
 
   Err err;
   // Empty should always fail.
   err = schema->ValidateSetting(kKey, SettingValue());
   EXPECT_TRUE(err.has_error());
   // Same value should be valid.
-  err = schema->ValidateSetting(kKey, item.value());
+  err = schema->ValidateSetting(kKey, setting.value);
   EXPECT_FALSE(err.has_error()) << err.msg();
   // Unknown key should fail.
-  err = schema->ValidateSetting("wrong", item.value());
+  err = schema->ValidateSetting("wrong", setting.value);
   EXPECT_TRUE(err.has_error());
   // Should validate same value.
   err = schema->ValidateSetting(kKey, SettingValue(value));
@@ -41,24 +39,24 @@ TEST(SettingSchema, Bool) {
 }
 
 TEST(SettingSchema, Int) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   int value = 10;
-  SettingSchemaItem item(kName, kDescription, value);
-  ASSERT_TRUE(item.value().is_int());
-  EXPECT_EQ(item.value().get_int(), value);
+  Setting setting{{kName, kDescription}, SettingValue(value)};
+  ASSERT_TRUE(setting.value.is_int());
+  EXPECT_EQ(setting.value.get_int(), value);
 
-  schema->AddSetting(kKey, item);
+  schema->AddSetting(kKey, setting);
 
   Err err;
   // Empty should always fail.
   err = schema->ValidateSetting(kKey, SettingValue());
   EXPECT_TRUE(err.has_error());
   // Same value should be valid.
-  err = schema->ValidateSetting(kKey, item.value());
+  err = schema->ValidateSetting(kKey, setting.value);
   EXPECT_FALSE(err.has_error()) << err.msg();
   // Unknown key should fail.
-  err = schema->ValidateSetting("wrong", item.value());
+  err = schema->ValidateSetting("wrong", setting.value);
   EXPECT_TRUE(err.has_error());
   // Should validate same value.
   err = schema->ValidateSetting(kKey, SettingValue(value));
@@ -66,67 +64,49 @@ TEST(SettingSchema, Int) {
 }
 
 TEST(SettingSchema, String) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   std::string value = "test";
-  SettingSchemaItem item(kName, kDescription, value);
-  ASSERT_TRUE(item.value().is_string());
-  EXPECT_EQ(item.value().get_string(), value);
+  Setting setting{{kName, kDescription}, SettingValue(value)};
+  ASSERT_TRUE(setting.value.is_string());
+  EXPECT_EQ(setting.value.get_string(), value);
 
-  schema->AddSetting(kKey, item);
+  schema->AddSetting(kKey, setting);
 
   Err err;
   // Empty should always fail.
   err = schema->ValidateSetting(kKey, SettingValue());
   EXPECT_TRUE(err.has_error());
   // Same value should be valid.
-  err = schema->ValidateSetting(kKey, item.value());
+  err = schema->ValidateSetting(kKey, setting.value);
   EXPECT_FALSE(err.has_error()) << err.msg();
   // Unknown key should fail.
-  err = schema->ValidateSetting("wrong", item.value());
+  err = schema->ValidateSetting("wrong", setting.value);
   EXPECT_TRUE(err.has_error());
   // Should validate same value.
   err = schema->ValidateSetting(kKey, SettingValue(value));
   EXPECT_FALSE(err.has_error()) << err.msg();
 }
 
-TEST(SettingSchema, StringWithOptions) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
-
-  std::string value = "valid";
-  std::vector<std::string> valid_values = {value, "another"};
-
-  // Within the values should work.
-  SettingSchemaItem item = SettingSchemaItem::StringWithOptions(
-      kName, kDescription, value, valid_values);
-  ASSERT_TRUE(item.value().is_string());
-  EXPECT_EQ(item.value().get_string(), value);
-
-  // Not within options should fail.
-  item = SettingSchemaItem::StringWithOptions(kName, kDescription, "invalid",
-                                              valid_values);
-  EXPECT_TRUE(item.value().is_null());
-}
-
 TEST(SettingSchema, List) {
-  auto schema = fxl::MakeRefCounted<SettingSchema>(kLevel);
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
 
   std::vector<std::string> value = {"test", "vector"};
-  SettingSchemaItem item(kName, kDescription, value);
-  ASSERT_TRUE(item.value().is_list());
-  EXPECT_EQ(item.value().get_list(), value);
+  Setting setting{{kName, kDescription}, SettingValue(value)};
+  ASSERT_TRUE(setting.value.is_list());
+  EXPECT_EQ(setting.value.get_list(), value);
 
-  schema->AddSetting(kKey, item);
+  schema->AddSetting(kKey, setting);
 
   Err err;
   // Empty should always fail.
   err = schema->ValidateSetting(kKey, SettingValue());
   EXPECT_TRUE(err.has_error());
   // Same value should be valid.
-  err = schema->ValidateSetting(kKey, item.value());
+  err = schema->ValidateSetting(kKey, setting.value);
   EXPECT_FALSE(err.has_error()) << err.msg();
   // Unknown key should fail.
-  err = schema->ValidateSetting("wrong", item.value());
+  err = schema->ValidateSetting("wrong", setting.value);
   EXPECT_TRUE(err.has_error());
   // Should validate same value.
   err = schema->ValidateSetting(kKey, SettingValue(value));
