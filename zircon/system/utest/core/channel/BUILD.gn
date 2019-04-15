@@ -5,7 +5,7 @@
 source_set("channel") {
   testonly = true
   sources = [
-    "channel.c",
+    "channel.cpp",
   ]
   deps = [
     "$zx/system/ulib/fdio",
