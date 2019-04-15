@@ -42,6 +42,8 @@ constexpr uint32_t kPingConfigSize = 0x17FC0;
 constexpr uint32_t kAexpHistStatsOffset = 0x24A8;
 constexpr uint32_t kHistSize = 0x2000;
 constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
+constexpr uint32_t kPongMeteringStatsOffset = kPingMeteringStatsOffset + kPingConfigSize;
+constexpr uint32_t kDecompander0PongOffset = kDecompander0PingOffset + kPingConfigSize;
 constexpr uint32_t kMeteringSize = 0x8000;
 constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
 constexpr uint32_t kConfigSize = 0x1231C;
@@ -135,7 +137,7 @@ int ArmIspDevice::IspIrqHandler() {
                     // Copy Config from local memory to ISP PING Config space
                     CopyContextInfo(kPing, kCopyToIsp);
                     // Copy Metering Info from ISP to Local Memory
-                    CopyMeteringInfo(kPing, kCopyFromIsp);
+                    CopyMeteringInfo(kPing);
                     // Start processing this new frame.
                     sync_completion_signal(&frame_processing_signal_);
                 }
@@ -155,7 +157,7 @@ int ArmIspDevice::IspIrqHandler() {
                     // Copy Config from local memory to ISP PING Config space
                     CopyContextInfo(kPong, kCopyToIsp);
                     // Copy Metering Info from ISP to Local Memory
-                    CopyMeteringInfo(kPong, kCopyFromIsp);
+                    CopyMeteringInfo(kPong);
                     // Start processing this new frame.
                     sync_completion_signal(&frame_processing_signal_);
                 }
@@ -169,59 +171,54 @@ bool ArmIspDevice::IsFrameProcessingInProgress() {
     return sync_completion_signaled(&frame_processing_signal_);
 }
 
+// Note: We have only one copy of local config and
+//       metering info, so assign the correct device_offset
+//       depending if it is PING or PONG context
+//       before we copy the data to/from the ISP.
 void ArmIspDevice::CopyContextInfo(uint8_t config_space,
                                    uint8_t direction) {
-    zx_off_t local_offset, device_offset;
+    zx_off_t device_offset;
 
     if (config_space == kPing) {
-        // PING Context
-        local_offset = kDecompander0PingOffset;
         device_offset = kDecompander0PingOffset;
     } else {
         // PONG Context
-        local_offset = kDecompander0PingOffset;
-        device_offset = kDecompander0PingOffset + kPingConfigSize;
+        device_offset = kDecompander0PongOffset;
     }
 
     if (direction == kCopyToIsp) {
         // Copy to ISP from Local Config Buffer
-        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset, device_offset, kConfigSize / 4);
+        isp_mmio_.CopyFrom32(isp_mmio_local_,
+                             kDecompander0PingOffset,
+                             device_offset,
+                             kConfigSize / 4);
     } else {
         // Copy from ISP to Local Config Buffer
-        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset, device_offset, kConfigSize / 4);
+        isp_mmio_local_.CopyFrom32(isp_mmio_,
+                                   device_offset,
+                                   kDecompander0PingOffset,
+                                   kConfigSize / 4);
     }
 }
 
-void ArmIspDevice::CopyMeteringInfo(uint8_t config_space,
-                                    uint8_t direction) {
-    zx_off_t local_offset_1, device_offset_1;
-    zx_off_t local_offset_2, device_offset_2;
+void ArmIspDevice::CopyMeteringInfo(uint8_t config_space) {
+    zx_off_t device_offset;
 
     if (config_space == kPing) {
         // PING Context
-        local_offset_1 = kAexpHistStatsOffset;
-        device_offset_1 = kAexpHistStatsOffset;
-
-        local_offset_2 = kPingMeteringStatsOffset;
-        device_offset_2 = kPingMeteringStatsOffset;
+        device_offset = kPingMeteringStatsOffset;
     } else {
         // PONG Context
-        local_offset_1 = kAexpHistStatsOffset;
-        device_offset_1 = kAexpHistStatsOffset;
-
-        local_offset_2 = kPingMeteringStatsOffset;
-        device_offset_2 = kPingMeteringStatsOffset + kPingConfigSize;
+        device_offset = kPongMeteringStatsOffset;
     }
 
-    if (direction == kCopyToIsp) {
-        // Copy to ISP from Local Config Buffer
-        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset_1, device_offset_1, kHistSize / 4);
-        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset_2, device_offset_2, kMeteringSize / 4);
-    } else {
-        // Copy from ISP to Local Config Buffer
-        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset_1, device_offset_1, kHistSize / 4);
-        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset_2, device_offset_2, kMeteringSize / 4);
-    }
+    // Copy from ISP to Local Config Buffer
+    isp_mmio_local_.CopyFrom32(isp_mmio_, kAexpHistStatsOffset,
+                               kAexpHistStatsOffset,
+                               kHistSize / 4);
+    isp_mmio_local_.CopyFrom32(isp_mmio_, device_offset,
+                               kPingMeteringStatsOffset,
+                               kMeteringSize / 4);
 }
 
 zx_status_t ArmIspDevice::IspContextInit() {

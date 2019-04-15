@@ -79,8 +79,7 @@ private:
     int IspIrqHandler();
     void CopyContextInfo(uint8_t config_space,
                          uint8_t direction);
-    void CopyMeteringInfo(uint8_t config_space,
-                          uint8_t direction);
+    void CopyMeteringInfo(uint8_t config_space);
     bool IsFrameProcessingInProgress();
 
     // DDKMessage Helper Functions.
