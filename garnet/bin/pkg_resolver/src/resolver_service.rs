@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::rewrite_manager::RewriteManager;
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy};
@@ -18,7 +19,9 @@ use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{info, warn};
+use parking_lot::RwLock;
 use regex::Regex;
+use std::sync::Arc;
 
 lazy_static! {
     // The error amber returns if it could not find the merkle for this package.
@@ -32,6 +35,7 @@ lazy_static! {
 }
 
 pub async fn run_resolver_service(
+    rewrites: Arc<RwLock<RewriteManager>>,
     mut amber: AmberProxy,
     cache: PackageCacheProxy,
     mut stream: PackageResolverRequestStream,
@@ -53,7 +57,8 @@ pub async fn run_resolver_service(
             should_reconnect = false;
         }
 
-        let status = await!(resolve(&amber, &cache, package_uri, selectors, update_policy, dir));
+        let status =
+            await!(resolve(&rewrites, &amber, &cache, package_uri, selectors, update_policy, dir));
 
         // TODO this is an overbroad error type for this, make it more accurate
         if let Err(Status::INTERNAL) = &status {
@@ -67,11 +72,27 @@ pub async fn run_resolver_service(
     Ok(())
 }
 
+fn rewrite_uri(rewrites: &Arc<RwLock<RewriteManager>>, uri: FuchsiaPkgUri) -> FuchsiaPkgUri {
+    for rule in rewrites.read().list() {
+        match rule.apply(&uri) {
+            Some(Ok(res)) => {
+                return res;
+            }
+            Some(Err(err)) => {
+                fx_log_err!("re-write rule {:?} produced an invalid URI, ignoring rule", err);
+            }
+            _ => {}
+        }
+    }
+    uri
+}
+
 /// Resolve the package.
 ///
 /// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
 /// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
 async fn resolve<'a>(
+    rewrites: &'a Arc<RwLock<RewriteManager>>,
     amber: &'a AmberProxy,
     cache: &'a PackageCacheProxy,
     pkg_uri: String,
@@ -83,10 +104,13 @@ async fn resolve<'a>(
         fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
         Err(Status::INVALID_ARGS)
     })?;
+    let was_fuchsia_host = uri.host() == "fuchsia.com";
+    let uri = rewrite_uri(rewrites, uri);
 
     // FIXME: at the moment only the fuchsia.com host is supported.
-    if uri.host() != "fuchsia.com" {
-        fx_log_warn!("package uri's host is currently unsupported: {}", uri);
+    if !was_fuchsia_host && uri.host() != "fuchsia.com" {
+        fx_log_err!("package uri's host is currently unsupported: {}", uri);
+        return Err(Status::INVALID_ARGS);
     }
 
     // While the fuchsia-pkg:// spec doesn't require a package name, we do.
@@ -121,7 +145,13 @@ async fn resolve<'a>(
         err
     })?;
 
-    fx_log_info!("resolved {:?} with the selectors {:?} to {}", pkg_uri, selectors, merkle);
+    fx_log_info!(
+        "resolved {} as {} with the selectors {:?} to {}",
+        pkg_uri,
+        uri,
+        selectors,
+        merkle
+    );
 
     await!(cache.open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request))
         .map_err(|err| {
@@ -191,6 +221,7 @@ async fn wait_for_update_to_complete(chan: Channel, uri: &FuchsiaPkgUri) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rewrite_manager::tests::make_dynamic_rule_config;
     use failure::Error;
     use fidl::endpoints::{RequestStream, ServerEnd};
     use fidl_fuchsia_amber::{ControlRequest, ControlRequestStream};
@@ -366,20 +397,25 @@ mod tests {
     }
 
     struct ResolveTest {
+        rewrite_manager: Arc<RwLock<RewriteManager>>,
         amber_proxy: AmberProxy,
         cache_proxy: PackageCacheProxy,
         pkgfs: Rc<TempDir>,
     }
 
     impl ResolveTest {
-        fn new(amber_chan: Channel, cache_chan: Channel) -> ResolveTest {
+        fn new(
+            rewrite_manager: Arc<RwLock<RewriteManager>>,
+            amber_chan: Channel,
+            cache_chan: Channel,
+        ) -> ResolveTest {
             let amber_proxy = AmberProxy::new(fasync::Channel::from_channel(amber_chan).unwrap());
             let cache_proxy =
                 PackageCacheProxy::new(fasync::Channel::from_channel(cache_chan).unwrap());
 
             let pkgfs = Rc::new(TempDir::new().expect("failed to create tmp dir"));
 
-            ResolveTest { amber_proxy, cache_proxy, pkgfs }
+            ResolveTest { rewrite_manager, amber_proxy, cache_proxy, pkgfs }
         }
 
         fn start_services(&self, amber_s: Channel, cache_s: Channel, packages: Vec<Package>) {
@@ -469,6 +505,7 @@ mod tests {
             let update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
             let (package_dir_c, package_dir_s) = Channel::create().unwrap();
             let res = await!(resolve(
+                &self.rewrite_manager,
                 &self.amber_proxy,
                 &self.cache_proxy,
                 uri.to_string(),
@@ -496,9 +533,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mock_amber() {
+        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
+        let rewrite_manager =
+            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(amber_c, cache_c);
+        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
             Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
@@ -526,9 +566,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package() {
+        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
+        let rewrite_manager =
+            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(amber_c, cache_c);
+        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
 
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
@@ -551,9 +594,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
+        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
+        let rewrite_manager =
+            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(amber_c, cache_c);
+        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
         let packages = vec![
             Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
             Package::new(
@@ -579,5 +625,35 @@ mod tests {
 
         // No package name
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com", Err(Status::INVALID_ARGS)));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_resolve_package_unknown_host() {
+        let rules = vec![fuchsia_uri_rewrite::Rule::new(
+            "example.com".to_owned(),
+            "fuchsia.com".to_owned(),
+            "/foo/".to_owned(),
+            "/foo/".to_owned(),
+        )
+        .unwrap()];
+        let dynamic_rule_config = make_dynamic_rule_config(rules);
+        let rewrite_manager =
+            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
+        let (amber_c, amber_s) = Channel::create().unwrap();
+        let (cache_c, cache_s) = Channel::create().unwrap();
+        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
+
+        let packages = vec![
+            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+        ];
+
+        test.start_services(amber_s, cache_s, packages);
+
+        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
+        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
+        await!(test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::INVALID_ARGS)));
+        await!(test
+            .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
     }
 }

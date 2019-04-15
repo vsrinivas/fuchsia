@@ -50,33 +50,49 @@ fn main() -> Result<(), Error> {
 
     let rewrite_manager = load_rewrite_manager();
 
+    let resolver_cb = {
+        // Capture a clone of rewrite_manager's Arc so the new client callback has a copy from
+        // which to make new clones.
+        let rewrite_manager = rewrite_manager.clone();
+        move |stream| {
+            fasync::spawn(
+                resolver_service::run_resolver_service(
+                    rewrite_manager.clone(),
+                    amber.clone(),
+                    cache.clone(),
+                    stream,
+                )
+                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+            )
+        }
+    };
+
+    let repo_cb = move |stream| {
+        let repo_manager = repo_manager.clone();
+
+        fasync::spawn(
+            async move {
+                let mut repo_service = RepositoryService::new(repo_manager);
+                await!(repo_service.run(stream))
+            }
+                .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
+        )
+    };
+
+    let rewrite_cb = move |stream| {
+        let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
+
+        fasync::spawn(
+            async move { await!(rewrite_service.handle_client(stream)) }
+                .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
+        )
+    };
+
     let mut fs = ServiceFs::new();
     fs.dir("public")
-        .add_fidl_service(move |stream| {
-            fasync::spawn(
-                resolver_service::run_resolver_service(amber.clone(), cache.clone(), stream)
-                    .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
-            )
-        })
-        .add_fidl_service(move |stream| {
-            let repo_manager = repo_manager.clone();
-
-            fasync::spawn(
-                async move {
-                    let mut repo_service = RepositoryService::new(repo_manager);
-                    await!(repo_service.run(stream))
-                }
-                    .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
-            )
-        })
-        .add_fidl_service(move |stream| {
-            let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
-
-            fasync::spawn(
-                async move { await!(rewrite_service.handle_client(stream)) }
-                    .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
-            )
-        });
+        .add_fidl_service(resolver_cb)
+        .add_fidl_service(repo_cb)
+        .add_fidl_service(rewrite_cb);
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
