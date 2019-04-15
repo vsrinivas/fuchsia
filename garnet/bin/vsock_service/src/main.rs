@@ -4,19 +4,17 @@
 
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 use {
     failure::{Error, ResultExt},
     fdio,
-    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_hardware_vsock::DeviceMarker,
-    fidl_fuchsia_vsock::{ConnectorMarker, ConnectorRequestStream},
-    fuchsia_app::server::ServicesServer,
     fuchsia_async as fasync,
-    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
-    futures::TryFutureExt,
+    futures::{StreamExt, TryFutureExt},
 };
 
 use vsock_service_lib as service;
@@ -36,26 +34,20 @@ async fn main() -> Result<(), Error> {
         await!(service::Vsock::new(dev)).context("Failed to initialize vsock service")?;
 
     let service_clone = service.clone();
-    let server = ServicesServer::new()
-        .add_service((ConnectorMarker::NAME, move |chan| {
-            fasync::spawn(
-                service_clone
-                    .clone()
-                    .run_client_connection(ConnectorRequestStream::from_channel(chan))
-                    .unwrap_or_else(|err| fx_log_info!("Error {} during client connection", err)),
-            );
-        }))
-        .start()
-        .context("Error starting ServicesServer")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        fasync::spawn(
+            service_clone
+                .clone()
+                .run_client_connection(stream)
+                .unwrap_or_else(|err| fx_log_info!("Error {} during client connection", err)),
+        );
+    });
+    fs.take_and_serve_directory_handle()?;
 
     // Spawn the services server with a wrapper to discard the return value.
-    fasync::spawn(
-        async {
-            if let Err(err) = await!(server) {
-                fx_log_err!("Services server failed with {}", err);
-            }
-        },
-    );
+    fasync::spawn(fs.collect());
+
     // Run the event loop until completion. The event loop only terminates
     // with an error.
     await!(event_loop)?;
