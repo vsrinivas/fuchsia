@@ -5,17 +5,14 @@
 #ifndef LIB_NETEMUL_NETWORK_ETHERTAP_CLIENT_H_
 #define LIB_NETEMUL_NETWORK_ETHERTAP_CLIENT_H_
 
-#include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <stdlib.h>
 #include <zircon/types.h>
-
 #include <memory>
 #include <string>
 #include <vector>
-
 #include "ethertap_types.h"
 
 namespace netemul {
@@ -23,7 +20,7 @@ namespace netemul {
 class EthertapConfig {
  public:
   std::string name = "etap";
-  uint32_t options = fuchsia::hardware::ethertap::OPT_REPORT_PARAM;
+  uint32_t options = 0;
   uint32_t features = 0;
   uint32_t mtu = 1500;
   Mac mac;

@@ -6,17 +6,18 @@
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
 #include <functional>
 #include <iomanip>
 #include <iostream>

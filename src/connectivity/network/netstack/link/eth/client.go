@@ -108,7 +108,11 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	if status, err := device.ConfigMulticastSetPromiscuousMode(true); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "ConfigMulticastSetPromiscuousMode"); err != nil {
-		return nil, err
+		// Some drivers - most notably virtio - don't support this setting.
+		if err.(*zx.Error).Status != zx.ErrNotSupported {
+			return nil, err
+		}
+		logger.Warnf("%s", err)
 	}
 	info, err := device.GetInfo()
 	if err != nil {
