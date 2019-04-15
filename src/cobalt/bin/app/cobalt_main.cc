@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-
 #include <fcntl.h>
-#include <chrono>
-#include <fstream>
-#include <memory>
-#include <string>
-#include <thread>
-#include <utility>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -19,9 +10,19 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fsl/syslogger/init.h>
 #include <lib/zx/channel.h>
+#include <stdlib.h>
 #include <zircon/boot/image.h>
 
+#include <chrono>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+
+#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -132,6 +133,7 @@ int main(int argc, const char** argv) {
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
+  fsl::InitLoggerFromCommandLine(command_line, {"cobalt"});
 
   if (fxl::GetVlogVerbosity() >= 10) {
     setenv("GRPC_VERBOSITY", "DEBUG", 1);
