@@ -186,6 +186,9 @@ void NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/system/data/vulkan/icd.d",
                               "/config/vulkan/icd.d");
+      PushDirectoryFromPathAs(
+        "/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
+        "/config/data/vulkan/icd.d");
     }
   }
 

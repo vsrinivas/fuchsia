@@ -5,6 +5,7 @@
 #include "garnet/bin/appmgr/namespace_builder.h"
 
 #include <lib/zx/channel.h>
+#include <fcntl.h>
 
 #include <string>
 #include <vector>
@@ -54,9 +55,21 @@ TEST(NamespaceBuilder, Control) {
                         "/dev/class/display-controller") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/gpu") !=
               paths.end());
-  if (flat->count == 5u) {
-    EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/config/vulkan/icd.d") !=
-                paths.end());
+
+  fxl::UniqueFD dir(open("/system/data/vulkan/icd.d",
+                         O_DIRECTORY | O_RDONLY));
+  if (dir.is_valid()) {
+    EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                          "/config/vulkan/icd.d") != paths.end());
+    close(dir.get());
+  }
+
+  fxl::UniqueFD dir2(open("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
+                          O_DIRECTORY | O_RDONLY));
+  if (dir2.is_valid()) {
+    EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                          "/config/data/vulkan/icd.d") != paths.end());
+    close(dir2.get());
   }
 
   for (size_t i = 0; i < flat->count; ++i)
