@@ -11,14 +11,6 @@ use {
     },
 };
 
-/// Macro to help make cloning host dispatchers nicer
-#[macro_export]
-macro_rules! make_clones {
-    ($obj:ident => $($copy:ident),* $(,)*) => {
-        $( let $copy = $obj.clone(); )*
-    }
-}
-
 /// Macro to help build bluetooth fidl statuses.
 /// No Args is a success
 /// One Arg is the error type
