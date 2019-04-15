@@ -177,8 +177,9 @@ int ConsoleMain(int argc, const char* argv[]) {
       help.Append(
           Syntax::kComment,
           "Please \"connect <ip>:<port>\" matching what you passed to\n   "
-          "\"run debug_agent --port=<port>\" on the target system. Or try "
-          "\"help\".");
+          "run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx "
+          "--port=<port>\n"
+          "   on the target system. Or try \"help\".");
       console.Output(help);
     }
 
