@@ -17,6 +17,7 @@ import (
 	"syscall/zx/mxnet"
 	"syscall/zx/zxwait"
 
+	"netstack/fidlconv"
 	"syslog/logger"
 
 	"fidl/fuchsia/net"
@@ -530,11 +531,16 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 	var index C.uint
 	for nicid, ifs := range ios.ns.mu.ifStates {
 		ifs.mu.Lock()
-		if ifs.mu.nic.Addr == ipv4Loopback {
-			ifs.mu.Unlock()
+		info, err := ifs.toNetInterface2Locked()
+		ifs.mu.Unlock()
+		if err != nil {
+			logger.Errorf("NIC %d: error getting info: %s", ifs.nicid, err)
 			continue
 		}
-		name := ifs.mu.nic.Name
+		if info.Addr == fidlconv.ToNetIpAddress(ipv4Loopback) {
+			continue
+		}
+		name := info.Name
 		// leave one byte for the null terminator.
 		if l := len(rep.info[index].name) - 1; len(name) > l {
 			name = name[:l]
@@ -545,16 +551,9 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 		}
 		rep.info[index].index = C.ushort(index + 1)
 		rep.info[index].flags |= C.NETC_IFF_UP
-		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: ifs.mu.nic.Addr})
-		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.mu.nic.Netmask)})
-
-		// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
-		broadaddr := []byte(ifs.mu.nic.Addr)
-		for i := range broadaddr {
-			broadaddr[i] |= ^ifs.mu.nic.Netmask[i]
-		}
-		rep.info[index].broadaddr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
-		ifs.mu.Unlock()
+		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Addr)})
+		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Netmask)})
+		rep.info[index].broadaddr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Broadaddr)})
 
 		index++
 	}
