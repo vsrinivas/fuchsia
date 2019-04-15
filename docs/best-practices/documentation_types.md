@@ -87,13 +87,15 @@ want to learn. If your document has multiple headings, you should include a bull
 high-level headings after this first paragraph.
 
 You should use graphics, images, or diagrams to reinforce certain concepts. The text that comes
-before and after the graphic should explain what the graphic shows.
+before and after the graphic should explain what the graphic shows. Images should be saved in
+a feature specific 'images/' directory or a common 'images/' directory. You should also save
+the source file of your images in a 'images/src/' directory.
 
 Good conceptual documentation usually includes:
 
 - **Description** rather than instruction
 - **Background** concepts
-- **Diagrams** or other visual aids (preferably in .svg format)
+- **Diagrams** or other visual aids (preferably in .png format)
 - **Links** to how-to and/or reference docs
 
 After writing your document, it is good practice to proofread the document, put yourself in the
