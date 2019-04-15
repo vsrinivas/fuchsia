@@ -275,6 +275,15 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
     fbl::AutoLock lock(&display_lock_);
     auto* config = display_configs[0];
     if (display_count == 1 && config->layer_count) {
+        if (!full_init_done_) {
+            zx_status_t status;
+            if ((status = DisplaySubsystemInit()) != ZX_OK) {
+                DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
+                ZX_ASSERT(0);
+            }
+            full_init_done_ = true;
+        }
+
         // First stop the overlay engine, followed by the DISP RDMA Engine
         syscfg_->MutexReset();
         ovl_->Reset();
@@ -300,10 +309,12 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         ovl_->Start();
         syscfg_->MutexEnable();
     } else {
-        syscfg_->MutexReset();
-        ovl_->Restart();
-        disp_rdma_->Restart();
-        syscfg_->MutexEnable();
+        if (full_init_done_) {
+            syscfg_->MutexReset();
+            ovl_->Restart();
+            disp_rdma_->Restart();
+            syscfg_->MutexEnable();
+        }
     }
 
     // If bootloader does not enable any of the display hardware, no vsync will be generated.
@@ -314,7 +325,6 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
                 dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), nullptr, 0);
             }
         }
-        full_init_done_ = true;
     }
 }
 
@@ -632,6 +642,20 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
     // This will trigger a start of the display subsystem.
     dsi_host_->Start();
 
+    // Map VSync Interrupt
+    status = pdev_get_interrupt(&pdev_, 0, 0, vsync_irq_.reset_and_get_address());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map vsync Interruptn");
+        return status;
+    }
+
+    auto start_thread = [](void* arg) { return static_cast<Mt8167sDisplay*>(arg)->VSyncThread(); };
+    status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not create vsync_thread\n");
+        return status;
+    }
+
     return ZX_OK;
 }
 
@@ -743,27 +767,6 @@ zx_status_t Mt8167sDisplay::Bind() {
     if (!ac.check()) {
         DISP_ERROR("Could not map SMI LARB0 MMIO\n");
         return ZX_ERR_NO_MEMORY;
-    }
-
-    // Map VSync Interrupt
-    status = pdev_get_interrupt(&pdev_, 0, 0, vsync_irq_.reset_and_get_address());
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map vsync Interruptn");
-        return status;
-    }
-
-    // Initialize Display Subsystem
-    status = DisplaySubsystemInit();
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize Display Subsystem\n");
-        return status;
-    }
-
-    auto start_thread = [](void* arg) { return static_cast<Mt8167sDisplay*>(arg)->VSyncThread(); };
-    status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not create vsync_thread\n");
-        return status;
     }
 
     status = DdkAdd("mt8167s-display");
