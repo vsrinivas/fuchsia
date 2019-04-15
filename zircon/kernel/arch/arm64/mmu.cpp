@@ -391,7 +391,7 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
         return status;
     }
 
-    page->set_state(VM_PAGE_STATE_MMU);
+    page->state = VM_PAGE_STATE_MMU;
     pt_pages_++;
 
     LOCAL_KTRACE("page table alloc");
@@ -1065,7 +1065,7 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         if (status != ZX_OK) {
             return status;
         }
-        page->set_state(VM_PAGE_STATE_MMU);
+        page->state = VM_PAGE_STATE_MMU;
 
         volatile pte_t* va = static_cast<volatile pte_t*>(paddr_to_physmap(pa));
 

@@ -44,8 +44,8 @@ void ZeroPage(vm_page_t* p) {
 }
 
 void InitializeVmPage(vm_page_t* p) {
-    DEBUG_ASSERT(p->state() == VM_PAGE_STATE_ALLOC);
-    p->set_state(VM_PAGE_STATE_OBJECT);
+    DEBUG_ASSERT(p->state == VM_PAGE_STATE_ALLOC);
+    p->state = VM_PAGE_STATE_OBJECT;
     p->object.pin_count = 0;
 }
 
@@ -228,13 +228,13 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
             vm_page_t* page = paddr_to_vm_page(pa);
             ASSERT(page);
 
-            if (page->state() == VM_PAGE_STATE_WIRED) {
+            if (page->state == VM_PAGE_STATE_WIRED) {
                 boot_reserve_unwire_page(page);
             } else {
                 // This function is only valid for memory in the boot image,
                 // which should all be wired.
-                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR
-                      " state %u\n", pa, page->state());
+                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
+                      page->state);
             }
             InitializeVmPage(page);
 
@@ -823,7 +823,7 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
     uint64_t pin_range_end = start_page_offset;
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
         [&pin_range_end](const auto p, uint64_t off) {
-            DEBUG_ASSERT(p->state() == VM_PAGE_STATE_OBJECT);
+            DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
             if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
                 return ZX_ERR_UNAVAILABLE;
             }
@@ -866,7 +866,7 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
 
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
         [](const auto p, uint64_t off) {
-            DEBUG_ASSERT(p->state() == VM_PAGE_STATE_OBJECT);
+            DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
             ASSERT(p->object.pin_count > 0);
             p->object.pin_count--;
             return ZX_ERR_NEXT;

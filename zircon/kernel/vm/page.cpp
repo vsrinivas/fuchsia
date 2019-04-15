@@ -18,9 +18,6 @@
 
 #define LOCAL_TRACE 0
 
-ktl::atomic<size_t> vm_page::count_by_state[VM_PAGE_STATE_COUNT_];
-ktl::atomic<size_t> vm_page::count_total;
-
 const char* page_state_to_string(unsigned int state) {
     switch (state) {
     case VM_PAGE_STATE_FREE:
@@ -44,29 +41,7 @@ const char* page_state_to_string(unsigned int state) {
 
 void vm_page::dump() const {
     printf("page %p: address %#" PRIxPTR " state %s flags %#x\n", this, paddr(),
-           page_state_to_string(state_priv), flags);
-}
-
-void vm_page::set_state(vm_page_state new_state) {
-    constexpr uint32_t kMask = (1 << VM_PAGE_STATE_BITS) - 1;
-    DEBUG_ASSERT_MSG(new_state == (new_state & kMask), "invalid state %u\n", new_state);
-
-    count_by_state[state_priv].fetch_sub(1, ktl::memory_order_relaxed);
-    count_by_state[new_state].fetch_add(1, ktl::memory_order_relaxed);
-    state_priv = (new_state & kMask);
-}
-
-size_t vm_page::get_count(vm_page_state state) {
-    return count_by_state[state].load(ktl::memory_order_relaxed);
-}
-
-size_t vm_page::get_count_total() {
-    return count_total.load(ktl::memory_order_relaxed);
-}
-
-void vm_page::add_to_initial_count(vm_page_state state, size_t n) {
-    count_by_state[state].fetch_add(n, ktl::memory_order_relaxed);
-    count_total.fetch_add(n, ktl::memory_order_relaxed);
+           page_state_to_string(state), flags);
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {

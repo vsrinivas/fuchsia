@@ -28,7 +28,7 @@ public:
           return status;
       }
 
-      page_->set_state(VM_PAGE_STATE_WIRED);
+      page_->state = VM_PAGE_STATE_WIRED;
 
       memset(VirtualAddress(), fill, PAGE_SIZE);
       return ZX_OK;

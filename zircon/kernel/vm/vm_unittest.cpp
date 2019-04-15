@@ -1346,7 +1346,7 @@ static bool vmpl_take_cleanup_test() {
     ASSERT_NONNULL(page, "pmm_alloc single page");
     ASSERT_NE(0u, pa, "pmm_alloc single page");
 
-    page->set_state(VM_PAGE_STATE_OBJECT);
+    page->state = VM_PAGE_STATE_OBJECT;
     page->object.pin_count = 0;
 
     VmPageList pl;

@@ -8,14 +8,13 @@
 #pragma once
 
 #include <fbl/algorithm.h>
-#include <ktl/atomic.h>
 #include <list.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-enum vm_page_state : uint32_t {
-    VM_PAGE_STATE_FREE = 0,
+enum vm_page_state {
+    VM_PAGE_STATE_FREE,
     VM_PAGE_STATE_ALLOC,
     VM_PAGE_STATE_OBJECT,
     VM_PAGE_STATE_WIRED,
@@ -38,8 +37,7 @@ typedef struct vm_page {
 
     struct {
         uint32_t flags : 8;
-        // logically private; use |state()| and |set_state()|
-        uint32_t state_priv : VM_PAGE_STATE_BITS;
+        uint32_t state : VM_PAGE_STATE_BITS;
     };
     // offset: 0x1c
 
@@ -54,7 +52,7 @@ typedef struct vm_page {
 
     // helper routines
     bool is_free() const {
-        return state_priv == VM_PAGE_STATE_FREE;
+        return state == VM_PAGE_STATE_FREE;
     }
 
     void dump() const;
@@ -62,28 +60,6 @@ typedef struct vm_page {
     // return the physical address
     // future plan to store in a compressed form
     paddr_t paddr() const { return paddr_priv; }
-
-    vm_page_state state() const { return vm_page_state(state_priv); }
-
-    void set_state(vm_page_state new_state);
-
-    // Return the approximate number of pages in state |state|.
-    //
-    // When called concurrently with |set_state|, the count may be off by a small amount.
-    static size_t get_count(vm_page_state state);
-
-    // Return the total number of pages.
-    static size_t get_count_total();
-
-    // Add |n| to the count of pages in state |state|.
-    //
-    // Should be used when first constructing pages.
-    static void add_to_initial_count(vm_page_state state, size_t n);
-
-private:
-    static ktl::atomic<size_t> count_by_state[VM_PAGE_STATE_COUNT_];
-    static ktl::atomic<size_t> count_total;
-
 } vm_page_t;
 
 // assert that the page structure isn't growing uncontrollably
