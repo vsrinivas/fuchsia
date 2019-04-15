@@ -36,7 +36,6 @@ group("all") {
     "//garnet/packages/experimental:network_settings_server",
     "//garnet/packages/experimental:sys",
     "//garnet/packages/experimental:tennis",
-    "//garnet/packages/experimental:wayland_bridge",
     "//garnet/packages/experimental:zircon_guest",
   ]
 }
@@ -54,13 +53,6 @@ group("debian_guest") {
   public_deps = [
     "//garnet/bin/guest/pkg/debian_guest",
     "//garnet/packages/prod:guest_runner",
-  ]
-}
-
-group("wayland_bridge") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wayland/bridge",
   ]
 }
 
@@ -85,8 +77,6 @@ group("linux_runner") {
   testonly = true
   public_deps = [
     "//garnet/bin/guest/pkg/biscotti_guest/linux_runner",
-    "//garnet/packages/experimental:wayland_bridge",
-    "//garnet/packages/prod:guest_runner",
   ]
 }
 

@@ -9,7 +9,6 @@ group("wayland") {
   testonly = true
   deps = [
     ":wayland_tests",
-    "bridge",
     "core",
     "protocols",
   ]
@@ -17,15 +16,10 @@ group("wayland") {
 
 test_package("wayland_tests") {
   deps = [
-    "bridge:tests",
     "core:tests",
     "scanner:tests",
   ]
   tests = [
-    {
-      name = "test_wayland_bridge_test_lib_test"
-      environments = basic_envs
-    },
     {
       name = "wayland_scanner_front_end_test_lib_test"
       environments = basic_envs

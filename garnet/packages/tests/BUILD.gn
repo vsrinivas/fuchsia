@@ -1113,7 +1113,6 @@ group("wayland") {
   testonly = true
   public_deps = [
     "//garnet/bin/wayland:wayland_tests",
-    "//garnet/packages/experimental:wayland_bridge",
   ]
 }
 
