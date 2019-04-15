@@ -4,8 +4,6 @@
 
 //! The Ethernet protocol.
 
-use std::fmt::{self, Debug, Display, Formatter};
-
 use log::debug;
 use packet::{Buf, MtuError, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
@@ -117,64 +115,16 @@ impl ndp::LinkLayerAddress for Mac {
     }
 }
 
-/// An EtherType number.
-#[allow(missing_docs)]
-#[derive(Copy, Clone, Hash, Eq, PartialEq)]
-pub(crate) enum EtherType {
-    Ipv4,
-    Arp,
-    Ipv6,
-    Other(u16),
-}
-
-impl EtherType {
-    const IPV4: u16 = 0x0800;
-    const ARP: u16 = 0x0806;
-    const IPV6: u16 = 0x86DD;
-}
-
-impl From<u16> for EtherType {
-    fn from(u: u16) -> EtherType {
-        match u {
-            Self::IPV4 => EtherType::Ipv4,
-            Self::ARP => EtherType::Arp,
-            Self::IPV6 => EtherType::Ipv6,
-            u => EtherType::Other(u),
-        }
+create_protocol_enum!(
+    /// An EtherType number.
+    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+    pub(crate) enum EtherType: u16 {
+        Ipv4, 0x0800, "IPv4";
+        Arp, 0x0806, "ARP";
+        Ipv6, 0x86DD, "IPv6";
+        _, "EtherType {}";
     }
-}
-
-impl Into<u16> for EtherType {
-    fn into(self) -> u16 {
-        match self {
-            EtherType::Ipv4 => Self::IPV4,
-            EtherType::Arp => Self::ARP,
-            EtherType::Ipv6 => Self::IPV6,
-            EtherType::Other(u) => u,
-        }
-    }
-}
-
-impl Display for EtherType {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}",
-            match self {
-                EtherType::Ipv4 => "IPv4",
-                EtherType::Arp => "ARP",
-                EtherType::Ipv6 => "IPv6",
-                EtherType::Other(u) => return write!(f, "EtherType {}", u),
-            }
-        )
-    }
-}
-
-impl Debug for EtherType {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        Display::fmt(self, f)
-    }
-}
+);
 
 /// The state associated with an Ethernet device.
 pub(crate) struct EthernetDeviceState {

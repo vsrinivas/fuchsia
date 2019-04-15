@@ -828,77 +828,21 @@ mod internal {
         }
     }
 
-    /// An IP protocol or next header number.
-    ///
-    /// For IPv4, this is the protocol number. For IPv6, this is the next header
-    /// number.
-    #[allow(missing_docs)]
-    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-    pub(crate) enum IpProto {
-        Icmp,
-        Igmp,
-        Tcp,
-        Udp,
-        Icmpv6,
-        Other(u8),
-    }
-
-    impl IpProto {
-        const ICMP: u8 = 1;
-        const IGMP: u8 = 2;
-        const TCP: u8 = 6;
-        const UDP: u8 = 17;
-        const ICMPV6: u8 = 58;
-    }
-
-    impl From<u8> for IpProto {
-        fn from(u: u8) -> IpProto {
-            match u {
-                Self::ICMP => IpProto::Icmp,
-                Self::IGMP => IpProto::Igmp,
-                Self::TCP => IpProto::Tcp,
-                Self::UDP => IpProto::Udp,
-                Self::ICMPV6 => IpProto::Icmpv6,
-                u => IpProto::Other(u),
-            }
+    create_protocol_enum!(
+        /// An IP protocol or next header number.
+        ///
+        /// For IPv4, this is the protocol number. For IPv6, this is the next header
+        /// number.
+        #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+        pub(crate) enum IpProto: u8 {
+            Icmp, 1, "ICMP";
+            Igmp, 2, "IGMP";
+            Tcp, 6, "TCP";
+            Udp, 17, "UDP";
+            Icmpv6, 58, "ICMPv6";
+            _, "IP protocol {}";
         }
-    }
-
-    impl Into<u8> for IpProto {
-        fn into(self) -> u8 {
-            match self {
-                IpProto::Icmp => Self::ICMP,
-                IpProto::Igmp => Self::IGMP,
-                IpProto::Tcp => Self::TCP,
-                IpProto::Udp => Self::UDP,
-                IpProto::Icmpv6 => Self::ICMPV6,
-                IpProto::Other(u) => u,
-            }
-        }
-    }
-
-    impl Display for IpProto {
-        fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-            write!(
-                f,
-                "{}",
-                match self {
-                    IpProto::Icmp => "ICMP",
-                    IpProto::Igmp => "IGMP",
-                    IpProto::Tcp => "TCP",
-                    IpProto::Udp => "UDP",
-                    IpProto::Icmpv6 => "ICMPv6",
-                    IpProto::Other(u) => return write!(f, "IP protocol {}", u),
-                }
-            )
-        }
-    }
-
-    impl Debug for IpProto {
-        fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-            Display::fmt(self, f)
-        }
-    }
+    );
 
     /// An extension trait to the `Ip` trait adding an associated `Packet` type.
     ///
