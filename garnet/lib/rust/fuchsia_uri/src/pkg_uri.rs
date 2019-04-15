@@ -32,7 +32,7 @@ use url::Url;
 /// - fuchsia-pkg://example.com/some-package/some-variant#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource (obsolete)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FuchsiaPkgUri {
     host: String,
     path: String,
@@ -251,7 +251,7 @@ impl<'de> Deserialize<'de> for FuchsiaPkgUri {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(transparent)]
 pub struct RepoUri {
     uri: FuchsiaPkgUri,

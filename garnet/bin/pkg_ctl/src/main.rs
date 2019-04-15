@@ -6,12 +6,16 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
+use fidl_fuchsia_pkg::{
+    PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
+};
+use fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig};
 use files_async;
-use fuchsia_component::client::{launcher, launch};
 use fuchsia_async as fasync;
-use fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker, UpdatePolicy};
-use fidl_fuchsia_pkg_ext::BlobId;
+use fuchsia_component::client::{launch, launcher};
 use fuchsia_zircon as zx;
+use serde_json;
+use std::convert::TryFrom;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -45,6 +49,7 @@ enum Command {
         #[structopt(help = "Package selectors")]
         selectors: Vec<String>,
     },
+
     #[structopt(name = "open", about = "open a package by merkle root")]
     Open {
         #[structopt(help = "Merkle root of package's meta.far to cache")]
@@ -53,16 +58,21 @@ enum Command {
         #[structopt(help = "Package selectors")]
         selectors: Vec<String>,
     },
+
+    #[structopt(name = "repo", about = "repo subcommands")]
+    Repo(RepoCommand),
+}
+
+#[derive(StructOpt)]
+enum RepoCommand {
+    #[structopt(name = "list", about = "list repositories")]
+    List,
 }
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let Options {
-        pkg_resolver_uri,
-        pkg_cache_uri,
-        cmd,
-    } = Options::from_args();
+    let Options { pkg_resolver_uri, pkg_cache_uri, cmd } = Options::from_args();
 
     // Launch the server and connect to the resolver service.
     let launcher = launcher().context("Failed to open launcher service")?;
@@ -82,10 +92,7 @@ fn main() -> Result<(), Error> {
                 let res = await!(resolver.resolve(
                     &pkg_uri,
                     &mut selectors.iter().map(|s| s.as_str()),
-                    &mut UpdatePolicy {
-                        fetch_if_absent: true,
-                        allow_old_versions: true,
-                    },
+                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
                     dir_server_end,
                 ))?;
                 zx::Status::ok(res)?;
@@ -98,19 +105,13 @@ fn main() -> Result<(), Error> {
 
                 Ok(())
             }
-            Command::Open {
-                meta_far_blob_id,
-                selectors,
-            } => {
+            Command::Open { meta_far_blob_id, selectors } => {
                 let app = launch(&launcher, pkg_cache_uri, None)
                     .context("Failed to launch cache service")?;
                 let cache = app
                     .connect_to_service(PackageCacheMarker)
                     .context("Failed to connect to cache service")?;
-                println!(
-                    "opening {} with the selectors {:?}",
-                    meta_far_blob_id, selectors
-                );
+                println!("opening {} with the selectors {:?}", meta_far_blob_id, selectors);
 
                 let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
@@ -128,6 +129,41 @@ fn main() -> Result<(), Error> {
                 }
 
                 Ok(())
+            }
+            Command::Repo(cmd) => {
+                let app = launch(&launcher, pkg_resolver_uri, None)
+                    .context("Failed to launch resolver service")?;
+                let repo_manager = app
+                    .connect_to_service(RepositoryManagerMarker)
+                    .context("Failed to connect to resolver service")?;
+
+                match cmd {
+                    RepoCommand::List => {
+                        let (iter, server_end) = fidl::endpoints::create_proxy()?;
+                        repo_manager.list(server_end)?;
+                        let mut repos = vec![];
+
+                        loop {
+                            let chunk = await!(iter.next())?;
+                            if chunk.is_empty() {
+                                break;
+                            }
+                            repos.extend(chunk);
+                        }
+
+                        let repos = repos
+                            .into_iter()
+                            .map(|repo| {
+                                RepositoryConfig::try_from(repo).expect("valid repo config")
+                            })
+                            .collect::<Vec<_>>();
+
+                        let s = serde_json::to_string_pretty(&repos).expect("valid json");
+                        println!("{}", s);
+
+                        Ok(())
+                    }
+                }
             }
         }
     };

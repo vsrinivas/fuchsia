@@ -18,11 +18,13 @@ use std::path::Path;
 use std::sync::Arc;
 
 mod repository_manager;
+mod repository_service;
 mod resolver_service;
 #[cfg(test)]
 mod test_util;
 
 use repository_manager::RepositoryManager;
+use repository_service::RepositoryService;
 
 const SERVER_THREADS: usize = 2;
 const STATIC_REPO_DIR: &str = "/config/data/pkg_resolver/repositories";
@@ -33,20 +35,31 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let _repo_manager = static_repo_manager();
+    let repo_manager = static_repo_manager();
 
     let amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
-        fx_log_info!("spawning resolver service");
-        fasync::spawn(
-            resolver_service::run_resolver_service(amber.clone(), cache.clone(), stream)
-                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
-        )
-    });
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
+            fasync::spawn(
+                resolver_service::run_resolver_service(amber.clone(), cache.clone(), stream)
+                    .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+            )
+        })
+        .add_fidl_service(move |stream| {
+            let repo_manager = repo_manager.clone();
+
+            fasync::spawn(
+                async move {
+                    let mut repo_service = RepositoryService::new(repo_manager);
+                    await!(repo_service.run(stream))
+                }
+                    .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
+            )
+        });
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run(fs.collect(), SERVER_THREADS);

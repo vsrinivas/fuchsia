@@ -5,7 +5,7 @@
 use {
     failure::Fail,
     fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigs},
-    std::collections::hash_map::Entry,
+    std::collections::hash_map::{self, Entry},
     std::collections::HashMap,
     std::fmt,
     std::fs,
@@ -94,6 +94,11 @@ impl RepositoryManager {
 
         Ok((RepositoryManager { configs: map }, errors))
     }
+
+    /// Returns an iterator over all the managed [RepositoryConfig]s.
+    pub fn list(&self) -> List {
+        List { iter: self.configs.iter() }
+    }
 }
 
 /// [LoadError] describes all the recoverable error conditions that can be encountered when
@@ -131,6 +136,21 @@ impl fmt::Display for LoadError {
                 write!(f, "repository config for {} was overridden", replaced_config.repo_url())
             }
         }
+    }
+}
+
+/// `List` is an iterator over all the [RepoConfig].
+///
+/// See its documentation for more.
+pub struct List<'a> {
+    iter: hash_map::Iter<'a, String, RepositoryConfig>,
+}
+
+impl<'a> Iterator for List<'a> {
+    type Item = (&'a String, &'a RepositoryConfig);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 
@@ -339,6 +359,42 @@ mod tests {
                     "fuchsia.com".to_string() => fuchsia_config1,
                 }
             }
+        );
+    }
+
+    #[test]
+    fn test_list_empty() {
+        let repomgr = RepositoryManager::new();
+        assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![]);
+    }
+
+    #[test]
+    fn test_list() {
+        let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
+        let example_config = RepositoryConfigBuilder::new(example_uri).build();
+
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri).build();
+
+        let dir = create_dir(vec![
+            ("example.com", RepositoryConfigs::Version1(vec![example_config.clone()])),
+            ("fuchsia.com", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
+        ]);
+
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        assert_eq!(errors.len(), 0);
+
+        let mut results = repomgr.list().collect::<Vec<_>>();
+
+        // Sort the results so it's easy to compare.
+        results.sort_unstable_by_key(|(k, _)| &**k);
+
+        assert_eq!(
+            results,
+            vec![
+                (&"example.com".into(), &example_config),
+                (&"fuchsia.com".into(), &fuchsia_config),
+            ]
         );
     }
 }
