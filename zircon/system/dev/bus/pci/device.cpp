@@ -308,16 +308,17 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     // preserve it.
     if (bar_info.address) {
         status = allocator->GetRegion(bar_info.address, bar_info.size, &bar_info.allocation);
-        if (status != ZX_OK) {
-            pci_errorf("%s failed to preserve BAR %u address %lx, reallocating: %d\n",
+        if (status == ZX_OK) {
+            // If we successfully grabbed the allocation then we're finished because
+            // our metadata already matches what we requested from the allocator.
+            pci_tracef("%s preserved BAR %u's existing allocation.\n", cfg_->addr(),
+                       bar_info.bar_id);
+            return ZX_OK;
+        } else {
+            pci_tracef("%s failed to preserve BAR %u address %lx, reallocating: %d\n",
                        cfg_->addr(), bar_info.bar_id, bar_info.address, status);
             bar_info.address = 0;
         }
-
-        // If we successfully grabbed the allocation then we're finished because
-        // our metadata already matches what we requested from the allocator.
-        pci_tracef("%s preserved BAR %u's existing allocation.\n", cfg_->addr(), bar_info.bar_id);
-        return ZX_OK;
     }
 
     // If we had no address, or we failed to preseve the address, then it's time
