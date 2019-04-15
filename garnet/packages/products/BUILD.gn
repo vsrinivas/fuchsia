@@ -134,6 +134,7 @@ group("network_wifi") {
 group("base") {
   testonly = true
   public_deps = [
+    "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/config:amber",
     "//garnet/packages/config:mdns",
     "//garnet/packages/config:network",

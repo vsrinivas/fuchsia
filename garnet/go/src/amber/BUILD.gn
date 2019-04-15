@@ -57,6 +57,26 @@ generate_manifest("install-disk-image.manifest") {
 manifest_outputs = get_target_outputs(":install-disk-image.manifest")
 manifest_file = manifest_outputs[0]
 
+package("pkgfs") {
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//garnet/go/src/pmd/meta/pkgsvr.cmx")
+      dest = "pkgsvr.cmx"
+    },
+  ]
+}
+
 package("amber") {
   deprecated_global_persistent_storage = "//build"
   extra = [ manifest_file ]
@@ -68,10 +88,6 @@ package("amber") {
   ]
 
   binaries = [
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
     {
       name = "amber"
       source = "grand_unified_binary"
@@ -103,10 +119,6 @@ package("amber") {
     {
       path = rebase_path("meta/amber.cmx")
       dest = "amber.cmx"
-    },
-    {
-      path = rebase_path("//garnet/go/src/pmd/meta/pkgsvr.cmx")
-      dest = "pkgsvr.cmx"
     },
     {
       path = rebase_path(

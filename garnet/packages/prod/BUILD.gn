@@ -199,6 +199,7 @@ group("all") {
   testonly = true
   public_deps = [
     ":drivers",
+    "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",

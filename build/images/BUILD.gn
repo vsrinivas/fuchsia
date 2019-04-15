@@ -404,6 +404,7 @@ collect_blob_manifest("blob.manifest") {
     ":preinstall_packages",
     ":system_image.meta",
     ":update.meta",
+    pkgfs_package_label,
   ]
 }
 

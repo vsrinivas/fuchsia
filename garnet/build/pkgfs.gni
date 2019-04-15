@@ -8,7 +8,7 @@
 # moved/changed.
 
 # The label that will produce a package containing bin/pkgsvr, the pkgfs binary.
-pkgfs_package_label = "//garnet/go/src/amber:amber"
+pkgfs_package_label = "//garnet/go/src/amber:pkgfs"
 
 # The name of the binary withing the pkgfs package that hosts pkgfs (pkgsvr).
 pkgfs_binary_name = "pkgsvr"
