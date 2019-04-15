@@ -1,0 +1,32 @@
+library fuchsia.castsysteminfo;
+
+/// Error codes for the GetSystemInfo operation.
+enum ErrorCode {
+ /// Error when there is no system info available.
+ ERR_NO_SYSTEM_INFO = 1;
+ /// Generic error.
+ ERR_INTERNAL = 2;
+};
+
+/// Cast-related device settings
+///
+/// This table may be extended to include additional cast-specific information.
+/// The values requested here are generated on first boot of the device and
+/// don't change unless there is a factory reset.
+table SystemInfo {
+  /// Local (CastV2) device ID. Identifies the device on a local network.
+  /// Used by the Home app as the device identifier and for MDNS record matching.
+  1: string local_device_id;
+  /// The device will use this identifier to send/receive CloudCast commands.
+  /// Sending a CloudCast command to the receiver with this ID will ensure that
+  /// the command is accepted and consumed by the device.
+  2: string cloud_device_id;
+};
+
+/// Exposes Cast system info, as modeled in the SystemInfo table.
+[Discoverable]
+protocol Provider {
+  /// Retrieves the SystemInfo fields that are generated at first boot and are
+  /// available at startup.
+  GetSystemInfo() -> (SystemInfo systemInfo) error ErrorCode;
+};
