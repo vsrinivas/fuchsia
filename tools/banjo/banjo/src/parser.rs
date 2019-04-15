@@ -75,7 +75,7 @@ compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = { ("@")? ~ (alpha | digit | "_")+ }
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
-string = { "\"" ~ ("-" | "_" | "/" | "." | "," | "'" | "(" | ")" | "&" |
+string = { "\"" ~ ("-" | "_" | "/" | "." | "," | "'" | "(" | ")" | "&" | "*" |
            SYMBOL | alpha | digit)* ~ "\"" }
 numeric = { ("-" | digit)* }
 constant = { compound_ident | string | numeric }

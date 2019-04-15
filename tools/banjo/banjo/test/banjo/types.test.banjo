@@ -47,7 +47,7 @@ struct default_values {
     uint16 u16 = 348;
     uint32 u32 = 9038;
     uint64 u64 = 19835;
-    string s = "hello-_/.,'()&0123456789";
+    string s = "hello-_/.,'()&*0123456789";
 };
 
 const uint32 arrays_size = 32;
