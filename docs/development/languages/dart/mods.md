@@ -198,3 +198,7 @@ sky_engine:file:///<abs_fuchsia_root>/third_party/dart-pkg/git/flutter/bin/cache
 You might have to relaunch Atom to get everything working correctly. With this
 `.packages` files, you get all dartanalyzer errors/warnings, jump to definition,
 auto completion features.
+
+# Testing
+
+For information on integration testing Flutter mods, see [mod integration testing](mod_integration_testing.md).

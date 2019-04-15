@@ -41,3 +41,7 @@ for test in host_tests:
 So if there are packages that have no tests at all, they won't be considered in
 the denominator of the report, which can give you a misleadingly high coverage
 number.
+
+## Integration Testing
+
+For information on integration testing [Flutter mods](mods.md), see [mod integration testing](mod_integration_testing.md).
