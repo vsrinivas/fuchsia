@@ -6,7 +6,11 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-for h2md in ./build-*/tools/h2md ;
+# Change to the zircon directory.
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPT_DIR}/.."
+
+for h2md in ../out/build-*/tools/h2md ;
 do
     echo $h2md
     break;

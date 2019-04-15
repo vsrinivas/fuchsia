@@ -13,6 +13,7 @@ group("tools") {
     "bootserver",
     "fidl:tools",
     "fvm",
+    "h2md",
     "kernel-buildsig",
     "ktrace-dump",
     "loglistener",
