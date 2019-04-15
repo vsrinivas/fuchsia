@@ -58,23 +58,10 @@ void PageImpl::GetSnapshot(
       std::move(key_prefix), std::move(watcher), std::move(timed_callback));
 }
 
-void PageImpl::GetSnapshotNew(
-    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
-    fit::function<void(Status)> callback) {
-  PageImpl::GetSnapshot(std::move(snapshot_request), std::move(key_prefix),
-                        std::move(watcher), std::move(callback));
-}
-
 void PageImpl::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
                    fit::function<void(Status)> callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
                   std::move(callback));
-}
-
-void PageImpl::PutNew(std::vector<uint8_t> key, std::vector<uint8_t> value,
-                      fit::function<void(Status)> callback) {
-  Put(std::move(key), std::move(value), std::move(callback));
 }
 
 void PageImpl::PutWithPriority(std::vector<uint8_t> key,
@@ -87,13 +74,6 @@ void PageImpl::PutWithPriority(std::vector<uint8_t> key,
                                std::move(timed_callback));
 }
 
-void PageImpl::PutWithPriorityNew(std::vector<uint8_t> key,
-                                  std::vector<uint8_t> value, Priority priority,
-                                  fit::function<void(Status)> callback) {
-  PageImpl::PutWithPriority(std::move(key), std::move(value), priority,
-                            std::move(callback));
-}
-
 void PageImpl::PutReference(std::vector<uint8_t> key, Reference reference,
                             Priority priority,
                             fit::function<void(Status)> callback) {
@@ -104,13 +84,6 @@ void PageImpl::PutReference(std::vector<uint8_t> key, Reference reference,
                                std::move(timed_callback));
 }
 
-void PageImpl::PutReferenceNew(std::vector<uint8_t> key, Reference reference,
-                               Priority priority,
-                               fit::function<void(Status)> callback) {
-  PutReference(std::move(key), std::move(reference), priority,
-               std::move(callback));
-}
-
 void PageImpl::Delete(std::vector<uint8_t> key,
                       fit::function<void(Status)> callback) {
   fit::function<void(Status)> timed_callback =
@@ -119,19 +92,10 @@ void PageImpl::Delete(std::vector<uint8_t> key,
                                std::move(timed_callback));
 }
 
-void PageImpl::DeleteNew(std::vector<uint8_t> key,
-                         fit::function<void(Status)> callback) {
-  Delete(std::move(key), std::move(callback));
-}
-
 void PageImpl::Clear(fit::function<void(Status)> callback) {
   fit::function<void(Status)> timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_clear");
   delaying_facade_.EnqueueCall(&PageDelegate::Clear, std::move(timed_callback));
-}
-
-void PageImpl::ClearNew(fit::function<void(Status)> callback) {
-  Clear(std::move(callback));
 }
 
 void PageImpl::CreateReferenceFromSocket(
@@ -146,14 +110,6 @@ void PageImpl::CreateReferenceFromSocket(
       &PageDelegate::CreateReference,
       storage::DataSource::Create(std::move(data), size),
       std::move(timed_callback));
-}
-
-void PageImpl::CreateReferenceFromSocketNew(
-    uint64_t size, zx::socket data,
-    fit::function<void(Status, CreateReferenceStatus,
-                       std::unique_ptr<Reference>)>
-        callback) {
-  CreateReferenceFromSocket(size, std::move(data), std::move(callback));
 }
 
 void PageImpl::CreateReferenceFromBuffer(
@@ -173,22 +129,11 @@ void PageImpl::CreateReferenceFromBuffer(
                                std::move(timed_callback));
 }
 
-void PageImpl::CreateReferenceFromBufferNew(
-    fuchsia::mem::Buffer data, fit::function<void(Status, CreateReferenceStatus,
-                                                  std::unique_ptr<Reference>)>
-                                   callback) {
-  CreateReferenceFromBuffer(std::move(data), std::move(callback));
-}
-
 void PageImpl::StartTransaction(fit::function<void(Status)> callback) {
   fit::function<void(Status)> timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_start_transaction");
   delaying_facade_.EnqueueCall(&PageDelegate::StartTransaction,
                                std::move(timed_callback));
-}
-
-void PageImpl::StartTransactionNew(fit::function<void(Status)> callback) {
-  PageImpl::StartTransaction(std::move(callback));
 }
 
 void PageImpl::Commit(fit::function<void(Status)> callback) {
@@ -198,10 +143,6 @@ void PageImpl::Commit(fit::function<void(Status)> callback) {
                                std::move(timed_callback));
 }
 
-void PageImpl::CommitNew(fit::function<void(Status)> callback) {
-  Commit(std::move(callback));
-}
-
 void PageImpl::Rollback(fit::function<void(Status)> callback) {
   fit::function<void(Status)> timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_rollback");
@@ -209,20 +150,10 @@ void PageImpl::Rollback(fit::function<void(Status)> callback) {
                                std::move(timed_callback));
 }
 
-void PageImpl::RollbackNew(fit::function<void(Status)> callback) {
-  Rollback(std::move(callback));
-}
-
 void PageImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                                    fit::function<void(Status)> callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::SetSyncStateWatcher,
                                std::move(watcher), std::move(callback));
-}
-
-void PageImpl::SetSyncStateWatcherNew(
-    fidl::InterfaceHandle<SyncWatcher> watcher,
-    fit::function<void(Status)> callback) {
-  SetSyncStateWatcher(std::move(watcher), std::move(callback));
 }
 
 void PageImpl::WaitForConflictResolution(

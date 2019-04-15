@@ -38,38 +38,18 @@ class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
                    std::vector<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    fit::function<void(Status)> callback) override;
-  void GetSnapshotNew(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                      std::vector<uint8_t> key_prefix,
-                      fidl::InterfaceHandle<PageWatcher> watcher,
-                      fit::function<void(Status)> callback) override;
   void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
            fit::function<void(Status)> callback) override;
-  void PutNew(std::vector<uint8_t> key, std::vector<uint8_t> value,
-              fit::function<void(Status)> callback) override;
   void PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
                        Priority priority,
                        fit::function<void(Status)> callback) override;
-  void PutWithPriorityNew(std::vector<uint8_t> key, std::vector<uint8_t> value,
-                          Priority priority,
-                          fit::function<void(Status)> callback) override;
   void PutReference(std::vector<uint8_t> key, Reference reference,
                     Priority priority,
                     fit::function<void(Status)> callback) override;
-  void PutReferenceNew(std::vector<uint8_t> key, Reference reference,
-                       Priority priority,
-                       fit::function<void(Status)> callback) override;
   void Delete(std::vector<uint8_t> key,
               fit::function<void(Status)> callback) override;
-  void DeleteNew(std::vector<uint8_t> key,
-                 fit::function<void(Status)> callback) override;
   void Clear(fit::function<void(Status)> callback) override;
-  void ClearNew(fit::function<void(Status)> callback) override;
   void CreateReferenceFromSocket(
-      uint64_t size, zx::socket data,
-      fit::function<void(Status, CreateReferenceStatus,
-                         std::unique_ptr<Reference>)>
-          callback) override;
-  void CreateReferenceFromSocketNew(
       uint64_t size, zx::socket data,
       fit::function<void(Status, CreateReferenceStatus,
                          std::unique_ptr<Reference>)>
@@ -79,21 +59,11 @@ class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
       fit::function<void(Status, CreateReferenceStatus,
                          std::unique_ptr<Reference>)>
           callback) override;
-  void CreateReferenceFromBufferNew(
-      fuchsia::mem::Buffer data,
-      fit::function<void(Status, CreateReferenceStatus,
-                         std::unique_ptr<Reference>)>
-          callback) override;
   void StartTransaction(fit::function<void(Status)> callback) override;
-  void StartTransactionNew(fit::function<void(Status)> callback) override;
   void Commit(fit::function<void(Status)> callback) override;
-  void CommitNew(fit::function<void(Status)> callback) override;
   void Rollback(fit::function<void(Status)> callback) override;
-  void RollbackNew(fit::function<void(Status)> callback) override;
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            fit::function<void(Status)> callback) override;
-  void SetSyncStateWatcherNew(fidl::InterfaceHandle<SyncWatcher> watcher,
-                              fit::function<void(Status)> callback) override;
   void WaitForConflictResolution(
       fit::function<void(Status, ConflictResolutionWaitStatus)> callback)
       override;
