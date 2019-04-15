@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/lib/fxl/logging.h"
@@ -37,17 +38,20 @@ T GetRegisterValue(const std::vector<zxdb::Register>& regs,
   return 0;
 }
 
-// Grovels through the |dump| and constructs a local copy of the bytes starting
-// at |bytes_address| and continuing for |num_bytes|.
-std::unique_ptr<uint8_t[]> MemoryDumpToBytes(uint64_t bytes_address,
-                                             uint32_t num_bytes,
-                                             const zxdb::MemoryDump& dump) {
-  std::unique_ptr<uint8_t[]> output_buffer =
-      std::make_unique<uint8_t[]>(num_bytes);
+// Grovels through the |dump| and constructs a local copy of the bytes into an
+// array of type |T|, starting at |bytes_address| and continuing for |count|
+// elements.
+template <typename T>
+std::unique_ptr<T> MemoryDumpToArray(uint64_t bytes_address, uint32_t count,
+                                     const zxdb::MemoryDump& dump) {
+  static_assert(std::is_array<T>::value || std::is_pointer<T>::value,
+                "MemoryDump can only be used for pointer types");
+  std::unique_ptr<T> output_buffer = std::make_unique<T>(count);
   // replace with memset, or poison pattern.
-  for (uint32_t i = 0; i < num_bytes; i++) {
+  for (uint32_t i = 0; i < count; i++) {
     output_buffer[i] = 0;
   }
+  uint8_t* buffer_as_bytes = reinterpret_cast<uint8_t*>(output_buffer.get());
   size_t output_offset = 0;
 
   for (const debug_ipc::MemoryBlock& block : dump.blocks()) {
@@ -61,8 +65,9 @@ std::unique_ptr<uint8_t[]> MemoryDumpToBytes(uint64_t bytes_address,
       }
       block_offset = bytes_address - block.address;
     }
-    while (block_offset < block.size && output_offset < num_bytes) {
-      output_buffer[output_offset] = block.data[block_offset];
+    while (block_offset < block.size &&
+           output_offset < (sizeof(output_buffer[0]) * count)) {
+      buffer_as_bytes[output_offset] = block.data[block_offset];
       output_offset++;
       block_offset++;
     }
@@ -125,37 +130,90 @@ void ZxChannelWriteParams::BuildX86AndContinue(
   uint32_t num_handles =
       GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_r9);
 
-  // We'll do something with handles_address eventually.
-  (void)handles_address;
+  struct ParamStore {
+    // The params, which will move from partially-constructed to fully
+    // constructed.
+    ZxChannelWriteParams params;
+
+    // Any errs that are propagated from the memory reads.
+    zxdb::Err err;
+
+    // The last callback to run, which invokes the ZxChannelWriteCallback
+    fit::function<void()> final_cb;
+  };
+
+  ParamStore* store = new ParamStore();
+  ZxChannelWriteParams new_params(handle, options, nullptr, num_bytes, nullptr,
+                                  num_handles);
+  store->params = std::move(new_params);
+  store->final_cb = [store, fn = std::move(fn)]() {
+    if (!store->err.ok()) {
+      ZxChannelWriteParams p;
+      fn(store->err, p);
+    } else {
+      zxdb::Err err;
+      fn(err, store->params);
+    }
+    delete store;
+  };
 
   if (num_bytes != 0) {
     thread->GetProcess()->ReadMemory(
         bytes_address, num_bytes,
-        [handle, options, bytes_address, num_bytes, handles_address,
-         num_handles,
-         fn = std::move(fn)](const zxdb::Err& err, zxdb::MemoryDump dump) {
-          (void)handles_address;
-          ZxChannelWriteParams params;
+        [store, num_bytes, bytes_address](const zxdb::Err& err,
+                                          zxdb::MemoryDump dump) {
+          std::unique_ptr<uint8_t[]> bytes;
+          auto handles = std::move(store->params.handles_);
           if (err.ok()) {
-            auto bytes = MemoryDumpToBytes(bytes_address, num_bytes, dump);
-            zx_handle_t* handles = nullptr;
-            params = ZxChannelWriteParams(handle, options, std::move(bytes),
-                                          num_bytes, handles, num_handles);
-            fn(err, params);
+            bytes =
+                MemoryDumpToArray<uint8_t[]>(bytes_address, num_bytes, dump);
           } else {
             std::string msg = "Failed to build zx_channel_write params: ";
             msg.append(err.msg());
-            zxdb::Err e = zxdb::Err(err.type(), msg);
-            fn(e, params);
+            zxdb::Err new_err(err.type(), msg);
+            store->err = new_err;
+          }
+          ZxChannelWriteParams new_params(
+              store->params.GetHandle(), store->params.GetOptions(),
+              std::move(bytes), num_bytes, std::move(handles),
+              store->params.GetNumHandles());
+          store->params = std::move(new_params);
+          if (store->params.IsComplete() || !store->err.ok()) {
+            store->final_cb();
           }
         });
-  } else {
-    ZxChannelWriteParams params(handle, options, nullptr, num_bytes, nullptr,
-                                num_handles);
-    zxdb::Err err;
-    fn(err, params);
   }
-  return;
+
+  if (num_handles != 0) {
+    thread->GetProcess()->ReadMemory(
+        handles_address, num_handles * sizeof(zx_handle_t),
+        [store, num_handles, handles_address](const zxdb::Err& err,
+                                              zxdb::MemoryDump dump) {
+          std::unique_ptr<zx_handle_t[]> handles;
+          auto bytes = std::move(store->params.bytes_);
+          if (err.ok()) {
+            handles = MemoryDumpToArray<zx_handle_t[]>(handles_address,
+                                                       num_handles, dump);
+          } else {
+            std::string msg = "Failed to build zx_channel_write params: ";
+            msg.append(err.msg());
+            zxdb::Err new_err(err.type(), msg);
+            store->err = new_err;
+          }
+          ZxChannelWriteParams new_params(
+              store->params.GetHandle(), store->params.GetOptions(),
+              std::move(bytes), store->params.GetNumBytes(), std::move(handles),
+              store->params.GetNumHandles());
+          store->params = std::move(new_params);
+          if (store->params.IsComplete() || !store->err.ok()) {
+            store->final_cb();
+          }
+        });
+  }
+
+  if (num_handles == 0 && num_bytes == 0) {
+    store->final_cb();
+  }
 }
 
 }  // namespace fidlcat

@@ -144,8 +144,8 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
   }
   fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
                        params.GetNumBytes());
-  // Fill in handles later.
-  fidl::HandlePart handles;
+  fidl::HandlePart handles(params.GetHandles().get(), params.GetNumHandles(),
+                           params.GetNumHandles());
   fidl::Message message(std::move(bytes), std::move(handles));
   fidl_message_header_t header = message.header();
   const fidlcat::InterfaceMethod* method;
@@ -169,7 +169,8 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
   fprintf(stderr, "ordinal = %d\n", header.ordinal);
   fprintf(stderr, "Output: %s\n", output.GetString());
 #endif
-  fprintf(stdout, "%s\n", output.GetString());
+  fprintf(stdout, "%s.%s = %s\n", method->enclosing_interface().name().c_str(),
+          method->name().c_str(), output.GetString());
 }
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
@@ -178,7 +179,7 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
                     std::vector<std::string>& params) {
   workflow.SetZxChannelWriteCallback(std::bind(
       OnZxChannelWrite, &loader, std::placeholders::_1, std::placeholders::_2));
-  unsigned long long process_koid = ULLONG_MAX;
+  uint64_t process_koid = ULLONG_MAX;
   if (options.remote_pid) {
     std::string& pid_str = *options.remote_pid;
     process_koid = strtoull(pid_str.c_str(), nullptr, 10);

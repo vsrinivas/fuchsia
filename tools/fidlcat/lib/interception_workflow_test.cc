@@ -32,6 +32,10 @@ class DataForZxWriteTest {
 
   size_t num_bytes() { return sizeof(header_); }
 
+  const zx_handle_t* handles() { return handles_; }
+
+  size_t num_handles() { return sizeof(handles_) / sizeof(handles_[0]); }
+
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
       zxdb::Session* session) {
     constexpr uint64_t kElfSymbolAddress = 0x100060;
@@ -66,6 +70,15 @@ class DataForZxWriteTest {
       const uint8_t* bytes = data();
       std::copy(bytes, bytes + num_bytes(), std::back_inserter(block.data));
     }
+    if (address == kHandlesAddress) {
+      block.address = address;
+      block.size = size;
+      block.valid = true;
+      const zx_handle_t* h = handles();
+      std::copy(reinterpret_cast<const uint8_t*>(h),
+                reinterpret_cast<const uint8_t*>(h + num_handles()),
+                std::back_inserter(block.data));
+    }
   }
 
   void PopulateRegisters(debug_ipc::RegisterCategory& category) {
@@ -73,17 +86,30 @@ class DataForZxWriteTest {
     // Assumes Little Endian
     const uint8_t* address_as_bytes =
         reinterpret_cast<const uint8_t*>(&kBytesAddress);
-    uint8_t num_bytes = sizeof(fidl_message_header_t);
+
+    const uint8_t* handles_address_as_bytes =
+        reinterpret_cast<const uint8_t*>(&kHandlesAddress);
 
     std::map<debug_ipc::RegisterID, std::vector<uint8_t>> values = {
+        // zx_handle_t handle
         {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
+        // uint32_t options
         {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
+        // bytes_address
         {debug_ipc::RegisterID::kX64_rdx,
-         std::vector<uint8_t>(address_as_bytes, address_as_bytes + num_bytes)},
-        {debug_ipc::RegisterID::kX64_rcx, {num_bytes, 0x00, 0x00, 0x00}},
+         std::vector<uint8_t>(address_as_bytes,
+                              address_as_bytes + num_bytes())},
+        // num_bytes
+        {debug_ipc::RegisterID::kX64_rcx,
+         {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
+        // handles_address
         {debug_ipc::RegisterID::kX64_r8,
-         {0x7e, 0x57, 0xab, 0x1e, 0x0f, 0xac, 0xad, 0xe5}},
-        {debug_ipc::RegisterID::kX64_r9, {0x01, 0x00, 0x00, 0x00}}};
+         std::vector<uint8_t>(
+             handles_address_as_bytes,
+             handles_address_as_bytes + (sizeof(zx_handle_t) * num_handles()))},
+        // num_handles
+        {debug_ipc::RegisterID::kX64_r9,
+         {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}}};
 
     std::vector<debug_ipc::Register>& registers = category.registers;
     for (auto value : values) {
@@ -100,9 +126,11 @@ class DataForZxWriteTest {
   static const uint32_t kOrdinal = 2011483371;
   static constexpr char kElfSymbolBuildID[] = "123412341234";
   static constexpr uint64_t kBytesAddress = 0x7e57ab1eba5eba11;
+  static constexpr uint64_t kHandlesAddress = 0xca11ab1e7e57;
   static const char* zx_channel_write_name_;
 
   fidl_message_header_t header_;
+  zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
 };
 
 const char* DataForZxWriteTest::zx_channel_write_name_ =
@@ -194,6 +222,26 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
 };
 
+namespace {
+template <typename T>
+void AppendElements(std::string& result, size_t num, const T* a, const T* b) {
+  std::ostringstream os;
+  os << "actual      expected\n";
+  for (size_t i = 0; i < num; i++) {
+    os << std::left << std::setw(11) << a[i];
+    os << " ";
+    os << std::left << std::setw(11) << b[i];
+    os << std::endl;
+  }
+  result.append(os.str());
+}
+
+struct AlwaysQuit {
+  ~AlwaysQuit() { debug_ipc::MessageLoop::Current()->QuitNow(); }
+};
+
+}  // namespace
+
 TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
   zxdb::Session& ses = session();
   debug_ipc::PlatformMessageLoop& lp = loop();
@@ -205,27 +253,35 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
 
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
-  workflow.SetZxChannelWriteCallback(
-      [this, &hit_breakpoint](const zxdb::Err& err,
-                              const ZxChannelWriteParams& params) {
-        hit_breakpoint = true;
-        ASSERT_TRUE(err.ok());
-        const uint8_t* data = data_.data();
-        std::string result;
-        uint32_t num_bytes = params.GetNumBytes();
-        ASSERT_EQ(num_bytes, data_.num_bytes());
-        if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
-          for (size_t i = 0; i < num_bytes; i++) {
-            result.append(std::to_string(params.GetBytes().get()[i]));
-            result.append(" ");
-            result.append(std::to_string(data[i]));
-            result.append("\n");
-          }
-          result.append("bytes not equivalent");
-          ASSERT_TRUE(false) << result;
-        }
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  workflow.SetZxChannelWriteCallback([this, &hit_breakpoint](
+                                         const zxdb::Err& err,
+                                         const ZxChannelWriteParams& params) {
+    AlwaysQuit aq;
+    hit_breakpoint = true;
+    ASSERT_TRUE(err.ok());
+
+    std::string result;
+
+    const uint8_t* data = data_.data();
+    uint32_t num_bytes = params.GetNumBytes();
+    ASSERT_EQ(num_bytes, data_.num_bytes());
+    if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
+      result.append("bytes not equivalent");
+      AppendElements<uint8_t>(result, num_bytes, params.GetBytes().get(), data);
+      ASSERT_TRUE(false) << result;
+    }
+
+    const zx_handle_t* handles = data_.handles();
+    uint32_t num_handles = params.GetNumHandles();
+    ASSERT_EQ(num_handles, data_.num_handles());
+    if (memcmp(params.GetHandles().get(), handles,
+               num_handles * sizeof(zx_handle_t)) != 0) {
+      result.append("handles not equivalent\n");
+      AppendElements<zx_handle_t>(result, num_handles,
+                                  params.GetHandles().get(), handles);
+      ASSERT_TRUE(false) << result;
+    }
+  });
 
   // Create a fake process and thread.
   constexpr uint64_t kProcessKoid = 1234;

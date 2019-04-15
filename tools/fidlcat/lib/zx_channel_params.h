@@ -83,18 +83,27 @@ class ZxChannelWriteParams {
   uint32_t num_handles_;
 
   ZxChannelWriteParams(zx_handle_t handle, uint32_t options,
-                       std::unique_ptr<uint8_t[]>&& bytes, uint32_t num_bytes,
-                       zx_handle_t* handles, uint32_t num_handles)
+                       std::unique_ptr<uint8_t[]> bytes, uint32_t num_bytes,
+                       std::unique_ptr<zx_handle_t[]> handles,
+                       uint32_t num_handles)
       : handle_(handle),
         options_(options),
         bytes_(std::move(bytes)),
         num_bytes_(num_bytes),
-        handles_(handles),
+        handles_(std::move(handles)),
         num_handles_(num_handles) {}
 
   static void BuildX86AndContinue(fxl::WeakPtr<zxdb::Thread> thread,
                                   const std::vector<zxdb::Register>& regs,
                                   ZxChannelWriteCallback&& fn);
+
+  bool IsComplete() {
+    // NB: The builder functions will attempt to get memory at any location,
+    // including 0x0.  This means that nullptr is used exclusively to indicate
+    // whether the bytes / handles are set.
+    return (num_bytes_ == 0 || bytes_ != nullptr) &&
+           (num_handles_ == 0 || handles_ != nullptr);
+  }
 };
 
 }  // namespace fidlcat
