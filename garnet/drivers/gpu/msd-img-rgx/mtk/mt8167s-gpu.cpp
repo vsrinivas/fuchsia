@@ -18,6 +18,8 @@
 #include <ddktl/protocol/clock.h>
 #include <hw/reg.h>
 
+#include "sys_driver/magma_driver.h"
+
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 struct ComponentDescription {
@@ -45,6 +47,8 @@ public:
     zx_status_t Bind();
     void DdkRelease();
 private:
+    bool StartMagma();
+
     // MFG is Mediatek's name for their graphics subsystem.
     zx_status_t PowerOnMfgAsync();
     zx_status_t PowerOnMfg2d();
@@ -61,7 +65,16 @@ private:
     std::optional<ddk::MmioBuffer> real_gpu_buffer_;
     std::optional<ddk::MmioBuffer> power_gpu_buffer_; // SCPSYS MMIO
     std::optional<ddk::MmioBuffer> clock_gpu_buffer_; // XO MMIO
+
+    std::unique_ptr<MagmaDriver> magma_driver_;
+    std::shared_ptr<MagmaSystemDevice> magma_system_device_;
 };
+
+bool Mt8167sGpu::StartMagma()
+{
+    magma_system_device_ = magma_driver_->CreateDevice(parent());
+    return !!magma_system_device_;
+}
 
 void Mt8167sGpu::DdkRelease() { delete this; }
 
@@ -265,6 +278,17 @@ zx_status_t Mt8167sGpu::Bind()
     zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n", ReadHW64(&real_gpu_buffer_.value(), 0x18));
     zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
            ReadHW64(&real_gpu_buffer_.value(), 0x20));
+
+    magma_driver_ = MagmaDriver::Create();
+    if (!magma_driver_) {
+        GPU_ERROR("Failed to create MagmaDriver\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    if (!StartMagma()) {
+        GPU_ERROR("Failed to start Magma system device\n");
+        return ZX_ERR_INTERNAL;
+    }
 
     return DdkAdd("mt8167s-gpu");
 }
