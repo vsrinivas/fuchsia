@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
   constexpr int EXIT_CODE_GENERAL_ERROR = 1;
 
   // The wip number is incremented arbitrarily.
-  // TODO(dschuyler) replace wip number with real version number.
+  // TODO(smbug.com/44) replace wip number with real version number.
   constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 10";
 
   // Command line options.
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
   }
   if (command_line.HasOption(COMMAND_INSPECT)) {
     FXL_LOG(INFO) << "Enabled component framework inspection (wip)";
-    // TODO(dschuyler): actually do component framework inspection.
+    // TODO(smbug.com/43): actually do component framework inspection.
   }
   if (command_line.HasOption(COMMAND_UPDATE_PERIOD)) {
     std::string update_period;

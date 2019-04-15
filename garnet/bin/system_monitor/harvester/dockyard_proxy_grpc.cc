@@ -63,8 +63,8 @@ DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(
 
 DockyardProxyStatus DockyardProxyGrpc::SendSample(
     const std::string& dockyard_path, uint64_t value) {
-  // TODO(dschuyler): system_clock might be at usec resolution. Consider using
-  // high_resolution_clock.
+  // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
+  // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
                              now.time_since_epoch())
@@ -79,8 +79,8 @@ DockyardProxyStatus DockyardProxyGrpc::SendSample(
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
-  // TODO(dschuyler): system_clock might be at usec resolution. Consider using
-  // high_resolution_clock.
+  // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
+  // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
                              now.time_since_epoch())

@@ -4,12 +4,12 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+#include <grpc++/grpc++.h>
+
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
-
-#include <grpc++/grpc++.h>
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "src/lib/fxl/logging.h"
@@ -70,7 +70,7 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     while (stream->Read(&inspect)) {
       FXL_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
                     << inspect.dockyard_id() << ": " << inspect.json();
-      // TODO(dschuyler): interpret the data.
+      // TODO(smbug.com/43): interpret the data.
     }
     return grpc::Status::OK;
   }
