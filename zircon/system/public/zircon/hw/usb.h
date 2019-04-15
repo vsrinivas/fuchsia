@@ -215,6 +215,18 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_DEVICE_QUALIFIER
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint8_t bNumConfigurations;
+    uint8_t bReserved;
+} __attribute__ ((packed)) usb_device_qualifier_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
     uint8_t bDescriptorType;    // USB_DT_SS_EP_COMPANION
     uint8_t bMaxBurst;
     uint8_t bmAttributes;

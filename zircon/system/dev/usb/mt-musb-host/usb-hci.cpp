@@ -65,7 +65,7 @@ uint64_t UsbHci::UsbHciGetCurrentFrame() {
 }
 
 zx_status_t UsbHci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                       const usb_hub_descriptor_t* desc) {
+                                       const usb_hub_descriptor_t* desc, bool multi_tt) {
     if (device_id == root_hub()->id()) {
         // This is a no-op for the emulated root hub.  The hub is constructed in a configured state.
         return ZX_OK;

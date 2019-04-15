@@ -26,7 +26,7 @@ protocol UsbHci {
     GetCurrentFrame() -> (uint64 frame);
     /// Used by the USB hub driver to configure a newly enumerated USB hub.
     ConfigureHub(uint32 device_id, zircon.hw.usb.UsbSpeed speed,
-                 zircon.hw.usb.hub.UsbHubDescriptor desc) -> (zx.status s);
+                 zircon.hw.usb.hub.UsbHubDescriptor desc, bool multi_tt) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a new device is attached.
     HubDeviceAdded(uint32 device_id, uint32 port, zircon.hw.usb.UsbSpeed speed) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a device has been removed.

@@ -471,7 +471,7 @@ uint64_t UsbVirtualBus::UsbHciGetCurrentFrame() {
 }
 
 zx_status_t UsbVirtualBus::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                              const usb_hub_descriptor_t* desc) {
+                                              const usb_hub_descriptor_t* desc, bool multi_tt) {
     return ZX_OK;
 }
 

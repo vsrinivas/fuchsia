@@ -52,8 +52,8 @@ uint64_t UsbVirtualHost::UsbHciGetCurrentFrame() {
 }
 
 zx_status_t UsbVirtualHost::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                              const usb_hub_descriptor_t* desc) {
-    return bus_->UsbHciConfigureHub(device_id, speed, desc);
+                                              const usb_hub_descriptor_t* desc, bool multi_tt) {
+    return bus_->UsbHciConfigureHub(device_id, speed, desc, multi_tt);
 }
 
 zx_status_t UsbVirtualHost::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port,

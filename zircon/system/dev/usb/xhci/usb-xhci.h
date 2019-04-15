@@ -42,7 +42,7 @@ public:
                                      const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable);
     uint64_t UsbHciGetCurrentFrame();
     zx_status_t UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                   const usb_hub_descriptor_t* desc);
+                                   const usb_hub_descriptor_t* desc, bool multi_tt);
     zx_status_t UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed);
     zx_status_t UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port);
     zx_status_t UsbHciHubDeviceReset(uint32_t device_id, uint32_t port);

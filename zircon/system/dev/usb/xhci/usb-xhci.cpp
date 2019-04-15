@@ -96,7 +96,7 @@ uint64_t UsbXhci::UsbHciGetCurrentFrame() {
 }
 
 zx_status_t UsbXhci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
-                                        const usb_hub_descriptor_t* desc) {
+                                        const usb_hub_descriptor_t* desc, bool multi_tt) {
     return xhci_configure_hub(xhci_.get(), device_id, speed, desc);
 }
 

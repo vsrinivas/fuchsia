@@ -310,12 +310,12 @@ static int usb_hub_thread(void* arg) {
     usb_hub_t* hub = (usb_hub_t*)arg;
     usb_request_t* req = hub->status_request;
 
-    usb_hub_descriptor_t desc;
+    usb_hub_descriptor_t hub_desc;
     size_t out_length;
     int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
     zx_status_t result = usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                            desc_type, 0, &desc, sizeof(desc), ZX_TIME_INFINITE,
-                                            &out_length);
+                                            desc_type, 0, &hub_desc, sizeof(hub_desc),
+                                            ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
         zxlogf(ERROR, "get hub descriptor failed: %d\n", result);
         goto fail;
@@ -323,7 +323,7 @@ static int usb_hub_thread(void* arg) {
     // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
     // and how many ports it has.
     size_t min_length = 7;
-    size_t max_length = sizeof(desc);
+    size_t max_length = sizeof(hub_desc);
     if (out_length < min_length || out_length > max_length) {
         zxlogf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu\n",
                 out_length, min_length, max_length);
@@ -331,13 +331,51 @@ static int usb_hub_thread(void* arg) {
         goto fail;
     }
 
-    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
+    // Determine whether the hub supports a single or multiple transaction-translators.  For
+    // low or full-speed devices, this information is encoded in the bDeviceProtocol field of a
+    // DEVICE_QUALIFIER descriptor.  For high-speed devices, this information is encoded in the
+    // bDeviceProtocol field of a DEVICE descriptor.  See: USB 2.0 spec. 11.23.
+    bool multi_tt = false;
+    if (hub->hub_speed == USB_SPEED_LOW || hub->hub_speed == USB_SPEED_FULL) {
+        usb_device_qualifier_descriptor_t qual_desc;
+        result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE_QUALIFIER, 0,
+                                    &qual_desc, sizeof(qual_desc), ZX_TIME_INFINITE, &out_length);
+        if (result < 0) {
+            zxlogf(ERROR, "get device_qualifier descriptor failed: %d\n", result);
+            goto fail;
+        } else if (out_length != sizeof(qual_desc)) {
+            zxlogf(ERROR, "get device_qualifier descriptor returned %ld bytes, want %ld\n",
+                   out_length, sizeof(qual_desc));
+            result = ZX_ERR_BAD_STATE;
+            goto fail;
+        }
+        multi_tt = qual_desc.bDeviceProtocol == 2;
+    } else if (hub->hub_speed == USB_SPEED_HIGH) {
+        usb_device_descriptor_t dev_desc;
+        result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, &dev_desc,
+                                    sizeof(dev_desc), ZX_TIME_INFINITE, &out_length);
+        if (result < 0) {
+            zxlogf(ERROR, "get device descriptor failed: %d\n", result);
+            goto fail;
+        } else if (out_length != sizeof(dev_desc)) {
+            zxlogf(ERROR, "get device descriptor returned %ld bytes, want %ld\n",
+                   out_length, sizeof(dev_desc));
+            result = ZX_ERR_BAD_STATE;
+            goto fail;
+        }
+        multi_tt = dev_desc.bDeviceProtocol == 2;
+    } else { // super-speed
+        // USB 3.x devices do not support the concept of transaction-translators.
+        multi_tt = false;
+    }
+
+    result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &hub_desc, multi_tt);
     if (result < 0) {
         zxlogf(ERROR, "configure_hub failed: %d\n", result);
         goto fail;
     }
 
-    int num_ports = desc.bNbrPorts;
+    int num_ports = hub_desc.bNbrPorts;
     hub->num_ports = num_ports;
     hub->port_status = calloc(num_ports + 1, sizeof(port_status_t));
     if (!hub->port_status) {
@@ -346,7 +384,7 @@ static int usb_hub_thread(void* arg) {
     }
 
     // power on delay in microseconds
-    hub->power_on_delay = desc.bPowerOn2PwrGood * 2 * 1000;
+    hub->power_on_delay = hub_desc.bPowerOn2PwrGood * 2 * 1000;
     if (hub->power_on_delay < 100 * 1000) {
         // USB 2.0 spec section 9.1.2 recommends atleast 100ms delay after power on
         hub->power_on_delay = 100 * 1000;
