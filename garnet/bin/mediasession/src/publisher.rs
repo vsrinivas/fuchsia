@@ -10,14 +10,10 @@ use crate::{
     Result,
 };
 use failure::ResultExt;
-use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
-use fidl_fuchsia_mediasession::{
-    PublisherMarker, PublisherRequest, PublisherRequestStream, SessionMarker,
-};
-use fuchsia_app::server::ServiceFactory;
-use fuchsia_async as fasync;
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_mediasession::{PublisherRequest, PublisherRequestStream, SessionMarker};
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use futures::{lock::Mutex, TryStreamExt};
 use std::{ops::DerefMut, sync::Arc};
 use zx::AsHandleRef;
 
@@ -31,25 +27,16 @@ pub struct Publisher {
 }
 
 impl Publisher {
-    pub fn factory(
+    pub fn new(
         session_list: Arc<Mutex<SessionList>>,
         active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
         collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
         active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
-    ) -> impl ServiceFactory {
-        let publisher = Publisher {
-            session_list,
-            active_session_queue,
-            collection_event_sink,
-            active_session_sink,
-        };
-        (PublisherMarker::NAME, move |channel| {
-            fasync::spawn(publisher.clone().serve(channel).unwrap_or_else(|e| eprintln!("{}", e)))
-        })
+    ) -> Publisher {
+        Publisher { session_list, active_session_queue, collection_event_sink, active_session_sink }
     }
 
-    async fn serve(mut self, channel: fasync::Channel) -> Result<()> {
-        let mut request_stream = PublisherRequestStream::from_channel(channel);
+    pub async fn serve(mut self, mut request_stream: PublisherRequestStream) -> Result<()> {
         while let Some(request) =
             await!(request_stream.try_next()).context("Publisher server request stream")?
         {

@@ -10,8 +10,8 @@ use fidl_fuchsia_math::Size;
 use fidl_fuchsia_media::TimelineFunction;
 use fidl_fuchsia_mediasession::*;
 use fidl_fuchsia_mem::Buffer;
-use fuchsia_app as app;
 use fuchsia_async as fasync;
+use fuchsia_component as comp;
 use fuchsia_zircon as zx;
 use futures::{
     select,
@@ -139,7 +139,7 @@ impl TestSession {
 struct TestService {
     // This needs to stay alive to keep the service running.
     #[allow(unused)]
-    app: app::client::App,
+    app: comp::client::App,
     publisher: PublisherProxy,
     registry: RegistryProxy,
     registry_events: RegistryEventStream,
@@ -147,9 +147,8 @@ struct TestService {
 
 impl TestService {
     fn new() -> Result<Self, Error> {
-        let launcher = app::client::Launcher::new().context("Creating launcher")?;
-        let mediasession = launcher
-            .launch(String::from(MEDIASESSION_URL), None)
+        let launcher = comp::client::launcher().context("Connecting to launcher")?;
+        let mediasession = comp::client::launch(&launcher, String::from(MEDIASESSION_URL), None)
             .context("Launching mediasession")?;
 
         let publisher =

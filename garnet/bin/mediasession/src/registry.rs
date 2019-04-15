@@ -3,19 +3,16 @@
 // found in the LICENSE file.
 
 use crate::{
-    active_session_queue::ActiveSessionQueue, clone_session_id_handle,
-    log_error::log_error_discard_result, mpmc, session_list::SessionList, session_proxy::*,
-    subscriber::Subscriber, Result,
+    active_session_queue::ActiveSessionQueue, clone_session_id_handle, mpmc,
+    session_list::SessionList, session_proxy::*, subscriber::Subscriber, Result,
 };
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_mediasession::{
-    ActiveSession, RegistryControlHandle, RegistryMarker, RegistryRequest, SessionDelta,
+    ActiveSession, RegistryControlHandle, RegistryRequest, RegistryRequestStream, SessionDelta,
     SessionEntry, SessionsChange,
 };
-use fuchsia_app::server::ServiceFactory;
-use fuchsia_async as fasync;
 use fuchsia_zircon::AsHandleRef;
-use futures::{lock::Mutex, FutureExt, StreamExt};
+use futures::{lock::Mutex, StreamExt};
 use std::{ops::Deref, sync::Arc};
 
 /// `Registry` implements `fuchsia.media.session.Registry`.
@@ -28,28 +25,22 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn factory(
+    pub fn new(
         session_list: Arc<Mutex<SessionList>>,
         active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
         collection_event_stream: mpmc::Receiver<(SessionRegistration, SessionCollectionEvent)>,
         active_session_stream: mpmc::Receiver<Option<SessionRegistration>>,
-    ) -> impl ServiceFactory {
-        let controller_registry = Registry {
+    ) -> Registry {
+        Registry {
             session_list,
             active_session_queue,
             collection_event_stream,
             active_session_stream,
-        };
-        (RegistryMarker::NAME, move |channel: fasync::Channel| {
-            let server_end = ServerEnd::from(channel.into_zx_channel());
-            fasync::spawn(
-                controller_registry.clone().serve(server_end).map(log_error_discard_result),
-            )
-        })
+        }
     }
 
-    async fn serve(mut self, server_end: ServerEnd<RegistryMarker>) -> Result<()> {
-        let (mut request_stream, control_handle) = server_end.into_stream_and_control_handle()?;
+    pub async fn serve(mut self, mut request_stream: RegistryRequestStream) -> Result<()> {
+        let control_handle = request_stream.control_handle();
         let (mut active_session_subscriber, mut sessions_change_subscriber) = match (
             await!(self.initialize_active_session_subscriber(control_handle.clone()))?,
             await!(self.initialize_sessions_change_subscriber(control_handle.clone()))?,

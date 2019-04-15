@@ -22,11 +22,11 @@ use self::{
     active_session_queue::ActiveSessionQueue, publisher::Publisher, registry::Registry,
     session_list::SessionList,
 };
-use failure::{Error, ResultExt};
-use fuchsia_app::server::ServicesServer;
+use failure::Error;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use futures::lock::Mutex;
+use futures::{lock::Mutex, Future, StreamExt, TryFutureExt};
 use std::sync::Arc;
 use zx::AsHandleRef;
 
@@ -48,29 +48,36 @@ fn clone_session_id_handle(session_id_handle: &zx::Event) -> Result<zx::Event> {
     Ok(session_id_handle.as_handle_ref().duplicate(session_id_rights())?.into())
 }
 
+fn spawn_log_error(fut: impl Future<Output = Result<()>> + Send + 'static) {
+    fasync::spawn(fut.unwrap_or_else(|e| eprintln!("{}", e)))
+}
+
 #[fasync::run_singlethreaded]
-async fn main() -> Result<()> {
+async fn main() {
     let session_list = Arc::new(Mutex::new(SessionList::default()));
     let active_session_queue = Arc::new(Mutex::new(ActiveSessionQueue::default()));
     let (active_session_sink, active_session_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
     let (collection_event_sink, collection_event_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
 
-    let fidl_server = ServicesServer::new()
-        .add_service(Publisher::factory(
-            session_list.clone(),
-            active_session_queue.clone(),
-            active_session_sink,
-            collection_event_sink,
-        ))
-        .add_service(Registry::factory(
-            session_list.clone(),
-            active_session_queue.clone(),
-            active_session_stream,
-            collection_event_stream,
-        ))
-        .start()
-        .context("Starting Media Session FIDL server.")?;
+    let publisher = Publisher::new(
+        session_list.clone(),
+        active_session_queue.clone(),
+        active_session_sink,
+        collection_event_sink,
+    );
+    let registry = Registry::new(
+        session_list.clone(),
+        active_session_queue.clone(),
+        active_session_stream,
+        collection_event_stream,
+    );
 
-    await!(fidl_server)?;
-    Ok(())
+    let mut server = ServiceFs::new();
+    server
+        .dir("public")
+        .add_fidl_service(|request_stream| spawn_log_error(publisher.clone().serve(request_stream)))
+        .add_fidl_service(|request_stream| spawn_log_error(registry.clone().serve(request_stream)));
+    server.take_and_serve_directory_handle().expect("To serve Media Session services");
+
+    await!(server.collect::<()>());
 }
