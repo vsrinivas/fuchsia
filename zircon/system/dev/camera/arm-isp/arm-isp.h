@@ -14,24 +14,24 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/isp.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
 #include <hw/reg.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
+#include <zircon/fidl.h>
 
 namespace camera {
 // |ArmIspDevice| is spawned by the driver in |arm-isp.cpp|
-// This class provides the ZX_PROTOCOL_ISP ops for all of it's
-// children. This is TBD as to which protocol it will provide.
-// Most likely its the ZX_PROTOCOL_CAMERA once we move it from
-// Garnet to Zircon.
+// This provides the interface provided in camera.fidl in Zircon.
 class ArmIspDevice;
-using IspDeviceType = ddk::Device<ArmIspDevice, ddk::Unbindable>;
+using IspDeviceType = ddk::Device<ArmIspDevice, ddk::Unbindable, ddk::Messageable>;
 
 class ArmIspDevice : public IspDeviceType,
-                     public ddk::IspProtocol<ArmIspDevice, ddk::base_protocol> {
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArmIspDevice);
 
@@ -59,9 +59,7 @@ public:
     // Methods required by the ddk.
     void DdkRelease();
     void DdkUnbind();
-
-    // ZX_PROTOCOL_ISP ops.
-    void IspDummyCall() {}
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // ISP Init Sequences (init_sequences.cpp)
     void IspLoadSeq_linear();
@@ -84,6 +82,29 @@ private:
     void CopyMeteringInfo(uint8_t config_space,
                           uint8_t direction);
     bool IsFrameProcessingInProgress();
+
+    // DDKMessage Helper Functions.
+    zx_status_t StartStreaming();
+    zx_status_t StopStreaming();
+    zx_status_t ReleaseFrame(uint32_t buffer_id);
+    zx_status_t GetFormats(uint32_t index, fidl_txn_t* txn);
+    zx_status_t CreateStream(const fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
+                             const fuchsia_hardware_camera_FrameRate* rate,
+                             zx_handle_t stream,
+                             zx_handle_t stream_token);
+    zx_status_t GetDeviceInfo(fidl_txn_t* txn);
+
+    static constexpr fuchsia_hardware_camera_Stream_ops_t stream_ops = {
+        .Start = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::StartStreaming>,
+        .Stop = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::StopStreaming>,
+        .ReleaseFrame = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::ReleaseFrame>,
+    };
+
+    static constexpr fuchsia_hardware_camera_Control_ops_t control_ops = {
+        .GetFormats = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::GetFormats>,
+        .CreateStream = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::CreateStream>,
+        .GetDeviceInfo = fidl::Binder<ArmIspDevice>::BindMember<&ArmIspDevice::GetDeviceInfo>,
+    };
 
     ddk::PDev pdev_;
 

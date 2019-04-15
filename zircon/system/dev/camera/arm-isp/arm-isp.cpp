@@ -128,7 +128,6 @@ int ArmIspDevice::IspIrqHandler() {
                     .select_config_ping()
                     .WriteTo(&isp_mmio_);
 
-
                 if (IsFrameProcessingInProgress()) {
                     // TODO: (braval): Handle dropped frame
 
@@ -428,6 +427,42 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t s
     __UNUSED auto ptr = isp_device.release();
 
     return status;
+}
+
+zx_status_t ArmIspDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    zx_status_t status = fuchsia_hardware_camera_Control_try_dispatch(this, txn, msg, &control_ops);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+        return status;
+    }
+
+    return fuchsia_hardware_camera_Stream_try_dispatch(this, txn, msg, &stream_ops);
+}
+
+zx_status_t ArmIspDevice::StartStreaming() {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::StopStreaming() {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::ReleaseFrame(uint32_t buffer_id) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::GetFormats(uint32_t index, fidl_txn_t* txn) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::CreateStream(const fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
+                                       const fuchsia_hardware_camera_FrameRate* rate,
+                                       zx_handle_t stream,
+                                       zx_handle_t stream_token) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::GetDeviceInfo(fidl_txn_t* txn) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 ArmIspDevice::~ArmIspDevice() {
