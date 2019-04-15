@@ -95,8 +95,6 @@ class BatchImpl : public Db::Batch {
   async_dispatcher_t* const dispatcher_;
   std::unique_ptr<leveldb::WriteBatch> batch_;
 
-  const leveldb::ReadOptions read_options_;
-
   fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback_;
 };
 
