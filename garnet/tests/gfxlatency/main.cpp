@@ -18,6 +18,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/coding.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <math.h>
@@ -707,6 +708,55 @@ static void print_usage(FILE* stream) {
           "(default=1)\n");
 }
 
+class BufferArray {
+ public:
+  BufferArray(uint32_t buffer_size, size_t count, uint32_t width,
+              uint32_t height, zx_pixel_format_t format)
+      : size_(buffer_size), array_(new buffer_t[NUM_BUFFERS], count) {
+    for (auto& buffer : array_) {
+      zx_status_t status = alloc_image_buffer(size_, &buffer.vmo);
+      ZX_ASSERT(status == ZX_OK);
+
+      zx_vmo_set_cache_policy(buffer.vmo, ZX_CACHE_POLICY_WRITE_COMBINING);
+
+      status =
+          import_image(buffer.vmo, width, height, format, &buffer.image_id);
+      ZX_ASSERT(status == ZX_OK);
+
+      status =
+          zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                      0, buffer.vmo, 0, size_, &buffer.data);
+      ZX_ASSERT(status == ZX_OK);
+    }
+  }
+
+  ~BufferArray() {
+    for (auto& buffer : array_) {
+      release_image(buffer.image_id);
+      if (buffer.wait_event_id != INVALID_ID) {
+        release_event(buffer.wait_event_id);
+      }
+      if (buffer.wait_event != ZX_HANDLE_INVALID) {
+        zx_handle_close(buffer.wait_event);
+      }
+      zx_vmar_unmap(zx_vmar_root_self(), buffer.data, size_);
+      zx_handle_close(buffer.vmo);
+    }
+  }
+
+  size_t size() const { return array_.size(); }
+
+  buffer_t& operator[](size_t i) const { return array_[i]; }
+
+  buffer_t* begin() const { return array_.begin(); }
+
+  buffer_t* end() const { return array_.end(); }
+
+ private:
+  uint32_t size_;
+  fbl::Array<buffer_t> array_;
+};
+
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   trace::TraceProvider provider(loop.dispatcher());
@@ -879,6 +929,8 @@ int main(int argc, char* argv[]) {
   gfx_surface* surface =
       gfx_create_surface((void*)surface_data.get(), canvas_width, canvas_height,
                          canvas_width, format, 0);
+  auto cleanup_surface =
+      fit::defer([surface]() { gfx_surface_destroy(surface); });
   ZX_ASSERT(surface);
   {
     TRACE_DURATION("app", "Initialize Canvas");
@@ -907,6 +959,8 @@ int main(int argc, char* argv[]) {
       gfx_create_surface((void*)sprite_surface_data.get(), SPRITE_DIM,
                          SPRITE_DIM, SPRITE_DIM, SPRITE_FORMAT, 0);
   ZX_ASSERT(sprite_surface);
+  auto cleanup_sprite_surface =
+      fit::defer([sprite_surface]() { gfx_surface_destroy(sprite_surface); });
   gfx_clear(sprite_surface, 0);
 
   // Scratch buffer for sprite updates. 2 times the size of the sprite.
@@ -933,18 +987,9 @@ int main(int argc, char* argv[]) {
 
   uint64_t next_event_id = INVALID_ID + 1;
 
-  buffer_t buffer_storage[NUM_BUFFERS];
-  fbl::Array<buffer_t> buffers(buffer_storage,
-                               vsync == VSync::OFF ? 1 : NUM_BUFFERS);
+  BufferArray buffers(buffer_size, vsync == VSync::OFF ? 1 : NUM_BUFFERS, width,
+                      height, format);
   for (auto& buffer : buffers) {
-    status = alloc_image_buffer(buffer_size, &buffer.vmo);
-    ZX_ASSERT(status == ZX_OK);
-
-    zx_vmo_set_cache_policy(buffer.vmo, ZX_CACHE_POLICY_WRITE_COMBINING);
-
-    status = import_image(buffer.vmo, width, height, format, &buffer.image_id);
-    ZX_ASSERT(status == ZX_OK);
-
     status = zx_event_create(0, &buffer.wait_event);
     ZX_ASSERT(status == ZX_OK);
     buffer.wait_event_id = INVALID_ID;
@@ -955,10 +1000,6 @@ int main(int argc, char* argv[]) {
     }
     zx_object_signal(buffer.wait_event, 0, ZX_EVENT_SIGNALED);
 
-    status =
-        zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                    buffer.vmo, 0, buffer_size, &buffer.data);
-    ZX_ASSERT(status == ZX_OK);
     copy_rect(
         (uint32_t*)buffer.data,
         (const uint32_t*)surface->ptr + origin.y * canvas_width + origin.x,
@@ -968,19 +1009,9 @@ int main(int argc, char* argv[]) {
 
   uint32_t sprite_size =
       ZX_PIXEL_FORMAT_BYTES(format) * SPRITE_DIM * sprite_stride;
-  buffer_t sprite_storage[NUM_BUFFERS];
-  fbl::Array<buffer_t> sprites(sprite_storage,
-                               vsync == VSync::OFF ? 1 : NUM_BUFFERS);
+  BufferArray sprites(sprite_size, vsync == VSync::OFF ? 1 : NUM_BUFFERS,
+                      SPRITE_DIM, SPRITE_DIM, SPRITE_FORMAT);
   for (auto& sprite : sprites) {
-    status = alloc_image_buffer(sprite_size, &sprite.vmo);
-    ZX_ASSERT(status == ZX_OK);
-
-    zx_vmo_set_cache_policy(sprite.vmo, ZX_CACHE_POLICY_WRITE_COMBINING);
-
-    status = import_image(sprite.vmo, SPRITE_DIM, SPRITE_DIM, SPRITE_FORMAT,
-                          &sprite.image_id);
-    ZX_ASSERT(status == ZX_OK);
-
     status = zx_event_create(0, &sprite.wait_event);
     ZX_ASSERT(status == ZX_OK);
     sprite.wait_event_id = INVALID_ID;
@@ -991,10 +1022,6 @@ int main(int argc, char* argv[]) {
     }
     zx_object_signal(sprite.wait_event, 0, ZX_EVENT_SIGNALED);
 
-    status =
-        zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                    sprite.vmo, 0, sprite_size, &sprite.data);
-    ZX_ASSERT(status == ZX_OK);
     memset((void*)sprite.data, 0, sprite_size);
     memset(&sprite.damage, 0, sizeof(sprite.damage));
   }
@@ -1970,26 +1997,6 @@ int main(int argc, char* argv[]) {
     close(touchfd);
   if (touchpadfd >= 0)
     close(touchpadfd);
-  for (auto& buffer : buffers) {
-    release_image(buffer.image_id);
-    if (buffer.wait_event_id != INVALID_ID)
-      release_event(buffer.wait_event_id);
-    if (buffer.wait_event != ZX_HANDLE_INVALID)
-      zx_handle_close(buffer.wait_event);
-    zx_vmar_unmap(zx_vmar_root_self(), buffer.data, buffer_size);
-    zx_handle_close(buffer.vmo);
-  }
-  for (auto& sprite : sprites) {
-    release_image(sprite.image_id);
-    if (sprite.wait_event_id != INVALID_ID)
-      release_event(sprite.wait_event_id);
-    if (sprite.wait_event != ZX_HANDLE_INVALID)
-      zx_handle_close(sprite.wait_event);
-    zx_vmar_unmap(zx_vmar_root_self(), sprite.data, sprite_size);
-    zx_handle_close(sprite.vmo);
-  }
-  gfx_surface_destroy(surface);
-  gfx_surface_destroy(sprite_surface);
   zx_handle_close(dc_handle);
   close(dc_fd);
   return 0;
