@@ -79,11 +79,14 @@ driver("bus-pci.proxy") {
 test("pci_tests") {
   sources = [
     "test/allocation_tests.cpp",
+    "test/config_tests.cpp",
+    "test/fake_ecam.h",
     "test/main.cpp",
   ]
   deps = [
     ":user_pci",
     "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zxtest",
   ]
 }
