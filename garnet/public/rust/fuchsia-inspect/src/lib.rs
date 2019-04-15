@@ -154,6 +154,17 @@ impl ObjectTreeNode {
         }
     }
 
+    /// Adds a child tree to this node, not checking whether a child with the same name previously
+    /// exists. This is intended to be used when the client is sure that a name collision would
+    /// not occur.
+    ///
+    /// If this method is called while a child with the same name exists, the subsequent behaviors
+    /// for `get_child`, `get_children_names`, `get_num_children`, and `remove_child` are not
+    /// defined.
+    pub fn add_child_tree_unchecked(&mut self, otn: Arc<Mutex<ObjectTreeNode>>) {
+        self.children.push(otn);
+    }
+
     /// Sets this node to also include a set of children that are generated dynamically via the
     /// given function. This dynamic set of children is generated and appended to the static set of
     /// children whenever this node is being interacted with, except where documented as otherwise.
