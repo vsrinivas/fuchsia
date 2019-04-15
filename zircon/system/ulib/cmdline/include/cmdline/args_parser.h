@@ -7,9 +7,11 @@
 
 #include <functional>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include <cmdline/optional_bool.h>
 #include <cmdline/status.h>
 
 namespace cmdline {
@@ -46,7 +48,7 @@ public:
 
     // Callback used for command-line switch presence checks. There is no value
     // and if one is provided it will be an error.
-    using NoArgCallback = std::function<void()>;
+    using OnOffSwitchCallback = std::function<void()>;
 
     // Callback used for string-value switches.
     using StringCallback = std::function<Status(const std::string&)>;
@@ -66,8 +68,10 @@ public:
     //
     // The callback will be called if the switch is specified. With passed-in
     // strings must outlive this class (they're assumed to be static).
-    void AddGeneralSwitch(const char* long_name, const char short_name,
-                          const char* help, NoArgCallback);
+    void AddGeneralSwitch(const char* long_name,
+                          const char short_name, const char* help,
+                          OnOffSwitchCallback on_switch,
+                          OnOffSwitchCallback off_switch = nullptr);
     void AddGeneralSwitch(const char* long_name, const char short_name,
                           const char* help, StringCallback);
 
@@ -88,14 +92,18 @@ private:
         const char* help_text = nullptr;
 
         // Only one of these should be non-null, indicates the parameter type.
-        NoArgCallback no_arg_callback;
+        OnOffSwitchCallback on_switch_callback;
         StringCallback string_callback;
+
+        // This callback should also be included if allowing --no<switchname>
+        OnOffSwitchCallback off_switch_callback;
     };
 
     // Returns true if this record takes an argument.
     static bool NeedsArg(const Record* record);
 
     std::vector<Record> records_;
+    std::string invalid_option_suggestion_ = "Try --help";
 };
 
 // ArgsParser -----------------------------------------------------------
@@ -115,6 +123,8 @@ public:
     // a boolean to true if the parameter is present on the command line. The
     // structure should default the boolean to false to detect a set. If a value
     // is present for the switch ("--enable-foo=bar") it will give an error.
+    // If the default for the bool is true, the user can disable a boolean
+    // switch by prefixing the long name with "no", as in: "--nofoo".
     //
     // Example
     //   struct MyOptions {
@@ -122,14 +132,22 @@ public:
     //   };
     //   ArgsParser<MyOptions> parser;
     //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo_set);
-    void AddSwitch(const char* long_name, const char short_name, const char* help,
+    void AddSwitch(const char* long_name,
+                   const char short_name, const char* help,
                    bool ResultStruct::*value) {
-        AddGeneralSwitch(long_name, short_name, help,
-                         [this, value]() { result_.*value = true; });
+        AddGeneralSwitch(
+            long_name, short_name, help,
+            [this, value]() { result_.*value = true; },
+            [this, value]() { result_.*value = false; });
     }
 
-    // Sets a std::optional with the value if the parameter is present. The value
-    // will be required.
+    // Sets a std::optional with the value if the parameter is present. The
+    // value will be required.
+    //
+    // If the optional validator lambda is given, it will be called with the
+    // string value for the parameter, and invalid values can be rejected by
+    // returning a cmdline::Status::Error("Your message"); otherwise return
+    // cmdline::Status::Ok().
     //
     // Example
     //   struct MyOptions {
@@ -137,18 +155,104 @@ public:
     //   };
     //   ArgsParser<MyOptions> parser;
     //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
+    void AddSwitch(const char* long_name,
+                   const char short_name, const char* help,
+                   std::optional<std::string> ResultStruct::*value,
+                   StringCallback validator = nullptr) {
+        AddGeneralSwitch(
+            long_name, short_name, help,
+            [this, value, validator](const std::string& v) -> Status {
+                if (validator != nullptr) {
+                    Status status = validator(v);
+                    if (status.has_error()) {
+                        return status;
+                    }
+                }
+                result_.*value = v;
+                return Status::Ok();
+            });
+    }
+
+    // Sets a OptionalBool with the value if the switch is present. The value
+    // will be required.
+    //
+    // Note that std::optional<bool> is not supported because this type can
+    // facilitate error-prone uses. std::optional<> implements |operator bool()|
+    // to return true if the value is set. The compiler will, thus, allow a
+    // std_optional<bool> to be used in a boolean expression, which might appear
+    // to resolve to the value, but is not. The boolean expression would
+    // evaluate the wrong boolean, creating a bug that is hard to detect
+    // when reviewing the code.
+    //
+    // Example
+    //   struct MyOptions {
+    //     OptionalBool foo;
+    //   };
+    //   ArgsParser<MyOptions> parser;
+    //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
     void AddSwitch(const char* long_name, const char short_name, const char* help,
-                   std::optional<std::string> ResultStruct::*value) {
-        AddGeneralSwitch(long_name, short_name, help,
-                         [this, value](const std::string& v) -> Status {
-                             result_.*value = v;
-                             return Status::Ok();
-                         });
+                   OptionalBool ResultStruct::*value) {
+        AddGeneralSwitch(
+            long_name, short_name, help,
+            [this, value]() { result_.*value = true; },
+            [this, value]() { result_.*value = false; });
+    }
+
+    // Sets a command-line option of any type streamable to an iostream (via
+    // operator ">>") with the value, if the parameter is present. The value
+    // will be required.
+    //
+    // If the optional validator lambda is given, it will be called with the
+    // string value for the parameter, and invalid values can be rejected by
+    // returning a cmdline::Status::Error("Your message"); otherwise return
+    // cmdline::Status::Ok().
+    //
+    // Example
+    //   struct MyOptions {
+    //     size_t foo;  // Note the type could be int, double, std::string, ...
+    //   };
+    //   ArgsParser<MyOptions> parser;
+    //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
+    template <typename T>
+    void AddSwitch(const char* long_name, const char short_name,
+                   const char* help,
+                   T ResultStruct::*value,
+                   StringCallback validator = nullptr) {
+        AddGeneralSwitch(
+            long_name, short_name, help,
+            [this, long_name, value, validator](const std::string& v)
+                -> Status {
+                if (validator != nullptr) {
+                    Status status = validator(v);
+                    if (status.has_error()) {
+                        return status;
+                    }
+                }
+                std::stringstream ss(v);
+                ss >> result_.*value;
+                if (ss.fail()) {
+                    return Status::Error(
+                        "'" + v + "' is invalid for --" + long_name);
+                }
+                std::string trailing;
+                ss >> trailing;
+                if (trailing.size() > 0) {
+                    return Status::Error(
+                        "Invalid trailing characters '" + trailing +
+                        "' for --" + long_name);
+                }
+                return Status::Ok();
+            });
     }
 
     // Collects a list of all values passed with this flag. This allows multiple
     // flag invocations. For examples "-f foo -f bar" would produce a vector
     // { "foo", "bar" }
+    //
+    // If the optional validator lambda is given, it will be called with the
+    // string value for the parameter, and invalid values can be rejected by
+    // returning a cmdline::Status::Error("Your message"); otherwise return
+    // cmdline::Status::Ok().
     //
     // Example
     //   struct MyOptions {
@@ -156,13 +260,22 @@ public:
     //   };
     //   ArgsParser<MyOptions> parser;
     //   parser.AddSwitch("foo", 'f', kFooHelp, &MyOptions::foo);
-    void AddSwitch(const char* long_name, const char short_name, const char* help,
-                   std::vector<std::string> ResultStruct::*value) {
-        AddGeneralSwitch(long_name, short_name, help,
-                         [this, value](const std::string& v) -> Status {
-                             (result_.*value).push_back(v);
-                             return Status::Ok();
-                         });
+    void AddSwitch(const char* long_name,
+                   const char short_name, const char* help,
+                   std::vector<std::string> ResultStruct::*value,
+                   StringCallback validator = nullptr) {
+        AddGeneralSwitch(
+            long_name, short_name, help,
+            [this, value, validator](const std::string& v) -> Status {
+                if (validator != nullptr) {
+                    Status status = validator(v);
+                    if (status.has_error()) {
+                        return status;
+                    }
+                }
+                (result_.*value).push_back(v);
+                return Status::Ok();
+            });
     }
 
     // Parses the given command line, returning the success.

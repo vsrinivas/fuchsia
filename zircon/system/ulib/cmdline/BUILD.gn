@@ -6,6 +6,7 @@ library("cmdline") {
   sdk = "source"
   sdk_headers = [
     "cmdline/args_parser.h",
+    "cmdline/optional_bool.h",
     "cmdline/status.h",
   ]
   host = true

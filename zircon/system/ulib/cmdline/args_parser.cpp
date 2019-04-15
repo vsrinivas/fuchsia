@@ -53,15 +53,17 @@ std::string GetLongOption(const char* arg, const char** value_begin) {
 GeneralArgsParser::GeneralArgsParser() = default;
 GeneralArgsParser::~GeneralArgsParser() = default;
 
-void GeneralArgsParser::AddGeneralSwitch(const char* long_name,
-                                         const char short_name,
-                                         const char* help,
-                                         NoArgCallback cb) {
+void GeneralArgsParser::AddGeneralSwitch(
+    const char* long_name, const char short_name, const char* help,
+    OnOffSwitchCallback on_switch, OnOffSwitchCallback off_switch) {
     Record& record = records_.emplace_back();
     record.long_name = long_name;
     record.short_name = short_name;
     record.help_text = help;
-    record.no_arg_callback = std::move(cb);
+    record.on_switch_callback = std::move(on_switch);
+    if (off_switch != nullptr) {
+        record.off_switch_callback = std::move(off_switch);
+    }
 }
 
 void GeneralArgsParser::AddGeneralSwitch(const char* long_name,
@@ -100,6 +102,7 @@ Status GeneralArgsParser::ParseGeneral(
     for (int i = 1; i < argc; i++) {
         // Non-null when we find the argument.
         const char* arg_begin = nullptr;
+        bool off_switch = false;
 
         const Record* record = nullptr;
         if (IsOptionEndFlag(argv[i])) {
@@ -121,6 +124,10 @@ Status GeneralArgsParser::ParseGeneral(
                 if (cur_record.long_name == long_opt) {
                     record = &cur_record;
                     break;
+                } else if (std::string("no") + cur_record.long_name == long_opt) {
+                    off_switch = true;
+                    record = &cur_record;
+                    break;
                 }
             }
         } else {
@@ -131,8 +138,9 @@ Status GeneralArgsParser::ParseGeneral(
 
         // If we get here we should have found a record for the option.
         if (!record)
-            return Status::Error(std::string(argv[i]) +
-                                 " is not a valid option. Try --help");
+            return Status::Error(
+                std::string(argv[i]) +
+                " is not a valid option. " + invalid_option_suggestion_);
 
         if (NeedsArg(record)) {
             // Arguments can be already found ("-cfoo" or "--foo=bar") or they could
@@ -153,18 +161,28 @@ Status GeneralArgsParser::ParseGeneral(
                 // Arg points somewhere other than the end of the string when we
                 // weren't expecting an arg.
                 return Status::Error(
-                    std::string(
-                        "Unexpected value for argument that doesn't take one:\n  ") +
-                    argv[i] + "\n\n" + record->help_text);
+                    std::string("Unexpected value for argument that doesn't take one:\n  ") +
+                    argv[i] + "\n\n" +
+                    record->help_text);
             }
         }
 
         // Execute the right callback.
         Status status = Status::Ok();
-        if (record->string_callback)
+        if (off_switch) {
+            if (record->off_switch_callback) {
+                record->off_switch_callback();
+            } else {
+                status = Status::Error(
+                    std::string("--") + record->long_name +
+                    " can only be turned on, not off.\n\n" +
+                    record->help_text);
+            }
+        } else if (record->on_switch_callback) {
+            record->on_switch_callback();
+        } else if (record->string_callback) {
             status = record->string_callback(arg_begin);
-        else if (record->no_arg_callback)
-            record->no_arg_callback();
+        }
 
         if (status.has_error())
             return status;
