@@ -6,13 +6,13 @@
 #define SRC_LEDGER_BIN_TESTING_SYNC_PARAMS_H_
 
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <set>
 #include <string>
 
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

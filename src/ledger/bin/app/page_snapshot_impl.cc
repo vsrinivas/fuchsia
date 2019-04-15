@@ -4,24 +4,24 @@
 
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 
+#include <lib/callback/trace_callback.h>
+#include <lib/callback/waiter.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+
 #include <algorithm>
 #include <functional>
 #include <limits>
 #include <queue>
 #include <vector>
 
-#include <lib/callback/trace_callback.h>
-#include <lib/callback/waiter.h>
-#include <lib/fidl/cpp/optional.h>
-#include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/memory/ref_counted.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {

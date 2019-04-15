@@ -4,8 +4,6 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/page_cloud_impl.h"
 
-#include <iterator>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <google/protobuf/util/time_util.h>
 #include <lib/callback/capture.h>
@@ -16,6 +14,8 @@
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <iterator>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "peridot/lib/convert/convert.h"

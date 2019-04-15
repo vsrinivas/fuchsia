@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_COMMIT_BATCH_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_COMMIT_BATCH_H_
 
+#include <lib/fit/function.h>
+
 #include <list>
 #include <string>
 #include <vector>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 

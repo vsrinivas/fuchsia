@@ -4,17 +4,17 @@
 
 #include "src/ledger/bin/app/merging/last_one_wins_merge_strategy.h"
 
-#include <memory>
-#include <string>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
+#include <string>
 
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

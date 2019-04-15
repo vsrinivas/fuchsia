@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_MANAGER_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_MANAGER_H_
 
+#include <fuchsia/auth/cpp/fidl.h>
+
 #include <functional>
 
-#include <fuchsia/auth/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
-
 #include "peridot/lib/rng/random.h"
+#include "src/lib/fxl/macros.h"
 
 namespace firebase_auth {
 

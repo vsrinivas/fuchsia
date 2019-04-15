@@ -8,12 +8,12 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/app/delaying_facade.h"
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 class PageDelegate;

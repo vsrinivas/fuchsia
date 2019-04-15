@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_TESTING_STORAGE_MATCHER_H_
 
 #include <gmock/gmock.h>
+
 #include <tuple>
 
 #include "src/ledger/bin/storage/public/types.h"

@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
 #include <numeric>
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 

@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/testing/quit_on_error.h"
 
-#include <sstream>
-
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <sstream>
 
 namespace ledger {
 

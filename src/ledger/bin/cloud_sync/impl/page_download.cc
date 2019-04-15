@@ -6,11 +6,11 @@
 
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/strings/concatenate.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {
 namespace {

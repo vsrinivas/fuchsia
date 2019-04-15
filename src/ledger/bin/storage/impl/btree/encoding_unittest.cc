@@ -4,14 +4,13 @@
 
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "gtest/gtest.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {

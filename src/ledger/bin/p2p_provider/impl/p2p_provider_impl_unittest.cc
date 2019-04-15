@@ -4,21 +4,22 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 
+#include <lib/fit/function.h>
+
 #include <algorithm>
 #include <ostream>
 #include <string>
 
-#include <lib/fit/function.h>
-
 // gtest matchers are in gmock.
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
 #include "src/ledger/bin/testing/netconnector/netconnector_factory.h"
+#include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {
 namespace {

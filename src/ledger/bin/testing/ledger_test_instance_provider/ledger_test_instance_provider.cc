@@ -6,12 +6,12 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/io/fd.h>
+#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <cstdlib>
 
-#include "lib/fsl/io/fd.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/fxl/strings/string_view.h"

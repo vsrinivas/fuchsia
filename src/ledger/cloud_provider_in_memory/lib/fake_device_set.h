@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_DEVICE_SET_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_DEVICE_SET_H_
 
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include <set>
 #include <string>
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

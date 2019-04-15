@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
 #define SRC_LEDGER_BIN_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
 
-#include <map>
-#include <utility>
-
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/enum.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include <map>
+#include <utility>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/sync_helper/sync_helper.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

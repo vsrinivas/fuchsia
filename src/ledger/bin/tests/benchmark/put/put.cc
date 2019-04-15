@@ -7,11 +7,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
 
 #include <iostream>
@@ -28,6 +23,11 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace ledger {
 namespace {

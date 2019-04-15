@@ -6,10 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

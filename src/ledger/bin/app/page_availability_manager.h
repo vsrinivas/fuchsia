@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_AVAILABILITY_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_PAGE_AVAILABILITY_MANAGER_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/types.h"

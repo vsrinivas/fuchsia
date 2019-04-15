@@ -6,10 +6,10 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
+#include "src/lib/fxl/logging.h"
 
 namespace p2p_provider {
 RemoteConnection::RemoteConnection(std::string local_name)

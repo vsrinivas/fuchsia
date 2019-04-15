@@ -6,11 +6,11 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_JOURNAL_H_
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 

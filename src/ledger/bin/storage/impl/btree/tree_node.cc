@@ -4,22 +4,22 @@
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 
-#include <algorithm>
-#include <utility>
-
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_counted.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/string_printf.h>
+
+#include <algorithm>
+#include <utility>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {

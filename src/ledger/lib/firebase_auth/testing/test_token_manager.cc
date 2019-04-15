@@ -8,7 +8,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace firebase_auth {
 TestTokenManager::TestTokenManager(async_dispatcher_t* dispatcher)

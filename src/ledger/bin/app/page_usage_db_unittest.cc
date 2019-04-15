@@ -5,16 +5,16 @@
 #include "src/ledger/bin/app/page_usage_db.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

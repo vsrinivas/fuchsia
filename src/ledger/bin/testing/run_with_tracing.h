@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_TESTING_RUN_WITH_TRACING_H_
 #define SRC_LEDGER_BIN_TESTING_RUN_WITH_TRACING_H_
 
-#include <functional>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+
+#include <functional>
 
 namespace ledger {
 

@@ -4,16 +4,15 @@
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 
-#include <string>
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

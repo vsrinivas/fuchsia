@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_ENCODING_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_ENCODING_H_
 
-#include <string>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <google/firestore/v1beta1/document.pb.h>
 #include <lib/fidl/cpp/vector.h>
-#include <src/lib/fxl/strings/string_view.h>
+
+#include <string>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {
 

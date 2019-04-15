@@ -5,14 +5,12 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 #define SRC_LEDGER_BIN_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 
-#include "src/ledger/bin/app/page_eviction_manager.h"
+#include <lib/fit/function.h>
 
 #include <memory>
 #include <utility>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/ledger/bin/app/page_eviction_manager.h"
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
@@ -20,6 +18,7 @@
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

@@ -5,16 +5,15 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_PAGE_MANAGER_H_
 
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/time/time_delta.h>
+
+#include <memory>
+#include <vector>
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/app/page_delegate.h"
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {
 // Manages a ledger page.

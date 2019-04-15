@@ -5,17 +5,17 @@
 #ifndef SRC_LEDGER_BIN_TESTS_INTEGRATION_INTEGRATION_TEST_H_
 #define SRC_LEDGER_BIN_TESTS_INTEGRATION_INTEGRATION_TEST_H_
 
-#include <functional>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <trace-provider/provider.h>
+
+#include <functional>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

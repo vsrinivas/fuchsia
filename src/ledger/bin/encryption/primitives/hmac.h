@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_HMAC_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_HMAC_H_
 
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace encryption {
 // Compute the HMAC defined by RFC 2104 using SHA-256 for the hash algorithm.

@@ -6,8 +6,6 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_H_
 
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <memory>
 #include <string>
@@ -19,6 +17,8 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
 

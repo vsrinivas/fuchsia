@@ -6,12 +6,12 @@
 
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/murmurhash/murmurhash.h"
 
 namespace storage {

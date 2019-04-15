@@ -5,16 +5,14 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_DELEGATE_H_
 #define SRC_LEDGER_BIN_APP_PAGE_DELEGATE_H_
 
+#include <lib/callback/operation_serializer.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <queue>
 #include <string>
 #include <vector>
-
-#include <lib/callback/operation_serializer.h>
-#include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/branch_tracker.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
@@ -25,6 +23,8 @@
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;

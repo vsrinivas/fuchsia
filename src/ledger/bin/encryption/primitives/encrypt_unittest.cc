@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 
-#include <algorithm>
-
 #include <gtest/gtest.h>
 #include <zircon/syscalls.h>
+
+#include <algorithm>
 
 #include "peridot/lib/rng/test_random.h"
 

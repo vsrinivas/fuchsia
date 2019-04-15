@@ -5,10 +5,9 @@
 #ifndef SRC_LEDGER_BIN_SYNC_COORDINATOR_IMPL_PAGE_SYNC_IMPL_H_
 #define SRC_LEDGER_BIN_SYNC_COORDINATOR_IMPL_PAGE_SYNC_IMPL_H_
 
-#include <functional>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <functional>
 
 #include "src/ledger/bin/cloud_sync/public/page_sync.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
@@ -17,6 +16,7 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/sync_coordinator/impl/sync_watcher_converter.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
+#include "src/lib/fxl/macros.h"
 
 namespace sync_coordinator {
 

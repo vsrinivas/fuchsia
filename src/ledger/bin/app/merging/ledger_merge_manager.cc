@@ -4,13 +4,13 @@
 
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 
-#include <memory>
-#include <string>
-
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
+
+#include <memory>
+#include <string>
 
 #include "src/ledger/bin/app/merging/auto_merge_strategy.h"
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"

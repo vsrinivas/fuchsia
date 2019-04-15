@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_H_
 #define SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/compiler_specific.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fxl/compiler_specific.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 // Helper class for waiting for asynchronous event.

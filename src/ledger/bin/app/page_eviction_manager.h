@@ -5,18 +5,18 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_EVICTION_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_PAGE_EVICTION_MANAGER_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <string>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/app/page_eviction_policies.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

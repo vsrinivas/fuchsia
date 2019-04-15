@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 #define SRC_LEDGER_BIN_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using the CUSTOM policy.

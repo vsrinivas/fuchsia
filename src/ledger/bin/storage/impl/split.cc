@@ -6,8 +6,6 @@
 
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include <limits>
 #include <memory>
@@ -21,6 +19,8 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 

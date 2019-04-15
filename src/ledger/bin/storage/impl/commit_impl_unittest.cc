@@ -6,13 +6,12 @@
 
 #include <tuple>
 
-#include <src/lib/fxl/macros.h>
-
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace {

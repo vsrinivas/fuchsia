@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 
-#include <memory>
-#include <set>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+
+#include <memory>
+#include <set>
 
 #include "src/ledger/bin/cloud_sync/impl/aggregator.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"

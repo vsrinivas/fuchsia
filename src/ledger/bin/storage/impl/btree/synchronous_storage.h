@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_SYNCHRONOUS_STORAGE_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_SYNCHRONOUS_STORAGE_H_
 
+#include <lib/callback/waiter.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/callback/waiter.h>
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

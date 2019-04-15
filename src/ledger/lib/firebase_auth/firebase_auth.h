@@ -5,12 +5,13 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_H_
 
+#include <lib/callback/cancellable.h>
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <string>
 
-#include <lib/callback/cancellable.h>
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
 namespace firebase_auth {
 

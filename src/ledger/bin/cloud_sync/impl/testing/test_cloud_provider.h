@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_CLOUD_PROVIDER_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_CLOUD_PROVIDER_H_
 
-#include <memory>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_device_set.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 class TestCloudProvider : public cloud_provider::CloudProvider {

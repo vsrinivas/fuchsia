@@ -4,15 +4,9 @@
 
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 
-#include <time.h>
-
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <openssl/bio.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
@@ -21,12 +15,16 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include "src/lib/files/file.h"
+#include <time.h>
 
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace service_account {
 

@@ -7,12 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/command_line.h>
 
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace ledger {
 

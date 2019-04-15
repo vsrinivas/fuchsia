@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_SYNC_COORDINATOR_PUBLIC_LEDGER_SYNC_H_
 #define SRC_LEDGER_BIN_SYNC_COORDINATOR_PUBLIC_LEDGER_SYNC_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/cloud_sync/public/ledger_sync.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
+#include "src/lib/fxl/macros.h"
 
 namespace sync_coordinator {
 

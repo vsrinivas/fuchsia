@@ -5,11 +5,9 @@
 #ifndef SRC_LEDGER_BIN_APP_LEDGER_IMPL_H_
 #define SRC_LEDGER_BIN_APP_LEDGER_IMPL_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
+
+#include <memory>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/page_manager.h"
@@ -17,6 +15,8 @@
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

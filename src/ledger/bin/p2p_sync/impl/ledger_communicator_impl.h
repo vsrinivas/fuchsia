@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_LEDGER_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_LEDGER_COMMUNICATOR_IMPL_H_
 
-#import <map>
-
 #include <lib/fit/function.h>
+
+#import <map>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"

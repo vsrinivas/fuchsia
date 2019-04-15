@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <bitset>
-
 #include "src/ledger/bin/storage/impl/object_digest.h"
 
-#include <src/lib/fxl/strings/concatenate.h>
+#include <bitset>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/constants.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace storage {
 

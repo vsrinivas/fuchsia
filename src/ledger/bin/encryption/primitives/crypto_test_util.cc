@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/encryption/primitives/crypto_test_util.h"
 
-#include <src/lib/fxl/strings/string_number_conversions.h>
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace encryption {
 

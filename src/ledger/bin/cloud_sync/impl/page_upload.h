@@ -5,14 +5,13 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_PAGE_UPLOAD_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_PAGE_UPLOAD_H_
 
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
+#include <vector>
 
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 // Internal state of PageUpload.

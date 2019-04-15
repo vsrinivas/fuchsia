@@ -7,8 +7,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <functional>
 #include <memory>
@@ -18,6 +16,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 

@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
+
+#include <utility>
 
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"

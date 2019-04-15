@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_MANAGER_H_
 #define SRC_LEDGER_LIB_COROUTINE_COROUTINE_MANAGER_H_
 
+#include <lib/fit/function.h>
+
 #include <algorithm>
 #include <list>
-
-#include <lib/fit/function.h>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
 

@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_APP_TYPES_H_
 #define SRC_LEDGER_BIN_APP_TYPES_H_
 
-#include <string>
-
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
+
+#include <string>
 
 #include "src/ledger/bin/storage/public/types.h"
 

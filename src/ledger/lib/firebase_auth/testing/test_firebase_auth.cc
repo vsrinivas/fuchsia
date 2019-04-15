@@ -4,11 +4,11 @@
 
 #include "src/ledger/lib/firebase_auth/testing/test_firebase_auth.h"
 
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/fit/function.h>
+
+#include <utility>
 
 namespace firebase_auth {
 

@@ -5,14 +5,12 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_CONFLICT_RESOLVER_CLIENT_H_
 #define SRC_LEDGER_BIN_APP_MERGING_CONFLICT_RESOLVER_CLIENT_H_
 
-#include <memory>
-#include <vector>
-
 #include <lib/callback/operation_serializer.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
+#include <vector>
 
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/page_manager.h"
@@ -20,6 +18,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to

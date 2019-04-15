@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
-
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 

@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/storage/impl/journal_impl.h"
+#include <lib/callback/set_when_called.h>
 
 #include <memory>
 #include <vector>
-
-#include <lib/callback/set_when_called.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
+#include "src/ledger/bin/storage/impl/journal_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

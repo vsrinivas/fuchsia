@@ -6,9 +6,8 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
 class Aggregator::Listener : public SyncStateWatcher {

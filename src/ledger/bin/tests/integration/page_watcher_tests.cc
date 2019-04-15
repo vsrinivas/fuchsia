@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_printf.h>
+
+#include <utility>
+#include <vector>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gmock/gmock.h"
@@ -23,6 +21,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace ledger {
 namespace {
@@ -642,7 +642,7 @@ TEST_P(PageWatcherIntegrationTest, NoChangeTransactionForwardState) {
 
   PagePtr page1 = instance->GetTestPage();
 
-  auto waiter =  NewWaiter();
+  auto waiter = NewWaiter();
   PageId page_id;
   page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -682,7 +682,7 @@ TEST_P(PageWatcherIntegrationTest, RollbackTransactionForwardState) {
 
   PagePtr page1 = instance->GetTestPage();
 
-  auto waiter =  NewWaiter();
+  auto waiter = NewWaiter();
   PageId page_id;
   page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());

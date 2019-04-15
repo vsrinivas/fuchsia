@@ -5,13 +5,12 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 #define SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 
-#include <functional>
-#include <memory>
-
 #include <lib/callback/operation_serializer.h>
 #include <lib/timekeeper/clock.h>
 
-#include "src/lib/fxl/strings/concatenate.h"
+#include <functional>
+#include <memory>
+
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 

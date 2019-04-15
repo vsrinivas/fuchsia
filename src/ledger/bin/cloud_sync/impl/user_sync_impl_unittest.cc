@@ -4,18 +4,18 @@
 
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
-#include <utility>
-
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <utility>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 

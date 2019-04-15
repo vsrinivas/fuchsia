@@ -6,11 +6,11 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_COMMIT_IMPL_H_
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/timekeeper/clock.h>
 
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 

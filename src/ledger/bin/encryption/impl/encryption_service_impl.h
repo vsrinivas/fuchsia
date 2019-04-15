@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_IMPL_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_IMPL_H_
 
-#include <functional>
-#include <string>
-
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
+#include <functional>
+#include <string>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/cache/lazy_value.h"

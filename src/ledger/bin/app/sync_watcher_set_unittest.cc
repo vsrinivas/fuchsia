@@ -4,14 +4,14 @@
 
 #include "src/ledger/bin/app/sync_watcher_set.h"
 
+#include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include <algorithm>
 #include <string>
 
-#include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

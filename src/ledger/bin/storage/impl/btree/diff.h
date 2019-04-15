@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_DIFF_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_DIFF_H_
 
-#include <functional>
-
 #include <lib/fit/function.h>
+
+#include <functional>
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/public/types.h"

@@ -5,18 +5,18 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_MERGE_RESOLVER_H_
 #define SRC_LEDGER_BIN_APP_MERGING_MERGE_RESOLVER_H_
 
-#include <vector>
-
 #include <lib/backoff/backoff.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <vector>
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;

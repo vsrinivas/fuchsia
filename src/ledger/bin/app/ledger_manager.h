@@ -5,18 +5,15 @@
 #ifndef SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <type_traits>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-#include <src/lib/fxl/strings/string_view.h>
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <type_traits>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -32,6 +29,9 @@
 #include "src/ledger/bin/fidl/error_notifier/error_notifier_binding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

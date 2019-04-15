@@ -6,9 +6,9 @@
 
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service_impl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_provider_firestore {
 

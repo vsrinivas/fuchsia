@@ -4,9 +4,10 @@
 
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 
-#include <src/lib/fxl/logging.h>
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace encryption {
 

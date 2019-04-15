@@ -4,13 +4,12 @@
 
 #include "src/ledger/bin/app/page_eviction_manager_impl.h"
 
-#include <algorithm>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/zx/time.h>
+
+#include <algorithm>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
@@ -22,6 +21,7 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/files/directory.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {

@@ -6,11 +6,11 @@
 #define SRC_LEDGER_BIN_FILESYSTEM_DETACHED_PATH_H_
 
 #include <fcntl.h>
+
 #include <string>
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

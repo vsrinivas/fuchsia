@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_READ_STREAM_DRAINER_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_READ_STREAM_DRAINER_H_
 
+#include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 #include <vector>
 
-#include <grpc++/grpc++.h>
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/cloud_provider_firestore/bin/grpc/stream_controller.h"
 #include "src/ledger/cloud_provider_firestore/bin/grpc/stream_reader.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider_firestore {
 

@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_TESTING_PAGE_DATA_GENERATOR_H_
 #define SRC_LEDGER_BIN_TESTING_PAGE_DATA_GENERATOR_H_
 
-#include <vector>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/strings/string_view.h>
+
+#include <vector>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

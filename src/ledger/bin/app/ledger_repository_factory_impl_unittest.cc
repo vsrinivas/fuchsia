@@ -11,7 +11,6 @@
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 namespace {

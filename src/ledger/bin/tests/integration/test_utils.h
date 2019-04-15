@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_TESTS_INTEGRATION_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_TESTS_INTEGRATION_TEST_UTILS_H_
 
+#include <lib/fsl/vmo/sized_vmo.h>
+
 #include <string>
 #include <vector>
-
-#include <lib/fsl/vmo/sized_vmo.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"

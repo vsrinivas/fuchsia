@@ -10,9 +10,6 @@
 #include <lib/callback/operation_serializer.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/observer_list.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <vector>
 
@@ -26,6 +23,9 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/observer_list.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
 

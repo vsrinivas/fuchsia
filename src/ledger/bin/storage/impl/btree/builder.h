@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_BUILDER_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_BUILDER_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <set>
-
-#include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

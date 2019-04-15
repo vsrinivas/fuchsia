@@ -4,23 +4,23 @@
 
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "peridot/lib/util/ptr.h"
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

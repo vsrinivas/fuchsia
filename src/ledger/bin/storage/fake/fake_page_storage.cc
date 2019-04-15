@@ -10,8 +10,6 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
 
 #include <string>
 #include <utility>
@@ -24,6 +22,8 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace storage {
 namespace fake {

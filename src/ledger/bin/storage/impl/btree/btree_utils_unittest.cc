@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <stdio.h>
-#include <algorithm>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
+#include <stdio.h>
+
+#include <algorithm>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -24,6 +21,9 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {

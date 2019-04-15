@@ -5,12 +5,11 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_PUBLIC_PAGE_COMMUNICATOR_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_PUBLIC_PAGE_COMMUNICATOR_H_
 
-#include "src/ledger/bin/p2p_sync/public/page_communicator.h"
-
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/ledger/bin/p2p_sync/public/page_communicator.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // PageCommunicator handles page-level data transfer between peers.

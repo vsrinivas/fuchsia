@@ -4,20 +4,18 @@
 
 #include "src/ledger/bin/app/ledger_manager.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/callback/ensure_called.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace/event.h>
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "lib/async/cpp/task.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_manager_container.h"
@@ -26,6 +24,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

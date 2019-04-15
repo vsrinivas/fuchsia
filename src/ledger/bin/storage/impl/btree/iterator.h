@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_ITERATOR_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_ITERATOR_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"

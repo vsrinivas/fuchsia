@@ -9,10 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/string_printf.h>
+#include <lib/timekeeper/test_clock.h>
 
 #include <chrono>
 #include <memory>
@@ -21,7 +18,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/timekeeper/test_clock.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
@@ -46,6 +42,10 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 

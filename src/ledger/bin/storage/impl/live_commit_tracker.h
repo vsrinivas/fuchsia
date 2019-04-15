@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_LIVE_COMMIT_TRACKER_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_LIVE_COMMIT_TRACKER_H_
 
+#include <lib/zx/time.h>
+
 #include <memory>
 #include <set>
 #include <vector>
-
-#include <lib/zx/time.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/commit.h"

@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_TREE_NODE_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_TREE_NODE_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/object.h"

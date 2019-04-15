@@ -8,11 +8,11 @@
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/fidl_helpers/bound_interface.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/netconnector/fake_netconnector.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

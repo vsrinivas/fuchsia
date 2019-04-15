@@ -7,11 +7,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider {
 namespace {

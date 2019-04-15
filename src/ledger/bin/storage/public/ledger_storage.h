@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_LEDGER_STORAGE_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_LEDGER_STORAGE_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 

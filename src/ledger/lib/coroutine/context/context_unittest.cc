@@ -4,13 +4,12 @@
 
 #include "src/ledger/lib/coroutine/context/context.h"
 
+#include <lib/fit/function.h>
 #include <string.h>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/compiler_specific.h>
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/compiler_specific.h"
+#include "src/lib/fxl/logging.h"
 
 namespace context {
 

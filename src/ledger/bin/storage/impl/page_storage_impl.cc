@@ -12,11 +12,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -51,6 +46,11 @@
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace storage {
 

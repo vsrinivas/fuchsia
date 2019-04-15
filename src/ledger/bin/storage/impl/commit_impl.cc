@@ -4,16 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/commit_impl.h"
 
-#include <sys/time.h>
-#include <algorithm>
-#include <utility>
-
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/build_config.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_counted.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
+#include <sys/time.h>
+
+#include <algorithm>
+#include <utility>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
@@ -22,6 +18,10 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/fxl/build_config.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 

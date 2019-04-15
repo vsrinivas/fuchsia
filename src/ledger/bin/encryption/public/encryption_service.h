@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_PUBLIC_ENCRYPTION_SERVICE_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_PUBLIC_ENCRYPTION_SERVICE_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <string>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace encryption {
 

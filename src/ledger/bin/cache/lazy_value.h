@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_CACHE_LAZY_VALUE_H_
 #define SRC_LEDGER_BIN_CACHE_LAZY_VALUE_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 namespace cache {
 // Implements a self-populating lazy value.

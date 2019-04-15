@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-#include <vector>
-
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
+
+#include <utility>
+#include <vector>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "garnet/public/lib/callback/waiter.h"
@@ -22,6 +20,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {

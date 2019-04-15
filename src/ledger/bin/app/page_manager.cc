@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/app/page_manager.h"
 
-#include <algorithm>
-
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/syscalls.h>
+
+#include <algorithm>
 
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

@@ -5,9 +5,9 @@
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 namespace btree {

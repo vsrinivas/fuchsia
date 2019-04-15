@@ -6,7 +6,6 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace btree {

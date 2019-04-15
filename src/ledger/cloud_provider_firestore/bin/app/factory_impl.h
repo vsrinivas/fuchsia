@@ -11,11 +11,11 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/cloud_provider_impl.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_provider_firestore {
 

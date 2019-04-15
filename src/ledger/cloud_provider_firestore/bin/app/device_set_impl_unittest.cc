@@ -8,12 +8,12 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/testing/test_credentials_provider.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/test_firestore_service.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider_firestore {
 namespace {

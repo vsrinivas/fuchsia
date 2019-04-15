@@ -9,11 +9,11 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

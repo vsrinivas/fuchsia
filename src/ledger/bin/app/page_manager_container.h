@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_MANAGER_CONTAINER_H_
 #define SRC_LEDGER_BIN_APP_PAGE_MANAGER_CONTAINER_H_
 
-#include <string>
-
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+
+#include <string>
 
 #include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_impl.h"

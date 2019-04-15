@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/filesystem/detached_path.h"
 
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include <utility>
+
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 
@@ -41,8 +41,7 @@ DetachedPath DetachedPath::SubPath(
 }
 
 fxl::UniqueFD DetachedPath::OpenFD(DetachedPath* detatched_path) const {
-  fxl::UniqueFD fd(
-      openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
+  fxl::UniqueFD fd(openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
   if (fd.is_valid()) {
     *detatched_path = ledger::DetachedPath(fd.get());
   }

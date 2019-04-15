@@ -5,7 +5,8 @@
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 
 #include <lib/fidl/cpp/optional.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {
 

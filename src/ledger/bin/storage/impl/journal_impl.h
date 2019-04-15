@@ -5,18 +5,18 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_JOURNAL_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_JOURNAL_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 

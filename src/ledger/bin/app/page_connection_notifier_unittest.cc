@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/app/page_connection_notifier.h"
 
-#include <random>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+
+#include <random>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"

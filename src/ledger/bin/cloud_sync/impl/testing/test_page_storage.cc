@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 
-#include <memory>
-#include <set>
-#include <utility>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
+
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_IMPL_H_
 #define SRC_LEDGER_LIB_COROUTINE_COROUTINE_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <vector>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/macros.h"
 
 namespace context {
 class Stack;

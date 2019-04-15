@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/app/merging/common_ancestor.h"
 
-#include <utility>
-
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
+
+#include <utility>
 
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 

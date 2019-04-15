@@ -4,13 +4,13 @@
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_page_cloud.h"
 
-#include <functional>
-
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <functional>
 
 #include "peridot/lib/convert/convert.h"
 #include "third_party/murmurhash/murmurhash.h"

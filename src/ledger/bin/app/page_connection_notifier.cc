@@ -6,9 +6,9 @@
 
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

@@ -4,14 +4,14 @@
 
 #include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
-#include <utility>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <utility>
 
 #include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"
 

@@ -4,10 +4,6 @@
 
 #include "src/ledger/bin/app/page_impl.h"
 
-#include <algorithm>
-#include <map>
-#include <memory>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/capture.h>
@@ -16,9 +12,11 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <algorithm>
+#include <map>
+#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -33,6 +31,8 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using testing::Contains;
 using testing::ElementsAre;

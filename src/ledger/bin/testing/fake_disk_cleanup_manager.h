@@ -6,13 +6,13 @@
 #define SRC_LEDGER_BIN_TESTING_FAKE_DISK_CLEANUP_MANAGER_H_
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

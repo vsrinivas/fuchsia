@@ -9,13 +9,13 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-#include <src/lib/fxl/strings/concatenate.h>
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace encryption {
 namespace {

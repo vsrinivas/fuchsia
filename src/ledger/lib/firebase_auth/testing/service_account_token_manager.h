@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
 
+#include <fuchsia/auth/cpp/fidl.h>
+
 #include <map>
 
-#include <fuchsia/auth/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
+#include "src/lib/fxl/macros.h"
 
 namespace service_account {
 

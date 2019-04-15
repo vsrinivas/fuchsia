@@ -6,14 +6,11 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/object_dir.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
@@ -21,7 +18,6 @@
 #include <memory>
 #include <utility>
 
-#include "lib/component/cpp/object_dir.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
@@ -30,6 +26,10 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

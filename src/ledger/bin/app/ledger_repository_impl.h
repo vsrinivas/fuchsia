@@ -11,7 +11,6 @@
 #include <lib/component/cpp/expose.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/inspect/inspect.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -29,6 +28,7 @@
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

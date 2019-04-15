@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 
-#include <algorithm>
-#include <string>
-
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <algorithm>
+#include <string>
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/netconnector/netconnector_factory.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/lib/fxl/macros.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest {

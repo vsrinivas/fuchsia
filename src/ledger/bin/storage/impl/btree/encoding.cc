@@ -4,14 +4,14 @@
 
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 
-#include <algorithm>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include <algorithm>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
+#include "src/lib/fxl/logging.h"
 
 namespace storage {
 namespace btree {

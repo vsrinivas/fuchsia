@@ -5,11 +5,12 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_MANAGER_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_MANAGER_H_
 
-#include <string>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
+
+#include <string>
+
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 using fuchsia::auth::AppConfig;
 using fuchsia::auth::AuthenticationUIContext;

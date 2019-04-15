@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_LEDGER_SYNC_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_LEDGER_SYNC_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/bin/cloud_sync/public/page_sync.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 

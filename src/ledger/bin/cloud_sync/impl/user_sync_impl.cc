@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <zircon/syscalls.h>
+
+#include <utility>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {
 

@@ -4,15 +4,14 @@
 
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include <memory>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \

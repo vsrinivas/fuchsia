@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_APP_FIDL_SERIALIZATION_SIZE_H_
 
 #include <stddef.h>
-
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 

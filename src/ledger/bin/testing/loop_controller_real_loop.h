@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_
 #define SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_
 
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
+
+#include <memory>
 
 #include "src/ledger/bin/testing/loop_controller.h"
 

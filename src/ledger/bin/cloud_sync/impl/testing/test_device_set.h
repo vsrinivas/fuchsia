@@ -6,9 +6,9 @@
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_DEVICE_SET_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 

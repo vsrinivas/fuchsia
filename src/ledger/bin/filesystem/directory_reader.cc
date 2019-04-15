@@ -6,11 +6,12 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 namespace {

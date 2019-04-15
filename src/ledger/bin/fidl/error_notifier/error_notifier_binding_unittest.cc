@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/fidl/error_notifier/error_notifier_fidl_test.h"
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/fidl/error_notifier/error_notifier_fidl_test.h"
 
 namespace ledger {
 namespace {

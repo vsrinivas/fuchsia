@@ -10,7 +10,6 @@
 #include <lib/callback/cancellable.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
@@ -25,6 +24,7 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;

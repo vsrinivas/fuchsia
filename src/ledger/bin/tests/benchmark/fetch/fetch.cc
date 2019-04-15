@@ -9,9 +9,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
 
 #include <iostream>
@@ -32,6 +29,9 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace ledger {
 namespace {

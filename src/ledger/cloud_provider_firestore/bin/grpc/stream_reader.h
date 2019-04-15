@@ -5,11 +5,12 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_READER_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_GRPC_STREAM_READER_H_
 
-#include <functional>
-
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include <functional>
+
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_provider_firestore {
 

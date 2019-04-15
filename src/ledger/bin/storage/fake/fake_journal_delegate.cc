@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
 #include <zircon/syscalls.h>
+
+#include <utility>
 
 #include "src/ledger/bin/storage/fake/fake_commit.h"
 #include "src/ledger/bin/storage/public/constants.h"

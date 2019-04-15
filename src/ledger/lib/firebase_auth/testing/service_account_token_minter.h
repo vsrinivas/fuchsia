@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
 
-#include <map>
-
 #include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
+#include <map>
+
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
+#include "src/lib/fxl/macros.h"
 
 namespace service_account {
 

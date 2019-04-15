@@ -4,12 +4,12 @@
 
 #include "src/ledger/bin/app/page_availability_manager.h"
 
+#include <fuchsia/ledger/cpp/fidl.h>
+#include <lib/callback/set_when_called.h>
+
 #include <map>
 #include <random>
 #include <vector>
-
-#include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/callback/set_when_called.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

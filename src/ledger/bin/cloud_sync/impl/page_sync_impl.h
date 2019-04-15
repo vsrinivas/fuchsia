@@ -5,16 +5,14 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 
-#include <functional>
-#include <queue>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/time/time_delta.h>
+
+#include <functional>
+#include <queue>
 
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
@@ -25,6 +23,8 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace cloud_sync {
 

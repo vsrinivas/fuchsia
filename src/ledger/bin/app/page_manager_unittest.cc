@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/app/page_manager.h"
 
-#include <memory>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -15,8 +13,9 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
@@ -28,6 +27,7 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_JOURNAL_DELEGATE_H_
 #define SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_JOURNAL_DELEGATE_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <string>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {

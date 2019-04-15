@@ -5,9 +5,6 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
 #include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include <lib/async/wait.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/component/cpp/expose.h>
@@ -17,10 +14,10 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/inspect/inspect.h>
+#include <stdio.h>
 #include <trace/event.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -39,6 +36,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

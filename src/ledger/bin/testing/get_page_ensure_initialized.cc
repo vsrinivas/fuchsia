@@ -5,9 +5,9 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 namespace {

@@ -5,7 +5,8 @@
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace sync_coordinator {
 

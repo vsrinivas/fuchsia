@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_TESTING_DATA_GENERATOR_H_
 #define SRC_LEDGER_BIN_TESTING_DATA_GENERATOR_H_
 
+#include <lib/fidl/cpp/vector.h>
+
 #include <climits>
 #include <random>
 #include <vector>
-
-#include <lib/fidl/cpp/vector.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"

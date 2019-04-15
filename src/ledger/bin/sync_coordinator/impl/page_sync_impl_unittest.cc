@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/backoff/testing/test_backoff.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"

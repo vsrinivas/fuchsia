@@ -5,13 +5,14 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 
-#include <string>
-
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/netconnector/cpp/message_relay.h>
 #include <lib/zx/channel.h>
+
+#include <string>
+
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_provider {
 // RemoteConnection holds a connection with a single remote device.

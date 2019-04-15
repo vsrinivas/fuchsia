@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_APP_MERGING_TEST_UTILS_H_
 
-#include <functional>
-#include <memory>
-
 #include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <functional>
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

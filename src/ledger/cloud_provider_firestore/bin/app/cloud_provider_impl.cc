@@ -4,19 +4,19 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/cloud_provider_impl.h"
 
-#include <utility>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_view.h>
+
+#include <utility>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider_impl.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/grpc_status.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {
 

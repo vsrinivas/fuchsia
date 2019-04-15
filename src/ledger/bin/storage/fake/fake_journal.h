@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_JOURNAL_H_
 #define SRC_LEDGER_BIN_STORAGE_FAKE_FAKE_JOURNAL_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <string>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {

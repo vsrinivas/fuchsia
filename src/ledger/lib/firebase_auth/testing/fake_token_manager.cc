@@ -4,9 +4,8 @@
 
 #include "src/ledger/lib/firebase_auth/testing/fake_token_manager.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fxl/logging.h"
 
 namespace firebase_auth {
 

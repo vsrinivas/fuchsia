@@ -9,8 +9,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <functional>
 #include <map>
@@ -23,6 +21,8 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
 namespace {

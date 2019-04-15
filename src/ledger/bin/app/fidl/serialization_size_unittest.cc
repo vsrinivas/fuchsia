@@ -4,17 +4,17 @@
 
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 
-#include <memory>
-
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace ledger {
 namespace fidl_serialization {

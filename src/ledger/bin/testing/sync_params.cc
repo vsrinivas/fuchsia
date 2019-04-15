@@ -7,7 +7,6 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 #include <openssl/sha.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <iostream>
 
@@ -15,6 +14,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace {
 

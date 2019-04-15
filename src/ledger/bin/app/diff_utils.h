@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_APP_DIFF_UTILS_H_
 #define SRC_LEDGER_BIN_APP_DIFF_UTILS_H_
 
-#include <functional>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <functional>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace diff_utils {

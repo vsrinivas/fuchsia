@@ -5,13 +5,14 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_CLIENT_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_CLIENT_H_
 
+#include <google/firestore/v1beta1/firestore.grpc.pb.h>
+#include <grpc++/grpc++.h>
+
 #include <functional>
 #include <memory>
 
-#include <google/firestore/v1beta1/firestore.grpc.pb.h>
-#include <grpc++/grpc++.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider_firestore {
 

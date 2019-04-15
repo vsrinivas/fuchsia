@@ -5,9 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_LEDGER_REPOSITORY_FACTORY_IMPL_H_
 #define SRC_LEDGER_BIN_APP_LEDGER_REPOSITORY_FACTORY_IMPL_H_
 
-#include <memory>
-#include <string>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -16,8 +13,10 @@
 #include <lib/callback/cancellable.h>
 #include <lib/callback/managed_container.h>
 #include <lib/component/cpp/expose.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/inspect/inspect.h>
+
+#include <memory>
+#include <string>
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
@@ -28,6 +27,7 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

@@ -5,13 +5,13 @@
 #ifndef SRC_LEDGER_BIN_LOCK_LOCK_H_
 #define SRC_LEDGER_BIN_LOCK_LOCK_H_
 
+#include <lib/callback/operation_serializer.h>
+
 #include <memory>
 
-#include <lib/callback/operation_serializer.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace lock {
 // A lock. As long as this object lives, OperationSerializer blocks all other

@@ -4,19 +4,19 @@
 
 #include "src/ledger/bin/storage/impl/journal_impl.h"
 
+#include <lib/callback/waiter.h>
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <map>
 #include <string>
 #include <utility>
 
-#include <lib/callback/waiter.h>
-#include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_impl.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 

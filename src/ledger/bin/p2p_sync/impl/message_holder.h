@@ -5,12 +5,13 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_MESSAGE_HOLDER_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_MESSAGE_HOLDER_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <utility>
 #include <vector>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // MessageHolder is used to hold a parsed Flatbuffer message along with its

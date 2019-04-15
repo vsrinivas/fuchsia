@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 
-#include <map>
-#include <memory>
-#include <set>
-#include <vector>
-
 #include <lib/async/dispatcher.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
+
+#include <map>
+#include <memory>
+#include <set>
+#include <vector>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

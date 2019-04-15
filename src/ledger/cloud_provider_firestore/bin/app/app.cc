@@ -6,12 +6,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <trace-provider/provider.h>
 
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/factory_impl.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 namespace cloud_provider_firestore {
 namespace {

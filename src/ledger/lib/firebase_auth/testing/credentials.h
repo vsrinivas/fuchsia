@@ -5,11 +5,12 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_CREDENTIALS_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_CREDENTIALS_H_
 
-#include <string>
-
-#include <src/lib/fxl/strings/string_view.h>
 #include <openssl/pem.h>
 #include <rapidjson/document.h>
+
+#include <string>
+
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace service_account {
 

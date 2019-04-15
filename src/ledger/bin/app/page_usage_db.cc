@@ -7,12 +7,12 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/zx/time.h>
 
-#include "src/lib/fxl/strings/concatenate.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/lock/lock.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/public/iterator.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {

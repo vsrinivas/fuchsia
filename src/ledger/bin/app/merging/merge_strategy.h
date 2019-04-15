@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_MERGE_STRATEGY_H_
 #define SRC_LEDGER_BIN_APP_MERGING_MERGE_STRATEGY_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/fidl/include/types.h"

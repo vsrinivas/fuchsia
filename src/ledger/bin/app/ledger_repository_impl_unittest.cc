@@ -15,8 +15,6 @@
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -27,6 +25,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 namespace {

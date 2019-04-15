@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_CONVERT_H_
 #define SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_CONVERT_H_
 
-#include <string>
-
 #include <lib/fidl/cpp/vector.h>
+
+#include <string>
 
 namespace cloud_provider {
 

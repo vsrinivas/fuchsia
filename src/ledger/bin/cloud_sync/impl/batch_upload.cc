@@ -9,8 +9,6 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
 #include <algorithm>
@@ -18,6 +16,8 @@
 #include <utility>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 

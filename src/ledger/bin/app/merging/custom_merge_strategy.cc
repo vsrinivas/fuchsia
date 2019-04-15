@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "src/ledger/bin/app/page_manager.h"
 

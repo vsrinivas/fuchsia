@@ -8,9 +8,9 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/environment/environment.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

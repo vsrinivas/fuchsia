@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/testing/data_generator.h"
 
+#include <lib/fidl/cpp/clone.h>
+
 #include <algorithm>
 #include <functional>
 #include <string>
 
-#include <lib/fidl/cpp/clone.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {

@@ -5,19 +5,19 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_LISTEN_CALL_H_
 
-#include <memory>
-
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <memory>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/listen_call_client.h"
 #include "src/ledger/cloud_provider_firestore/bin/grpc/stream_controller.h"
 #include "src/ledger/cloud_provider_firestore/bin/grpc/stream_reader.h"
 #include "src/ledger/cloud_provider_firestore/bin/grpc/stream_writer.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_provider_firestore {
 

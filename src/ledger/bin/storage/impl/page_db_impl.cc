@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include <algorithm>
 #include <iterator>
 #include <string>
@@ -18,6 +15,8 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \

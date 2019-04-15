@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/app/page_utils.h"
 
-#include <memory>
-
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <memory>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/public/object.h"

@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 #define SRC_LEDGER_BIN_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 
-#include <memory>
-
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using a last-one-wins policy for conflicts.

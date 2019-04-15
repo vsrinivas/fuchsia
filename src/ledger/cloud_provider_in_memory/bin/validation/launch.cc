@@ -7,12 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <iostream>
 
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace {
 constexpr fxl::StringView kCloudProviderUrl =

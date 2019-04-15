@@ -6,10 +6,10 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 

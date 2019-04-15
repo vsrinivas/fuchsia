@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_SYNC_HELPER_SYNC_HELPER_H_
 #define SRC_LEDGER_BIN_SYNC_HELPER_SYNC_HELPER_H_
 
-#include <map>
-#include <utility>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <map>
+#include <utility>
 
 #include "src/ledger/bin/sync_helper/mutable.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

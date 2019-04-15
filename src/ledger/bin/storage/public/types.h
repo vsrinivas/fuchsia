@@ -9,9 +9,8 @@
 #include <set>
 #include <string>
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
 

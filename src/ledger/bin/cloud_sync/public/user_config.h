@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include <memory>
 #include <string>
-
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"

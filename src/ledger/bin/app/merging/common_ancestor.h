@@ -5,15 +5,15 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_COMMON_ANCESTOR_H_
 #define SRC_LEDGER_BIN_APP_MERGING_COMMON_ANCESTOR_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
-
-#include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_counted.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace ledger {
 

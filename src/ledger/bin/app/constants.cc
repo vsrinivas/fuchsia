@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/app/constants.h"
 
-#include <string>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+
+#include <string>
 
 namespace ledger {
 

@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 
-#include <utility>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
+#include <utility>
+
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 

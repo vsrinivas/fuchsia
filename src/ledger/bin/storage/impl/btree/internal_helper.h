@@ -7,9 +7,8 @@
 
 #include <vector>
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \

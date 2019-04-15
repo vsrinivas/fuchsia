@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include <utility>
@@ -16,6 +15,7 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/logging.h"
 #include "util/env_fuchsia.h"
 
 namespace storage {

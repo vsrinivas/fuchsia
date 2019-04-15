@@ -4,17 +4,16 @@
 
 #include "src/ledger/bin/app/page_delegate.h"
 
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
+
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 

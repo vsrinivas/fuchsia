@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/app/page_manager_container.h"
 
-#include <string>
-
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include <string>
 
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

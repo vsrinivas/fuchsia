@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_H_
 
-#include <functional>
-#include <string>
-
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
+#include <functional>
+#include <string>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"

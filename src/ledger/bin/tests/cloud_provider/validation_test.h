@@ -9,9 +9,9 @@
 #include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/tests/cloud_provider/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider {
 

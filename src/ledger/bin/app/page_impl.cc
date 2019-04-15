@@ -8,11 +8,11 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/page_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 PageImpl::PageImpl(storage::PageIdView page_id,

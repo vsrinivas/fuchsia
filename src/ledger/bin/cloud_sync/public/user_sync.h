@@ -7,13 +7,12 @@
 
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "src/ledger/bin/cloud_sync/public/ledger_sync.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
 

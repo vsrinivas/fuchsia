@@ -13,7 +13,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/svc/cpp/services.h>
-#include <src/lib/fxl/logging.h>
 
 #include <utility>
 
@@ -21,6 +20,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 namespace {

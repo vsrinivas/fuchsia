@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 
-#include <string>
-
 #include <lib/fit/function.h>
+
+#include <string>
 
 namespace storage {
 namespace fake {

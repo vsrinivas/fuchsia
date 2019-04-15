@@ -4,9 +4,8 @@
 
 #include "src/ledger/bin/encryption/impl/encryption_service_factory_impl.h"
 
-#include "src/ledger/bin/testing/test_with_environment.h"
-
 #include "gtest/gtest.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace encryption {
 namespace {

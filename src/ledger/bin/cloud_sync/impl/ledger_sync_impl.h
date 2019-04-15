@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <set>
-
-#include <lib/fit/function.h>
 
 #include "src/ledger/bin/cloud_sync/impl/aggregator.h"
 #include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"

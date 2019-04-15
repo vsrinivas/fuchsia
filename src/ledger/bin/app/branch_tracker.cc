@@ -4,18 +4,18 @@
 
 #include "src/ledger/bin/app/branch_tracker.h"
 
-#include <vector>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
+
+#include <vector>
 
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {

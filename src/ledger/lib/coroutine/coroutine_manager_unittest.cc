@@ -4,9 +4,9 @@
 
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 
-#include <memory>
-
 #include <lib/callback/set_when_called.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
@@ -43,16 +43,15 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
   bool reached_callback = false;
   bool executed_callback = false;
   CoroutineHandler* handler = nullptr;
-  manager->StartCoroutine(callback::SetWhenCalled(&called),
-                          [&](CoroutineHandler* current_handler,
-                                     fit::function<void()> callback) {
-                            handler = current_handler;
-                            EXPECT_EQ(ContinuationStatus::INTERRUPTED,
-                                      handler->Yield());
-                            reached_callback = true;
-                            callback();
-                            executed_callback = true;
-                          });
+  manager->StartCoroutine(
+      callback::SetWhenCalled(&called),
+      [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+        handler = current_handler;
+        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+        reached_callback = true;
+        callback();
+        executed_callback = true;
+      });
 
   ASSERT_TRUE(handler);
   EXPECT_FALSE(called);

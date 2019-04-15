@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/svc/cpp/services.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <utility>
 
@@ -19,6 +18,7 @@
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
 #include "src/ledger/lib/firebase_auth/testing/fake_token_manager.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 namespace {

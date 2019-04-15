@@ -5,11 +5,10 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_DB_SERIALIZATION_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_DB_SERIALIZATION_H_
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
 

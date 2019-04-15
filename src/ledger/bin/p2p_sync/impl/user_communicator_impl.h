@@ -5,14 +5,14 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <memory>
-#include <set>
-#include <string>
-
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/netconnector/cpp/message_relay.h>
+
+#include <memory>
+#include <set>
+#include <string>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"

@@ -13,19 +13,19 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/fit/scope.h>
-#include <src/lib/files/directory.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/ref_counted.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/string_view.h>
-#include <src/lib/fxl/synchronization/thread_annotations.h>
 #include <trace/event.h>
 
 #include <mutex>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 // LevelDbFactory tries to keep an empty, initialized instance of LevelDb always
 // available. It stores this cached instance under cached_db/.

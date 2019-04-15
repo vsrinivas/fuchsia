@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <string>
-
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
+
+#include <memory>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

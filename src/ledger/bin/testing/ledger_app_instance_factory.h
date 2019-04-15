@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 #define SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 
-#include <functional>
-#include <memory>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
+
+#include <functional>
+#include <memory>
 
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/testing/loop_controller.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

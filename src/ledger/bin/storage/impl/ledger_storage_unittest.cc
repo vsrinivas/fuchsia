@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace {

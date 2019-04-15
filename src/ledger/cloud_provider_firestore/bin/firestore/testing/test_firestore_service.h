@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_TESTING_TEST_FIRESTORE_SERVICE_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_TESTING_TEST_FIRESTORE_SERVICE_H_
 
-#include <string>
-
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <lib/fit/function.h>
+
+#include <string>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service.h"
 

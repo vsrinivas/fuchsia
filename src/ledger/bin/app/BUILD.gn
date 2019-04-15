@@ -151,6 +151,10 @@ source_set("serialization_version") {
     "serialization_version.h",
   ]
 
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+
   configs += [ "//src/ledger:ledger_config" ]
 }
 

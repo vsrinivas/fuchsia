@@ -6,8 +6,6 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_PAGE_STORAGE_H_
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include <functional>
 #include <memory>
@@ -20,6 +18,8 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
 

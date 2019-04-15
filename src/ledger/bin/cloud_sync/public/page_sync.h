@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_PAGE_SYNC_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_PUBLIC_PAGE_SYNC_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 
-#include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
+#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 

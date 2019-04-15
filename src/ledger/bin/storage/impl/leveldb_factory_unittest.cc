@@ -6,8 +6,6 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include <memory>
 
@@ -17,6 +15,8 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace storage {
 namespace {

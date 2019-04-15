@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-#include <vector>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
-#include <src/lib/fxl/macros.h>
+
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

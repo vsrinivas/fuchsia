@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/vector.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {

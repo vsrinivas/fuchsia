@@ -4,19 +4,17 @@
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 
-#include <algorithm>
-#include <memory>
-#include <queue>
-#include <set>
-#include <utility>
-
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <algorithm>
+#include <memory>
+#include <queue>
+#include <set>
+#include <utility>
 
 #include "src/ledger/bin/app/merging/common_ancestor.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
@@ -26,6 +24,8 @@
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

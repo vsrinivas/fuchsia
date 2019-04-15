@@ -5,10 +5,9 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "src/ledger/bin/p2p_provider/public/types.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_provider {
 // P2PProvider handles the peer-to-peer connections between devices.

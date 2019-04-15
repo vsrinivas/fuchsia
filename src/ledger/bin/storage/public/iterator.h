@@ -5,9 +5,8 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_ITERATOR_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_ITERATOR_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace storage {
 

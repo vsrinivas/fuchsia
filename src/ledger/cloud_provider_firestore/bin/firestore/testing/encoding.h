@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_TESTING_ENCODING_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_TESTING_ENCODING_H_
 
-#include <string>
-
 #include <google/firestore/v1beta1/document.pb.h>
 #include <lib/fidl/cpp/vector.h>
+
+#include <string>
 
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
 
