@@ -55,18 +55,22 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
         zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
         return ZX_ERR_INTERNAL;
     }
-    if (req_handle_count != 1) {
-        zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
-        return ZX_ERR_INTERNAL;
-    }
     auto* resp = reinterpret_cast<AmlogicCanvasProxyResponse*>(resp_buf);
     *out_resp_size = sizeof(*resp);
 
     switch (req->op) {
     case AmlogicCanvasOp::CONFIG:
+        if (req_handle_count != 1) {
+            zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+            return ZX_ERR_INTERNAL;
+        }
         return amlogic_canvas_config(&canvas_, req_handles[0], req->offset, &req->info,
                                        &resp->canvas_idx);
     case AmlogicCanvasOp::FREE:
+        if (req_handle_count != 0) {
+            zxlogf(ERROR, "%s received %u handles, expecting 0\n", __func__, req_handle_count);
+            return ZX_ERR_INTERNAL;
+        }
         return amlogic_canvas_free(&canvas_, req->canvas_idx);
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
