@@ -33,39 +33,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/etherdevice.h>
-#include <linux/if_arp.h>
-#include <linux/ip.h>
-#include <linux/kernel.h>
-#include <linux/netdevice.h>
-#include <linux/skbuff.h>
-#include <linux/slab.h>
-#include <linux/time.h>
-#include <net/ieee80211_radiotap.h>
-#include <net/mac80211.h>
-#include <net/tcp.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
-#include "fw/error-dump.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-io.h"
-#include "iwl-nvm-parse.h"
-#include "iwl-op-mode.h"
-#include "iwl-phy-db.h"
-#include "iwl-prph.h"
-#include "iwl-vendor-cmd.h"
-#include "mvm.h"
-#include "sta.h"
-#include "time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-vendor-cmd.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-dispatch.h"
 #endif
 #ifdef CPTCFG_NL80211_TESTMODE
-#include "fw/testmode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/testmode.h"
 #endif
-#include "fw/api/nan.h"
-#include "tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 
+#if 0   // NEEDS_PORTING
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
     {
         .max = CPTCFG_IWLWIFI_NUM_STA_INTERFACES,
@@ -190,14 +181,15 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
     {},
 };
 #endif
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_ref(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
     if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
 
     IWL_DEBUG_RPM(mvm, "Take mvm reference - type %d\n", ref_type);
-    spin_lock_bh(&mvm->refs_lock);
+    mtx_lock(&mvm->refs_lock);
     mvm->refs[ref_type]++;
-    spin_unlock_bh(&mvm->refs_lock);
+    mtx_unlock(&mvm->refs_lock);
     iwl_trans_ref(mvm->trans);
 }
 
@@ -205,22 +197,23 @@ void iwl_mvm_unref(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
     if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
 
     IWL_DEBUG_RPM(mvm, "Leave mvm reference - type %d\n", ref_type);
-    spin_lock_bh(&mvm->refs_lock);
+    mtx_lock(&mvm->refs_lock);
     if (WARN_ON(!mvm->refs[ref_type])) {
-        spin_unlock_bh(&mvm->refs_lock);
+        mtx_unlock(&mvm->refs_lock);
         return;
     }
     mvm->refs[ref_type]--;
-    spin_unlock_bh(&mvm->refs_lock);
+    mtx_unlock(&mvm->refs_lock);
     iwl_trans_unref(mvm->trans);
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_unref_all_except(struct iwl_mvm* mvm, enum iwl_mvm_ref_type except_ref) {
-    int i, j;
+    enum iwl_mvm_ref_type i, j;
 
     if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
 
-    spin_lock_bh(&mvm->refs_lock);
+    mtx_lock(&mvm->refs_lock);
     for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
         if (except_ref == i || !mvm->refs[i]) { continue; }
 
@@ -230,8 +223,9 @@ static void iwl_mvm_unref_all_except(struct iwl_mvm* mvm, enum iwl_mvm_ref_type 
         }
         mvm->refs[i] = 0;
     }
-    spin_unlock_bh(&mvm->refs_lock);
+    mtx_unlock(&mvm->refs_lock);
 }
+#endif  // NEEDS_PORTING
 
 bool iwl_mvm_ref_taken(struct iwl_mvm* mvm) {
     int i;
@@ -239,31 +233,34 @@ bool iwl_mvm_ref_taken(struct iwl_mvm* mvm) {
 
     if (!iwl_mvm_is_d0i3_supported(mvm)) { return true; }
 
-    spin_lock_bh(&mvm->refs_lock);
+    mtx_lock(&mvm->refs_lock);
     for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
         if (mvm->refs[i]) {
             taken = true;
             break;
         }
     }
-    spin_unlock_bh(&mvm->refs_lock);
+    mtx_unlock(&mvm->refs_lock);
 
     return taken;
 }
 
-int iwl_mvm_ref_sync(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
+zx_status_t iwl_mvm_ref_sync(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
     iwl_mvm_ref(mvm, ref_type);
 
+#if 0   // NEEDS_PORTING
     if (!wait_event_timeout(mvm->d0i3_exit_waitq, !test_bit(IWL_MVM_STATUS_IN_D0I3, &mvm->status),
                             HZ)) {
         WARN_ON_ONCE(1);
         iwl_mvm_unref(mvm, ref_type);
         return -EIO;
     }
+#endif  // NEEDS_PORTING
 
-    return 0;
+    return ZX_OK;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm* mvm) {
     int i;
 
@@ -400,8 +397,11 @@ const static struct wiphy_iftype_ext_capab he_iftypes_ext_capa[] = {
     },
 #endif /* CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE */
 };
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
+zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
+    return ZX_OK;
+#if 0   // NEEDS_PORTING
     struct ieee80211_hw* hw = mvm->hw;
     int num_mac, ret, i;
     static const uint32_t mvm_ciphers[] = {
@@ -738,8 +738,10 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
     }
 
     return ret;
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 static bool iwl_mvm_defer_tx(struct iwl_mvm* mvm, struct ieee80211_sta* sta, struct sk_buff* skb) {
     struct iwl_mvm_sta* mvmsta;
     bool defer = false;
@@ -824,8 +826,10 @@ static void iwl_mvm_mac_tx(struct ieee80211_hw* hw, struct ieee80211_tx_control*
 drop:
     ieee80211_free_txskb(hw, skb);
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
+#if 0   // NEEDS_PORTING
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_mac80211(txq);
     struct sk_buff* skb = NULL;
@@ -847,8 +851,10 @@ void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
     rcu_read_unlock();
 
     spin_unlock(&mvmtxq->tx_path_lock);
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_mac_wake_tx_queue(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_mac80211(txq);
@@ -4575,8 +4581,10 @@ static bool iwl_mvm_mac_can_aggregate(struct ieee80211_hw* hw, struct sk_buff* h
 
     return iwl_mvm_can_hw_csum(skb) == iwl_mvm_can_hw_csum(head);
 }
+#endif  // NEEDS_PORTING
 
 const struct ieee80211_ops iwl_mvm_hw_ops = {
+#if 0   // NEEDS_PORTING
     .tx = iwl_mvm_mac_tx,
     .wake_tx_queue = iwl_mvm_mac_wake_tx_queue,
     .ampdu_action = iwl_mvm_mac_ampdu_action,
@@ -4662,4 +4670,5 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     .sta_add_debugfs = iwl_mvm_sta_add_debugfs,
 #endif
+#endif  // NEEDS_PORTING
 };

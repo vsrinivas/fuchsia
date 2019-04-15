@@ -98,11 +98,13 @@ static void iwl_mvm_rx_fw_logs(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rx
 int __init iwl_mvm_init(void) {
     int ret;
 
+#if 0   // NEEDS_PORTING
     ret = iwl_mvm_rate_control_register();
     if (ret) {
         pr_err("Unable to register rate control algorithm: %d\n", ret);
         return ret;
     }
+#endif  // NEEDS_PORTING
 
     ret = iwl_opmode_register("iwlmvm", &iwl_mvm_ops);
     if (ret) { pr_err("Unable to register MVM op_mode: %d\n", ret); }
@@ -112,7 +114,9 @@ int __init iwl_mvm_init(void) {
 
 void __exit iwl_mvm_exit(void) {
     iwl_opmode_deregister("iwlmvm");
+#if 0   // NEEDS_PORTING
     iwl_mvm_rate_control_unregister();
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_nic_config(struct iwl_op_mode* op_mode) {
@@ -162,6 +166,7 @@ static void iwl_mvm_nic_config(struct iwl_op_mode* op_mode) {
     IWL_DEBUG_INFO(mvm, "Radio type=0x%x-0x%x-0x%x\n", radio_cfg_type, radio_cfg_step,
                    radio_cfg_dash);
 
+#if 0   // NEEDS_PORTING
     /*
      * W/A : NIC is stuck in a reset state after Early PCIe power off
      * (PCIe power is lost before PERST# is asserted), causing ME FW
@@ -170,6 +175,7 @@ static void iwl_mvm_nic_config(struct iwl_op_mode* op_mode) {
     if (!mvm->trans->cfg->apmg_not_supported)
         iwl_set_bits_mask_prph(mvm->trans, APMG_PS_CTRL_REG, APMG_PS_CTRL_EARLY_PWR_OFF_RESET_DIS,
                                ~APMG_PS_CTRL_EARLY_PWR_OFF_RESET_DIS);
+#endif  // NEEDS_PORTING
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED
@@ -236,6 +242,7 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
     RX_HANDLER(TX_CMD, iwl_mvm_rx_tx_cmd, RX_HANDLER_SYNC),
     RX_HANDLER(BA_NOTIF, iwl_mvm_rx_ba_notif, RX_HANDLER_SYNC),
 
+#if 0   // NEEDS_PORTING
     RX_HANDLER_GRP(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF, iwl_mvm_tlc_update_notif,
                    RX_HANDLER_SYNC),
 
@@ -296,6 +303,7 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 #ifdef CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED
     RX_HANDLER_GRP(DEBUG_GROUP, DEBUG_HOST_NTF, iwl_mvm_rx_dhn, RX_HANDLER_SYNC),
 #endif
+#endif  // NEEDS_PORTING
 };
 #undef RX_HANDLER
 #undef RX_HANDLER_GRP
@@ -605,7 +613,9 @@ static bool iwl_mvm_fwrt_fw_running(void* ctx) {
     return iwl_mvm_firmware_running(ctx);
 }
 
-static int iwl_mvm_fwrt_send_hcmd(void* ctx, struct iwl_host_cmd* host_cmd) {
+static zx_status_t iwl_mvm_fwrt_send_hcmd(void* ctx, struct iwl_host_cmd* host_cmd) {
+    return ZX_ERR_NOT_SUPPORTED;
+#if 0   // NEEDS_PORTING
     struct iwl_mvm* mvm = (struct iwl_mvm*)ctx;
     int ret;
 
@@ -614,6 +624,7 @@ static int iwl_mvm_fwrt_send_hcmd(void* ctx, struct iwl_host_cmd* host_cmd) {
     mtx_unlock(&mvm->mutex);
 
     return ret;
+#endif  // NEEDS_PORTING
 }
 
 static const struct iwl_fw_runtime_ops iwl_mvm_fwrt_ops = {
@@ -832,8 +843,10 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 
     trans_cfg.sw_csum_tx = IWL_MVM_SW_TX_CSUM_OFFLOAD;
 
+#if 0   // NEEDS_PORTING
     /* Set a short watchdog for the command queue */
     trans_cfg.cmd_q_wdg_timeout = iwl_mvm_get_wd_timeout(mvm, NULL, false, true);
+#endif  // NEEDS_PORTING
 
 #if 0   // NEEDS_PORTING
     snprintf(mvm->hw->wiphy->fw_version, sizeof(mvm->hw->wiphy->fw_version), "%s", fw->fw_version);
@@ -851,8 +864,10 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     trans->iml = mvm->fw->iml;
     trans->iml_len = mvm->fw->iml_len;
 
+#if 0   // NEEDS_PORTING
     /* set up notification wait support */
     iwl_notification_wait_init(&mvm->notif_wait);
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
     iwl_dnt_init(mvm->trans, dbgfs_dir);
@@ -886,9 +901,11 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     mtx_lock(&mvm->mutex);
     iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
     err = iwl_run_init_mvm_ucode(mvm, true);
+#if 0   // NEEDS_PORTING
     if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
         iwl_fw_alive_error_dump(&mvm->fwrt);
     }
+#endif  // NEEDS_PORTING
     if (!iwlmvm_mod_params.init_dbg || !err) { iwl_mvm_stop_device(mvm); }
     iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
     mtx_unlock(&mvm->mutex);
@@ -1163,6 +1180,7 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
 
 static void iwl_mvm_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
                        struct iwl_rx_cmd_buffer* rxb) {
+#if 0   // NEEDS_PORTING
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
     uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
@@ -1184,6 +1202,7 @@ static void iwl_mvm_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
     } else {
         iwl_mvm_rx_common(mvm, rxb, pkt);
     }
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_rx_mq(struct iwl_op_mode* op_mode, struct napi_struct* napi,
@@ -1309,8 +1328,10 @@ static bool iwl_mvm_set_hw_rfkill_state(struct iwl_op_mode* op_mode, bool state)
 
     iwl_mvm_set_rfkill_state(mvm);
 
+#if 0   // NEEDS_PORTING
     /* iwl_run_init_mvm_ucode is waiting for results, abort it */
     if (calibrating) { iwl_abort_notification_waits(&mvm->notif_wait); }
+#endif  // NEEDS_PORTING
 
     /*
      * Stop the device if we run OPERATIONAL firmware or if we are in the
@@ -1349,6 +1370,7 @@ static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
 #endif  // NEEDS_PORTING
 
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
+#if 0   // NEEDS_PORTING
     iwl_abort_notification_waits(&mvm->notif_wait);
 
     /*
@@ -1411,12 +1433,15 @@ void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
         ieee80211_restart_hw(mvm->hw);
 #endif  // NEEDS_PORTING
     }
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_nic_error(struct iwl_op_mode* op_mode) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
 
+#if 0   // NEEDS_PORTING
     if (!test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) { iwl_mvm_dump_nic_error_log(mvm); }
+#endif  // NEEDS_PORTING
 
     iwl_mvm_nic_restart(mvm, true);
 }

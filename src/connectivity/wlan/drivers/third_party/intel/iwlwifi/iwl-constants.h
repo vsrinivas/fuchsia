@@ -34,6 +34,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONSTANTS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONSTANTS_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 enum {
     IWL_D0I3_DBG_KEEP_BUS = BIT(0),
     IWL_D0I3_DBG_KEEP_WAKE_LOCK = BIT(1),

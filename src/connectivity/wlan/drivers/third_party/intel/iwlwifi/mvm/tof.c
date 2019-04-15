@@ -30,12 +30,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "fw/api/tof.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 #define IWL_MVM_TOF_RANGE_REQ_MAX_ID 256
 
 void iwl_mvm_tof_init(struct iwl_mvm* mvm) {
+#if 0   // NEEDS_PORTING
     struct iwl_mvm_tof_data* tof_data = &mvm->tof_data;
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return; }
@@ -60,6 +61,7 @@ void iwl_mvm_tof_init(struct iwl_mvm* mvm) {
 
     mvm->tof_data.active_range_request = IWL_MVM_TOF_RANGE_REQ_MAX_ID;
     mvm->init_status |= IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE;
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_tof_clean(struct iwl_mvm* mvm) {
@@ -75,6 +77,7 @@ void iwl_mvm_tof_clean(struct iwl_mvm* mvm) {
     mvm->init_status &= ~IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_tof_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     bool* enabled = _data;
 
@@ -247,3 +250,4 @@ void iwl_mvm_tof_resp_handler(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
         break;
     }
 }
+#endif  // NEEDS_PORTING

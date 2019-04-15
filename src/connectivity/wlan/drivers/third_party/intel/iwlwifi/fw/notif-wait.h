@@ -98,7 +98,9 @@ static inline void iwl_notification_notify(struct iwl_notif_wait_data* notif_dat
 
 static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* notif_data,
                                                 struct iwl_rx_packet* pkt) {
+#if 0   // NEEDS_PORTING
     if (iwl_notification_wait(notif_data, pkt)) { iwl_notification_notify(notif_data); }
+#endif  // NEEDS_PORTING
 }
 
 #if 0   // NEEDS_PORTING

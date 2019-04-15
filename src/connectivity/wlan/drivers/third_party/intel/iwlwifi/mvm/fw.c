@@ -33,26 +33,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/netdevice.h>
-#include <net/mac80211.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h" /* for iwl_mvm_rx_card_state_notif */
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h" /* for iwl_mvm_rx_card_state_notif */
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
-#include "fw/acpi.h"
-#include "fw/img.h"
-#include "iwl-csr.h" /* for iwl_mvm_rx_card_state_notif */
-#include "iwl-debug.h"
-#include "iwl-io.h" /* for iwl_mvm_rx_card_state_notif */
-#include "iwl-op-mode.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
-
-#include "fw/dbg.h"
-#include "iwl-modparams.h"
-#include "iwl-nvm-parse.h"
-#include "iwl-phy-db.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "fw/testmode.h"
-#include "iwl-dnt-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/testmode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
 #endif
 
 #define MVM_UCODE_ALIVE_TIMEOUT (HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
@@ -65,6 +62,7 @@ struct iwl_mvm_alive_data {
     uint32_t scd_base_addr;
 };
 
+#if 0   // NEEDS_PORTING
 /* set device type and latency */
 static int iwl_set_soc_latency(struct iwl_mvm* mvm) {
     struct iwl_soc_configuration_cmd cmd;
@@ -493,8 +491,11 @@ static int iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
 
     return iwl_mvm_send_cmd_pdu(mvm, PHY_CONFIGURATION_CMD, 0, sizeof(phy_cfg_cmd), &phy_cfg_cmd);
 }
+#endif  // NEEDS_PORTING
 
-int iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
+zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
+    return ZX_ERR_NOT_SUPPORTED;
+#if 0   // NEEDS_PORTING
     struct iwl_notification_wait calib_wait;
     static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
     int ret;
@@ -594,8 +595,10 @@ out:
     }
 
     return ret;
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_config_ltr(struct iwl_mvm* mvm) {
     struct iwl_ltr_config_cmd cmd = {
         .flags = cpu_to_le32(LTR_CFG_FLAG_FEATURE_ENABLE),
@@ -1274,3 +1277,4 @@ void iwl_mvm_rx_mfuart_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb)
         IWL_DEBUG_INFO(mvm, "MFUART: image size: 0x%08x\n", le32_to_cpu(mfuart_notif->image_size));
     }
 }
+#endif  // NEEDS_PORTING

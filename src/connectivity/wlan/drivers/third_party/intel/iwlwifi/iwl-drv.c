@@ -1788,8 +1788,9 @@ struct iwl_mod_params iwlwifi_mod_params = {
     /* the rest are 0 by default */
 };
 
-#if 0  // NEEDS_PORTING
-int iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* ops) {
+zx_status_t iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* ops) {
+    return ZX_OK;
+#if 0   // NEEDS_PORTING
     int i;
     struct iwl_drv* drv;
     struct iwlwifi_opmode_table* op;
@@ -1810,10 +1811,11 @@ int iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* ops) {
     }
     mutex_unlock(&iwlwifi_opmode_table_mtx);
     return -EIO;
+#endif  // NEEDS_PORTING
 }
-IWL_EXPORT_SYMBOL(iwl_opmode_register);
 
 void iwl_opmode_deregister(const char* name) {
+#if 0   // NEEDS_PORTING
     int i;
     struct iwl_drv* drv;
 
@@ -1832,9 +1834,10 @@ void iwl_opmode_deregister(const char* name) {
         return;
     }
     mutex_unlock(&iwlwifi_opmode_table_mtx);
+#endif  // NEEDS_PORTING
 }
-IWL_EXPORT_SYMBOL(iwl_opmode_deregister);
 
+#if 0  // NEEDS_PORTING
 static int __init iwl_drv_init(void) {
     int i;
 

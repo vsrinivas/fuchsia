@@ -1457,7 +1457,7 @@ int __iwl_mvm_mac_start(struct iwl_mvm* mvm);
  * MVM Methods
  ******************/
 /* uCode */
-int iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm);
+zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm);
 
 /* Utils */
 int iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band);
@@ -1539,7 +1539,9 @@ static inline uint8_t iwl_mvm_get_valid_rx_ant(struct iwl_mvm* mvm) {
 }
 
 static inline void iwl_mvm_toggle_tx_ant(struct iwl_mvm* mvm, uint8_t* ant) {
+#if 0   // NEEDS_PORTING
     *ant = iwl_mvm_next_antenna(mvm, iwl_mvm_get_valid_tx_ant(mvm), *ant);
+#endif  // NEEDS_PORTING
 }
 
 static inline uint32_t iwl_mvm_get_phy_config(struct iwl_mvm* mvm) {
@@ -1847,6 +1849,7 @@ static inline uint32_t iwl_mvm_flushable_queues(struct iwl_mvm* mvm) {
 
 static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
     lockdep_assert_held(&mvm->mutex);
+#if 0   // NEEDS_PORTING
     /* calling this function without using dump_start/end since at this
      * point we already hold the op mode mutex
      */
@@ -1856,6 +1859,7 @@ static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
     clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
     iwl_fw_dump_conf_clear(&mvm->fwrt);
     iwl_trans_stop_device(mvm->trans);
+#endif  // NEEDS_PORTING
 }
 
 /* Re-configure the SCD for a queue that has already been configured */

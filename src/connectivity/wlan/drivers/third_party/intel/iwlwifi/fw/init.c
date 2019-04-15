@@ -30,10 +30,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "dbg.h"
-#include "debugfs.h"
-#include "iwl-drv.h"
-#include "runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/debugfs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
 void iwl_fw_runtime_init(struct iwl_fw_runtime* fwrt, struct iwl_trans* trans,
                          const struct iwl_fw* fw, const struct iwl_fw_runtime_ops* ops,
@@ -45,17 +45,16 @@ void iwl_fw_runtime_init(struct iwl_fw_runtime* fwrt, struct iwl_trans* trans,
     fwrt->dump.conf = FW_DBG_INVALID;
     fwrt->ops = ops;
     fwrt->ops_ctx = ops_ctx;
+#if 0   // NEEDS_PORTING
     INIT_DELAYED_WORK(&fwrt->dump.wk, iwl_fw_error_dump_wk);
+#endif  // NEEDS_PORTING
     iwl_fwrt_dbgfs_register(fwrt, dbgfs_dir);
 }
-IWL_EXPORT_SYMBOL(iwl_fw_runtime_init);
 
 void iwl_fw_runtime_suspend(struct iwl_fw_runtime* fwrt) {
     iwl_fw_suspend_timestamp(fwrt);
 }
-IWL_EXPORT_SYMBOL(iwl_fw_runtime_suspend);
 
 void iwl_fw_runtime_resume(struct iwl_fw_runtime* fwrt) {
     iwl_fw_resume_timestamp(fwrt);
 }
-IWL_EXPORT_SYMBOL(iwl_fw_runtime_resume);

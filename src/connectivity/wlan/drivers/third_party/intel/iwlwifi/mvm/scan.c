@@ -34,12 +34,9 @@
  *
  *****************************************************************************/
 
-#include <linux/etherdevice.h>
-#include <net/mac80211.h>
-
-#include "fw/api/scan.h"
-#include "iwl-io.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 #define IWL_DENSE_EBS_SCAN_RATIO 5
 #define IWL_SPARSE_EBS_SCAN_RATIO 1
@@ -64,6 +61,7 @@ struct iwl_mvm_scan_timing_params {
     uint32_t max_out_time;
 };
 
+#if 0   // NEEDS_PORTING
 static struct iwl_mvm_scan_timing_params scan_timing[] = {
     [IWL_SCAN_TYPE_UNASSOC] =
         {
@@ -91,6 +89,7 @@ static struct iwl_mvm_scan_timing_params scan_timing[] = {
             .max_out_time = 37,
         },
 };
+#endif  // NEEDS_PORTING
 
 struct iwl_mvm_scan_params {
     /* For CDB this is low band scan type, for non-CDB - type. */
@@ -114,6 +113,7 @@ struct iwl_mvm_scan_params {
     uint32_t measurement_dwell;
 };
 
+#if 0   // NEEDS_PORTING
 static inline void* iwl_mvm_get_scan_req_umac_data(struct iwl_mvm* mvm) {
     struct iwl_scan_req_umac* cmd = mvm->scan_cmd;
 
@@ -1711,6 +1711,7 @@ static int iwl_mvm_scan_stop_wait(struct iwl_mvm* mvm, int type) {
 
     return ret;
 }
+#endif  // NEEDS_PORTING
 
 int iwl_mvm_scan_size(struct iwl_mvm* mvm) {
     int base_size = IWL_SCAN_REQ_UMAC_SIZE_V1;
@@ -1733,6 +1734,7 @@ int iwl_mvm_scan_size(struct iwl_mvm* mvm) {
            sizeof(struct iwl_scan_probe_req);
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * This function is used in nic restart flow, to inform mac80211 about scans
  * that was aborted by restart flow or by an assert.
@@ -1827,3 +1829,4 @@ out:
 
     return ret;
 }
+#endif  // NEEDS_PORTING

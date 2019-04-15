@@ -31,15 +31,11 @@
  *
  *****************************************************************************/
 
-#include <linux/export.h>
-#include <linux/slab.h>
-#include <linux/string.h>
-
-#include "iwl-debug.h"
-#include "iwl-drv.h"
-#include "iwl-op-mode.h"
-#include "iwl-phy-db.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 #define CHANNEL_NUM_SIZE 4 /* num of channels in calib_ch size */
 
@@ -88,7 +84,7 @@ struct iwl_phy_db_chg_txp {
 } __packed;
 
 struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans) {
-    struct iwl_phy_db* phy_db = kzalloc(sizeof(struct iwl_phy_db), GFP_KERNEL);
+    struct iwl_phy_db* phy_db = calloc(1, sizeof(struct iwl_phy_db));
 
     if (!phy_db) { return phy_db; }
 
@@ -100,7 +96,6 @@ struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans) {
     /* TODO: add default values of the phy db. */
     return phy_db;
 }
-IWL_EXPORT_SYMBOL(iwl_phy_db_init);
 
 /*
  * get phy db section: returns a pointer to a phy db section specified by
@@ -158,8 +153,8 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
 
     kfree(phy_db);
 }
-IWL_EXPORT_SYMBOL(iwl_phy_db_free);
 
+#if 0   // NEEDS_PORTING
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
     struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
     enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
@@ -392,3 +387,4 @@ int iwl_send_phy_db_data(struct iwl_phy_db* phy_db) {
     return 0;
 }
 IWL_EXPORT_SYMBOL(iwl_send_phy_db_data);
+#endif  // NEEDS_PORTING

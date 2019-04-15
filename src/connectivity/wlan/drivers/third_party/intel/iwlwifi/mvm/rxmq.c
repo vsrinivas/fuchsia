@@ -32,12 +32,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#include <linux/etherdevice.h>
-#include <linux/skbuff.h>
-#include "fw-api.h"
-#include "iwl-trans.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
+#if 0   // NEEDS_PORTING
 static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int queue,
                                    struct ieee80211_sta* sta) {
     struct iwl_mvm_sta* mvmsta;
@@ -510,8 +509,10 @@ static void iwl_mvm_del_ba(struct iwl_mvm* mvm, int queue, struct iwl_mvm_delba_
 out:
     rcu_read_unlock();
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_rx_queue_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb, int queue) {
+#if 0   // NEEDS_PORTING
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rxq_sync_notification* notif;
     struct iwl_mvm_internal_rxq_notif* internal_notif;
@@ -537,8 +538,10 @@ void iwl_mvm_rx_queue_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb, 
     if (internal_notif->sync && !atomic_dec_return(&mvm->queue_sync_counter)) {
         wake_up(&mvm->rx_sync_waitq);
     }
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * Returns true if the MPDU was buffered\dropped, false if it should be passed
  * to upper layer.
@@ -1144,9 +1147,11 @@ static void iwl_mvm_decode_lsig(struct sk_buff* skb, struct iwl_mvm_rx_phy_data*
         break;
     }
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
                         struct iwl_rx_cmd_buffer* rxb, int queue) {
+#if 0   // NEEDS_PORTING
     struct ieee80211_rx_status* rx_status;
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
@@ -1437,10 +1442,12 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
 out:
     rcu_read_unlock();
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,
                             struct iwl_rx_cmd_buffer* rxb, int queue) {
+#if 0   // NEEDS_PORTING
     struct ieee80211_rx_status* rx_status;
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_no_data* desc = (void*)pkt->data;
@@ -1550,9 +1557,12 @@ void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,
     iwl_mvm_pass_packet_to_mac80211(mvm, napi, skb, queue, sta);
 out:
     rcu_read_unlock();
+#endif  // NEEDS_PORTING
 }
+
 void iwl_mvm_rx_frame_release(struct iwl_mvm* mvm, struct napi_struct* napi,
                               struct iwl_rx_cmd_buffer* rxb, int queue) {
+#if 0   // NEEDS_PORTING
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_frame_release* release = (void*)pkt->data;
     struct ieee80211_sta* sta;
@@ -1582,4 +1592,5 @@ void iwl_mvm_rx_frame_release(struct iwl_mvm* mvm, struct napi_struct* napi,
 
 out:
     rcu_read_unlock();
+#endif  // NEEDS_PORTING
 }

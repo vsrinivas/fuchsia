@@ -33,17 +33,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/etherdevice.h>
-#include <linux/ieee80211.h>
-#include <linux/tcp.h>
-#include <net/ip.h>
-#include <net/ipv6.h>
 
-#include "iwl-eeprom-parse.h"
-#include "iwl-trans.h"
-#include "mvm.h"
-#include "sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid,
                                       uint16_t ssn) {
     struct iwl_fw_dbg_trigger_tlv* trig;
@@ -1290,8 +1286,10 @@ static inline uint32_t iwl_mvm_get_scd_ssn(struct iwl_mvm* mvm, struct iwl_mvm_t
     return le32_to_cpup((__le32*)iwl_mvm_get_agg_status(mvm, tx_resp) + tx_resp->frame_count) &
            0xfff;
 }
+#endif  // NEEDS_PORTING
 
 static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
+#if 0   // NEEDS_PORTING
     struct ieee80211_sta* sta;
     uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     int txq_id = SEQ_TO_QUEUE(sequence);
@@ -1515,8 +1513,10 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* 
     }
 out:
     rcu_read_unlock();
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 #ifdef CPTCFG_IWLWIFI_DEBUG
 #define AGG_TX_STATE_(x)   \
     case AGG_TX_STATE_##x: \
@@ -1558,8 +1558,10 @@ static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet*
 #else
 static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {}
 #endif /* CPTCFG_IWLWIFI_DEBUG */
+#endif  // NEEDS_PORTING
 
 static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
+#if 0   // NEEDS_PORTING
     struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
     int sta_id = IWL_MVM_TX_RES_GET_RA(tx_resp->ra_tid);
     int tid = IWL_MVM_TX_RES_GET_TID(tx_resp->ra_tid);
@@ -1593,6 +1595,7 @@ static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt
     }
 
     rcu_read_unlock();
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_rx_tx_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -1606,6 +1609,7 @@ void iwl_mvm_rx_tx_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     }
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_tx_reclaim(struct iwl_mvm* mvm, int sta_id, int tid, int txq, int index,
                                struct ieee80211_tx_info* ba_info, uint32_t rate) {
     struct sk_buff_head reclaimed_skbs;
@@ -1726,8 +1730,10 @@ out:
         ieee80211_tx_status(mvm->hw, skb);
     }
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
+#if 0   // NEEDS_PORTING
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     int sta_id, tid, txq, index;
     struct ieee80211_tx_info ba_info = {};
@@ -1815,8 +1821,10 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
         ba_notif->txed, ba_notif->txed_2_done);
 
     IWL_DEBUG_TX_REPLY(mvm, "reduced txp from ba notif %d\n", ba_notif->reduced_txp);
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * Note that there are transports that buffer frames before they reach
  * the firmware. This means that after flush_tx_path is called, the
@@ -1867,3 +1875,4 @@ int iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t fl
 
     return iwl_mvm_flush_tx_path(mvm, mvm_sta->tfd_queue_msk, flags);
 }
+#endif  // NEEDS_PORTING

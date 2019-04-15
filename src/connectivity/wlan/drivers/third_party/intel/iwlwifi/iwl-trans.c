@@ -31,14 +31,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/bsearch.h>
-#include <linux/kernel.h>
 
-#include "iwl-constants.h"
-#include "iwl-drv.h"
-#include "iwl-fh.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-constants.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
+#if 0   // NEEDS_PORTING
 struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
                                   const struct iwl_cfg* cfg, const struct iwl_trans_ops* ops) {
     struct iwl_trans* trans;
@@ -156,13 +155,12 @@ int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config* trans) {
     return 0;
 }
 IWL_EXPORT_SYMBOL(iwl_cmd_groups_verify_sorted);
+#endif  // NEEDS_PORTING
 
 void iwl_trans_ref(struct iwl_trans* trans) {
     if (trans->ops->ref) { trans->ops->ref(trans); }
 }
-IWL_EXPORT_SYMBOL(iwl_trans_ref);
 
 void iwl_trans_unref(struct iwl_trans* trans) {
     if (trans->ops->unref) { trans->ops->unref(trans); }
 }
-IWL_EXPORT_SYMBOL(iwl_trans_unref);
