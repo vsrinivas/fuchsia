@@ -61,7 +61,7 @@ private:
 
 const char* NandDriverImpl::Init() {
     parent_.Query(&info_, &op_size_);
-    zxlogf(INFO, "FTL: Nand: page_size %u, blk sz %u, %u blocks, %u ecc, %u oob, op size %lu\n",
+    zxlogf(INFO, "FTL: Nand: page_size %u, block size %u, %u blocks, %u ecc, %u oob, op size %lu\n",
            info_.page_size, info_.pages_per_block, info_.num_blocks, info_.ecc_bits,
            info_.oob_size, op_size_);
 
@@ -92,14 +92,14 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
         }
         options.flags = 0;
     } else if (BadBbtReservation()) {
-        zxlogf(WARN, "FTL: Unable to reduce bad block reservation");
+        zxlogf(WARN, "FTL: Unable to reduce bad block reservation\n");
         options.max_bad_blocks *= 2;
     }
 
     const char* error = CreateNdmVolume(ftl_volume, options);
     if (error) {
         // Retry allowing the volume to be fixed as needed.
-        zxlogf(INFO, "FTL: About to retry volume creation");
+        zxlogf(INFO, "FTL: About to retry volume creation\n");
         options.flags = 0;
         error = CreateNdmVolume(ftl_volume, options);
     }
@@ -273,33 +273,33 @@ bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
     RemoveNdmVolume();
 
     options.flags = 0;  // Allow automatic fixing of errors.
-    zxlogf(INFO, "FTL: About to read volume of size %u blocks", num_blocks);
+    zxlogf(INFO, "FTL: About to read volume of size %u blocks\n", num_blocks);
     if (!IsNdmDataPresent(options)) {
-        zxlogf(ERROR, "FTL: Failed to read initial volume");
+        zxlogf(ERROR, "FTL: Failed to read initial volume\n");
         return true;
     }
 
     if (!SaveBadBlockData()) {
-        zxlogf(ERROR, "FTL: Failed to extract bad block table");
+        zxlogf(ERROR, "FTL: Failed to extract bad block table\n");
         return true;
     }
     RemoveNdmVolume();
 
     options.num_blocks = info_.num_blocks;
     if (!IsNdmDataPresent(options)) {
-        zxlogf(ERROR, "FTL: Failed to NDM extend volume");
+        zxlogf(ERROR, "FTL: Failed to NDM extend volume\n");
         return true;
     }
     if (!RestoreBadBlockData()) {
-        zxlogf(ERROR, "FTL: Failed to write bad block table");
+        zxlogf(ERROR, "FTL: Failed to write bad block table\n");
         return true;
     }
 
     const char* error = CreateNdmVolume(ftl_volume, options);
     if (error) {
-        zxlogf(ERROR, "FTL: Failed to extend volume: %s", error);
+        zxlogf(ERROR, "FTL: Failed to extend volume: %s\n", error);
     } else {
-        zxlogf(INFO, "FTL: Volume successfully extended");
+        zxlogf(INFO, "FTL: Volume successfully extended\n");
     }
 
     return true;
