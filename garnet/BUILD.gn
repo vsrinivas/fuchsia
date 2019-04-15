@@ -21,7 +21,7 @@ declare_args() {
   build_info_product = ""
 
   # Board configuration of the current build
-  build_info_board = ""
+  build_info_board = board_name
 
   # Logical version of the current build. If not set, defaults to the timestamp
   # of the most recent update.
@@ -69,7 +69,7 @@ package("build-info") {
     {
       dest = "latest-commit-date"
       path = build_info_files.latest_commit_date
-    },
+    }
   ]
 }
 

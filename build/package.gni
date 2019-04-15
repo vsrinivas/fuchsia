@@ -16,6 +16,9 @@ declare_args() {
   # doesn't exist yet when it's needed, it will be generated.  New
   # keys can be generated with the `pm -k FILE genkey` host command.
   system_package_key = "//build/development.key"
+
+  # Board name used for paving and amber updates.
+  board_name = ""
 }
 
 # Generate a list of package metadata exported from all packages in the

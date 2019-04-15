@@ -133,6 +133,26 @@ func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
 
 var diskImagerPath = filepath.Join("/pkg", "bin", "install-disk-image")
 
+func ValidateImgs(imgs []string, imgsPath string) error {
+	boardPath := filepath.Join(imgsPath, "board")
+	actual, err := ioutil.ReadFile(boardPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		} else {
+			return err
+		}
+	}
+	expected, err := ioutil.ReadFile("/config/build-info/board")
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(actual, expected) {
+		return fmt.Errorf("parser: expected board name %s found %s", expected, actual)
+	}
+	return nil
+}
+
 func WriteImgs(imgs []string, imgsPath string) error {
 	logger.Infof("Writing images %+v from %q", imgs, imgsPath)
 
@@ -159,6 +179,8 @@ func WriteImgs(imgs []string, imgsPath string) error {
 			}
 		case "bootloader":
 			c = exec.Command(diskImagerPath, "install-bootloader")
+		case "board":
+			continue
 		default:
 			return fmt.Errorf("unrecognized image %q", img)
 		}

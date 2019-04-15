@@ -101,6 +101,10 @@ func run() (err error) {
 		return fmt.Errorf("failed getting packages: %s", err)
 	}
 
+	if err:= ValidateImgs(imgs, dataPath); err != nil {
+		return fmt.Errorf("failed to validate imgs: %s", err)
+	}
+
 	phase = metrics.PhaseImageWrite
 	if err := WriteImgs(imgs, dataPath); err != nil {
 		return fmt.Errorf("error writing image file: %s", err)

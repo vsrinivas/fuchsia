@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "build-info",
             "shell",
             "deprecated-global-persistent-storage"
         ],

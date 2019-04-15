@@ -45,14 +45,14 @@ declare_args() {
   vbmeta_r_partition = ""
   active_partition = ""
   signed_image = false
-
-  # arguments for pave script.
-  board_name = ""
 }
 
 assert(
     meta_package_labels != [],
     "Missing meta_package_labels. Are you using a supported product configuration? " + "Check your args.gn file for an import of a product configuration, and consider " + "using one of the products in the `//products` or `//vendor/*/products` directories.")
+
+board_name_file = "$root_build_dir/board_name"
+write_file(board_name_file, "${board_name}")
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
@@ -1318,6 +1318,13 @@ action("update.manifest") {
       }
     }
   }
+
+  update_manifest += [
+    {
+      target = "board"
+      sources = [ board_name_file ]
+    }
+  ]
 
   script = "manifest.py"
 
