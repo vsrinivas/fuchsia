@@ -170,7 +170,7 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   }
   RequestKtraceStart(channel, group_mask);
 
-  FXL_LOG(INFO) << "Started ktrace";
+  FXL_VLOG(1) << "Ktrace started";
 }
 
 void App::StopKTrace() {
@@ -201,6 +201,8 @@ void App::StopKTrace() {
   trace_release_prolonged_context(context_);
   context_ = nullptr;
   current_group_mask_ = 0u;
+
+  FXL_VLOG(1) << "Ktrace stopped";
 }
 
 }  // namespace ktrace_provider
