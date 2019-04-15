@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
-#include <memory>
-
 #include <lib/async/cpp/future.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/array_to_string.h"

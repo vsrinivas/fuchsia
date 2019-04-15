@@ -5,14 +5,15 @@
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <unordered_set>
-#include "fuchsia/ledger/cpp/fidl.h"
-#include "src/lib/uuid/uuid.h"
 
+#include <unordered_set>
+
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/storage/session_storage_xdr.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace modular {
 

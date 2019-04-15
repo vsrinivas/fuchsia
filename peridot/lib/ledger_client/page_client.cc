@@ -4,10 +4,10 @@
 
 #include "peridot/lib/ledger_client/page_client.h"
 
+#include <lib/fsl/vmo/strings.h>
+
 #include <memory>
 #include <utility>
-
-#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"

@@ -4,16 +4,17 @@
 
 #include "peridot/bin/sessionmgr/story/model/ledger_story_model_storage.h"
 
+#include <lib/fidl/cpp/object_coding.h>  // for EncodeObject()/DecodeObject()
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/fsl/vmo/vector.h>
+
 #include <string>
 #include <vector>
 
-#include "lib/fidl/cpp/object_coding.h"  // for EncodeObject()/DecodeObject()
-#include "lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/logging.h"
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 #include "peridot/lib/ledger_client/promise.h"  // for fit::promise<> wrappers
+#include "src/lib/fxl/logging.h"
 
 using fuchsia::modular::storymodel::StoryModel;
 using fuchsia::modular::storymodel::StoryModelMutation;

@@ -4,14 +4,13 @@
 
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
 
-#include <algorithm>
-#include <deque>
-#include <utility>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
+
+#include <algorithm>
+#include <deque>
+#include <utility>
 
 #include "peridot/bin/sessionmgr/message_queue/persistent_queue.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -19,6 +18,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_client.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace modular {
 

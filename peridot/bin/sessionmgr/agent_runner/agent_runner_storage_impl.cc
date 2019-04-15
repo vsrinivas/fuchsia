@@ -4,12 +4,12 @@
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 
-#include <functional>
-#include <utility>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <functional>
+#include <utility>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"
