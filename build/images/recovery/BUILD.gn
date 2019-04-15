@@ -15,7 +15,7 @@ recovery_packages = [
   "//garnet/packages/prod:runtime",
   "//garnet/packages/prod:wlancfg",
   "//garnet/packages/prod:wlanstack",
-  "//src/recovery/ui",
+  "//src/recovery/system",
   pkgfs_package_label,
 ]
 

@@ -6,7 +6,7 @@ group("recovery") {
   testonly = true
   deps = [
     ":tests",
-    "ui",
+    "system",
   ]
 }
 

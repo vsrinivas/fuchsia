@@ -7,6 +7,7 @@
 use failure::{format_err, Error, ResultExt};
 use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
 use fdio::make_ioctl;
+use fdio::watch_directory;
 use fidl_fuchsia_hardware_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
 use fuchsia_async as fasync;
 use fuchsia_runtime::vmar_root_self;
@@ -14,7 +15,7 @@ use fuchsia_zircon::{
     self as zx,
     sys::{
         zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, zx_handle_t,
-        ZX_CACHE_FLUSH_DATA,
+        ZX_CACHE_FLUSH_DATA, ZX_TIME_INFINITE,
     },
     Handle, VmarFlags, Vmo,
 };
@@ -129,7 +130,8 @@ pub struct Frame {
 
 impl Frame {
     fn allocate_image_vmo(
-        framebuffer: &FrameBuffer, executor: &mut fasync::Executor,
+        framebuffer: &FrameBuffer,
+        executor: &mut fasync::Executor,
     ) -> Result<Vmo, Error> {
         let vmo: Rc<RefCell<Option<Vmo>>> = Rc::new(RefCell::new(None));
         let vmo_response = framebuffer
@@ -152,7 +154,9 @@ impl Frame {
     }
 
     fn import_image_vmo(
-        framebuffer: &FrameBuffer, executor: &mut fasync::Executor, image_vmo: Vmo,
+        framebuffer: &FrameBuffer,
+        executor: &mut fasync::Executor,
+        image_vmo: Vmo,
     ) -> Result<u64, Error> {
         let pixel_format: u32 = framebuffer.config.format.into();
         let plane = ImagePlane {
@@ -166,18 +170,9 @@ impl Frame {
             type_: 0,
             planes: [
                 plane,
-                ImagePlane {
-                    byte_offset: 0,
-                    bytes_per_row: 0,
-                },
-                ImagePlane {
-                    byte_offset: 0,
-                    bytes_per_row: 0,
-                },
-                ImagePlane {
-                    byte_offset: 0,
-                    bytes_per_row: 0,
-                },
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
             ],
         };
 
@@ -264,11 +259,7 @@ impl Frame {
         // TODO: This explicitly violates the safety constraints of SharedBuffer.
         let frame_buffer_pixel_ptr = self.pixel_buffer_addr as *mut u8;
         let result = unsafe {
-            zx_cache_flush(
-                frame_buffer_pixel_ptr,
-                self.byte_size(),
-                ZX_CACHE_FLUSH_DATA,
-            )
+            zx_cache_flush(frame_buffer_pixel_ptr, self.byte_size(), ZX_CACHE_FLUSH_DATA)
         };
         if result != 0 {
             return Err(format_err!("zx_cache_flush failed: {}", result));
@@ -277,10 +268,7 @@ impl Frame {
             .controller
             .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)
             .context("Frame::present() set_layer_image")?;
-        framebuffer
-            .controller
-            .apply_config()
-            .context("Frame::present() apply_config")?;
+        framebuffer.controller.apply_config().context("Frame::present() apply_config")?;
         Ok(())
     }
 
@@ -333,17 +321,15 @@ impl FrameBuffer {
         };
 
         if result_size != mem::size_of::<zx_handle_t>() as isize {
-            return Err(format_err!(
-                "ioctl_display_controller_get_handle failed: {}",
-                result_size
-            ));
+            return Err(format_err!("ioctl_display_controller_get_handle failed: {}", result_size));
         }
 
         Ok(unsafe { Handle::from_raw(display_handle) })
     }
 
     fn create_config_from_event_stream(
-        proxy: &ControllerProxy, executor: &mut fasync::Executor,
+        proxy: &ControllerProxy,
+        executor: &mut fasync::Executor,
     ) -> Result<Config, Error> {
         let display_info: Rc<RefCell<Option<(u64, u32, u32, u32)>>> = Rc::new(RefCell::new(None));
         let stream = proxy.take_event_stream();
@@ -376,9 +362,8 @@ impl FrameBuffer {
         let display_info = display_info.replace(None);
         if let Some((display_id, pixel_format, width, height)) = display_info {
             let stride: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
-            let stride_response = proxy
-                .compute_linear_image_stride(width, pixel_format)
-                .map_ok(|px_stride| {
+            let stride_response =
+                proxy.compute_linear_image_stride(width, pixel_format).map_ok(|px_stride| {
                     stride.replace(px_stride);
                 });
 
@@ -403,7 +388,9 @@ impl FrameBuffer {
     }
 
     fn configure_layer(
-        config: Config, proxy: &ControllerProxy, executor: &mut fasync::Executor,
+        config: Config,
+        proxy: &ControllerProxy,
+        executor: &mut fasync::Executor,
     ) -> Result<u64, Error> {
         let layer_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
         let layer_id_response = proxy.create_layer().map_ok(|(status, id)| {
@@ -416,10 +403,8 @@ impl FrameBuffer {
         let layer_id = layer_id.replace(None);
         if let Some(id) = layer_id {
             let pixel_format: u32 = config.format.into();
-            let plane = ImagePlane {
-                byte_offset: 0,
-                bytes_per_row: config.linear_stride_bytes() as u32,
-            };
+            let plane =
+                ImagePlane { byte_offset: 0, bytes_per_row: config.linear_stride_bytes() as u32 };
             let mut image_config = ImageConfig {
                 width: config.width,
                 height: config.height,
@@ -427,18 +412,9 @@ impl FrameBuffer {
                 type_: 0,
                 planes: [
                     plane,
-                    ImagePlane {
-                        byte_offset: 0,
-                        bytes_per_row: 0,
-                    },
-                    ImagePlane {
-                        byte_offset: 0,
-                        bytes_per_row: 0,
-                    },
-                    ImagePlane {
-                        byte_offset: 0,
-                        bytes_per_row: 0,
-                    },
+                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
+                    ImagePlane { byte_offset: 0, bytes_per_row: 0 },
                 ],
             };
             proxy.set_layer_primary_config(id, &mut image_config)?;
@@ -452,16 +428,23 @@ impl FrameBuffer {
     }
 
     pub fn new(
-        display_index: Option<usize>, executor: &mut fasync::Executor,
+        display_index: Option<usize>,
+        executor: &mut fasync::Executor,
     ) -> Result<FrameBuffer, Error> {
-        let device_path = format!(
-            "/dev/class/display-controller/{:03}",
-            display_index.unwrap_or(0)
-        );
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(device_path)?;
+        let device_path = if let Some(index) = display_index {
+            format!("/dev/class/display-controller/{:03}", index)
+        } else {
+            // If the caller did not supply a display index, we watch the
+            // display-controller and use the first display that appears.
+            let mut first_path = None;
+            let dir = OpenOptions::new().read(true).open("/dev/class/display-controller")?;
+            watch_directory(&dir, ZX_TIME_INFINITE, |_event, path| {
+                first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
+                Err(zx::Status::STOP)
+            });
+            first_path.unwrap()
+        };
+        let file = OpenOptions::new().read(true).write(true).open(device_path)?;
         let zx_handle = Self::get_display_handle(&file)?;
         let channel = fasync::Channel::from_channel(zx_handle.into())?;
         let proxy = ControllerProxy::new(channel);

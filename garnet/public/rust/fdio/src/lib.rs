@@ -499,10 +499,10 @@ where
 /// If the callback returns an error, the watching stops, and the zx::Status is returned.
 ///
 /// This function blocks for the duration of the watch operation. The deadline parameter will stop
-/// the watch at the given (absolute) time and return zx::Status::ErrTimedOut. A deadline of
+/// the watch at the given (absolute) time and return zx::Status::TIMED_OUT. A deadline of
 /// zx::ZX_TIME_INFINITE will never expire.
 ///
-/// The callback may use zx::ErrStop as a way to signal to the caller that it wants to
+/// The callback may use zx::Status::STOP as a way to signal to the caller that it wants to
 /// stop because it found what it was looking for. Since this error code is not returned by
 /// syscalls or public APIs, the callback does not need to worry about it turning up normally.
 pub fn watch_directory<F>(dir: &File, deadline: sys::zx_time_t, mut f: F) -> zx::Status

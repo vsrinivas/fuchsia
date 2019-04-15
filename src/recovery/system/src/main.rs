@@ -21,7 +21,7 @@ struct RecoveryUI<'a> {
 }
 
 impl<'a> RecoveryUI<'a> {
-    fn draw(&mut self, url: &str, user_code: &str) {
+    fn draw(&mut self, heading: &str, body: &str) {
         let r = Rect::new(
             Point::new(0.0, 0.0),
             Size::new(self.config.width as f32, self.config.height as f32),
@@ -32,10 +32,10 @@ impl<'a> RecoveryUI<'a> {
 
         let mut font_description =
             FontDescription { baseline: 0, face: &mut self.face, size: self.text_size };
-        let size = measure_text(url, &mut font_description);
+        let size = measure_text(heading, &mut font_description);
         let paint = Paint { fg: Color { r: 255, g: 255, b: 255, a: 255 }, bg: bg };
         self.canvas.fill_text(
-            url,
+            heading,
             Point::new(
                 (self.config.width / 2) as f32 - (size.width / 2.0),
                 (self.config.height / 4) as f32 - (size.height / 2.0),
@@ -44,10 +44,10 @@ impl<'a> RecoveryUI<'a> {
             &paint,
         );
 
-        let size = measure_text(user_code, &mut font_description);
+        let size = measure_text(body, &mut font_description);
 
         self.canvas.fill_text(
-            user_code,
+            body,
             Point::new(
                 (self.config.width / 2) as f32 - (size.width / 2.0),
                 (self.config.height / 2) as f32 + (self.config.height / 4) as f32
@@ -78,7 +78,7 @@ impl PixelSink for FramePixelSink {
 }
 
 fn main() -> Result<(), Error> {
-    println!("Recovery UI");
+    println!("recovery: started");
 
     let face = FontFace::new(FONT_DATA).unwrap();
 
@@ -99,7 +99,7 @@ fn main() -> Result<(), Error> {
 
     let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
-    ui.draw("Verification URL", "User Code");
+    ui.draw("Fuchsia System Recovery", "Waiting...");
 
     executor.run_singlethreaded(future::empty::<()>());
     unreachable!();
