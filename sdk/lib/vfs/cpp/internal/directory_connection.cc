@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 
 #include <utility>
-
-#include <lib/vfs/cpp/directory.h>
-#include <lib/vfs/cpp/flags.h>
 
 namespace vfs {
 namespace internal {
@@ -17,8 +16,8 @@ DirectoryConnection::DirectoryConnection(uint32_t flags, vfs::Directory* vn)
 
 DirectoryConnection::~DirectoryConnection() = default;
 
-zx_status_t DirectoryConnection::Bind(zx::channel request,
-                                      async_dispatcher_t* dispatcher) {
+zx_status_t DirectoryConnection::BindInternal(zx::channel request,
+                                              async_dispatcher_t* dispatcher) {
   zx_status_t status = binding_.Bind(std::move(request), dispatcher);
   if (status != ZX_OK) {
     return status;

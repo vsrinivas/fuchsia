@@ -103,6 +103,9 @@ class Node {
   virtual bool IsDirectory() const = 0;
 
  protected:
+  // Returns total number of active connections
+  uint64_t GetConnectionCount() const;
+
   // Called by |Serve| after validating flags and modes.
   // This should be implemented by sub classes which doesn't create a
   // connection class.
@@ -139,27 +142,22 @@ class Node {
   // See documentation of  |ValidateFlags| for exact details.
   virtual uint32_t GetProhibitiveFlags() const;
 
-  // guards connection_
-  std::mutex mutex_;
-  // The active connections associated with this object.
-  std::vector<std::unique_ptr<Connection>> connections_ __TA_GUARDED(mutex_);
-
  private:
   // Validate flags on |Serve|.
   //
   // If the caller specified an invalid combination of flags as per io.fidl,
   // returns |ZX_ERR_INVALID_ARGS|.
   //
-  // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and |IsDirectory|
-  // returns false.
+  // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and
+  // |IsDirectory| returns false.
   //
-  // Calls |GetProhibitiveFlags| flags and if one of the flag is in prohibitive
-  // list, returns |ZX_ERR_INVALID_ARGS|.
+  // Calls |GetProhibitiveFlags| flags and if one of the flag is in
+  // prohibitive list, returns |ZX_ERR_INVALID_ARGS|.
   //
   // Calls |GetAdditionalAllowedFlags|, appends |OPEN_FLAG_DESCRIBE|,
-  // |OPEN_FLAG_NODE_REFERENCE|, |OPEN_FLAG_DIRECTORY| (only if |IsDirectory|
-  // returns true) to those flags and returns |ZX_ERR_NOT_SUPPORTED| if flags
-  // are not found in allowed list.
+  // |OPEN_FLAG_NODE_REFERENCE|, |OPEN_FLAG_DIRECTORY| (only if
+  // |IsDirectory| returns true) to those flags and returns
+  // |ZX_ERR_NOT_SUPPORTED| if flags are not found in allowed list.
   //
   // Returns ZX_OK if none of the above cases are true.
   zx_status_t ValidateFlags(uint32_t flags) const;
@@ -175,6 +173,11 @@ class Node {
   // |OPEN_FLAG_NODE_REFERENCE|.
   // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
   uint32_t FilterRefFlags(uint32_t flags);
+
+  // guards connection_
+  mutable std::mutex mutex_;
+  // The active connections associated with this object.
+  std::vector<std::unique_ptr<Connection>> connections_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace vfs

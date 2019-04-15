@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/node.h>
-
-#include <algorithm>
-#include <mutex>
-
 #include <fuchsia/io/c/fidl.h>
 #include <lib/vfs/cpp/connection.h>
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
+#include <lib/vfs/cpp/node.h>
 #include <zircon/assert.h>
+
+#include <algorithm>
+#include <mutex>
 
 namespace vfs {
 namespace {
@@ -19,7 +18,6 @@ namespace {
 constexpr uint32_t kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
     fuchsia::io::OPEN_FLAG_POSIX | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
-
 
 }  // namespace
 
@@ -52,8 +50,7 @@ zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Node::Clone(uint32_t flags, uint32_t parent_flags,
-                 zx::channel request,
+void Node::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                  async_dispatcher_t* dispatcher) {
   if (!Flags::InputPrecondition(flags)) {
     SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
@@ -61,7 +58,8 @@ void Node::Clone(uint32_t flags, uint32_t parent_flags,
   }
   // If SAME_RIGHTS is specified, the client cannot request any specific rights.
   // TODO(yifeit): Start enforcing this after soft transition
-  // if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights)) {
+  // if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights))
+  // {
   //   SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
   //   return;
   // }
@@ -171,11 +169,8 @@ zx_status_t Node::Connect(uint32_t flags, zx::channel request,
   }
   status = connection->Bind(std::move(request), dispatcher);
   if (status == ZX_OK) {
-    if (Flags::ShouldDescribe(flags)) {
-      connection->SendOnOpenEvent(status);
-    }
     AddConnection(std::move(connection));
-  }  // can't send status as request object is gone.
+  }
   return status;
 }
 
@@ -203,6 +198,11 @@ void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,
   msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
   msg.s = status;
   request.write(0, &msg, sizeof(msg), nullptr, 0);
+}
+
+uint64_t Node::GetConnectionCount() const {
+  std::lock_guard<std::mutex> guard(mutex_);
+  return connections_.size();
 }
 
 void Node::AddConnection(std::unique_ptr<Connection> connection) {

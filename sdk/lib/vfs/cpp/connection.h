@@ -46,12 +46,6 @@ class Connection {
   uint64_t offset() const { return offset_; }
   void set_offset(uint64_t offset) { offset_ = offset; }
 
-  // Send OnOpen event for |fuchsia::io::Node|.
-  //
-  // This function will not check for |OPEN_FLAG_DESCRIBE|. Caller should do
-  // that. Every subclass must implement this.
-  virtual void SendOnOpenEvent(zx_status_t status) = 0;
-
   // Associate |request| with this connection.
   //
   // Waits for messages asynchronously on the |request| channel using
@@ -59,13 +53,35 @@ class Connection {
   // |async_get_default_dispatcher| to obtain the default dispatcher for the
   // current thread.
   //
+  // After calling internal functions from implementing classes this function
+  // will also send OnOpen event if |OPEN_FLAG_DESCRIBE| is present in |flags_|
+  // and binding is successful.
+  //
   // Typically called during connection setup.
-  virtual zx_status_t Bind(zx::channel request,
-                           async_dispatcher_t* dispatcher) = 0;
+  zx_status_t Bind(zx::channel request, async_dispatcher_t* dispatcher);
 
  protected:
-  // Implementations for common |fuchsia.io.Node| operations. Used by subclasses
-  // to avoid code duplication.
+  // Send OnOpen event for |fuchsia::io::Node|.
+  //
+  // This function will not check for |OPEN_FLAG_DESCRIBE|. Caller should do
+  // that. Every subclass must implement this.
+  //
+  // This should only be called from |Bind()|.
+  virtual void SendOnOpenEvent(zx_status_t status) = 0;
+
+  // Associate |request| with this connection.
+  //
+  // This function is called by |Connection::Bind()|.
+  //
+  // Waits for messages asynchronously on the |request| channel using
+  // |dispatcher|. If |dispatcher| is |nullptr|, the implementation will call
+  // |async_get_default_dispatcher| to obtain the default dispatcher for the
+  // current thread.
+  virtual zx_status_t BindInternal(zx::channel request,
+                                   async_dispatcher_t* dispatcher) = 0;
+
+  // Implementations for common |fuchsia.io.Node| operations. Used by
+  // subclasses to avoid code duplication.
 
   void Clone(Node* vn, uint32_t flags, zx::channel request,
              async_dispatcher_t* dispatcher);

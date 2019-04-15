@@ -24,8 +24,8 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   ~FileConnection() override;
 
   // Start listening for |fuchsia.io.File| messages on |request|.
-  zx_status_t Bind(zx::channel request,
-                   async_dispatcher_t* dispatcher) override;
+  zx_status_t BindInternal(zx::channel request,
+                           async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::File| Implementation:
   void Clone(uint32_t flags,
@@ -51,6 +51,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override;
 
+ protected:
   // |Connection| Implementation:
   void SendOnOpenEvent(zx_status_t status) override;
 

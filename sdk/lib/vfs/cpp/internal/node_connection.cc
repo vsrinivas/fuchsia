@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
+#include <lib/vfs/cpp/node.h>
 
 #include <utility>
-
-#include <lib/vfs/cpp/flags.h>
-#include <lib/vfs/cpp/node.h>
 
 namespace vfs {
 namespace internal {
@@ -17,8 +16,8 @@ NodeConnection::NodeConnection(uint32_t flags, vfs::Node* vn)
 
 NodeConnection::~NodeConnection() = default;
 
-zx_status_t NodeConnection::Bind(zx::channel request,
-                                 async_dispatcher_t* dispatcher) {
+zx_status_t NodeConnection::BindInternal(zx::channel request,
+                                         async_dispatcher_t* dispatcher) {
   zx_status_t status = binding_.Bind(std::move(request), dispatcher);
   if (status != ZX_OK) {
     return status;

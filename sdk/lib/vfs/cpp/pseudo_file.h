@@ -75,10 +75,8 @@ class PseudoFile : public File {
     size_t GetCapacity() override;
 
     // Connection implementation:
-    zx_status_t Bind(zx::channel request,
-                     async_dispatcher_t* dispatcher) override;
-
-    void SendOnOpenEvent(zx_status_t status) override;
+    zx_status_t BindInternal(zx::channel request,
+                             async_dispatcher_t* dispatcher) override;
 
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
@@ -93,6 +91,8 @@ class PseudoFile : public File {
     uint32_t GetAdditionalAllowedFlags() const override;
 
     uint32_t GetProhibitiveFlags() const override;
+
+    void SendOnOpenEvent(zx_status_t status) override;
 
    private:
     void SetInputLength(size_t length);

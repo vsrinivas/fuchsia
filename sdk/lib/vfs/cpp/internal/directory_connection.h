@@ -25,8 +25,8 @@ class DirectoryConnection final : public Connection,
   ~DirectoryConnection() override;
 
   // Start listening for |fuchsia.io.Directory| messages on |request|.
-  zx_status_t Bind(zx::channel request,
-                   async_dispatcher_t* dispatcher) override;
+  zx_status_t BindInternal(zx::channel request,
+                           async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::Directory| Implementation:
   void Clone(uint32_t flags,
@@ -52,6 +52,7 @@ class DirectoryConnection final : public Connection,
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCallback callback) override;
 
+ protected:
   // |Connection| Implementation:
   void SendOnOpenEvent(zx_status_t status) override;
 

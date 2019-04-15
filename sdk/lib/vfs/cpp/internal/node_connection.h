@@ -24,8 +24,8 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   ~NodeConnection() override;
 
   // Start listening for |fuchsia.io.Node| messages on |request|.
-  zx_status_t Bind(zx::channel request,
-                   async_dispatcher_t* dispatcher) override;
+  zx_status_t BindInternal(zx::channel request,
+                           async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::Node| Implementation:
   void Clone(uint32_t flags,
@@ -39,6 +39,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
              std::vector<uint8_t> in, IoctlCallback callback) override;
 
+ protected:
   // |Connection| Implementation:
   void SendOnOpenEvent(zx_status_t status) override;
 

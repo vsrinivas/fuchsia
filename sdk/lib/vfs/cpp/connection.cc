@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/connection.h>
-
 #include <lib/fdio/vfs.h>
+#include <lib/vfs/cpp/connection.h>
+#include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/node.h>
 
 namespace vfs {
@@ -13,8 +13,7 @@ Connection::Connection(uint32_t flags) : flags_(flags) {}
 
 Connection::~Connection() = default;
 
-void Connection::Clone(Node* vn, uint32_t flags,
-                       zx::channel request,
+void Connection::Clone(Node* vn, uint32_t flags, zx::channel request,
                        async_dispatcher_t* dispatcher) {
   vn->Clone(flags, flags_, std::move(request), dispatcher);
 }
@@ -34,6 +33,15 @@ void Connection::Describe(Node* vn,
   } else {
     callback(std::move(info));
   }
+}
+
+zx_status_t Connection::Bind(zx::channel request,
+                             async_dispatcher_t* dispatcher) {
+  auto status = BindInternal(std::move(request), dispatcher);
+  if (status == ZX_OK && Flags::ShouldDescribe(flags_)) {
+    SendOnOpenEvent(status);
+  }  // can't send status as binding failed and request object is gone.
+  return status;
 }
 
 void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
