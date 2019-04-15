@@ -22,6 +22,13 @@ bool VkReadbackTest::Initialize()
 
 bool VkReadbackTest::InitVulkan()
 {
+    // Current loader seems to require this extension be provided, though it
+    // should be core in 1.1
+    std::vector<const char*> instance_exts;
+    if (ext_ != NONE) {
+        instance_exts.emplace_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+    }
+
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
@@ -29,8 +36,8 @@ bool VkReadbackTest::InitVulkan()
         nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
         0,                                      // uint32_t                    enabledLayerCount;
         nullptr,                                // const char* const*          ppEnabledLayerNames;
-        0,       // uint32_t                    enabledExtensionCount;
-        nullptr, // const char* const*          ppEnabledExtensionNames;
+        static_cast<uint32_t>(instance_exts.size()),
+        instance_exts.data(),
     };
     VkAllocationCallbacks* allocation_callbacks = nullptr;
     VkInstance instance;
@@ -65,6 +72,61 @@ bool VkReadbackTest::InitVulkan()
         DLOG("vendorID 0x%x", properties.vendorID);
         DLOG("deviceID 0x%x", properties.deviceID);
         DLOG("deviceType 0x%x", properties.deviceType);
+
+        if (ext_ == NONE) {
+            continue;
+        }
+
+        // Test external buffer/image capabilities
+        VkPhysicalDeviceExternalBufferInfo buffer_info = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO,
+            .flags = 0,
+            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+        };
+        VkExternalBufferProperties buffer_props = {
+            .sType = VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES,
+            .pNext = nullptr,
+        };
+        vkGetPhysicalDeviceExternalBufferProperties(device, &buffer_info, &buffer_props);
+        EXPECT_EQ(buffer_props.externalMemoryProperties.externalMemoryFeatures,
+                  0u | VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
+                      VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT);
+        EXPECT_EQ(buffer_props.externalMemoryProperties.exportFromImportedHandleTypes,
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+        EXPECT_EQ(buffer_props.externalMemoryProperties.compatibleHandleTypes,
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+
+        VkPhysicalDeviceExternalImageFormatInfo ext_format_info = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
+            .pNext = nullptr,
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+        };
+        VkPhysicalDeviceImageFormatInfo2 image_format_info = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+            .pNext = &ext_format_info,
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .type = VK_IMAGE_TYPE_2D,
+            .tiling = VK_IMAGE_TILING_LINEAR,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            .flags = 0u,
+        };
+        VkExternalImageFormatProperties ext_format_props = {
+            .sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES,
+            .pNext = nullptr,
+        };
+        VkImageFormatProperties2 image_format_props = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
+            .pNext = &ext_format_props,
+        };
+        vkGetPhysicalDeviceImageFormatProperties2(device, &image_format_info, &image_format_props);
+        EXPECT_EQ(ext_format_props.externalMemoryProperties.externalMemoryFeatures,
+                  0u | VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
+                      VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT);
+        EXPECT_EQ(ext_format_props.externalMemoryProperties.exportFromImportedHandleTypes,
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+        EXPECT_EQ(ext_format_props.externalMemoryProperties.compatibleHandleTypes,
+                  VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
     }
 
     uint32_t queue_family_count;
