@@ -32,8 +32,6 @@ Merge a list of product definitions to unique lists of GN labels:
 monolith   - the list of packages included in the base system images
 preinstall - the list of packages preinstall, but not part of OTA
 available  - the list of packages installable and updatable
-host_tests - host tests collected from all above package sets
-data_deps  - additional labels to build, such as host tools
 files_read - a list of files used to compute all of the above
 """)
     parser.add_argument("--monolith",
@@ -67,15 +65,9 @@ files_read - a list of files used to compute all of the above
     except ImportError:
         return 1
 
-    host_tests = set()
-    data_deps = set()
     for res in (monolith_results, preinstall_results, available_results):
         if res is None:
             continue
-        if res["host_tests"]:
-            host_tests.update(res["host_tests"])
-        if res["data_deps"]:
-            data_deps.update(res["data_deps"])
         if res["files_read"]:
             build_packages["files_read"].update(res["files_read"])
 
@@ -93,8 +85,6 @@ files_read - a list of files used to compute all of the above
         "monolith": list(monolith_targets),
         "preinstall": list(preinstall_targets),
         "available": list(available_targets),
-        "host_tests": list(host_tests),
-        "data_deps": list(data_deps),
         "files_read": list(build_packages["files_read"]),
     }))
 

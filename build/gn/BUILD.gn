@@ -5,14 +5,6 @@
 import("//build/compiled_action.gni")
 import("//build/gn/packages.gni")
 
-group("host_tests") {
-  visibility = [ "//:host_tests" ]
-  public_deps = []
-  foreach(label, package_host_tests) {
-    public_deps += [ "$label($host_toolchain)" ]
-  }
-}
-
 # Generates breakpad symbol data for unstripped binaries.
 #
 # This symbol data is consumed by infrastructure tools and uploaded to Crash

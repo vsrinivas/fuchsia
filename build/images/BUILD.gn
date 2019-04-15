@@ -129,10 +129,9 @@ group("packages") {
     ":available_packages",
     ":meta_packages",
   ]
-  data_deps = package_data_deps
 
   if (enable_netboot) {
-    data_deps += [
+    data_deps = [
       ":netboot",
       ":netboot-script",
     ]

@@ -31,8 +31,6 @@ monolith += board_packages
 # monolith - package labels for base system and verified boot image
 # preinstall - package labels for preinstall, but not OTA
 # available - package labels for the install and update repository
-# host_tests - labels for host tests
-# data_deps - labels for host tools and non-package build targets
 _preprocessed_products = exec_script("preprocess_products.py",
                                      [
                                        "--monolith=$monolith",
@@ -63,18 +61,4 @@ foreach(pkg, _preprocessed_products.preinstall) {
 available_package_labels = []
 foreach(pkg, _preprocessed_products.available) {
   available_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
-}
-
-# Every extra GN target the package JSON requests be built on the side.
-# This is for things like install_host_tools() targets whose output should
-# be on hand for a developer to use in conjuction with a Fuchsia package.
-package_data_deps = []
-foreach(pkg, _preprocessed_products.data_deps) {
-  package_data_deps += [ get_label_info(pkg, "label_no_toolchain") ]
-}
-
-# Labels of test() targets to be copied into $root_build_dir/host_tests.
-package_host_tests = []
-foreach(label, _preprocessed_products.host_tests) {
-  package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
 }

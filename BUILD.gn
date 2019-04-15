@@ -75,13 +75,6 @@ group("recovery_image") {
   ]
 }
 
-group("host_tests") {
-  visibility = [ ":*" ]
-  public_deps = [
-    "//build/gn:host_tests",
-  ]
-}
-
 # TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
 #
 # Aggregates metadata about all tests within the build graph to create a
@@ -93,7 +86,6 @@ generated_file("tests") {
   data_keys = [ "test_spec" ]
   output_conversion = "json"
   deps = [
-    ":host_tests",
     "//build/images:packages",
   ]
 }
@@ -110,7 +102,6 @@ generated_file("pseudo_tests") {
   # TODO(joshuaseaton|jinwoo): have this depend on a top-level //tests target,
   # when such a target exists.
   deps = [
-    ":host_tests",
     "//build/images:packages",
   ]
 }
@@ -159,7 +150,6 @@ action("copy_host_tests") {
   ]
 
   deps = [
-    ":host_tests",
     ":pseudo_tests",
     ":tests",
     "//build/images:packages",
