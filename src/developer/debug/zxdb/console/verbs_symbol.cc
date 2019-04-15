@@ -532,17 +532,20 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
 
 const char kSymNearShortHelp[] = "sym-near / sn: Print symbol for an address.";
 const char kSymNearHelp[] =
-    R"(sym-near <address>
+    R"(sym-near <address-expression>
 
   Alias: "sn"
 
   Finds the symbol nearest to the given address. This command is useful for
   finding what a pointer or a code location refers to.
 
+  The address can be an explicit number or any expression ("help print") that
+  evaluates to a memory address.
+
 Example
 
   sym-near 0x12345670
-  process 2 sym-near 0x612a2519
+  process 2 sym-near &x
 )";
 
 Err DoSymNear(ConsoleContext* context, const Command& cmd) {
@@ -553,24 +556,28 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  if (cmd.args().size() != 1u) {
-    return Err(
-        ErrType::kInput,
-        "\"sym-near\" needs exactly one arg that's the address to lookup.");
-  }
+  return EvalCommandAddressExpression(
+      cmd, "sym-near", GetEvalContextForCommand(cmd),
+      [weak_process = cmd.target()->GetProcess()->GetWeakPtr()](
+          const Err& err, uint64_t address, std::optional<uint64_t> size) {
+        Console* console = Console::get();
+        if (err.has_error()) {
+          console->Output(err);  // Evaluation error.
+          return;
+        }
+        if (!weak_process) {
+          // Process has been destroyed during evaluation. Normally a message
+          // will be printed when that happens so we can skip reporting the
+          // error.
+          return;
+        }
 
-  uint64_t address = 0;
-  err = StringToUint64(cmd.args()[0], &address);
-  if (err.has_error())
-    return err;
-
-  auto locations =
-      cmd.target()->GetProcess()->GetSymbols()->ResolveInputLocation(
-          InputLocation(address));
-  FXL_DCHECK(locations.size() == 1u);
-  Console::get()->Output(
-      FormatLocation(cmd.target()->GetSymbols(), locations[0], true, true));
-  return Err();
+        auto locations = weak_process->GetSymbols()->ResolveInputLocation(
+            InputLocation(address));
+        FXL_DCHECK(locations.size() == 1u);
+        console->Output(FormatLocation(weak_process->GetTarget()->GetSymbols(),
+                                       locations[0], true, true));
+      });
 }
 
 // sym-search ------------------------------------------------------------------
