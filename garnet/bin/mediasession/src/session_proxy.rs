@@ -6,6 +6,7 @@ use crate::{
     active_session_queue::ActiveSessionQueue, fidl_clones::*, log_error::log_error_discard_result,
     mpmc, session_list::SessionList, Result, CHANNEL_BUFFER_SIZE,
 };
+use fidl::encoding::OutOfLine;
 use fidl::endpoints::*;
 use fidl_fuchsia_media::Metadata;
 use fidl_fuchsia_mediasession::*;
@@ -13,6 +14,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use std::{
+    collections::HashMap,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
@@ -111,7 +113,7 @@ impl Session {
             loop {
                 futures::select! {
                     request = request_stream.select_next_some() => {
-                        Self::serve_request(proxy.deref(), request?)?;
+                        await!(Self::serve_request(proxy.deref(), request?))?;
                     },
                     _cancel = cancel_signal => {
                         break;
@@ -155,10 +157,15 @@ impl Session {
                 .send_on_playback_capabilities_changed(clone_playback_capabilities(
                     playback_capabilities,
                 )),
+            SessionEvent::OnMediaImagesChanged { media_images } => {
+                let mut images: Vec<MediaImage> =
+                    media_images.iter().map(clone_media_image).collect();
+                control_handle.send_on_media_images_changed(&mut images.iter_mut())
+            }
         }?)
     }
 
-    fn serve_request(proxy: &SessionProxy, request: SessionRequest) -> Result<()> {
+    async fn serve_request(proxy: &SessionProxy, request: SessionRequest) -> Result<()> {
         match request {
             SessionRequest::Play { .. } => proxy.play()?,
             SessionRequest::Pause { .. } => proxy.pause()?,
@@ -183,6 +190,20 @@ impl Session {
             SessionRequest::ConnectToExtension { extension, channel, .. } => {
                 proxy.connect_to_extension(&extension, channel)?
             }
+            SessionRequest::GetMediaImageBitmap {
+                url,
+                mut minimum_size,
+                mut desired_size,
+                responder,
+            } => {
+                let mut bitmap = await!(proxy.get_media_image_bitmap(
+                    &url,
+                    &mut minimum_size,
+                    &mut desired_size
+                ))?;
+                let response = bitmap.as_mut().map(|b| OutOfLine(b.deref_mut()));
+                responder.send(response)?
+            }
         };
         Ok(())
     }
@@ -195,6 +216,7 @@ struct SessionState {
     playback_status: Option<PlaybackStatus>,
     playback_capabilities: Option<PlaybackCapabilities>,
     media_metadata: Option<Metadata>,
+    media_images: HashMap<MediaImageType, MediaImage>,
 }
 
 impl Clone for SessionState {
@@ -206,6 +228,11 @@ impl Clone for SessionState {
                 .as_ref()
                 .map(clone_playback_capabilities),
             media_metadata: self.media_metadata.as_ref().map(clone_metadata),
+            media_images: self
+                .media_images
+                .iter()
+                .map(|(image_type, image)| (*image_type, clone_media_image(image)))
+                .collect(),
         }
     }
 }
@@ -243,6 +270,13 @@ impl SessionState {
             events.push(event);
         }
 
+        // We don't want to send an empty list of media images on first connection.
+        if !self.media_images.is_empty() {
+            events.push(SessionEvent::OnMediaImagesChanged {
+                media_images: self.media_images.values().map(clone_media_image).collect(),
+            });
+        }
+
         events
     }
 
@@ -257,6 +291,13 @@ impl SessionState {
             SessionEvent::OnPlaybackCapabilitiesChanged { ref playback_capabilities } => {
                 self.playback_capabilities
                     .get_or_insert_with(|| clone_playback_capabilities(playback_capabilities));
+            }
+            SessionEvent::OnMediaImagesChanged { media_images } => {
+                for image in media_images {
+                    self.media_images
+                        .entry(image.image_type)
+                        .or_insert_with(|| clone_media_image(image));
+                }
             }
         }
     }

@@ -26,6 +26,8 @@ bits PlaybackCapabilityFlags:uint32 {
     CHANGE_TO_PREV_ITEM = 0x100;
     /// If set, the player can |BindGainControl()|.
     HAS_GAIN_CONTROL = 0x200;
+    /// If set, the player can provide bitmaps of its artwork.
+    PROVIDE_BITMAPS = 0x400;
 };
 
 /// |PlaybackCapabilities| enumerates the capabilities of the player backing

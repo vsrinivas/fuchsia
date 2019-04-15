@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
     "//third_party/rust_crates:crossbeam",
@@ -25,6 +26,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

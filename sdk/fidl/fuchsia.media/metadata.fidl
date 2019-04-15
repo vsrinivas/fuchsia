@@ -20,3 +20,7 @@ const string METADATA_LABEL_ALBUM = "fuchsia.media.album";
 const string METADATA_LABEL_PUBLISHER = "fuchsia.media.publisher";
 const string METADATA_LABEL_GENRE = "fuchsia.media.genre";
 const string METADATA_LABEL_COMPOSER = "fuchsia.media.composer";
+
+/// The title of the source of the media, e.g. a player, streaming service, or
+/// website.
+const string METADATA_SOURCE_TITLE = "fuchsia.media.source_title";

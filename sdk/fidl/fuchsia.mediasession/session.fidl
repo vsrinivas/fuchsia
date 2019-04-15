@@ -7,6 +7,7 @@ library fuchsia.mediasession;
 using zx;
 using fuchsia.media;
 using fuchsia.media.audio;
+using fuchsia.math;
 
 /// `ReadOnlySession` is a handle for media playback, allowing clients to observe
 /// a playback session.
@@ -17,9 +18,19 @@ protocol ReadOnlySession {
     -> OnPlaybackStatusChanged(PlaybackStatus playback_status);
     /// Sent on first connection and when metadata
     /// changes.
-    // TODO(turnage): Do a soft or hard transition to move Metadata into
-    // fuchsia.media.
     -> OnMetadataChanged(fuchsia.media.Metadata media_metadata);
+    /// Sent on first connection if there are images, and when media images
+    /// change. Sends only the image type that has changed: if album
+    /// art changes but not source icon, the source icon is not re-sent.
+    -> OnMediaImagesChanged(vector<MediaImage> media_images);
+
+    /// Returns the bitmap for a given image url. This url is expected to be a
+    /// url the session gave the client in an `OnMediaImagesChanged` event. If
+    /// the minimum size is not available or the url is not recognized, the
+    /// session may return a null image.
+    GetMediaImageBitmap(string url,
+                        fuchsia.math.Size minimum_size,
+                        fuchsia.math.Size desired_size) -> (MediaImageBitmap? media_image_bitmap);
 };
 
 /// `Session` is a handle for media playback, allowing clients to observe

@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mediasession") {
   sources = [
+    "image.fidl",
     "playback_capabilities.fidl",
     "playback_status.fidl",
     "service.fidl",
@@ -13,7 +14,10 @@ fidl("fuchsia.mediasession") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
+    "//sdk/fidl/fuchsia.media.playback",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

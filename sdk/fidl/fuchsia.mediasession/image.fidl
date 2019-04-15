@@ -1,0 +1,34 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediasession;
+
+using fuchsia.math;
+using fuchsia.mem;
+
+enum MediaImageType {
+    /// Artwork for the playing media.
+    ARTWORK = 0;
+    /// An icon for the source of the playing media (e.g. the player or streaming
+    /// service).
+    SOURCE_ICON = 1;
+};
+
+/// An image for playing media.
+struct MediaImage {
+    MediaImageType image_type;
+    /// A url the client can use to load the image or request a bitmap from the
+    /// player.
+    string url;
+    /// The mime type of the image if loaded through the given url by the client.
+    string mime_type;
+    /// Dimensions in which the image is available.
+    vector<fuchsia.math.Size> sizes;
+};
+
+/// An ARGB8888 bitmap image.
+struct MediaImageBitmap {
+    fuchsia.math.Size size;
+    fuchsia.mem.Buffer argb8888_pixel_data;
+};

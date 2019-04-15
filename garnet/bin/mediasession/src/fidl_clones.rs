@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 //! Remove this file entirely when FIDL-526 is fixed.
 
-use fidl_fuchsia_media::{Metadata, Property, TimelineFunction};
-use fidl_fuchsia_mediasession::{Error, PlaybackCapabilities, PlaybackStatus, SessionEvent};
+use fidl_fuchsia_math::*;
+use fidl_fuchsia_media::*;
+use fidl_fuchsia_mediasession::*;
 
 pub struct Clonable<T>(pub T);
 
@@ -71,6 +72,19 @@ pub fn clone_playback_capabilities(
     }
 }
 
+pub fn clone_size(size: &Size) -> Size {
+    Size { width: size.width, height: size.height }
+}
+
+pub fn clone_media_image(media_image: &MediaImage) -> MediaImage {
+    MediaImage {
+        image_type: media_image.image_type.clone(),
+        url: media_image.url.clone(),
+        mime_type: media_image.mime_type.clone(),
+        sizes: media_image.sizes.iter().map(clone_size).collect(),
+    }
+}
+
 impl Clone for Clonable<SessionEvent> {
     fn clone(&self) -> Self {
         Clonable(clone_session_event(&self.0))
@@ -92,5 +106,8 @@ pub fn clone_session_event(event: &SessionEvent) -> SessionEvent {
                 playback_capabilities: clone_playback_capabilities(&playback_capabilities),
             }
         }
+        SessionEvent::OnMediaImagesChanged { media_images } => SessionEvent::OnMediaImagesChanged {
+            media_images: media_images.iter().map(clone_media_image).collect(),
+        },
     }
 }
