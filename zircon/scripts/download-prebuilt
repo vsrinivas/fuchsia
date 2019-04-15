@@ -299,7 +299,7 @@ update() {
   local internal_access=false
   if $cipd_ok && CIPD="$(find_cipd)"; then
     # We have CIPD, so use it.
-    if [[ "$("$CIPD" ls fuchsia_internal)" != "No matching packages." ]]; then
+    if [[ "$("$CIPD" ls fuchsia_internal | tail -1)" != "No matching packages." ]]; then
       internal_access=true
     fi
     update_via_cipd "$CIPD" "$internal_access" || return
