@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Whether to enable debug commands in netsvc.
+  netsvc_debug_commands = true
+}
+
 executable("netsvc") {
   sources = [
     "board-name.cpp",
@@ -13,6 +18,15 @@ executable("netsvc") {
     "tftp.cpp",
     "zbi.cpp",
   ]
+  if (netsvc_debug_commands) {
+    sources += [
+      "debug-command-enabled.cpp",
+    ]
+  } else {
+    sources += [
+      "debug-command-disabled.cpp",
+    ]
+  }
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
