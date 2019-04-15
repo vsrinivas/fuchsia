@@ -20,14 +20,21 @@ use std::sync::Arc;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
+mod rewrite_manager;
+mod rewrite_service;
+
 #[cfg(test)]
 mod test_util;
 
 use repository_manager::RepositoryManager;
 use repository_service::RepositoryService;
 
+use rewrite_manager::RewriteManager;
+use rewrite_service::RewriteService;
+
 const SERVER_THREADS: usize = 2;
 const STATIC_REPO_DIR: &str = "/config/data/pkg_resolver/repositories";
+const DYNAMIC_RULES_PATH: &str = "/data/rewrite_rules.json";
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
@@ -40,6 +47,8 @@ fn main() -> Result<(), Error> {
     let amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
+
+    let rewrite_manager = load_rewrite_manager();
 
     let mut fs = ServiceFs::new();
     fs.dir("public")
@@ -59,10 +68,19 @@ fn main() -> Result<(), Error> {
                 }
                     .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
             )
+        })
+        .add_fidl_service(move |stream| {
+            let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
+
+            fasync::spawn(
+                async move { await!(rewrite_service.handle_client(stream)) }
+                    .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
+            )
         });
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
+
     Ok(())
 }
 
@@ -90,4 +108,17 @@ fn static_repo_manager() -> Arc<RwLock<RepositoryManager>> {
             Arc::new(RwLock::new(RepositoryManager::new()))
         }
     }
+}
+
+fn load_rewrite_manager() -> Arc<RwLock<RewriteManager>> {
+    let dynamic_rules_path = Path::new(DYNAMIC_RULES_PATH);
+
+    if !dynamic_rules_path.exists() {
+        return Arc::new(RwLock::new(RewriteManager::new(dynamic_rules_path.to_owned())));
+    }
+
+    Arc::new(RwLock::new(RewriteManager::load(dynamic_rules_path).unwrap_or_else(|e| {
+        fx_log_err!("unable to load dynamic rewrite rules from disk, using defaults: {}", e);
+        RewriteManager::new(dynamic_rules_path.to_owned())
+    })))
 }

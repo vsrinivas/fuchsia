@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/fuchsia_uri",
+    "//garnet/lib/rust/fuchsia_uri_rewrite",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
@@ -26,6 +27,7 @@ rustc_binary("bin") {
     # "//garnet/public/rust/tuf", FIXME re-enable once tuf is on futures alpha 13
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
