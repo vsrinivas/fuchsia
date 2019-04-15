@@ -72,10 +72,12 @@ class ExtraProvider : public ::testing::Test {
             .pending = 0,
         },
     };
-    status = our_event_.wait_many(
-        &wait_items[0], 2, zx::deadline_after(zx::duration(kTestTimeout)));
+    // Leave it to the test harness to provide a timeout. If it doesn't that's
+    // its bug.
+    status = our_event_.wait_many(&wait_items[0], 2, zx::time::infinite());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed waiting for provider process to start\n";
+      FXL_LOG(ERROR) << "Failed waiting for provider process to start: "
+                     << zx_status_get_string(status);
       TearDown();
     }
     FXL_LOG(INFO) << GetProgramPath() << " started";

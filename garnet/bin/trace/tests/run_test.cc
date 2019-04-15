@@ -152,9 +152,10 @@ zx_status_t SpawnProgram(const zx::job& job,
 
 zx_status_t WaitAndGetExitCode(const std::string& program_name,
                                const zx::process& process, int* out_exit_code) {
+  // Leave it to the test harness to provide a timeout. If it doesn't that's
+  // its bug.
   auto status =
-      process.wait_one(ZX_PROCESS_TERMINATED,
-                       zx::deadline_after(zx::duration(kTestTimeout)), nullptr);
+      process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed waiting for program " << program_name
                    << " to exit: " << zx_status_get_string(status);

@@ -13,11 +13,6 @@
 #include <string>
 #include <vector>
 
-// For now don't run longer than this. The CQ bot has this timeout as well,
-// so this is as good a value as any. Later we might want to add a timeout
-// value to tspecs.
-constexpr zx_duration_t kTestTimeout = ZX_SEC(60);
-
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
 
 // If |arg_handle| is not ZX_HANDLE_INVALID, then it is passed to the
