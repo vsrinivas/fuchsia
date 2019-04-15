@@ -67,6 +67,23 @@ zx_status_t DummyDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+zx_status_t DummyDisplay::DisplayControllerImplImportImage(image_t* image,
+                                                           zx_unowned_handle_t handle,
+                                                           uint32_t index) {
+    zx_status_t status = ZX_OK;
+
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
+        status = ZX_ERR_INVALID_ARGS;
+        return status;
+    }
+
+    void* new_handle = malloc(1);
+    image->handle = reinterpret_cast<uint64_t>(new_handle);
+
+    return status;
+}
+
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void DummyDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     free(reinterpret_cast<void*>(image->handle));
 }
