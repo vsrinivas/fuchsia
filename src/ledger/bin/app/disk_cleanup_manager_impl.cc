@@ -15,9 +15,7 @@ DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment,
 
 DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
 
-storage::Status DiskCleanupManagerImpl::Init() {
-  return page_eviction_manager_.Init();
-}
+void DiskCleanupManagerImpl::Init() { page_eviction_manager_.Init(); }
 
 void DiskCleanupManagerImpl::SetPageEvictionDelegate(
     PageEvictionManager::Delegate* delegate) {
@@ -53,8 +51,8 @@ void DiskCleanupManagerImpl::OnPageUnused(fxl::StringView ledger_name,
       ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
       [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](
           storage::Status status, PageWasEvicted) {
-        if (status != storage::Status::OK &&
-            status != storage::Status::INTERNAL_ERROR) {
+        FXL_DCHECK(status != storage::Status::INTERRUPTED);
+        if (status != storage::Status::OK) {
           FXL_LOG(ERROR) << "Failed to check if page is empty and/or evict it. "
                             "storage::Status: "
                          << fidl::ToUnderlying(status)

@@ -26,15 +26,15 @@
 namespace ledger {
 namespace {
 
-// Logs an error message if the given |status| is not |OK| or |INTERNAL_ERROR|.
+// Logs an error message if the given |status| is not |OK| or |INTERRUPTED|.
 void LogOnPageUpdateError(fxl::StringView operation_description,
                           storage::Status status, fxl::StringView ledger_name,
                           storage::PageIdView page_id) {
-  // Don't print an error on |INTERNAL_ERROR|: it means that the operation was
+  // Don't print an error on |INTERRUPED|: it means that the operation was
   // interrupted, because PageEvictionManagerImpl was destroyed before being
   // empty.
   if (status != storage::Status::OK &&
-      status != storage::Status::INTERNAL_ERROR) {
+      status != storage::Status::INTERRUPTED) {
     FXL_LOG(ERROR) << "Failed to " << operation_description
                    << " in PageUsage DB. storage::Status: "
                    << fidl::ToUnderlying(status)
@@ -43,14 +43,16 @@ void LogOnPageUpdateError(fxl::StringView operation_description,
   }
 }
 
-// If the given |status| is not |OK|, logs an error message on failure to
-// initialize. Returns true in case of error; false otherwise.
+// If the given |status| is not |OK| or |INTERRUPTED|, logs an error message on
+// failure to initialize. Returns true in case of error; false otherwise.
 bool LogOnInitializationError(fxl::StringView operation_description,
                               storage::Status status) {
   if (status != storage::Status::OK) {
-    FXL_LOG(ERROR) << operation_description
-                   << " failed because of initialization error: "
-                   << fidl::ToUnderlying(status);
+    if (status != storage::Status::INTERRUPTED) {
+      FXL_LOG(ERROR) << operation_description
+                     << " failed because of initialization error: "
+                     << fidl::ToUnderlying(status);
+    }
     return true;
   }
   return false;
@@ -61,11 +63,15 @@ bool LogOnInitializationError(fxl::StringView operation_description,
 PageEvictionManagerImpl::Completer::Completer() {}
 
 PageEvictionManagerImpl::Completer::~Completer() {
-  CallCallbacks(storage::Status::INTERNAL_ERROR);
+  // We should not call the callbacks: they are SyncCall callbacks, so when we
+  // drop them the caller will receive |INTERRUPTED|.
 }
 
 void PageEvictionManagerImpl::Completer::Complete(storage::Status status) {
   FXL_DCHECK(!completed_);
+  // If we get |INTERRUPTED| here, it means the caller did not return as soon as
+  // it received |INTERRUPTED|.
+  FXL_DCHECK(status != storage::Status::INTERRUPTED);
   CallCallbacks(status);
 }
 
@@ -85,7 +91,7 @@ storage::Status PageEvictionManagerImpl::Completer::WaitUntilDone(
         callbacks_.push_back(std::move(callback));
       });
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return storage::Status::INTERRUPTED;
   }
   return status_;
 }
@@ -105,6 +111,13 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(storage::Status status) {
   }
 }
 
+void PageEvictionManagerImpl::Completer::Cancel() {
+  FXL_DCHECK(!completed_);
+  completed_ = true;
+  status_ = storage::Status::INTERRUPTED;
+  callbacks_.clear();
+}
+
 PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment,
                                                  storage::DbFactory* db_factory,
                                                  DetachedPath db_path)
@@ -116,7 +129,7 @@ PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment,
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
 
-storage::Status PageEvictionManagerImpl::Init() {
+void PageEvictionManagerImpl::Init() {
   // Initializing the DB and marking pages as closed are slow operations and we
   // shouldn't wait for them to finish, before returning from initialization:
   // Start these operations and finalize the initialization completer when done.
@@ -140,7 +153,7 @@ storage::Status PageEvictionManagerImpl::Init() {
             },
             &status,
             &db_instance) == coroutine::ContinuationStatus::INTERRUPTED) {
-      initialization_completer_.Complete(storage::Status::INTERNAL_ERROR);
+      initialization_completer_.Cancel();
       return;
     }
     if (status != storage::Status::OK) {
@@ -150,9 +163,12 @@ storage::Status PageEvictionManagerImpl::Init() {
     db_ = std::make_unique<PageUsageDb>(environment_->clock(),
                                         std::move(db_instance));
     status = db_->MarkAllPagesClosed(handler);
+    if (status == storage::Status::INTERRUPTED) {
+      initialization_completer_.Cancel();
+      return;
+    }
     initialization_completer_.Complete(status);
   });
-  return storage::Status::OK;
 }
 
 void PageEvictionManagerImpl::SetDelegate(
@@ -283,7 +299,7 @@ storage::Status PageEvictionManagerImpl::CanEvictPage(
   auto sync_call_status =
       coroutine::Wait(handler, std::move(waiter), &status, &can_evict_states);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return storage::Status::INTERRUPTED;
   }
   if (status != storage::Status::OK) {
     return status;
@@ -320,7 +336,7 @@ storage::Status PageEvictionManagerImpl::CanEvictEmptyPage(
       },
       &status, &empty_state);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return storage::Status::INTERRUPTED;
   }
   *can_evict = (empty_state == PagePredicateResult::YES);
   return status;
@@ -375,7 +391,7 @@ storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
       },
       &status);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return storage::Status::INTERRUPTED;
   }
   *was_evicted = PageWasEvicted(status == storage::Status::OK);
   return status;

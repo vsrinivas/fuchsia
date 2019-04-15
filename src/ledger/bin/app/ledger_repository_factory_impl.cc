@@ -313,11 +313,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
       environment_, db_factory.get(),
       repository_information.page_usage_db_path);
-  storage::Status status = disk_cleanup_manager->Init();
-  if (status != storage::Status::OK) {
-    container->SetRepository(status, nullptr);
-    return;
-  }
+  disk_cleanup_manager->Init();
 
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;

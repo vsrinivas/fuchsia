@@ -55,7 +55,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
 
   // gtest::TestLoopFixture:
   void SetUp() override {
-    EXPECT_EQ(storage::Status::OK, disk_cleanup_manager_.Init());
+    disk_cleanup_manager_.Init();
     RunLoopUntilIdle();
     disk_cleanup_manager_.SetPageEvictionDelegate(&delegate_);
   }

@@ -98,11 +98,12 @@ class LedgerRepositoryImpl
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
-  std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
   PageUsageListener* page_usage_listener_;
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
+  // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
+  std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
   callback::AutoCleanableSet<ErrorNotifierBinding<
       fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate>>
       bindings_;

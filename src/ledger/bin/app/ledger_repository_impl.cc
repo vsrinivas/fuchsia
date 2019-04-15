@@ -38,8 +38,8 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
-      disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       page_usage_listener_(page_usage_listener),
+      disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       inspect_object_(std::move(inspect_object)),
       requests_metric_(
           inspect_object_.CreateUIntMetric(kRequestsInspectPathComponent, 0UL)),
@@ -70,6 +70,10 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
   }
 
   FXL_DCHECK(ledger_manager);
+  // |ledger_manager| can be destructed if empty, or if the
+  // |LedgerRepositoryImpl| is destructed. In the second case, the callback
+  // should not be called. The first case will not happen before the callback
+  // has been called, because the manager is non-empty while a page is tracked.
   ledger_manager->PageIsClosedAndSynced(page_id, std::move(callback));
 }
 
@@ -83,6 +87,10 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     return;
   }
   FXL_DCHECK(ledger_manager);
+  // |ledger_manager| can be destructed if empty, or if the
+  // |LedgerRepositoryImpl| is destructed. In the second case, the callback
+  // should not be called. The first case will not happen before the callback
+  // has been called, because the manager is non-empty while a page is tracked.
   ledger_manager->PageIsClosedOfflineAndEmpty(page_id, std::move(callback));
 }
 

@@ -64,7 +64,7 @@ class PageEvictionManagerTest : public TestWithEnvironment {
 
   // TestWithEnvironment:
   void SetUp() override {
-    EXPECT_EQ(storage::Status::OK, page_eviction_manager_.Init());
+    page_eviction_manager_.Init();
     RunLoopUntilIdle();
     page_eviction_manager_.SetDelegate(&delegate_);
   }

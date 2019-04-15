@@ -213,12 +213,7 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     fit::function<void(PageManager*,
                        fit::function<void(storage::Status, bool)>)>
         predicate,
-    fit::function<void(storage::Status, PagePredicateResult)> callback_unsafe) {
-  // Ensure that the callback will be called, whatever happens.
-  auto callback = callback::EnsureCalled(std::move(callback_unsafe),
-                                         storage::Status::ILLEGAL_STATE,
-                                         PagePredicateResult::PAGE_OPENED);
-
+    fit::function<void(storage::Status, PagePredicateResult)> callback) {
   // Start logging whether the page has been opened during the execution of
   // this method.
   auto tracker = NewPageTracker(page_id);
@@ -255,38 +250,38 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
       return;
     }
     FXL_DCHECK(page_manager);
-    // The page_manager may be destructed before we complete.
-    auto weak_this = weak_factory_.GetWeakPtr();
-    predicate(page_manager,
-              [this, page_id = std::move(page_id), tracker = std::move(tracker),
-               callback = std::move(callback), token = std::move(token),
-               weak_this](storage::Status status, bool condition) mutable {
-                if (status != storage::Status::OK) {
-                  callback(status, PagePredicateResult::PAGE_OPENED);
-                }
-                if (!weak_this) {
-                  // |callback| is called on destruction.
-                  return;
-                }
-                // |token| is expected to go out of scope.
-                async::PostTask(environment_->dispatcher(),
-                                [condition, page_id = std::move(page_id),
-                                 callback = std::move(callback),
-                                 tracker = std::move(tracker)]() mutable {
-                                  if (!tracker()) {
-                                    // If |RemoveTrackedPage| returns false,
-                                    // this means that the page was opened
-                                    // during this operation and |PAGE_OPENED|
-                                    // must be returned.
-                                    callback(storage::Status::OK,
-                                             PagePredicateResult::PAGE_OPENED);
-                                    return;
-                                  }
-                                  callback(storage::Status::OK,
-                                           condition ? PagePredicateResult::YES
-                                                     : PagePredicateResult::NO);
-                                });
-              });
+    predicate(
+        page_manager,
+        callback::MakeScoped(
+            weak_factory_.GetWeakPtr(),
+            [this, page_id = std::move(page_id), tracker = std::move(tracker),
+             callback = std::move(callback), token = std::move(token)](
+                storage::Status status, bool condition) mutable {
+              if (status != storage::Status::OK) {
+                callback(status, PagePredicateResult::PAGE_OPENED);
+              }
+              // |token| is expected to go out of scope. The LedgerManager is
+              // kept non-empty by |tracker|.
+              async::PostTask(
+                  environment_->dispatcher(),
+                  callback::MakeScoped(
+                      weak_factory_.GetWeakPtr(),
+                      [condition, page_id = std::move(page_id),
+                       callback = std::move(callback),
+                       tracker = std::move(tracker)]() mutable {
+                        if (!tracker()) {
+                          // If |RemoveTrackedPage| returns false, this means
+                          // that the page was opened during this operation and
+                          // |PAGE_OPENED| must be returned.
+                          callback(storage::Status::OK,
+                                   PagePredicateResult::PAGE_OPENED);
+                          return;
+                        }
+                        callback(storage::Status::OK,
+                                 condition ? PagePredicateResult::YES
+                                           : PagePredicateResult::NO);
+                      }));
+            }));
   });
 }
 

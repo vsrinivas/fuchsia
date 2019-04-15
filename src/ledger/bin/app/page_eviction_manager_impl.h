@@ -29,9 +29,8 @@ class PageEvictionManagerImpl : public PageEvictionManager,
                           storage::DbFactory* db_factory, DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
 
-  // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
-  // of an error while initializing the underlying database.
-  storage::Status Init();
+  // Asynchronously initializes this PageEvictionManager.
+  void Init();
 
   // Sets the delegate for this PageEvictionManagerImpl. The delegate should
   // outlive this object.
@@ -68,6 +67,11 @@ class PageEvictionManagerImpl : public PageEvictionManager,
     // Completes the operation with the given status and unblocks all pending
     // |WaitUntilDone| calls. |Complete| can only be called once.
     void Complete(storage::Status status);
+
+    // Cancels the operation. All WaitUntilDone calls will return
+    // |storage::Status::INTERRUPTED|. If |Cancel| is called, |Complete| should
+    // never be called.
+    void Cancel();
 
     // Blocks execution until |Complete| is called, and then returns its status.
     // If the operation is already completed, |WaitUntilDone| returns
