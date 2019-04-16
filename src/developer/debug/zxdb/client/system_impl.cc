@@ -21,7 +21,7 @@
 namespace zxdb {
 
 SystemImpl::SystemImpl(Session* session)
-    : System(session), weak_factory_(this) {
+    : System(session), symbols_(this), weak_factory_(this) {
   // Create the default job and target.
   AddNewJobContext(std::make_unique<JobContextImpl>(this, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
@@ -131,6 +131,14 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
     result.push_back(item.get());
   }
   return result;
+}
+
+void SystemImpl::RequestDownload(const std::string& build_id) {
+  for (const auto& target : targets_) {
+    if (auto process = target->process()) {
+      process->NotifyFailedToFindDebugSymbols(build_id);
+    }
+  }
 }
 
 Process* SystemImpl::ProcessFromKoid(uint64_t koid) const {

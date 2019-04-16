@@ -51,7 +51,12 @@ class SystemSymbols {
     std::unique_ptr<ModuleSymbols> module_symbols_;
   };
 
-  SystemSymbols();
+  class DownloadHandler {
+   public:
+    virtual void RequestDownload(const std::string& build_id) = 0;
+  };
+
+  explicit SystemSymbols(DownloadHandler* download_handler);
   ~SystemSymbols();
 
   // Returns the directory to which paths are relative.
@@ -73,11 +78,14 @@ class SystemSymbols {
   //
   // This function uses the build_id for loading symbols. The name is only
   // used for generating informational messages.
-  Err GetModule(const std::string& name_for_msg, const std::string& build_id,
-                fxl::RefPtr<ModuleRef>* module);
+  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module);
 
  private:
   friend ModuleRef;
+
+  // Request that the system arrange for symbols to be downloaded for a given
+  // build ID.
+  void RequestDownload(const std::string& build_id);
 
   // Notification from the ModuleRef that all references have been deleted and
   // the tracking information should be removed from the map.
@@ -85,6 +93,8 @@ class SystemSymbols {
 
   // The directory to which paths are relative.
   std::string build_dir_;
+
+  DownloadHandler* download_handler_;
 
   BuildIDIndex build_id_index_;
 

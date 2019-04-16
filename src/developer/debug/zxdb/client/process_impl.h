@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include "src/developer/debug/zxdb/client/process.h"
-
 #include <map>
 #include <memory>
 
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -65,6 +64,9 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
 
   // Returns true if the caller should show the output. False means silence.
   bool HandleIO(const debug_ipc::NotifyIO&);
+
+  // Called when we have attempted to download debug symbols and failed.
+  void NotifyFailedToFindDebugSymbols(const std::string& build_id);
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .

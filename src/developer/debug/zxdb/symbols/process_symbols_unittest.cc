@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
@@ -70,7 +71,7 @@ TEST(ProcessSymbols, SetModules) {
   std::string fake_build_id_1 = "12345";
   std::string fake_build_id_2 = "67890";
   std::string test_file_name = TestSymbolModule::GetTestFileName();
-  SystemSymbols system;
+  SystemSymbols system(nullptr);
   system.build_id_index().AddBuildIDMapping(fake_build_id_1, test_file_name);
   system.build_id_index().AddBuildIDMapping(fake_build_id_2, test_file_name);
 

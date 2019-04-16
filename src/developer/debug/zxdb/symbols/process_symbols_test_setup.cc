@@ -10,7 +10,7 @@
 namespace zxdb {
 
 ProcessSymbolsTestSetup::ProcessSymbolsTestSetup()
-    : system_(),
+    : system_(nullptr),
       target_(&system_),
       process_notifications_(),
       process_(&process_notifications_, &target_) {}

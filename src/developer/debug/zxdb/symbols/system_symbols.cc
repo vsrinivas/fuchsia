@@ -55,7 +55,8 @@ void SystemSymbols::ModuleRef::SystemSymbolsDeleting() {
 
 // SystemSymbols ---------------------------------------------------------------
 
-SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {}
+SystemSymbols::SystemSymbols(DownloadHandler* download_handler)
+    : build_dir_(GetBuildDir()), download_handler_(download_handler) {}
 
 SystemSymbols::~SystemSymbols() {
   // Disown any remaining ModuleRefs so they don't call us back.
@@ -75,8 +76,7 @@ fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
   return result;
 }
 
-Err SystemSymbols::GetModule(const std::string& name_for_msg,
-                             const std::string& build_id,
+Err SystemSymbols::GetModule(const std::string& build_id,
                              fxl::RefPtr<ModuleRef>* module) {
   auto found_existing = modules_.find(build_id);
   if (found_existing != modules_.end()) {
@@ -86,10 +86,12 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
 
   std::string file_name = build_id_index_.FileForBuildID(build_id);
   if (file_name.empty()) {
-    return Err(fxl::StringPrintf(
-        "Could not load symbols for \"%s\" because there was no mapping for "
-        "build ID \"%s\".",
-        name_for_msg.c_str(), build_id.c_str()));
+    // This should only be null in tests.
+    FXL_DCHECK(download_handler_);
+
+    *module = nullptr;
+    download_handler_->RequestDownload(build_id);
+    return Err();
   }
 
   auto module_symbols =

@@ -206,7 +206,7 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
 
   fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
   *symbol_load_err = target_symbols_->system_symbols()->GetModule(
-      module.name, module.build_id, &module_symbols);
+      module.build_id, &module_symbols);
   if (symbol_load_err->has_error()) {
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))

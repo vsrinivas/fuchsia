@@ -22,7 +22,9 @@ class SystemSymbolsProxy;
 class TargetImpl;
 class JobContextImpl;
 
-class SystemImpl final : public System, public SettingStoreObserver {
+class SystemImpl final : public System,
+                         public SettingStoreObserver,
+                         public SystemSymbols::DownloadHandler {
  public:
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
@@ -53,6 +55,9 @@ class SystemImpl final : public System, public SettingStoreObserver {
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
   void Pause() override;
   void Continue() override;
+
+  // DownloadHandler implementation:
+  void RequestDownload(const std::string& build_id) override;
 
   // Notification that a connection has been made/terminated to a target
   // system.
