@@ -27,25 +27,22 @@ function run-ninja {
 }
 
 function main {
-  local arg switches=() zircon_targets=() fuchsia_targets=()
+  local switches=() zircon_targets=() fuchsia_targets=()
   while [ $# -gt 0 ]; do
     case "$1" in
       # These Ninja switches take an argument.
       -[Cfjkldtv])
         switches+=("$1" "$2")
         shift
-        continue
         ;;
       -*)
         switches+=("$1")
         ;;
       zircon/*)
         zircon_targets+=("${1#zircon/}")
-        any_zircon=true
         ;;
       *)
         fuchsia_targets+=("$1")
-        any_fuchsia=true
         ;;
     esac
     shift
