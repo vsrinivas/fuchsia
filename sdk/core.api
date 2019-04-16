@@ -26,6 +26,7 @@ sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.http
+sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.oldhttp
 sdk://fidl/fuchsia.netstack
 sdk://fidl/fuchsia.process

@@ -1,0 +1,197 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.mdns;
+
+using fuchsia.net;
+using zx;
+
+// TODO(FIDL-580): Make these alias comments doc comments.
+
+// Identifies a host. Host names consist of one or more labels separated by
+// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
+// or less (not including the separator) and are UTF-8-encoded. A complete host
+// name, including separators, must be 255 characters or less.
+using host_name = string:255;
+
+// Identifies a (type of) service being published. Service names consist of
+// two labels, both terminated with a '.'. The first label must start with an
+// underscore and be 16 characters or less, including the underscore. The
+// second label must be either '_tcp' or '_udp'. Labels do not contain '.'s.
+// With underscores and terminators, that makes for a maximum of 22 characters.
+// Service names are UTF-8-encoded.
+using service_name = string:22;
+
+// Identifies a specific instance of a service being published. Instance names
+// consist of a single label, which is at most 63 characters long and which
+// contains no '.'s. Instance names are UTF-8-encoded.
+using instance_name = string:63;
+
+// Identifies a subtype of a service. Subtype names consist of a single label,
+// which is at most 63 characters long and which contains no '.'s. Subtype
+// names are UTF-8-encoded.
+using subtype_name = string:63;
+
+// Provides description relating to a service instance. In typical use, TXT
+// strings consist of a key and value separated by '='. TXT strings must be
+// at most 255 characters long and are UTF-8-encoded.
+using txt_string = string:255;
+
+/// Discoverable protocol for resolving host names to IP addresses.
+[Discoverable]
+protocol Resolver {
+    /// Gets the addresses for the specified host. `timeout` specifies how long
+    /// the service should wait before giving up when waiting for a response to
+    /// a resolution query. In typical use, a timeout of two or three seconds
+    /// is recommended.
+    ///
+    /// A successful resolution may return one or both addresses. An
+    /// unsuccessful resolution is indicated when both addresses are null.
+    ResolveHostName(host_name host, zx.duration timeout)
+        -> (fuchsia.net.Ipv4Address? v4_address,
+            fuchsia.net.Ipv6Address? v6_address);
+};
+
+/// Discoverable protocol for finding service instances.
+[Discoverable]
+protocol Subscriber {
+    /// Subscribes to a service. The subscription lasts until `subscriber` is
+    /// unbound.
+    SubscribeToService(service_name service, ServiceSubscriber subscriber);
+};
+
+/// Discoverable protocol for publishing service instances.
+[Discoverable]
+protocol Publisher {
+    /// Publishes a service instance. `responder` is consulted via its
+    /// `OnPublication` method for initial announcements and to answer queries.
+    /// The service is published until the `responder` channel closes. In
+    /// addition to announcements and queries for the service type, all queries
+    /// for subtypes are answered subject to filtering through the responder.
+    /// `perform_probe` indicates whether a probe for a conflicting instance
+    /// should be performed before publishing the instance. This value should
+    /// be `true` unless the instance name is known to be unique.
+    PublishServiceInstance(service_name service,
+                           instance_name instance,
+                           bool perform_probe,
+                           PublicationResponder responder) -> () error Error;
+};
+
+/// Error values for instance publishing.
+enum Error : int32 {
+    /// The specified service name is invalid.
+    INVALID_SERVICE_NAME = 1;
+
+    /// The specified instance name is invalid.
+    INVALID_INSTANCE_NAME = 2;
+
+    /// The specified service instance is already being published by this
+    /// mDNS implementation.
+    ALREADY_PUBLISHED_LOCALLY = 3;
+
+    /// The specified service instance is already being published by another
+    /// host on the subnet. This result occurs when an initial probe discovers
+    /// a conflicting instance.
+    ALREADY_PUBLISHED_ON_SUBNET = 4;
+};
+
+/// Client-implemented interface for subscribers. Method replies are used to
+/// throttle traffic. The service won't necessarily wait for a reply before
+/// calling another method.
+protocol ServiceSubscriber {
+    /// Notifies the subscriber that a service instance has been discovered.
+    OnInstanceDiscovered(ServiceInstance instance) -> ();
+
+    /// Notifies the subscriber that addresses or text for a known service
+    /// instance have changed.
+    OnInstanceChanged(ServiceInstance instance) -> ();
+
+    /// Notifies the subscriber that a known service instance has been lost.
+    OnInstanceLost(service_name service, instance_name instance) -> ();
+};
+
+/// Describes a service instance.
+struct ServiceInstance {
+    /// The name of the service.
+    service_name service;
+
+    /// The name of the service instance.
+    instance_name instance;
+
+    /// Endpoint addresses for the service. If two addresses are supplied, one
+    /// will be a V4 address and the other will be a V6 address.
+    vector<fuchsia.net.Endpoint>:2 addresses;
+
+    /// Text strings describing the instance.
+    vector<txt_string> text;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    uint16 srv_priority;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    uint16 srv_weight;
+};
+
+/// Client-supplied publication responder interface.
+protocol PublicationResponder {
+    /// Provides instance information for initial announcements and query
+    /// responses relating to the service instance specified in
+    /// `Publisher.PublishServiceInstance`. `query` indicates whether data is
+    /// requested for an initial announcement (false) or in response to a query
+    /// (true). If the publication relates to a subtype of the service,
+    /// `subtype` contains the subtype, otherwise it is null. If `publication`
+    /// is null, no announcement or response is transmitted. Strings in `text`
+    /// are transmitted in the TXT record.
+    OnPublication(bool query, subtype_name? subtype)
+        -> (Publication? publication);
+
+    /// Sets the subtypes for the service instance. The specified subtypes will
+    /// be announced subject to filtering through the responder. The initial
+    /// subtype collection is empty.
+    -> SetSubtypes(vector<subtype_name> subtypes);
+
+    /// Initiates reannouncement of the service instance due to a change in the
+    /// instance's port number or text strings. All announcements are filtered
+    /// through `OnPublication`, which replies with the new port and text
+    /// values.
+    -> Reannounce();
+};
+
+/// Describes an initial instance announcement or query response. In typical
+/// use, the default SRV priority, SRV weight and TTL values should be used. TTL
+/// values are rounded down to the nearest second. TTL values less than one
+/// second are not permitted and will result in the `PublicationResponder`
+/// channel being closed.
+struct Publication {
+    /// The port at which the the service instance is addressable.
+    uint16 port;
+
+    /// Text strings describing the instance.
+    vector<txt_string> text;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    uint16 srv_priority = DEFAULT_SRV_PRIORITY;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    uint16 srv_weight = DEFAULT_SRV_WEIGHT;
+
+    /// Time-to-live for PTR resource records.
+    zx.duration ptr_ttl = DEFAULT_PTR_TTL;
+
+    /// Time-to-live for SRV resource records.
+    zx.duration srv_ttl = DEFAULT_SRV_TTL;
+
+    /// Time-to-live for TXT resource records.
+    zx.duration txt_ttl = DEFAULT_TXT_TTL;
+};
+
+const uint16 DEFAULT_SRV_PRIORITY = 0;
+const uint16 DEFAULT_SRV_WEIGHT = 0;
+const zx.duration DEFAULT_PTR_TTL = 4500000000000; // 75 minutes
+const zx.duration DEFAULT_SRV_TTL = 120000000000; // 2 minutes
+const zx.duration DEFAULT_TXT_TTL = 4500000000000; // 75 minutes
