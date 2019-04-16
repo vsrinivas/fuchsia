@@ -102,8 +102,8 @@ void CodecFactoryImpl::CreateDecoder(
   }
 
   if (params.has_require_hw() && params.require_hw()) {
-    FXL_LOG(WARNING)
-        << "require_hw, but no matching HW decoder factory found; closing";
+    FXL_LOG(WARNING) << "require_hw, but no matching HW decoder factory found ("
+                     << params.input_details().mime_type() << "); closing";
     // TODO(dustingreen): Send epitaph when possible.
     // ~decoder
     return;
