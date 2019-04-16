@@ -245,12 +245,6 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOOTLOADER_HOST_FILENAME)) {
         printf("netsvc: Running BOOTLOADER Paver\n");
         argv[1] = "install-bootloader";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_EFI_HOST_FILENAME)) {
-        printf("netsvc: Running EFI Paver\n");
-        argv[1] = "install-efi";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_KERNC_HOST_FILENAME)) {
-        printf("netsvc: Running KERN-C Paver\n");
-        argv[1] = "install-kernc";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONA_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-A Paver\n");
         argv[1] = "install-zircona";

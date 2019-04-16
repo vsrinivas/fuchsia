@@ -8,7 +8,9 @@ board_name = "pc"
 
 fuchsia_packages = []
 
-export_x64_sdk_images = true
+update_kernels = [ "zbi.signed" ]
+
+use_vboot = true
 
 board_packages = [
   # Include all drivers for now.

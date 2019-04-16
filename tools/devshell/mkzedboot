@@ -84,12 +84,18 @@ echo "done"
 
 echo "Create new partitions... "
 # ESP needs to be a FAT compatible size
-esp_size=$(((63*1024*1024)/512))
-vboot_size=$(((64*1024*1024)/512))
-esp_offset=2048
-vboot_offset=$(($esp_size + $esp_offset))
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
+if [[ ! -z "${IMAGE_ZEDBOOT_ESP}" ]]; then
+  esp_size=$(((63*1024*1024)/512))
+  esp_offset=2048
+  "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
+else
+  reserved_size=2048
+  reserved_offset=2048
+  vboot_size=$(((64*1024*1024)/512))
+  vboot_offset=$(($reserved_offset + $reserved_size))
+  "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${reserved_size}" -t reserved -b "${reserved_offset}" -l reserved "${USB_DEVICE}"
+  "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
+fi
 
 # NOTE: Ok, so here goes some stuff. I could have written a much smarter "dd"
 # (a thing that can operate on block-boundaries for seek and copy, but that
@@ -119,20 +125,29 @@ if $include_install; then
   # We need to specify the install size in 512byte lba's:
   install_size=$(($install_size * 8192))
 
-  install_min_offset=$(($esp_size + $esp_offset + $vboot_size))
+  if [[ ! -z "${IMAGE_ZEDBOOT_ESP}" ]]; then
+    install_min_offset=$(($esp_size + $esp_offset))
+  else
+    install_min_offset=$(($vboot_size + $vboot_offset))
+  fi
   # Align the partition offset to a 4mb "block size"
   install_offset=$(( (($install_min_offset * 512) + 4194303) / 4194304))
   # The lba offset of that is:
   install_lba_offset=$(($install_offset * 8192))
   "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -s "${install_size}" -t "48435546-4953-2041-494E-5354414C4C52" -b "${install_lba_offset}" -l install "${USB_DEVICE}"
 fi
-"${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
+if [[ ! -z "${IMAGE_ZIRCONR_SIGNEDZBI}" ]]; then
+  "${FUCHSIA_BUILD_DIR}/tools/cgpt" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
+fi
 echo "done"
 
-echo "Writing zedboot for EFI"
-dd if="${FUCHSIA_BUILD_DIR}/${IMAGE_ZEDBOOT_ESP}" of="${USB_DEVICE}" seek=${esp_offset}
-echo "Writing zedboot for Cros"
-dd if="${FUCHSIA_BUILD_DIR}/${IMAGE_ZEDBOOT_VBOOT}" of="${USB_DEVICE}" seek=${vboot_offset}
+if [[ ! -z "${IMAGE_ZEDBOOT_ESP}" ]]; then
+  echo "Writing zedboot for EFI"
+  dd if="${FUCHSIA_BUILD_DIR}/${IMAGE_ZEDBOOT_ESP}" of="${USB_DEVICE}" seek=${esp_offset}
+else
+  echo "Writing zedboot for Cros"
+  dd if="${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONR_SIGNEDZBI}" of="${USB_DEVICE}" seek=${vboot_offset}
+fi
 if $include_install; then
   echo "Writing install partition"
   dd if="${FUCHSIA_BUILD_DIR}/${IMAGE_INSTALLER_RAW}" of="${USB_DEVICE}" seek=${install_offset} bs=4194304

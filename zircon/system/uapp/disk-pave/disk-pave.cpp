@@ -19,7 +19,6 @@
 
 namespace {
 
-using paver::Arch;
 using paver::Command;
 using paver::Flags;
 
@@ -27,13 +26,12 @@ void PrintUsage() {
     ERROR("install-disk-image <command> [options...]\n");
     ERROR("Commands:\n");
     ERROR("  install-bootloader : Install a BOOTLOADER partition to the device\n");
-    ERROR("  install-efi        : Install an EFI partition to the device\n");
-    ERROR("  install-kernc      : Install a KERN-C CrOS partition to the device\n");
     ERROR("  install-zircona    : Install a ZIRCON-A partition to the device\n");
     ERROR("  install-zirconb    : Install a ZIRCON-B partition to the device\n");
     ERROR("  install-zirconr    : Install a ZIRCON-R partition to the device\n");
     ERROR("  install-vbmetaa    : Install a VBMETA-A partition to the device\n");
     ERROR("  install-vbmetab    : Install a VBMETA-B partition to the device\n");
+    ERROR("  install-vbmetar    : Install a VBMETA-R partition to the device\n");
     ERROR("  install-fvm        : Install a sparse FVM to the device\n");
     ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
     ERROR("  wipe               : Remove the FVM partition\n");
@@ -60,9 +58,9 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     if (!strcmp(argv[0], "install-bootloader")) {
         flags->cmd = Command::kInstallBootloader;
     } else if (!strcmp(argv[0], "install-efi")) {
-        flags->cmd = Command::kInstallEfi;
+        flags->cmd = Command::kInstallBootloader;
     } else if (!strcmp(argv[0], "install-kernc")) {
-        flags->cmd = Command::kInstallKernc;
+        flags->cmd = Command::kInstallZirconA;
     } else if (!strcmp(argv[0], "install-zircona")) {
         flags->cmd = Command::kInstallZirconA;
     } else if (!strcmp(argv[0], "install-zirconb")) {
@@ -73,6 +71,8 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         flags->cmd = Command::kInstallVbMetaA;
     } else if (!strcmp(argv[0], "install-vbmetab")) {
         flags->cmd = Command::kInstallVbMetaB;
+    } else if (!strcmp(argv[0], "install-vbmetar")) {
+        flags->cmd = Command::kInstallVbMetaR;
     } else if (!strcmp(argv[0], "install-data-file")) {
         flags->cmd = Command::kInstallDataFile;
     } else if (!strcmp(argv[0], "install-fvm")) {
@@ -87,11 +87,6 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
 
     // Parse options.
     flags->force = false;
-#if defined(__x86_64__)
-    flags->arch = Arch::X64;
-#elif defined(__aarch64__)
-    flags->arch = Arch::ARM64;
-#endif
     flags->payload_fd.reset(STDIN_FILENO);
     while (argc > 0) {
         if (!strcmp(argv[0], "--file")) {

@@ -191,6 +191,15 @@ typedef struct gpt_entry {
 }
 #define GUID_VBMETA_B_NAME "vbmeta_b"
 
+#define GUID_VBMETA_R_STRING "6A2460C3-CD11-4E8B-A880-12CCE268ED0A"
+#define GUID_VBMETA_R_VALUE {                      \
+    0xc3, 0x60, 0x24, 0x6a,                        \
+    0x11, 0xcd,                                    \
+    0x8b, 0x4e,                                    \
+    0x80, 0xa8, 0x12, 0xcc, 0xe2, 0x68, 0xed, 0x0a \
+}
+#define GUID_VBMETA_R_NAME "vbmeta_r"
+
 #define GUID_CROS_KERNEL_STRING "FE3A2A5D-4F32-41A7-B725-ACCC3285A309"
 #define GUID_CROS_KERNEL_VALUE {                   \
     0x5d, 0x2a, 0x3a, 0xfe,                        \

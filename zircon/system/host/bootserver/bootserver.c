@@ -206,12 +206,12 @@ void usage(void) {
             "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
             "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
             "  --efi <file>             use the supplied file as an EFI image\n"
-            "  --kernc <file>           use the supplied file as a KERN-C CrOS image\n"
             "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
             "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
             "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
             "  --vbmetaa <file>         use the supplied file as a AVB vbmeta_a image\n"
             "  --vbmetab <file>         use the supplied file as a AVB vbmeta_b image\n"
+            "  --vbmetar <file>         use the supplied file as a AVB vbmeta_r image\n"
             "  --authorized-keys <file> use the supplied file as an authorized_keys file\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
@@ -302,13 +302,12 @@ int main(int argc, char** argv) {
     const char* board_name = NULL;
     const char* board_name_file = NULL;
     const char* bootloader_image = NULL;
-    const char* efi_image = NULL;
-    const char* kernc_image = NULL;
     const char* zircona_image = NULL;
     const char* zirconb_image = NULL;
     const char* zirconr_image = NULL;
     const char* vbmetaa_image = NULL;
     const char* vbmetab_image = NULL;
+    const char* vbmetar_image = NULL;
     const char* authorized_keys = NULL;
     const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
     const char* kernel_fn = NULL;
@@ -353,22 +352,6 @@ int main(int argc, char** argv) {
                 return -1;
             }
             bootloader_image = argv[1];
-        } else if (!strcmp(argv[1], "--efi")) {
-            argc--;
-            argv++;
-            if (argc <= 1) {
-                fprintf(stderr, "'--efi' option requires an argument (EFI image)\n");
-                return -1;
-            }
-            efi_image = argv[1];
-        } else if (!strcmp(argv[1], "--kernc")) {
-            argc--;
-            argv++;
-            if (argc <= 1) {
-                fprintf(stderr, "'--kernc' option requires an argument (KERN-C image)\n");
-                return -1;
-            }
-            kernc_image = argv[1];
         } else if (!strcmp(argv[1], "--zircona")) {
             argc--;
             argv++;
@@ -405,10 +388,18 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
             if (argc <= 1) {
-                fprintf(stderr, "'--vbmetab' option requires an argument (vbmeta_a image)\n");
+                fprintf(stderr, "'--vbmetab' option requires an argument (vbmeta_b image)\n");
                 return -1;
             }
             vbmetab_image = argv[1];
+        } else if (!strcmp(argv[1], "--vbmetar")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--vbmetar' option requires an argument (vbmeta_r image)\n");
+                return -1;
+            }
+            vbmetar_image = argv[1];
         } else if (!strcmp(argv[1], "--authorized-keys")) {
             argc--;
             argv++;
@@ -528,8 +519,8 @@ int main(int argc, char** argv) {
         argc--;
         argv++;
     }
-    if (!kernel_fn && !bootloader_image && !efi_image && !kernc_image && !zircona_image &&
-        !zirconb_image && !zirconr_image && !vbmetaa_image && !vbmetab_image && !fvm_images[0]) {
+    if (!kernel_fn && !bootloader_image && !zircona_image && !zirconb_image && !zirconr_image &&
+        !vbmetaa_image && !vbmetab_image && !fvm_images[0]) {
         usage();
     }
     if (!nodename) {
@@ -671,12 +662,6 @@ int main(int argc, char** argv) {
         }
         if (status == 0 && bootloader_image) {
             status = xfer(&ra, bootloader_image, NB_BOOTLOADER_FILENAME);
-        }
-        if (status == 0 && efi_image) {
-            status = xfer(&ra, efi_image, NB_EFI_FILENAME);
-        }
-        if (status == 0 && kernc_image) {
-            status = xfer(&ra, kernc_image, NB_KERNC_FILENAME);
         }
         if (status == 0 && zircona_image) {
             status = xfer(&ra, zircona_image, NB_ZIRCONA_FILENAME);

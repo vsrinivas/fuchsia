@@ -134,7 +134,7 @@ bool check_board_name(const char* name, size_t length) {
 
     // Special case x64 to check if chromebook.
     if (!strcmp(real_board_name, "pc") && IsChromebook()) {
-        // strcpy(real_board_name, "chromebook-x64");
+        strcpy(real_board_name, "chromebook-x64");
     }
 
     return strncmp(real_board_name, name, length) == 0;

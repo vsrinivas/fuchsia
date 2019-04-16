@@ -51,7 +51,7 @@ bool KernelFilterCallback(const gpt_partition_t& part, const uint8_t kern_type[G
            strncmp(cstring_name, partition_name.data(), partition_name.length()) == 0;
 }
 
-bool FvmFilterCallback(const gpt_partition_t& part) {
+bool IsFvmPartition(const gpt_partition_t& part) {
     const uint8_t partition_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     return memcmp(part.type, partition_type, GPT_GUID_LEN) == 0;
 }
@@ -246,10 +246,6 @@ const char* PartitionName(Partition type) {
     switch (type) {
     case Partition::kBootloader:
         return "Bootloader";
-    case Partition::kKernelC:
-        return "Kernel C";
-    case Partition::kEfi:
-        return "EFI";
     case Partition::kZirconA:
         return "Zircon A";
     case Partition::kZirconB:
@@ -260,6 +256,8 @@ const char* PartitionName(Partition type) {
         return "VBMeta A";
     case Partition::kVbMetaB:
         return "VBMeta B";
+    case Partition::kVbMetaR:
+        return "VBMeta R";
     case Partition::kFuchsiaVolumeManager:
         return "Fuchsia Volume Manager";
     default:
@@ -608,7 +606,7 @@ zx_status_t GptDevicePartitioner::WipeFvm() {
         if (!p) {
             continue;
         }
-        if (!FvmFilterCallback(*p)) {
+        if (!IsFvmPartition(*p)) {
             continue;
         }
 
@@ -664,7 +662,7 @@ zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::un
     size_t optional_reserve_bytes = 0;
 
     switch (partition_type) {
-    case Partition::kEfi: {
+    case Partition::kBootloader: {
         const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
         memcpy(type, efi_type, GPT_GUID_LEN);
         minimum_size_bytes = 20LU * (1 << 20);
@@ -711,7 +709,7 @@ zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::un
 zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
                                                 fbl::unique_fd* out_fd) const {
     switch (partition_type) {
-    case Partition::kEfi: {
+    case Partition::kBootloader: {
         return gpt_->FindPartition(IsGigabootPartition, out_fd);
     }
     case Partition::kZirconA: {
@@ -736,7 +734,7 @@ zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
         return gpt_->FindPartition(filter, out_fd);
     }
     case Partition::kFuchsiaVolumeManager:
-        return gpt_->FindPartition(FvmFilterCallback, out_fd);
+        return gpt_->FindPartition(IsFvmPartition, out_fd);
 
     default:
         ERROR("EFI partitioner cannot find unknown partition type\n");
@@ -804,11 +802,18 @@ zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
     size_t optional_reserve_bytes = 0;
 
     switch (partition_type) {
-    case Partition::kKernelC: {
+    case Partition::kZirconA: {
         const uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
         memcpy(type, kernc_type, GPT_GUID_LEN);
         minimum_size_bytes = 64LU * (1 << 20);
         name = kZirconAName;
+        break;
+    }
+    case Partition::kZirconR: {
+        const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+        memcpy(type, zircon_r_type, GPT_GUID_LEN);
+        minimum_size_bytes = 24LU * (1 << 20);
+        name = kZirconRName;
         break;
     }
     case Partition::kFuchsiaVolumeManager: {
@@ -829,15 +834,22 @@ zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
 zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
                                                  fbl::unique_fd* out_fd) const {
     switch (partition_type) {
-    case Partition::kKernelC: {
+    case Partition::kZirconA: {
         const auto filter = [](const gpt_partition_t& part) {
             const uint8_t guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
             return KernelFilterCallback(part, guid, kZirconAName);
         };
         return gpt_->FindPartition(filter, out_fd);
     }
+    case Partition::kZirconR: {
+        const auto filter = [](const gpt_partition_t& part) {
+            const uint8_t guid[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+            return KernelFilterCallback(part, guid, kZirconRName);
+        };
+        return gpt_->FindPartition(filter, out_fd);
+    }
     case Partition::kFuchsiaVolumeManager:
-        return gpt_->FindPartition(FvmFilterCallback, out_fd);
+        return gpt_->FindPartition(IsFvmPartition, out_fd);
 
     default:
         ERROR("Cros partitioner cannot find unknown partition type\n");
@@ -847,7 +859,7 @@ zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
 
 zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     // Special partition finalization is only necessary for Zircon partitions.
-    if (partition_type != Partition::kKernelC) {
+    if (partition_type != Partition::kZirconA) {
         return ZX_OK;
     }
 
@@ -978,6 +990,11 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
         memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
         break;
     }
+    case Partition::kVbMetaR: {
+        const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
+        memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
+        break;
+    }
     case Partition::kFuchsiaVolumeManager: {
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
         memcpy(type, fvm_type, GPT_GUID_LEN);
@@ -1080,6 +1097,11 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     case Partition::kVbMetaB: {
         const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
         memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kVbMetaR: {
+        const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
+        memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
         break;
     }
     case Partition::kFuchsiaVolumeManager: {

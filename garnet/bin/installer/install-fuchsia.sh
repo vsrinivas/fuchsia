@@ -8,7 +8,7 @@ INSTALL_PATH="/install"
 PAVER="/boot/bin/install-disk-image"
 
 # TODO(raggi): template this from the build instead.
-IMAGES="fvm.sparse.blk fuchsia.esp.blk fuchsia.zbi zircon.vboot"
+IMAGES="fvm.sparse.blk fuchsia.esp.blk fuchsia.zbi zedboot.zbi"
 
 if [ ! -e "${PAVER}" ]; then
   echo "Paver \"install-disk-image\" is missing!"
@@ -17,25 +17,18 @@ fi
 
 for file in $IMAGES; do
   img="${INSTALL_PATH}/${file}"
-  if [ ! -f "$img" ]; then
-    echo "Missing required image file: $img" >&2
-    exit 1
-  fi
-done
 
-for file in $IMAGES; do
-  img="${INSTALL_PATH}/${file}"
+  if [ ! -f ${img} ]; then
+    continue
+  fi
 
   typ=""
   case "$file" in
-    fvm*|*.fvm.blk|*.sparse.blk)
+    fvm.sparse.blk)
       typ="fvm"
       ;;
-    *esp.blk|*efi.blk)
-      typ="efi"
-      ;;
-    *.vboot)
-      typ="kernc"
+    fuchsia.esp.blk)
+      typ="bootloader"
       ;;
     fuchsia.zbi)
       typ="zircona"

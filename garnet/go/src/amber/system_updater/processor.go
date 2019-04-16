@@ -165,10 +165,6 @@ func WriteImgs(imgs []string, imgsPath string) error {
 
 		var c *exec.Cmd
 		switch img {
-		case "efi":
-			c = exec.Command(diskImagerPath, "install-efi")
-		case "kernc":
-			c = exec.Command(diskImagerPath, "install-kernc")
 		case "zbi", "zbi.signed":
 			c = exec.Command(diskImagerPath, "install-zircona")
 		case "zedboot", "zedboot.signed":

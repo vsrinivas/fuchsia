@@ -51,6 +51,9 @@ assert(
     meta_package_labels != [],
     "Missing meta_package_labels. Are you using a supported product configuration? " + "Check your args.gn file for an import of a product configuration, and consider " + "using one of the products in the `//products` or `//vendor/*/products` directories.")
 
+assert(custom_signing_script == "" || !use_vboot,
+       "custom_signing_script and use_vboot cannot be used together!")
+
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
@@ -635,7 +638,9 @@ images += [
     ]
     sdk = "fuchsia.zbi"
     updater = "zbi"
-    installer = "fuchsia.zbi"
+    if (!use_vboot) {
+      installer = "fuchsia.zbi"
+    }
     json = {
       name = "zircon-a"
       type = "zbi"
@@ -646,7 +651,7 @@ images += [
       # rebooting in the case we do not mexec a kernel.)
       bootserver_pave = [ "--boot" ]
 
-      if (custom_signing_script == "") {
+      if (custom_signing_script == "" && !use_vboot) {
         bootserver_pave += [
           "--zircona",
           # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
@@ -714,22 +719,36 @@ if (custom_signing_script != "") {
       },
     ]
   }
+} else if (use_vboot) {
+  # ChromeOS vboot images.
+  vboot("signed") {
+    testonly = true
+    output_name = "fuchsia.zbi"
+    deps = [
+      ":fuchsia",
+    ]
+  }
+  images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      sdk = "zircon-a.signed"
+      updater = "zbi.signed"
+      installer = "fuchsia.zbi"
+      json = {
+        name = "zircon-a.signed"
+        type = "zbi.signed"
+        bootserver_pave = [ "--zircona" ]
+      }
+      public = [
+        "IMAGE_ZIRCONA_SIGNEDZBI",
+      ]
+    },
+  ]
 }
 
 # The updater also wants the zedboot zbi as recovery.
-images += [
-  {
-    deps = [
-      "zedboot:zbi",
-    ]
-    sources = [
-      "$root_out_dir/zedboot.zbi",
-    ]
-    updater = "zedboot"
-    installer = "zedboot.zbi"
-  },
-]
-
 if (custom_signing_script != "") {
   images += [
     {
@@ -740,6 +759,32 @@ if (custom_signing_script != "") {
         "$root_out_dir/zedboot.zbi.signed",
       ]
       updater = "zedboot.signed"
+    },
+  ]
+} else if (use_vboot) {
+  images += [
+    {
+      deps = [
+        "zedboot:signed",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vboot",
+      ]
+      updater = "zedboot.signed"
+      installer = "zedboot.zbi"
+    },
+  ]
+} else {
+  images += [
+    {
+      deps = [
+        "zedboot:zbi",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.zbi",
+      ]
+      updater = "zedboot"
+      installer = "zedboot.zbi"
     },
   ]
 }
@@ -933,8 +978,8 @@ images += [
   },
 ]
 
-if (target_cpu != "arm64") {
-  # ChromeOS vboot images.
+if (target_cpu != "arm64" && !use_vboot) {
+  # TODO(surajmalhotra): Remove this target once SDK no longer depends on it.
   vboot("vboot") {
     testonly = true
     output_name = "fuchsia"
@@ -947,28 +992,11 @@ if (target_cpu != "arm64") {
       json = {
         name = "zircon-vboot"
         type = "vboot"
-        bootserver_pave = [ "--kernc" ]
       }
       deps = [
         ":vboot",
       ]
-      installer = "zircon.vboot"
       sdk = "zircon.vboot"
-      updater = "kernc"
-      public = [
-        "IMAGE_ZIRCON_VBOOT",
-      ]
-    },
-  ]
-
-  images += [
-    {
-      deps = [
-        "zedboot:vboot",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.vboot",
-      ]
     },
   ]
 
@@ -990,11 +1018,11 @@ if (target_cpu != "arm64") {
       json = {
         name = "efi"
         type = "blk"
-        bootserver_pave = [ "--efi" ]
+        bootserver_pave = [ "--bootloader" ]
       }
       installer = "fuchsia.esp.blk"
       sdk = "local.esp.blk"
-      updater = "efi"
+      updater = "bootloader"
       public = [
         "IMAGE_ESP_RAW",
       ]

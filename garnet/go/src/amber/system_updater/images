@@ -1,5 +1,4 @@
-efi
-kernc
+bootloader
 zbi
 zbi.signed
 zedboot

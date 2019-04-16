@@ -32,6 +32,7 @@ enum class Partition {
     kZirconR,
     kVbMetaA,
     kVbMetaB,
+    kVbMetaR,
     kFuchsiaVolumeManager,
 };
 
@@ -50,8 +51,6 @@ public:
     static fbl::unique_ptr<DevicePartitioner> Create();
 
     virtual ~DevicePartitioner() = default;
-
-    virtual bool IsCros() const = 0;
 
     // Whether to use skip block interface or block interface for non-FVM
     // partitions.
@@ -142,8 +141,6 @@ public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                   fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-    bool IsCros() const override { return false; }
-
     bool UseSkipBlockInterface() const override { return false; }
 
     zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
@@ -168,8 +165,6 @@ class CrosDevicePartitioner : public DevicePartitioner {
 public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                   fbl::unique_ptr<DevicePartitioner>* partitioner);
-
-    bool IsCros() const override { return true; }
 
     bool UseSkipBlockInterface() const override { return false; }
 
@@ -199,8 +194,6 @@ public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                   fbl::unique_ptr<DevicePartitioner>* partitioner);
 
-    bool IsCros() const override { return false; }
-
     bool UseSkipBlockInterface() const override { return false; }
 
     zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
@@ -229,8 +222,6 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
 public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                   fbl::unique_ptr<DevicePartitioner>* partitioner);
-
-    bool IsCros() const override { return false; }
 
     bool UseSkipBlockInterface() const override { return true; }
 

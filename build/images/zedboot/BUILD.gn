@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/custom_signing.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/zxcrypt.gni")
@@ -158,7 +159,7 @@ zedboot_images += [
     json = {
       name = "zircon-r"
       type = "zbi"
-      if (custom_signing_script == "") {
+      if (custom_signing_script == "" && !use_vboot) {
         bootserver_pave = [ "--zirconr" ]
       }
     }
@@ -195,10 +196,8 @@ if (custom_signing_script != "") {
       }
     },
   ]
-}
-
-if (target_cpu != "arm64") {
-  vboot("vboot") {
+} else if (use_vboot) {
+  vboot("signed") {
     output_name = "zedboot"
     deps = [
       ":zbi",
@@ -208,18 +207,21 @@ if (target_cpu != "arm64") {
   zedboot_images += [
     {
       deps = [
-        ":vboot",
+        ":signed",
       ]
       public = [
-        "IMAGE_ZEDBOOT_VBOOT",
+        "IMAGE_ZIRCONR_SIGNEDZBI",
       ]
       json = {
-        name = "zedboot"
-        type = "vboot"
+        name = "zircon-r.signed"
+        type = "zbi.signed"
+        bootserver_pave = [ "--zirconr" ]
       }
     },
   ]
+}
 
+if (target_cpu != "arm64" && !use_vboot) {
   esp("esp") {
     output_name = "zedboot"
     cmdline = "efi_cmdline.txt"
@@ -249,13 +251,10 @@ group("zedboot") {
   deps = [
     ":zbi",
   ]
-  if (target_cpu != "arm64") {
-    deps += [
-      ":esp",
-      ":vboot",
-    ]
+  if (target_cpu != "arm64" && !use_vboot) {
+    deps += [ ":esp" ]
   }
-  if (custom_signing_script != "") {
+  if (custom_signing_script != "" || use_vboot) {
     deps += [ ":signed" ]
   }
 }

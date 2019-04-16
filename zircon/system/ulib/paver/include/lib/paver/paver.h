@@ -13,27 +13,19 @@ namespace paver {
 enum class Command {
     kUnknown,
     kInstallBootloader,
-    kInstallEfi,
-    kInstallKernc,
     kInstallZirconA,
     kInstallZirconB,
     kInstallZirconR,
     kInstallVbMetaA,
     kInstallVbMetaB,
+    kInstallVbMetaR,
     kInstallDataFile,
     kInstallFvm,
     kWipeFvm,
 };
 
-// Architecture of device being paved. Used for payload validation.
-enum class Arch {
-    X64,
-    ARM64,
-};
-
 struct Flags {
     Command cmd = Command::kUnknown;
-    Arch arch = Arch::X64;
     bool force = false;
     fbl::unique_fd payload_fd;
     char* path = nullptr;

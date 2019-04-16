@@ -325,17 +325,6 @@ END_TEST_CASE(CrosDevicePartitionerTests)
 namespace fixed {
 namespace {
 
-bool IsCrosTest() {
-    BEGIN_TEST;
-
-    fbl::unique_fd dev_fs(open("/dev", O_RDWR));
-    fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(dev_fs), &partitioner), ZX_OK);
-    ASSERT_FALSE(partitioner->IsCros());
-
-    END_TEST;
-}
-
 bool UseBlockInterfaceTest() {
     BEGIN_TEST;
 
@@ -457,7 +446,6 @@ bool GetBlockSizeTest() {
 } // namespace fixed
 
 BEGIN_TEST_CASE(FixedDevicePartitionerTests)
-RUN_TEST(fixed::IsCrosTest)
 RUN_TEST(fixed::UseBlockInterfaceTest)
 RUN_TEST(fixed::AddPartitionTest)
 RUN_TEST(fixed::WipeFvmTest)
@@ -468,21 +456,6 @@ END_TEST_CASE(FixedDevicePartitionerTests)
 
 namespace skipblock {
 namespace {
-
-bool IsCrosTest() {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(Initialize());
-    fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
-
-    fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
-              ZX_OK);
-    ASSERT_FALSE(partitioner->IsCros());
-
-    END_TEST;
-}
 
 bool UseSkipBlockInterfaceTest() {
     BEGIN_TEST;
@@ -621,7 +594,6 @@ bool GetBlockSizeTest() {
 } // namespace skipblock
 
 BEGIN_TEST_CASE(SkipBlockDevicePartitionerTests)
-RUN_TEST(skipblock::IsCrosTest)
 RUN_TEST(skipblock::UseSkipBlockInterfaceTest)
 RUN_TEST(skipblock::AddPartitionTest)
 RUN_TEST(skipblock::WipeFvmTest)

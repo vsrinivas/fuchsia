@@ -59,10 +59,6 @@ static Partition PartitionType(const Command command) {
     switch (command) {
     case Command::kInstallBootloader:
         return Partition::kBootloader;
-    case Command::kInstallEfi:
-        return Partition::kEfi;
-    case Command::kInstallKernc:
-        return Partition::kKernelC;
     case Command::kInstallZirconA:
         return Partition::kZirconA;
     case Command::kInstallZirconB:
@@ -73,6 +69,8 @@ static Partition PartitionType(const Command command) {
         return Partition::kVbMetaA;
     case Command::kInstallVbMetaB:
         return Partition::kVbMetaB;
+    case Command::kInstallVbMetaR:
+        return Partition::kVbMetaR;
     case Command::kInstallFvm:
         return Partition::kFuchsiaVolumeManager;
     default:
@@ -352,6 +350,7 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size, const fzl::
     return ZX_OK;
 }
 
+#if 0
 // Checks first few bytes of buffer to ensure it is a ZBI.
 // Also validates architecture in kernel header matches the target.
 bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
@@ -409,6 +408,7 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 
     return ZX_OK;
 }
+#endif
 
 // Attempt to bind an FVM driver to a partition fd.
 fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::duration timeout) {
@@ -948,8 +948,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 }
 
 // Paves an image onto the disk.
-zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::unique_fd payload_fd,
-                          Partition partition_type, Arch arch) {
+zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
+                          fbl::unique_fd payload_fd, Partition partition_type) {
     LOG("Paving partition.\n");
 
     zx_status_t status;
@@ -1008,10 +1008,6 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::u
     if ((status = StreamPayloadToVmo(mapper, payload_fd, block_size_bytes, &payload_size)) !=
         ZX_OK) {
         ERROR("Failed to stream partition to VMO\n");
-        return status;
-    }
-    if ((status = ValidateKernelPayload(mapper, payload_size, partition_type, arch)) != ZX_OK) {
-        ERROR("Failed to validate partition\n");
         return status;
     }
     if (partitioner->UseSkipBlockInterface()) {
@@ -1185,45 +1181,19 @@ zx_status_t RealMain(Flags flags) {
         ERROR("Unable to initialize a partitioner.");
         return ZX_ERR_BAD_STATE;
     }
-    const bool is_cros_device = device_partitioner->IsCros();
-
     switch (flags.cmd) {
     case Command::kWipeFvm:
         return device_partitioner->WipeFvm();
     case Command::kInstallFvm:
     case Command::kInstallVbMetaA:
     case Command::kInstallVbMetaB:
-        break;
-    case Command::kInstallBootloader:
-        if (flags.arch == Arch::X64 && !flags.force) {
-            LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallEfi:
-        if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
-            LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallKernc:
-        if (!is_cros_device && !flags.force) {
-            LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
+    case Command::kInstallVbMetaR:
     case Command::kInstallZirconA:
     case Command::kInstallZirconB:
     case Command::kInstallZirconR:
-        if (is_cros_device && !flags.force) {
-            LOG("SKIPPING Zircon-{A/B/R} install on CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
+    case Command::kInstallBootloader:
+      return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
+                           PartitionType(flags.cmd));
     case Command::kInstallDataFile:
         return DataFilePave(std::move(device_partitioner), std::move(flags.payload_fd), flags.path);
 
@@ -1231,8 +1201,6 @@ zx_status_t RealMain(Flags flags) {
         ERROR("Unsupported command.");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
-                         PartitionType(flags.cmd), flags.arch);
 }
 
 } //  namespace paver

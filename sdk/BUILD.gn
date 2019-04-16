@@ -8,6 +8,10 @@ import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
 
+declare_args() {
+  export_x64_sdk_images = false
+}
+
 # This default target is empty because there are multiple flavors of SDKs and
 # there is no "default" one. The empty target is still needed so that all the
 # other targets in this file are attached to the build graph.
@@ -104,7 +108,7 @@ sdk("images") {
   deps = [
     "//build/images:images_sdk",
   ]
-  if (target_cpu != "arm64") {
+  if (export_x64_sdk_images) {
     deps += [
       "//build/images:fvm.sparse.blk_sdk",
       "//build/images:local.esp.blk_sdk",
