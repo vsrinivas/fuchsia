@@ -116,10 +116,13 @@ table SessionmgrConfig {
 
     /// The fuchsia package url for which story shell to use.
     7: string:fuchsia.io.MAX_PATH story_shell_url;
+
+    /// A map of agents to the arguments they should be started with.
+    8: vector<AppConfig> component_args;
 };
 
 /// Used to pass around configuration references to apps such as base shell,
-/// session shell, and story shell.
+/// session shell, story shell, and agents.
 table AppConfig {
     /// The fuchsia package url for app.
     1: string:fuchsia.io.MAX_PATH url;

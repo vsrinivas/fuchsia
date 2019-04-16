@@ -78,9 +78,32 @@
             "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
            },
           "uniqueItems": true
+        },
+        "component_args": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/component_args"
+          }
         }
       },
       "additionalProperties": false
+    },
+    "component_args": {
+      "type": "object",
+      "items": {
+        "uri": {
+          "type": "string",
+          "pattern": "w+:(/?/?)[^s]+"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required": [ "uri", "args" ]
+      }
     }
   },
   "type": "object",

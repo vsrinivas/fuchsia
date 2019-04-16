@@ -108,6 +108,16 @@ void XdrSessionShellMapEntry(
                         has_screen_width, static_cast<float>(0));
 }
 
+void XdrComponentArgs(XdrContext* const xdr,
+                      fuchsia::modular::internal::AppConfig* const data) {
+  xdr->Field(modular_config::kUri, data->mutable_url());
+
+  bool has_args = data->has_args();
+  std::vector<std::string> default_args;
+  xdr->FieldWithDefault(modular_config::kArgs, data->mutable_args(), has_args,
+                        default_args);
+}
+
 std::vector<fuchsia::modular::internal::SessionShellMapEntry>
 GetDefaultSessionShellMap() {
   fuchsia::modular::internal::SessionShellConfig config;
@@ -272,6 +282,12 @@ void XdrSessionmgrConfig_v1(
   xdr->FieldWithDefault(modular_config::kSessionAgents,
                         data->mutable_session_agents(), has_session_agents,
                         default_agents);
+
+  std::vector<fuchsia::modular::internal::AppConfig> default_component_args;
+  bool has_component_args = data->has_component_args();
+  xdr->FieldWithDefault(modular_config::kComponentArgs,
+                        data->mutable_component_args(), XdrComponentArgs,
+                        has_component_args, std::move(default_component_args));
 }
 
 }  // namespace modular

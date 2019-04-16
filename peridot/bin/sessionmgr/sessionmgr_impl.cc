@@ -252,9 +252,11 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 
   fuchsia::sys::LauncherPtr parent_launcher;
   startup_context_->environment()->GetLauncher(parent_launcher.NewRequest());
-  // TODO(MF-150): Pass override argv from the Modular config to
-  // ArgvInjectingLauncher.
+
   ArgvInjectingLauncher::ArgvMap argv_map;
+  for (auto& agent : config_.component_args()) {
+    argv_map.insert(std::make_pair(agent.url(), agent.args()));
+  }
   auto argv_injecting_launcher = std::make_unique<ArgvInjectingLauncher>(
       std::move(parent_launcher), argv_map);
   session_environment_->OverrideLauncher(std::move(argv_injecting_launcher));

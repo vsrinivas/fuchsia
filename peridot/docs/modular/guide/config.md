@@ -34,6 +34,12 @@ modular_config() target in the product's monolith packages.
     ],
     "session_agents": [
       "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
+    ],
+    "component_args": [
+      {
+        "uri": "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx",
+        "args: [ "test" ]
+      }
     ]
   }
 }
@@ -99,15 +105,16 @@ modular_config() target in the product's monolith packages.
         * `NONE`: Do not use a cloud provider.
     - **default**: `LET_LEDGER_DECIDE`
 * `enable_cobalt`: **boolean** *(optional)*
-    - When set to false, Cobalt statistics are disabled. This is used for testing.
+    - When set to false, Cobalt statistics are disabled. This is used for
+      testing.
     - **default**: `true`
 * `enable_story_shell_preload`: **boolean** *(optional)*
     - When set to false, StoryShell instances are not warmed up as a startup
       latency optimization. This is used for testing.
     - **default**: `true`
 * `use_memfs_for_ledger`: **boolean** *(optional)*
-    - Tells the sessionmgr whether it should host+pass a memfs-backed directory to
-      the ledger for the user's repository, or to use /data/LEDGER.
+    - Tells the sessionmgr whether it should host+pass a memfs-backed directory
+      to the ledger for the user's repository, or to use /data/LEDGER.
     - **default**: `false`
 * `startup_agents`: **string[]** *(optional)*
     - A list of fuchsia component urls that specify which agents to launch at
@@ -115,3 +122,10 @@ modular_config() target in the product's monolith packages.
 * `session_agents`: **string[]** *(optional)*
     - A list of fuchsia component urls that specify which agents to launch at
       startup with PuppetMaster and FocusProvider services.
+* `component_args`: **array** *(optional)*
+    - A map of component URI to arguments list for that component. Presence in
+      this list results in the given arguments passed to the component as its
+      argv at launch.
+        * `uri`: The component's uri.
+        * `args`: A list of arguments to be passed to the component specified by
+                  `uri`.

@@ -94,7 +94,8 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "enable_story_shell_preload":true,
       "use_memfs_for_ledger":false,
       "startup_agents":null,
-      "session_agents":null})";
+      "session_agents":null,
+      "component_args":null})";
 
   // Remove whitespace for string comparison
   expected_json.erase(

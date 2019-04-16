@@ -40,6 +40,9 @@ inline constexpr char kUseSessionShellForStoryShellFactory[] =
     "use_session_shell_for_story_shell_factory";
 
 // Sessionmgr constants
+inline constexpr char kComponentArgs[] = "component_args";
+inline constexpr char kUri[] = "uri";
+inline constexpr char kArgs[] = "args";
 inline constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
 inline constexpr char kStartupAgents[] = "startup_agents";
 inline constexpr char kSessionAgents[] = "session_agents";
