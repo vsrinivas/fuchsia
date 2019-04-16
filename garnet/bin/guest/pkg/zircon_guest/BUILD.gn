@@ -14,17 +14,19 @@ config_data("services_config") {
   ]
 }
 
+guest_fvm_blk_label = "//build/images/guest:fvm.blk"
+
 guest_package("zircon_guest") {
   deps = [
-    "//build/images/guest:guest",
-    "//build/images/guest:guest_fvm",
+    "//build/images/guest",
+    guest_fvm_blk_label,
   ]
   zircon = "$root_out_dir/guest.zbi"
 
   cmdline = "console.path=/dev/class/console/virtio-console"
 
   disk_filename = "filesystem.fvm"
-  fvm = "$root_out_dir/guest_fvm.blk"
+  fvm = get_label_info(guest_fvm_blk_label, "target_out_dir") + "/fvm.blk"
   resources = [
     {
       path = rebase_path(fvm)

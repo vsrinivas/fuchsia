@@ -2,251 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/config/fuchsia/zbi.gni")
-import("//build/config/fuchsia/zircon.gni")
-import("//build/images/collect_blob_manifest.gni")
-import("//build/images/manifest.gni")
-import("//build/images/shell_commands.gni")
-import("//build/package.gni")
+import("//build/images/assemble_system.gni")
 import("//garnet/build/pkgfs.gni")
 
 guest_packages = [
-  get_label_info("//garnet/bin/appmgr", "label_no_toolchain"),
-  get_label_info("//garnet/bin/guest/integration:guest_integration_tests_utils",
-                 "label_no_toolchain"),
-  get_label_info("//garnet/bin/guest/pkg/zircon_guest:services_config",
-                 "label_no_toolchain"),
-  get_label_info("//garnet/bin/run", "label_no_toolchain"),
-  get_label_info("//garnet/bin/sysmgr", "label_no_toolchain"),
-  get_label_info("//garnet/bin/trace", "label_no_toolchain"),
-  get_label_info("//garnet/bin/vsock_service:vsock_service",
-                 "label_no_toolchain"),
-  get_label_info(pkgfs_package_label, "label_no_toolchain"),
+  "//garnet/bin/appmgr",
+  "//garnet/bin/guest/integration:guest_integration_tests_utils",
+  "//garnet/bin/guest/pkg/zircon_guest:services_config",
+  "//garnet/bin/run",
+  "//garnet/bin/sysmgr",
+  "//garnet/bin/trace",
+  "//garnet/bin/vsock_service:vsock_service",
+  pkgfs_package_label,
 ]
 
-# The namespace builder in appmgr creates a trampoline at /bin that points to
-# /pkgfs/packages/shell-commands/0/bin. So, to function correctly this package
-# must be named "shell-commands" exactly.
 shell_commands("shell-commands") {
   testonly = true
   visibility = [ ":*" ]
   deps = guest_packages
 }
-guest_packages += [ get_label_info(":shell-commands", "label_no_toolchain") ]
 
 config_package("config-data") {
   testonly = true
   visibility = [ ":*" ]
   deps = guest_packages
 }
-guest_packages += [ get_label_info(":config-data", "label_no_toolchain") ]
 
-guest_meta_far_merkle_index = "$target_out_dir/guest_meta_far_merkle_index"
-package_metadata_list("guest_meta_far_merkle_index") {
-  testonly = true
-  outputs = [
-    guest_meta_far_merkle_index,
-  ]
-  data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = guest_packages
-}
+guest_packages += [
+  ":shell-commands",
+  ":config-data",
+]
 
-# The pkgsvr index is a manifest mapping `package_name/package_version` to
-# the merkleroot of the package's meta.far file.
-action("pkgsvr_index") {
-  visibility = [ ":*" ]
-  testonly = true
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
-  deps = [
-    ":guest_meta_far_merkle_index",
-  ]
-  inputs = [
-    guest_meta_far_merkle_index,
-  ]
-
-  script = "//build/images/manifest_content_expand.sh"
-  args = [
-    rebase_path(guest_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir),
-  ]
-}
-
-boot_manifest = "$target_out_dir/boot.manifest"
-
-guest_image_manifest_args = "guest_image.manifest_args"
-guest_image_manifest_args_path = target_gen_dir + "/guest_image.manifest_args"
-
-generated_file(guest_image_manifest_args) {
-  testonly = true
-  outputs = [
-    guest_image_manifest_args_path,
-  ]
-  data_keys = [ "system_image_rsps" ]
-  walk_keys = [ "package_barrier" ]
-  deps = guest_packages
-}
-
-generate_manifest("guest.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  bootfs_manifest = boot_manifest
-  bootfs_zircon_groups = "all"
-
-  deps = [
-    ":" + guest_image_manifest_args,
-  ]
-  sources = [
-    guest_image_manifest_args_path,
-  ]
-  args = [ "@" + rebase_path(guest_image_manifest_args_path, root_build_dir) ]
-
-  json = "guest_meta_package.json"
-  sources += [ json ]
-  args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
-
-  # Add the static packages (pkgsvr) index.
-  deps += [ ":pkgsvr_index" ]
-  pkgsvr_index = "$target_out_dir/pkgsvr_index"
-  sources += [ pkgsvr_index ]
-  args += [ "--entry=data/static_packages=" +
-            rebase_path(pkgsvr_index, root_build_dir) ]
-}
-
-# Generate, sign, and seal the package file.
-pm_build_package("guest.meta") {
-  visibility = [ ":*" ]
-  testonly = true
-  manifest = ":guest.manifest"
-  package_name = "guest_image"
-}
-
-guest_blob_manifest = "$root_build_dir/guest_blob.manifest"
-collect_blob_manifest("guest_blob.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  outputs = [
-    guest_blob_manifest,
-  ]
-  deps = guest_packages + [ ":guest.meta" ]
-}
-
-zircon_tool_action("guest_blob.blk") {
-  visibility = [ ":*" ]
-  testonly = true
-  deps = [
-    ":guest_blob.manifest",
-  ]
-  blob_image_path = "$target_out_dir/$target_name"
-  outputs = [
-    blob_image_path,
-  ]
-  depfile = blob_image_path + ".d"
-  inputs = [
-    guest_blob_manifest,
-  ]
-  tool = "blobfs"
-  args = [
-    "--depfile",
-    rebase_path(blob_image_path, root_build_dir),
-    "create",
-    "--manifest",
-    rebase_path(guest_blob_manifest, root_build_dir),
-  ]
-}
-
-zircon_tool_action("guest_fvm") {
-  testonly = true
-  fvm = "$root_out_dir/guest_fvm.blk"
-  outputs = [
-    fvm,
-  ]
-  tool = "fvm"
-  sources = []
-  deps = [
-    ":guest_blob.blk",
-  ]
-  foreach(label, deps) {
-    sources += get_target_outputs(label)
-  }
-  args = [
-           rebase_path(fvm, root_build_dir),
-           "create",
-           "--blob",
-         ] + rebase_path(sources, root_build_dir)
-}
-
-# Generate the /boot/config/devmgr file.
-action("devmgr_config.txt") {
-  visibility = [ ":*" ]
-  testonly = true
-  script = "//build/images/manifest.py"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
-  pkgfs = "bin/" + pkgfs_binary_name
-  pkgfs_label = pkgfs_package_label
-  pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
-                      get_label_info(pkgfs_label, "name")
-  pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
-  system_image_merkleroot = "$target_out_dir/guest.meta/meta.far.merkle"
-
-  deps = [
-    ":guest.manifest",
-    ":guest.meta",
-    pkgfs_label,
-  ]
-  sources = [
-    boot_manifest,
-    pkgfs_blob_manifest,
-    system_image_merkleroot,
-  ]
-
-  args = [
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-
-    # Start with the fixed options.
-    "--entry=devmgr.require-system=true",
-
-    # Add the pkgfs command line, embedding the merkleroot of the system image.
-    "--contents",
-    "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
-    "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
-    "--no-contents",
-    "--reset-rewrite",
-
-    # Embed the pkgfs blob manifest with the "zircon.system.pkgfs.file."
-    # prefix on target file names.
-    "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
-    "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
-    "--reset-rewrite",
-    "--include=bin/devhost",
-    "--rewrite=bin/devhost=devhost.asan.strict=false",
-    "--manifest=" + rebase_path(boot_manifest, root_build_dir),
-  ]
-}
-
-zbi("guest") {
-  testonly = true
-  deps = [
-    ":devmgr_config.txt",
-    ":guest.manifest",
-  ]
-  inputs = [
-    zircon_kernel_zbi,
-    boot_manifest,
-  ]
-  manifest = [
-    {
-      outputs = [
-        "config/devmgr",
-      ]
-      sources = get_target_outputs(":devmgr_config.txt")
-    },
-  ]
-  cmdline = []
-  cmdline_inputs = []
+assemble_system("guest") {
+  base_packages = guest_packages
 }

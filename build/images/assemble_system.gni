@@ -182,7 +182,7 @@ template("assemble_system") {
   }
 
   generate_fvm("fvm.blk") {
-    visibility = [ ":*" ]
+    # Referenced by guest_package.
     testonly = true
     output_name = "$target_out_dir/$target_name"
     args = fvm_create_args
