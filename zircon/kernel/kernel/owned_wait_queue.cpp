@@ -382,6 +382,10 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count,
             return true;
         }
 
+        if (action == Action::Stop) {
+            return false;
+        }
+
         // All other choices involve waking up this thread, so go ahead and do that now.
         ++woken;
         DequeueThread(t, ZX_OK);
@@ -520,6 +524,10 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count,
             // If the user wants to skip this thread, just move on to the next.
             if (action == Action::Skip) {
                 return true;
+            }
+
+            if (action == Action::Stop) {
+                return false;
             }
 
             // Actually move the thread from this to the requeue_target.

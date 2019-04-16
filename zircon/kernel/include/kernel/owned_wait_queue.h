@@ -68,6 +68,9 @@ public:
             // possible).
             Skip,
 
+            // Do not wake or requeue this thread and stop considering threads.
+            Stop,
+
             // Select this thread to be either woken or requeued, then continue
             // to consider more threads (if any).  Do not assign this thread to
             // be the owner.
