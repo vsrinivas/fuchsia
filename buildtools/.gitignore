@@ -1,5 +1,6 @@
 /.cipd_client*
 /.versions
+/linux-arm64/
 /linux-x64/
 /mac-x64/
 *.DS_Store
