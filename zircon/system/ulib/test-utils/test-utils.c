@@ -320,7 +320,7 @@ void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, 
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals)
 {
     uint64_t key = tu_get_koid(handle);
-    uint32_t options = ZX_WAIT_ASYNC_REPEATING;
+    uint32_t options = ZX_WAIT_ASYNC_ONCE;
     zx_status_t status = zx_object_wait_async(handle, port, key, signals, options);
     if (status < 0)
         tu_fatal(__func__, status);

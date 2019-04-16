@@ -163,7 +163,7 @@ bool thread_start_test_exception_handler_worker(zx_handle_t inferior, zx_handle_
 
     zx_koid_t pid = tu_get_koid(inferior);
 
-    if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
+    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
         ASSERT_TRUE(packet->key != pid);
         // Must be a signal on one of the threads.
         // Here we're only expecting TERMINATED.

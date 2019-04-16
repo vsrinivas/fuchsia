@@ -133,11 +133,7 @@ bool SuspendedRegAccessTest() {
     // ZX_EXCP_THREAD_STARTING.
     ASSERT_TRUE(recv_simple_response(channel, RESP_PONG), "");
 
-    // Set up waiting for the thread to suspend via a port (since this is
-    // what debuggers will typically do).
     zx_handle_t eport = tu_io_port_create();
-    zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-    tu_object_wait_async(thread, eport, signals);
 
     // Keep looping until we know the thread is stopped in the assembler.
     // This is the only place we can guarantee particular registers have
@@ -311,11 +307,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         EXPECT_TRUE(tu_channel_wait_readable(syscall_handle));
     }
 
-    // Set up waiting for the thread to suspend via a port (since this is
-    // what debuggers will typically do).
     zx_handle_t eport = tu_io_port_create();
-    zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-    tu_object_wait_async(thread, eport, signals);
 
     zx_handle_t token;
     ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
@@ -413,7 +405,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
 
     auto data = reinterpret_cast<suspend_in_exception_data_t*>(handler_arg);
 
-    if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
+    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
         // Must be a signal on one of the threads.
         ASSERT_TRUE(packet->key != data->process_id);
         zx_koid_t pkt_tid = packet->key;

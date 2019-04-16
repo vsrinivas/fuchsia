@@ -164,7 +164,7 @@ static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
 static bool read_packet(zx_handle_t eport, zx_port_packet_t* packet)
 {
     ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
-    if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
+    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
         unittest_printf("signal received: key %" PRIu64 ", observed 0x%x\n",
                         packet->key, packet->signal.observed);
     } else if (ZX_PKT_IS_USER(packet->type)) {
@@ -204,9 +204,7 @@ static bool verify_signal(const zx_port_packet_t* packet,
                           uint64_t key,
                           zx_signals_t expected_signals)
 {
-    ASSERT_TRUE(ZX_PKT_IS_SIGNAL_ONE(packet->type) ||
-                ZX_PKT_IS_SIGNAL_REP(packet->type),
-                "");
+    ASSERT_TRUE(ZX_PKT_IS_SIGNAL_ONE(packet->type));
 
     if (key != 0u)
         EXPECT_EQ(packet->key, key, "");
@@ -247,8 +245,7 @@ static bool wait_process_exit(zx_handle_t eport, zx_handle_t process) {
         unittest_printf("%s: read_packet done\n", __func__);
         // If we get a process exit signal then all threads have exited.
         // Any other signal packet is an error.
-        if (ZX_PKT_IS_SIGNAL_ONE(packet.type) ||
-            ZX_PKT_IS_SIGNAL_REP(packet.type)) {
+        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
             if (packet.key == pid && (packet.signal.observed & ZX_PROCESS_TERMINATED))
                 break;
             ASSERT_TRUE(false, "");
@@ -293,8 +290,7 @@ static bool wait_process_exit_from_debugger(zx_handle_t eport, zx_handle_t proce
         unittest_printf("%s: read_packet done\n", __func__);
         // If we get a process exit signal then all threads have exited.
         // Any other signal packet is an error.
-        if (ZX_PKT_IS_SIGNAL_ONE(packet.type) ||
-            ZX_PKT_IS_SIGNAL_REP(packet.type)) {
+        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
             if (packet.key == pid && (packet.signal.observed & ZX_PROCESS_TERMINATED))
                 break;
             ASSERT_TRUE(false, "");

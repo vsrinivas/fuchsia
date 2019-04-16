@@ -345,6 +345,9 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
 
     zx_koid_t tid = tu_get_koid(thread);
 
+    zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+    tu_object_wait_async(thread, eport, signals);
+
     while (true) {
         zx_port_packet_t packet;
         zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet);
@@ -352,14 +355,16 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
             // This shouldn't really happen unless the system is really loaded.
             // Just flag it and try again. The watchdog will catch failures.
             unittest_printf("%s: timed out???\n", __func__);
+            tu_object_wait_async(thread, eport, signals);
             continue;
         }
         ASSERT_EQ(status, ZX_OK);
-        if (ZX_PKT_IS_SIGNAL_REP(packet.type)) {
+        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
             ASSERT_EQ(packet.key, tid);
             if (packet.signal.observed & ZX_THREAD_SUSPENDED)
                 break;
             ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
+            tu_object_wait_async(thread, eport, signals);
         } else {
             ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
             zx_koid_t report_tid = packet.exception.tid;
@@ -447,10 +452,24 @@ static bool wait_inferior_thread_worker(
             return false;
 
         // Is the inferior gone?
-        if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == pid &&
-            (packet.signal.observed & ZX_PROCESS_TERMINATED)) {
-            unittest_printf("wait-inf: inferior gone\n");
-            return true;
+        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
+            if (packet.key == pid) {
+                if (packet.signal.observed & ZX_PROCESS_TERMINATED) {
+                    return true;
+                }
+                tu_object_wait_async(inferior, eport, ZX_PROCESS_TERMINATED);
+            } else {
+                zx_signals_t thread_signals = ZX_THREAD_TERMINATED;
+                if (packet.signal.observed & ZX_THREAD_RUNNING)
+                    thread_signals |= ZX_THREAD_SUSPENDED;
+                else if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+                    thread_signals |= ZX_THREAD_RUNNING;
+                zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
+                if (thread == ZX_HANDLE_INVALID) {
+                    continue;
+                }
+                tu_object_wait_async(thread, eport, thread_signals);
+            }
         }
 
         if (!handler(inferior, eport, &packet, handler_arg))
