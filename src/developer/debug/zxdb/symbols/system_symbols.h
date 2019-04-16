@@ -53,7 +53,7 @@ class SystemSymbols {
 
   class DownloadHandler {
    public:
-    virtual void RequestDownload(const std::string& build_id) = 0;
+    virtual void RequestDownload(const std::string& build_id, bool quiet) = 0;
   };
 
   explicit SystemSymbols(DownloadHandler* download_handler);
@@ -85,7 +85,7 @@ class SystemSymbols {
 
   // Request that the system arrange for symbols to be downloaded for a given
   // build ID.
-  void RequestDownload(const std::string& build_id);
+  void RequestDownload(const std::string& build_id, bool quiet);
 
   // Notification from the ModuleRef that all references have been deleted and
   // the tracking information should be removed from the map.

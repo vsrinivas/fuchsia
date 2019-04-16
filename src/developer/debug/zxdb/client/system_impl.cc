@@ -18,11 +18,11 @@
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
-namespace {
 
 // When we want to download symbols for a build ID, we create a Download
 // object. We then fire off requests to all symbol servers we know about asking
@@ -60,6 +60,9 @@ class Download {
   // Notify this Download object that a transaction failed.
   void Error(std::shared_ptr<Download> self, const Err& err);
 
+  // Add a symbol server to this download.
+  void AddServer(std::shared_ptr<Download> self, SymbolServer* server);
+
  private:
   void RunCB(std::shared_ptr<Download> self,
              std::function<void(SymbolServer::FetchCallback)>& cb);
@@ -71,6 +74,20 @@ class Download {
   std::vector<std::function<void(SymbolServer::FetchCallback)>> server_cbs_;
   bool trying_ = false;
 };
+
+void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
+  FXL_DCHECK(self.get() == this);
+
+  server->CheckFetch(
+      build_id_,
+      [self](const Err& err,
+                 std::function<void(SymbolServer::FetchCallback)> cb) {
+        if (!cb)
+          self->Error(self, err);
+        else
+          self->Found(self, std::move(cb));
+      });
+}
 
 void Download::Found(std::shared_ptr<Download> self,
                      std::function<void(SymbolServer::FetchCallback)> cb) {
@@ -115,8 +132,6 @@ void Download::RunCB(std::shared_ptr<Download> self,
     }
   });
 }
-
-}  // namespace
 
 SystemImpl::SystemImpl(Session* session)
     : System(session), symbols_(this), weak_factory_(this) {
@@ -231,9 +246,13 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
   return result;
 }
 
-void SystemImpl::RequestDownload(const std::string& build_id) {
+std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id, bool quiet) {
+  if (auto existing = downloads_[build_id].lock()) {
+    return existing;
+  }
+
   auto download = std::make_shared<Download>(
-      build_id, [build_id, weak_this = weak_factory_.GetWeakPtr()](
+      build_id, [build_id, weak_this = weak_factory_.GetWeakPtr(), quiet](
                     const Err& err, const std::string& path) {
         if (!weak_this) {
           return;
@@ -253,25 +272,25 @@ void SystemImpl::RequestDownload(const std::string& build_id) {
               process->GetSymbols()->RetryLoadBuildID(build_id);
             }
           }
-        } else {
+        } else if (!quiet) {
           weak_this->NotifyFailedToFindDebugSymbols(err, build_id);
         }
       });
+
+  downloads_[build_id] = download;
+
+  return download;
+}
+
+void SystemImpl::RequestDownload(const std::string& build_id, bool quiet) {
+  auto download = GetDownload(build_id, quiet);
 
   for (auto& server : symbol_servers_) {
     if (server->state() != SymbolServer::State::kReady) {
       continue;
     }
 
-    server->CheckFetch(
-        build_id,
-        [download](const Err& err,
-                   std::function<void(SymbolServer::FetchCallback)> cb) {
-          if (!cb)
-            download->Error(download, err);
-          else
-            download->Found(download, std::move(cb));
-        });
+    download->AddServer(download, server.get());
   }
 }
 
@@ -295,6 +314,21 @@ void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
             status.name.c_str(), status.build_id.c_str())));
       } else {
         process->OnSymbolLoadFailure(err);
+      }
+    }
+  }
+}
+
+void SystemImpl::OnSymbolServerBecomesReady(SymbolServer* server) {
+  for (const auto& target : targets_) {
+    auto process = target->process();
+    if (!process)
+      continue;
+
+    for (const auto& mod : process->GetSymbols()->GetStatus()) {
+      if (!mod.symbols || !mod.symbols->module_ref()) {
+        auto download = GetDownload(mod.build_id, true);
+        download->AddServer(download, server);
       }
     }
   }
@@ -467,9 +501,21 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
     for (const auto& url : urls) {
       if (existing.find(url) == existing.end()) {
         symbol_servers_.push_back(SymbolServer::FromURL(session(), url));
+        auto& server = symbol_servers_.back();
 
         for (auto& observer : observers()) {
-          observer.DidCreateSymbolServer(symbol_servers_.back().get());
+          observer.DidCreateSymbolServer(server.get());
+        }
+
+        server->set_state_change_callback(
+            [weak_this = weak_factory_.GetWeakPtr()](
+                SymbolServer* server, SymbolServer::State state) {
+              if (weak_this && state == SymbolServer::State::kReady)
+                weak_this->OnSymbolServerBecomesReady(server);
+            });
+
+        if (server->state() == SymbolServer::State::kReady) {
+          OnSymbolServerBecomesReady(server.get());
         }
       }
     }

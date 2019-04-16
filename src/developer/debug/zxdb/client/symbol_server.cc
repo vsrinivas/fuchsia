@@ -336,7 +336,7 @@ void SymbolServer::ChangeState(SymbolServer::State state) {
   state_ = state;
 
   if (state_change_callback_)
-    state_change_callback_(state_);
+    state_change_callback_(this, state_);
 }
 
 std::unique_ptr<SymbolServer> SymbolServer::FromURL(Session* session,

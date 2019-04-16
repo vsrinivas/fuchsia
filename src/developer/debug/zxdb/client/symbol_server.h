@@ -43,7 +43,7 @@ class SymbolServer : public ClientObject {
   const std::vector<std::string>& error_log() const { return error_log_; }
 
   State state() const { return state_; }
-  void set_state_change_callback(std::function<void(State)> cb) {
+  void set_state_change_callback(std::function<void(SymbolServer*,State)> cb) {
     state_change_callback_ = cb;
   }
 
@@ -80,7 +80,7 @@ class SymbolServer : public ClientObject {
   // handle custom protocol identifiers etc.
   std::string name_;
 
-  std::function<void(State)> state_change_callback_ = nullptr;
+  std::function<void(SymbolServer*,State)> state_change_callback_ = nullptr;
 };
 
 }  // namespace zxdb

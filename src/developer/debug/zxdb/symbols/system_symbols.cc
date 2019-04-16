@@ -90,7 +90,7 @@ Err SystemSymbols::GetModule(const std::string& build_id,
     FXL_DCHECK(download_handler_);
 
     *module = nullptr;
-    download_handler_->RequestDownload(build_id);
+    download_handler_->RequestDownload(build_id, false);
     return Err();
   }
 
