@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/processargs.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <random>
@@ -34,10 +35,7 @@ constexpr uint8_t kArbitraryConstant = 2;
 
 constexpr char kServersEnvVarName[] = "FIDL_COMPATIBILITY_TEST_SERVERS";
 constexpr char kUsage[] =
-    ("Usage:\n  FIDL_COMPATIBILITY_TEST_SERVERS=foo_server,bar_server "
-     "fidl_compatibility_test\n"
-     "You must set the environment variable FIDL_COMPATIBILITY_TEST_SERVERS to "
-     "a comma-separated list of server URLs when running this test.");
+    ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
 
 zx::handle Handle() {
   zx_handle_t raw_event;
@@ -923,81 +921,91 @@ class CompatibilityTest
   std::unique_ptr<async::Loop> loop_;
 };
 
-TEST_P(CompatibilityTest, EchoStruct) {
-  RecordProperty("proxy_url", proxy_url_);
-  RecordProperty("server_url", server_url_);
-  std::cerr << proxy_url_ << " <-> " << server_url_ << std::endl;
+std::vector<std::string> servers;
 
-  Struct sent;
-  Initialize(&sent);
-  fidl::test::compatibility::EchoClientApp app;
-  app.Start(proxy_url_);
+using TestBody = std::function<void(async::Loop& loop,
+                                    fidl::test::compatibility::EchoPtr& proxy,
+                                    const std::string& server_url)>;
 
-  Struct sent_clone;
-  sent.Clone(&sent_clone);
-  Struct resp_clone;
-  bool called_back = false;
-  app.echo()->EchoStruct(std::move(sent), server_url_,
-                         [this, &resp_clone, &called_back](Struct resp) {
-                           ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-                           called_back = true;
-                           loop_->Quit();
-                         });
+void ForAllServers(TestBody body) {
+  for (auto const& proxy_url : servers) {
+    for (auto const& server_url : servers) {
+      std::cerr << proxy_url << " <-> " << server_url << std::endl;
+      async::Loop loop(&kAsyncLoopConfigAttachToThread);
+      fidl::test::compatibility::EchoClientApp proxy;
+      proxy.Start(proxy_url);
 
-  loop_->Run();
-  ASSERT_TRUE(called_back);
-  ExpectEq(sent_clone, resp_clone);
+      body(loop, proxy.echo(), server_url);
+    }
+  }
 }
 
-TEST_P(CompatibilityTest, EchoStructNoRetVal) {
-  RecordProperty("proxy_url", proxy_url_);
-  RecordProperty("server_url", server_url_);
-  std::cerr << proxy_url_ << " <-> " << server_url_ << std::endl;
+TEST(Compatibility, EchoStruct) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    Struct sent;
+    Initialize(&sent);
 
-  Struct sent;
-  Initialize(&sent);
-  fidl::test::compatibility::EchoClientApp app;
-  app.Start(proxy_url_);
+    Struct sent_clone;
+    sent.Clone(&sent_clone);
+    Struct resp_clone;
+    bool called_back = false;
+    proxy->EchoStruct(std::move(sent), server_url,
+                      [&loop, &resp_clone, &called_back](Struct resp) {
+                        ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                        called_back = true;
+                        loop.Quit();
+                      });
 
-  Struct sent_clone;
-  sent.Clone(&sent_clone);
-  std::mutex m;
-  std::condition_variable cv;
-  fidl::test::compatibility::Struct resp_clone;
-  bool event_received = false;
-  app.echo().events().EchoEvent = [this, &resp_clone,
-                                   &event_received](Struct resp) {
-    resp.Clone(&resp_clone);
-    event_received = true;
-    loop_->Quit();
-  };
-  app.echo()->EchoStructNoRetVal(std::move(sent), server_url_);
-  loop_->Run();
-  ASSERT_TRUE(event_received);
-  ExpectEq(sent_clone, resp_clone);
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectEq(sent_clone, resp_clone);
+  });
 }
 
-// It'd be better to take these on the command-line but googletest doesn't
-// support instantiating tests after main() is called.
-std::vector<std::string> ServerURLsFromEnv() {
-  const char* servers_raw = getenv(kServersEnvVarName);
-  FXL_CHECK(servers_raw != nullptr) << kUsage;
-  std::vector<std::string> servers =
-      fxl::SplitStringCopy(fxl::StringView(servers_raw, strlen(servers_raw)),
-                           ",", fxl::WhiteSpaceHandling::kTrimWhitespace,
-                           fxl::SplitResult::kSplitWantNonEmpty);
-  FXL_CHECK(!servers.empty()) << kUsage;
-  return servers;
+TEST(Compatibility, EchoStructNoRetval) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    Struct sent;
+    Initialize(&sent);
+
+    Struct sent_clone;
+    sent.Clone(&sent_clone);
+    fidl::test::compatibility::Struct resp_clone;
+    bool event_received = false;
+    proxy.events().EchoEvent = [&loop, &resp_clone,
+                                &event_received](Struct resp) {
+      resp.Clone(&resp_clone);
+      event_received = true;
+      loop.Quit();
+    };
+    proxy->EchoStructNoRetVal(std::move(sent), server_url);
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    ExpectEq(sent_clone, resp_clone);
+  });
 }
 
 }  // namespace
 
-INSTANTIATE_TEST_SUITE_P(
-    CompatibilityTest, CompatibilityTest,
-    ::testing::Combine(::testing::ValuesIn(ServerURLsFromEnv()),
-                       ::testing::ValuesIn(ServerURLsFromEnv())));
-
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
+
+  // TODO(ianloic): remove support for environment once Topaz has migrated to
+  // passing server names on the command-line.
+  const char* servers_from_env = getenv(kServersEnvVarName);
+  if (servers_from_env != nullptr) {
+    servers = fxl::SplitStringCopy(
+        fxl::StringView(servers_from_env, strlen(servers_from_env)), ",",
+        fxl::WhiteSpaceHandling::kTrimWhitespace,
+        fxl::SplitResult::kSplitWantNonEmpty);
+  }
+
+  for (int i = 1; i < argc; i++) {
+    servers.push_back(argv[i]);
+  }
+
+  FXL_CHECK(!servers.empty()) << kUsage;
+
   return RUN_ALL_TESTS();
 }

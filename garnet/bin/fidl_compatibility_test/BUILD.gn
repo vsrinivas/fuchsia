@@ -145,6 +145,13 @@ package("fidl_compatibility_test_bin") {
     ":fidl_compatibility_test",
   ]
 
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_bin.cmx"
+      dest = "fidl_compatibility_test_bin.cmx"
+    },
+  ]
+
   testonly = true
 
   # Declare it as a binary so humans and automation don't try to run it
