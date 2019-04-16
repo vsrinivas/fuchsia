@@ -441,12 +441,23 @@ void DebuggedProcess::OnWriteMemory(
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }
 
-void DebuggedProcess::SuspendAll(std::vector<uint64_t>* suspended_koids) {
-  for (auto& pair : threads_) {
-    if (pair.second->Suspend() == DebuggedThread::SuspendResult::kWasRunning) {
+void DebuggedProcess::SuspendAll(bool synchronous,
+                                 std::vector<uint64_t>* suspended_koids) {
+  // We issue the suspension order for all the threads.
+  for (auto& [thread_koid, thread] : threads_) {
+    if (thread->Suspend() == DebuggedThread::SuspendResult::kWasRunning) {
       if (suspended_koids)
-        suspended_koids->push_back(pair.first);
+        suspended_koids->push_back(thread_koid);
     }
+  }
+
+  if (!synchronous)
+    return;
+
+  // If we want to block, we need to wait on the notification for each thread.
+  zx::time deadline = DebuggedThread::DefaultSuspendDeadline();
+  for (auto& [thread_koid, thread] : threads_) {
+    thread->WaitForSuspension(deadline);
   }
 }
 

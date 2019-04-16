@@ -82,6 +82,12 @@ class DebuggedThread {
   };
   SuspendResult Suspend(bool synchronous = false);
 
+  // The typical suspend deadline users should use when suspending.
+  static zx::time DefaultSuspendDeadline();
+
+  // Waits on a suspension token.
+  SuspendResult WaitForSuspension(zx::time deadline);
+
   // Fills the thread status record. If full_stack is set, a full backtrace
   // will be generated, otherwise a minimal one will be generated.
   //
@@ -152,7 +158,6 @@ class DebuggedThread {
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
 
-  zx_status_t WaitForSuspension();
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.

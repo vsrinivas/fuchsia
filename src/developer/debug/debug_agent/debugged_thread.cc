@@ -209,6 +209,9 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 }
 
 DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
+  // Subsequent suspend calls should return immediatelly. Note that this does
+  // not mean that the thread is in that state, but rather that that operation
+  // was sent to the kernel.
   if (suspend_reason_ == SuspendReason::kException)
     return SuspendResult::kOnException;
 
@@ -224,12 +227,28 @@ DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
 
   suspend_reason_ = SuspendReason::kOther;
 
-  if (synchronous) {
-    status = WaitForSuspension();
-    if (status != ZX_OK)
-      return SuspendResult::kError;
-  }
+  if (synchronous)
+    return WaitForSuspension(DefaultSuspendDeadline());
   return SuspendResult::kWasRunning;
+}
+
+zx::time DebuggedThread::DefaultSuspendDeadline() {
+  return zx::deadline_after(zx::msec(100));
+}
+
+DebuggedThread::SuspendResult DebuggedThread::WaitForSuspension(
+    zx::time deadline) {
+  // Only exception will return immediatelly.
+  if (suspend_reason_ == SuspendReason::kException)
+    return SuspendResult::kOnException;
+
+  zx_signals_t observed;
+  zx_status_t status = thread_.wait_one(ZX_THREAD_SUSPENDED, deadline,
+                                        &observed);
+  FXL_DCHECK(observed & ZX_THREAD_SUSPENDED);
+  if (status != ZX_OK)
+    return SuspendResult::kError;
+  return SuspendResult::kSuspended;
 }
 
 void DebuggedThread::FillThreadRecord(
@@ -489,17 +508,6 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   // This could fail for legitimate reasons, like the process could have just
   // closed the thread.
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
-}
-
-zx_status_t DebuggedThread::WaitForSuspension() {
-  zx_signals_t observed;
-  zx_status_t status = thread_.wait_one(ZX_THREAD_SUSPENDED,
-                                        zx::time::infinite(),
-                                        &observed);
-  FXL_DCHECK(observed & ZX_THREAD_SUSPENDED);
-  if (status != ZX_OK)
-    return status;
-  return ZX_OK;
 }
 
 const char* DebuggedThread::SuspendReasonToString(SuspendReason reason) {

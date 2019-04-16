@@ -236,6 +236,9 @@ test_package("debug_agent_tests") {
       name = "debug_test_true"
     },
     {
+      name = "multi_threaded"
+    },
+    {
       name = "printer"
     },
     {

@@ -101,6 +101,7 @@ group("helper_executables") {
   public_deps = [
     ":debug_test_false",
     ":debug_test_true",
+    ":multi_threaded",
     ":printer",
     ":process_loop",
     ":process_spawner",
@@ -123,6 +124,19 @@ executable("debug_test_true") {
 executable("debug_test_false") {
   sources = [
     "false.c",
+  ]
+}
+
+executable("multi_threaded") {
+  testonly = true
+
+  sources = [
+    "multi_threaded.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 }
 
