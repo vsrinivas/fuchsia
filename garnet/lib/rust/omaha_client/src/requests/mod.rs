@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{
+use crate::{
     common::App,
     configuration::Config,
     protocol::{
@@ -13,7 +13,7 @@ use super::{
 
 use log::*;
 
-type ProtocolApp = super::protocol::request::App;
+type ProtocolApp = crate::protocol::request::App;
 
 /// These are the parameters that describe how the request should be performed.
 #[derive(Clone, Debug, PartialEq)]
@@ -195,13 +195,12 @@ impl<'a> RequestBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{
+    use super::*;
+    use crate::{
         common::Version,
         configuration::Updater,
         protocol::request::{EventResult, EventType, OS},
     };
-
-    use super::*;
     use pretty_assertions::assert_eq;
 
     /// Handy generator for an updater configuration.  Used to reduce test boilerplate.

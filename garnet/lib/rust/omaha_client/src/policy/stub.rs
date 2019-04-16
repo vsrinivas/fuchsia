@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::super::{
+use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     install_plan::InstallPlan,
+    policy::{CheckDecision, Policy, PolicyData, UpdateDecision},
     requests::RequestParams,
 };
-use super::{CheckDecision, Policy, PolicyData, UpdateDecision};
 
 /// A stub policy implementation that allows everything immediately.
 pub struct StubPolicy;
@@ -49,8 +49,8 @@ impl Policy for StubPolicy {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::{install_plan::StubInstallPlan, protocol::request::InstallSource};
     use super::*;
+    use crate::{install_plan::StubInstallPlan, protocol::request::InstallSource};
     use std::time::SystemTime;
 
     const SCHEDULING: UpdateCheckSchedule = UpdateCheckSchedule {

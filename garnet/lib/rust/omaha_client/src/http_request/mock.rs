@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::HttpRequest;
+use crate::http_request::HttpRequest;
 use futures::compat::Stream01CompatExt;
 use futures::executor::block_on;
 use futures::future::FutureObj;

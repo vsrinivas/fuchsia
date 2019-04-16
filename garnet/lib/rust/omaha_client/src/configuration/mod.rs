@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{common::Version, protocol::request::OS};
+use crate::{common::Version, protocol::request::OS};
 
 /// This is the name and version of the updater binary that is built using this crate.
 ///

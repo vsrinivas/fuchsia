@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::Cohort;
+use crate::protocol::Cohort;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 

@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::Cohort;
-
+use crate::protocol::Cohort;
 use serde_derive::Serialize;
 use serde_repr::Serialize_repr;
 
@@ -161,7 +160,7 @@ pub struct UpdateCheck {
     /// value of false indicates that the client will attempt an update if instructed that one is
     /// available.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
-    #[serde(rename="updatedisabled")]
+    #[serde(rename = "updatedisabled")]
     pub disabled: bool,
 }
 

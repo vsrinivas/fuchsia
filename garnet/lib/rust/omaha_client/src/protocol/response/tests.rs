@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::super::Cohort;
 use super::*;
+use crate::protocol::Cohort;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 

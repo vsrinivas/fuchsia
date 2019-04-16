@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule};
-use super::install_plan::InstallPlan;
-use super::requests::RequestParams;
+use crate::{
+    common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
+    install_plan::InstallPlan,
+    requests::RequestParams,
+};
 use std::time::SystemTime;
 
 pub mod stub;
