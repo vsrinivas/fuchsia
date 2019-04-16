@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+
+package("netemul_lib_test") {
+  testonly = true
+
+  deps = [
+    "network:network_test_bin",
+    "sync:sync_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "network_test"
+      environments = basic_envs
+    },
+    {
+      name = "sync_test"
+      environments = basic_envs
+    },
+  ]
+}

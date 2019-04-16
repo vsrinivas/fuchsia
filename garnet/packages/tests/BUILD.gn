@@ -510,10 +510,7 @@ group("fidl") {
 group("netemul") {
   testonly = true
   public_deps = [
-    "//garnet/bin/netemul_runner/test:netemul_sandbox_test",
-    "//garnet/packages/prod:netstack",
-    "//garnet/packages/testing:netemul_runner",
-    "//garnet/public/lib/netemul:netemul_lib_test",
+    "//src/connectivity/network/testing/netemul:tests",
   ]
 }
 

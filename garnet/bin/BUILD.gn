@@ -43,7 +43,6 @@ group("bin") {
     "net_ctl",
     "netcfg",
     "netconnector",
-    "netemul_runner",
     "network-speed-test",
     "network_settings_server",
     "network_time",

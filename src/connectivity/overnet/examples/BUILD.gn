@@ -62,6 +62,7 @@ group("tests") {
   public_deps = [
     ":overnet_examples_tests",
     "//garnet/bin/mdns/service:mdns",
+    "//src/connectivity/network/testing/netemul",
     "//src/connectivity/overnet/overnetstack",
   ]
 }

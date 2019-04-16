@@ -9,7 +9,6 @@ group("all") {
   testonly = true
   public_deps = [
     "//garnet/packages/testing:environment_delegating_runner",
-    "//garnet/packages/testing:netemul_runner",
     "//garnet/packages/testing:run_test_component",
     "//garnet/packages/testing:views",
   ]
@@ -33,13 +32,5 @@ group("run_test_component") {
   testonly = true
   public_deps = [
     "//garnet/bin/run_test_component",
-  ]
-}
-
-group("netemul_runner") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/netemul_runner:netemul_sandbox",
-    "//garnet/bin/netemul_runner/runner:netemul_runner",
   ]
 }

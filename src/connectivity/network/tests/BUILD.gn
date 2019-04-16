@@ -19,11 +19,11 @@ executable("netstack_integration_test") {
 
   deps = [
     "//garnet/lib/inet",
-    "//garnet/public/lib/netemul/network:ethertap",
     "//garnet/public/lib/netstack/c",
     "//sdk/fidl/fuchsia.net.filter",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/connectivity/network/testing/netemul/lib/network:ethertap",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
     "//zircon/public/fidl/fuchsia-net-stack",

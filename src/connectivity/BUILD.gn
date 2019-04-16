@@ -22,6 +22,7 @@ group("tests") {
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
     "//src/connectivity/bluetooth/tests",
+    "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/overnet/examples:tests",
     "//src/connectivity/overnet/lib:overnet_tests",
     "//src/connectivity/overnet/overnetstack:overnetstack_tests",

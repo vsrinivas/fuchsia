@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("runner") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":netemul_runner",
+  ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "netemul_runner"
+  sources = [
+    "main.cc",
+    "runner.cc",
+    "runner.h",
+  ]
+
+  deps = [
+    "//garnet/lib/cmx:cmx",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/pkg_url",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("netemul_runner") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "netemul_runner"
+
+  meta = [
+    {
+      path = rebase_path("meta/netemul_runner.cmx")
+      dest = "netemul_runner.cmx"
+    },
+  ]
+}

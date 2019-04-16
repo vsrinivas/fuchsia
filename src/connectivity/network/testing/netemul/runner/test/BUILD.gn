@@ -1,0 +1,168 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":netemul_empty_binaries",
+    ":netemul_sandbox_test",
+    "dummy_proc",
+    "dynamic_devices",
+    "easy_netstack_cfg",
+    "env_build",
+    "inheritance",
+    "netstack_socks",
+    "sandbox_service",
+    "svc_list",
+  ]
+}
+
+# netemul tests are defined only by their .cmx file.
+# currently, there's a limitation on runtests where every test
+# needs an associated binary. Some changes to how this is set up
+# are on the pipeline but not ready yet, so here we just
+# create some empty files and we'll use them as dummy binaries.
+# If you copy this pattern, try to use the name "netemul_empty_binaries"
+# as well, so when a better approach comes along I can hunt down
+# for this pattern and update it everywhere.
+# TODO(brunodalbo) migrate .cmx file handling
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/svc_list_test", "")
+  write_file("$root_out_dir/netstack_socks_test", "")
+  write_file("$root_out_dir/env_build_test", "")
+  write_file("$root_out_dir/easy_netstack_cfg_test", "")
+  write_file("$root_out_dir/inheritance_test", "")
+  write_file("$root_out_dir/dynamic_devices_test", "")
+  write_file("$root_out_dir/netstack_intermediary_test", "")
+}
+
+test_package("netemul_sandbox_test") {
+  deps = [
+    ":netemul_empty_binaries",
+    "dummy_proc",
+    "dynamic_devices",
+    "easy_netstack_cfg",
+    "env_build",
+    "inheritance",
+    "netstack_intermediary",
+    "netstack_socks",
+    "sandbox_service",
+    "svc_list",
+    "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
+    "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings",
+    "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/dummy_proc.cmx")
+      dest = "dummy_proc.cmx"
+    },
+    {
+      path = rebase_path("meta/svc_list.cmx")
+      dest = "svc_list.cmx"
+    },
+    {
+      path = rebase_path("meta/netstack_socks.cmx")
+      dest = "netstack_socks.cmx"
+    },
+    {
+      path = rebase_path("meta/env_build.cmx")
+      dest = "env_build.cmx"
+    },
+    {
+      path = rebase_path("meta/easy_netstack_cfg.cmx")
+      dest = "easy_netstack_cfg.cmx"
+    },
+    {
+      path = rebase_path("meta/inheritance.cmx")
+      dest = "inheritance.cmx"
+    },
+    {
+      path = rebase_path("meta/dynamic_devices.cmx")
+      dest = "dynamic_devices.cmx"
+    },
+    {
+      path = rebase_path("meta/netstack_intermediary.cmx")
+      dest = "netstack_intermediary.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "dummy_proc"
+    },
+    {
+      name = "svc_list"
+    },
+    {
+      name = "netstack_socks"
+    },
+    {
+      name = "env_build"
+    },
+    {
+      name = "easy_netstack_cfg"
+    },
+    {
+      name = "inheritance"
+    },
+    {
+      name = "dynamic_devices"
+    },
+    {
+      name = "netstack_intermediary"
+    },
+  ]
+
+  tests = [
+    {
+      name = "sandbox_unittest"
+      environments = basic_envs
+    },
+    {
+      name = "model_unittest"
+    },
+    {
+      name = "sandbox_service_bin_test"
+      dest = "sandbox_service"
+      environments = basic_envs
+    },
+    {
+      name = "svc_list_test"
+      environments = basic_envs
+    },
+    {
+      name = "env_build_test"
+      environments = basic_envs
+    },
+    {
+      name = "netstack_socks_test"
+      environments = basic_envs
+    },
+    {
+      name = "easy_netstack_cfg_test"
+      environments = basic_envs
+    },
+    {
+      name = "inheritance_test"
+      environments = basic_envs
+    },
+    {
+      name = "dynamic_devices_test"
+      environments = basic_envs
+    },
+    {
+      name = "mock_device_settings_bin_test"
+      dest = "mock_device_settings"
+    },
+    {
+      name = "netstack_intermediary_test"
+      environments = basic_envs
+    },
+  ]
+}

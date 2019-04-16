@@ -5,10 +5,10 @@
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <lib/netemul/network/ethernet_client.h>
-#include <lib/netemul/network/ethertap_client.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
+#include <src/connectivity/network/testing/netemul/lib/network/ethertap_client.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
