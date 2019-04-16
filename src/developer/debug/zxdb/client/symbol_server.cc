@@ -37,14 +37,14 @@ class CloudStorageSymbolServer : public SymbolServer {
   // gs://<bucket name>
   CloudStorageSymbolServer(Session* session, const std::string& url)
       : SymbolServer(session, url) {
-    state_ = SymbolServer::State::kAuth;
-
     // Strip off the protocol identifier, yielding only the bucket name.
     bucket_ = url.substr(5);
 
     if (bucket_.back() != '/') {
       bucket_ += "/";
     }
+
+    ChangeState(SymbolServer::State::kAuth);
   }
 
   std::string AuthInfo() const override;
@@ -65,7 +65,7 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   void IncrementRetries() {
     if (++retries_ == kMaxRetries) {
-      state_ = SymbolServer::State::kUnreachable;
+      ChangeState(SymbolServer::State::kUnreachable);
     }
   }
 
@@ -85,7 +85,7 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
   static std::string result;
   static const std::string kEmpty;
 
-  if (state_ != SymbolServer::State::kAuth) {
+  if (state() != SymbolServer::State::kAuth) {
     return kEmpty;
   }
 
@@ -108,13 +108,13 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
 
 void CloudStorageSymbolServer::Authenticate(
     const std::string& data, std::function<void(const Err&)> cb) {
-  if (state_ != SymbolServer::State::kAuth) {
+  if (state() != SymbolServer::State::kAuth) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb]() { cb(Err("Authentication not required.")); });
     return;
   }
 
-  state_ = SymbolServer::State::kBusy;
+  ChangeState(SymbolServer::State::kBusy);
 
   auto curl = Curl::MakeShared();
 
@@ -141,7 +141,7 @@ void CloudStorageSymbolServer::Authenticate(
       error += result.ToString();
 
       error_log_.push_back(error);
-      state_ = SymbolServer::State::kAuth;
+      ChangeState(SymbolServer::State::kAuth);
       cb(Err(error));
       return;
     }
@@ -150,7 +150,7 @@ void CloudStorageSymbolServer::Authenticate(
         !document->HasMember("access_token") ||
         !document->HasMember("refresh_token")) {
       error_log_.push_back("Authentication failed");
-      state_ = SymbolServer::State::kAuth;
+      ChangeState(SymbolServer::State::kAuth);
       cb(Err("Authentication failed"));
       return;
     }
@@ -159,14 +159,14 @@ void CloudStorageSymbolServer::Authenticate(
     refresh_token_ = (*document)["refresh_token"].GetString();
 
     error_log_.clear();
-    state_ = SymbolServer::State::kReady;
+    ChangeState(SymbolServer::State::kReady);
     cb(Err());
   });
 }
 
 std::shared_ptr<Curl> CloudStorageSymbolServer::PrepareCurl(
     const std::string& build_id) {
-  if (state_ != SymbolServer::State::kReady) {
+  if (state() != SymbolServer::State::kReady) {
     return nullptr;
   }
 
@@ -331,6 +331,13 @@ void CloudStorageSymbolServer::FetchWithCurl(const std::string& build_id,
 }
 
 }  // namespace
+
+void SymbolServer::ChangeState(SymbolServer::State state) {
+  state_ = state;
+
+  if (state_change_callback_)
+    state_change_callback_(state_);
+}
 
 std::unique_ptr<SymbolServer> SymbolServer::FromURL(Session* session,
                                                     const std::string& url) {

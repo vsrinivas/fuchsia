@@ -43,6 +43,9 @@ class SymbolServer : public ClientObject {
   const std::vector<std::string>& error_log() const { return error_log_; }
 
   State state() const { return state_; }
+  void set_state_change_callback(std::function<void(State)> cb) {
+    state_change_callback_ = cb;
+  }
 
   AuthType auth_type() const { return AuthType::kOAuth; }
 
@@ -65,16 +68,19 @@ class SymbolServer : public ClientObject {
  protected:
   explicit SymbolServer(Session* session, const std::string& name)
       : ClientObject(session), name_(name) {}
+  void ChangeState(State state);
 
   std::vector<std::string> error_log_;
 
+ private:
   State state_ = State::kInitializing;
 
- private:
   // URL as originally used to construct the class. This is mostly to be used
   // to identify the server in the UI. The actual URL may be processed to
   // handle custom protocol identifiers etc.
   std::string name_;
+
+  std::function<void(State)> state_change_callback_ = nullptr;
 };
 
 }  // namespace zxdb
