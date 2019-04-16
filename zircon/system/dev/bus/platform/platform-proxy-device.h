@@ -93,28 +93,6 @@ private:
     fbl::RefPtr<PlatformProxy> proxy_;
 };
 
-class ProxyPower : public ddk::PowerProtocol<ProxyPower> {
-public:
-    explicit ProxyPower(uint32_t device_id, uint32_t index, fbl::RefPtr<PlatformProxy> proxy)
-        : device_id_(device_id), index_(index), proxy_(proxy) {}
-
-    zx_status_t PowerEnablePowerDomain();
-    zx_status_t PowerDisablePowerDomain();
-    zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
-    zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
-    zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* value);
-
-    void GetProtocol(power_protocol_t* proto) {
-        proto->ops = &power_protocol_ops_;
-        proto->ctx = this;
-    }
-
-private:
-    uint32_t device_id_;
-    uint32_t index_;
-    fbl::RefPtr<PlatformProxy> proxy_;
-};
-
 class ProxySysmem : public ddk::SysmemProtocol<ProxySysmem> {
 public:
     explicit ProxySysmem(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
@@ -223,7 +201,6 @@ private:
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyGpio> gpios_;
-    fbl::Vector<ProxyPower> power_domains_;
     fbl::Vector<ProxyI2c> i2cs_;
     ProxyClock clk_;
     ProxySysmem sysmem_;
