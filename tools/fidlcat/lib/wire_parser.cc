@@ -17,7 +17,7 @@ void PrintPayload(FILE* fstream, const fidl::Message& message) {
   uint8_t* payload = reinterpret_cast<uint8_t*>(message.bytes().data());
   uint32_t amt = message.bytes().actual();
   for (size_t i = 0; i < amt; i++) {
-    fprintf(fstream, "b%5zu: 0x%x\n", i, payload[i]);
+    fprintf(fstream, "b %p %5zu: 0x%x\n", payload + i, i, payload[i]);
   }
   if (message.handles().actual() != 0) {
     fprintf(fstream, "======\nhandles\n");

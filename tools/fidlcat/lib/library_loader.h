@@ -57,6 +57,7 @@ class Interface;
 class InterfaceMethod;
 class Enum;
 class Struct;
+class Union;
 
 class InterfaceMethodParameter {
   friend class InterfaceMethod;
@@ -188,13 +189,77 @@ class Enum {
   const rapidjson::Value& value_;
 };
 
+// TODO: Consider whether this is duplicative of Struct / Table / XUnion member.
+class UnionMember {
+ public:
+  UnionMember(const Union& enclosing_union, const rapidjson::Value& value)
+      : enclosing_union_(enclosing_union), value_(value) {}
+
+  virtual std::unique_ptr<Type> GetType() const;
+
+  virtual uint64_t size() const {
+    return std::strtoll(value_["size"].GetString(), nullptr, 10);
+  }
+
+  virtual uint64_t offset() const {
+    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
+  }
+
+  virtual std::string name() const { return value_["name"].GetString(); }
+
+  virtual const Union& enclosing_union() const { return enclosing_union_; }
+
+  virtual ~UnionMember() {}
+
+ private:
+  const Union& enclosing_union_;
+  const rapidjson::Value& value_;
+};
+
+class Union {
+  friend class Library;
+
+ public:
+  Union(const Library& enclosing_library, const rapidjson::Value& value)
+      : enclosing_library_(enclosing_library),
+        value_(value),
+        illegal_(nullptr) {
+    for (auto& member : value["members"].GetArray()) {
+      members_.emplace_back(*this, member);
+    }
+  }
+
+  Union(const Union& other) : Union(other.enclosing_library_, other.value_) {}
+
+  const Library& enclosing_library() const { return enclosing_library_; }
+
+  const std::vector<UnionMember>& members() const { return members_; }
+
+  const UnionMember& MemberWithTag(uint32_t tag) const;
+
+  uint64_t alignment() const {
+    return std::strtoll(value_["alignment"].GetString(), nullptr, 10);
+  }
+
+  uint32_t size() const {
+    return std::strtoll(value_["size"].GetString(), nullptr, 10);
+  }
+
+ private:
+  const rapidjson::Value& schema() const { return value_; }
+
+  const UnionMember& get_illegal_member() const;
+
+  const Library& enclosing_library_;
+  const rapidjson::Value& value_;
+  std::vector<UnionMember> members_;
+  mutable std::unique_ptr<UnionMember> illegal_;
+};
+
 class StructMember {
  public:
   StructMember(const Struct& enclosing_struct, const rapidjson::Value& value)
-      : enclosing_struct_(enclosing_struct), value_(value) {
-    // TODO: delete the following line
-    (void)value_;
-  }
+      : enclosing_struct_(enclosing_struct), value_(value) {}
 
   std::unique_ptr<Type> GetType() const;
 
@@ -221,9 +286,6 @@ class Struct {
  public:
   Struct(const Library& enclosing_library, const rapidjson::Value& value)
       : enclosing_library_(enclosing_library), value_(value) {
-    // TODO: delete the next line.
-    (void)value_;
-    (void)enclosing_library_;
     for (auto& member : value["members"].GetArray()) {
       members_.emplace_back(*this, member);
     }
@@ -262,6 +324,11 @@ class Library {
                        std::forward_as_tuple(str["name"].GetString()),
                        std::forward_as_tuple(*this, str));
     }
+    for (auto& str : backing_document_["union_declarations"].GetArray()) {
+      unions_.emplace(std::piecewise_construct,
+                      std::forward_as_tuple(str["name"].GetString()),
+                      std::forward_as_tuple(*this, str));
+    }
   }
 
   // Adds methods to this Library.  Pass it a std::map from ordinal value to the
@@ -295,6 +362,7 @@ class Library {
   std::vector<Interface> interfaces_;
   std::map<std::string, Enum> enums_;
   std::map<std::string, Struct> structs_;
+  std::map<std::string, Union> unions_;
 };
 
 // An indexed collection of libraries.

@@ -29,13 +29,25 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(
     bool is_nullable, std::string& identifier) const {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
-    return std::make_unique<StructType>(std::ref(str->second), is_nullable);
+    std::unique_ptr<Type> type(new StructType(std::ref(str->second)));
+    if (is_nullable) {
+      return std::make_unique<PointerType>(type.release());
+    }
+    return type;
   }
   auto enu = enums_.find(identifier);
   if (enu != enums_.end()) {
     return std::make_unique<EnumType>(std::ref(enu->second));
   }
-  // And probably for unions and tables.
+  auto uni = unions_.find(identifier);
+  if (uni != unions_.end()) {
+    std::unique_ptr<Type> type(new UnionType(std::ref(uni->second)));
+    if (is_nullable) {
+      return std::make_unique<PointerType>(type.release());
+    }
+    return type;
+  }
+  // And probably for tables.
   return Type::get_illegal();
 }
 
@@ -61,13 +73,50 @@ uint32_t Enum::size() const { return GetType()->InlineSize(); }
 std::unique_ptr<Type> StructMember::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
-    // TODO: something else here.
-    // Probably print out raw bytes instead.
     return Type::get_illegal();
   }
   const rapidjson::Value& type = value_["type"];
   return Type::GetType(
       enclosing_struct().enclosing_library().enclosing_loader(), type);
+}
+
+std::unique_ptr<Type> UnionMember::GetType() const {
+  if (!value_.HasMember("type")) {
+    FXL_LOG(ERROR) << "Type missing";
+    return Type::get_illegal();
+  }
+  const rapidjson::Value& type = value_["type"];
+  return Type::GetType(enclosing_union().enclosing_library().enclosing_loader(),
+                       type);
+}
+
+const UnionMember& Union::get_illegal_member() const {
+  class IllegalUnionMember : public UnionMember {
+   public:
+    IllegalUnionMember(const Union& uni) : UnionMember(uni, value_) {}
+
+    virtual std::unique_ptr<Type> GetType() const override {
+      return Type::get_illegal();
+    }
+
+    virtual uint64_t size() const override { return enclosing_union().size(); }
+
+    virtual std::string name() const override { return "unknown"; }
+
+   private:
+    const rapidjson::Value value_;
+  };
+  if (illegal_ == nullptr) {
+    illegal_.reset(new IllegalUnionMember(*this));
+  }
+  return *illegal_;
+}
+
+const UnionMember& Union::MemberWithTag(uint32_t tag) const {
+  if (tag >= members_.size() || tag < 0) {
+    return get_illegal_member();
+  }
+  return members_[tag];
 }
 
 LibraryLoader::LibraryLoader(

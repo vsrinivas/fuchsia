@@ -91,6 +91,15 @@ bool Marker::is_valid() const {
          (end_byte_pos_ == nullptr || handle_pos_ <= end_handle_pos_);
 }
 
+namespace {
+
+ValueGeneratingCallback NullCallback() {
+  return [](ObjectTracker* tracker, Marker& marker, rapidjson::Value& value,
+            rapidjson::Document::AllocatorType& allocator) { value.SetNull(); };
+}
+
+}  // namespace
+
 // Prints out raw bytes as a C string of hex pairs ("af b0 1e...").  Useful for
 // debugging / unknown data.
 Marker UnknownType::GetValueCallback(Marker marker, size_t length,
@@ -180,123 +189,142 @@ Marker BoolType::GetValueCallback(Marker marker, size_t length,
   return marker;
 }
 
-// This provides a Tracker for objects that may or may not be out-of-line.  If
-// the object is in-line, it should use the Tracker provided by the outermost
-// enclosing fixed length object (for example, an in-line struct embedded in the
-// params should use the params's tracker).  If the object is out-of-line, then
-// it needs its own tracker.  This class keeps track of the slightly different
-// things you need to do in the two cases.
-class TrackerMark {
- public:
-  // Tracker should be present if this is an in-line object, and absent if it
-  // isn't.
-  TrackerMark(Marker marker, std::optional<ObjectTracker*> tracker,
-              const Marker& end_)
-      : marker_(marker), inner_tracker_(end_) {
-    if (tracker) {
-      tracker_ = *tracker;
-    } else {
-      tracker_ = &inner_tracker_;
-    }
-  }
-
-  ObjectTracker* GetTracker() const { return tracker_; }
-
-  // Run callbacks if this is an out-of-line object.
-  Marker MaybeRunCallbacks(Marker end_marker) const {
-    if (tracker_ == &inner_tracker_) {
-      if (!tracker_->RunCallbacksFrom(end_marker)) {
-        return end_marker;
-      }
-      end_marker.AdvanceBytesTo(AlignToNextWordBoundary(end_marker.byte_pos()));
-      return end_marker;
-    }
-    return marker_;
-  }
-
- private:
-  Marker marker_;
-  ObjectTracker* tracker_;
-  ObjectTracker inner_tracker_;
-};
-
-StructType::StructType(const Struct& str, bool is_nullable)
-    : struct_(str), is_nullable_(is_nullable) {}
-
 Marker StructType::GetValueCallback(Marker marker, size_t length,
                                     ObjectTracker* tracker,
                                     ValueGeneratingCallback& callback) const {
-  bool is_nullable = is_nullable_;
   const Struct& str = struct_;
-  Marker inline_marker = marker;
-  const uint8_t* bytes = marker.byte_pos();
-  marker.AdvanceBytesBy(length);
-  if (!marker.is_valid()) {
-    return marker;
-  }
-  uintptr_t val = internal::MemoryFrom<uintptr_t>(bytes);
-  if (is_nullable_) {
-    if (val == 0) {
-      callback = [](ObjectTracker* tracker, Marker& marker,
-                    rapidjson::Value& value,
-                    rapidjson::Document::AllocatorType& allocator) {
-        value.SetNull();
-        return;
-      };
-
-      return marker;
-    }
-
-    if (val != UINTPTR_MAX) {
-      FXL_LOG(INFO) << "Illegally encoded struct.";
-    }
-  }
-  callback = [inline_marker, str, is_nullable, tracker](
-                 ObjectTracker* ignored, Marker& outline_marker,
-                 rapidjson::Value& value,
-                 rapidjson::Document::AllocatorType& allocator) {
-    const Marker* mp;
-    std::optional<ObjectTracker*> tracker_for_mark;
-    if (is_nullable) {
-      mp = &outline_marker;
-      tracker_for_mark = std::nullopt;
-    } else {
-      mp = &inline_marker;
-      tracker_for_mark = std::optional<ObjectTracker*>(tracker);
-    }
-    Marker marker = *mp;
-
-    TrackerMark mark(outline_marker, tracker_for_mark, tracker->end());
+  callback = [str, mp = marker](ObjectTracker* tracker, Marker& marker,
+                                rapidjson::Value& value,
+                                rapidjson::Document::AllocatorType& allocator) {
     value.SetObject();
-    ObjectTracker* tracker = mark.GetTracker();
-    Marker prev_marker = marker;
+    Marker inline_marker = mp;
+    Marker prev_marker = inline_marker;
     for (auto& member : str.members()) {
       std::unique_ptr<Type> member_type = member.GetType();
       ValueGeneratingCallback value_callback;
-      Marker value_marker(marker.byte_pos() + member.offset(),
-                          marker.handle_pos(), tracker->end());
+      Marker value_marker(inline_marker.byte_pos() + member.offset(),
+                          prev_marker.handle_pos(), tracker->end());
       if (!value_marker.is_valid()) {
-        outline_marker = value_marker;
-        return;
-      }
-
-      value_marker.AdvanceHandlesTo(prev_marker.handle_pos());
-      if (!value_marker.is_valid()) {
-        outline_marker = value_marker;
+        marker = value_marker;
         return;
       }
 
       prev_marker = member_type->GetValueCallback(value_marker, member.size(),
                                                   tracker, value_callback);
+      if (!prev_marker.is_valid()) {
+        marker = value_marker;
+        return;
+      }
+
       tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
                              allocator);
     }
-    marker.AdvanceBytesBy(str.size());
-    if (!marker.is_valid()) {
-      outline_marker = marker;
+  };
+  marker.AdvanceBytesBy(length);
+  return marker;
+}
+
+size_t StructType::InlineSize() const { return struct_.size(); }
+
+UnionType::UnionType(const Union& uni) : union_(uni) {}
+
+Marker UnionType::GetValueCallback(Marker marker, size_t length,
+                                   ObjectTracker* tracker,
+                                   ValueGeneratingCallback& callback) const {
+  const Union& uni = union_;
+  callback = [uni, mp = marker](ObjectTracker* tracker, Marker& marker,
+                                rapidjson::Value& value,
+                                rapidjson::Document::AllocatorType& allocator) {
+    value.SetObject();
+    Marker inline_marker = mp;
+    const uint8_t* final_pos = inline_marker.byte_pos() + uni.size();
+
+    // Read tag
+    const uint8_t* bytes = inline_marker.byte_pos();
+    uint32_t tag = internal::MemoryFrom<uint32_t>(bytes);
+    inline_marker.AdvanceBytesBy(uni.alignment());
+    if (!inline_marker.is_valid()) {
+      marker = inline_marker;
       return;
     }
-    outline_marker = mark.MaybeRunCallbacks(marker);
+
+    // Determine member type and get appropriate callback
+    const UnionMember& member = uni.MemberWithTag(tag);
+    std::unique_ptr<Type> member_type = member.GetType();
+    ValueGeneratingCallback raw_value_callback;
+    inline_marker = member_type->GetValueCallback(inline_marker, member.size(),
+                                                  tracker, raw_value_callback);
+    ValueGeneratingCallback value_callback =
+        [rvc = std::move(raw_value_callback), final_pos, tracker,
+         inline_marker](ObjectTracker* ignored, Marker& tracker_marker,
+                        rapidjson::Value& value,
+                        rapidjson::Document::AllocatorType& allocator) {
+          Marker marker = inline_marker;
+          rvc(tracker, marker, value, allocator);
+
+          // Advance marker's pos to the real end, which may or may not be the
+          // end of the value.
+          marker.AdvanceBytesTo(final_pos);
+          if (!marker.is_valid()) {
+            tracker_marker = marker;
+          }
+        };
+
+    tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
+                           allocator);
+  };
+
+  marker.AdvanceBytesBy(length);
+  return marker;
+}
+
+size_t UnionType::InlineSize() const { return union_.size(); }
+
+PointerType::PointerType(Type* target_type) : target_type_(target_type) {}
+
+Marker PointerType::GetValueCallback(Marker marker, size_t length,
+                                     ObjectTracker* tracker,
+                                     ValueGeneratingCallback& callback) const {
+  // Check the intptr and maybe return a callback that does nothing but set a
+  // null value.
+  const uint8_t* bytes = marker.byte_pos();
+  uintptr_t data;
+  marker.AdvanceBytesBy(sizeof(data));
+  if (!marker.is_valid()) {
+    return marker;
+  }
+  data = internal::MemoryFrom<uint64_t>(bytes);
+  if (data == FIDL_ALLOC_ABSENT) {
+    callback = NullCallback();
+    return marker;
+  }
+
+  if (data != FIDL_ALLOC_PRESENT) {
+    // TODO: add "name" to the type, print it here instead of "object".
+    FXL_LOG(INFO) << "Illegally encoded object";
+  }
+
+  // If the intptr is non-null, return a callback that will track an out of line
+  // object of the wrapped type.
+  marker.AdvanceBytesBy(sizeof(data));
+  callback = [target_type = target_type_](
+                 ObjectTracker* tracker, Marker& marker,
+                 rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) {
+    ValueGeneratingCallback callback;
+    ObjectTracker local_tracker(tracker->end());
+    Marker val = target_type->GetValueCallback(
+        marker, target_type->InlineSize(), &local_tracker, callback);
+    if (!val.is_valid()) {
+      marker = val;
+      return;
+    }
+    callback(&local_tracker, marker, value, allocator);
+    local_tracker.RunCallbacksFrom(val);
+    if (!val.is_valid()) {
+      marker = val;
+      return;
+    }
   };
   return marker;
 }
@@ -375,9 +403,8 @@ Marker VectorType::GetValueCallback(Marker marker, size_t length,
       marker.AdvanceBytesBy(element_size * count);
     };
   } else if (data == 0) {
-    callback =
-        [](ObjectTracker* tracker, Marker& marker, rapidjson::Value& value,
-           rapidjson::Document::AllocatorType& allocator) { value.SetNull(); };
+    // TODO: Validate this is a nullable vector.
+    callback = NullCallback();
   }
   return marker;
 }
@@ -517,8 +544,7 @@ std::unique_ptr<Type> Type::GetType(const LibraryLoader& loader,
   } else if (kind == "handle") {
     return std::make_unique<HandleType>();
   } else if (kind == "request") {
-    // TODO: implement something useful.
-    return std::make_unique<NumericType<uint32_t>>();
+    return std::make_unique<HandleType>();
   } else if (kind == "primitive") {
     return Type::TypeFromPrimitive(type);
   } else if (kind == "identifier") {

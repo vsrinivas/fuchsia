@@ -316,15 +316,51 @@ class BoolType : public Type {
 
 class StructType : public Type {
  public:
-  StructType(const Struct& str, bool is_nullable);
+  StructType(const Struct& str) : struct_(str) {}
 
   virtual Marker GetValueCallback(
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
+  virtual size_t InlineSize() const override;
+
  private:
   const Struct& struct_;
-  const bool is_nullable_;
+};
+
+class UnionType : public Type {
+ public:
+  UnionType(const Union& uni);
+
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override;
+
+ private:
+  const Union& union_;
+};
+
+// A type that can be used to express that this is a pointer to an instance of
+// another type.
+class PointerType : public Type {
+ public:
+  explicit PointerType(Type* target_type);
+
+  // PointerType's GetValueCallback method does the following:
+  //
+  // a) In the case where the intptr at the marker is null, returns a
+  //    callback that sets the value to null.
+  // b) In the case where the intptr at the marker is not null, returns a
+  //    callback that tracks an instance of the wrapped type out-of-line,
+  //    with its own ObjectTracker.
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+ private:
+  std::shared_ptr<Type> target_type_;
 };
 
 class ElementSequenceType : public Type {

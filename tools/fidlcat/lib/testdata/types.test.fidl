@@ -19,6 +19,7 @@ protocol this_is_an_interface {
     Float64(float64 f64);
     Struct(primitive_types p);
     NullableStruct(primitive_types? p);
+    NullableStructAndInt(primitive_types? p, int32 i);
     Array1(array<int32>:1 b_1);
     Array2(array<int32>:2 b_2);
     Vector(vector<int32>? v_1);
@@ -35,6 +36,10 @@ protocol this_is_an_interface {
     TwoStringVectorInt(vector<string> vec, int32 i32);
     TwoStringNullableStructInt(two_string_struct? s, int32 i32);
     HandleStruct(handle_struct hs);
+
+    Union(int_struct_union isu, int32 i);
+    NullableUnion(int_struct_union? isu, int32 i);
+    ShortUnion(u8_u16_union u, int32 i);
 };
 
 struct primitive_types {
@@ -72,4 +77,14 @@ struct handle_struct {
     handle<channel> h1;
     handle<channel> h2;
     handle<channel> h3;
+};
+
+union int_struct_union {
+    int32 variant_i;
+    two_string_struct variant_tss;
+};
+
+union u8_u16_union {
+    uint8 variant_u8;
+    uint16 variant_u16;
 };
