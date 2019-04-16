@@ -80,7 +80,7 @@ test("pci_tests") {
   sources = [
     "test/allocation_tests.cpp",
     "test/config_tests.cpp",
-    "test/fake_ecam.h",
+    "test/device_tests.cpp",
     "test/main.cpp",
   ]
   deps = [

@@ -37,15 +37,16 @@ struct BusScanEntry {
     UpstreamNode* upstream;
 };
 
+using DeviceList = fbl::WAVLTree<pci_bdf_t,
+                                 fbl::RefPtr<pci::Device>,
+                                 pci::Device::KeyTraitsSortByBdf,
+                                 pci::Device::BusListTraits>;
+
 class Bus;
 using PciBusType = ddk::Device<Bus>;
 class Bus : public PciBusType,
             public BusLinkInterface {
 public:
-    using DeviceList = fbl::WAVLTree<pci_bdf_t,
-                                     fbl::RefPtr<pci::Device>,
-                                     pci::Device::KeyTraitsSortByBdf,
-                                     pci::Device::BusListTraits>;
     static zx_status_t Create(zx_device_t* parent);
     void DdkRelease();
 
@@ -88,7 +89,7 @@ private:
     mutable fbl::Mutex dev_list_lock_;
 
     // Devices are keyed by BDF so they should not experience any collisions.
-    DeviceList device_list_;
+    pci::DeviceList device_list_;
 };
 
 } // namespace pci
