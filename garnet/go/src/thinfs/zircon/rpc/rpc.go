@@ -67,7 +67,7 @@ func (vfs *ThinVFS) Serve() {
 }
 
 func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeInterfaceRequest) (fidl.BindingKey, error) {
-	d := &directoryWrapper{vfs: vfs, dir: dir}
+	d := &directoryWrapper{vfs: vfs, dir: dir, cookies: make(map[uint64]uint64)}
 
 	vfs.Lock()
 	defer vfs.Unlock()
