@@ -62,8 +62,8 @@ bool CompareBlock(const Block* actual, const Block expected) {
 template <typename T>
 bool CompareArray(const Block* block, const T* expected, size_t count) {
     BEGIN_HELPER;
-    EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(&block->payload) + 8,
-                    reinterpret_cast<const uint8_t*>(expected),
+    EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected),
+                    reinterpret_cast<const uint8_t*>(&block->payload) + 8,
                     sizeof(int64_t) * count,
                     "Array payload does not match");
 
@@ -308,7 +308,7 @@ bool CreateArrays() {
     auto heap = std::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
-    IntArray a = state->CreateIntArray("a", 0, 10, ArrayFormat::kLinearHistogram);
+    IntArray a = state->CreateIntArray("a", 0, 10, ArrayFormat::kDefault);
     UintArray b = state->CreateUintArray("b", 0, 10, ArrayFormat::kDefault);
     DoubleArray c = state->CreateDoubleArray("c", 0, 10, ArrayFormat::kDefault);
 
@@ -358,7 +358,7 @@ bool CreateArrays() {
                                                ValueBlockFields::Order::Make(3) |
                                                ValueBlockFields::NameIndex::Make(1),
                                            ArrayBlockPayload::EntryType::Make(BlockType::kIntValue) |
-                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kDefault) |
                                                ArrayBlockPayload::Count::Make(10))));
         int64_t a_array_values[] = {10, -10, -9, 0, 0, 0, 0, 0, 0, 0};
         EXPECT_TRUE(CompareArray(blocks.find(8)->block, a_array_values, 10));
@@ -411,7 +411,7 @@ bool CreateArrayChildren() {
 
     Object root = state->CreateObject("root", 0);
 
-    IntArray a = root.CreateIntArray("a", 10, ArrayFormat::kLinearHistogram);
+    IntArray a = root.CreateIntArray("a", 10, ArrayFormat::kDefault);
     UintArray b = root.CreateUintArray("b", 10, ArrayFormat::kDefault);
     DoubleArray c = root.CreateDoubleArray("c", 10, ArrayFormat::kDefault);
 
@@ -449,7 +449,7 @@ bool CreateArrayChildren() {
                                                ValueBlockFields::Order::Make(3) |
                                                ValueBlockFields::NameIndex::Make(3),
                                            ArrayBlockPayload::EntryType::Make(BlockType::kIntValue) |
-                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kDefault) |
                                                ArrayBlockPayload::Count::Make(10))));
         int64_t a_array_values[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         EXPECT_TRUE(CompareArray(blocks.find(8)->block, a_array_values, 10));
@@ -488,6 +488,237 @@ bool CreateArrayChildren() {
                                                ArrayBlockPayload::Flags::Make(ArrayFormat::kDefault) |
                                                ArrayBlockPayload::Count::Make(10))));
         double c_array_values[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        EXPECT_TRUE(CompareArray(blocks.find(24)->block, c_array_values, 10));
+    }
+
+    END_TEST;
+}
+
+bool CreateLinearHistogramChildren() {
+    BEGIN_TEST;
+
+    auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
+    ASSERT_TRUE(vmo != nullptr);
+    auto heap = std::make_unique<Heap>(std::move(vmo));
+    auto state = State::Create(std::move(heap));
+
+    Object root = state->CreateObject("root", 0);
+
+    auto a = root.CreateLinearIntHistogram("a", 10 /*floor*/, 5 /*step_size*/, 6 /*buckets*/);
+    auto b = root.CreateLinearUintHistogram("b", 10 /*floor*/, 5 /*step_size*/, 6 /*buckets*/);
+    auto c = root.CreateLinearDoubleHistogram("c", 10 /*floor*/, 5 /*step_size*/, 6 /*buckets*/);
+
+    a.Insert(0, 3);
+    a.Insert(10);
+    a.Insert(1000);
+    a.Insert(21);
+
+    b.Insert(0, 3);
+    b.Insert(10);
+    b.Insert(1000);
+    b.Insert(21);
+
+    c.Insert(0, 3);
+    c.Insert(10);
+    c.Insert(1000);
+    c.Insert(21);
+
+    fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+    size_t free_blocks, allocated_blocks;
+    auto snapshot =
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+    ASSERT_TRUE(snapshot);
+
+    // Header and 2 for each metric.
+    EXPECT_EQ(9, allocated_blocks);
+    EXPECT_EQ(4, free_blocks);
+
+    EXPECT_TRUE(CompareBlock(blocks.find(0)->block, MakeHeader(2 + 6 * 3 + 8 * 3)));
+
+    EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kObjectValue) |
+                                           ValueBlockFields::ParentIndex::Make(0) |
+                                           ValueBlockFields::NameIndex::Make(2),
+                                       3)));
+
+    EXPECT_TRUE(CompareBlock(
+        blocks.find(2)->block,
+        MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(4),
+                  "root\0\0\0\0")));
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(3)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "a\0\0\0\0\0\0\0")));
+        EXPECT_TRUE(CompareBlock(blocks.find(8)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(3),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kIntValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <step_size>, <underflow>, <N buckets>..., <overflow>
+        int64_t a_array_values[] = {10, 5, 3, 1, 0, 1, 0, 0, 0, 1};
+        EXPECT_TRUE(CompareArray(blocks.find(8)->block, a_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(4)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "b\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(16)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(4),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kUintValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <step_size>, <underflow>, <N buckets>..., <overflow>
+        uint64_t b_array_values[] = {10, 5, 3, 1, 0, 1, 0, 0, 0, 1};
+        EXPECT_TRUE(CompareArray(blocks.find(16)->block, b_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(5)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "c\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(24)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(5),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kDoubleValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kLinearHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <step_size>, <underflow>, <N buckets>..., <overflow>
+        double c_array_values[] = {10, 5, 3, 1, 0, 1, 0, 0, 0, 1};
+        EXPECT_TRUE(CompareArray(blocks.find(24)->block, c_array_values, 10));
+    }
+
+    END_TEST;
+}
+
+bool CreateExponentialHistogramChildren() {
+    BEGIN_TEST;
+
+    auto vmo = fzl::ResizeableVmoMapper::Create(4096, "test");
+    ASSERT_TRUE(vmo != nullptr);
+    auto heap = std::make_unique<Heap>(std::move(vmo));
+    auto state = State::Create(std::move(heap));
+
+    Object root = state->CreateObject("root", 0);
+
+    auto a = root.CreateExponentialIntHistogram(
+        "a", 1 /*floor*/, 1 /*initial_step*/, 2 /*step_multiplier*/, 5 /*buckets*/);
+    auto b = root.CreateExponentialUintHistogram(
+        "b", 1 /*floor*/, 1 /*initial_step*/, 2 /*step_multiplier*/, 5 /*buckets*/);
+    auto c = root.CreateExponentialDoubleHistogram(
+        "c", 1 /*floor*/, 1 /*initial_step*/, 2 /*step_multiplier*/, 5 /*buckets*/);
+
+    a.Insert(0, 3);
+    a.Insert(4);
+    a.Insert(1000);
+    a.Insert(30);
+
+    b.Insert(0, 3);
+    b.Insert(4);
+    b.Insert(1000);
+    b.Insert(30);
+
+    c.Insert(0, 3);
+    c.Insert(4);
+    c.Insert(1000);
+    c.Insert(30);
+
+    fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+    size_t free_blocks, allocated_blocks;
+    auto snapshot =
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+    ASSERT_TRUE(snapshot);
+
+    // Header and 2 for each metric.
+    EXPECT_EQ(9, allocated_blocks);
+    EXPECT_EQ(4, free_blocks);
+
+    EXPECT_TRUE(CompareBlock(blocks.find(0)->block, MakeHeader(2 + 8 * 3 + 8 * 3)));
+
+    EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kObjectValue) |
+                                           ValueBlockFields::ParentIndex::Make(0) |
+                                           ValueBlockFields::NameIndex::Make(2),
+                                       3)));
+
+    EXPECT_TRUE(CompareBlock(
+        blocks.find(2)->block,
+        MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(4),
+                  "root\0\0\0\0")));
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(3)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "a\0\0\0\0\0\0\0")));
+        EXPECT_TRUE(CompareBlock(blocks.find(8)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(3),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kIntValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kExponentialHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
+        int64_t a_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
+        EXPECT_TRUE(CompareArray(blocks.find(8)->block, a_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(4)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "b\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(16)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(4),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kUintValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kExponentialHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
+        uint64_t b_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
+        EXPECT_TRUE(CompareArray(blocks.find(16)->block, b_array_values, 10));
+    }
+
+    {
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(5)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "c\0\0\0\0\0\0\0")));
+
+        EXPECT_TRUE(CompareBlock(blocks.find(24)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                                               ValueBlockFields::ParentIndex::Make(1) |
+                                               ValueBlockFields::Order::Make(3) |
+                                               ValueBlockFields::NameIndex::Make(5),
+                                           ArrayBlockPayload::EntryType::Make(BlockType::kDoubleValue) |
+                                               ArrayBlockPayload::Flags::Make(ArrayFormat::kExponentialHistogram) |
+                                               ArrayBlockPayload::Count::Make(10))));
+        // Array is:
+        // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
+        double c_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
         EXPECT_TRUE(CompareArray(blocks.find(24)->block, c_array_values, 10));
     }
 
@@ -1152,6 +1383,8 @@ RUN_TEST(CreateUintMetric)
 RUN_TEST(CreateDoubleMetric)
 RUN_TEST(CreateArrays)
 RUN_TEST(CreateArrayChildren)
+RUN_TEST(CreateLinearHistogramChildren)
+RUN_TEST(CreateExponentialHistogramChildren)
 RUN_TEST(CreateSmallProperties)
 RUN_TEST(CreateLargeSingleExtentProperties)
 RUN_TEST(CreateMultiExtentProperty)

@@ -10,6 +10,8 @@ using inspect::hierarchy::Metric;
 using inspect::hierarchy::Node;
 using inspect::hierarchy::Property;
 
+namespace {}  // namespace
+
 namespace inspect {
 
 namespace hierarchy {
@@ -20,6 +22,12 @@ void PrintTo(const Metric& metric, std::ostream* os) {
     *os << "UInt";
   if (metric.format() == MetricFormat::DOUBLE)
     *os << "Double";
+  if (metric.format() == MetricFormat::INT_ARRAY)
+    *os << "IntArray";
+  if (metric.format() == MetricFormat::UINT_ARRAY)
+    *os << "UIntArray";
+  if (metric.format() == MetricFormat::DOUBLE_ARRAY)
+    *os << "DoubleArray";
   *os << "Metric(" << ::testing::PrintToString(metric.name()) << ", ";
   if (metric.format() == MetricFormat::INT)
     *os << ::testing::PrintToString(metric.Get<IntMetric>().value());
@@ -27,6 +35,12 @@ void PrintTo(const Metric& metric, std::ostream* os) {
     *os << ::testing::PrintToString(metric.Get<UIntMetric>().value());
   if (metric.format() == MetricFormat::DOUBLE)
     *os << ::testing::PrintToString(metric.Get<DoubleMetric>().value());
+  if (metric.format() == MetricFormat::INT_ARRAY)
+    *os << ::testing::PrintToString(metric.Get<IntArray>().value());
+  if (metric.format() == MetricFormat::UINT_ARRAY)
+    *os << ::testing::PrintToString(metric.Get<UIntArray>().value());
+  if (metric.format() == MetricFormat::DOUBLE_ARRAY)
+    *os << ::testing::PrintToString(metric.Get<DoubleArray>().value());
   *os << ")";
 }
 
@@ -181,6 +195,64 @@ void internal::PropertyListMatcher::DescribeNegationTo(
       ::testing::Property(&Metric::Get<hierarchy::DoubleMetric>,
                           ::testing::Property(&hierarchy::DoubleMetric::value,
                                               ::testing::Eq(value))));
+}
+
+::testing::Matcher<const hierarchy::Metric&> IntArrayIs(
+    const std::string& name, ::testing::Matcher<std::vector<int64_t>> matcher) {
+  return ::testing::AllOf(
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format, hierarchy::MetricFormat::INT_ARRAY),
+      ::testing::Property(&Metric::Get<hierarchy::IntArray>,
+                          ::testing::Property(&hierarchy::IntArray::value,
+                                              std::move(matcher))));
+}
+
+::testing::Matcher<const hierarchy::Metric&> UIntArrayIs(
+    const std::string& name,
+    ::testing::Matcher<std::vector<uint64_t>> matcher) {
+  return ::testing::AllOf(
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format, hierarchy::MetricFormat::UINT_ARRAY),
+      ::testing::Property(&Metric::Get<hierarchy::UIntArray>,
+                          ::testing::Property(&hierarchy::UIntArray::value,
+                                              std::move(matcher))));
+}
+
+::testing::Matcher<const hierarchy::Metric&> DoubleArrayIs(
+    const std::string& name, ::testing::Matcher<std::vector<double>> matcher) {
+  return ::testing::AllOf(
+      ::testing::Property(&Metric::name, ::testing::StrEq(name)),
+      ::testing::Property(&Metric::format,
+                          hierarchy::MetricFormat::DOUBLE_ARRAY),
+      ::testing::Property(&Metric::Get<hierarchy::DoubleArray>,
+                          ::testing::Property(&hierarchy::DoubleArray::value,
+                                              std::move(matcher))));
+}
+
+::testing::Matcher<const hierarchy::Metric&> ArrayDisplayFormatIs(
+    hierarchy::ArrayDisplayFormat format) {
+  return ::testing::AnyOf(
+      ::testing::AllOf(
+          ::testing::Property(&Metric::format,
+                              hierarchy::MetricFormat::INT_ARRAY),
+          ::testing::Property(
+              &Metric::Get<hierarchy::IntArray>,
+              ::testing::Property(&hierarchy::IntArray::GetDisplayFormat,
+                                  format))),
+      ::testing::AllOf(
+          ::testing::Property(&Metric::format,
+                              hierarchy::MetricFormat::UINT_ARRAY),
+          ::testing::Property(
+              &Metric::Get<hierarchy::UIntArray>,
+              ::testing::Property(&hierarchy::UIntArray::GetDisplayFormat,
+                                  format))),
+      ::testing::AllOf(
+          ::testing::Property(&Metric::format,
+                              hierarchy::MetricFormat::DOUBLE_ARRAY),
+          ::testing::Property(
+              &Metric::Get<hierarchy::DoubleArray>,
+              ::testing::Property(&hierarchy::DoubleArray::GetDisplayFormat,
+                                  format))));
 }
 
 ::testing::Matcher<const ObjectHierarchy&> NodeMatches(NodeMatcher matcher) {

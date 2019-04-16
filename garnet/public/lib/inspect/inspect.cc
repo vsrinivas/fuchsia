@@ -4,6 +4,8 @@
 
 #include "lib/inspect/inspect.h"
 
+#include "lib/inspect-vmo/block.h"
+
 using component::ObjectDir;
 
 namespace inspect {
@@ -196,6 +198,108 @@ DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
   }
 
   return DoubleMetric();
+}
+
+IntArray Object::CreateIntArray(std::string name, size_t slots) {
+  return CreateIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+}
+
+IntArray Object::CreateIntArray(std::string name, size_t slots,
+                                vmo::ArrayFormat format) {
+  if (object_.index() == kVmoVariant) {
+    return IntArray(object_.template get<kVmoVariant>().CreateIntArray(
+        name, slots, format));
+  }
+  return IntArray();
+}
+
+UIntArray Object::CreateUIntArray(std::string name, size_t slots) {
+  return CreateUIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+}
+
+UIntArray Object::CreateUIntArray(std::string name, size_t slots,
+                                  vmo::ArrayFormat format) {
+  if (object_.index() == kVmoVariant) {
+    return UIntArray(object_.template get<kVmoVariant>().CreateUintArray(
+        name, slots, format));
+  }
+  return UIntArray();
+}
+
+DoubleArray Object::CreateDoubleArray(std::string name, size_t slots) {
+  return CreateDoubleArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
+}
+
+DoubleArray Object::CreateDoubleArray(std::string name, size_t slots,
+                                      vmo::ArrayFormat format) {
+  if (object_.index() == kVmoVariant) {
+    return DoubleArray(object_.template get<kVmoVariant>().CreateDoubleArray(
+        name, slots, format));
+  }
+  return DoubleArray();
+}
+
+LinearIntHistogramMetric Object::CreateLinearIntHistogramMetric(
+    std::string name, int64_t floor, int64_t step_size, size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return LinearIntHistogramMetric(
+        object_.template get<kVmoVariant>().CreateLinearIntHistogram(
+            name, floor, step_size, buckets));
+  }
+  return LinearIntHistogramMetric();
+}
+
+LinearUIntHistogramMetric Object::CreateLinearUIntHistogramMetric(
+    std::string name, uint64_t floor, uint64_t step_size, size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return LinearUIntHistogramMetric(
+        object_.template get<kVmoVariant>().CreateLinearUintHistogram(
+            name, floor, step_size, buckets));
+  }
+  return LinearUIntHistogramMetric();
+}
+
+LinearDoubleHistogramMetric Object::CreateLinearDoubleHistogramMetric(
+    std::string name, double floor, double step_size, size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return LinearDoubleHistogramMetric(
+        object_.template get<kVmoVariant>().CreateLinearDoubleHistogram(
+            name, floor, step_size, buckets));
+  }
+  return LinearDoubleHistogramMetric();
+}
+
+ExponentialIntHistogramMetric Object::CreateExponentialIntHistogramMetric(
+    std::string name, int64_t floor, int64_t initial_step,
+    int64_t step_multiplier, size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return ExponentialIntHistogramMetric(
+        object_.template get<kVmoVariant>().CreateExponentialIntHistogram(
+            name, floor, initial_step, step_multiplier, buckets));
+  }
+  return ExponentialIntHistogramMetric();
+}
+
+ExponentialUIntHistogramMetric Object::CreateExponentialUIntHistogramMetric(
+    std::string name, uint64_t floor, uint64_t initial_step,
+    uint64_t step_multiplier, size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return ExponentialUIntHistogramMetric(
+        object_.template get<kVmoVariant>().CreateExponentialUintHistogram(
+            name, floor, initial_step, step_multiplier, buckets));
+  }
+  return ExponentialUIntHistogramMetric();
+}
+
+ExponentialDoubleHistogramMetric Object::CreateExponentialDoubleHistogramMetric(
+    std::string name, double floor, double initial_step, double step_multiplier,
+    size_t buckets) {
+  if (object_.index() == kVmoVariant) {
+    return ExponentialDoubleHistogramMetric(
+        object_.template get<kVmoVariant>().CreateExponentialDoubleHistogram(
+            name, floor, initial_step, step_multiplier, buckets));
+  }
+  return ExponentialDoubleHistogramMetric();
 }
 
 LazyMetric Object::CreateLazyMetric(std::string name,

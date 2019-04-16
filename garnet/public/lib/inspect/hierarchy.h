@@ -10,6 +10,7 @@
 #include <lib/fit/variant.h>
 #include <lib/inspect-vmo/block.h>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,20 @@ namespace inspect {
 // Namespace hierarchy contains classes representing the parts of a parsed
 // ObjectHierarchy.
 namespace hierarchy {
+
+// Describes how an array of values should be displayed.
+enum class ArrayDisplayFormat {
+  // The array should be displayed as a flat list of numeric types.
+  FLAT,
+
+  // The array consists of parameters and buckets for a linear histogram.
+  LINEAR_HISTOGRAM,
+
+  // The array consists of parameters and buckets for an exponential
+  // histogram.
+  EXPONENTIAL_HISTOGRAM,
+};
+
 namespace internal {
 template <typename T, size_t FormatIndex>
 // Internal class wrapping a typed value.
@@ -38,6 +53,118 @@ class Value {
  private:
   T value_;
 };
+
+// An Array is a specialization of Value that contains multiple values as well
+// as a display format.
+template <typename T, size_t FormatIndex>
+class Array : public Value<std::vector<T>, FormatIndex> {
+ public:
+  // Describes a single bucket in a histogram.
+  //
+  // This contains the count of values falling in interval [floor, upper_limit).
+  struct HistogramBucket {
+    // The floor of values falling in this bucket, inclusive.
+    T floor;
+
+    // The upper limit for values falling in this bucket, exclusive.
+    T upper_limit;
+
+    // The count of values falling in [floor, upper_limit).
+    T count;
+
+    HistogramBucket(T floor, T upper_limit, T count)
+        : floor(floor), upper_limit(upper_limit), count(count) {}
+  };
+
+  // Constructs an array consisting of values and a display format.
+  Array(std::vector<T> values, ArrayDisplayFormat display_format)
+      : Value<std::vector<T>, FormatIndex>(std::move(values)),
+        display_format_(display_format) {}
+
+  // Gets the display format for this array.
+  ArrayDisplayFormat GetDisplayFormat() const { return display_format_; }
+
+  // Gets the buckets for this array interpreted as a histogram.
+  // If the array does not represent a valid histogram, the returned array will
+  // be empty.
+  std::vector<HistogramBucket> GetBuckets() const;
+
+ private:
+  // The display format for this array.
+  ArrayDisplayFormat display_format_;
+};
+
+template <typename T, size_t FormatIndex>
+std::vector<typename Array<T, FormatIndex>::HistogramBucket>
+Array<T, FormatIndex>::GetBuckets() const {
+  std::vector<HistogramBucket> ret;
+
+  const auto& value = this->value();
+
+  if (display_format_ == ArrayDisplayFormat::LINEAR_HISTOGRAM) {
+    if (value.size() < 5) {
+      // We need at least floor, step_size, underflow, bucket 0, overflow.
+      return ret;
+    }
+    T floor = value[0];
+    const T step_size = value[1];
+
+    if (std::numeric_limits<T>::has_infinity) {
+      ret.push_back(HistogramBucket(-std::numeric_limits<T>::infinity(), floor,
+                                    value[2]));
+    } else {
+      ret.push_back(
+          HistogramBucket(std::numeric_limits<T>::min(), floor, value[2]));
+    }
+
+    for (size_t i = 3; i < value.size() - 1; i++) {
+      ret.push_back(HistogramBucket(floor, floor + step_size, value[i]));
+      floor += step_size;
+    }
+
+    if (std::numeric_limits<T>::has_infinity) {
+      ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::infinity(),
+                                    value[value.size() - 1]));
+    } else {
+      ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::max(),
+                                    value[value.size() - 1]));
+    }
+
+  } else if (display_format_ == ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM) {
+    if (value.size() < 6) {
+      // We need at least floor, initial_step, step_multiplier, underflow,
+      // bucket 0, overflow.
+      return ret;
+    }
+    T floor = value[0];
+    T current_step = value[1];
+    const T step_multiplier = value[2];
+
+    if (std::numeric_limits<T>::has_infinity) {
+      ret.push_back(HistogramBucket(-std::numeric_limits<T>::infinity(), floor,
+                                    value[3]));
+    } else {
+      ret.push_back(
+          HistogramBucket(std::numeric_limits<T>::min(), floor, value[3]));
+    }
+
+    for (size_t i = 4; i < value.size() - 1; i++) {
+      ret.push_back(HistogramBucket(floor, floor + current_step, value[i]));
+      floor += current_step;
+      current_step *= step_multiplier;
+    }
+
+    if (std::numeric_limits<T>::has_infinity) {
+      ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::infinity(),
+                                    value[value.size() - 1]));
+    } else {
+      ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::max(),
+                                    value[value.size() - 1]));
+    }
+  }
+
+  return ret;
+}
 
 // Internal class associating a name with one of several types of value.
 template <typename TypeVariant, typename FormatType>
@@ -83,6 +210,9 @@ enum class MetricFormat {
   INT = 1,
   UINT = 2,
   DOUBLE = 3,
+  INT_ARRAY = 4,
+  UINT_ARRAY = 5,
+  DOUBLE_ARRAY = 6,
 };
 
 using IntMetric =
@@ -91,11 +221,17 @@ using UIntMetric =
     internal::Value<uint64_t, static_cast<size_t>(MetricFormat::UINT)>;
 using DoubleMetric =
     internal::Value<double, static_cast<size_t>(MetricFormat::DOUBLE)>;
+using IntArray =
+    internal::Array<int64_t, static_cast<size_t>(MetricFormat::INT_ARRAY)>;
+using UIntArray =
+    internal::Array<uint64_t, static_cast<size_t>(MetricFormat::UINT_ARRAY)>;
+using DoubleArray =
+    internal::Array<double, static_cast<size_t>(MetricFormat::DOUBLE_ARRAY)>;
 
 // Metric consist of a name and a value corresponding to one MetricFormat.
 using Metric = internal::NamedValue<
     fit::internal::variant<fit::internal::monostate, IntMetric, UIntMetric,
-                           DoubleMetric>,
+                           DoubleMetric, IntArray, UIntArray, DoubleArray>,
     MetricFormat>;
 
 enum class PropertyFormat {

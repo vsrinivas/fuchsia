@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "lib/inspect-vmo/block.h"
 #include "lib/inspect-vmo/types.h"
 
 namespace inspect {
@@ -164,14 +165,96 @@ class StaticMetric final {
       entity_;
 };
 
+template <typename T, typename VmoType>
+class ArrayMetric final {
+ public:
+  // Create a default numeric array metric.
+  // Operations on the metric will have no effect.
+  ArrayMetric() = default;
+
+  // Set the value of the given array index.
+  void Set(size_t index, T value) { vmo_metric_.Set(index, value); }
+
+  // Add the given value to given array index.
+  void Add(size_t index, T value) { vmo_metric_.Add(index, value); }
+
+  // Subtract the given value to the given array index.
+  void Subtract(size_t index, T value) { vmo_metric_.Subtract(index, value); }
+
+ private:
+  friend class ::inspect::Object;
+
+  // Internal constructor wrapping a VMO type.
+  explicit ArrayMetric(VmoType vmo_metric)
+      : vmo_metric_(std::move(vmo_metric)) {}
+
+  VmoType vmo_metric_;
+};
+
 // Metric wrapping a signed integer.
 using IntMetric = StaticMetric<int64_t, vmo::IntMetric>;
 
-// Metric wrapped an unsigned integer.
+// Metric wrapping an unsigned integer.
 using UIntMetric = StaticMetric<uint64_t, vmo::UintMetric>;
 
 // Metric wrapping a double floating point number.
 using DoubleMetric = StaticMetric<double, vmo::DoubleMetric>;
+
+// Array of signed integers.
+using IntArray = ArrayMetric<int64_t, vmo::IntArray>;
+
+// Array of unsigned integers.
+using UIntArray = ArrayMetric<uint64_t, vmo::UintArray>;
+
+// Array of double floating point numbers.
+using DoubleArray = ArrayMetric<double, vmo::DoubleArray>;
+
+template <typename T, typename VmoType>
+class HistogramMetric final {
+ public:
+  // Create a default histogram.
+  // Operations on the metric will have no effect.
+  HistogramMetric() = default;
+
+  // Insert the given value once to the correct bucket of the histogram.
+  void Insert(T value) { Insert(value, 1); }
+
+  // Insert the given value |count| times to the correct bucket of the
+  // histogram.
+  void Insert(T value, T count) { histogram_.Insert(value, count); }
+
+ private:
+  friend class ::inspect::Object;
+
+  // Internal constructor wrapping a VMO type.
+  HistogramMetric(VmoType histogram) : histogram_(std::move(histogram)) {}
+
+  VmoType histogram_;
+};
+
+// Linear histogram of integers.
+using LinearIntHistogramMetric =
+    HistogramMetric<int64_t, vmo::LinearIntHistogram>;
+
+// Linear histogram of unsigned integers.
+using LinearUIntHistogramMetric =
+    HistogramMetric<uint64_t, vmo::LinearUintHistogram>;
+
+// Linear histogram of doubles.
+using LinearDoubleHistogramMetric =
+    HistogramMetric<double, vmo::LinearDoubleHistogram>;
+
+// Exponential histogram of integers.
+using ExponentialIntHistogramMetric =
+    HistogramMetric<int64_t, vmo::ExponentialIntHistogram>;
+
+// Exponential histogram of unsigned integers.
+using ExponentialUIntHistogramMetric =
+    HistogramMetric<uint64_t, vmo::ExponentialUintHistogram>;
+
+// Exponential histogram of doubles.
+using ExponentialDoubleHistogramMetric =
+    HistogramMetric<double, vmo::ExponentialDoubleHistogram>;
 
 // Metric with value determined by evaluating a callback.
 class LazyMetric final {
@@ -405,6 +488,56 @@ class Object final {
   // object.
   [[nodiscard]] DoubleMetric CreateDoubleMetric(std::string name, double value);
 
+  // Create a new |IntArray| with the given name that is a child of this
+  // object.
+  [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots);
+
+  // Create a new |UIntArray| with the given name that is a child of this
+  // object.
+  [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots);
+
+  // Create a new |DoubleArray| with the given name that is a child of this
+  // object.
+  [[nodiscard]] DoubleArray CreateDoubleArray(std::string name, size_t slots);
+
+  // Create a new |LinearIntHistogramMetric| with the given name that is a child
+  // of this object.
+  [[nodiscard]] LinearIntHistogramMetric CreateLinearIntHistogramMetric(
+      std::string name, int64_t floor, int64_t step_size, size_t buckets);
+
+  // Create a new |LinearUIntHistogramMetric| with the given name that is a
+  // child of this object.
+  [[nodiscard]] LinearUIntHistogramMetric CreateLinearUIntHistogramMetric(
+      std::string name, uint64_t floor, uint64_t step_size, size_t buckets);
+
+  // Create a new |LinearDoubleHistogramMetric| with the given name that is a
+  // child of this object.
+  [[nodiscard]] LinearDoubleHistogramMetric CreateLinearDoubleHistogramMetric(
+      std::string name, double floor, double step_size, size_t buckets);
+
+  // Create a new |ExponentialIntHistogramMetric| with the given name that is a
+  // child of this object.
+  [[nodiscard]] ExponentialIntHistogramMetric
+  CreateExponentialIntHistogramMetric(std::string name, int64_t floor,
+                                      int64_t initial_step,
+                                      int64_t step_multiplier, size_t buckets);
+
+  // Create a new |ExponentialIntHistogramMetric| with the given name that is a
+  // child of this object.
+  [[nodiscard]] ExponentialUIntHistogramMetric
+  CreateExponentialUIntHistogramMetric(std::string name, uint64_t floor,
+                                       uint64_t initial_step,
+                                       uint64_t step_multiplier,
+                                       size_t buckets);
+
+  // Create a new |ExponentialDoubleHistogramMetric| with the given name that is
+  // a child of this object.
+  [[nodiscard]] ExponentialDoubleHistogramMetric
+  CreateExponentialDoubleHistogramMetric(std::string name, double floor,
+                                         double initial_step,
+                                         double step_multiplier,
+                                         size_t buckets);
+
   // Create a new |StringProperty| with the given name that is a child of this
   // object.
   [[nodiscard]] StringProperty CreateStringProperty(std::string name,
@@ -446,6 +579,13 @@ class Object final {
 
   // Construct an Object facade in front of an ExposedObject.
   explicit Object(component::ExposedObject object);
+
+  [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots,
+                                        vmo::ArrayFormat format);
+  [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots,
+                                          vmo::ArrayFormat format);
+  [[nodiscard]] DoubleArray CreateDoubleArray(std::string name, size_t slots,
+                                              vmo::ArrayFormat format);
 
   fit::internal::variant<fit::internal::monostate, component::ExposedObject,
                          vmo::Object>

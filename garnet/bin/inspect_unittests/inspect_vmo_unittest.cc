@@ -99,6 +99,20 @@ void DefaultMetricTest() {
   default_metric.Set(1);
 }
 
+template <typename Type>
+void DefaultArrayTest() {
+  Type default_metric;
+  default_metric.Add(0, 1);
+  default_metric.Subtract(0, 1);
+  default_metric.Set(0, 1);
+}
+
+template <typename Type>
+void DefaultHistogramTest() {
+  Type default_metric;
+  default_metric.Insert(0);
+}
+
 TEST(InspectVmo, Metrics) {
   DefaultMetricTest<inspect::IntMetric>();
   DefaultMetricTest<inspect::UIntMetric>();
@@ -122,6 +136,137 @@ TEST(InspectVmo, Metrics) {
                           MetricList(UnorderedElementsAre(
                               IntMetricIs("int", -9), UIntMetricIs("uint", 9),
                               DoubleMetricIs("double", 0.75))))));
+  }
+  // Check that the metrics are removed when they goes out of scope.
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(MetricList(IsEmpty())));
+}
+
+TEST(InspectVmo, Arrays) {
+  DefaultArrayTest<inspect::IntArray>();
+  DefaultArrayTest<inspect::UIntArray>();
+  DefaultArrayTest<inspect::DoubleArray>();
+
+  auto tree = inspect::Inspector().CreateTree("root");
+  Object& root = tree.GetRoot();
+  {
+    auto metric_int = root.CreateIntArray("int", 5);
+    metric_int.Add(0, 5);
+    metric_int.Subtract(2, 4);
+    auto metric_uint = root.CreateUIntArray("uint", 5);
+    metric_uint.Add(0, 5);
+    metric_uint.Add(2, 5);
+    metric_uint.Subtract(2, 4);
+    auto metric_double = root.CreateDoubleArray("double", 5);
+    metric_double.Add(0, 1);
+    metric_double.Subtract(2, 0.5);
+    EXPECT_THAT(
+        GetHierarchy(tree),
+        NodeMatches(AllOf(
+            NameMatches("root"),
+            MetricList(UnorderedElementsAre(
+                IntArrayIs("int", ::testing::ElementsAre(5, 0, -4, 0, 0)),
+                UIntArrayIs("uint", ::testing::ElementsAre(5, 0, 1, 0, 0)),
+                DoubleArrayIs("double",
+                              ::testing::ElementsAre(1, 0, -0.5, 0, 0)))))));
+  }
+  // Check that the metrics are removed when they goes out of scope.
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(MetricList(IsEmpty())));
+}
+
+TEST(InspectVmo, LinearHistograms) {
+  DefaultHistogramTest<inspect::LinearIntHistogramMetric>();
+  DefaultHistogramTest<inspect::LinearUIntHistogramMetric>();
+  DefaultHistogramTest<inspect::LinearDoubleHistogramMetric>();
+
+  auto tree = inspect::Inspector().CreateTree("root");
+  Object& root = tree.GetRoot();
+  {
+    auto metric_int = root.CreateLinearIntHistogramMetric("int", 10, 5, 5);
+    metric_int.Insert(0, 2);
+    metric_int.Insert(16);
+    metric_int.Insert(230);
+    auto expected_int_values = CreateExpectedLinearHistogramContents<int64_t>(
+        10, 5, 5, {0, 0, 16, 230});
+    EXPECT_THAT(expected_int_values,
+                ::testing::ElementsAre(10, 5, 2, 0, 1, 0, 0, 0, 1));
+    auto metric_uint = root.CreateLinearUIntHistogramMetric("uint", 10, 5, 5);
+    metric_uint.Insert(0, 2);
+    metric_uint.Insert(16);
+    metric_uint.Insert(230);
+    auto expected_uint_values = CreateExpectedLinearHistogramContents<uint64_t>(
+        10, 5, 5, {0, 0, 16, 230});
+    EXPECT_THAT(expected_uint_values,
+                ::testing::ElementsAre(10, 5, 2, 0, 1, 0, 0, 0, 1));
+    auto metric_double =
+        root.CreateLinearDoubleHistogramMetric("double", 10, .5, 5);
+    metric_double.Insert(0, 2);
+    metric_double.Insert(11);
+    metric_double.Insert(230);
+    auto expected_double_values = CreateExpectedLinearHistogramContents<double>(
+        10, .5, 5, {0, 0, 11, 230});
+    EXPECT_THAT(expected_double_values,
+                ::testing::ElementsAre(10, .5, 2, 0, 0, 1, 0, 0, 1));
+    EXPECT_THAT(
+        GetHierarchy(tree),
+        NodeMatches(
+            AllOf(NameMatches("root"),
+                  MetricList(UnorderedElementsAre(
+                      IntArrayIs("int", ::testing::Eq(expected_int_values)),
+                      UIntArrayIs("uint", ::testing::Eq(expected_uint_values)),
+                      DoubleArrayIs("double",
+                                    ::testing::Eq(expected_double_values)))))));
+  }
+  // Check that the metrics are removed when they goes out of scope.
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(MetricList(IsEmpty())));
+}
+
+TEST(InspectVmo, ExponentialHistograms) {
+  DefaultHistogramTest<inspect::ExponentialIntHistogramMetric>();
+  DefaultHistogramTest<inspect::ExponentialUIntHistogramMetric>();
+  DefaultHistogramTest<inspect::ExponentialDoubleHistogramMetric>();
+
+  auto tree = inspect::Inspector().CreateTree("root");
+  Object& root = tree.GetRoot();
+  {
+    auto metric_int =
+        root.CreateExponentialIntHistogramMetric("int", 1, 1, 2, 4);
+    metric_int.Insert(0, 2);
+    metric_int.Insert(8);
+    metric_int.Insert(230);
+    auto expected_int_values =
+        CreateExpectedExponentialHistogramContents<int64_t>(1, 1, 2, 4,
+                                                            {0, 0, 8, 230});
+    EXPECT_THAT(expected_int_values,
+                ::testing::ElementsAre(1, 1, 2, 2, 0, 0, 0, 1, 1));
+    auto metric_uint =
+        root.CreateExponentialUIntHistogramMetric("uint", 1, 1, 2, 4);
+    metric_uint.Insert(0, 2);
+    metric_uint.Insert(8);
+    metric_uint.Insert(230);
+    auto expected_uint_values =
+        CreateExpectedExponentialHistogramContents<uint64_t>(1, 1, 2, 4,
+                                                             {0, 0, 8, 230});
+    EXPECT_THAT(expected_uint_values,
+                ::testing::ElementsAre(1, 1, 2, 2, 0, 0, 0, 1, 1));
+    auto metric_double =
+        root.CreateExponentialDoubleHistogramMetric("double", 1, 1, 2, 4);
+    metric_double.Insert(0, 2);
+    metric_double.Insert(8);
+    metric_double.Insert(230);
+    auto expected_double_values =
+        CreateExpectedExponentialHistogramContents<double>(1, 1, 2, 4,
+                                                           {0, 0, 8, 230});
+    EXPECT_THAT(expected_double_values,
+                ::testing::ElementsAre(1, 1, 2, 2, 0, 0, 0, 1, 1));
+    EXPECT_THAT(
+        GetHierarchy(tree),
+        NodeMatches(
+            AllOf(NameMatches("root"),
+                  MetricList(UnorderedElementsAre(
+                      IntArrayIs("int", ::testing::Eq(expected_int_values)),
+                      UIntArrayIs("uint", ::testing::Eq(expected_uint_values)),
+                      DoubleArrayIs("double",
+                                    ::testing::Eq(expected_double_values)))))));
   }
   // Check that the metrics are removed when they goes out of scope.
   EXPECT_THAT(GetHierarchy(tree), NodeMatches(MetricList(IsEmpty())));

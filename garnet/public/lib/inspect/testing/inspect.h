@@ -133,6 +133,22 @@ class PropertyListMatcher
 ::testing::Matcher<const hierarchy::Metric&> DoubleMetricIs(
     const std::string& name, double value);
 
+// Matches the values of an integer array.
+::testing::Matcher<const hierarchy::Metric&> IntArrayIs(
+    const std::string& name, ::testing::Matcher<std::vector<int64_t>>);
+
+// Matches the values of an unsigned integer array.
+::testing::Matcher<const hierarchy::Metric&> UIntArrayIs(
+    const std::string& name, ::testing::Matcher<std::vector<uint64_t>>);
+
+// Matches the values of a double width floating point number array.
+::testing::Matcher<const hierarchy::Metric&> DoubleArrayIs(
+    const std::string& name, ::testing::Matcher<std::vector<double>>);
+
+// Matches the display format of a numeric array value.
+::testing::Matcher<const hierarchy::Metric&> ArrayDisplayFormatIs(
+    hierarchy::ArrayDisplayFormat format);
+
 // Matcher for the object inside an ObjectHierarchy.
 ::testing::Matcher<const ObjectHierarchy&> NodeMatches(NodeMatcher matcher);
 
@@ -147,6 +163,62 @@ class PropertyListMatcher
 // Matcher for the children of the object in an ObjectHierarchy.
 ::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(
     ChildrenMatcher matcher);
+
+// Computes the bucket index for a value in a linear histogram.
+template <typename T>
+size_t ComputeLinearBucketIndex(T floor, T step_size, size_t buckets, T value) {
+  size_t ret;
+  for (ret = 0; value >= floor && ret < buckets + 1;
+       floor += step_size, ret++) {
+  }
+  return ret;
+}
+
+// Computes the bucket index for a value in an exponential histogram.
+template <typename T>
+size_t ComputeExponentialBucketIndex(T floor, T initial_step, T step_multiplier,
+                                     size_t buckets, T value) {
+  T current_step = initial_step;
+  size_t ret;
+  for (ret = 0; value >= floor && ret < buckets + 1;
+       floor += current_step, current_step *= step_multiplier, ret++) {
+  }
+  return ret;
+}
+
+// Creates the expected contents of a linear histogram given parameters and
+// values.
+template <typename T>
+std::vector<T> CreateExpectedLinearHistogramContents(
+    T floor, T step_size, size_t buckets, const std::vector<T>& values) {
+  const size_t underflow_bucket_offset = 2;
+  const size_t array_size = 4 + buckets;
+  std::vector<T> expected = {floor, step_size};
+  expected.resize(array_size);
+  for (T value : values) {
+    expected[underflow_bucket_offset +
+             ComputeLinearBucketIndex(floor, step_size, buckets, value)]++;
+  }
+  return expected;
+}
+
+// Creates the expected contents of an exponential histogram given parameters
+// and values.
+template <typename T>
+std::vector<T> CreateExpectedExponentialHistogramContents(
+    T floor, T initial_step, T step_multiplier, size_t buckets,
+    const std::vector<T>& values) {
+  const size_t underflow_bucket_offset = 3;
+  const size_t array_size = 5 + buckets;
+  std::vector<T> expected = {floor, initial_step, step_multiplier};
+  expected.resize(array_size);
+  for (T value : values) {
+    expected[underflow_bucket_offset +
+             ComputeExponentialBucketIndex(floor, initial_step, step_multiplier,
+                                           buckets, value)]++;
+  }
+  return expected;
+}
 
 }  // namespace testing
 }  // namespace inspect

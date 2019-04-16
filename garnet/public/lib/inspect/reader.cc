@@ -8,6 +8,7 @@
 #include <lib/inspect-vmo/scanner.h>
 #include <lib/inspect-vmo/snapshot.h>
 
+#include <iterator>
 #include <stack>
 #include <unordered_map>
 
@@ -289,7 +290,8 @@ void Reader::InnerScanBlocks() {
           InnerCreateObject(index, block);
         } else if (type == BlockType::kIntValue ||
                    type == BlockType::kUintValue ||
-                   type == BlockType::kDoubleValue) {
+                   type == BlockType::kDoubleValue ||
+                   type == BlockType::kArrayValue) {
           // This block defines a metric for an Object, parse the metric into
           // the metrics field of the ParsedObject.
           auto parent_index =
@@ -380,6 +382,17 @@ ParsedObject* Reader::GetOrCreate(BlockIndex index) {
   return &parsed_objects_.emplace(index, ParsedObject()).first->second;
 }
 
+hierarchy::ArrayDisplayFormat ArrayFormatToDisplay(ArrayFormat format) {
+  switch (format) {
+    case ArrayFormat::kLinearHistogram:
+      return hierarchy::ArrayDisplayFormat::LINEAR_HISTOGRAM;
+    case ArrayFormat::kExponentialHistogram:
+      return hierarchy::ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM;
+    default:
+      return hierarchy::ArrayDisplayFormat::FLAT;
+  }
+}
+
 void Reader::InnerParseMetric(ParsedObject* parent, const Block* block) {
   auto name = GetAndValidateName(
       ValueBlockFields::NameIndex::Get<size_t>(block->header));
@@ -403,6 +416,46 @@ void Reader::InnerParseMetric(ParsedObject* parent, const Block* block) {
       parent_metrics.emplace_back(hierarchy::Metric(
           std::move(name), hierarchy::DoubleMetric(block->payload.f64)));
       return;
+    case BlockType::kArrayValue: {
+      BlockType entry_type =
+          ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
+      uint8_t count =
+          ArrayBlockPayload::Count::Get<uint8_t>(block->payload.u64);
+      if (GetArraySlot<const int64_t>(block, count - 1) == nullptr) {
+        // Block does not store the entire array.
+        return;
+      }
+
+      auto array_format = ArrayFormatToDisplay(
+          ArrayBlockPayload::Flags::Get<ArrayFormat>(block->payload.u64));
+
+      if (entry_type == BlockType::kIntValue) {
+        std::vector<int64_t> values;
+        std::copy(GetArraySlot<const int64_t>(block, 0),
+                  GetArraySlot<const int64_t>(block, count),
+                  std::back_inserter(values));
+        parent_metrics.emplace_back(hierarchy::Metric(
+            std::move(name),
+            hierarchy::IntArray(std::move(values), array_format)));
+      } else if (entry_type == BlockType::kUintValue) {
+        std::vector<uint64_t> values;
+        std::copy(GetArraySlot<const uint64_t>(block, 0),
+                  GetArraySlot<const uint64_t>(block, count),
+                  std::back_inserter(values));
+        parent_metrics.emplace_back(hierarchy::Metric(
+            std::move(name),
+            hierarchy::UIntArray(std::move(values), array_format)));
+      } else if (entry_type == BlockType::kDoubleValue) {
+        std::vector<double> values;
+        std::copy(GetArraySlot<const double>(block, 0),
+                  GetArraySlot<const double>(block, count),
+                  std::back_inserter(values));
+        parent_metrics.emplace_back(hierarchy::Metric(
+            std::move(name),
+            hierarchy::DoubleArray(std::move(values), array_format)));
+      }
+      return;
+    }
     default:
       return;
   }

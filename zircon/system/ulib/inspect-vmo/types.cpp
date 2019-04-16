@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fbl/string_piece.h"
 #include <lib/inspect-vmo/state.h>
 #include <lib/inspect-vmo/types.h>
 
@@ -340,6 +341,77 @@ DoubleArray Object::CreateDoubleArray(fbl::StringPiece name, size_t slots, Array
         return state_->CreateDoubleArray(name, value_index_, slots, format);
     }
     return DoubleArray();
+}
+
+namespace {
+const size_t kExtraSlotsForLinearHistogram = 4;
+const size_t kExtraSlotsForExponentialHistogram = 5;
+} // namespace
+
+LinearIntHistogram Object::CreateLinearIntHistogram(
+    fbl::StringPiece name, int64_t floor, int64_t step_size, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForLinearHistogram;
+        auto array = state_->CreateIntArray(
+            name, value_index_, slots, ArrayFormat::kLinearHistogram);
+        return LinearIntHistogram(floor, step_size, slots, std::move(array));
+    }
+    return LinearIntHistogram();
+}
+
+LinearUintHistogram Object::CreateLinearUintHistogram(
+    fbl::StringPiece name, uint64_t floor, uint64_t step_size, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForLinearHistogram;
+        auto array = state_->CreateUintArray(
+            name, value_index_, slots, ArrayFormat::kLinearHistogram);
+        return LinearUintHistogram(floor, step_size, slots, std::move(array));
+    }
+    return LinearUintHistogram();
+}
+
+LinearDoubleHistogram Object::CreateLinearDoubleHistogram(
+    fbl::StringPiece name, double floor, double step_size, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForLinearHistogram;
+        auto array = state_->CreateDoubleArray(
+            name, value_index_, slots, ArrayFormat::kLinearHistogram);
+        return LinearDoubleHistogram(floor, step_size, slots, std::move(array));
+    }
+    return LinearDoubleHistogram();
+}
+
+ExponentialIntHistogram Object::CreateExponentialIntHistogram(
+    fbl::StringPiece name, int64_t floor, int64_t initial_step, int64_t step_multiplier, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForExponentialHistogram;
+        auto array = state_->CreateIntArray(
+            name, value_index_, slots, ArrayFormat::kExponentialHistogram);
+        return ExponentialIntHistogram(floor, initial_step, step_multiplier, slots, std::move(array));
+    }
+    return ExponentialIntHistogram();
+}
+
+ExponentialUintHistogram Object::CreateExponentialUintHistogram(
+    fbl::StringPiece name, uint64_t floor, uint64_t initial_step, uint64_t step_multiplier, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForExponentialHistogram;
+        auto array = state_->CreateUintArray(
+            name, value_index_, slots, ArrayFormat::kExponentialHistogram);
+        return ExponentialUintHistogram(floor, initial_step, step_multiplier, slots, std::move(array));
+    }
+    return ExponentialUintHistogram();
+}
+
+ExponentialDoubleHistogram Object::CreateExponentialDoubleHistogram(
+    fbl::StringPiece name, double floor, double initial_step, double step_multiplier, size_t buckets) {
+    if (state_) {
+        const size_t slots = buckets + kExtraSlotsForExponentialHistogram;
+        auto array = state_->CreateDoubleArray(
+            name, value_index_, slots, ArrayFormat::kExponentialHistogram);
+        return ExponentialDoubleHistogram(floor, initial_step, step_multiplier, slots, std::move(array));
+    }
+    return ExponentialDoubleHistogram();
 }
 
 } // namespace vmo
