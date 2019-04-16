@@ -94,9 +94,9 @@ bool TestSymbolModule::LoadSpecific(const std::string& path,
 }
 
 // static
-std::vector<std::string> TestSymbolModule::SplitName(std::string_view input) {
+Identifier TestSymbolModule::SplitName(std::string_view input) {
   const std::string separator("::");
-  std::vector<std::string> components;
+  Identifier result;
 
   size_t input_index = 0;
   while (input_index < input.size()) {
@@ -111,9 +111,9 @@ std::vector<std::string> TestSymbolModule::SplitName(std::string_view input) {
       input_index = next + separator.size();  // Skip over "::".
     }
 
-    components.push_back(std::move(cur_name));
+    result.AppendComponent(std::move(cur_name));
   }
-  return components;
+  return result;
 }
 
 }  // namespace zxdb

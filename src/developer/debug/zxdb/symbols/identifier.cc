@@ -80,15 +80,6 @@ std::string Identifier::GetFullName() const { return GetName(false); }
 
 std::string Identifier::GetDebugName() const { return GetName(true); }
 
-// TODO(brettw) remove this function when Identifier can be used everywhere.
-std::vector<std::string> Identifier::GetAsIndexComponents() const {
-  std::vector<std::string> result;
-  result.reserve(components_.size());
-  for (const auto& c : components_)
-    result.push_back(c.GetName(false));
-  return result;
-}
-
 const char* Identifier::GetSeparator() const { return "::"; }
 
 const std::string* Identifier::GetSingleComponentName() const {

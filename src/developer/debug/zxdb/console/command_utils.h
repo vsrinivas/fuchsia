@@ -105,14 +105,14 @@ std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 std::string DescribeSymbolServer(const ConsoleContext* context,
                                  const SymbolServer* symbol_server);
 
-std::string DescribeBreakpoint(const ConsoleContext* context,
-                               const Breakpoint* breakpoint);
+OutputBuffer FormatBreakpoint(const ConsoleContext* context,
+                              const Breakpoint* breakpoint);
 
-std::string DescribeInputLocation(const InputLocation& location);
+OutputBuffer FormatInputLocation(const InputLocation& location);
 
 // Formats the given string as an identifier, with any template annotations
 // dimmed. If bold_last is set, the last identifier component will be bolded.
-OutputBuffer FormatIdentifier(const std::string& str, bool bold_last);
+OutputBuffer FormatIdentifier(const Identifier& str, bool bold_last);
 
 // Formats the function name with syntax highlighting. If show_params is true,
 // the types of the function parameters will be output. Otherwise the

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/client/breakpoint_impl.h"
+
 #include <utility>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
-#include "src/developer/debug/zxdb/client/breakpoint_impl.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -93,7 +94,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   in.enabled = false;
   in.scope = BreakpointSettings::Scope::kSystem;
   in.location.type = InputLocation::Type::kSymbol;
-  in.location.symbol = {kFunctionName};
+  in.location.symbol = Identifier(kFunctionName);
 
   // Setting the disabled settings shouldn't update the backend.
   Err err = SyncSetSettings(bp, in);

@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+
 #include <inttypes.h>
 #include <time.h>
+
 #include <ostream>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -74,21 +76,21 @@ TEST(ModuleSymbolIndex, FindPrefix) {
   index.CreateIndex(module.object_file());
 
   // Querying an exact identifier should return it.
-  auto [found, end] = index.FindPrefix({"GetStructWithEnums"});
+  auto [found, end] = index.FindPrefix(Identifier("GetStructWithEnums"));
   ASSERT_NE(found, end);
   EXPECT_EQ("GetStructWithEnums", found->first);
 
   // Empty query should return found == end.
-  std::tie(found, end) = index.FindPrefix({});
+  std::tie(found, end) = index.FindPrefix(Identifier());
   EXPECT_EQ(found, end);
 
   // Something not found.
-  std::tie(found, end) = index.FindPrefix({"ThisDoesntExist"});
+  std::tie(found, end) = index.FindPrefix(Identifier("ThisDoesntExist"));
   EXPECT_EQ(found, end);
 
   // Something with multiple results (NOTE: if more functions are added to the
   // test file with this prefix, the expected results might change).
-  std::tie(found, end) = index.FindPrefix({"Call"});
+  std::tie(found, end) = index.FindPrefix(Identifier("Call"));
   ASSERT_NE(found, end);
   EXPECT_EQ("CallInline", found->first);
   ++found;
@@ -96,7 +98,8 @@ TEST(ModuleSymbolIndex, FindPrefix) {
   EXPECT_EQ("CallInlineMember", found->first);
 
   // A nested namespace.
-  std::tie(found, end) = index.FindPrefix({"my_ns", "Base"});
+  std::tie(found, end) =
+      index.FindPrefix(TestSymbolModule::SplitName("my_ns::Base"));
   ASSERT_NE(found, end);
   EXPECT_EQ("Base1", found->first);
   ++found;
@@ -184,7 +187,7 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Should also have deifned an "int" type.
-  result = index.FindExact({"int"});
+  result = index.FindExact(Identifier("int"));
   EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 

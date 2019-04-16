@@ -96,7 +96,7 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
     return ident_err;
 
   location->type = InputLocation::Type::kSymbol;
-  location->symbol = ident.GetAsIndexComponents();
+  location->symbol = std::move(ident);
   return Err();
 }
 

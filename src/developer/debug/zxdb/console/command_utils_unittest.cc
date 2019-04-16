@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -184,27 +185,24 @@ TEST(CommandUtils, ParseHostPort) {
 }
 
 TEST(CommandUtils, FormatIdentifier) {
-  // Obviously unparseable identifiers should just come through as strings.
-  std::string gibberish("!@(#*ASDGasdh<@");
-  EXPECT_EQ(gibberish, FormatIdentifier(gibberish, true).AsString());
-
   // Regular name.
-  auto output = FormatIdentifier("ThisIsAName", false);
+  OutputBuffer output = FormatIdentifier(Identifier("ThisIsAName"), false);
   EXPECT_EQ("kNormal \"ThisIsAName\"", output.GetDebugString());
 
   // Regular name with bolding.
-  output = FormatIdentifier("ThisIsAName", true);
+  output = FormatIdentifier(Identifier("ThisIsAName"), true);
   EXPECT_EQ("kHeading \"ThisIsAName\"", output.GetDebugString());
 
   // Hierarchical name.
-  output = FormatIdentifier("::Foo<int, char*>::Bar<Baz>", true);
+  auto [err, ident] = ExprParser::ParseIdentifier("::Foo<int, char*>::Bar<Baz>");
+  ASSERT_FALSE(err.has_error());
   EXPECT_EQ(
       "kNormal \"::Foo\", "
       "kComment \"<int, char*>\", "
       "kNormal \"::\", "
       "kHeading \"Bar\", "
       "kComment \"<Baz>\"",
-      output.GetDebugString());
+      FormatIdentifier(ident, true).GetDebugString());
 }
 
 TEST(CommandUtils, FormatFunctionName) {

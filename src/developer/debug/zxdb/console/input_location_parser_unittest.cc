@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -20,8 +21,7 @@ TEST(InputLocationParser, Parse) {
   Err err = ParseInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kSymbol, location.type);
-  std::vector<std::string> expected = {"Foo", "Bar"};
-  EXPECT_EQ(expected, location.symbol);
+  EXPECT_EQ(R"("Foo"; ::"Bar")", location.symbol.GetDebugName());
 
   // Valid file/line.
   location = InputLocation();

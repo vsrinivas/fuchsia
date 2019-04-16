@@ -45,7 +45,7 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
     // When the breakpoint resolved to nothing, warn the user, they may have
     // made a typo.
     OutputBuffer out;
-    out.Append(DescribeBreakpoint(&console->context(), breakpoint.get()));
+    out.Append(FormatBreakpoint(&console->context(), breakpoint.get()));
     out.Append(Syntax::kWarning, "\nPending");
     out.Append(": No matches for location, it will be pending library loads.");
     console->Output(out);
@@ -54,7 +54,7 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
 
   // Successfully wrote the breakpoint.
   OutputBuffer out;
-  out.Append(DescribeBreakpoint(&console->context(), breakpoint.get()));
+  out.Append(FormatBreakpoint(&console->context(), breakpoint.get()));
   out.Append("\n");
 
   // There is a question of what to show the breakpoint enabled state. The
@@ -372,9 +372,12 @@ Err DoClear(ConsoleContext* context, const Command& cmd) {
         "Use \"breakpoint <index> clear\" to specify one.\n");
   }
 
-  std::string desc = DescribeBreakpoint(context, cmd.breakpoint());
+  OutputBuffer desc("Deleted ");
+  desc.Append(FormatBreakpoint(context, cmd.breakpoint()));
+
   context->session()->system().DeleteBreakpoint(cmd.breakpoint());
-  Console::get()->Output("Deleted " + desc);
+
+  Console::get()->Output(desc);
   return Err();
 }
 

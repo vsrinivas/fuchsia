@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/lib/fxl/macros.h"
 
 namespace llvm {
@@ -73,7 +74,7 @@ class TestSymbolModule {
   // Helper to convert symbol names to vectors of components without using the
   // "expr" library. This just splits on "::" which handles most cases but
   // not elaborate templates.
-  static std::vector<std::string> SplitName(std::string_view input);
+  static Identifier SplitName(std::string_view input);
 
  private:
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.

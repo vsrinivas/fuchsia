@@ -415,57 +415,47 @@ std::string DescribeSymbolServer(const ConsoleContext* context,
   return symbol_server->name();
 }
 
-std::string DescribeBreakpoint(const ConsoleContext* context,
-                               const Breakpoint* breakpoint) {
+OutputBuffer FormatBreakpoint(const ConsoleContext* context,
+                              const Breakpoint* breakpoint) {
   BreakpointSettings settings = breakpoint->GetSettings();
 
   std::string scope = BreakpointScopeToString(context, settings);
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
   const char* type = BreakpointTypeToString(settings.type);
-  std::string location = DescribeInputLocation(settings.location);
+  OutputBuffer location = FormatInputLocation(settings.location);
 
-  return fxl::StringPrintf("Breakpoint %d (%s) on %s, %s, stop=%s, @ %s",
-                           context->IdForBreakpoint(breakpoint), type,
-                           scope.c_str(), enabled, stop.c_str(),
-                           location.c_str());
+  OutputBuffer result("Breakpoint ");
+  result.Append(Syntax::kSpecial,
+                fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
+  result.Append(fxl::StringPrintf(" (%s) on %s, %s, stop=%s, @ ", type,
+                                  scope.c_str(), enabled, stop.c_str()));
+
+  result.Append(std::move(location));
+  return result;
 }
 
-std::string DescribeInputLocation(const InputLocation& location) {
+OutputBuffer FormatInputLocation(const InputLocation& location) {
   switch (location.type) {
     case InputLocation::Type::kNone:
-      return "<no location>";
+      return OutputBuffer(Syntax::kComment, "<no location>");
     case InputLocation::Type::kLine:
       // Don't pass a TargetSymbols to DescribeFileLine because we always want
       // the full file name as passed-in by the user (as this is an "input"
       // location object). It is surprising if the debugger deletes some input.
-      return DescribeFileLine(nullptr, location.line);
-    case InputLocation::Type::kSymbol: {
-      std::string output;
-      // TODO(brettw) need to disambiguate symbols with leading "::".
-      for (const auto& cur : location.symbol) {
-        if (!output.empty())
-          output += "::";
-        output += cur;
-      }
-      return output;
-    }
+      return OutputBuffer(DescribeFileLine(nullptr, location.line));
+    case InputLocation::Type::kSymbol:
+      return FormatIdentifier(location.symbol, true);
     case InputLocation::Type::kAddress:
-      return fxl::StringPrintf("0x%" PRIx64, location.address);
+      return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, location.address));
   }
   FXL_NOTREACHED();
-  return std::string();
+  return OutputBuffer();
 }
 
 // This annoyingly duplicates Identifier::GetName but is required to get
 // syntax highlighting for all the components.
-OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
-  const auto& [err, identifier] = ExprParser::ParseIdentifier(str);
-  if (err.has_error()) {
-    // Not parseable as an identifier, just write the string.
-    return OutputBuffer(str);
-  }
-
+OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
   OutputBuffer result;
   if (identifier.qualification() == Identifier::kGlobal)
     result.Append(identifier.GetSeparator());
@@ -501,7 +491,14 @@ OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
 }
 
 OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
-  OutputBuffer result = FormatIdentifier(function->GetFullName(), true);
+  auto [err, ident] = ExprParser::ParseIdentifier(function->GetFullName());
+  OutputBuffer result;
+  if (err.has_error()) {
+    // Can't parse the name, just pass through.
+    result = OutputBuffer(function->GetFullName());
+  } else {
+    result = FormatIdentifier(ident, true);
+  }
 
   const auto& params = function->parameters();
   std::string params_str;

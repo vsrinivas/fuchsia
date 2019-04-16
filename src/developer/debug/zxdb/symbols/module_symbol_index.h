@@ -28,6 +28,8 @@ class ObjectFile;
 
 namespace zxdb {
 
+class Identifier;
+
 // Holds the index of symbols for a given module.
 class ModuleSymbolIndex {
  public:
@@ -51,12 +53,8 @@ class ModuleSymbolIndex {
 
   // Takes a fully-qualified name with namespaces and classes and template
   // parameters and returns the list of symbols which match exactly.
-  //
-  // The vector version takes a list of components that have been split on
-  // "::". Most callers should use Identifier::GetAsIndexComponents() to get
-  // this list in the correct format.
   const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
-      const std::vector<std::string>& input) const;
+      const Identifier& input) const;
 
   // Takes a fully-qualified name with namespaces and classes and returns a
   // pair of iterators.
@@ -82,7 +80,7 @@ class ModuleSymbolIndex {
   // iterator key and less than the end.
   std::pair<ModuleSymbolIndexNode::ConstIterator,
             ModuleSymbolIndexNode::ConstIterator>
-  FindPrefix(const std::vector<std::string>& input) const;
+  FindPrefix(const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The
   // name is matched from the right side with a left boundary of either a slash

@@ -226,7 +226,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
                    input_location.line.file().c_str());
       case InputLocation::Type::kSymbol:
         return Err("There are no symbols matching \"%s\".",
-                   DescribeInputLocation(input_location).c_str());
+                   FormatInputLocation(input_location).AsString().c_str());
       case InputLocation::Type::kAddress:
       case InputLocation::Type::kNone:
       default:

@@ -79,6 +79,21 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
   return a.File == b.File && a.Line == b.Line;
 }
 
+// Determines if the given input location references a PLT symbol. If it does,
+// returns the name of that symbol (with the "@plt" annotation stripped). If it
+// does not, returns a null optional.
+std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
+  if (loc.type != InputLocation::Type::kSymbol ||
+      loc.symbol.components().size() != 1)
+    return std::nullopt;
+
+  const Identifier::Component& comp = loc.symbol.components()[0];
+  if (comp.has_template() || !StringEndsWith(comp.name(), "@plt"))
+    return std::nullopt;
+
+  return comp.name().substr(0, comp.name().size() - 4);
+}
+
 }  // namespace
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
@@ -259,15 +274,10 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  if (input_location.type == InputLocation::Type::kSymbol &&
-      input_location.symbol.size() == 1 &&
-      StringEndsWith(input_location.symbol[0], "@plt")) {
-    auto found = plt_locations_.find(input_location.symbol[0].substr(
-        0, input_location.symbol[0].size() - 4));
-
-    if (found == plt_locations_.end()) {
+  if (auto plt_name = GetPLTInputLocation(input_location)) {
+    auto found = plt_locations_.find(*plt_name);
+    if (found == plt_locations_.end())
       return {};
-    }
 
     // TODO: We should have a location type that can properly hold names and
     // sizes for PLT entries and other weird symbol-adjacent bits of code.

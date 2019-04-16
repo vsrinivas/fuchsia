@@ -13,24 +13,20 @@ TEST(Identifier, GetName) {
   // Empty.
   Identifier unqualified;
   EXPECT_EQ("", unqualified.GetFullName());
-  EXPECT_TRUE(unqualified.GetAsIndexComponents().empty());
 
   // Single name with no "::" at the beginning.
   unqualified.AppendComponent("First");
   EXPECT_EQ("First", unqualified.GetFullName());
   std::vector<std::string> expected_index = {"First"};
-  EXPECT_EQ(expected_index, unqualified.GetAsIndexComponents());
 
   // Single name with a "::" at the beginning.
   Identifier qualified(Identifier::kGlobal, "First");
   EXPECT_EQ("::First", qualified.GetFullName());
-  EXPECT_EQ(expected_index, qualified.GetAsIndexComponents());
 
   // Append some template stuff.
   qualified.AppendComponent("Second", {"int", "Foo"});
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
   expected_index.push_back("Second<int, Foo>");
-  EXPECT_EQ(expected_index, qualified.GetAsIndexComponents());
 }
 
 TEST(Identifier, GetScope) {

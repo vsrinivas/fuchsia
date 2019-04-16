@@ -5,10 +5,12 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <string>
 #include <vector>
 
 #include "src/developer/debug/zxdb/symbols/file_line.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
 
@@ -29,7 +31,7 @@ struct InputLocation {
   InputLocation() = default;
   explicit InputLocation(FileLine file_line)
       : type(Type::kLine), line(std::move(file_line)) {}
-  explicit InputLocation(std::vector<std::string> symbol)
+  explicit InputLocation(Identifier symbol)
       : type(Type::kSymbol), symbol(std::move(symbol)) {}
   explicit InputLocation(uint64_t address)
       : type(Type::kAddress), address(address) {}
@@ -56,11 +58,7 @@ struct InputLocation {
   FileLine line;
 
   // Valid when type == kSymbol.
-  //
-  // This contains the symbol split on namespace and class names (on "::")
-  // with template names canonicalized. Most callers should use
-  // Identifier::GetAsIndexComponents() to get a string in the correct format.
-  std::vector<std::string> symbol;
+  Identifier symbol;
 
   // Valid when type == kAddress;
   uint64_t address;

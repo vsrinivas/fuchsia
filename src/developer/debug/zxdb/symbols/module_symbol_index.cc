@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/lib/fxl/logging.h"
 
@@ -370,11 +371,11 @@ size_t ModuleSymbolIndex::CountSymbolsIndexed() const {
 }
 
 const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
-    const std::vector<std::string>& input) const {
+    const Identifier& input) const {
   const ModuleSymbolIndexNode* cur = &root_;
 
-  for (size_t i = 0; i < input.size(); i++) {
-    auto found = cur->sub().find(input[i]);
+  for (size_t i = 0; i < input.components().size(); i++) {
+    auto found = cur->sub().find(input.components()[i].GetName(false));
     if (found == cur->sub().end()) {
       // We return a reference for performance, so need an empty one.
       static std::vector<ModuleSymbolIndexNode::DieRef> empty_result;
@@ -388,21 +389,21 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
 
 std::pair<ModuleSymbolIndexNode::ConstIterator,
           ModuleSymbolIndexNode::ConstIterator>
-ModuleSymbolIndex::FindPrefix(const std::vector<std::string>& input) const {
+ModuleSymbolIndex::FindPrefix(const Identifier& input) const {
   if (input.empty())
     return std::make_pair(root_.sub().end(), root_.sub().end());
 
   const ModuleSymbolIndexNode* cur = &root_;
 
   // Go through all inputs that must match exactly (all but the last).
-  for (size_t i = 0; i < input.size() - 1; i++) {
-    auto found = cur->sub().find(input[i]);
+  for (size_t i = 0; i < input.components().size() - 1; i++) {
+    auto found = cur->sub().find(input.components()[i].GetName(false));
     if (found == cur->sub().end())
       return std::make_pair(root_.sub().end(), root_.sub().end());
     cur = &found->second;
   }
 
-  return cur->FindPrefix(input.back());
+  return cur->FindPrefix(input.components().back().GetName(false));
 }
 
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(

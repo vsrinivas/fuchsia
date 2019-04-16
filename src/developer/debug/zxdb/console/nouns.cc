@@ -525,11 +525,11 @@ void ListBreakpoints(ConsoleContext* context) {
   for (auto& bp : breakpoints)
     id_bp[context->IdForBreakpoint(bp)] = bp;
 
-  std::vector<std::vector<std::string>> rows;
+  std::vector<std::vector<OutputBuffer>> rows;
 
   for (const auto& pair : id_bp) {
     rows.emplace_back();
-    std::vector<std::string>& row = rows.back();
+    std::vector<OutputBuffer>& row = rows.back();
 
     // "Current breakpoint" marker.
     if (pair.first == active_breakpoint_id)
@@ -538,12 +538,13 @@ void ListBreakpoints(ConsoleContext* context) {
       row.emplace_back();
 
     BreakpointSettings settings = pair.second->GetSettings();
-    row.push_back(fxl::StringPrintf("%d", pair.first));
-    row.push_back(BreakpointScopeToString(context, settings));
-    row.push_back(BreakpointStopToString(settings.stop_mode));
-    row.push_back(BreakpointEnabledToString(settings.enabled));
-    row.push_back(BreakpointTypeToString(settings.type));
-    row.push_back(DescribeInputLocation(settings.location));
+    row.push_back(
+        OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
+    row.emplace_back(BreakpointScopeToString(context, settings));
+    row.emplace_back(BreakpointStopToString(settings.stop_mode));
+    row.emplace_back(BreakpointEnabledToString(settings.enabled));
+    row.emplace_back(BreakpointTypeToString(settings.type));
+    row.push_back(FormatInputLocation(settings.location));
   }
 
   OutputBuffer out;
@@ -582,14 +583,13 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
   // command line (otherwise the command would have been rejected before here).
   FXL_DCHECK(cmd.breakpoint());
   context->SetActiveBreakpoint(cmd.breakpoint());
-  Console::get()->Output(DescribeBreakpoint(context, cmd.breakpoint()));
+  Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint()));
   return true;
 }
 
 // Symbol Servers --------------------------------------------------------------
 
-const char kSymServerShortHelp[] =
-    "sym-server: Select or list symbol servers.";
+const char kSymServerShortHelp[] = "sym-server: Select or list symbol servers.";
 const char kSymServerHelp[] =
     R"(sym-server [ <id> [ <command> ... ] ]
 

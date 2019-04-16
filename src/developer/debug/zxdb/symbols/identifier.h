@@ -133,14 +133,6 @@ class Identifier {
   // Returns a form for debugging where the parsing is more visible.
   std::string GetDebugName() const;
 
-  // Returns the list of components, each with their template parameters
-  // converted to a string. For example:
-  //
-  //   { "std", "vector<std::string>" }
-  //
-  // This is the format used in the ModuleSymbolIndex for lookup.
-  std::vector<std::string> GetAsIndexComponents() const;
-
   // Returns the separator string for components. This is currently always "::"
   // but is exposed here as a getter to avoid hardcoding it everywhere and to
   // allow us to do language-specific separators in the future.
