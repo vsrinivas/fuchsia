@@ -53,15 +53,15 @@ private:
 };
 
 namespace {
-constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
+constexpr size_t kMaxAllocatedPacketCount = 16 * 1024u;
 
 // TODO(maniscalco): Enforce this limit per process via the job policy.
-constexpr size_t kMaxPendingPacketCountPerPort = kMaxPendingPacketCount / 8;
+constexpr size_t kMaxAllocatedPacketCountPerPort = kMaxAllocatedPacketCount / 8;
 ArenaPortAllocator port_allocator;
 } // namespace.
 
 zx_status_t ArenaPortAllocator::Init() {
-    return arena_.Init("packets", kMaxPendingPacketCount);
+    return arena_.Init("packets", kMaxAllocatedPacketCount);
 }
 
 PortPacket* ArenaPortAllocator::Alloc() {
@@ -152,9 +152,8 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
     if ((trigger_ & new_state) == 0u)
         return 0;
 
-    // TODO(cpu): Queue() can fail and we don't propagate this information
-    // here properly. Now, this failure is self inflicted because we constrain
-    // the packet arena size artificially.  See ZX-2166 for details.
+    // Queue cannot fail because the packet is not allocated in the packet arena,
+    // and does not count against the per-port limit.
     auto status = port_->Queue(&packet_, new_state, count);
 
     if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status != ZX_OK))
@@ -189,13 +188,13 @@ zx_status_t PortDispatcher::Create(uint32_t options, KernelHandle<PortDispatcher
 }
 
 PortDispatcher::PortDispatcher(uint32_t options)
-    : options_(options), zero_handles_(false), num_packets_(0u) {
+    : options_(options), zero_handles_(false), num_ephemeral_packets_(0u) {
     kcounter_add(dispatcher_port_create_count, 1);
 }
 
 PortDispatcher::~PortDispatcher() {
     DEBUG_ASSERT(zero_handles_);
-    DEBUG_ASSERT(num_packets_ == 0u);
+    DEBUG_ASSERT(num_ephemeral_packets_ == 0u);
     kcounter_add(dispatcher_port_destroy_count, 1);
 }
 
@@ -218,11 +217,11 @@ void PortDispatcher::on_zero_handles() {
     // Free any queued packets.
     while (!packets_.is_empty()) {
         auto packet = packets_.pop_front();
-        --num_packets_;
 
         // If the packet is ephemeral, free it outside of the lock. Otherwise,
         // reset the observer if it is present.
         if (packet->is_ephemeral()) {
+            --num_ephemeral_packets_;
             guard.CallUnlocked([packet]() {
                     packet->Free();
             });
@@ -302,7 +301,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     if (zero_handles_)
         return ZX_ERR_BAD_STATE;
 
-    if (num_packets_ > kMaxPendingPacketCountPerPort) {
+    if (port_packet->is_ephemeral() && num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
         kcounter_add(port_full_count, 1);
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -317,7 +316,9 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
         port_packet->packet.signal.count = count;
     }
     packets_.push_back(port_packet);
-    ++num_packets_;
+    if (port_packet->is_ephemeral()) {
+        ++num_ephemeral_packets_;
+    }
     // This Disable() call must come before Post() to be useful, but doing
     // it earlier would also be OK.
     resched_disable.Disable();
@@ -347,7 +348,9 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline,
             Guard<fbl::Mutex> guard{get_lock()};
             PortPacket* port_packet = packets_.pop_front();
             if (port_packet != nullptr) {
-                --num_packets_;
+                if (port_packet->is_ephemeral()) {
+                    --num_ephemeral_packets_;
+                }
                 *out_packet = port_packet->packet;
 
                 bool is_ephemeral = port_packet->is_ephemeral();
@@ -475,10 +478,10 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     for (auto it = packets_.begin(); it != packets_.end();) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
+            DEBUG_ASSERT(!to_remove->is_ephemeral());
             // Destroyed as we go around the loop.
             ktl::unique_ptr<const PortObserver> observer =
                 ktl::move(packets_.erase(to_remove)->observer);
-            --num_packets_;
             packet_removed = true;
         } else {
             ++it;
@@ -494,8 +497,10 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
     Guard<fbl::Mutex> guard{get_lock()};
 
     if (port_packet->InContainer()) {
+        if (port_packet->is_ephemeral()) {
+            --num_ephemeral_packets_;
+        }
         packets_.erase(*port_packet)->observer.reset();
-        --num_packets_;
         return true;
     }
 

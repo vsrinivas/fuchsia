@@ -328,6 +328,55 @@ static bool async_wait_event_test_repeat(void) {
     END_TEST;
 }
 
+static bool async_wait_event_all_processed(void) {
+    BEGIN_TEST;
+    zx_status_t status;
+
+    const uint64_t key = 6567ull;
+    // One more than the size of the packet arena.
+    constexpr size_t kEventCount = 16 * 1024u + 1;
+
+    zx_handle_t port;
+    status = zx_port_create(0, &port);
+    EXPECT_EQ(status, ZX_OK);
+
+    zx_handle_t ev[kEventCount];
+    for (size_t i = 0u; i < kEventCount; i++) {
+        status = zx_event_create(0u, &ev[i]);
+        EXPECT_EQ(status, ZX_OK);
+
+        status = zx_object_wait_async(ev[i], port, key, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+        EXPECT_EQ(status, ZX_OK);
+
+        status = zx_object_signal(ev[i], 0u, ZX_EVENT_SIGNALED);
+        EXPECT_EQ(status, ZX_OK);
+    }
+
+    size_t count = 0;
+    zx_port_packet_t out = {};
+    while (ZX_OK == (status = zx_port_wait(port, zx_deadline_after(ZX_USEC(200)), &out))) {
+        EXPECT_EQ(out.key, key);
+        EXPECT_EQ(out.type, ZX_PKT_TYPE_SIGNAL_ONE);
+        EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED);
+        EXPECT_EQ(out.signal.trigger, ZX_EVENT_SIGNALED);
+        EXPECT_EQ(out.signal.count, 1u);
+
+        ++count;
+    }
+    EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+    EXPECT_EQ(count, kEventCount);
+
+    for (size_t i = 0u; i < kEventCount; i++) {
+        status = zx_handle_close(ev[i]);
+        EXPECT_EQ(status, ZX_OK);
+    }
+
+    status = zx_handle_close(port);
+    EXPECT_EQ(status, ZX_OK);
+
+    END_TEST;
+}
+
 // Check that zx_object_wait_async() returns an error if it is passed an
 // invalid option.
 static bool async_wait_invalid_option() {
@@ -867,6 +916,7 @@ RUN_TEST(queue_too_many)
 RUN_TEST(async_wait_channel_test)
 RUN_TEST(async_wait_event_test_single)
 RUN_TEST(async_wait_event_test_repeat)
+RUN_TEST(async_wait_event_all_processed)
 RUN_TEST(async_wait_invalid_option)
 RUN_TEST(async_wait_close_order_1)
 RUN_TEST(async_wait_close_order_2)

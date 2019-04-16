@@ -251,7 +251,7 @@ private:
     bool zero_handles_ TA_GUARDED(get_lock());
 
     // Next three members handle the object, manual and exception notifications.
-    size_t num_packets_ TA_GUARDED(get_lock());
+    size_t num_ephemeral_packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
     // Next two members handle the interrupt notifications.
