@@ -381,19 +381,16 @@ template("environment") {
       }
     }
     if (selector == "$selector") {
-      if (selector == get_path_info(selector, "file")) {
-        # No slash in the name.  Just a trivial non-host catch-all.
-        selector = {
+      selector = {
+        host = false
+        if (selector == get_path_info(selector, "file")) {
+          # No slash in the name.  Just a trivial non-host catch-all.
           variant = selector
-          host = false
-        }
-      } else {
-        # "$variant/$output_name"
-        selector = {
+        } else {
+          # "$variant/$output_name"
           variant = get_path_info(selector, "dir")
           output_name = [ get_path_info(selector, "file") ]
         }
-        assert(false, "TODO: shorthand expansion")
       }
     }
     if (selector != false) {
