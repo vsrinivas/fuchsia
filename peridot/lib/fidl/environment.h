@@ -5,10 +5,6 @@
 #ifndef PERIDOT_LIB_FIDL_ENVIRONMENT_H_
 #define PERIDOT_LIB_FIDL_ENVIRONMENT_H_
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
@@ -18,6 +14,10 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace modular {
 
@@ -43,6 +43,9 @@ class Environment {
     services_dir_->AddEntry(service_name, service);
   }
 
+  // Overrides return value of GetLauncher() with |launcher|.
+  void OverrideLauncher(std::unique_ptr<fuchsia::sys::Launcher> launcher);
+
   fuchsia::sys::Launcher* GetLauncher();
 
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
@@ -60,6 +63,8 @@ class Environment {
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> services_dir_;
+
+  std::unique_ptr<fuchsia::sys::Launcher> override_launcher_;
 };
 
 }  // namespace modular

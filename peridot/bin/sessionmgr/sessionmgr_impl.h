@@ -5,10 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
@@ -25,7 +21,12 @@
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/sessionmgr/argv_injecting_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/sessionmgr/user_intelligence_provider_impl.h"

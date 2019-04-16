@@ -13,6 +13,8 @@ executable_package("sessionmgr") {
   ]
 
   sources = [
+    "argv_injecting_launcher.cc",
+    "argv_injecting_launcher.h",
     "device_map_impl.cc",
     "device_map_impl.h",
     "sessionmgr.cc",
@@ -66,6 +68,7 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.speech",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",

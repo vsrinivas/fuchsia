@@ -27,7 +27,15 @@ Environment::Environment(const Environment* const parent_scope,
                   kill_on_oom);
 }
 
+void Environment::OverrideLauncher(
+    std::unique_ptr<fuchsia::sys::Launcher> launcher) {
+  override_launcher_ = std::move(launcher);
+}
+
 fuchsia::sys::Launcher* Environment::GetLauncher() {
+  if (override_launcher_) {
+    return override_launcher_.get();
+  }
   if (!env_launcher_) {
     env_->GetLauncher(env_launcher_.NewRequest());
   }

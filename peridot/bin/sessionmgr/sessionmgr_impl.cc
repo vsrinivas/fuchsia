@@ -21,6 +21,7 @@
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
+
 #include <memory>
 #include <string>
 
@@ -249,6 +250,16 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
       startup_context_->environment(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
       /* kill_on_oom = */ true);
+
+  fuchsia::sys::LauncherPtr parent_launcher;
+  startup_context_->environment()->GetLauncher(parent_launcher.NewRequest());
+  // TODO(MF-150): Pass override argv from the Modular config to
+  // ArgvInjectingLauncher.
+  ArgvInjectingLauncher::ArgvMap argv_map;
+  auto argv_injecting_launcher = std::make_unique<ArgvInjectingLauncher>(
+      std::move(parent_launcher), argv_map);
+  session_environment_->OverrideLauncher(std::move(argv_injecting_launcher));
+
   AtEnd(Reset(&session_environment_));
 }
 
