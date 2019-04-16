@@ -1641,17 +1641,12 @@ macro_rules! fidl_table {
             fn inline_size(&self) -> usize { 16 }
 
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
-                let members = &mut [$(
+                let members: &mut [(u64, Option<&mut $crate::encoding::Encodable>)] = &mut [$(
                     ($ordinal, self.$member_name.as_mut().map(|x| x as &mut $crate::encoding::Encodable)),
                 )*];
 
                 // Cut off the `None` elements at the tail of the table
-                let last_some_index = members
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .find(|(_i, val)| val.1.is_some())
-                    .map(|(i, _val)| i);
+                let last_some_index = members.iter().rposition(|x| x.1.is_some());
 
                 let members = if let Some(i) = last_some_index {
                     &mut members[..(i + 1)]
@@ -1663,7 +1658,7 @@ macro_rules! fidl_table {
                 let max_ordinal = members.last().map(|v| v.0).unwrap_or(0);
                 (max_ordinal as u64).encode(encoder)?;
                 $crate::encoding::ALLOC_PRESENT_U64.encode(encoder)?;
-                let bytes_len = max_ordinal * 16; // 16 = ENVELOPE_INLINE_SIZE
+                let bytes_len = (max_ordinal as usize) * 16; // 16 = ENVELOPE_INLINE_SIZE
                 encoder.write_out_of_line(bytes_len, |encoder| {
                     encoder.recurse(|encoder| {
                         let mut next_ordinal_to_write = 1;
@@ -2835,6 +2830,13 @@ mod test {
                 ordinal: 4,
             },
         },
+    }
+
+    #[allow(unused)]
+    struct EmptyTableCompiles {}
+    fidl_table! {
+        name: EmptyTableCompiles,
+        members: {},
     }
 
     struct TablePrefix {
