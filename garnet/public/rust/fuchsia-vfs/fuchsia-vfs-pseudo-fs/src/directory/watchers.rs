@@ -150,7 +150,6 @@ impl Watchers {
     ///
     /// In case of a communication error with any of the watchers, connection to this watcher is
     /// closed.
-    #[allow(unused)]
     pub fn send_events<GetNames, Names, Name>(
         &mut self,
         mask: u32,
@@ -195,7 +194,6 @@ impl Watchers {
 
     /// Closes all the currently connected watcher connections.  New connections may still be added
     /// via add().
-    #[allow(unused)]
     pub fn close_all(&mut self) {
         self.connections.clear();
     }
@@ -320,7 +318,6 @@ impl WatcherConnection {
     ///
     /// `event` is one of the WATCH_EVENT_* constants, with the values used to populate the `event`
     /// field.
-    #[allow(unused)]
     fn send_events<Name>(
         &self,
         event: u8,
@@ -339,7 +336,6 @@ impl WatcherConnection {
     /// Constructs and sends a fidl_fuchsia_io::WatchEvent instance over the watcher connection,
     /// skipping the operation if the watcher did not request this kind of events to be delivered -
     /// filtered by the mask value.
-    #[allow(unused)]
     fn send_event_check_mask<Name>(
         &self,
         mask: u32,

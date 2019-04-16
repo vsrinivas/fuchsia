@@ -214,6 +214,18 @@ macro_rules! assert_watch {
 }
 
 #[macro_export]
+macro_rules! assert_watch_err {
+    ($proxy:expr, $mask:expr, $expected_status:expr) => {{
+        use $crate::directory::test_utils::reexport::*;
+
+        let (_watcher_client, watcher_server) = zx::Channel::create().unwrap();
+
+        let status = await!($proxy.watch($mask, 0, watcher_server)).expect("watch failed");
+        assert_eq!(Status::from_raw(status), $expected_status);
+    }};
+}
+
+#[macro_export]
 macro_rules! assert_watcher_one_message_watched_events {
     ($watcher:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
         use $crate::directory::test_utils::reexport::*;
