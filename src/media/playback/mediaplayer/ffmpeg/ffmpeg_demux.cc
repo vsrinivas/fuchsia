@@ -504,9 +504,10 @@ void FfmpegDemuxImpl::SendStatus() {
     problem_details = problem_details_;
   }
 
-  status_callback_(duration_ns,
-                   (io_context_->seekable & AVIO_SEEKABLE_NORMAL) != 0,
-                   std::move(metadata), problem_type, problem_details);
+  status_callback_(
+      duration_ns,
+      io_context_ && (io_context_->seekable & AVIO_SEEKABLE_NORMAL) != 0,
+      std::move(metadata), problem_type, problem_details);
 }
 
 void FfmpegDemuxImpl::ReportProblem(const std::string& type,
