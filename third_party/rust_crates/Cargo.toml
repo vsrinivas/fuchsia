@@ -33,6 +33,7 @@ freetype = "0.4"
 futures-preview = { version = "=0.3.0-alpha.13", features = ["io-compat"] }
 getopts = "0.2"
 glob = "0.3.0"
+handlebars = "2.0.0-beta.2"
 harfbuzz = { version = "0.3.1", default-features = false }
 heck = "0.3.1"
 hex = "0.3.2"

@@ -608,6 +608,7 @@ dependencies = [
  "futures-preview 0.3.0-alpha.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "getopts 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "handlebars 2.0.0-beta.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "harfbuzz 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -835,6 +836,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "handlebars"
+version = "2.0.0-beta.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "hashbrown 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pest 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pest_derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.87 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.38 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "harfbuzz"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,6 +869,14 @@ dependencies = [
  "core-text 13.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "freetype 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "hashbrown"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "serde 1.0.87 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2522,8 +2548,10 @@ version = "0.3.99"
 "checksum glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 "checksum gzip-header 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2f9e59524a909fe98bb6c6f2cf1f27f2f6772887a496bf4c68cae0d94f884586"
 "checksum h2 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "ddb2b25a33e231484694267af28fec74ac63b5ccf51ee2065a5e313b834d836e"
+"checksum handlebars 2.0.0-beta.2 (registry+https://github.com/rust-lang/crates.io-index)" = "cfcc4c7d5274ebfa5c5c1d9464b5bfa7a15c784a9f016d7c43b8aa71ad2631d2"
 "checksum harfbuzz 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "46f7426266a5ece3e49eae6f48e602c0f8c39917354a847eac9c06437dcde8da"
 "checksum harfbuzz-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "617d896521b45c5f131bc2b587c053fcdf89da2eee389b9b473310fb624d1af8"
+"checksum hashbrown 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "61e4900fa4e80b3d15c78a08ec8a08433246063fa7577e7b2c6426b3b21b1f79"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
 "checksum hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
 "checksum http 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)" = "1a10e5b573b9a0146545010f50772b9e8b1dd0a256564cc4307694c68832a2f5"
