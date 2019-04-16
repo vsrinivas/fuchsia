@@ -55,3 +55,13 @@ test_package("overnet_examples_tests") {
     },
   ]
 }
+
+# expose a "tests" group that includes the tests package and runtime dependencies
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":overnet_examples_tests",
+    "//garnet/bin/mdns/service:mdns",
+    "//src/connectivity/overnet/overnetstack",
+  ]
+}
