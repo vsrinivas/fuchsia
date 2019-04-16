@@ -59,12 +59,14 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (!tracees_.back()->Start(
           std::move(categories_clone), buffer_size, buffering_mode_,
           [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
-            if (weak)
-              weak->CheckAllProvidersStarted();
+            if (weak) {
+              weak->OnProviderStarted(bundle);
+            }
           },
           [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
-            if (weak)
+            if (weak) {
               weak->FinishProvider(bundle);
+            }
           })) {
     tracees_.pop_back();
   } else {
@@ -113,6 +115,25 @@ void TraceSession::Abort() {
   TransitionToState(State::kStopped);
   tracees_.clear();
   abort_handler_();
+}
+
+// Called when a provider reports that it has started.
+
+void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
+  if (state_ == State::kReady || state_ == State::kStarted) {
+    CheckAllProvidersStarted();
+  } else {
+    // Tracing stopped in the interim.
+    auto it =
+        std::find_if(tracees_.begin(), tracees_.end(),
+                     [bundle](const auto& tracee) {
+                       return *tracee == bundle;
+    });
+
+    if (it != tracees_.end()) {
+      (*it)->Stop();
+    }
+  }
 }
 
 // Called when a provider state change is detected.

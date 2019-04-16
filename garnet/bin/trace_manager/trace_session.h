@@ -72,6 +72,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   void NotifyStarted();
   void Abort();
+  void OnProviderStarted(TraceProviderBundle* bundle);
   void CheckAllProvidersStarted();
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();

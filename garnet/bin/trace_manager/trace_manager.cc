@@ -152,6 +152,7 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
 void TraceManager::RegisterTraceProviderWorker(
     fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider, uint64_t pid,
     fidl::StringPtr name) {
+  FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.get() << "}";
   auto it = providers_.emplace(
       providers_.end(),
       TraceProviderBundle{provider.Bind(), next_provider_id_++, pid,
