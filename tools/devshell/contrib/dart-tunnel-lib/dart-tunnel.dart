@@ -52,8 +52,7 @@ Future<Null> main(List<String> args) async {
   final String isolateName = results[kIsolateNameFlag];
   final Pattern isolatePattern = flagIsValid(isolateName) ? isolateName : r'';
   final List<IsolateRef> isolates = await connection.getMainIsolatesByPattern(
-      isolatePattern,
-      includeNonFlutterIsolates: true);
+      isolatePattern);
   final String plural =
       isolates.length == 0 || isolates.length > 1 ? 'isolates' : 'isolate';
   final String isolateResultString = 'Found ${isolates.length} $plural';
