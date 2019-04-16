@@ -10,6 +10,7 @@
 
 #include <ktl/unique_ptr.h>
 #include <lib/system-topology.h>
+#include <lk/init.h>
 #include <pow2.h>
 #include <printf.h>
 #include <trace.h>
@@ -402,6 +403,10 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
 
         // Add cores directly attached to die.
         for (auto& core : die->cores()) {
+            if (!core) {
+                continue;
+            }
+
             core->SetFlatParent(die_flat_index);
             auto status = insert_core(core);
             if (status != ZX_OK) {
@@ -429,7 +434,11 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
     }
 
     status = AttachNumaInformation(acpi_tables, decoder, &dies);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+        // This is not a critical error. Systems, such as qemu, may not have the
+        // tables present to enumerate NUMA information.
+        LTRACEF("Unable to attach NUMA information, missing ACPI tables.\n");
+    } else if (status != ZX_OK) {
         return status;
     }
 
@@ -438,7 +447,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
 } // namespace x86
 
-void x86_system_topology_init() {
+void x86_system_topology_init(uint32_t) {
     const AcpiTableProvider table_provider;
     fbl::Vector<zbi_topology_node_t> topology;
     auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables(&table_provider),
@@ -448,3 +457,5 @@ void x86_system_topology_init() {
         panic("Failed to initialize system topology!");
     }
 }
+
+LK_INIT_HOOK(system_topology_init, x86_system_topology_init, LK_INIT_LEVEL_VM + 2)

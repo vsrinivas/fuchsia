@@ -17,7 +17,6 @@
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
-#include <arch/x86/cpu_topology.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
@@ -146,7 +145,6 @@ void x86_init_percpu(cpu_num_t cpu_num) {
 
     x86_feature_init();
 
-    x86_cpu_topology_init();
     x86_extended_register_init();
     x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_SSE);
     x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_AVX);

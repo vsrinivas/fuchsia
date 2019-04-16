@@ -20,6 +20,4 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
 } // namespace x86
 
-void x86_system_topology_init();
-
 #endif // ARCH_X86_SYSTEM_TOPOLOGY_H

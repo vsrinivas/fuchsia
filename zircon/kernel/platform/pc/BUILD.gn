@@ -32,6 +32,7 @@ library("pc") {
     "$zx/kernel/lib/lockdep",
     "$zx/kernel/lib/memory_limit",
     "$zx/kernel/lib/pow2_range_allocator",
+    "$zx/kernel/lib/topology",
     "$zx/kernel/lib/version",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/smbios",

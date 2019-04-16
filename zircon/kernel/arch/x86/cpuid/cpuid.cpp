@@ -61,7 +61,7 @@ Registers FindHighestCacheSubleaf(uint32_t leaf) {
 
             // If there is no highest just return the current.
             if (!highest) {
-                printf("WARNING: unable to find any cache levels.");
+                printf("WARNING: unable to find any cache levels.\n");
                 return current;
             }
             return *highest;
@@ -74,7 +74,7 @@ Registers FindHighestCacheSubleaf(uint32_t leaf) {
         }
     }
 
-    printf("WARNING: more than 1000 levels of cache, couldn't find highest.");
+    printf("WARNING: more than 1000 levels of cache, couldn't find highest.\n");
     return *highest;
 }
 

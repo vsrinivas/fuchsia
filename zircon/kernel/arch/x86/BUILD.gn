@@ -75,7 +75,6 @@ library("x86") {
     "asm.S",
     "bootstrap16.cpp",
     "cache.cpp",
-    "cpu_topology.cpp",
     "debugger.cpp",
     "descriptor.cpp",
     "exceptions.S",
