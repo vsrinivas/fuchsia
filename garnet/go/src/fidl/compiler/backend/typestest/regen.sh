@@ -16,6 +16,11 @@ if [ ! -x "${FIDLGEN}" ]; then
     echo "error: fidlgen missing; maybe fx clean-build x64?" 1>&2
     exit 1
 fi
+FIDLGEN_LLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp"
+if [ ! -x "${FIDLGEN_LLCPP}" ]; then
+    echo "error: fidlgen_llcp missing; maybe fx clean-build x64?" 1>&2
+    exit 1
+fi
 
 EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 EXAMPLE_DIR="$( echo $EXAMPLE_DIR | sed -e "s+${FUCHSIA_DIR}/++" )"
@@ -66,7 +71,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     mv "${GOLDENS_DIR}/${cpp_test_header_name}" "${GOLDENS_DIR}/${cpp_test_header_name}.golden"
 
     echo "  llcpp: ${json_name} > ${llcpp_header_name} and ${llcpp_source_name}"
-    ${FIDLGEN} \
+    ${FIDLGEN_LLCPP} \
         -generators llcpp \
         -json "${GOLDENS_DIR}/${json_name}" \
         -output-base "${GOLDENS_DIR}/${json_name}.llcpp" \
@@ -105,4 +110,4 @@ done
 printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"
 
 > "${GOLDENS_DIR}/OWNERS"
-find "${EXAMPLE_DIR}/.."  -name 'OWNERS' -exec cat {} \; | sort -u > "${GOLDENS_DIR}/OWNERS"
+find "${EXAMPLE_DIR}/../.."  -name 'OWNERS' -exec cat {} \; | sort -u > "${GOLDENS_DIR}/OWNERS"

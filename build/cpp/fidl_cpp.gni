@@ -48,7 +48,7 @@ template("fidl_cpp_codegen") {
 
     visibility = [ ":$main_target_name" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen"
+    tool = invoker.fidlgen_tool 
 
     inputs = [
       json_representation,
@@ -151,6 +151,7 @@ template("fidl_cpp") {
       fidl_cpp_codegen(lib_name) {
         forward_variables_from(invoker, "*")
         name = library_name
+        fidlgen_tool = generator_settings.fidlgen_tool
         generator = generator_settings.fidlgen_generator
         generated_source_base = generator_settings.output_stem
         root_target = target_name

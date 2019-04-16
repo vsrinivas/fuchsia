@@ -25,12 +25,24 @@ go_binary("fidlgen") {
   ]
 }
 
+go_binary("fidlgen_llcpp") {
+  gopackage = "fidl/compiler/llcpp_backend"
+
+  sdk_category = "partner"
+
+  deps = [
+    ":fidl_lib",
+  ]
+}
+
 install_host_tools("fidl") {
   deps = [
     ":fidlgen",
+    ":fidlgen_llcpp",
   ]
   outputs = [
     "fidlgen",
+    "fidlgen_llcpp",
   ]
 }
 
@@ -52,7 +64,7 @@ go_test("fidlgen_cpp_test") {
 }
 
 go_test("fidlgen_llcpp_test") {
-  gopackage = "fidl/compiler/backend/llcpp"
+  gopackage = "fidl/compiler/llcpp_backend/llcpp"
 
   deps = [
     ":fidlgen_test_lib",

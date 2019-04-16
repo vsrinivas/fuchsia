@@ -7,7 +7,7 @@ LLCPP_TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="$( echo ${LLCPP_TEST_DIR} | sed -e 's,zircon/system/utest.*$,,' )"
 
 FIDLC=${FUCHSIA_DIR}out/default/host_x64/fidlc
-FIDLGEN=${FUCHSIA_DIR}out/default/host_x64/fidlgen
+FIDLGEN=${FUCHSIA_DIR}out/default/host_x64/fidlgen_llcpp
 
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build?" 1>&2
@@ -15,7 +15,7 @@ if [ ! -x "${FIDLC}" ]; then
 fi
 
 if [ ! -x "${FIDLGEN}" ]; then
-    echo "error: fidlgen missing; did you fx clean-build?" 1>&2
+    echo "error: fidlgen_llcpp missing; did you fx clean-build?" 1>&2
     exit 1
 fi
 

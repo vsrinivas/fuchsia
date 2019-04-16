@@ -6,33 +6,43 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"fidl/compiler/backend/cmdline"
-	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/cpp_overnet_internal"
-	"fidl/compiler/backend/golang"
-	"fidl/compiler/backend/rust"
-	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
+	"fidl/compiler/llcpp_backend/llcpp"
 )
+
+// commaSeparatedList holds the result of parsing a command-line flag that
+// accepts a comma-separated list of strings. This type satisfies the flag.Value
+// interface.
+type commaSeparatedList []string
+
+func (l *commaSeparatedList) String() string {
+	return fmt.Sprintf("%v", *l)
+}
+
+func (l *commaSeparatedList) Set(args string) error {
+	for _, el := range strings.Split(args, ",") {
+		*l = append(*l, el)
+	}
+	return nil
+}
 
 type GenerateFidl interface {
 	GenerateFidl(fidl types.Root, config *types.Config) error
 }
 
 var generators = map[string]GenerateFidl{
-	"cpp":              cpp.NewFidlGenerator(),
-	"overnet_internal": cpp_overnet_internal.NewFidlGenerator(),
-	"go":               golang.NewFidlGenerator(),
-	"rust":             rust.NewFidlGenerator(),
-	"syzkaller":        syzkaller.FidlGenerator{},
+	"llcpp":            llcpp.NewFidlGenerator(),
 }
 
 func main() {
 	baseFlags := cmdline.BaseFlags()
-	var generatorNames CommaSeparatedList
+	var generatorNames commaSeparatedList
 	flag.Var(&generatorNames, "generators",
 		"Comma-separated list of names of generators to run")
 	flag.Parse()

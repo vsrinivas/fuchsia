@@ -11,8 +11,8 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp/ir"
-	"fidl/compiler/backend/llcpp/templates/files"
-	"fidl/compiler/backend/llcpp/templates/fragments"
+	"fidl/compiler/llcpp_backend/llcpp/templates/files"
+	"fidl/compiler/llcpp_backend/llcpp/templates/fragments"
 	"fidl/compiler/backend/types"
 )
 

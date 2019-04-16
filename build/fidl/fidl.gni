@@ -79,6 +79,7 @@ template("fidl") {
       llcpp_generators = [
         {
           target_suffix = "llcpp"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen_llcpp"
           fidlgen_generator = "llcpp"
           output_stem = "llcpp/fidl"
           additional_public_deps = [
@@ -96,12 +97,14 @@ template("fidl") {
       forward_variables_from(invoker, "*")
       generators = [
         {
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
           fidlgen_generator = "cpp"
           output_stem = "cpp/fidl"
           additional_public_deps = hlcpp_public_deps
         },
         {
           target_suffix = "overnet_internal"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
           fidlgen_generator = "overnet_internal"
           output_stem = "cpp/overnet_internal"
           additional_public_deps =
