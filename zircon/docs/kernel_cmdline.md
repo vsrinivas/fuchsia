@@ -23,6 +23,11 @@ lines starting with # are ignored.  Whitespace is not allowed in names.
 If this option is set, the system will not use Address Space Layout
 Randomization.
 
+## appmgr.arg
+
+An argument to pass to appmgr. You can supply this argument multiple times
+to pass multiple arguments to appmgr.
+
 ## bootsvc.next=\<bootfs path\>
 Controls what program is executed by bootsvc to continue the boot process.
 If this is not specified, the default next program will be used.

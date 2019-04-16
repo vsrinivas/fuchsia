@@ -30,6 +30,10 @@ import("//garnet/build/pkgfs.gni")
 #   netboot (default: false)
 #     [boolean] Whether the generated ZBI should contain the entire system.
 #
+#   devmgr_config (default: [])
+#     [list of strings] List of arguments to add to /boot/config/devmgr.
+#     These arguments come after synthesized arguments to configure blobfs and
+#     pkgfs.
 template("assemble_system") {
   base_packages = invoker.base_packages
 
@@ -39,6 +43,11 @@ template("assemble_system") {
   netboot = false
   if (defined(invoker.netboot)) {
     netboot = invoker.netboot
+  }
+
+  devmgr_config = []
+  if (defined(invoker.devmgr_config)) {
+    devmgr_config = invoker.devmgr_config
   }
 
   group("base_packages") {
@@ -223,6 +232,10 @@ template("assemble_system") {
       "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
       "--reset-rewrite",
     ]
+
+    foreach(entry, devmgr_config) {
+      args += [ "--entry=$entry" ]
+    }
   }
 
   zbi(image_name) {
