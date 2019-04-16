@@ -14,18 +14,19 @@ namespace fidlcat {
 
 // Prints the content of the message (in hex) to fstream.
 void PrintPayload(FILE* fstream, const fidl::Message& message) {
-  uint8_t* payload = reinterpret_cast<uint8_t*>(message.payload().data());
-  uint32_t amt = message.payload().actual();
+  uint8_t* payload = reinterpret_cast<uint8_t*>(message.bytes().data());
+  uint32_t amt = message.bytes().actual();
   for (size_t i = 0; i < amt; i++) {
-    fprintf(fstream, "+0x%x\n", payload[i]);
+    fprintf(fstream, "b%5zu: 0x%x\n", i, payload[i]);
   }
   if (message.handles().actual() != 0) {
     fprintf(fstream, "======\nhandles\n");
     zx_handle_t* handles =
         reinterpret_cast<zx_handle_t*>(message.handles().data());
-    amt = message.handles().actual();
-    for (size_t i = 0; i < amt; i++) {
-      fprintf(fstream, "+0x%x\n", handles[i]);
+    int i = 0;
+    for (zx_handle_t* handle = handles; handle < message.handles().end();
+         handle++) {
+      fprintf(fstream, "h%5d: 0x%x (%d)\n", i++, *handle, *handle);
     }
   }
 }
@@ -105,8 +106,18 @@ bool RequestToJSON(const InterfaceMethod* method, const fidl::Message& message,
   }
   const std::optional<std::vector<InterfaceMethodParameter>>& params =
       method->request_params();
-
   return ParamsToJSON(params, message, request);
+}
+
+bool ResponseToJSON(const InterfaceMethod* method, const fidl::Message& message,
+                    rapidjson::Document& response) {
+  if (!method->response_params().has_value()) {
+    return false;
+  }
+
+  const std::optional<std::vector<InterfaceMethodParameter>>& params =
+      method->response_params();
+  return ParamsToJSON(params, message, response);
 }
 
 }  // namespace fidlcat

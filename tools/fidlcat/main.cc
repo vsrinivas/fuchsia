@@ -135,6 +135,13 @@ void CatchSigterm() {
   sigaction(SIGINT, &action, NULL);
 }
 
+std::string DocumentToString(rapidjson::Document& document) {
+  rapidjson::StringBuffer output;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(output);
+  document.Accept(writer);
+  return output.GetString();
+}
+
 // The meat of the program: decode the given zx_channel_write params.
 void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
                       const ZxChannelWriteParams& params) {
@@ -155,22 +162,47 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
                      << " not found";
     return;
   }
-  rapidjson::Document actual;
-  if (!fidlcat::RequestToJSON(method, message, actual)) {
+
+  rapidjson::Document actual_request;
+  bool matched_request =
+      fidlcat::RequestToJSON(method, message, actual_request);
+
+  rapidjson::Document actual_response;
+  bool matched_response =
+      fidlcat::ResponseToJSON(method, message, actual_response);
+
+  std::string output;
+  if (matched_request && matched_response) {
+    // TODO(DX-1307): We can track whether this process has historically been
+    // sending requests or responses on this channel, and surface based on that.
+    // We may be able to indicate directionality in the message itself (e.g.,
+    // with a bit in the txid).  Or do something else that's smarter than print
+    // both out.
+    output = "One of (request):\n    ";
+    output.append(DocumentToString(actual_request));
+    output.append("\nor (response):\n    ");
+    output.append(DocumentToString(actual_response));
+  } else if (matched_request) {
+    output.append("(request): ");
+    output.append(DocumentToString(actual_request));
+  } else if (matched_response) {
+    output.append("(response): ");
+    output.append(DocumentToString(actual_response));
+  } else {
     FXL_LOG(WARNING) << "Could not parse data with type " << method->name()
                      << ", best effort displayed";
+    output = "One of (request):\n    ";
+    output.append(DocumentToString(actual_request));
+    output.append("\nor (response):\n    ");
+    output.append(DocumentToString(actual_response));
   }
-
-  rapidjson::StringBuffer output;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(output);
-  actual.Accept(writer);
 
 #if 0
   fprintf(stderr, "ordinal = %d\n", header.ordinal);
-  fprintf(stderr, "Output: %s\n", output.GetString());
+  fprintf(stderr, "Output: %s\n", output.c_str());
 #endif
   fprintf(stdout, "%s.%s = %s\n", method->enclosing_interface().name().c_str(),
-          method->name().c_str(), output.GetString());
+          method->name().c_str(), output.c_str());
 }
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.

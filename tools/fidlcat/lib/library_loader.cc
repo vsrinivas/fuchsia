@@ -90,6 +90,53 @@ LibraryLoader::LibraryLoader(
   }
 }
 
+InterfaceMethod::InterfaceMethod(const Interface& interface,
+                                 const rapidjson::Value& value)
+    : enclosing_interface_(interface), value_(value) {
+  if (value_["has_request"].GetBool()) {
+    request_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& request : value["maybe_request"].GetArray()) {
+      request_params_->emplace_back(*this, request);
+    }
+  } else {
+    request_params_ = {};
+  }
+
+  if (value_["has_response"].GetBool()) {
+    response_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& response : value["maybe_response"].GetArray()) {
+      response_params_->emplace_back(*this, response);
+    }
+  } else {
+    response_params_ = {};
+  }
+}
+
+InterfaceMethod::InterfaceMethod(InterfaceMethod&& other)
+    : enclosing_interface_(other.enclosing_interface_), value_(other.value_) {
+  if (other.request_params_) {
+    request_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& request : *other.request_params_) {
+      request_params_->emplace_back(*this, request.value_);
+    }
+  } else {
+    request_params_ = {};
+  }
+
+  if (other.response_params_) {
+    response_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& response : *other.response_params_) {
+      response_params_->emplace_back(*this, response.value_);
+    }
+  } else {
+    response_params_ = {};
+  }
+}
+
 std::string InterfaceMethod::fully_qualified_name() const {
   return enclosing_interface_.name() + "." + name();
 }

@@ -19,6 +19,14 @@ namespace fidlcat {
 bool RequestToJSON(const InterfaceMethod* method, const fidl::Message& message,
                    rapidjson::Document& request);
 
+// Given a wire-formatted |message| and a schema for that message represented by
+// |method|, populates |response| with JSON representing that response.
+//
+// Returns false if it cannot decode the message using the metadata associated
+// with the method.
+bool ResponseToJSON(const InterfaceMethod* method, const fidl::Message& message,
+                    rapidjson::Document& response);
+
 }  // namespace fidlcat
 
 #endif  // TOOLS_FIDLCAT_LIB_WIRE_PARSER_H_
