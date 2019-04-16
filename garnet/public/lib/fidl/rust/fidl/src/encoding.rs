@@ -235,8 +235,14 @@ impl<'a> Decoder<'a> {
         let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
 
         let mut decoder = Decoder { remaining_depth: MAX_RECURSION, buf, out_of_line_buf, handles };
-
-        value.decode(&mut decoder)
+        value.decode(&mut decoder)?;
+        if decoder.out_of_line_buf.len() != 0 {
+            return Err(Error::ExtraBytes);
+        }
+        if decoder.handles.len() != 0 {
+            return Err(Error::ExtraHandles);
+        }
+        Ok(())
     }
 
     /// Runs the provided closure at at the next recursion depth level,
@@ -2591,7 +2597,7 @@ mod test {
                     offset: 8,
                 },
             ],
-            size: 24,
+            size: 16,
             align: 8,
         };
 
@@ -3264,5 +3270,20 @@ mod test {
         }
 
         identities![XUnion::Variant(vec![1, 2, 3]),];
+    }
+
+    #[test]
+    fn extra_data_is_disallowed() {
+        let mut output = ();
+        match Decoder::decode_into(&[0], &mut [], &mut output).expect_err("bytes") {
+            Error::ExtraBytes => {}
+            e => panic!("expected ExtraBytes, found {:?}", e),
+        }
+        match Decoder::decode_into(&[], &mut [zx::Handle::invalid()], &mut output)
+            .expect_err("handles")
+        {
+            Error::ExtraHandles => {}
+            e => panic!("expected ExtraHandles, found {:?}", e),
+        }
     }
 }

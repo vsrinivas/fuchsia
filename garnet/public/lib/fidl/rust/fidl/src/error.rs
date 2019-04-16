@@ -35,6 +35,14 @@ pub enum Error {
     #[fail(display = "The FIDL object could not fit within the provided buffer range")]
     OutOfRange,
 
+    /// Decoding the FIDL object did not use all of the bytes provided.
+    #[fail(display = "Decoding the FIDL object did not use all of the bytes provided.")]
+    ExtraBytes,
+
+    /// Decoding the FIDL object did not use all of the handles provided.
+    #[fail(display = "Decoding the FIDL object did not use all of the handles provided.")]
+    ExtraHandles,
+
     /// The FIDL object had too many layers of structural recursion.
     #[fail(display = "The FIDL object had too many layers of structural recursion.")]
     MaxRecursionDepth,
