@@ -278,7 +278,6 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
 
     # Parts.
     manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
-    manifest['new_parts'] = manifest['parts']
 
     manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
     _ensure_directory(manifest_path)
@@ -321,9 +320,9 @@ def main():
          _open_output(args.output_archive, args.output_directory) as out_dir:
 
         first_elements = set([Part(p)
-                              for p in _get_manifest(first_dir)['new_parts']])
+                              for p in _get_manifest(first_dir)['parts']])
         second_elements = set([Part(p)
-                               for p in _get_manifest(second_dir)['new_parts']])
+                               for p in _get_manifest(second_dir)['parts']])
         common_elements = first_elements & second_elements
 
         # Copy elements that appear in a single SDK.

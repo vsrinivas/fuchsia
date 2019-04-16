@@ -50,28 +50,6 @@
         "additionalProperties": false
       }
     },
-    "new_parts": {
-      "description": "The elements in this SDK (DEPRECATED - use parts instead)",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "description": "The type of the element",
-            "$ref": "common.json#/definitions/type"
-          },
-          "meta": {
-            "description": "The metadata file for the element",
-            "$ref": "common.json#/definitions/file"
-          }
-        },
-        "required": [
-          "meta",
-          "type"
-        ],
-        "additionalProperties": false
-      }
-    },
     "schema_version": {
       "description": "An opaque identifier for metadata schemas in the SDK",
       "type": "string"
@@ -80,7 +58,6 @@
   "required": [
     "arch",
     "id",
-    "new_parts",
     "parts",
     "schema_version"
   ],
