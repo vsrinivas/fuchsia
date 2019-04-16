@@ -4,11 +4,11 @@
 
 import("//products/core.gni")
 
-monolith += [
-  "src/modular/bundles/framework",
-  "garnet/packages/prod/media_audio",
+base_package_labels += [
+  "//src/modular/bundles:framework",
+  "//garnet/packages/prod:media_audio",
 ]
 
-preinstall += []
+cache_package_labels += []
 
-available += []
+universe_package_labels += []

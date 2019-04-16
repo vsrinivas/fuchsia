@@ -7,38 +7,38 @@ import("//products/terminal.gni")
 # Add packages that were part of the //garnet/packages/sdk/garnet
 # and //topaz/packages/sdk/topaz packages but not in the terminal's.
 # TODO(DX-934): Move most of those into available or pre-install
-monolith += [
-  "garnet/packages/config/mediasession",
-  "garnet/packages/prod/fonts",
-  "garnet/packages/prod/iquery",
-  "garnet/packages/prod/mdns-util",
-  "garnet/packages/prod/media_audio",
-  "garnet/packages/prod/media_codec",
-  "garnet/packages/prod/mediaplayer",
-  "garnet/packages/prod/mediasession",
-  "garnet/packages/prod/tiles",
-  "garnet/packages/prod/sbase",
-  "garnet/packages/prod/wlan",
-  "garnet/packages/products/devtools",
-  "garnet/packages/testing/run_test_component",
-  "peridot/packages/prod/sessionctl",
-  "topaz/packages/prod/dart_jit_product_runner",
-  "topaz/packages/prod/dart_jit_runner",
-  "topaz/packages/prod/flutter_jit",
-  "topaz/packages/prod/flutter_jit_product",
+base_package_labels += [
+  "//garnet/packages/config:mediasession",
+  "//garnet/packages/prod:fonts",
+  "//garnet/packages/prod:iquery",
+  "//garnet/packages/prod:mdns-util",
+  "//garnet/packages/prod:media_audio",
+  "//garnet/packages/prod:media_codec",
+  "//garnet/packages/prod:mediaplayer",
+  "//garnet/packages/prod:mediasession",
+  "//garnet/packages/prod:tiles",
+  "//garnet/packages/prod:sbase",
+  "//garnet/packages/prod:wlan",
+  "//garnet/packages/products:devtools",
+  "//garnet/packages/testing:run_test_component",
+  "//peridot/packages/prod:sessionctl",
+  "//topaz/packages/prod:dart_jit_product_runner",
+  "//topaz/packages/prod:dart_jit_runner",
+  "//topaz/packages/prod:flutter_jit",
+  "//topaz/packages/prod:flutter_jit_product",
 ]
 
-preinstall += []
+cache_package_labels += []
 
 # TODO(DX-980): Add/move dev tools to this set once TUF repositories are set up.
-available += [
-  "src/modular/bundles/framework",
-  "src/modular/bundles/tools",
-  "topaz/packages/prod/chromium",
-  "topaz/packages/prod/dart_aot_product_runner",
-  "topaz/packages/prod/dart_aot_runner",
-  "topaz/packages/prod/flutter_aot",
-  "topaz/packages/prod/flutter_aot_product",
-  "topaz/packages/prod/google_auth_provider",
-  "topaz/packages/prod/mondrian",
+universe_package_labels += [
+  "//src/modular/bundles:framework",
+  "//src/modular/bundles:tools",
+  "//topaz/packages/prod:chromium",
+  "//topaz/packages/prod:dart_aot_product_runner",
+  "//topaz/packages/prod:dart_aot_runner",
+  "//topaz/packages/prod:flutter_aot",
+  "//topaz/packages/prod:flutter_aot_product",
+  "//topaz/packages/prod:google_auth_provider",
+  "//topaz/packages/prod:mondrian",
 ]

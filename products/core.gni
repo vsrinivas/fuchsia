@@ -11,14 +11,14 @@ meta_package_labels += [
   "//garnet/bin/component_index:component_index",
 ]
 
-monolith += [
-  "garnet/packages/config/kernel_crash_checker",
-  "garnet/packages/prod/crashpad_agent",
-  "garnet/packages/prod/feedback_agent",
-  "garnet/packages/prod/kernel_crash_checker",
-  "garnet/packages/products/base",
+base_package_labels += [
+  "//garnet/packages/config:kernel_crash_checker",
+  "//garnet/packages/prod:crashpad_agent",
+  "//garnet/packages/prod:feedback_agent",
+  "//garnet/packages/prod:kernel_crash_checker",
+  "//garnet/packages/products:base",
 ]
 
-preinstall += []
+cache_package_labels += []
 
-available += [ "bundles/tools" ]
+universe_package_labels += [ "//bundles:tools" ]

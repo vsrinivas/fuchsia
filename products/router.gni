@@ -4,6 +4,6 @@
 
 import("//products/core.gni")
 
-monolith += [ "garnet/packages/products/toulouse" ]
+base_package_labels += [ "//garnet/packages/products:toulouse" ]
 
 wlancfg_config_type = "ap"

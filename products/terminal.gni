@@ -4,15 +4,15 @@
 
 import("//products/core.gni")
 
-monolith += [
-  "garnet/packages/config/terminal",
-  "garnet/packages/prod/scenic",
+base_package_labels += [
+  "//garnet/packages/config:terminal",
+  "//garnet/packages/prod:scenic",
 ]
 
-preinstall += [
-  "garnet/packages/prod/fonts",
-  "garnet/packages/prod/terminal",
-  "garnet/packages/prod/tiles",
+cache_package_labels += [
+  "//garnet/packages/prod:fonts",
+  "//garnet/packages/prod:terminal",
+  "//garnet/packages/prod:tiles",
 ]
 
-available += [ "bundles/tools" ]
+universe_package_labels += [ "//bundles:tools" ]
