@@ -33,6 +33,7 @@ group("tests") {
     "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
     "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test",
     "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
+    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-tests",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
