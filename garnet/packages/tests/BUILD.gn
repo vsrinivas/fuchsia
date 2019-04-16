@@ -316,7 +316,6 @@ group("all") {
     "//garnet/packages/tests:go_far_tests",
     "//garnet/packages/tests:go_merkle_tests",
     "//garnet/packages/tests:go_stdlib_tests",
-    "//garnet/packages/tests:go_thinfs_tests",
     "//garnet/packages/tests:guest",
     "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
@@ -564,13 +563,6 @@ group("go_benchmarking_tests") {
   testonly = true
   public_deps = [
     "//garnet/go/src/benchmarking:go_benchmarking_tests",
-  ]
-}
-
-group("go_thinfs_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/go/src/thinfs:go_thinfs_tests",
   ]
 }
 
