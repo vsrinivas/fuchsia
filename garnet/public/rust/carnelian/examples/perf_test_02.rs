@@ -16,6 +16,9 @@ fn make_bounds(context: &ViewAssistantContext) -> Rect {
 
 struct TextScrollAppAssistant;
 
+const BACKGROUND_Z: f32 = 0.0;
+const TEXT_Z: f32 = BACKGROUND_Z - 5.0;
+
 impl AppAssistant for TextScrollAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         Ok(())
@@ -44,7 +47,7 @@ impl TextLineAnimator {
 
     pub fn animate(&mut self, bounds: &Rect) {
         self.location += self.velocity;
-        self.label.node().set_translation(bounds.size.width / 2.0, self.location.y, -5.0);
+        self.label.node().set_translation(bounds.size.width / 2.0, self.location.y, TEXT_Z);
 
         const ARBITRARILY_CHOSE_TOP_Y_LIMIT: f32 = 20.0;
         if self.location.y < bounds.origin.y + ARBITRARILY_CHOSE_TOP_Y_LIMIT {

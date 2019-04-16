@@ -16,6 +16,7 @@ const COLOR_CODES: &[&str] = &[
 ];
 
 const BAND_COUNT: usize = 64;
+const INITIAL_Z: f32 = 0.0;
 
 struct RainbowAppAssistant;
 
@@ -57,12 +58,14 @@ impl ViewAssistant for RainbowViewAssistant {
         let band_width = context.size.width / self.colors.len() as f32;
         let band_height = context.size.height / self.colors.len() as f32;
         let mut index = self.index;
+        let mut z = INITIAL_Z;
         for band in &self.colors {
             let color_index = index % COLOR_CODES.len();
             let center_x = context.size.width * 0.5;
             let center_y = context.size.height * 0.5;
             band.set_shape(&Rectangle::new(context.session.clone(), width, height));
-            band.set_translation(center_x, center_y, 0.0);
+            band.set_translation(center_x, center_y, z);
+            z -= 0.01;
             width -= band_width;
             height -= band_height;
             set_node_color(

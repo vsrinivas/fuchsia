@@ -11,6 +11,12 @@ use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Time};
 
+const BACKGROUND_Z: f32 = 0.0;
+const INDICATOR_Z: f32 = BACKGROUND_Z - 0.01;
+const BUTTON_Z: f32 = BACKGROUND_Z - 0.01;
+const BUTTON_BACKGROUND_Z: f32 = BUTTON_Z - 0.01;
+const BUTTON_LABEL_Z: f32 = BUTTON_BACKGROUND_Z - 0.01;
+
 /// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
 pub enum ButtonMessages {
@@ -105,7 +111,7 @@ impl Button {
         let min_dimension = context.size.width.min(context.size.height);
         let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
         let padding = (min_dimension / 20.0).ceil().max(8.0);
-        self.container.set_translation(center_x, center_y, 0.0);
+        self.container.set_translation(center_x, center_y, BUTTON_Z);
 
         set_node_color(context.session, &self.background_node, &paint.bg);
 
@@ -127,8 +133,10 @@ impl Button {
             self.bounds.size.width,
             self.bounds.size.height,
         ));
+        self.background_node.set_translation(0.0, 0.0, BUTTON_BACKGROUND_Z);
 
         self.label.update(font_size, &paint)?;
+        self.label.node().set_translation(0.0, 0.0, BUTTON_LABEL_Z);
 
         Ok(())
     }
@@ -221,7 +229,7 @@ impl ViewAssistant for ButtonViewAssistant {
             context.size.width,
             context.size.height,
         ));
-        self.background_node.set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
 
         // Position and size the indicator
         let indicator_y = context.size.height / 5.0;
@@ -231,7 +239,7 @@ impl ViewAssistant for ButtonViewAssistant {
             indicator_size,
             indicator_size,
         ));
-        self.indicator.set_translation(center_x, indicator_y, -5.0);
+        self.indicator.set_translation(center_x, indicator_y, INDICATOR_Z);
 
         let indicator_color = if self.red_light {
             Color::from_hash_code("#ff0000")?
@@ -243,7 +251,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
         // Update and position the button
         self.button.update(context)?;
-        self.button.node().set_translation(center_x, center_y, 0.0);
+        self.button.node().set_translation(center_x, center_y, BUTTON_Z);
 
         Ok(())
     }

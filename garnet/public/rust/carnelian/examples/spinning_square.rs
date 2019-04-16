@@ -18,6 +18,9 @@ use fuchsia_zircon::{ClockId, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
 
+const BACKGROUND_Z: f32 = 0.0;
+const SQUARE_Z: f32 = BACKGROUND_Z - 8.0;
+
 struct SpinningSquareAppAssistant;
 
 impl AppAssistant for SpinningSquareAppAssistant {
@@ -114,7 +117,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             context.size.width,
             context.size.height,
         ));
-        self.background_node.set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
         let square_size = context.size.width.min(context.size.height) * 0.6;
         let t = ((context.presentation_time.nanos() - self.start.nanos()) as f32
             * SECONDS_PER_NANOSECOND
@@ -139,7 +142,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
                 square_size,
             ));
         }
-        self.spinning_square_node.set_translation(center_x, center_y, -8.0);
+        self.spinning_square_node.set_translation(center_x, center_y, SQUARE_Z);
         self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
     }

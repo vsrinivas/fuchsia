@@ -17,6 +17,9 @@ use fuchsia_scenic::{
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
+const BACKGROUND_Z: f32 = 0.0;
+const EMBED_Z: f32 = BACKGROUND_Z - 0.1;
+
 fn inset(rect: &mut RectF, border: f32) {
     let inset = border.min(rect.width / 0.3).min(rect.height / 0.3);
     rect.x += inset;
@@ -129,7 +132,7 @@ impl EmbeddingViewAssistant {
                         downward_input: false,
                     };
                     view.host_view_holder.set_view_properties(view_properties);
-                    view.host_node.set_translation(tile_bounds.x, tile_bounds.y, -0.1);
+                    view.host_node.set_translation(tile_bounds.x, tile_bounds.y, EMBED_Z);
                     view.bounds = Some(tile_bounds);
                 }
             }
@@ -163,7 +166,7 @@ impl ViewAssistant for EmbeddingViewAssistant {
             self.size.width,
             self.size.height,
         ));
-        self.background_node.set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
         self.layout();
         Ok(())
     }
