@@ -16,8 +16,8 @@ CATEGORIES = [
   'jemalloc-heap',
   'pthread_t',
   'magma_create_buffer',
-  'ScudoPrimary',
-  'ScudoSecondary',
+  'scudo:primary',
+  'scudo:secondary',
   'lib',
 ]
 
