@@ -256,6 +256,10 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
         host_archs.add(manifest_one['arch']['host'])
     if _has_host_content(parts_two):
         host_archs.add(manifest_two['arch']['host'])
+    if not host_archs:
+        # The archives do not have any host content. The architecture is not
+        # meaningful in that case but is still needed: just pick one.
+        host_archs.add(manifest_one['arch']['host'])
     if len(host_archs) != 1:
         print('Error: mismatching host architecture: %s' %
               ', '.join(host_archs))
