@@ -119,24 +119,31 @@ impl OutputWorker {
         Ok(())
     }
 
-    fn on_position_notify(&mut self, ring_position: u32, _clock_time: i64) -> Result<(), Error> {
-        let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
+    fn on_position_notify(
+        &mut self,
+        ring_position: u32,
+        _clock_time: i64,
+        capturing: bool,
+    ) -> Result<(), Error> {
+        if capturing {
+            let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
 
-        if (ring_position as u64) < self.next_read {
-            // Wrap-around case, read through the end.
-            let mut data = vec![0u8; (self.work_space - self.next_read) as usize];
-            vmo.read(&mut data, self.next_read)?;
-            self.extracted_data.append(&mut data);
+            if (ring_position as u64) < self.next_read {
+                // Wrap-around case, read through the end.
+                let mut data = vec![0u8; (self.work_space - self.next_read) as usize];
+                vmo.read(&mut data, self.next_read)?;
+                self.extracted_data.append(&mut data);
 
-            // Read remaining data.
-            let mut data = vec![0u8; ring_position as usize];
-            vmo.read(&mut data, 0)?;
-            self.extracted_data.append(&mut data);
-        } else {
-            // Normal case, just read all the bytes.
-            let mut data = vec![0u8; ((ring_position as u64) - self.next_read) as usize];
-            vmo.read(&mut data, self.next_read)?;
-            self.extracted_data.append(&mut data);
+                // Read remaining data.
+                let mut data = vec![0u8; ring_position as usize];
+                vmo.read(&mut data, 0)?;
+                self.extracted_data.append(&mut data);
+            } else {
+                // Normal case, just read all the bytes.
+                let mut data = vec![0u8; ((ring_position as u64) - self.next_read) as usize];
+                vmo.read(&mut data, self.next_read)?;
+                self.extracted_data.append(&mut data);
+            }
         }
         self.next_read = ring_position as u64;
         Ok(())
@@ -150,7 +157,7 @@ impl OutputWorker {
         let mut output_events = va_output.take_event_stream();
         self.va_output = Some(va_output);
 
-        'ExtractEvents: loop {
+        loop {
             select! {
                 rx_msg = rx.next() => {
                     match rx_msg {
@@ -184,9 +191,7 @@ impl OutputWorker {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
                         Some(OutputEvent::OnPositionNotify { ring_position, clock_time }) => {
-                            if self.capturing {
-                                self.on_position_notify(ring_position, clock_time)?;
-                            }
+                            self.on_position_notify(ring_position, clock_time, self.capturing)?;
                         },
                         Some(evt) => {
                             fx_log_info!("XXXXXXXXXXXXXXXXXXXXXX Got unknown InputEvent {:?}", evt);
