@@ -14,8 +14,11 @@ file(GLOB_RECURSE ALL_DIRS LIST_DIRECTORIES true
         ${PROJECT_SOURCE_DIR}/garnet/*
         ${PROJECT_SOURCE_DIR}/out/*
         ${PROJECT_SOURCE_DIR}/peridot/*
+        ${PROJECT_SOURCE_DIR}/prebuilt/*
+        ${PROJECT_SOURCE_DIR}/src/*
         ${PROJECT_SOURCE_DIR}/third_party/*
         ${PROJECT_SOURCE_DIR}/topaz/*
+        ${PROJECT_SOURCE_DIR}/vendor/*
         ${PROJECT_SOURCE_DIR}/zircon/*
         )
 set(INCLUDE_DIRS "")
