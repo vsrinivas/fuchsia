@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Packages added to the universe set complementing SDK images.
+group("tools") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:iquery",
+    "//garnet/packages/prod:tiles",
+    "//garnet/packages/prod:sbase",
+    "//garnet/packages/products:devtools",
+    "//garnet/packages/testing:run_test_component",
+    "//peridot/packages/prod:sessionctl",
+    "//src/modular/bundles:framework",
+    "//src/modular/bundles:tools",
+    "//topaz/packages/prod:chromium",
+    "//topaz/packages/prod:dart_runner",
+    "//topaz/packages/prod:flutter",
+    "//topaz/packages/prod:google_auth_provider",
+  ]
+}
