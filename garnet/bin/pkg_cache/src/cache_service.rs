@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io::{self, DirectoryMarker, DirectoryProxy};
 use fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream};
 use fidl_fuchsia_pkg_ext::{BlobId, BlobInfo};
-use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 
-pub async fn serve(pkgfs: DirectoryProxy, chan: fasync::Channel) -> Result<(), Error> {
-    let mut stream = PackageCacheRequestStream::from_channel(chan);
-
+pub async fn serve(
+    pkgfs: DirectoryProxy,
+    mut stream: PackageCacheRequestStream,
+) -> Result<(), Error> {
     while let Some(event) = await!(stream.try_next())? {
         match event {
             PackageCacheRequest::Get { meta_far_blob, selectors, needed_blobs, dir, responder } => {

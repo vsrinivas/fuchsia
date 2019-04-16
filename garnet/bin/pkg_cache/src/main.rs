@@ -6,13 +6,11 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::DirectoryProxy;
-use fidl_fuchsia_pkg::PackageCacheMarker;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
-use futures::TryFutureExt;
+use futures::{StreamExt, TryFutureExt};
 use std::fs::File;
 
 mod cache_service;
@@ -27,20 +25,17 @@ fn main() -> Result<(), Error> {
 
     let pkgfs = connect_to_pkgfs_versions().context("error connecting to pkgfs")?;
 
-    let server = ServicesServer::new()
-        .add_service((PackageCacheMarker::NAME, move |chan| {
-            fx_log_info!("spawning package cache service");
-            fasync::spawn(
-                cache_service::serve(Clone::clone(&pkgfs), chan)
-                    .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
-            )
-        }))
-        .start()
-        .context("Error starting package cache server")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        fx_log_info!("spawning package cache service");
+        fasync::spawn(
+            cache_service::serve(Clone::clone(&pkgfs), stream)
+                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+        )
+    });
+    fs.take_and_serve_directory_handle()?;
 
-    executor
-        .run(server, SERVER_THREADS)
-        .context("failed to execute package cache future")?;
+    let () = executor.run(fs.collect(), SERVER_THREADS);
     Ok(())
 }
 
