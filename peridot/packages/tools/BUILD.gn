@@ -13,9 +13,17 @@ group("voila") {
   ]
 }
 
+group("cloud_provider_memory_diff") {
+  testonly = true
+  public_deps = [
+    "//src/ledger/cloud_provider_memory_diff",
+  ]
+}
+
 group("all") {
   testonly = true
   public_deps = [
+    "//peridot/packages/tools:cloud_provider_memory_diff",
     "//peridot/packages/tools:voila",
   ]
 }

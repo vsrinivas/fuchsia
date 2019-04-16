@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "cloud_provider_memory_diff"
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ledger.cloud:fuchsia.ledger.cloud-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
+package("cloud_provider_memory_diff") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "cloud_provider_memory_diff"
+
+  meta = [
+    {
+      path = rebase_path("meta/cloud_provider_memory_diff.cmx")
+      dest = "cloud_provider_memory_diff.cmx"
+    },
+  ]
+}
