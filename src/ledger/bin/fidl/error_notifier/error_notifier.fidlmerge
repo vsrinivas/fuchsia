@@ -45,7 +45,7 @@
 ::fidl::InterfaceHandle<{{- template "QualifiedId" .Identifier }}>
   {{- else -}}
     {{- if .Nullable -}}
-std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
+::std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
     {{- else -}}
 {{- template "QualifiedId" .Identifier }}
     {{- end -}}
@@ -92,7 +92,7 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 // Produces a comma separated list of move operations.
 {{- define "ForwardParams" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}std::move({{ $param.Name }})
+    {{- if $index }}, {{ end -}}::std::move({{ $param.Name }})
   {{- end -}}
 {{- end }}
 
@@ -126,7 +126,7 @@ std::unique_ptr<{{- template "QualifiedId" .Identifier }}>
 // Produces an implementation of the FIDL interface method that forward to the NotifierDelegate.
 {{- define "RequestMethodSignatureForward" -}}
   {{- if .HasResponse -}}
-{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}binding_->WrapOperation("{{ .Name }}", std::move(callback)))
+{{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}binding_->WrapOperation("{{ .Name }}", ::std::move(callback)))
   {{- else -}}
 {{ .Name }}({{ template "ForwardParams" .Request }}{{ if .Request }}, {{ end }}binding_->NewErrorCallback("{{ .Name }}"))
   {{- end -}}
@@ -209,7 +209,7 @@ class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.
         {{- end }}
     {{- end }}
   void Sync(::fit::function<void()> callback) override {
-    binding_->Sync(std::move(callback));
+    binding_->Sync(::std::move(callback));
   }
 
   {{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate_;
