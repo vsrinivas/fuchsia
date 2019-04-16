@@ -15,5 +15,5 @@ guest_package("biscotti_guest") {
       dest = "${rootfs_name}"
     },
   ]
-  block_devices = [ "/guest/data/${rootfs_name},ro,volatile" ]
+  block_devices = [ "/guest/data/${rootfs_name},ro" ]
 }
