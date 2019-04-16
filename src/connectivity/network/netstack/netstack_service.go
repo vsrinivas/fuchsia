@@ -351,7 +351,7 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 	}
 	ifs, err := ni.ns.Bridge(nics)
 	if err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownError}, 0, nil
+		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, 0, nil
 	}
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
 }
