@@ -129,6 +129,7 @@ executable("pixeltests") {
   ]
   include_dirs = [ "//garnet/public/lib/escher" ]
   deps = [
+    ":testing_deps",
     "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",

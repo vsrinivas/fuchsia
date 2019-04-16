@@ -5,6 +5,7 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
+#include "garnet/public/lib/escher/impl/vulkan_utils.h"
 #include "lib/ui/gfx/util/time.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "public/lib/escher/test/gtest_vulkan.h"
@@ -27,20 +28,47 @@ VK_TEST_F(PoseBufferTest, Validation) {
   ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
   ASSERT_TRUE(Apply(scenic::NewCreateCameraCmd(camera_id, scene_id)));
 
-  uint64_t vmo_size = PAGE_SIZE;
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
-  ASSERT_EQ(ZX_OK, status);
+  const size_t kVmoSize = PAGE_SIZE;
+
+  auto vulkan_queues = CreateVulkanDeviceQueues();
+  auto device = vulkan_queues->vk_device();
+  auto physical_device = vulkan_queues->vk_physical_device();
+
+  const vk::BufferUsageFlags kUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer |
+      vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer |
+      vk::BufferUsageFlagBits::eVertexBuffer;
+
+  auto memory_requirements =
+      GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory =
+      AllocateExportableMemory(device, physical_device, memory_requirements,
+                               vk::MemoryPropertyFlagBits::eDeviceLocal |
+                                   vk::MemoryPropertyFlagBits::eHostVisible);
+
+  // If we can't make memory that is both host-visible and device-local, we
+  // can't run this test.
+  if (!memory) {
+    FXL_LOG(INFO)
+        << "Could not find UMA compatible memory pool, aborting test.";
+    return;
+  }
+
+  zx::vmo vmo =
+      ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   zx_clock_t base_time = dispatcher_clock_now();
   uint64_t time_interval = 1024 * 1024;  // 1 ms
   uint32_t num_entries = 1;
 
   ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(
-      memory_id, std::move(vmo), vmo_size,
+      memory_id, std::move(vmo), kVmoSize,
       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
   ASSERT_TRUE(
-      Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, vmo_size)));
+      Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, kVmoSize)));
 
   // Actual Tests
 
@@ -68,6 +96,8 @@ VK_TEST_F(PoseBufferTest, Validation) {
   // num_entries too large
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
       camera_id, buffer_id, UINT32_MAX, base_time, time_interval)));
+
+  device.freeMemory(memory);
 }
 
 }  // namespace test

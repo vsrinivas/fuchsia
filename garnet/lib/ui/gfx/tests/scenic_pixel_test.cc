@@ -30,6 +30,9 @@
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
 #include "garnet/testing/views/test_view.h"
+#include "garnet/public/lib/escher/impl/vulkan_utils.h"
+#include "garnet/lib/ui/gfx/tests/vk_session_test.h"
+#include "public/lib/escher/test/gtest_vulkan.h"
 
 namespace {
 
@@ -484,7 +487,8 @@ TEST_F(ScenicPixelTest, StereoCamera) {
 // At a high level this test puts a camera inside a cube where each face is a
 // different color, then uses a pose buffer to point the camera at different
 // faces, using the colors to verify the pose buffer is working as expected.
-TEST_F(ScenicPixelTest, PoseBuffer) {
+
+VK_TEST_F(ScenicPixelTest, PoseBuffer) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
@@ -554,12 +558,43 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
 
   // Configure PoseBuffer
 
-  uint64_t vmo_size = PAGE_SIZE;
-  zx::vmo pose_buffer_vmo;
-  zx::vmo remote_vmo;
+  const size_t kVmoSize = PAGE_SIZE;
   zx_status_t status;
-  status = zx::vmo::create(vmo_size, 0u, &pose_buffer_vmo);
-  FXL_DCHECK(status == ZX_OK);
+
+  auto vulkan_queues =
+      scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues();
+  auto device = vulkan_queues->vk_device();
+  auto physical_device = vulkan_queues->vk_physical_device();
+
+  const vk::BufferUsageFlags kUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer |
+      vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer |
+      vk::BufferUsageFlagBits::eVertexBuffer;
+
+  auto memory_requirements =
+      scenic_impl::gfx::test::VkSessionTest::GetBufferRequirements(
+          device, kVmoSize, kUsageFlags);
+  auto memory = scenic_impl::gfx::test::VkSessionTest::AllocateExportableMemory(
+      device, physical_device, memory_requirements,
+      vk::MemoryPropertyFlagBits::eDeviceLocal |
+          vk::MemoryPropertyFlagBits::eHostVisible);
+
+  // If we can't make memory that is both host-visible and device-local, we
+  // can't run this test.
+  if (!memory) {
+    FXL_LOG(INFO)
+        << "Could not find UMA compatible memory pool, aborting test.";
+    return;
+  }
+
+  zx::vmo pose_buffer_vmo =
+      scenic_impl::gfx::test::VkSessionTest::ExportMemoryAsVmo(
+          device, vulkan_queues->dispatch_loader(), memory);
+
+  zx::vmo remote_vmo;
   status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
   FXL_DCHECK(status == ZX_OK);
 
@@ -570,9 +605,9 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   zx_time_t time_interval = 1;
   uint32_t num_entries = 1;
 
-  scenic::Memory mem(session, std::move(remote_vmo), vmo_size,
+  scenic::Memory mem(session, std::move(remote_vmo), kVmoSize,
                      fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
-  scenic::Buffer pose_buffer(mem, 0, vmo_size);
+  scenic::Buffer pose_buffer(mem, 0, kVmoSize);
 
   camera.SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 
@@ -682,6 +717,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
               get_color_at_coordinates(0.25, 0.5))
         << "i = " << i;
   }
+  device.freeMemory(memory);
 }
 
 }  // namespace
