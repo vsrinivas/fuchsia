@@ -47,7 +47,7 @@ fn main() -> Result<(), Error> {
     let args = app().get_matches();
 
     let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    let svc = fuchsia_app::client::connect_to_service::<OvernetMarker>()
+    let svc = fuchsia_component::client::connect_to_service::<OvernetMarker>()
         .context("Failed to connect to overnet service")?;
 
     let fut = match args.subcommand_name() {

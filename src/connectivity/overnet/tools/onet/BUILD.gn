@@ -11,8 +11,8 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//third_party/rust_crates:clap",
