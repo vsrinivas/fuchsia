@@ -20,7 +20,7 @@ For example, in order to use a test tool against the core nand driver, nandpart
 devices may be removed like so:
 
 ```shell
-$ unbind /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm
+$ unbind /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm
 ```
 
 *** note
@@ -57,21 +57,29 @@ $ nand-util --device /dev/misc/nand-ctl/ram-nand-0 --check
 ## Inspection / manipulation
 
 ```shell
-$ nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand --info
+$ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand --info
+$ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --read --block 1 --page 2
 ```
+## Grab an image
 
 *nand-util* can also be used to grab an image of the nand contents:
 
+*** note
+If a file system is already mounted, unbind will fail, and forcing it to work is
+likely to render the system unusable. Rememer to netboot or use Zedboot as
+needed.
+***
+
 ```shell
-$ unbind /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm/ftl/block
-$ unbind /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm/ftl
-$ nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm --save --file /tmp/image
+$ unbind /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block
+$ unbind /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl
+$ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --save --file /tmp/image
 ```
 
 Transfer the image file to the host:
 
 ```shell
-$ zircon/build-x64/tools/netcp :/tmp/image /tmp/saved_image_file
+$ zircon/build-gcc/tools/netcp :/tmp/image /tmp/saved_image_file
 ```
 
 ## Replay
@@ -82,7 +90,7 @@ First, transfer the image to a device running Zircon. For example, on the host:
 
 ```shell
 $ echo /nand.dmp=/tmp/saved_image_file > /tmp/manifest.txt
-$ zircon/build-x64/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
+$ zircon/build-gcc/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
 $ zircon/scripts/run-zircon-x64 -k -- -hda /tmp/image.dsk
 ```
 
