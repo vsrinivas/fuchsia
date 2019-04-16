@@ -13,7 +13,7 @@ use fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig};
 use fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy};
 use files_async;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{launch, launcher};
+use fuchsia_component::client::connect_to_service;
 use fuchsia_uri_rewrite::{Rule as RewriteRule, RuleConfig};
 use fuchsia_zircon as zx;
 use futures::Future;
@@ -26,20 +26,6 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(name = "pkgctl")]
 struct Options {
-    #[structopt(
-        long = "pkg-resolver-uri",
-        help = "Package URI of the package resolver",
-        default_value = "fuchsia-pkg://fuchsia.com/pkg_resolver#meta/pkg_resolver.cmx"
-    )]
-    pkg_resolver_uri: String,
-
-    #[structopt(
-        long = "pkg-cache-uri",
-        help = "Package URI of the package cache",
-        default_value = "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cmx"
-    )]
-    pkg_cache_uri: String,
-
     #[structopt(subcommand)]
     cmd: Command,
 }
@@ -117,18 +103,12 @@ fn parse_rule_config(s: &str) -> Result<RuleConfig, serde_json::error::Error> {
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let Options { pkg_resolver_uri, pkg_cache_uri, cmd } = Options::from_args();
-
-    // Launch the server and connect to the resolver service.
-    let launcher = launcher().context("Failed to open launcher service")?;
+    let Options { cmd } = Options::from_args();
 
     let fut = async {
         match cmd {
             Command::Resolve { pkg_uri, selectors } => {
-                let app = launch(&launcher, pkg_resolver_uri, None)
-                    .context("Failed to launch resolver service")?;
-                let resolver = app
-                    .connect_to_service(PackageResolverMarker)
+                let resolver = connect_to_service::<PackageResolverMarker>()
                     .context("Failed to connect to resolver service")?;
                 println!("resolving {} with the selectors {:?}", pkg_uri, selectors);
 
@@ -151,10 +131,7 @@ fn main() -> Result<(), Error> {
                 Ok(())
             }
             Command::Open { meta_far_blob_id, selectors } => {
-                let app = launch(&launcher, pkg_cache_uri, None)
-                    .context("Failed to launch cache service")?;
-                let cache = app
-                    .connect_to_service(PackageCacheMarker)
+                let cache = connect_to_service::<PackageCacheMarker>()
                     .context("Failed to connect to cache service")?;
                 println!("opening {} with the selectors {:?}", meta_far_blob_id, selectors);
 
@@ -176,10 +153,7 @@ fn main() -> Result<(), Error> {
                 Ok(())
             }
             Command::Repo(cmd) => {
-                let app = launch(&launcher, pkg_resolver_uri, None)
-                    .context("Failed to launch resolver service")?;
-                let repo_manager = app
-                    .connect_to_service(RepositoryManagerMarker)
+                let repo_manager = connect_to_service::<RepositoryManagerMarker>()
                     .context("Failed to connect to resolver service")?;
 
                 match cmd {
@@ -211,10 +185,7 @@ fn main() -> Result<(), Error> {
                 }
             }
             Command::Rule(cmd) => {
-                let app = launch(&launcher, pkg_resolver_uri, None)
-                    .context("Failed to launch resolver service")?;
-                let engine = app
-                    .connect_to_service(EngineMarker)
+                let engine = connect_to_service::<EngineMarker>()
                     .context("Failed to connect to rewrite engine service")?;
 
                 match cmd {

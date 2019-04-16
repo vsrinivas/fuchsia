@@ -6,7 +6,8 @@
         "services": [
             "fuchsia.pkg.PackageCache",
             "fuchsia.pkg.PackageResolver",
-            "fuchsia.sys.Launcher"
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine"
         ]
     }
 }
