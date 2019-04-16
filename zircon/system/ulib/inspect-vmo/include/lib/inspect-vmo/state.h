@@ -5,9 +5,9 @@
 #ifndef LIB_INSPECT_VMO_STATE_H_
 #define LIB_INSPECT_VMO_STATE_H_
 
-#include "fbl/string_piece.h"
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 #include <lib/inspect-vmo/block.h>
 #include <lib/inspect-vmo/heap.h>
 #include <lib/inspect-vmo/types.h>
