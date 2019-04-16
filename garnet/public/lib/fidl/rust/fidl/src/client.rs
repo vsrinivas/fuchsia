@@ -125,7 +125,7 @@ impl Client {
             let mut lock = self.inner.event_channel.lock();
 
             if let EventListener::None = lock.listener {
-                lock.listener = EventListener::New;
+                lock.listener = EventListener::WillPoll;
             } else {
                 panic!("Event stream was already taken");
             }
@@ -314,7 +314,7 @@ enum EventListener {
     /// No one is listening for the event
     None,
     /// Someone is listening for the event but has not yet polled
-    New,
+    WillPoll,
     /// Someone is listening for the event and can be woken via the `Waker`
     Some(Waker),
 }
@@ -361,14 +361,19 @@ impl ClientInner {
     }
 
     fn poll_recv_event(&self, lw: &Waker) -> Poll<Result<zx::MessageBuf, Error>> {
-        let is_closed = self.recv_all(lw)?;
+        {
+            // Update the EventListener with the latest waker, remove any stale WillPoll state
+            let mut lock = self.event_channel.lock();
+            lock.listener = EventListener::Some(lw.clone());
+        }
+
+        let is_closed = self.recv_all()?;
 
         let mut lock = self.event_channel.lock();
 
         if let Some(msg_buf) = lock.queue.pop_front() {
             Poll::Ready(Ok(msg_buf))
         } else {
-            lock.listener = EventListener::Some(lw.clone());
             if is_closed {
                 Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
             } else {
@@ -382,10 +387,22 @@ impl ClientInner {
         txid: Txid,
         lw: &Waker,
     ) -> Poll<Result<zx::MessageBuf, Error>> {
-        let is_closed = self.recv_all(lw)?;
+        let interest_id = InterestId::from_txid(txid);
+        {
+            // If have not yet received anything, update any stale WillPoll or Waiting(stale waker)
+            // message interest for the current message.
+            let mut message_interests = self.message_interests.lock();
+            let message_interest = message_interests
+                .get_mut(interest_id.as_raw_id())
+                .expect("Polled unregistered interest");
+            if !message_interest.is_received() {
+                *message_interest = MessageInterest::Waiting(lw.clone());
+            }
+        }
+
+        let is_closed = self.recv_all()?;
 
         let mut message_interests = self.message_interests.lock();
-        let interest_id = InterestId::from_txid(txid);
         if message_interests
             .get(interest_id.as_raw_id())
             .expect("Polled unregistered interest")
@@ -396,11 +413,6 @@ impl ClientInner {
             let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
             Poll::Ready(Ok(buf))
         } else {
-            // Set the current waker to be notified when a response arrives.
-            *message_interests
-                .get_mut(interest_id.as_raw_id())
-                .expect("Polled unregistered interest") = MessageInterest::Waiting(lw.clone());
-
             if is_closed {
                 Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
             } else {
@@ -412,13 +424,17 @@ impl ClientInner {
     /// Poll for the receipt of any response message or an event.
     ///
     /// Returns whether or not the channel is closed.
-    fn recv_all(&self, lw: &Waker) -> Result<bool, Error> {
+    fn recv_all(&self) -> Result<bool, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
-
         loop {
+            let waker = match self.get_pending_waker() {
+                Some(v) => v,
+                None => return Ok(false),
+            };
+
             let mut buf = zx::MessageBuf::new();
-            match self.channel.recv_from(&mut buf, lw) {
+            match self.channel.recv_from(&mut buf, &waker) {
                 Poll::Ready(Ok(())) => {}
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
                 Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),
@@ -431,8 +447,12 @@ impl ClientInner {
                 // received an event
                 let mut lock = self.event_channel.lock();
                 lock.queue.push_back(buf);
-                if let EventListener::Some(ref waker) = lock.listener {
-                    waker.wake();
+                if let EventListener::Some(_) = lock.listener {
+                    if let EventListener::Some(waker) =
+                        mem::replace(&mut lock.listener, EventListener::WillPoll)
+                    {
+                        waker.wake()
+                    }
                 }
             } else {
                 // received a message response
@@ -466,34 +486,31 @@ impl ClientInner {
         }
     }
 
-    // Wakes up an arbitrary task that has begun polling on the channel so that
-    // it will call recv_all and be registered as the new channel reader.
-    fn wake_any(&self) {
-        // Try to wake up message interests first, rather than the event listener.
-        // The event listener is a stream, and so could be between poll_nexts,
-        // blocked on a message interest completing before it begins polling again.
-        // Waking up only the event listener in these cases would cause a deadlock
-        // since the channel wouldn't be read from by the awoken event listener,
-        // so the message interest the event listener was blocked on would never
-        // complete.
-        //
-        // Message interests, however, should always be actively polled once
-        // they've begun being polled on a task.
+    /// Gets an arbitrary task that has polled on this channel and has not yet
+    /// gotten a response.
+    fn get_pending_waker(&self) -> Option<Waker> {
         {
             let lock = self.message_interests.lock();
             for (_, message_interest) in lock.iter() {
                 if let MessageInterest::Waiting(waker) = message_interest {
-                    waker.wake();
-                    return;
+                    return Some(waker.clone());
                 }
             }
         }
         {
             let lock = self.event_channel.lock();
             if let EventListener::Some(waker) = &lock.listener {
-                waker.wake();
-                return;
+                return Some(waker.clone());
             }
+        }
+        None
+    }
+
+    /// Wakes up an arbitrary task that has begun polling on the channel so that
+    /// it will call recv_all.
+    fn wake_any(&self) {
+        if let Some(waker) = self.get_pending_waker() {
+            waker.wake();
         }
     }
 }
@@ -592,6 +609,7 @@ pub mod sync {
 mod tests {
     use super::*;
     use {
+        crate::wake_counter,
         failure::{Error, ResultExt},
         fuchsia_async::TimeoutExt,
         fuchsia_zircon::DurationNum,
@@ -610,6 +628,21 @@ mod tests {
     const SEND_ORDINAL_HIGH_BYTE: u8 = 42;
     const SEND_ORDINAL: u32 = 42;
     const SEND_DATA: u8 = 55;
+
+    fn send_transaction(header: TransactionHeader, channel: &zx::Channel) {
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        encode_transaction(header, bytes, handles);
+        channel.write(bytes, handles).expect("Server channel write failed");
+    }
+
+    fn encode_transaction(
+        header: TransactionHeader,
+        bytes: &mut Vec<u8>,
+        handles: &mut Vec<zx::Handle>,
+    ) {
+        let event = &mut TransactionMessage { header: header, body: &mut SEND_DATA };
+        Encoder::encode(bytes, handles, event).expect("Encoding failure");
+    }
 
     #[test]
     fn sync_client() -> Result<(), Error> {
@@ -633,20 +666,14 @@ mod tests {
                 .wait_handle(zx::Signals::CHANNEL_READABLE, 5.seconds().after_now())
                 .expect("failed to wait for channel readable");
             server_end.read(&mut received).expect("failed to read on server end");
-            let (buf, handles) = received.split_mut();
+            let (buf, _handles) = received.split_mut();
             let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
             assert_eq!(header.tx_id, sync::QUERY_TX_ID);
             assert_eq!(header.ordinal, SEND_ORDINAL);
-            let response = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: header.tx_id,
-                    flags: 0,
-                    ordinal: header.ordinal,
-                },
-                body: &mut SEND_DATA,
-            };
-            Encoder::encode(buf, handles, response).expect("Encoding failure");
-            server_end.write(buf, handles).expect("Server channel write failed");
+            send_transaction(
+                TransactionHeader { tx_id: header.tx_id, flags: 0, ordinal: header.ordinal },
+                &server_end,
+            );
         });
         let response_data = client
             .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, 5.seconds().after_now())
@@ -704,13 +731,9 @@ mod tests {
             let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
                         // since FIDL txids start with `1`.
 
-            let response = &mut TransactionMessage {
-                header: TransactionHeader { tx_id: id, flags: 0, ordinal: 42 },
-                body: &mut 55,
-            };
-
             let (bytes, handles) = (&mut vec![], &mut vec![]);
-            Encoder::encode(bytes, handles, response).expect("Encoding failure");
+            let header = TransactionHeader { tx_id: id, flags: 0, ordinal: 42 };
+            encode_transaction(header, bytes, handles);
             server.write(bytes, handles).expect("Server channel write failed");
         };
 
@@ -760,12 +783,9 @@ mod tests {
 
         // Send the event from the server
         let server = fasync::Channel::from_channel(server_end).unwrap();
-        let event = &mut TransactionMessage {
-            header: TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 },
-            body: &mut 55i32,
-        };
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        Encoder::encode(bytes, handles, event).expect("Encoding failure");
+        let header = TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 };
+        encode_transaction(header, bytes, handles);
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);
 
@@ -786,5 +806,81 @@ mod tests {
             recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
 
         executor.run_singlethreaded(recv);
+    }
+
+    #[test]
+    fn client_always_wakes_pending_futures() {
+        let mut executor = fasync::Executor::new().unwrap();
+
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        let mut event_receiver = client.take_event_receiver();
+
+        // first poll on a response
+        let (response_waker, response_waker_count) = wake_counter::new_count_waker();
+        let mut response_txid = Txid(0);
+        let mut response_future = client.send_raw_query(|tx_id, bytes, handles| {
+            response_txid = tx_id;
+            let header =
+                TransactionHeader { tx_id: response_txid.as_raw_id(), flags: 0, ordinal: 42 };
+            encode_transaction(header, bytes, handles);
+            Ok(())
+        });
+        assert!(response_future.poll_unpin(&response_waker).is_pending());
+
+        // then, poll on an event
+        let (event_waker, event_waker_count) = wake_counter::new_count_waker();
+        assert!(event_receiver.poll_next_unpin(&event_waker).is_pending());
+
+        // at this point, nothing should have been woken
+        assert_eq!(response_waker_count.get(), 0);
+        assert_eq!(event_waker_count.get(), 0);
+
+        // next, simulate an event coming in
+        send_transaction(TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 }, &server_end);
+
+        // get event loop to deliver readiness notifications to channels
+        let _ = executor.run_until_stalled(&mut future::empty::<()>());
+
+        // either response_waker or event_waker should be woken
+        assert_eq!(response_waker_count.get() + event_waker_count.get(), 1);
+        let last_response_waker_count = response_waker_count.get();
+
+        // we'll pretend event_waker was woken, and have that poll out the event
+        assert!(event_receiver.poll_next_unpin(&event_waker).is_ready());
+
+        // next, simulate a response coming in
+        send_transaction(
+            TransactionHeader { tx_id: response_txid.as_raw_id(), flags: 0, ordinal: 42 },
+            &server_end,
+        );
+
+        // get event loop to deliver readiness notifications to channels
+        let _ = executor.run_until_stalled(&mut future::empty::<()>());
+
+        // response waker should have been woken again
+        assert_eq!(response_waker_count.get(), last_response_waker_count + 1);
+    }
+
+    #[test]
+    fn client_allows_take_event_stream_even_if_event_delivered() {
+        let mut _executor = fasync::Executor::new().unwrap();
+
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // first simulate an event coming in, even though nothing has polled
+        send_transaction(TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 }, &server_end);
+
+        // next, poll on a response
+        let (response_waker, _response_waker_count) = wake_counter::new_count_waker();
+        let mut response_future = client.send_query::<u8, u8>(&mut 55, 42);
+        assert!(response_future.poll_unpin(&response_waker).is_pending());
+
+        // then, make sure we can still take the event receiver without panicking
+        let mut _event_receiver = client.take_event_receiver();
     }
 }

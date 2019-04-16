@@ -13,6 +13,9 @@ pub mod encoding;
 pub mod client;
 pub mod endpoints;
 
+#[cfg(test)]
+mod wake_counter;
+
 mod error;
 pub use self::error::{Error, Result};
 // Used to generate the types for fidl Bits.
