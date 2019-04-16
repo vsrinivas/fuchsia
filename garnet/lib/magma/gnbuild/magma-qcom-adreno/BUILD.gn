@@ -6,38 +6,36 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-qcom-adreno") {
-  if (build_qcom_adreno) {
-    deprecated_system_image = true
-    if (magma_enable_developer_build) {
-      testonly = true
-    }
+  deprecated_system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
 
-    if (have_libvulkan) {
-      deps = build_libvulkan
+  if (have_libvulkan) {
+    deps = build_libvulkan
 
-      # api_version must be present but is unused
-      icd_data = [
-        "{",
-        "\"file_format_version\": \"1.0.0\",",
-        "\"ICD\": {",
-        "\"library_path\": \"libvulkan_adreno.so\",",
-        "\"api_version\": \"0.0.0\"",
-        "}",
-        "}",
-      ]
-      write_file("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json", icd_data)
+    # api_version must be present but is unused
+    icd_data = [
+      "{",
+      "\"file_format_version\": \"1.0.0\",",
+      "\"ICD\": {",
+      "\"library_path\": \"libvulkan_adreno.so\",",
+      "\"api_version\": \"0.0.0\"",
+      "}",
+      "}",
+    ]
+    write_file("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json", icd_data)
 
-      resources = [
-        {
-          path = rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json")
-          dest = "vulkan/icd.d/libvulkan_adreno.json"
-        },
-      ]
-      libraries = [
-        {
-          name = "libvulkan_adreno.so"
-        },
-      ]
-    }
+    resources = [
+      {
+        path = rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json")
+        dest = "vulkan/icd.d/libvulkan_adreno.json"
+      },
+    ]
+    libraries = [
+      {
+        name = "libvulkan_adreno.so"
+      },
+    ]
   }
 }

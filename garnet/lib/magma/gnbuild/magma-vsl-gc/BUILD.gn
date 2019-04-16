@@ -6,64 +6,62 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-vsl-gc") {
-  if (build_vsl_gc) {
-    deprecated_system_image = true
-    if (magma_enable_developer_build) {
-      testonly = true
-    }
+  deprecated_system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
 
-    deps = []
+  deps = []
 
-    if (magma_enable_developer_build) {
-      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
-      drivers = [
-        {
-          name = "libmsd_vsl_test.so"
-        },
-      ]
-    } else {
-      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl" ]
-      drivers = [
-        {
-          name = "libmsd_vsl.so"
-        },
-      ]
-    }
+  if (magma_enable_developer_build) {
+    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
+    drivers = [
+      {
+        name = "libmsd_vsl_test.so"
+      },
+    ]
+  } else {
+    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl" ]
+    drivers = [
+      {
+        name = "libmsd_vsl.so"
+      },
+    ]
+  }
 
-    resources = []
-    libraries = []
+  resources = []
+  libraries = []
 
-    if (build_libvulkan != []) {
-      foreach(entry, build_libvulkan) {
-        dir = get_label_info(entry, "dir")
-        if (dir == "//third_party/verisilicon-gc/fuchsia") {
-          deps += [ entry ]
+  if (build_libvulkan != []) {
+    foreach(entry, build_libvulkan) {
+      dir = get_label_info(entry, "dir")
+      if (dir == "//third_party/verisilicon-gc/fuchsia") {
+        deps += [ entry ]
 
-          icd_name = get_label_info(entry, "name")
-          filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-          icd_data = [
-            "{",
-            "\"file_format_version\": \"1.0.0\",",
-            "\"ICD\": {",
-            "\"library_path\": \"$icd_name.so\",",
-            "\"api_version\": \"1.0.68\"",
-            "}",
-            "}",
-          ]
-          write_file(filename, icd_data)
+        icd_name = get_label_info(entry, "name")
+        filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+        icd_data = [
+          "{",
+          "\"file_format_version\": \"1.0.0\",",
+          "\"ICD\": {",
+          "\"library_path\": \"$icd_name.so\",",
+          "\"api_version\": \"1.0.68\"",
+          "}",
+          "}",
+        ]
+        write_file(filename, icd_data)
 
-          resources += [
-            {
-              path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
-              dest = "vulkan/icd.d/$icd_name.json"
-            },
-          ]
-          libraries += [
-            {
-              name = "$icd_name.so"
-            },
-          ]
-        }
+        resources += [
+          {
+            path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
+            dest = "vulkan/icd.d/$icd_name.json"
+          },
+        ]
+        libraries += [
+          {
+            name = "$icd_name.so"
+          },
+        ]
       }
     }
   }
@@ -73,15 +71,13 @@ package("nonhardware-tests") {
   testonly = true
   package_name = "magma_vsl_gc_nonhardware_tests"
 
-  if (build_vsl_gc) {
-    deps = [
-      "//garnet/drivers/gpu/msd-vsl-gc:tests",
-    ]
+  deps = [
+    "//garnet/drivers/gpu/msd-vsl-gc:tests",
+  ]
 
-    tests = [
-      {
-        name = "msd_vsl_gc_nonhardware_tests"
-      },
-    ]
-  }
+  tests = [
+    {
+      name = "msd_vsl_gc_nonhardware_tests"
+    },
+  ]
 }

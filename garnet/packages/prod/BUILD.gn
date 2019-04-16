@@ -168,7 +168,6 @@ group("drivers") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:virtual_audio_driver",
     "//garnet/packages/prod:virtual_camera",
@@ -178,6 +177,9 @@ group("drivers") {
   ]
   if (target_cpu == "arm64") {
     public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
+  }
+  if (target_cpu == "x64") {
+    public_deps += [ "//garnet/packages/prod:magma-intel-gen" ]
   }
 }
 
@@ -243,7 +245,6 @@ group("all") {
     "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mtk",
-    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
@@ -1081,12 +1082,14 @@ group("magma-arm-mali") {
   ]
 }
 
-group("magma-intel-gen") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-intel-gen",
-    "//garnet/packages/prod:sysmem_connector",
-  ]
+if (target_cpu == "x64") {
+  group("magma-intel-gen") {
+    testonly = true
+    public_deps = [
+      "//garnet/lib/magma/gnbuild/magma-intel-gen",
+      "//garnet/packages/prod:sysmem_connector",
+    ]
+  }
 }
 
 group("magma-img-rgx-mtk") {

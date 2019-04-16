@@ -872,8 +872,6 @@ group("magma") {
   public_deps = [
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
-    "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
-    "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",
     "//garnet/lib/magma/tests:magma_abi_conformance_tests",
     "//garnet/lib/magma/tests:magma_nonhardware_tests",
@@ -882,6 +880,12 @@ group("magma") {
     "//garnet/lib/magma/tests_linux:tests_linux",
     "//garnet/packages/prod:vulkan",
   ]
+  if (target_cpu == "x64") {
+    public_deps += [
+      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
+      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
+    ]
+  }
 }
 
 group("dhcp_tests") {

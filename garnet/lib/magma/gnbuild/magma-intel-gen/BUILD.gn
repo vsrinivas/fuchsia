@@ -6,14 +6,17 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-package("magma-intel-gen") {
-  if (build_intel_gen) {
+# Mesa Intel Vulkan driver requires x64 build
+if (target_cpu == "x64") {
+  package("magma-intel-gen") {
     deprecated_system_image = true
     if (magma_enable_developer_build) {
       testonly = true
     }
 
-    deps = build_libvulkan
+    deps = [
+      "//third_party/mesa:magma_vulkan",
+    ]
 
     # api_version must be present but is unused
     icd_data = [
@@ -55,17 +58,14 @@ package("magma-intel-gen") {
       ]
     }
   }
-}
 
-test_package("magma_intel_gen_nonhardware_tests") {
-  tests = []
-  if (build_intel_gen) {
+  test_package("magma_intel_gen_nonhardware_tests") {
     deps = [
-      "$mesa_build_root:tests",
       "$msd_intel_gen_build_root:tests",
+      "//third_party/mesa:tests",
     ]
 
-    tests += [
+    tests = [
       {
         name = "msd_intel_gen_nonhardware_tests"
       },
@@ -86,16 +86,13 @@ test_package("magma_intel_gen_nonhardware_tests") {
       },
     ]
   }
-}
 
-test_package("magma_intel_gen_integration_tests") {
-  tests = []
-  if (build_intel_gen) {
+  test_package("magma_intel_gen_integration_tests") {
     deps = [
       "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
     ]
 
-    tests += [
+    tests = [
       {
         name = "msd_intel_gen_integration_tests"
         environments = intel_gpu_envs

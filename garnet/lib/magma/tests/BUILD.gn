@@ -25,24 +25,25 @@ group("tests") {
     ]
   }
 
-  if (build_intel_gen) {
+  # Intel
+  if (target_cpu == "x64") {
     deps += [
-      "$mesa_build_root:tests",
       "$msd_intel_gen_build_root:msd_intel_test",
       "$msd_intel_gen_build_root:tests",
       "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
+      "//third_party/mesa:tests",
     ]
   }
-  if (build_msd_arm_mali) {
-    deps += [
-      "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
-      "//garnet/drivers/gpu/msd-arm-mali:tests",
-      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
-    ]
-  }
-  if (build_vsl_gc) {
-    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
-  }
+
+  # arm/mali
+  deps += [
+    "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
+    "//garnet/drivers/gpu/msd-arm-mali:tests",
+    "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+  ]
+
+  # vsl/gc
+  deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
 }
 
 test_package("magma_nonhardware_tests") {

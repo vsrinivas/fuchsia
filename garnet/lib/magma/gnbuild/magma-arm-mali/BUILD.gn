@@ -11,99 +11,97 @@ if (have_prebuilt_libvulkan_arm) {
 }
 
 package("magma-arm-mali") {
-  if (build_msd_arm_mali) {
-    deprecated_system_image = true
-    if (magma_enable_developer_build) {
-      testonly = true
-    }
+  deprecated_system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
 
-    if (magma_enable_developer_build) {
-      deps = [
-        "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
-      ]
-      drivers = [
-        {
-          name = "libmsd_arm_test.so"
-        },
-      ]
-    } else {
-      deps = [
-        "//garnet/drivers/gpu/msd-arm-mali:msd_arm",
-      ]
-      drivers = [
-        {
-          name = "libmsd_arm.so"
-        },
-      ]
-    }
+  if (magma_enable_developer_build) {
+    deps = [
+      "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
+    ]
+    drivers = [
+      {
+        name = "libmsd_arm_test.so"
+      },
+    ]
+  } else {
+    deps = [
+      "//garnet/drivers/gpu/msd-arm-mali:msd_arm",
+    ]
+    drivers = [
+      {
+        name = "libmsd_arm.so"
+      },
+    ]
+  }
 
-    if (have_libvulkan) {
-      icd_list = []
+  if (have_libvulkan) {
+    icd_list = []
 
-      if (build_libvulkan != []) {
-        foreach(entry, build_libvulkan) {
-          dir = get_label_info(entry, "dir")
-          if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
-              dir == "//third_party/arm-mali-bifrost/fuchsia") {
-            deps += [ entry ]
-            icd_list += [
-              {
-                name = get_label_info(entry, "name")
-              },
-            ]
-          }
-        }
-      } else if (have_prebuilt_libvulkan_arm) {
-        deps += [ ":prebuilt_libvulkan" ]
-        icd_list += [
-          {
-            name = "libvulkan_arm"
-            library_path = "$libvulkan_gen_path/libvulkan_arm.so"
-          },
-        ]
-      }
-
-      foreach(entry, icd_list) {
-        icd_name = entry.name
-        filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-        icd_data = []
-        icd_data = [
-          "{",
-          "\"file_format_version\": \"1.0.0\",",
-          "\"ICD\": {",
-          "\"library_path\": \"$icd_name.so\",",
-          "\"api_version\": \"1.0.68\"",
-          "}",
-          "}",
-        ]
-        write_file(filename, icd_data)
-      }
-
-      resources = []
-      libraries = []
-
-      foreach(entry, icd_list) {
-        icd_name = entry.name
-        resources += [
-          {
-            path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
-            dest = "vulkan/icd.d/$icd_name.json"
-          },
-        ]
-        if (defined(entry.library_path)) {
-          libraries += [
+    if (build_libvulkan != []) {
+      foreach(entry, build_libvulkan) {
+        dir = get_label_info(entry, "dir")
+        if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
+            dir == "//third_party/arm-mali-bifrost/fuchsia") {
+          deps += [ entry ]
+          icd_list += [
             {
-              source = entry.library_path
-              name = "$icd_name.so"
-            },
-          ]
-        } else {
-          libraries += [
-            {
-              name = "$icd_name.so"
+              name = get_label_info(entry, "name")
             },
           ]
         }
+      }
+    } else if (have_prebuilt_libvulkan_arm) {
+      deps += [ ":prebuilt_libvulkan" ]
+      icd_list += [
+        {
+          name = "libvulkan_arm"
+          library_path = "$libvulkan_gen_path/libvulkan_arm.so"
+        },
+      ]
+    }
+
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+      icd_data = []
+      icd_data = [
+        "{",
+        "\"file_format_version\": \"1.0.0\",",
+        "\"ICD\": {",
+        "\"library_path\": \"$icd_name.so\",",
+        "\"api_version\": \"1.0.68\"",
+        "}",
+        "}",
+      ]
+      write_file(filename, icd_data)
+    }
+
+    resources = []
+    libraries = []
+
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      resources += [
+        {
+          path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
+          dest = "vulkan/icd.d/$icd_name.json"
+        },
+      ]
+      if (defined(entry.library_path)) {
+        libraries += [
+          {
+            source = entry.library_path
+            name = "$icd_name.so"
+          },
+        ]
+      } else {
+        libraries += [
+          {
+            name = "$icd_name.so"
+          },
+        ]
       }
     }
   }
@@ -129,36 +127,31 @@ if (have_prebuilt_libvulkan_arm) {
 }
 
 test_package("msd_arm_mali_nonhardware_tests") {
-  tests = []
-  if (build_msd_arm_mali) {
-    deps = [
-      "//garnet/drivers/gpu/msd-arm-mali:tests",
-    ]
+  deps = [
+    "//garnet/drivers/gpu/msd-arm-mali:tests",
+  ]
 
-    tests += [
-      {
-        name = "msd_arm_mali_nonhardware_tests"
-      },
-    ]
-  }
+  tests = [
+    {
+      name = "msd_arm_mali_nonhardware_tests"
+    },
+  ]
 }
 
 # Run with autorun or "run_test_component msd_arm_mali_integration_tests"
 test_package("msd-arm-mali-integration-tests") {
   tests = []
 
-  if (build_msd_arm_mali) {
-    deps = [
-      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
-    ]
+  deps = [
+    "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+  ]
 
-    tests += [
-      {
-        name = "msd_arm_mali_integration_tests"
+  tests = [
+    {
+      name = "msd_arm_mali_integration_tests"
 
-        # This test can only run on VIM2, which isn't targetable yet.
-        disabled = true
-      },
-    ]
-  }
+      # This test can only run on VIM2, which isn't targetable yet.
+      disabled = true
+    },
+  ]
 }
