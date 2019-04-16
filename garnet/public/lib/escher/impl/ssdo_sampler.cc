@@ -154,7 +154,8 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
       case 2:
         component = accel.b;
         break;
-      case 3:
+      // Including the next line breaks the Bifrost shader compiler.
+      // case 3:
       default:
         component = accel.a;
         break;
@@ -238,7 +239,8 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
       case 2:
         component = accel.b;
         break;
-      case 3:
+      // Including the next line breaks the Bifrost shader compiler.
+      // case 3:
       default:
         component = accel.a;
         break;
