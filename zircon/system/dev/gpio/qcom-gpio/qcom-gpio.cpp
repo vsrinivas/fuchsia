@@ -16,6 +16,7 @@
 namespace {
 
 uint64_t kPortKeyIrqMsg = 0x00;
+uint64_t kPortKeyTerminate = 0x01;
 
 } // namespace
 
@@ -30,6 +31,10 @@ int QcomGpioDevice::Thread() {
             return thrd_error;
         }
         zxlogf(TRACE, "%s msg on port key %lu\n", __func__, packet.key);
+        if (packet.key == kPortKeyTerminate) {
+            zxlogf(INFO, "QCOM GPIO thread terminating\n");
+            return 0;
+        }
         size_t index = 0;
         status = enabled_ints_cache_.Find(true, 0, kGpioMax, 1, &index);
         if (status != ZX_OK) {
@@ -184,6 +189,9 @@ zx_status_t QcomGpioDevice::GpioImplSetPolarity(uint32_t index, uint32_t polarit
 
 void QcomGpioDevice::ShutDown() {
     combined_int_.destroy();
+    zx_port_packet packet = {kPortKeyTerminate, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    auto status = port_.queue(&packet);
+    ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
 }
 
