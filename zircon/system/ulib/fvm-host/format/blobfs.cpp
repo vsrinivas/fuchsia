@@ -150,7 +150,7 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         vslice_info->vslice_start = 0;
         vslice_info->slice_count = 1;
         vslice_info->block_offset = 0;
-        vslice_info->block_count = 1;
+        vslice_info->block_count = ToU32(SuperblockBlocks(info_));
         vslice_info->zero_fill = true;
         return ZX_OK;
     }

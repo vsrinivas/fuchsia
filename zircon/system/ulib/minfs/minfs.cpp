@@ -1003,7 +1003,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     fuchsia_hardware_block_volume_VolumeInfo fvm_info;
     if (bc->FVMQuery(&fvm_info) == ZX_OK) {
         info.slice_size = fvm_info.slice_size;
-        info.flags |= kMinfsFlagFVM;
+        SetMinfsFlagFvm(info);
 
         if (info.slice_size % kMinfsBlockSize) {
             FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block\n");
@@ -1249,8 +1249,9 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
     return bc_->Readblk(start + bno, data);
 }
 
-zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
-                       const fbl::Vector<size_t>& extent_lengths) {
+zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
+                               const fbl::Vector<size_t>& extent_lengths,
+                               fbl::unique_ptr<minfs::Bcache>* out) {
     if (start >= end) {
         fprintf(stderr, "error: Insufficient space allocated\n");
         return ZX_ERR_INVALID_ARGS;
@@ -1287,8 +1288,54 @@ zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
         return status;
     }
 
+    *out = std::move(bc);
+    return ZX_OK;
+}
+
+zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
+                       const fbl::Vector<size_t>& extent_lengths) {
+
+    fbl::unique_ptr<minfs::Bcache> bc;
+    zx_status_t status;
+    if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
+        return status;
+    }
+
     return Fsck(std::move(bc));
 }
+
+zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
+                               const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size) {
+    fbl::unique_ptr<minfs::Bcache> bc;
+    zx_status_t status;
+
+    if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
+        return status;
+    }
+    return UsedDataSize(bc, out_size);
+}
+
+zx_status_t SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
+                             const fbl::Vector<size_t>& extent_lengths, uint64_t* out_inodes) {
+    fbl::unique_ptr<minfs::Bcache> bc;
+    zx_status_t status;
+    if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
+        return status;
+    }
+    return UsedInodes(bc, out_inodes);
+}
+
+zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
+                           const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size) {
+    fbl::unique_ptr<minfs::Bcache> bc;
+    zx_status_t status;
+
+    if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
+        return status;
+    }
+    return UsedSize(bc, out_size);
+}
+
 #endif
 
 void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count, uint32_t dinum_count,

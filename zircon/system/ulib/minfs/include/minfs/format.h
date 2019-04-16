@@ -216,4 +216,59 @@ static_assert(kMinfsMaxDirectorySize <= kMinfsReclenMask,
 // Block Cache (bcache.c)
 constexpr uint32_t kMinfsHashBits = (8);
 
+// Sets kMinfsFlagFVM for given superblock
+constexpr void SetMinfsFlagFvm(Superblock& info) {
+    info.flags |= kMinfsFlagFVM;
+}
+
+// Returns true if kMinfsFlagFVM is set for given superblock
+constexpr bool GetMinfsFlagFvm(Superblock& info) {
+    return (info.flags & kMinfsFlagFVM) == kMinfsFlagFVM;
+}
+
+constexpr uint64_t InodeBitmapBlocks(const Superblock& info) {
+    if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
+        return info.ibm_slices;
+    }
+
+    return info.abm_block - info.ibm_block;
+}
+
+constexpr uint64_t BlockBitmapBlocks(const Superblock& info) {
+    if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
+        return info.abm_slices;
+    }
+
+    return info.ino_block - info.abm_block;
+}
+
+constexpr uint64_t InodeBlocks(const Superblock& info) {
+    if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
+        return info.ino_slices;
+    }
+
+    return info.journal_start_block - info.ino_block;
+}
+
+constexpr uint64_t JournalBlocks(const Superblock& info) {
+    if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
+        return info.journal_slices;
+    }
+
+    return info.dat_block - info.journal_start_block;
+}
+
+constexpr uint64_t DataBlocks(const Superblock& info) {
+    if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
+        return info.dat_slices;
+    }
+
+    return info.block_count;
+}
+
+constexpr uint64_t NonDataBlocks(const Superblock& info) {
+    return InodeBitmapBlocks(info) + BlockBitmapBlocks(info) + InodeBlocks(info)
+           + JournalBlocks(info);
+}
+
 } // namespace minfs

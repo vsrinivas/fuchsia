@@ -42,6 +42,13 @@ int usage(void) {
                     " If the --disk flag is provided, instead checks that the paved sparse file"
                     " will fit within a disk of this size. On success, no information is"
                     " outputted\n");
+    fprintf(stderr, " used-data-size : Prints sum of the space, in bytes, used by data on \n"
+                    " different partitions. This does not include blocks used internally for \n"
+                    " superblock, bitmaps, inodes, or for journal,\n");
+    fprintf(stderr, " used-inodes : Prints the sum of used inodes on different partitions.\n");
+    fprintf(stderr, " used-size : Prints sum of the space, in bytes, used by data and by\n"
+                    " superblock, bitmaps, inodes, and journal different partitions. All of the\n"
+                    " reservations for non-data blocks are considered as used.\n");
     fprintf(stderr, " decompress : Decompresses a compressed sparse file. --sparse input path is"
                     " required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
@@ -396,6 +403,30 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Sparse container will not fit in target disk size\n");
             return -1;
         }
+    } else if (!strcmp(command, "used-data-size")) {
+        SparseContainer sparseContainer(path, slice_size, flags);
+        uint64_t size;
+
+        if (sparseContainer.UsedDataSize(&size) != ZX_OK) {
+            return -1;
+        }
+        printf("%" PRIu64 "\n", size);
+    } else if (!strcmp(command, "used-inodes")) {
+        SparseContainer sparseContainer(path, slice_size, flags);
+        uint64_t used_inodes;
+
+        if (sparseContainer.UsedInodes(&used_inodes) != ZX_OK) {
+            return -1;
+        }
+        printf("%" PRIu64 "\n", used_inodes);
+    } else if (!strcmp(command, "used-size")) {
+        SparseContainer sparseContainer(path, slice_size, flags);
+        uint64_t size;
+
+        if (sparseContainer.UsedSize(&size) != ZX_OK) {
+            return -1;
+        }
+        printf("%" PRIu64 "\n", size);
     } else if (!strcmp(command, "pave")) {
         char* input_type = argv[i];
         char* input_path = argv[i + 1];

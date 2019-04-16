@@ -38,6 +38,9 @@ private:
     //TODO(planders): Add ls support for blobfs.
     zx_status_t Mkfs() override;
     zx_status_t Fsck() override;
+    zx_status_t UsedDataSize() override;
+    zx_status_t UsedInodes() override;
+    zx_status_t UsedSize() override;
     zx_status_t Add() override;
 
     // A comparison function used to quickly compare MerkleInfo.

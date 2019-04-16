@@ -71,3 +71,57 @@ zx_status_t Format::Check(fbl::unique_fd fd, off_t start, off_t end,
     fprintf(stderr, "Format not supported\n");
     return ZX_ERR_INVALID_ARGS;
 }
+
+zx_status_t Format::UsedDataSize(const fbl::unique_fd& fd, off_t start, off_t end,
+                                 const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                                 uint64_t* out_size) {
+    if (part == DISK_FORMAT_BLOBFS) {
+        return blobfs::UsedDataSize(fd, out_size, start, end);
+    } else if (part == DISK_FORMAT_MINFS) {
+        fbl::unique_fd dupfd(dup(fd.get()));
+        if (!dupfd) {
+            fprintf(stderr, "Failed to duplicate fd\n");
+            return ZX_ERR_INTERNAL;
+        }
+        return minfs::SparseUsedDataSize(std::move(dupfd), start, end, extent_lengths, out_size);
+    }
+
+    fprintf(stderr, "Format not supported\n");
+    return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Format::UsedInodes(const fbl::unique_fd& fd, off_t start, off_t end,
+                               const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                               uint64_t* out_inodes) {
+    if (part == DISK_FORMAT_BLOBFS) {
+        return blobfs::UsedInodes(fd, out_inodes, start, end);
+    } else if (part == DISK_FORMAT_MINFS) {
+        fbl::unique_fd dupfd(dup(fd.get()));
+        if (!dupfd) {
+            fprintf(stderr, "Failed to duplicate fd\n");
+            return ZX_ERR_INTERNAL;
+        }
+        return minfs::SparseUsedInodes(std::move(dupfd), start, end, extent_lengths, out_inodes);
+    }
+
+    fprintf(stderr, "Format not supported\n");
+    return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Format::UsedSize(const fbl::unique_fd& fd, off_t start, off_t end,
+                             const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                             uint64_t* out_size) {
+    if (part == DISK_FORMAT_BLOBFS) {
+        return blobfs::UsedSize(fd, out_size, start, end);
+    } else if (part == DISK_FORMAT_MINFS) {
+        fbl::unique_fd dupfd(dup(fd.get()));
+        if (!dupfd) {
+            fprintf(stderr, "Failed to duplicate fd\n");
+            return ZX_ERR_INTERNAL;
+        }
+        return minfs::SparseUsedSize(std::move(dupfd), start, end, extent_lengths, out_size);
+    }
+
+    fprintf(stderr, "Format not supported\n");
+    return ZX_ERR_INVALID_ARGS;
+}

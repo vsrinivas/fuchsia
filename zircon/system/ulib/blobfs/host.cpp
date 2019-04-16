@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <new>
+#include <optional>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@
 #include <fs-host/common.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <safemath/checked_math.h>
 
 #define ZXDEBUG 0
 
@@ -124,7 +126,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 
 // Given a buffer (and pre-computed merkle tree), add the buffer as a
 // blob in Blobfs.
-zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, 
+zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder,
                                                const FileMapping& mapping, const MerkleInfo& info) {
     ZX_ASSERT(mapping.length() == info.length);
     const void* data;
@@ -201,12 +203,14 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
     return ZX_OK;
 }
 
-} // namespace
+// Returns ZX_OK and copies blobfs info_block_t, which is a block worth of data containing
+// superblock, into |out_info_block| if the block read from fd belongs to blobfs.
+zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_info_block,
+                                   off_t start = 0, std::optional<off_t> end = std::nullopt) {
 
-zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     info_block_t info_block;
 
-    if (readblk(fd.get(), 0, (void*)info_block.block) < 0) {
+    if (readblk_offset(fd.get(), 0, start, (void*)info_block.block) < 0) {
         return ZX_ERR_IO;
     }
     uint64_t blocks;
@@ -214,8 +218,81 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     if ((status = GetBlockCount(fd.get(), &blocks)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: cannot find end of underlying device\n");
         return status;
+    }
+
+    if (end &&
+        ((blocks * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
+        FS_TRACE_ERROR("blobfs: Invalid file size\n");
+        return ZX_ERR_BAD_STATE;
     } else if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Info check failed\n");
+        return status;
+    }
+
+    memcpy(out_info_block, &info_block, sizeof(*out_info_block));
+
+    return ZX_OK;
+}
+
+zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<off_t> end,
+                           Superblock* info) {
+    info_block_t info_block;
+    zx_status_t status;
+
+    if ((status = blobfs_load_info_block(fd, &info_block, start, end)) != ZX_OK) {
+        return status;
+    }
+
+    memcpy(info, &info_block.info, sizeof(info_block.info));
+    return ZX_OK;
+}
+
+} // namespace
+
+zx_status_t UsedDataSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start,
+                         std::optional<off_t> end) {
+    Superblock info;
+    zx_status_t status;
+
+    if ((status = get_superblock(fd, start, end, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_size = info.alloc_block_count * info.block_size;
+    return ZX_OK;
+}
+
+zx_status_t UsedInodes(const fbl::unique_fd& fd, uint64_t* out_inodes, off_t start,
+                       std::optional<off_t> end) {
+    Superblock info;
+    zx_status_t status;
+
+    if ((status = get_superblock(fd, start, end, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_inodes = info.alloc_inode_count;
+    return ZX_OK;
+}
+
+zx_status_t UsedSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start,
+                     std::optional<off_t> end) {
+    Superblock info;
+    zx_status_t status;
+
+    if ((status = get_superblock(fd, start, end, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_size = (TotalNonDataBlocks(info) + info.alloc_block_count) * info.block_size;
+    return ZX_OK;
+}
+
+zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
+    info_block_t info_block;
+    zx_status_t status;
+
+    if ((status = blobfs_load_info_block(fd, &info_block)) != ZX_OK) {
         return status;
     }
 
@@ -247,22 +324,9 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     }
 
     info_block_t info_block;
-
-    struct stat s;
-    if (fstat(fd.get(), &s) < 0) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    if (s.st_size < end) {
-        FS_TRACE_ERROR("blobfs: Invalid file size\n");
-        return ZX_ERR_BAD_STATE;
-    } else if (readblk_offset(fd.get(), 0, start, (void*)info_block.block) < 0) {
-        return ZX_ERR_IO;
-    }
-
     zx_status_t status;
-    if ((status = CheckSuperblock(&info_block.info, (end - start) / kBlobfsBlockSize)) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Info check failed\n");
+
+    if ((status = blobfs_load_info_block(fd, &info_block, start, end)) != ZX_OK) {
         return status;
     }
 

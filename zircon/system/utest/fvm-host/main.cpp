@@ -204,6 +204,20 @@ bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enab
     ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data, should_pass));
     if (should_pass) {
         ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
+        uint64_t data_size = 0, inode_count = 0, used_size = 0;
+        if ((flags & fvm::kSparseFlagLz4) == 0) {
+            ASSERT_EQ(sparseContainer->UsedSize(&used_size), ZX_OK);
+            ASSERT_NE(used_size, 0);
+            ASSERT_EQ(sparseContainer->UsedDataSize(&data_size), ZX_OK);
+            ASSERT_NE(data_size, 0);
+            ASSERT_GT(used_size, data_size);
+            ASSERT_EQ(sparseContainer->UsedInodes(&inode_count), ZX_OK);
+            ASSERT_NE(inode_count, 0);
+        } else {
+            ASSERT_NE(sparseContainer->UsedSize(&used_size), ZX_OK);
+            ASSERT_NE(sparseContainer->UsedDataSize(&data_size), ZX_OK);
+            ASSERT_NE(sparseContainer->UsedInodes(&inode_count), ZX_OK);
+        }
     }
     END_HELPER;
 }
@@ -356,6 +370,7 @@ bool PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_siz
     ASSERT_EQ(emu_mount(path), 0, "Unable to run mount");
     fbl::Vector<fbl::String> paths;
     paths.push_back(fbl::String("::"));
+    size_t total_size = 0;
 
     for (unsigned i = 0; i < ndirs; i++) {
         const char* base_dir = paths[rand() % paths.size()].data();
@@ -368,10 +383,24 @@ bool PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_siz
     for (unsigned i = 0; i < nfiles; i++) {
         const char* base_dir = paths[rand() % paths.size()].data();
         size_t size = 1 + (rand() % max_size);
+        total_size += size;
         char new_file[PATH_MAX];
         GenerateFilename(base_dir, 10, new_file);
         AddFileMinfs(new_file, size);
     }
+    uint64_t used_data, used_inodes, used_size;
+    ASSERT_EQ(emu_get_used_resources(path, &used_data, &used_inodes, &used_size), 0);
+
+    // Used data should be greater than or equal to total size of the data we added
+    ASSERT_GE(used_data, total_size);
+
+    // Some fs use inodes for internal structures (including root directory).
+    // So used_nodes should be gt total files+directories created.
+    ASSERT_GE(used_inodes, nfiles + ndirs);
+
+    // Used size should be always greater than used data.
+    ASSERT_GT(used_size, used_data);
+
     END_HELPER;
 }
 
@@ -397,12 +426,27 @@ bool PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
     fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
     ASSERT_TRUE(blobfd, "Unable to open blobfs path");
     fbl::unique_ptr<blobfs::Blobfs> bs;
-    ASSERT_EQ(blobfs::blobfs_create(&bs, std::move(blobfd)), ZX_OK,
-              "Failed to create blobfs");
+    ASSERT_EQ(blobfs::blobfs_create(&bs, blobfd.duplicate()), ZX_OK, "Failed to create blobfs");
+    size_t total_size = 0;
     for (unsigned i = 0; i < nfiles; i++) {
         size_t size = 1 + (rand() % max_size);
         ASSERT_TRUE(AddFileBlobfs(bs.get(), size));
+        total_size += size;
     }
+    uint64_t used_data, used_inodes, used_size;
+
+    // Used data should be greater than or equal to total size of the data we added
+    ASSERT_EQ(blobfs::UsedDataSize(blobfd, &used_data), ZX_OK);
+    ASSERT_GE(used_data, total_size);
+
+    // Blobfs uses inodes for internal structures (including file extents).
+    // So used_nodes should be greater than or equal to total files+directories created.
+    ASSERT_EQ(blobfs::UsedInodes(blobfd, &used_inodes), ZX_OK);
+    ASSERT_GE(used_inodes, nfiles);
+
+    // Used size should be always greater than used data.
+    ASSERT_EQ(blobfs::UsedSize(blobfd, &used_size), ZX_OK);
+    ASSERT_GE(used_size, used_data);
     END_HELPER;
 }
 

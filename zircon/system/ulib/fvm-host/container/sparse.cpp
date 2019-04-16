@@ -212,6 +212,72 @@ zx_status_t SparseContainer::Verify() const {
     return ZX_OK;
 }
 
+// TODO(auradkar): Iteration over partition is copy pasted several times in this file.
+//                 Iteration can be made more common code.
+zx_status_t SparseContainer::PartitionsIterator(UsedSize_f* used_size_f, uint64_t* out_size) const {
+    uint64_t total_size = 0;
+    uint64_t size = 0;
+
+    CheckValid();
+
+    if (image_.flags & fvm::kSparseFlagLz4) {
+        // Decompression must occur before verification, since all contents must be available
+        // reading superblock.
+        fprintf(stderr, "SparseContainer: Found compressed container; contents cannot be"
+                        " read\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (image_.magic != fvm::kSparseFormatMagic) {
+        fprintf(stderr, "SparseContainer: Bad magic\n");
+        return ZX_ERR_IO;
+    }
+
+    xprintf("Slice size is %" PRIu64 "\n", image_.slice_size);
+    xprintf("Found %" PRIu64 " partitions\n", image_.partition_count);
+
+    off_t start = 0;
+    off_t end = image_.header_length;
+    for (unsigned i = 0; i < image_.partition_count; i++) {
+        fbl::Vector<size_t> extent_lengths;
+        start = end;
+        xprintf("Found partition %u with %u extents\n", i, partitions_[i].descriptor.extent_count);
+
+        for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
+            extent_lengths.push_back(partitions_[i].extents[j].extent_length);
+            end += partitions_[i].extents[j].extent_length;
+        }
+
+        zx_status_t status;
+        disk_format_t part;
+        if ((status = Format::Detect(fd_.get(), start, &part)) != ZX_OK) {
+            return status;
+        }
+
+        if ((status = used_size_f(fd_, start, end, extent_lengths, part, &size)) != ZX_OK) {
+            const char* name = reinterpret_cast<const char*>(partitions_[i].descriptor.name);
+            fprintf(stderr, "%s used_size returned an error.\n", name);
+            return status;
+        }
+        total_size += size;
+    }
+
+    *out_size = total_size;
+    return ZX_OK;
+}
+
+zx_status_t SparseContainer::UsedDataSize(uint64_t* out_size) const {
+    return PartitionsIterator(Format::UsedDataSize, out_size);
+}
+
+zx_status_t SparseContainer::UsedInodes(uint64_t* out_inodes) const {
+    return PartitionsIterator(Format::UsedInodes, out_inodes);
+}
+
+zx_status_t SparseContainer::UsedSize(uint64_t* out_size) const {
+    return PartitionsIterator(Format::UsedSize, out_size);
+}
+
 zx_status_t SparseContainer::CheckDiskSize(uint64_t target_disk_size) const {
     CheckValid();
 

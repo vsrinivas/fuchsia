@@ -156,6 +156,9 @@ bool MinfsCreator::IsCommandValid(Command command) {
     switch (command) {
     case Command::kMkfs:
     case Command::kFsck:
+    case Command::kUsedDataSize:
+    case Command::kUsedInodes:
+    case Command::kUsedSize:
     case Command::kLs:
     case Command::kCp:
     case Command::kManifest:
@@ -377,6 +380,51 @@ zx_status_t MinfsCreator::Fsck() {
         return status;
     }
     return minfs::Fsck(std::move(bc));
+}
+
+zx_status_t MinfsCreator::UsedDataSize() {
+    zx_status_t status;
+    uint64_t size;
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if ((status = GenerateBcache(&bc)) != ZX_OK) {
+        return status;
+    }
+    if ((status = minfs::UsedDataSize(bc, &size)) != ZX_OK) {
+        return status;
+    }
+
+    printf("%" PRIu64 "\n", size);
+    return ZX_OK;
+}
+
+zx_status_t MinfsCreator::UsedInodes() {
+    zx_status_t status;
+    uint64_t used_inodes;
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if ((status = GenerateBcache(&bc)) != ZX_OK) {
+        return status;
+    }
+    if ((status = minfs::UsedInodes(bc, &used_inodes)) != ZX_OK) {
+        return status;
+    }
+
+    printf("%" PRIu64 "\n", used_inodes);
+    return ZX_OK;
+}
+
+zx_status_t MinfsCreator::UsedSize() {
+    zx_status_t status;
+    uint64_t size;
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if ((status = GenerateBcache(&bc)) != ZX_OK) {
+        return status;
+    }
+    if ((status = minfs::UsedSize(bc, &size)) != ZX_OK) {
+        return status;
+    }
+
+    printf("%" PRIu64 "\n", size);
+    return ZX_OK;
 }
 
 zx_status_t MinfsCreator::Add() {

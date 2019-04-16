@@ -23,6 +23,9 @@ enum class Command {
     kNone,
     kMkfs,
     kFsck,
+    kUsedDataSize,
+    kUsedInodes,
+    kUsedSize,
     kLs,
     kAdd,
     kCp,
@@ -110,6 +113,19 @@ protected:
     virtual zx_status_t Mkfs() { return ZX_ERR_NOT_SUPPORTED; }
     // Runs fsck on the fs at fd_.
     virtual zx_status_t Fsck() { return ZX_ERR_NOT_SUPPORTED; }
+
+    // On success, returns ZX_OK and prints to stdout the number of bytes used
+    // by data within the fs.
+    virtual zx_status_t UsedDataSize() { return ZX_ERR_NOT_SUPPORTED; }
+
+    // On success, returns ZX_OK and prints to stdout the number allocated
+    // inodes within the fs.
+    virtual zx_status_t UsedInodes() { return ZX_ERR_NOT_SUPPORTED; }
+
+    // On success, returns ZX_OK and prints to stdout the number of bytes used by data
+    // and bytes reserved for superblock, bitmaps, inodes and journal within the fs.
+    virtual zx_status_t UsedSize() { return ZX_ERR_NOT_SUPPORTED; }
+
     // Adds all files specified in manifests or other command line arguments to the fs.
     virtual zx_status_t Add()  { return ZX_ERR_NOT_SUPPORTED; }
     // Runs ls on the fs at fd_, at the specified path (if any).

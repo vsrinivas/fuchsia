@@ -120,9 +120,29 @@ public:
     static zx_status_t Detect(int fd, off_t offset, disk_format_t* out);
     // Read file at |path| and generate appropriate Format
     static zx_status_t Create(const char* path, const char* type, fbl::unique_ptr<Format>* out);
-    // Fun fsck on partition contained between bytes |start| and |end|
+    // Run fsck on partition contained between bytes |start| and |end|. extent_lengths is lengths
+    // of each extent (in bytes).
     static zx_status_t Check(fbl::unique_fd fd, off_t start, off_t end,
                              const fbl::Vector<size_t>& extent_lengths, disk_format_t part);
+
+    // Copies into |out_size| the number of bytes used by data in fs contained in a partition
+    // between bytes |start| and |end|. extent_lengths is lengths of each extent (in bytes).
+    static zx_status_t UsedDataSize(const fbl::unique_fd& fd, off_t start, off_t end,
+                                    const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                                    uint64_t* out_size);
+
+    // Copies into |out_inodes| the number of allocated inodes in fs contained in a partition
+    // between bytes |start| and |end|. extent_lengths is lengths of each extent (in bytes).
+    static zx_status_t UsedInodes(const fbl::unique_fd& fd, off_t start, off_t end,
+                                  const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                                  uint64_t* out_inodes);
+
+    // Copies into |out_size| the number of bytes used by data and bytes reserved for superblock,
+    // bitmaps, inodes and journal on fs contained in a partition between bytes |start| and |end|.
+    // extent_lengths is lengths of each extent (in bytes).
+    static zx_status_t UsedSize(const fbl::unique_fd& fd, off_t start, off_t end,
+                                const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
+                                uint64_t* out_size);
     virtual ~Format() {}
     // Update the file system's superblock (e.g. set FVM flag), and any other information required
     // for the partition to be placed in FVM.

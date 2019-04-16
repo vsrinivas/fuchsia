@@ -36,6 +36,8 @@ int emu_mkfs(const char* path);
 int emu_mount(const char* path);
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc);
 bool emu_is_mounted();
+int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* out_inodes,
+                           uint64_t* out_used_size);
 
 int emu_open(const char* path, int flags, mode_t mode);
 int emu_close(int fd);

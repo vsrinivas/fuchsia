@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":minfs-data-assigner-unit",
+    ":minfs-format-unit",
   ]
 }
 
@@ -19,6 +20,19 @@ test("minfs-data-assigner-unit") {
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxtest",
+  ]
+  include_dirs = [ "$zx/system/ulib/minfs" ]
+}
+
+test("minfs-format-unit") {
+  test_group = "fs"
+  sources = [
+    "format-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/minfs",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
   ]

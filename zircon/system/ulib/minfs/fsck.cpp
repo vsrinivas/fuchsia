@@ -633,7 +633,7 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
     return ZX_OK;
 }
 
-zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
+zx_status_t LoadSuperblock(fbl::unique_ptr<Bcache>& bc, Superblock* out) {
     zx_status_t status;
 
     char data[kMinfsBlockSize];
@@ -648,8 +648,52 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
         return status;
     }
 
+    memcpy(out, info, sizeof(*out));
+    return ZX_OK;
+}
+
+zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
+    zx_status_t status;
+    Superblock info = {};
+    if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_size = (info.alloc_block_count * info.block_size);
+    return ZX_OK;
+}
+
+zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
+    zx_status_t status;
+    Superblock info = {};
+    if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_inodes = info.alloc_inode_count;
+    return ZX_OK;
+}
+
+zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
+    zx_status_t status;
+    Superblock info = {};
+    if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+        return status;
+    }
+
+    *out_size = (NonDataBlocks(info) + info.alloc_block_count) * info.block_size;
+    return ZX_OK;
+}
+
+zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
+    zx_status_t status;
+    Superblock info = {};
+    if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+        return status;
+    }
+
     MinfsChecker chk;
-    if ((status = chk.Init(std::move(bc), info)) != ZX_OK) {
+    if ((status = chk.Init(std::move(bc), &info)) != ZX_OK) {
         FS_TRACE_ERROR("Fsck: Init failure: %d\n", status);
         return status;
     }

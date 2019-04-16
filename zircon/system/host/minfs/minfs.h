@@ -29,6 +29,9 @@ private:
 
     zx_status_t Mkfs() override;
     zx_status_t Fsck() override;
+    zx_status_t UsedDataSize() override;
+    zx_status_t UsedInodes() override;
+    zx_status_t UsedSize() override;
     zx_status_t Add() override;
     zx_status_t Ls() override;
 

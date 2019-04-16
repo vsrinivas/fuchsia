@@ -35,6 +35,7 @@ constexpr uint32_t kBlobFlagDirty        = 2;
 constexpr uint32_t kBlobFlagFVM          = 4;
 constexpr uint32_t kBlobfsBlockSize      = 8192;
 constexpr uint32_t kBlobfsBlockBits      = (kBlobfsBlockSize * 8);
+constexpr uint32_t kBlobfsSuperblockBlocks = 1;
 constexpr uint32_t kBlobfsBlockMapStart  = 1;
 constexpr uint32_t kBlobfsInodeSize      = 64;
 constexpr uint32_t kBlobfsInodesPerBlock = (kBlobfsBlockSize / kBlobfsInodeSize);
@@ -136,6 +137,11 @@ struct CommitBlock {
 
 static_assert(sizeof(CommitBlock) <= kBlobfsBlockSize, "CommitBlock size is too large");
 
+
+constexpr uint64_t SuperblockBlocks(const Superblock& info) {
+    return kBlobfsSuperblockBlocks;
+}
+
 constexpr uint64_t BlockMapStartBlock(const Superblock& info) {
     if (info.flags & kBlobFlagFVM) {
         return kFVMBlockMapStart;
@@ -192,9 +198,13 @@ constexpr uint64_t DataBlocks(const Superblock& info) {
     return info.data_block_count;
 }
 
+constexpr uint64_t TotalNonDataBlocks(const Superblock& info) {
+    return SuperblockBlocks(info) + BlockMapBlocks(info) + NodeMapBlocks(info)
+           + JournalBlocks(info);
+}
+
 constexpr uint64_t TotalBlocks(const Superblock& info) {
-    return BlockMapStartBlock(info) + BlockMapBlocks(info) + NodeMapBlocks(info)
-           + JournalBlocks(info) + DataBlocks(info);
+    return TotalNonDataBlocks(info) + DataBlocks(info);
 }
 
 // States of 'Blob' identified via start block.

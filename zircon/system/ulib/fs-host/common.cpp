@@ -41,6 +41,7 @@ struct {
 };
 
 // Commands struct.
+// clang-format off
 struct {
     const char* name;
     Command command;
@@ -48,25 +49,32 @@ struct {
     ArgType arg_type;
     const char* help;
 } CMDS[] = {
-    {"create",   Command::kMkfs,     O_RDWR | O_CREAT, ArgType::kOptional,
+    {"create",         Command::kMkfs,               O_RDWR | O_CREAT, ArgType::kOptional,
         "Initialize filesystem."},
-    {"mkfs",     Command::kMkfs,     O_RDWR | O_CREAT, ArgType::kOptional,
+    {"mkfs",           Command::kMkfs,               O_RDWR | O_CREAT, ArgType::kOptional,
         "Initialize filesystem."},
-    {"check",    Command::kFsck,     O_RDONLY,         ArgType::kNone,
+    {"check",          Command::kFsck,               O_RDONLY,         ArgType::kNone,
         "Check filesystem integrity."},
-    {"fsck",     Command::kFsck,     O_RDONLY,         ArgType::kNone,
+    {"fsck",           Command::kFsck,               O_RDONLY,         ArgType::kNone,
         "Check filesystem integrity."},
-    {"add",      Command::kAdd,      O_RDWR,           ArgType::kMany,
+    {"used-data-size", Command::kUsedDataSize,       O_RDONLY,         ArgType::kNone,
+        "Prints total bytes consumed by data."},
+    {"used-inodes",    Command::kUsedInodes,         O_RDONLY,         ArgType::kNone,
+        "Prints number of allocated inodes."},
+    {"used-size",      Command::kUsedSize,           O_RDONLY,         ArgType::kNone,
+        "Prints total bytes used by data and reserved for fs internal data structures."},
+    {"add",            Command::kAdd,                O_RDWR,           ArgType::kMany,
         "Add files to an fs image (additional arguments required)."},
-    {"cp",       Command::kCp,       O_RDWR,           ArgType::kTwo,
+    {"cp",             Command::kCp,                 O_RDWR,           ArgType::kTwo,
         "Copy to/from fs."},
-    {"mkdir",    Command::kMkdir,    O_RDWR,           ArgType::kOne,
+    {"mkdir",          Command::kMkdir,              O_RDWR,           ArgType::kOne,
         "Create directory."},
-    {"ls",       Command::kLs,       O_RDONLY,         ArgType::kOne,
+    {"ls",             Command::kLs,                 O_RDONLY,         ArgType::kOne,
         "List contents of directory."},
-    {"manifest", Command::kManifest, O_RDWR,           ArgType::kOne,
+    {"manifest",       Command::kManifest,           O_RDWR,           ArgType::kOne,
         "Add files to fs as specified in manifest (deprecated)."},
 };
+// clang-format on
 
 // Arguments struct.
 struct {
@@ -460,6 +468,12 @@ zx_status_t FsCreator::RunCommand() {
         return Mkfs();
     case Command::kFsck:
         return Fsck();
+    case Command::kUsedDataSize:
+        return UsedDataSize();
+    case Command::kUsedInodes:
+        return UsedInodes();
+    case Command::kUsedSize:
+        return UsedSize();
     case Command::kAdd:
     case Command::kCp:
     case Command::kManifest:

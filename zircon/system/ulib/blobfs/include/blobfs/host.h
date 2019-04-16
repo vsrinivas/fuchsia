@@ -10,6 +10,7 @@
 #error Host-only Header
 #endif
 
+#include <optional>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -224,6 +225,25 @@ private:
     // Caches the most recent block read from disk
     BlockCache cache_;
 };
+
+// Copies into |out_size| the number of bytes used by data in fs contained in a partition between
+// bytes |start| and |end|. If |start| and |end| are not passed, start is assumed to be zero and
+// no safety checks are made for size of partition.
+zx_status_t UsedDataSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start = 0,
+                         std::optional<off_t> end = std::nullopt);
+
+// Copies into |out_inodes| the number of allocated inodes in fs contained in a partition
+// between bytes |start| and |end|.  If |start| and |end| are not passed, start is assumed to be
+// zero and no safety checks are made for size of partition.
+zx_status_t UsedInodes(const fbl::unique_fd& fd, uint64_t* out_inodes, off_t start = 0,
+                       std::optional<off_t> end = std::nullopt);
+
+// Copies into |out_size| the number of bytes used by data and bytes reserved for superblock,
+// bitmaps, inodes and journal on fs contained in a partition between bytes |start| and |end|.
+// If |start| and |end| are not passed, start is assumed to be zero and no safety checks are made
+// for size of partition.
+zx_status_t UsedSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start = 0,
+                     std::optional<off_t> end = std::nullopt);
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 

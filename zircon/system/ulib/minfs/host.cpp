@@ -134,7 +134,15 @@ static const minfs::MountOptions kDefaultMountOptions = {
     .verbose = false,
 };
 
-int emu_mount(const char* path) {
+int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
+    int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root) == ZX_OK ? 0 : -1;
+    if (r == 0) {
+        fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+    }
+    return r;
+}
+
+int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) {
     fbl::unique_fd fd(open(path, O_RDWR));
     if (!fd) {
         FS_TRACE_ERROR("error: could not open path %s\n", path);
@@ -155,21 +163,37 @@ int emu_mount(const char* path) {
         return -1;
     }
 
-    zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
-    if (status != ZX_OK) {
-        return -1;
-    }
-
-    fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+    *out_bc = std::move(bc);
     return 0;
 }
 
-int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-    int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root) == ZX_OK ? 0 : -1;
-    if (r == 0) {
-        fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+int emu_mount(const char* path) {
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if (emu_create_bcache(path, &bc) != 0) {
+        return -1;
     }
-    return r;
+    return emu_mount_bcache(std::move(bc));
+}
+
+int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* out_inodes,
+                           uint64_t* out_used_size) {
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if (emu_create_bcache(path, &bc) != 0) {
+        return -1;
+    }
+    if (minfs::UsedDataSize(bc, out_data_size) != ZX_OK) {
+        return -1;
+    }
+
+    if (minfs::UsedInodes(bc, out_inodes) != ZX_OK) {
+        return -1;
+    }
+
+    if (minfs::UsedSize(bc, out_used_size) != ZX_OK) {
+        return -1;
+    }
+
+    return 0;
 }
 
 bool emu_is_mounted() {
