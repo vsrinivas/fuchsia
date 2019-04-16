@@ -70,8 +70,13 @@ public:
 
     bool Lint(fidl::Findings* findings) {
         auto ast = parser_.Parse();
-        if (!parser_.Ok())
+        if (!parser_.Ok()) {
+            fidl::StringView beginning(source_file_.data().data(), 0);
+            fidl::SourceLocation source_location(beginning, source_file_);
+            findings->emplace_back(source_location, "parser-error",
+                                   error_reporter_->errors().front() + "\n");
             return false;
+        }
         fidl::linter::Linter linter;
         return linter.Lint(ast, findings);
     }

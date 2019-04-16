@@ -10,7 +10,8 @@
 
 namespace fidl {
 
-std::string TemplateString::Substitute(Substitutions substitutions) const {
+std::string TemplateString::Substitute(Substitutions substitutions,
+                                       bool remove_unmatched) const {
     std::ostringstream os;
     std::smatch match;
 
@@ -35,7 +36,7 @@ std::string TemplateString::Substitute(Substitutions substitutions) const {
                                           : match[kUnbracedVar];
             if (substitutions.find(replaceable) != substitutions.end()) {
                 os << substitutions[replaceable];
-            } else {
+            } else if (!remove_unmatched) {
                 os << match[0];
             }
         }

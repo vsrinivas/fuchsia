@@ -40,7 +40,17 @@ public:
 
     // Returns the string value after replacing all matched variables in the
     // template string with the values for the matching keys.
-    std::string Substitute(Substitutions substitutions) const;
+    // If |remove_unmatched| is true, variables without matching keys are
+    // removed from the string.
+    std::string Substitute(Substitutions substitutions,
+                           bool remove_unmatched) const;
+
+    // Returns the string value after replacing all matched variables in the
+    // template string with the values for the matching keys.
+    // Variables without matching keys are left in place.
+    std::string Substitute(Substitutions substitutions) const {
+        return Substitute(substitutions, false);
+    }
 
     // Returns the template string with unreplaced variables (as given at
     // construction).

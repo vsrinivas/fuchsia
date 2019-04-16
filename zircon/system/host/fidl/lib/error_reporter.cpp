@@ -11,7 +11,7 @@ namespace fidl {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column) {
     std::string squiggle;
-    for (int i = 0; i < column; i++) {
+    for (int i = 0; i < (column - 1); i++) {
         switch (surrounding_line[i]) {
         case '\t':
             squiggle.push_back('\t');
