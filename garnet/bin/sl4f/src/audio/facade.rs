@@ -343,6 +343,7 @@ impl InputWorker {
         // 28 bytes for wave fmt block
         // 8 bytes for data header
         self.data_offset = 44;
+        self.zeros_written = 0;
         self.inj_data.write(&data)?;
         Ok(())
     }
@@ -360,7 +361,7 @@ impl InputWorker {
 
         let frames_per_millisecond = frames_per_second as u64 / 1000;
 
-        self.target_frames = 200 * frames_per_millisecond;
+        self.target_frames = 150 * frames_per_millisecond;
         self.low_frames = 100 * frames_per_millisecond;
         self.frames_per_notification = 50 * frames_per_millisecond;
         Ok(())
@@ -388,7 +389,12 @@ impl InputWorker {
         Ok(())
     }
 
-    fn on_position_notify(&mut self, ring_position: u32, _clock_time: i64) -> Result<(), Error> {
+    fn on_position_notify(
+        &mut self,
+        ring_position: u32,
+        _clock_time: i64,
+        active: bool,
+    ) -> Result<(), Error> {
         let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
 
         let current_fill = if self.next_write < ring_position as u64 {
@@ -406,52 +412,54 @@ impl InputWorker {
         let write_end =
             (ring_position as u64 + self.target_frames * self.frame_size) % self.work_space;
 
-        // Calculate how many bytes we're writing, and figure out if we've wrapped around, and
-        // if so, calculate the split.
-        let (split_point, write_size) = if write_end < self.next_write {
-            (
-                (self.work_space - self.next_write) as usize,
-                (self.work_space - self.next_write + write_end) as usize,
-            )
-        } else {
-            (0 as usize, (write_end - self.next_write) as usize)
-        };
-
-        // Calculate the range of the data we need to use.
-        let start = self.data_offset as usize;
-        let end;
-
-        let data_size;
-        let src_data_size = self.inj_data.len();
-        if write_size as usize > (src_data_size - self.data_offset) {
-            data_size = src_data_size - self.data_offset;
-            end = src_data_size as usize;
-        } else {
-            data_size = write_size;
-            end = self.data_offset + write_size as usize;
-        }
-
-        // Build the data to send.
-        let mut wav_data = Vec::from_iter(self.inj_data[start..end].iter().cloned());
-        // Fill out with zeroes.
-        wav_data.resize_with(write_size as usize, || 0);
-
-        // If we're writing any wav data, clear our bookkeeping of having zeroed out the buffer.
-        if !(data_size == 0) {
-            self.zeros_written = 0;
-        }
-
-        // Only write to the VMO when we're going to be changing the contents.
-        if self.zeros_written < self.work_space as usize {
-            if split_point == 0 {
-                vmo.write(&wav_data, self.next_write)?;
+        if active {
+            // Calculate how many bytes we're writing, and figure out if we've wrapped around, and
+            // if so, calculate the split.
+            let (split_point, write_size) = if write_end < self.next_write {
+                (
+                    (self.work_space - self.next_write) as usize,
+                    (self.work_space - self.next_write + write_end) as usize,
+                )
             } else {
-                vmo.write(&wav_data[0..split_point], self.next_write)?;
-                vmo.write(&wav_data[split_point..], 0)?;
+                (0 as usize, (write_end - self.next_write) as usize)
+            };
+
+            // Calculate the range of the data we need to use.
+            let start = self.data_offset as usize;
+            let end;
+
+            let data_size;
+            let src_data_size = self.inj_data.len();
+            if write_size as usize > (src_data_size - self.data_offset) {
+                data_size = src_data_size - self.data_offset;
+                end = src_data_size as usize;
+            } else {
+                data_size = write_size;
+                end = self.data_offset + write_size as usize;
             }
+
+            // Build the data to send.
+            let mut wav_data = Vec::from_iter(self.inj_data[start..end].iter().cloned());
+            // Fill out with zeroes.
+            wav_data.resize_with(write_size as usize, || 0);
+
+            // If we're writing any wav data, clear our bookkeeping of having zeroed out the buffer.
+            if !(data_size == 0) {
+                self.zeros_written = 0;
+            }
+
+            // Only write to the VMO when we're going to be changing the contents.
+            if self.zeros_written < self.work_space as usize {
+                if split_point == 0 {
+                    vmo.write(&wav_data, self.next_write)?;
+                } else {
+                    vmo.write(&wav_data[0..split_point], self.next_write)?;
+                    vmo.write(&wav_data[split_point..], 0)?;
+                }
+            }
+            self.data_offset += data_size as usize;
+            self.zeros_written += write_size - data_size;
         }
-        self.data_offset += data_size as usize;
-        self.zeros_written += write_size - data_size;
         self.next_write = write_end;
 
         Ok(())
@@ -466,7 +474,7 @@ impl InputWorker {
         let mut input_events = va_input.take_event_stream();
         self.va_input = Some(va_input);
 
-        'InjectEvents: loop {
+        loop {
             select! {
                 rx_msg = rx.next() => {
                     match rx_msg {
@@ -497,10 +505,7 @@ impl InputWorker {
                         },
                         Some(InputEvent::OnPositionNotify { ring_position, clock_time }) => {
                             let mut active = await!(active.lock());
-                            if !*(active) {
-                                continue 'InjectEvents
-                            }
-                            self.on_position_notify(ring_position, clock_time)?;
+                            self.on_position_notify(ring_position, clock_time, *active)?;
                             if self.zeros_written >= self.work_space as usize {
                                 *(active) = false;
                             }
