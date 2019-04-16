@@ -13,14 +13,14 @@ use futures::future;
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
 
-struct RecoveryUI<'a> {
+struct RecoveryUI<'a, T: PixelSink> {
     face: FontFace<'a>,
-    canvas: Canvas<FramePixelSink>,
+    canvas: Canvas<T>,
     config: Config,
     text_size: u32,
 }
 
-impl<'a> RecoveryUI<'a> {
+impl<'a, T: PixelSink> RecoveryUI<'a, T> {
     fn draw(&mut self, heading: &str, body: &str) {
         let r = Rect::new(
             Point::new(0.0, 0.0),
@@ -103,4 +103,39 @@ fn main() -> Result<(), Error> {
 
     executor.run_singlethreaded(future::empty::<()>());
     unreachable!();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RecoveryUI, FONT_DATA, BYTES_PER_PIXEL};
+    use carnelian::{
+        Canvas, FontFace, PixelSink
+    };
+    use fuchsia_framebuffer::{Config, PixelFormat};
+
+    struct TestPixelSink {}
+
+    impl PixelSink for TestPixelSink {
+        fn write_pixel_at_location(&mut self, _x: u32, _y: u32, _value: &[u8]) {}
+        fn write_pixel_at_offset(&mut self, _offset: usize, _value: &[u8]) {}
+    }
+
+    #[test]
+    fn test_draw() {
+        let face = FontFace::new(FONT_DATA).unwrap();
+        let sink = TestPixelSink {};
+        let config = Config {
+            display_id: 0,
+            width: 800,
+            height: 600,
+            linear_stride_pixels: 800,
+            format: PixelFormat::Argb8888,
+            pixel_size_bytes: BYTES_PER_PIXEL,
+        };
+        let linear_stride_bytes = config.linear_stride_pixels * config.pixel_size_bytes;
+        let canvas = Canvas::new_with_sink(sink, linear_stride_bytes);
+
+        let mut ui = RecoveryUI { face: face, canvas, config, text_size: 24 };
+        ui.draw("Heading", "Body");
+    }
 }
