@@ -25,6 +25,16 @@
 namespace fidl {
 namespace coded {
 
+enum struct CodingContext {
+    // The coding table of this type will be used to represent data within
+    // an envelope. This will affect the 'coding needed'.
+    kInsideEnvelope,
+
+    // The coding table of this type will be used to represent data outside
+    // of an envelope, and default 'coding needed' is appropriate here.
+    kOutsideEnvelope,
+};
+
 enum struct CodingNeeded {
     // There is interesting coding information about the location of
     // pointers, allocations, or handles for this type.
@@ -35,6 +45,19 @@ enum struct CodingNeeded {
     // to support encoding/decoding of xunions and tables.
     kEnvelopeOnly,
 };
+
+namespace {
+
+CodingNeeded WhichCodingNeeded(CodingContext context, CodingNeeded coding_needed) {
+    switch (context) {
+    case CodingContext::kInsideEnvelope:
+        return CodingNeeded::kAlways;
+    case CodingContext::kOutsideEnvelope:
+        return coding_needed;
+    }
+}
+
+} // namespace
 
 struct Type;
 
@@ -101,8 +124,10 @@ struct Type {
 };
 
 struct PrimitiveType : public Type {
-    PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
-        : Type(Kind::kPrimitive, std::move(name), size, CodingNeeded::kEnvelopeOnly),
+    PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
+                  CodingContext context)
+        : Type(Kind::kPrimitive, std::move(name), size,
+               WhichCodingNeeded(context, CodingNeeded::kEnvelopeOnly)),
           subtype(subtype) {}
 
     const types::PrimitiveSubtype subtype;
@@ -205,8 +230,9 @@ struct InterfaceType : public Type {
 
 struct ArrayType : public Type {
     ArrayType(std::string name, const Type* element_type, uint32_t array_size,
-              uint32_t element_size)
-        : Type(Kind::kArray, std::move(name), array_size, element_type->coding_needed),
+              uint32_t element_size, CodingContext context)
+        : Type(Kind::kArray, std::move(name), array_size,
+               WhichCodingNeeded(context, element_type->coding_needed)),
           element_type(element_type), element_size(element_size) {}
 
     const Type* const element_type;

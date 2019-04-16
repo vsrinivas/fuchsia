@@ -66,9 +66,10 @@ TEST(MyTable, CodingTable) {
     const fidl_type& table_type = *table_vector.element;
     ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeTable, table_type.type_tag);
     const fidl::FidlCodedTable& coded_table = table_type.coded_table;
-    ASSERT_EQ(2, coded_table.field_count);
+    ASSERT_EQ(4, coded_table.field_count);
 
-    // The ordering in the coding table is |foo| followed by |bar|, following ordinal order.
+    // The ordering in the coding table is |foo|, |bar|, |baz|, and finally
+    // |qux|, i.e. following ordinal order.
     const fidl::FidlTableField& field_0 = coded_table.fields[0];
     ASSERT_EQ(1, field_0.ordinal);
     ASSERT_EQ(&fidl::internal::kBoolTable, field_0.type);
@@ -76,6 +77,14 @@ TEST(MyTable, CodingTable) {
     const fidl::FidlTableField& field_1 = coded_table.fields[1];
     ASSERT_EQ(2, field_1.ordinal);
     ASSERT_EQ(&fidl::internal::kInt32Table, field_1.type);
+
+    const fidl::FidlTableField& field_2 = coded_table.fields[2];
+    ASSERT_EQ(4, field_2.ordinal);
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeArray, field_2.type->type_tag);
+
+    const fidl::FidlTableField& field_3 = coded_table.fields[3];
+    ASSERT_EQ(5, field_3.ordinal);
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeVector, field_3.type->type_tag);
 }
 
 TEST(MyXUnion, CodingTableWhenNonnullable) {

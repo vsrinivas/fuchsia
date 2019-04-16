@@ -10,6 +10,48 @@ namespace fidl {
 
 namespace {
 
+// When generating coding tables for containers employing envelopes (xunions & tables),
+// we need to reference coding tables for primitives, in addition to types that need coding.
+// This function handles naming coding tables for both cases.
+std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
+    switch (type->kind) {
+    case coded::Type::Kind::kPrimitive: {
+        using fidl::types::PrimitiveSubtype;
+        // To save space, all primitive types of the same underlying subtype
+        // share the same table.
+        std::string suffix = ([type]() -> std::string {
+            switch (static_cast<const coded::PrimitiveType*>(type)->subtype) {
+            case PrimitiveSubtype::kBool:
+                return "Bool";
+            case PrimitiveSubtype::kInt8:
+                return "Int8";
+            case PrimitiveSubtype::kInt16:
+                return "Int16";
+            case PrimitiveSubtype::kInt32:
+                return "Int32";
+            case PrimitiveSubtype::kInt64:
+                return "Int64";
+            case PrimitiveSubtype::kUint8:
+                return "Uint8";
+            case PrimitiveSubtype::kUint16:
+                return "Uint16";
+            case PrimitiveSubtype::kUint32:
+                return "Uint32";
+            case PrimitiveSubtype::kUint64:
+                return "Uint64";
+            case PrimitiveSubtype::kFloat32:
+                return "Float32";
+            case PrimitiveSubtype::kFloat64:
+                return "Float64";
+            }
+        })();
+        return "::fidl::internal::k" + suffix;
+    }
+    default:
+        return type->coded_name;
+    }
+}
+
 constexpr auto kIndent = "    ";
 
 void Emit(std::ostream* file, StringView data) {
@@ -177,15 +219,15 @@ void TablesGenerator::Generate(const coded::PointerType& pointer) {
     case coded::Type::Kind::kStruct:
         Emit(&tables_file_, "static const fidl_type_t ");
         Emit(&tables_file_, NameTable(pointer.coded_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(&");
-        Emit(&tables_file_, NameTable(pointer.element_type->coded_name));
+        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(");
+        Generate(pointer.element_type);
         Emit(&tables_file_, ".coded_struct));\n");
         break;
     case coded::Type::Kind::kUnion:
         Emit(&tables_file_, "static const fidl_type_t ");
         Emit(&tables_file_, NameTable(pointer.coded_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(&");
-        Emit(&tables_file_, NameTable(pointer.element_type->coded_name));
+        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(");
+        Generate(pointer.element_type);
         Emit(&tables_file_, ".coded_union));\n");
         break;
     default:
@@ -251,8 +293,8 @@ void TablesGenerator::Generate(const coded::InterfaceHandleType& interface_type)
 void TablesGenerator::Generate(const coded::ArrayType& array_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
     Emit(&tables_file_, NameTable(array_type.coded_name));
-    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(&");
-    Emit(&tables_file_, NameTable(array_type.element_type->coded_name));
+    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(");
+    Generate(array_type.element_type);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, array_type.size);
     Emit(&tables_file_, ", ");
@@ -274,12 +316,7 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
     Emit(&tables_file_, NameTable(vector_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedVector(");
-    if (vector_type.element_type->coding_needed == coded::CodingNeeded::kAlways) {
-        Emit(&tables_file_, "&");
-        Emit(&tables_file_, NameTable(vector_type.element_type->coded_name));
-    } else {
-        Emit(&tables_file_, "nullptr");
-    }
+    Generate(vector_type.element_type);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, vector_type.max_count);
     Emit(&tables_file_, ", ");
@@ -290,79 +327,33 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
 }
 
 void TablesGenerator::Generate(const coded::Type* type) {
-    if (type) {
+    if (type && type->coding_needed == coded::CodingNeeded::kAlways) {
         Emit(&tables_file_, "&");
-        Emit(&tables_file_, NameTable(type->coded_name));
+        Emit(&tables_file_, NameTable(CodedNameForEnvelope(type)));
     } else {
         Emit(&tables_file_, "nullptr");
     }
 }
 
 void TablesGenerator::Generate(const coded::StructField& field) {
-    Emit(&tables_file_, "::fidl::FidlStructField(&");
-    Emit(&tables_file_, NameTable(field.type->coded_name));
+    Emit(&tables_file_, "::fidl::FidlStructField(");
+    Generate(field.type);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, field.offset);
     Emit(&tables_file_, ")");
 }
 
-namespace {
-
-// When generating coding tables for containers employing envelopes (xunions & tables),
-// we need to reference coding tables for primitives, in addition to types that need coding.
-// This function handles naming coding tables for both cases.
-std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
-    switch (type->kind) {
-    case coded::Type::Kind::kPrimitive: {
-        using fidl::types::PrimitiveSubtype;
-        // To save space, all primitive types of the same underlying subtype
-        // share the same table.
-        std::string suffix = ([type]() -> std::string {
-            switch (static_cast<const coded::PrimitiveType*>(type)->subtype) {
-            case PrimitiveSubtype::kBool:
-                return "Bool";
-            case PrimitiveSubtype::kInt8:
-                return "Int8";
-            case PrimitiveSubtype::kInt16:
-                return "Int16";
-            case PrimitiveSubtype::kInt32:
-                return "Int32";
-            case PrimitiveSubtype::kInt64:
-                return "Int64";
-            case PrimitiveSubtype::kUint8:
-                return "Uint8";
-            case PrimitiveSubtype::kUint16:
-                return "Uint16";
-            case PrimitiveSubtype::kUint32:
-                return "Uint32";
-            case PrimitiveSubtype::kUint64:
-                return "Uint64";
-            case PrimitiveSubtype::kFloat32:
-                return "Float32";
-            case PrimitiveSubtype::kFloat64:
-                return "Float64";
-            }
-        })();
-        return "::fidl::internal::k" + suffix;
-    }
-    default:
-        return type->coded_name;
-    }
-}
-
-} // namespace
-
 void TablesGenerator::Generate(const coded::TableField& field) {
-    Emit(&tables_file_, "::fidl::FidlTableField(&");
-    Emit(&tables_file_, NameTable(CodedNameForEnvelope(field.type)));
+    Emit(&tables_file_, "::fidl::FidlTableField(");
+    Generate(field.type);
     Emit(&tables_file_, ",");
     Emit(&tables_file_, field.ordinal);
     Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::XUnionField& field) {
-    Emit(&tables_file_, "::fidl::FidlXUnionField(&");
-    Emit(&tables_file_, NameTable(CodedNameForEnvelope(field.type)));
+    Emit(&tables_file_, "::fidl::FidlXUnionField(");
+    Generate(field.type);
     Emit(&tables_file_, ",");
     Emit(&tables_file_, field.ordinal);
     Emit(&tables_file_, ")");
@@ -501,10 +492,8 @@ std::ostringstream TablesGenerator::Produce() {
             Generate(*static_cast<const coded::VectorType*>(coded_type.get()));
             break;
         case coded::Type::Kind::kPrimitive:
-            // These are only around to provide size information to
-            // vectors. There's never anything to generate, and this
-            // should not be reached.
-            assert(false && "Primitive types should never need coding tables");
+            // Nothing to generate for primitives. We intern all primitive
+            // coding tables, and therefore directly reference them.
             break;
         }
     }

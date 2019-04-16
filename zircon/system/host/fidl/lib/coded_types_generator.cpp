@@ -8,20 +8,22 @@
 
 namespace fidl {
 
-const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
+const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
+                                                    coded::CodingContext context) {
     switch (type->kind) {
     case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
-        auto iter = array_type_map_.find(array_type);
+        auto iter = array_type_map_.find(WithContext(context, array_type));
         if (iter != array_type_map_.end())
             return iter->second;
-        auto coded_element_type = CompileType(array_type->element_type);
+        auto coded_element_type = CompileType(
+            array_type->element_type, coded::CodingContext::kOutsideEnvelope);
         uint32_t array_size = array_type->shape.Size();
         uint32_t element_size = array_type->element_type->shape.Size();
         auto name = NameCodedArray(coded_element_type->coded_name, array_size);
         auto coded_array_type = std::make_unique<coded::ArrayType>(
-            std::move(name), coded_element_type, array_size, element_size);
-        array_type_map_[array_type] = coded_array_type.get();
+            std::move(name), coded_element_type, array_size, element_size, context);
+        array_type_map_[WithContext(context, array_type)] = coded_array_type.get();
         coded_types_.push_back(std::move(coded_array_type));
         return coded_types_.back().get();
     }
@@ -30,7 +32,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = vector_type_map_.find(vector_type);
         if (iter != vector_type_map_.end())
             return iter->second;
-        auto coded_element_type = CompileType(vector_type->element_type);
+        auto coded_element_type = CompileType(
+            vector_type->element_type, coded::CodingContext::kOutsideEnvelope);
         uint32_t max_count = vector_type->element_count->value;
         uint32_t element_size = coded_element_type->size;
         StringView element_name = coded_element_type->coded_name;
@@ -81,14 +84,14 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
     }
     case flat::Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
-        auto iter = primitive_type_map_.find(primitive_type);
+        auto iter = primitive_type_map_.find(WithContext(context, primitive_type));
         if (iter != primitive_type_map_.end())
             return iter->second;
         auto name = NamePrimitiveSubtype(primitive_type->subtype);
         auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
             std::move(name), primitive_type->subtype,
-            flat::PrimitiveType::SubtypeSize(primitive_type->subtype));
-        primitive_type_map_[primitive_type] = coded_primitive_type.get();
+            flat::PrimitiveType::SubtypeSize(primitive_type->subtype), context);
+        primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
         coded_types_.push_back(std::move(coded_primitive_type));
         return coded_types_.back().get();
     }
@@ -193,7 +196,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 for (const auto& parameter : message.members) {
                     std::string parameter_name =
                         coded_message->coded_name + "_" + std::string(parameter.name.data());
-                    auto coded_parameter_type = CompileType(parameter.type_ctor->type);
+                    auto coded_parameter_type = CompileType(
+                        parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
                         request_fields.emplace_back(coded_parameter_type,
                                                     parameter.fieldshape.Offset());
@@ -222,9 +226,13 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member : struct_decl->members) {
             std::string member_name =
                 coded_struct->coded_name + "_" + std::string(member.name.data());
-            auto coded_member_type = CompileType(member.type_ctor->type);
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways)
+            auto coded_member_type = CompileType(
+                member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
+            if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
+                auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+                assert(!is_primitive && "No primitive in struct coding table!");
                 struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
+            }
         }
         break;
     }
@@ -236,8 +244,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member : union_decl->members) {
             std::string member_name =
                 union_struct->coded_name + "_" + std::string(member.name.data());
-            auto coded_member_type = CompileType(member.type_ctor->type);
+            auto coded_member_type = CompileType(
+                member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
             if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
+                auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+                assert(!is_primitive && "No primitive in union coding table!");
                 union_members.push_back(coded_member_type);
             } else {
                 // We need union_members.size() to match union_decl->members.size() because
@@ -261,7 +272,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
         for (const auto& member_pair : members) {
             const auto& member = *member_pair.second;
-            auto coded_member_type = CompileType(member.type_ctor->type);
+            auto coded_member_type = CompileType(
+                member.type_ctor->type, coded::CodingContext::kInsideEnvelope);
             coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
         }
         break;
@@ -283,7 +295,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 continue;
             std::string member_name =
                 coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-            auto coded_member_type = CompileType(member.maybe_used->type_ctor->type);
+            auto coded_member_type = CompileType(
+                member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
             table_fields.emplace_back(coded_member_type, member.ordinal->value);
         }
         break;
@@ -303,7 +316,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         named_coded_types_.emplace(&bits_decl->name,
                                    std::make_unique<coded::PrimitiveType>(
                                        std::move(bits_name), bits_subtype,
-                                       flat::PrimitiveType::SubtypeSize(bits_subtype)));
+                                       flat::PrimitiveType::SubtypeSize(bits_subtype),
+                                       coded::CodingContext::kOutsideEnvelope));
         break;
     }
     case flat::Decl::Kind::kConst:
@@ -315,7 +329,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         named_coded_types_.emplace(&enum_decl->name,
                                    std::make_unique<coded::PrimitiveType>(
                                        std::move(enum_name), enum_decl->type->subtype,
-                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype)));
+                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype),
+                                       coded::CodingContext::kOutsideEnvelope));
         break;
     }
     case flat::Decl::Kind::kInterface: {

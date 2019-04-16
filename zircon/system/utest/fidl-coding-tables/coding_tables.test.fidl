@@ -17,6 +17,9 @@ xunion MyXUnion {
 table MyTable {
     1: bool foo;
     2: int32 bar;
+    3: reserved;
+    4: array<uint64>:42 baz;
+    5: vector<uint64>:42 qux;
 };
 
 // fidlc will only expose coding tables for message types.

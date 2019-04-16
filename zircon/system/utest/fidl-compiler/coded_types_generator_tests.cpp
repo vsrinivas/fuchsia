@@ -218,14 +218,14 @@ xunion MyXUnion {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("int32", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
     auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("bool", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
     auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
@@ -277,14 +277,14 @@ struct Wrapper {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("int32", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
     auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("bool", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
     auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
@@ -328,27 +328,48 @@ library example;
 table MyTable {
   1: bool foo;
   2: int32 bar;
+  3: array<bool>:42 baz;
 };
 )FIDL");
     ASSERT_TRUE(library.Compile());
     fidl::CodedTypesGenerator gen(library.library());
     gen.CompileCodedTypes();
 
-    ASSERT_EQ(2, gen.coded_types().size());
+    ASSERT_EQ(4, gen.coded_types().size());
 
+    // This bool is used in the coding table of the MyTable table.
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("bool", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
     auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type0_primitive->subtype);
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("int32", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
     auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+
+    // This bool is part of array<bool>; it will not map to any coding table.
+    auto type2 = gen.coded_types().at(2).get();
+    ASSERT_STR_EQ("bool", type2->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type2->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+    auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+
+    auto type3 = gen.coded_types().at(3).get();
+    ASSERT_STR_EQ("Arraybool42", type3->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type3->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
+    auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
+    ASSERT_EQ(42, type3_array->size);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type3_array->element_type->kind);
+    auto type3_array_element_type =
+        static_cast<const fidl::coded::PrimitiveType*>(type3_array->element_type);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type3_array_element_type->subtype);
 
     auto name_table = fidl::flat::Name(library.library(), "MyTable");
     auto type_table = gen.CodedTypeFor(&name_table);
@@ -357,7 +378,7 @@ table MyTable {
     ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_table->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_table->kind);
     auto type_table_table = static_cast<const fidl::coded::TableType*>(type_table);
-    ASSERT_EQ(2, type_table_table->fields.size());
+    ASSERT_EQ(3, type_table_table->fields.size());
     auto table_field0 = type_table_table->fields.at(0);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, table_field0.type->kind);
     auto table_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(table_field0.type);
@@ -366,6 +387,8 @@ table MyTable {
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, table_field1.type->kind);
     auto table_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(table_field1.type);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, table_field1_primitive->subtype);
+    auto table_field2 = type_table_table->fields.at(2);
+    ASSERT_EQ(fidl::coded::Type::Kind::kArray, table_field2.type->kind);
     ASSERT_STR_EQ("example/MyTable", type_table_table->qname.c_str());
 
     END_TEST;
