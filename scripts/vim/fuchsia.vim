@@ -2,9 +2,9 @@
 " Use of this source code is governed by a BSD-style license that can be
 " found in the LICENSE file.
 
-" Use `fx full-build` to build when you type :make
+" Use `fx build` to build when you type :make
 " Helper to clean up quickfix list in make.vim
-let &makeprg="fx full-build"
+let &makeprg="fx build"
 
 " Look for the fuchsia root containing the current directory by looking for a
 " .jiri_manifest file

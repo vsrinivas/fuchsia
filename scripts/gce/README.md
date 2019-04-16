@@ -26,7 +26,7 @@ Fuchsia instance:
 ```
 cd $FUCHSIA_ROOT
 fx set core.x64 --release
-fx full-build
+fx build
 fx gce create-fuchsia-image
 fx gce create-instance
 sleep 60
