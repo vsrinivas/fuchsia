@@ -15,6 +15,7 @@
             "packages"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.oldhttp.HttpService"
         ]
