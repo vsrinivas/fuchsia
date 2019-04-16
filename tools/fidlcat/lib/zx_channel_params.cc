@@ -170,14 +170,12 @@ void ZxChannelWriteParams::BuildX86AndContinue(
           } else {
             std::string msg = "Failed to build zx_channel_write params: ";
             msg.append(err.msg());
-            zxdb::Err new_err(err.type(), msg);
-            store->err = new_err;
+            store->err = zxdb::Err(err.type(), msg);
           }
-          ZxChannelWriteParams new_params(
+          store->params = ZxChannelWriteParams(
               store->params.GetHandle(), store->params.GetOptions(),
               std::move(bytes), num_bytes, std::move(handles),
               store->params.GetNumHandles());
-          store->params = std::move(new_params);
           if (store->params.IsComplete() || !store->err.ok()) {
             store->final_cb();
           }
@@ -197,14 +195,12 @@ void ZxChannelWriteParams::BuildX86AndContinue(
           } else {
             std::string msg = "Failed to build zx_channel_write params: ";
             msg.append(err.msg());
-            zxdb::Err new_err(err.type(), msg);
-            store->err = new_err;
+            store->err = zxdb::Err(err.type(), msg);
           }
-          ZxChannelWriteParams new_params(
+          store->params = ZxChannelWriteParams(
               store->params.GetHandle(), store->params.GetOptions(),
               std::move(bytes), store->params.GetNumBytes(), std::move(handles),
               store->params.GetNumHandles());
-          store->params = std::move(new_params);
           if (store->params.IsComplete() || !store->err.ok()) {
             store->final_cb();
           }

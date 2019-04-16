@@ -97,7 +97,7 @@ class ZxChannelWriteParams {
                                   const std::vector<zxdb::Register>& regs,
                                   ZxChannelWriteCallback&& fn);
 
-  bool IsComplete() {
+  bool IsComplete() const {
     // NB: The builder functions will attempt to get memory at any location,
     // including 0x0.  This means that nullptr is used exclusively to indicate
     // whether the bytes / handles are set.

@@ -28,13 +28,15 @@ class DataForZxWriteTest {
     header_.ordinal = kOrdinal;
   }
 
-  const uint8_t* data() { return reinterpret_cast<uint8_t*>(&header_); }
+  const uint8_t* data() const {
+    return reinterpret_cast<const uint8_t*>(&header_);
+  }
 
-  size_t num_bytes() { return sizeof(header_); }
+  size_t num_bytes() const { return sizeof(header_); }
 
-  const zx_handle_t* handles() { return handles_; }
+  const zx_handle_t* handles() const { return handles_; }
 
-  size_t num_handles() { return sizeof(handles_) / sizeof(handles_[0]); }
+  size_t num_handles() const { return sizeof(handles_) / sizeof(handles_[0]); }
 
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
       zxdb::Session* session) {
@@ -223,6 +225,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 };
 
 namespace {
+
 template <typename T>
 void AppendElements(std::string& result, size_t num, const T* a, const T* b) {
   std::ostringstream os;
