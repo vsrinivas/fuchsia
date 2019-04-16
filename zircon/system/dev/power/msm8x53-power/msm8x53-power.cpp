@@ -222,6 +222,24 @@ zx_status_t Msm8x53Power::PowerImplGetPowerDomainStatus(uint32_t index,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Msm8x53Power::PowerImplGetSupportedVoltageRange(uint32_t index,
+                                                            uint32_t* min_voltage,
+                                                            uint32_t* max_voltage) {
+    if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Power::PowerImplRequestVoltage(uint32_t index,
+                                                  uint32_t voltage,
+                                                  uint32_t* actual_voltage) {
+    if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 void Msm8x53Power::DdkRelease() {
     delete this;
 }

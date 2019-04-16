@@ -33,6 +33,9 @@ public:
     zx_status_t PowerImplGetPowerDomainStatus(uint32_t index, power_domain_status_t* out_status);
     zx_status_t PowerImplEnablePowerDomain(uint32_t index);
     zx_status_t PowerImplDisablePowerDomain(uint32_t index);
+    zx_status_t PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
+                                                  uint32_t* max_voltage);
+    zx_status_t PowerImplRequestVoltage(uint32_t index, uint32_t voltage, uint32_t* actual_voltage);
     zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
     zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
 

@@ -17,6 +17,10 @@ protocol Power {
     EnablePowerDomain() -> (zx.status s);
     /// Disable power domain
     DisablePowerDomain() -> (zx.status s);
+    /// Get Supported Voltage Range
+    GetSupportedVoltageRange() -> (zx.status s, uint32 min, uint32 max);
+    /// Request a particular voltage
+    RequestVoltage(uint32 voltage) -> (zx.status s, uint32 actual_voltage);
     /// Get power domain status
     GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);
     /// Write to ctrl register of PMIC

@@ -30,6 +30,15 @@ zx_status_t PowerDevice::PowerGetPowerDomainStatus(power_domain_status_t* out_st
     return power_.GetPowerDomainStatus(index_, out_status);
 }
 
+zx_status_t PowerDevice::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
+                                                       uint32_t* max_voltage) {
+    return power_.GetSupportedVoltageRange(index_, min_voltage, max_voltage);
+}
+
+zx_status_t PowerDevice::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+    return power_.RequestVoltage(index_, voltage, actual_voltage);
+}
+
 zx_status_t PowerDevice::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
     return power_.WritePmicCtrlReg(index_, reg_addr, value);
 }

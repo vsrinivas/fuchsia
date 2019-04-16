@@ -330,6 +330,10 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
         return power_disable_power_domain(&power_);
     case PowerOp::GET_STATUS:
         return power_get_power_domain_status(&power_, &resp->status);
+    case PowerOp::GET_SUPPORTED_VOLTAGE_RANGE:
+        return power_get_supported_voltage_range(&power_, &resp->min_voltage, &resp->max_voltage);
+    case PowerOp::REQUEST_VOLTAGE:
+        return power_request_voltage(&power_, req->set_voltage, &resp->actual_voltage);
     case PowerOp::WRITE_PMIC_CTRL_REG:
         return power_write_pmic_ctrl_reg(&power_, req->reg_addr, req->reg_value);
     case PowerOp::READ_PMIC_CTRL_REG:

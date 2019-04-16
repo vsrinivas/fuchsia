@@ -153,6 +153,16 @@ zx_status_t MtkPower::PowerImplGetPowerDomainStatus(uint32_t index,
     return ZX_OK;
 }
 
+zx_status_t MtkPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
+                                                        uint32_t* max_voltage) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
+                                              uint32_t* out_voltage) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t MtkPower::PowerImplWritePmicCtrlReg(uint32_t index, uint32_t reg_addr,
                                                 uint32_t value) {
     return ZX_ERR_NOT_SUPPORTED;

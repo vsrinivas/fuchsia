@@ -99,6 +99,8 @@ enum class PowerOp {
     ENABLE,
     DISABLE,
     GET_STATUS,
+    GET_SUPPORTED_VOLTAGE_RANGE,
+    REQUEST_VOLTAGE,
     WRITE_PMIC_CTRL_REG,
     READ_PMIC_CTRL_REG,
 };
@@ -106,6 +108,7 @@ enum class PowerOp {
 struct PowerProxyRequest {
     ProxyRequest header;
     PowerOp op;
+    uint32_t set_voltage;
     uint32_t reg_addr;
     uint32_t reg_value;
 };
@@ -113,6 +116,9 @@ struct PowerProxyRequest {
 struct PowerProxyResponse {
     ProxyResponse header;
     power_domain_status_t status;
+    uint32_t min_voltage;
+    uint32_t max_voltage;
+    uint32_t actual_voltage;
     uint32_t reg_value;
 };
 

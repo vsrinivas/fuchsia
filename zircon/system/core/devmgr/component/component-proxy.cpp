@@ -487,6 +487,37 @@ zx_status_t ComponentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out
     return status;
 }
 
+zx_status_t ComponentProxy::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
+                                                          uint32_t* max_voltage) {
+    PowerProxyRequest req = {};
+    PowerProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.op = PowerOp::GET_SUPPORTED_VOLTAGE_RANGE;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *min_voltage = resp.min_voltage;
+    *max_voltage = resp.max_voltage;
+    return status;
+}
+
+zx_status_t ComponentProxy::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+    PowerProxyRequest req = {};
+    PowerProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.op = PowerOp::REQUEST_VOLTAGE;
+    req.set_voltage = voltage;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *actual_voltage = resp.actual_voltage;
+    return status;
+}
+
 zx_status_t ComponentProxy::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
     PowerProxyRequest req = {};
     PowerProxyResponse resp = {};
