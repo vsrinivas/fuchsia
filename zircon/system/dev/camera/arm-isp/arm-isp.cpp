@@ -36,6 +36,9 @@ constexpr uint8_t kPong = 1;
 constexpr uint8_t kCopyToIsp = 0;
 constexpr uint8_t kCopyFromIsp = 1;
 
+constexpr uint8_t kSafeStop = 0;
+constexpr uint8_t kSafeStart = 1;
+
 // ISP memory offsets
 constexpr uint32_t kDecompander0PingOffset = 0xAB6C;
 constexpr uint32_t kPingConfigSize = 0x17FC0;
@@ -244,12 +247,7 @@ zx_status_t ArmIspDevice::IspContextInit() {
     IspLoadCustomSequence();
 
     // Input port safe start
-    InputPort_Config3::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_mode_request(1)
-        .WriteTo(&isp_mmio_);
-
-    return ZX_OK;
+    return SetPort(kSafeStart);
 }
 
 zx_status_t ArmIspDevice::InitIsp() {
@@ -323,6 +321,27 @@ zx_status_t ArmIspDevice::InitIsp() {
         .WriteTo(&isp_mmio_);
 
     return ZX_OK;
+}
+
+zx_status_t ArmIspDevice::SetPort(uint8_t kMode) {
+    constexpr uint32_t kTimeout = ZX_MSEC(30);
+    constexpr uint32_t kDeadline = ZX_USEC(500);
+
+    // Input port safe stop or stop
+    InputPort_Config3::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_mode_request(kMode)
+        .WriteTo(&isp_mmio_);
+
+    // timeout 100ms
+    zx_time_t deadline = zx_deadline_after(kTimeout);
+    do {
+        if (InputPort_ModeStatus::Get().ReadFrom(&isp_mmio_).value() == kMode) {
+            return ZX_OK;
+        }
+        zx_nanosleep(zx_deadline_after(kDeadline));
+    } while (zx_clock_get_monotonic() < deadline);
+    return ZX_ERR_TIMED_OUT;
 }
 
 // static
@@ -409,8 +428,9 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t s
         return ZX_ERR_NO_MEMORY;
     }
 
+    // TODO(braval): This is here only for testing purposes for initial bring up phase
     isp_device->InitIsp();
-    //isp_device->statsMgr_->SensorStartStreaming();
+    //isp_device->StartStreaming();
 
     status = isp_device->DdkAdd("arm-isp");
     if (status != ZX_OK) {
@@ -436,11 +456,31 @@ zx_status_t ArmIspDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t ArmIspDevice::StartStreaming() {
-    return ZX_ERR_NOT_SUPPORTED;
+    // At reset we use PING config
+    IspGlobal_Config3::Get()
+        .ReadFrom(&isp_mmio_)
+        .select_config_ping()
+        .WriteTo(&isp_mmio_);
+
+    // Copy current context to ISP
+    CopyContextInfo(kPing, kCopyToIsp);
+
+    // TODO(garratt@) Get the next bufffer
+
+    CopyContextInfo(kPong, kCopyToIsp);
+
+    zx_status_t status = SetPort(kSafeStart);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    statsMgr_->SensorStartStreaming();
+    return status;
 }
 
 zx_status_t ArmIspDevice::StopStreaming() {
-    return ZX_ERR_NOT_SUPPORTED;
+    statsMgr_->SensorStopStreaming();
+    return SetPort(kSafeStop);
 }
 
 zx_status_t ArmIspDevice::ReleaseFrame(uint32_t buffer_id) {

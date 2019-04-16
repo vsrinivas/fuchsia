@@ -33,6 +33,7 @@ public:
     ~StatsManager();
 
     void SensorStartStreaming() { sensor_->StartStreaming(); }
+    void SensorStopStreaming() { sensor_->StopStreaming(); }
 
 private:
     int FrameProcessingThread();
