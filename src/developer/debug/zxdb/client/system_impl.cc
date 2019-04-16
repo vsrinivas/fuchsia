@@ -296,8 +296,7 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
 
     for (const auto& url : urls) {
       if (existing.find(url) == existing.end()) {
-        symbol_servers_.push_back(
-            std::make_unique<SymbolServer>(session(), url));
+        symbol_servers_.push_back(SymbolServer::FromURL(session(), url));
 
         for (auto& observer : observers()) {
           observer.DidCreateSymbolServer(symbol_servers_.back().get());

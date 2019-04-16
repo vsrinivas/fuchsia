@@ -629,26 +629,45 @@ void ListSymbolServers(ConsoleContext* context) {
   }
   std::sort(id_symbol_servers.begin(), id_symbol_servers.end());
 
-  std::vector<std::vector<std::string>> rows;
+  std::vector<std::vector<OutputBuffer>> rows;
   for (const auto& pair : id_symbol_servers) {
     rows.emplace_back();
-    std::vector<std::string>& row = rows.back();
+    std::vector<OutputBuffer>& row = rows.back();
 
     // "Current symbol_server" marker.
     if (pair.first == active_symbol_server_id)
-      row.push_back(GetRightArrow());
+      row.emplace_back(GetRightArrow());
     else
       row.emplace_back();
 
-    row.push_back(fxl::StringPrintf("%d", pair.first));
-    row.push_back(pair.second->name());
+    row.emplace_back(fxl::StringPrintf("%d", pair.first));
+    row.emplace_back(pair.second->name());
+
+    switch (pair.second->state()) {
+      case SymbolServer::State::kInitializing:
+        row.emplace_back(Syntax::kComment, "Initializing");
+        break;
+      case SymbolServer::State::kAuth:
+        row.emplace_back(Syntax::kHeading, "Authenticating");
+        break;
+      case SymbolServer::State::kBusy:
+        row.emplace_back(Syntax::kComment, "Busy");
+        break;
+      case SymbolServer::State::kReady:
+        row.emplace_back(Syntax::kHeading, "Ready");
+        break;
+      case SymbolServer::State::kUnreachable:
+        row.emplace_back(Syntax::kError, "Unreachable");
+        break;
+    }
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kLeft),
-               ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-               ColSpec(Align::kLeft, 0, "URL")},
-              rows, &out);
+  FormatTable(
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+       ColSpec(Align::kLeft, 0, "URL"), ColSpec(Align::kLeft, 0, "State")},
+      rows, &out);
   Console::get()->Output(out);
 }
 

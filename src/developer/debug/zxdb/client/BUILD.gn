@@ -99,6 +99,7 @@ static_library("client") {
     "stack.cc",
     "step_over_thread_controller.cc",
     "step_thread_controller.cc",
+    "symbol_server.cc",
     "system.cc",
     "system_impl.cc",
     "system_impl.h",
@@ -138,6 +139,7 @@ static_library("client") {
     "//third_party/crashpad/third_party/mini_chromium:base",
     "//third_party/crashpad/util",
     "//third_party/curl:libcurl",
+    "//third_party/rapidjson",
   ]
 }
 

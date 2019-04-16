@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdio.h>
+
 #include <string>
 #include <vector>
 
@@ -79,7 +80,7 @@ enum class TextForegroundColor {
   kLightYellow,
 };
 
-const char* TextForegroundColorToString(TextBackgroundColor);
+const char* TextForegroundColorToString(TextForegroundColor);
 
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions

@@ -111,6 +111,62 @@ void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
                                 static_cast<unsigned>(data_member->tag())));
 }
 
+// auth ------------------------------------------------------------------------
+
+const char kAuthShortHelp[] = "auth: Authenticate with a symbol server.";
+const char kAuthHelp[] =
+    R"(auth [credentials]
+
+  Authenticates with a symbol server. What that meas will depend on the type of
+  authentication the sever supports. Run with no arguments to receive
+  instructions on how to proceed.
+
+  Must have a valid symbol server noun. See help for sym-server.
+
+Example
+
+  auth my_secret
+  sym-server 3 auth some_credential
+)";
+Err DoAuth(ConsoleContext* context, const Command& cmd) {
+  if (cmd.args().size() > 1u) {
+    return Err("auth expects exactly one argument.");
+  }
+
+  if (!cmd.sym_server())
+    return Err("No symbol server selected.");
+
+  if (cmd.sym_server()->state() != SymbolServer::State::kAuth) {
+    return Err("Server is not requesting authentication.");
+  }
+
+  if (cmd.args().size() == 0) {
+    if (cmd.sym_server()->auth_type() != SymbolServer::AuthType::kOAuth) {
+      return Err("Unknown authentication type.");
+    }
+
+    Console::get()->Output(
+        std::string("To authenticate, please supply an authentication "
+                    "token. You can retrieve a token from:\n\n") +
+        cmd.sym_server()->AuthInfo() +
+        "\n\nOnce you've retrieved a token, run 'auth <token>'");
+    return Err();
+  }
+
+  cmd.sym_server()->Authenticate(
+      cmd.args()[0], [name = cmd.sym_server()->name()](const Err& err) {
+        if (!err.has_error()) {
+          Console::get()->Output(
+              std::string("Successfully authenticated with ") + name);
+        } else {
+          Console::get()->Output(std::string("Authentication with ") + name +
+                                 " failed: " + err.msg());
+        }
+      });
+
+  return Err();  // Will complete asynchronously.
+}
+
 // list ------------------------------------------------------------------------
 
 const char kListShortHelp[] = "list / l: List source code.";
@@ -826,6 +882,8 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   search.switches.emplace_back(kSymSearchListAll, false, "--all", 'a');
   search.switches.emplace_back(kSymSearchUnfold, false, "unfold", 'u');
   (*verbs)[Verb::kSymSearch] = std::move(search);
+  (*verbs)[Verb::kAuth] = VerbRecord(&DoAuth, {"auth"}, kAuthShortHelp,
+                                     kAuthHelp, CommandGroup::kSymbol);
 }
 
 }  // namespace zxdb
