@@ -150,8 +150,10 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
-  WLAN_RSSI_HIST_INC(assoc_data_rssi, rssi_dbm);
+  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
+    WLAN_RSSI_HIST_INC(assoc_data_rssi, rssi_dbm);
+  }
 
   if (data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength() &&
       controlled_port_ == eapol::PortState::kOpen) {
@@ -398,9 +400,11 @@ bool Station::ShouldDropMgmtFrame(const MgmtFrameView<>& frame) {
 void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
   debugfn();
 
-  auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
-  avg_rssi_dbm_.add(dBm(rssi_dbm));
-  WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
+  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
+    avg_rssi_dbm_.add(dBm(rssi_dbm));
+    WLAN_RSSI_HIST_INC(beacon_rssi, rssi_dbm);
+  }
 
   if (state_ != WlanState::kAssociated) {
     return;
@@ -518,9 +522,11 @@ zx_status_t Station::HandleAssociationResponse(
   zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
   timer_mgr_.Schedule(deadline, {}, &signal_report_timeout_);
   avg_rssi_dbm_.reset();
-  avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
-  service::SendSignalReportIndication(
-      device_, common::dBm(frame.View().rx_info()->rssi_dbm));
+  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+    service::SendSignalReportIndication(
+        device_, common::dBm(frame.View().rx_info()->rssi_dbm));
+  }
 
   remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
   status =
@@ -682,8 +688,10 @@ zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
   debugfn();
   ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
-  // Take signal strength into account.
-  avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    // Take signal strength into account.
+    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+  }
 
   // Some AP's such as Netgear Routers send periodic NULL data frames to test
   // whether a client timed out. The client must respond with a NULL data frame
@@ -699,8 +707,10 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
   auto data_llc_frame = frame.View();
   auto data_hdr = data_llc_frame.hdr();
 
-  // Take signal strength into account.
-  avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    // Take signal strength into account.
+    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
+  }
 
   // Forward EAPOL frames to SME.
   auto llc_frame = data_llc_frame.SkipHeader();

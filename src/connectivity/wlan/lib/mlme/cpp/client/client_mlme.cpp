@@ -272,12 +272,25 @@ void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
   }
 }
 
+void ValidateOnChannelFrame(const Packet& pkt) {
+  debugfn();
+  // Only WLAN frames are handed to channel handler since all Ethernet frames
+  // are handed over to the station directly.
+  ZX_DEBUG_ASSERT(pkt.peer() == Packet::Peer::kWlan);
+
+  if (pkt.has_ctrl_data<wlan_rx_info_t>()) {
+    auto rx_info = pkt.ctrl_data<wlan_rx_info_t>();
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+      // A frame should never report an RSSI of 0.
+      ZX_DEBUG_ASSERT(rx_info->rssi_dbm != 0);
+    }
+  }
+}
+
 void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(
     fbl::unique_ptr<Packet> packet) {
   debugfn();
-  // Only WLAN frame is handed to channel handler since all Ethernet frames are
-  // handed over to station directly.
-  ZX_DEBUG_ASSERT(packet->peer() == Packet::Peer::kWlan);
+  ValidateOnChannelFrame(*packet);
 
   if (auto mgmt_frame =
           MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
