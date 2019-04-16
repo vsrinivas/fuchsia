@@ -13,6 +13,7 @@
 
 #include "device.h"
 #include "input_kbd.h"
+#include "input_touch.h"
 #include "ring.h"
 
 namespace virtio {

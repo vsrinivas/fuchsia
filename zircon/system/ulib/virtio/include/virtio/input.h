@@ -66,6 +66,10 @@ enum virtio_input_abs_event_code {
     VIRTIO_INPUT_EV_ABS_RX = 3,
     VIRTIO_INPUT_EV_ABS_RY = 4,
     VIRTIO_INPUT_EV_ABS_RZ = 5,
+    VIRTIO_INPUT_EV_MT_SLOT = 0x2f,
+    VIRTIO_INPUT_EV_MT_POSITION_X = 0x35,
+    VIRTIO_INPUT_EV_MT_POSITION_Y = 0x36,
+    VIRTIO_INPUT_EV_MT_TRACKING_ID = 0x39,
 };
 
 typedef struct virtio_input_absinfo {

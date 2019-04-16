@@ -13,6 +13,7 @@ driver("virtio") {
     "gpu.cpp",
     "input.cpp",
     "input_kbd.cpp",
+    "input_touch.cpp",
     "rng.cpp",
     "socket.cpp",
     "virtio_driver.cpp",
@@ -24,6 +25,7 @@ driver("virtio") {
     "$zx/system/banjo/ddk-protocol-hidbus",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-hardware-vsock:c",
+    "$zx/system/ulib/hid",
   ]
 }
 

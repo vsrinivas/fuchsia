@@ -65,6 +65,16 @@ static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
     .SetWindowSize = virtio_input_SetWindowSize
 };
 
+static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
+    if (config.u.ids.bustype == 0x06
+        && config.u.ids.vendor == 0x00
+        && config.u.ids.product == 0x00
+        && config.u.ids.version == 0x01) {
+        return true;
+    }
+    return false;
+}
+
 zx_status_t InputDevice::virtio_input_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
@@ -155,9 +165,17 @@ zx_status_t InputDevice::Init() {
     SelectConfig(VIRTIO_INPUT_CFG_EV_BITS, VIRTIO_INPUT_EV_ABS);
     uint8_t cfg_abs_size = config_.size;
 
-    // At the moment we only support key events. Support for more devices
-    // should be added here.
-    if (cfg_key_size > 0) {
+    // At the moment we support keyboards and a specific touchscreen.
+    // Support for more devices should be added here.
+    SelectConfig(VIRTIO_INPUT_CFG_ID_DEVIDS, 0);
+    if (IsQemuTouchscreen(config_)) {
+        // QEMU MultiTouch Touchscreen
+        SelectConfig(VIRTIO_INPUT_CFG_ABS_INFO, VIRTIO_INPUT_EV_MT_POSITION_X);
+        virtio_input_absinfo_t x_info = config_.u.abs;
+        SelectConfig(VIRTIO_INPUT_CFG_ABS_INFO, VIRTIO_INPUT_EV_MT_POSITION_Y);
+        virtio_input_absinfo_t y_info = config_.u.abs;
+        hid_device_ = std::make_unique<HidTouch>(x_info, y_info);
+    } else if (cfg_key_size > 0) {
         // Keyboard
         dev_class_ = HID_DEVICE_CLASS_KBD;
         hid_device_ = std::make_unique<HidKeyboard>();
