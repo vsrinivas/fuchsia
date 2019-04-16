@@ -151,16 +151,20 @@ typedef struct wlan_key_config {
     // The BSSID for which this key is relevant.
     uint8_t bssid;
     // Which path to protect: None, TX, RX, or TX and RX.
+    // See WLAN_PROTECTION_*.
     uint8_t protection;
     // IEEE Cipher suite selector.
     // See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
     uint8_t cipher_oui[3];
     uint8_t cipher_type;
     // Whether this key is a pairwise, group or peer key.
+    // See WLAN_KEY_TYPE_*.
     uint8_t key_type;
-    // The peer address for pairwise keys.
+    // The peer MAC address for pairwise and peer keys.
+    // For group keys this value is always the broadcast address. 
     uint8_t peer_addr[6];
-    // Index for rotating group keys.
+    // Index for rotating keys, e.g. group keys. 
+    // This value is always 0 for key types which aren't rotating, e.g. pairwise keys.
     uint8_t key_idx;
     // Length of the supplied key.
     uint8_t key_len;
