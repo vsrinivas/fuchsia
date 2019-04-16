@@ -15,6 +15,8 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
   auto recycler = escher->resource_recycler();
 
   constexpr vk::DeviceSize kDummyBufferSize = 10000;
+  // TODO(SCN-1369): Scenic may use a different set of bits when creating a
+  // buffer, resulting in a memory pool mismatch.
   const auto kBufferUsageFlags = vk::BufferUsageFlagBits::eTransferSrc |
                                  vk::BufferUsageFlagBits::eTransferDst;
   const auto kMemoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible |

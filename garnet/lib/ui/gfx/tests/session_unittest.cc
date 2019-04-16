@@ -8,11 +8,9 @@
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
-#include "public/lib/escher/test/gtest_vulkan.h"
-
-#include "lib/ui/scenic/cpp/commands.h"
-
 #include "gtest/gtest.h"
+#include "lib/ui/scenic/cpp/commands.h"
+#include "public/lib/escher/test/gtest_vulkan.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -106,23 +104,52 @@ TEST_F(SessionTest, Labeling) {
 using BufferSessionTest = VkSessionTest;
 
 VK_TEST_F(BufferSessionTest, BufferAliasing) {
-  size_t vmo_size = 1024;
-  size_t offset = 512;
+  const size_t kVmoSize = 1024;
+  const size_t kOffset = 512;
 
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
-  EXPECT_TRUE(status == ZX_OK);
+  auto vulkan_queues = CreateVulkanDeviceQueues();
+  auto device = vulkan_queues->vk_device();
+  auto physical_device = vulkan_queues->vk_physical_device();
+
+  // TODO(SCN-1369): Scenic may use a different set of bits when creating a
+  // buffer, resulting in a memory pool mismatch.
+  const vk::BufferUsageFlags kUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer |
+      vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer |
+      vk::BufferUsageFlagBits::eVertexBuffer;
+
+  auto memory_requirements =
+      GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory =
+      AllocateExportableMemory(device, physical_device, memory_requirements,
+                               vk::MemoryPropertyFlagBits::eDeviceLocal |
+                                   vk::MemoryPropertyFlagBits::eHostVisible);
+
+  // If we can't make memory that is both host-visible and device-local, we
+  // can't run this test.
+  if (!memory) {
+    device.freeMemory(memory);
+    FXL_LOG(INFO)
+        << "Could not find UMA compatible memory pool, aborting test.";
+    return;
+  }
+
+  zx::vmo vmo =
+      ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   zx::vmo dup_vmo;
-  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-  EXPECT_TRUE(status == ZX_OK);
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  ASSERT_EQ(ZX_OK, status);
 
   EXPECT_TRUE(Apply(
-      scenic::NewCreateMemoryCmd(1, std::move(dup_vmo), vmo_size,
+      scenic::NewCreateMemoryCmd(1, std::move(dup_vmo), kVmoSize,
                                  fuchsia::images::MemoryType::HOST_MEMORY)));
-  EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(2, 1, 0, vmo_size)));
+  EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(2, 1, 0, kVmoSize)));
   EXPECT_TRUE(
-      Apply(scenic::NewCreateBufferCmd(3, 1, offset, vmo_size - offset)));
+      Apply(scenic::NewCreateBufferCmd(3, 1, kOffset, kVmoSize - kOffset)));
 
   auto base_buffer = FindResource<Buffer>(2);
   auto offset_buffer = FindResource<Buffer>(3);
@@ -140,11 +167,12 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   uint8_t* raw_memory = static_cast<uint8_t*>(shared_vmo->Map());
   EXPECT_TRUE(raw_memory);
 
-  memset(raw_memory, 0, vmo_size);
-  raw_memory[512] = 1;
+  memset(raw_memory, 0, kVmoSize);
+  raw_memory[kOffset] = 1;
   EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[0], 0);
-  EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[512], 1);
+  EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[kOffset], 1);
   EXPECT_EQ(offset_buffer->escher_buffer()->host_ptr()[0], 1);
+  device.freeMemory(memory);
 }
 
 // TODO:

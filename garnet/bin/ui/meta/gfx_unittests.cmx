@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             }
         }
@@ -16,6 +17,7 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.tracelink.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]

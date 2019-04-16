@@ -13,6 +13,16 @@ namespace test {
 
 class VkSessionTest : public SessionTest {
  public:
+  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues();
+  static vk::DeviceMemory AllocateExportableMemory(
+      vk::Device device, vk::PhysicalDevice physical_device,
+      vk::MemoryRequirements requirements, vk::MemoryPropertyFlags flags);
+  static zx::vmo ExportMemoryAsVmo(vk::Device device,
+                                   vk::DispatchLoaderDynamic dispatch_loader,
+                                   vk::DeviceMemory memory);
+  static vk::MemoryRequirements GetBufferRequirements(
+      vk::Device device, vk::DeviceSize size, vk::BufferUsageFlags usage_flags);
+
   // |SessionTest|
   std::unique_ptr<SessionForTest> CreateSession() override;
 
