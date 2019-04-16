@@ -170,8 +170,6 @@ function main {
   esac
   shift
 
-  local gn_args+=" allow_layer_guesswork=false"
-
   local gn_cmd='gen'
   local -a gn_switches=(--check)
   local gn_after_args=""

@@ -20,11 +20,10 @@ declare_args() {
   # a list of packages only added to the distribution repository)
   available = []
 
-  # Whether the build should attempt to guess what to build based on the
-  # .jiri_manifest file.
+  # Does nothing.
   #
-  # Eventually will be set to false and removed.
-  allow_layer_guesswork = true
+  # Will be removed after 30 April 2019.
+  allow_layer_guesswork = false
 
   # These arguments should be set by the board definition gni file.
 
@@ -48,18 +47,6 @@ declare_args() {
 
 monolith += board_packages
 monolith += fuchsia_packages
-
-if (allow_layer_guesswork && monolith == [] && preinstall == [] &&
-    available == [] && fuchsia_packages == []) {
-  _jiri_manifest = "//.jiri_manifest"
-  _layers = exec_script("//build/gn/guess_layer.py",
-                        [ rebase_path(_jiri_manifest) ],
-                        "list lines",
-                        [ _jiri_manifest ])
-  foreach(layer, _layers) {
-    import("//$layer/products/default.gni")
-  }
-}
 
 # Resolve all the JSON files and their dependencies
 # into lists of GN labels:
