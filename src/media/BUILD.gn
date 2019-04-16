@@ -8,11 +8,14 @@ group("media") {
     ":tests",
     "lib",
     "playback",
+    "sessions",
   ]
 }
 
 group("tests") {
   testonly = true
 
-  data_deps = []
+  data_deps = [
+    "sessions:tests"
+  ]
 }

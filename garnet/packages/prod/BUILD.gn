@@ -977,7 +977,7 @@ group("far") {
 group("mediasession") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediasession:mediasession",
+    "//src/media/sessions",
   ]
 }
 

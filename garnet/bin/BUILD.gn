@@ -38,7 +38,6 @@ group("bin") {
     "logger",
     "mdns",
     "media",
-    "mediasession",
     "memory_monitor",
     "net-cli",
     "net_ctl",

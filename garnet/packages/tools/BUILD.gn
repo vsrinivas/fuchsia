@@ -159,7 +159,7 @@ group("banjo_toolchain") {
 group("mediasession") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediasession:mediasession_cli_tool",
+    "//src/media/sessions:tools",
   ]
 }
 

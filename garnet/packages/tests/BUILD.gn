@@ -1119,7 +1119,7 @@ group("wayland") {
 group("mediasession") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediasession:mediasession_tests",
+    "//src/media/sessions:tests",
   ]
 }
 

@@ -120,7 +120,7 @@ group("services") {
 group("mediasession") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediasession:mediasession_config",
+    "//src/media/sessions:configs",
   ]
 }
 
