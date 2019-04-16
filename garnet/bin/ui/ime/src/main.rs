@@ -9,36 +9,22 @@ mod index_convert;
 mod legacy_ime;
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_ui_input::{ImeServiceMarker, ImeVisibilityServiceMarker};
-use fidl_fuchsia_ui_text::TextInputContextMarker;
-use fuchsia_app::server::ServicesServer;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog;
+use futures::StreamExt;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["ime_service"]).expect("ime syslog init should not fail");
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating fuchsia_async executor for IME service failed")?;
     let ime_service = ime_service::ImeService::new();
-    let ime_service1 = ime_service.clone();
-    let ime_service2 = ime_service.clone();
-    let ime_service3 = ime_service.clone();
-    let done = ServicesServer::new()
-        .add_service((ImeServiceMarker::NAME, move |chan| {
-            ime_service1.bind_ime_service(chan);
-        }))
-        .add_service((ImeVisibilityServiceMarker::NAME, move |chan| {
-            ime_service2.bind_ime_visibility_service(chan);
-        }))
-        .add_service((TextInputContextMarker::NAME, move |chan| {
-            ime_service3.bind_text_input_context(chan);
-        }))
-        .start()
-        .context("Creating ServicesServer for IME service failed")?;
-    executor
-        .run_singlethreaded(done)
-        .context("Attempt to start up IME services on async::Executor failed")?;
-
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(|stream| ime_service.bind_ime_service(stream))
+        .add_fidl_service(|stream| ime_service.bind_ime_visibility_service(stream))
+        .add_fidl_service(|stream| ime_service.bind_text_input_context(stream));
+    fs.take_and_serve_directory_handle()?;
+    let () = executor.run_singlethreaded(fs.collect());
     Ok(())
 }
 
@@ -47,7 +33,7 @@ mod test {
     use fidl_fuchsia_ui_input as uii;
     use fidl_fuchsia_ui_text as txt;
     use fidl_fuchsia_ui_text_testing as txt_testing;
-    use fuchsia_app::client::Launcher;
+    use fuchsia_component::client::{launch, launcher};
     use futures::prelude::*;
 
     #[test]
@@ -55,13 +41,13 @@ mod test {
         fuchsia_syslog::init_with_tags(&["ime_service"]).expect("ime syslog init should not fail");
         let mut executor = fuchsia_async::Executor::new()
             .expect("Creating fuchsia_async executor for IME service failed");
-        let launcher = Launcher::new().expect("Failed to open launcher service");
-        let app = launcher
-            .launch(
-                "fuchsia-pkg://fuchsia.com/text_test_suite#meta/test_suite.cmx".to_string(),
-                None,
-            )
-            .expect("Failed to launch testing service");
+        let launcher = launcher().expect("Failed to open launcher service");
+        let app = launch(
+            &launcher,
+            "fuchsia-pkg://fuchsia.com/text_test_suite#meta/test_suite.cmx".to_string(),
+            None,
+        )
+        .expect("Failed to launch testing service");
         let tester = app
             .connect_to_service(txt_testing::TextFieldTestSuiteMarker)
             .expect("Failed to connect to testing service");
@@ -88,8 +74,8 @@ mod test {
         test_id: u64,
     ) -> Result<(), String> {
         let mut ime_service = crate::ime_service::ImeService::new();
-        let (text_proxy, server_end) =
-            fidl::endpoints::create_proxy::<txt::TextInputContextMarker>()
+        let (text_proxy, text_stream) =
+            fidl::endpoints::create_proxy_and_stream::<txt::TextInputContextMarker>()
                 .expect("Failed to create proxy");
         let (imec_client, _imec_server) =
             fidl::endpoints::create_endpoints::<uii::InputMethodEditorClientMarker>()
@@ -97,9 +83,7 @@ mod test {
         let (_ime_client, ime_server) =
             fidl::endpoints::create_endpoints::<uii::InputMethodEditorMarker>()
                 .expect("Failed to create endpoints");
-        let chan = fuchsia_async::Channel::from_channel(server_end.into_channel())
-            .expect("Failed to create channel");
-        ime_service.bind_text_input_context(chan);
+        ime_service.bind_text_input_context(text_stream);
         await!(ime_service.get_input_method_editor(
             uii::KeyboardType::Text,
             uii::InputMethodAction::Done,

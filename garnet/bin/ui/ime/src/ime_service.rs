@@ -131,11 +131,10 @@ impl ImeService {
         }
     }
 
-    pub fn bind_ime_service(&self, chan: fuchsia_async::Channel) {
+    pub fn bind_ime_service(&self, mut stream: uii::ImeServiceRequestStream) {
         let mut self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                let mut stream = uii::ImeServiceRequestStream::from_channel(chan);
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from IME service request stream")?
                 {
@@ -173,11 +172,10 @@ impl ImeService {
         );
     }
 
-    pub fn bind_ime_visibility_service(&self, chan: fuchsia_async::Channel) {
+    pub fn bind_ime_visibility_service(&self, stream: uii::ImeVisibilityServiceRequestStream) {
         let self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                let stream = uii::ImeVisibilityServiceRequestStream::from_channel(chan);
                 let control_handle = stream.control_handle();
                 let mut state = await!(self_clone.0.lock());
                 if control_handle
@@ -192,11 +190,10 @@ impl ImeService {
         );
     }
 
-    pub fn bind_text_input_context(&self, chan: fuchsia_async::Channel) {
+    pub fn bind_text_input_context(&self, mut stream: txt::TextInputContextRequestStream) {
         let self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                let mut stream = txt::TextInputContextRequestStream::from_channel(chan);
                 let control_handle = stream.control_handle();
                 {
                     let mut state = await!(self_clone.0.lock());
@@ -262,17 +259,16 @@ mod test {
             .expect("Creating fuchsia_async executor for IME service tests failed");
         let ime_service = ImeService::new();
         let ime_service_proxy = {
-            let (service_proxy, service_server_end) =
-                fidl::endpoints::create_proxy::<uii::ImeServiceMarker>().unwrap();
-            let chan = fasync::Channel::from_channel(service_server_end.into_channel()).unwrap();
-            ime_service.bind_ime_service(chan);
+            let (service_proxy, ime_stream) =
+                fidl::endpoints::create_proxy_and_stream::<uii::ImeServiceMarker>().unwrap();
+            ime_service.bind_ime_service(ime_stream);
             service_proxy
         };
         let visibility_service_proxy = {
-            let (service_proxy, service_server_end) =
-                fidl::endpoints::create_proxy::<uii::ImeVisibilityServiceMarker>().unwrap();
-            let chan = fasync::Channel::from_channel(service_server_end.into_channel()).unwrap();
-            ime_service.bind_ime_visibility_service(chan);
+            let (service_proxy, ime_vis_stream) =
+                fidl::endpoints::create_proxy_and_stream::<uii::ImeVisibilityServiceMarker>()
+                    .unwrap();
+            ime_service.bind_ime_visibility_service(ime_vis_stream);
             service_proxy
         };
         let done = test_fn(ime_service_proxy, visibility_service_proxy);
