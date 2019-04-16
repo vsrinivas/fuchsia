@@ -238,37 +238,51 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
     return ZX_OK;
 }
 
+static zx_status_t source_handle_checks_locked(const Handle* handle, const Dispatcher* channel) {
+    if (!handle)
+        return ZX_ERR_BAD_HANDLE;
+    if (!handle->HasRights(ZX_RIGHT_TRANSFER))
+        return ZX_ERR_ACCESS_DENIED;
+    if (handle->dispatcher().get() == channel)
+        return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
+}
+
+static zx_status_t get_handle_for_message_locked(
+    ProcessDispatcher* process, const Dispatcher* channel,
+    zx_handle_t handle_val, Handle** raw_handle) TA_REQ(process->handle_table_lock()) {
+    HandleOwner handle = process->RemoveHandleLocked(handle_val);
+    auto status = source_handle_checks_locked(handle.get(), channel);
+    if (status != ZX_OK)
+        return status;
+
+    *raw_handle = handle.release();
+    return ZX_OK;
+}
+
 // Consumes all handles whether it succeeds or not.
+template <typename UserHandles>
 static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
-                                   user_in_ptr<const zx_handle_t> user_handles,
+                                   UserHandles user_handles,
                                    uint32_t num_handles,
                                    Dispatcher* channel) {
     DEBUG_ASSERT(num_handles <= kMaxMessageHandles); // This must be checked before calling.
 
-    zx_handle_t handles[kMaxMessageHandles];
-    if (user_handles.copy_array_from_user(handles, num_handles) != ZX_OK)
-        return ZX_ERR_INVALID_ARGS;
+    typename UserHandles::ValueType handles[kMaxMessageHandles] = {};
 
-    zx_status_t status = ZX_OK;
+    zx_status_t status = get_user_handles(user_handles, 0, num_handles, handles);
+    if (status != ZX_OK)
+        return status;
 
     {
         Guard<BrwLock, BrwLock::Writer> guard{up->handle_table_lock()};
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
-            auto handle = up->RemoveHandleLocked(handles[ix]).release();
-
-            if (status == ZX_OK) {
-                if (!handle) {
-                    status = ZX_ERR_BAD_HANDLE;
-                } else {
-                    // You may not write a channel endpoint handle into that channel
-                    // endpoint.
-                    if (handle->dispatcher().get() == channel)
-                        status = ZX_ERR_NOT_SUPPORTED;
-
-                    if (!handle->HasRights(ZX_RIGHT_TRANSFER))
-                        status = ZX_ERR_ACCESS_DENIED;
-                }
+            Handle* handle = nullptr;
+            auto inner_status = get_handle_for_message_locked(up, channel, handles[ix], &handle);
+            if ((inner_status != ZX_OK)  && (status == ZX_OK)) {
+                // Latch the first error encountered. It will be what the function returns.
+                status = inner_status;
             }
 
             msg->mutable_handles()[ix] = handle;
@@ -279,12 +293,12 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
     return status;
 }
 
-// zx_status_t zx_channel_write
-zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
-                              user_in_ptr<const void> user_bytes, uint32_t num_bytes,
-                              user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
+template <typename UserHandles>
+static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
+                                 user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                                 UserHandles user_handles, uint32_t num_handles) {
     LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
-            handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
+        handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -325,10 +339,23 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
     return ZX_OK;
 }
 
+// zx_status_t zx_channel_write
+zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
+                              user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                              user_in_ptr<const zx_handle_t> user_handles,
+                              uint32_t num_handles) {
+    LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
+        handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
+
+    return channel_write(
+        handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
+}
+
+// zx_status_t zx_channel_write_etc
 zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
-                                 user_in_ptr<const void> user_bytes, uint32_t num_bytes,
-                                 user_inout_ptr<zx_handle_disposition_t> user_handles,
-                                 uint32_t num_handles) {
+                                  user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                                  user_inout_ptr<zx_handle_disposition_t> user_handles,
+                                  uint32_t num_handles) {
     // TODO(cpu): Implement.
     return ZX_ERR_NOT_SUPPORTED;
 }

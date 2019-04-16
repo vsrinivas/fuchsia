@@ -24,6 +24,8 @@ enum InOutPolicy {
 template <typename T, InOutPolicy Policy>
 class user_ptr {
 public:
+    using ValueType = std::remove_const_t<T>;
+
     static_assert(std::is_const<T>::value == (Policy == kIn),
                   "In pointers must be const, and Out and InOut pointers must not be const");
 

@@ -11,9 +11,16 @@
 #include <zircon/types.h>
 
 // Extracts the handles from |offset| to  |offset + chunk_size| from |user_handles| and
-// returns them in |handles|.
-zx_status_t get_user_handles(user_in_ptr<const zx_handle_t> user_handles, size_t offset,
-                             size_t chunk_size, zx_handle_t* handles);
+// returns them in |handles| which must be at of at least size |chunk_size|.
+zx_status_t get_user_handles(
+    user_in_ptr<const zx_handle_t> user_handles, size_t offset, size_t chunk_size,
+    zx_handle_t* handles);
+
+// Like get_user_handles() but only returns the handles that would be consumed on syscalls
+// with handle_release semantics, such as zx_channel_write().
+zx_status_t get_user_handles_to_consume(
+    user_in_ptr<const zx_handle_t> user_handles, size_t offset, size_t chunk_size,
+    zx_handle_t* handles);
 
 // Removes the handles pointed by |user_handles| from |process|. Returns ZX_OK if all handles
 // have been removed, error otherwise. It only stops early if get_user_handles() fails.
@@ -28,7 +35,7 @@ zx_status_t RemoveUserHandles(
         // We process |num_handles| in chunks of |kMaxMessageHandles| because we don't have
         // a limit on how large |num_handles| can be.
         auto chunk_size = fbl::min<size_t>(num_handles - offset, kMaxMessageHandles);
-        status = get_user_handles(user_handles, offset, chunk_size, handles);
+        status = get_user_handles_to_consume(user_handles, offset, chunk_size, handles);
         if (status != ZX_OK) {
             break;
         }
