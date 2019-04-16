@@ -109,7 +109,7 @@ static zx_status_t choose_load_bias(zx_handle_t root_vmar,
             if (first) {
                 low = start;
                 first = false;
-            } else if (start < low || end < high) {
+            } else if (start < high) {
                 return ERR_ELF_BAD_FORMAT;
             }
             high = end;
