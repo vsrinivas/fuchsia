@@ -95,6 +95,7 @@ void {{ .Namespace }}::{{ .Name }}::Destroy() {
   {{- if $member.Type.LLDtor }}
   case Tag::{{ $member.TagName }}:
     {{ $member.StorageName }}.{{ $member.Type.LLDtor }}();
+    break;
   {{- end }}
   {{- end }}
   default:

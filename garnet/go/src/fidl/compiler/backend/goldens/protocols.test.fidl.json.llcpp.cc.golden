@@ -19,6 +19,7 @@ void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   switch (which()) {
   case Tag::kResponse:
     response_.~WithErrorSyntax_ErrorAsPrimitive_Response();
+    break;
   default:
     break;
   }
@@ -1556,8 +1557,10 @@ void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   switch (which()) {
   case Tag::kResponse:
     response_.~WithErrorSyntax_ErrorAsEnum_Response();
+    break;
   case Tag::kErr:
     err_.~ErrorEnun();
+    break;
   default:
     break;
   }
