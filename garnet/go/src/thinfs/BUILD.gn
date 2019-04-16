@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/package.gni")
 
 go_library("thinfs_lib") {
@@ -12,5 +13,28 @@ go_library("thinfs_lib") {
   deps = [
     "//garnet/public/go/third_party:github.com/golang/glog",
     "//garnet/public/go/third_party:github.com/pkg/errors",
+  ]
+}
+
+go_test("thinfs_zircon_rpc_test") {
+  gopackage = "thinfs/zircon/rpc"
+
+  deps = [
+    ":thinfs_lib",
+  ]
+}
+
+package("go_thinfs_tests") {
+  testonly = true
+
+  deps = [
+    ":thinfs_zircon_rpc_test",
+  ]
+
+  tests = [
+    {
+      name = "thinfs_zircon_rpc_test"
+      environments = basic_envs
+    },
   ]
 }
