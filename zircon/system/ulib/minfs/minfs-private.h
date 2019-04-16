@@ -192,6 +192,9 @@ public:
     // Allocate a new data block.
     void BlockNew(Transaction* transaction, blk_t* out_bno);
 
+    // Set/Unset the flags.
+    void UpdateFlags(Transaction* transaction, uint32_t flags, bool set);
+
     // Mark |in_bno| for de-allocation (if it is > 0), and return a new block |*out_bno|.
     // The swap will not be persisted until the transaction is commited.
     void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
@@ -343,6 +346,9 @@ private:
 
     // Internal version of VnodeLookup which may also return unlinked vnodes.
     fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
+
+    // Check if filesystem is readonly.
+    bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);

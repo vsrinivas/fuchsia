@@ -731,6 +731,22 @@ void Minfs::BlockNew(Transaction* transaction, blk_t* out_bno) {
     ValidateBno(*out_bno);
 }
 
+bool Minfs::IsReadonly() {
+ #ifdef __Fuchsia__
+    fbl::AutoLock lock(&vfs_lock_);
+ #endif
+    return ReadonlyLocked();
+}
+
+void Minfs::UpdateFlags(Transaction* transaction, uint32_t flags, bool set) {
+     if (set) {
+        sb_->MutableInfo()->flags |= flags;
+     } else {
+        sb_->MutableInfo()->flags &= (~flags);
+     }
+     sb_->Write(transaction->GetWork());
+}
+
 #ifdef __Fuchsia__
 void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
     if (in_bno > 0) {
@@ -898,6 +914,10 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
     }
     const Superblock* info = reinterpret_cast<Superblock*>(blk);
 
+    if ((info->flags & kMinfsFlagClean) == 0) {
+        FS_TRACE_WARN("minfs: filesystem not unmounted cleanly. Integrity check required\n");
+    }
+
     fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
@@ -917,6 +937,21 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
     }
 
     ZX_DEBUG_ASSERT(vn->IsDirectory());
+
+    // Filesystem is safely mounted at this point. On a read-write filesystem, since we can now
+    // serve writes on the filesystem, we need to unset the kMinfsFlagClean flag to indicate
+    // that the filesystem may not be in a "clean" state anymore. This helps to make sure we are
+    // unmounted cleanly i.e the kMinfsFlagClean flag is set back on clean unmount.
+    if (options.readonly == false) {
+        fbl::unique_ptr<Transaction> transaction;
+        if ((status = fs->BeginTransaction(0, 0, &transaction)) == ZX_OK) {
+            fs->UpdateFlags(transaction.get(), kMinfsFlagClean, false);
+            status = fs->CommitTransaction(std::move(transaction));
+        }
+        if (status != ZX_OK) {
+            FS_TRACE_WARN("minfs: failed to unset clean flag\n");
+        }
+     }
     __UNUSED auto r = fs.release();
     *root_out = std::move(vn);
     return ZX_OK;
@@ -943,6 +978,18 @@ zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispa
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
+    // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
+    if (IsReadonly() == false) {
+        fbl::unique_ptr<Transaction> transaction;
+        zx_status_t status;
+        if ((status = BeginTransaction(0, 0, &transaction)) == ZX_OK) {
+            UpdateFlags(transaction.get(), kMinfsFlagClean, true);
+            status = CommitTransaction(std::move(transaction));
+        }
+        if (status != ZX_OK) {
+            FS_TRACE_WARN("minfs: Failed to set clean flag on unmount.\n");
+        }
+    }
     ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
         Sync([this, cb = std::move(cb)](zx_status_t) mutable {
             async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
