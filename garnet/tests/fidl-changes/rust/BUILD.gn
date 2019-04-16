@@ -10,13 +10,10 @@ rustc_binary("rust") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-zircon",
     "//garnet/tests/fidl-changes:fidl.test.after-rustc",
     "//garnet/tests/fidl-changes:fidl.test.before-rustc",
     "//garnet/tests/fidl-changes:fidl.test.during-rustc",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
 }
