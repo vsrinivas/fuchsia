@@ -76,9 +76,13 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   escher_image_info.width = image_info.width;
   escher_image_info.height = image_info.height;
   escher_image_info.sample_count = 1;
+  // If this image is shared cross-process these flags (and all other
+  // vkCreateImage parameters) need to match those in the other process.
+  // Other locations that need to match: topaz/flutter_runner/vulkan_surface.cc
   escher_image_info.usage = vk::ImageUsageFlagBits::eTransferSrc |
                             vk::ImageUsageFlagBits::eTransferDst |
-                            vk::ImageUsageFlagBits::eSampled;
+                            vk::ImageUsageFlagBits::eSampled |
+                            vk::ImageUsageFlagBits::eColorAttachment;
   // TODO(SCN-1182): Add unit tests to verify this logic.
   switch (image_info.tiling) {
     case fuchsia::images::Tiling::LINEAR:
@@ -110,7 +114,8 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   if (memory_offset + memory_reqs.size > memory->size()) {
     error_reporter->ERROR()
         << "GpuImage::CreateFromMemory(): the Image must fit within the size "
-        << "of the Memory";
+        << "of the Memory" << memory_reqs.size << " " << memory->size() << " "
+        << memory_offset;
     return nullptr;
   }
 
