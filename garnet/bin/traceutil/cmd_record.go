@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -37,8 +40,114 @@ type reportGenerator struct {
 
 type zedmon struct {
 	cmd    *exec.Cmd
+	stdout io.ReadCloser
+	csvout *csv.Reader
 	stderr io.ReadCloser
 	err    error
+}
+
+type zTraceReport struct {
+	DisplayTimeUnit string        `json:"displayTimeUnit"`
+	TraceEvents     []interface{} `json:"traceEvents"`
+	//SystemTraceEvents zSystemTraceEvents `json:"systemTraceEvents"`
+}
+
+type zSystemTraceEvents struct {
+	Type   string        `json:"type"`
+	Events []interface{} `json:"events"`
+}
+
+type zMetadataEvent struct {
+	Type string        `json:"ph"`
+	PID  int           `json:"pid"`
+	Name string        `json:"name"`
+	Args zMetadataArgs `json:"args"`
+}
+
+type zMetadataArgs struct {
+	Name string `json:"name"`
+}
+
+type zCompleteDurationEvent struct {
+	Type      string  `json:"ph"`
+	PID       int     `json:"pid"`
+	Name      string  `json:"name"`
+	Timestamp float64 `json:"ts"`
+	Duration  float64 `json:"dur"`
+}
+
+type zCounterEvent struct {
+	Type      string      `json:"ph"`
+	PID       int         `json:"pid"`
+	Name      string      `json:"name"`
+	Timestamp float64     `json:"ts"`
+	Values    zTraceValue `json:"args"`
+}
+
+type zTraceValue struct {
+	Voltage float32 `json:"voltage"`
+}
+
+const zedmonPID = 2053461101 // "zedm" = 0x7a65546d = 2053461101.
+
+func newZTraceReport(events []interface{}) zTraceReport {
+	return zTraceReport{
+		DisplayTimeUnit: "ns",
+		TraceEvents:     events,
+		// SystemTraceEvents: zSystemTraceEvents{
+		// 	Type:   "fuchsia",
+		// 	Events: events,
+		// },
+	}
+}
+
+func newZMetadataEvent() zMetadataEvent {
+	return zMetadataEvent{
+		Type: "M",
+		PID:  zedmonPID,
+		Name: "process_name",
+		Args: zMetadataArgs{
+			Name: "zedmon",
+		},
+	}
+}
+
+func newZCompleteDurationEvent(name string, ts time.Time, dur time.Duration) zCompleteDurationEvent {
+	tus := float64(ts.UnixNano()) / 1000
+	dus := float64(dur.Nanoseconds()) / 1000
+	return zCompleteDurationEvent{
+		Type:      "X",
+		PID:       zedmonPID,
+		Name:      name,
+		Timestamp: tus,
+		Duration:  dus,
+	}
+}
+
+func newZCounterEvents(ts time.Time, delta time.Duration, vShunt, vBus float32) []interface{} {
+	errStart := ts.Add(-delta / 2)
+	us := float64(ts.UnixNano()) / 1000
+	return []interface{}{
+		newZCompleteDurationEvent(fmt.Sprintf("shunt:%f;bus:%f", vShunt, vBus), errStart, delta),
+		zCounterEvent{
+			Type:      "C",
+			PID:       zedmonPID,
+			Name:      "Shunt voltage",
+			Timestamp: us,
+			Values: zTraceValue{
+				Voltage: vShunt,
+			},
+		},
+		zCounterEvent{
+			Type:      "C",
+			PID:       zedmonPID,
+			Name:      "Bus voltage",
+			Timestamp: us,
+			Values: zTraceValue{
+				Voltage: vBus,
+			},
+		},
+	}
 }
 
 var (
@@ -106,6 +215,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		return subcommands.ExitFailure
 	}
 
+	// Establish connection to runtime host.
 	conn, err := NewTargetConnection(cmd.targetHostname, cmd.keyFile)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -113,6 +223,8 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 	defer conn.Close()
 
+	// Zedmon: Sync clock with runtime host to enable eventual
+	// zedmon -> devhost -> runtime host clock domain transformation.
 	var fOffset, fDelta time.Duration
 	doZedmon := cmd.zedmon != ""
 	if doZedmon {
@@ -121,10 +233,11 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 			fmt.Printf("Error syncing with device clock: %v\n", err)
 			doZedmon = false
 		} else {
-			fmt.Printf("Synced device clock: Offset: %v, ±%v\n", fOffset, fDelta)
+			fmt.Printf("Synced fuchsia clock: Offset: %v, ±%v\n", fOffset, fDelta)
 		}
 	}
 
+	// Establish local and remote files for managing trace data.
 	prefix := cmd.getFilenamePrefix()
 	var localFilename string
 	if cmd.captureConfig.Binary {
@@ -140,7 +253,6 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	} else {
 		remoteFilename = "/data/trace.json"
 	}
-
 	var localFile *os.File = nil
 	if cmd.captureConfig.Stream {
 		localFile, err = os.Create(localFilename)
@@ -158,25 +270,25 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		cmd.captureConfig.Command = f.Args()
 	}
 
+	// Zedmon: Start capturing data from zedmon device.
 	var z *zedmon
-	var zOffset, zDelta time.Duration
+	var zDataChan chan []byte
+	var zErrChan chan error
 	if doZedmon {
 		z = newZedmon()
-		zOffset, zDelta, err = z.start(cmd.zedmon)
-		if err != nil {
-			fmt.Printf("Error syncing with zedmon clock: %v\n", err)
-			doZedmon = false
-		} else {
-			fmt.Printf("Synced zedmon clock: Offset: %v, ±%v\n", zOffset, zDelta)
-		}
+		zDataChan, zErrChan = z.run(fOffset, fDelta, cmd.zedmon)
 	}
 
+	// Capture trace data from runtime host.
 	err = captureTrace(cmd.captureConfig, conn, localFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
 	}
 
+	// Zedmon: Stop capturing data, emit errors that occurred in the meantime.
+	var zData []byte
+	zErrs := make([]error, 0)
 	if doZedmon {
 		err = z.stop()
 		if err != nil {
@@ -185,8 +297,33 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		} else {
 			fmt.Printf("Zedmon data collection stopped cleanly\n")
 		}
+
+		timeout := make(chan bool, 1)
+		go func() {
+			time.Sleep(2 * time.Second)
+			timeout <- true
+		}()
+
+		func() {
+			for {
+				select {
+				case err := <-zErrChan:
+					fmt.Printf("Warning: Zedmon error: %v\n", err)
+					zErrs = append(zErrs, err)
+				case zData = <-zDataChan:
+					fmt.Printf("Collected %d-byte trace from zedmon\n", len(zData))
+					return
+				case <-timeout:
+					fmt.Printf("Failed to collect zedmon data: Channel read timeout\n")
+					return
+				}
+			}
+		}()
+
+		doZedmon = zData != nil
 	}
 
+	// Download file in non-streaming case.
 	if !cmd.captureConfig.Stream {
 		err = cmd.downloadFile(conn, "trace", remoteFilename, localFilename)
 		if err != nil {
@@ -195,6 +332,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		}
 	}
 
+	// Benchmark results: Download corresponding file.
 	if len(cmd.captureConfig.BenchmarkResultsFile) > 0 {
 		err = cmd.downloadFile(conn, cmd.captureConfig.BenchmarkResultsFile,
 			cmd.captureConfig.BenchmarkResultsFile,
@@ -206,23 +344,32 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		fmt.Println("done")
 	}
 
-	if doZedmon {
-		// TODO(markdittmer): Read from zedmon data and convert to trace input.
-	}
-
 	// TODO(TO-403): Remove remote file.  Add command line option to leave it.
 
 	title := cmd.getReportTitle()
 
 	// TODO(PT-113): Convert binary format to JSON and HTML when able.
 	if !cmd.captureConfig.Binary {
-		err = convertTrace(generatorPath, localFilename, outputFilename, title)
+		// Zedmon: Include additional zedmon trace data file in HTML output.
+		if doZedmon {
+			zFilename := "zedmon-" + prefix + ".json"
+			err = ioutil.WriteFile(zFilename, zData, 0644)
+			if err != nil {
+				fmt.Printf("Failed to write zedmon trace to file")
+				err = convertTrace(generatorPath, outputFilename, title, localFilename)
+			} else {
+				err = convertTrace(generatorPath, outputFilename, title, localFilename, zFilename)
+			}
+		} else {
+			err = convertTrace(generatorPath, outputFilename, title, localFilename)
+		}
 		if err != nil {
 			fmt.Println(err.Error())
 			return subcommands.ExitFailure
 		}
 	}
 
+	// Handle special report-to-stdout case.
 	if cmd.stdout {
 		report, openErr := os.Open(outputFilename)
 		if openErr != nil {
@@ -296,36 +443,119 @@ func newZedmon() *zedmon {
 	return &zedmon{}
 }
 
-var zRegExp = regexp.MustCompile("^Time offset: ([0-9]+)ns ± ([0-9]+)ns$")
+var zRegExp = regexp.MustCompile("Time offset: ([0-9]+)ns ± ([0-9]+)ns$")
 
 func (z *zedmon) fail(err error) error {
 	if z == nil {
 		return err
 	}
-	z.cmd = nil
-	z.stderr = nil
+	if z.stdout != nil {
+		z.stdout.Close()
+	}
 	if z.stderr != nil {
 		z.stderr.Close()
 	}
 	if z.cmd != nil && z.cmd.Process != nil {
 		z.cmd.Process.Kill()
 	}
+	z.cmd = nil
+	z.stdout = nil
+	z.csvout = nil
+	z.stderr = nil
 	return err
+}
+
+func (z *zedmon) run(fOffset, fDelta time.Duration, path string) (data chan []byte, errs chan error) {
+	data = make(chan []byte)
+	errs = make(chan error)
+	go z.doRun(fOffset, fDelta, path, data, errs)
+	return data, errs
+}
+
+func (z *zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []byte, errs chan error) {
+	// TODO(markdittmer): Add error delta to trace.
+	zOffset, zDelta, err := z.start(path)
+	if err != nil {
+		errs <- err
+		return
+	}
+	fmt.Printf("Synced zedmon clock: Offset: %v, ±%v\n", zOffset, zDelta)
+
+	offset := zOffset - fOffset
+	delta := 2 * (fDelta + zDelta)
+
+	events := make([]interface{}, 2)
+	events[0] = newZMetadataEvent()
+	var t0 time.Time
+	for {
+		strs, err := z.csvout.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			errs <- z.fail(errors.New("Failed to parse CSV record"))
+			break
+		}
+		if len(strs) != 3 {
+			errs <- z.fail(errors.New("Unexpected CSV record length"))
+			break
+		}
+		ts, err := strconv.ParseInt(strs[0], 10, 64)
+		if err != nil {
+			errs <- z.fail(errors.New("Failed to parse timestamp from CSV"))
+			break
+		}
+		vShunt, err := strconv.ParseFloat(strs[1], 64)
+		if err != nil {
+			errs <- z.fail(errors.New("Failed to parse voltage from CSV"))
+			break
+		}
+		vBus, err := strconv.ParseFloat(strs[2], 64)
+		if err != nil {
+			errs <- z.fail(errors.New("Failed to parse voltage from CSV"))
+			break
+		}
+
+		t := time.Unix(int64(ts/1000000), int64((ts%1000000)*1000)).Add(offset)
+		if t0 == (time.Time{}) {
+			t0 = t
+		}
+		events = append(events, newZCounterEvents(t, delta, float32(vShunt), float32(vBus))...)
+	}
+	events[1] = newZCompleteDurationEvent("maxTimeSyncErr", t0, delta)
+
+	// Drop last event: may be partial line from CSV stream.
+	if len(events) > 2 {
+		events = events[:len(events)-1]
+	}
+
+	d, err := json.Marshal(newZTraceReport(events))
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	data <- d
 }
 
 func (z *zedmon) start(path string) (offset time.Duration, delta time.Duration, err error) {
 	if z == nil {
 		return offset, delta, z.fail(errors.New("Nil zedmon"))
 	}
-	if z.cmd != nil || z.stderr != nil || z.err != nil {
+	if z.cmd != nil || z.stderr != nil || z.stdout != nil || z.csvout != nil || z.err != nil {
 		return offset, delta, z.fail(errors.New("Attempt to reuse zedmon object"))
 	}
 
-	z.cmd = exec.Command(path, "record")
+	z.cmd = exec.Command(path, "record", "-out", "-")
 	z.cmd.Dir, err = os.Getwd()
 	if err != nil {
 		return offset, delta, z.fail(errors.New("Failed to get working directory"))
 	}
+	z.stdout, err = z.cmd.StdoutPipe()
+	if err != nil {
+		return offset, delta, z.fail(err)
+	}
+	z.csvout = csv.NewReader(z.stdout)
 	z.stderr, err = z.cmd.StderrPipe()
 	if err != nil {
 		return offset, delta, z.fail(err)
@@ -338,7 +568,7 @@ func (z *zedmon) start(path string) (offset time.Duration, delta time.Duration, 
 
 	nl := byte('\n')
 	for l, err := r.ReadBytes(nl); err == nil; l, err = r.ReadBytes(nl) {
-		matches := zRegExp.FindSubmatch(l)
+		matches := zRegExp.FindSubmatch(l[:len(l)-1])
 		if len(matches) != 3 {
 			continue
 		}
@@ -354,6 +584,7 @@ func (z *zedmon) start(path string) (offset time.Duration, delta time.Duration, 
 			return offset, delta, z.fail(errors.New("Failed to parse time sync delta"))
 		}
 		delta = time.Nanosecond * time.Duration(d)
+		break
 	}
 
 	if err != nil {

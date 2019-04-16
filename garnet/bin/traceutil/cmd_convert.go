@@ -42,7 +42,7 @@ func (cmd *cmdConvert) Execute(_ context.Context, f *flag.FlagSet,
 	for _, jsonFilename := range f.Args() {
 		htmlGenerator := getHtmlGenerator()
 		htmlFilename := replaceFilenameExt(jsonFilename, "html")
-		err := convertTrace(htmlGenerator, jsonFilename, htmlFilename, "")
+		err := convertTrace(htmlGenerator, htmlFilename, "", jsonFilename)
 		if err != nil {
 			ret = subcommands.ExitFailure
 		}

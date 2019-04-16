@@ -134,11 +134,11 @@ func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration,
 	if err != nil {
 		return offset, delta, err
 	}
-	coutPipe, err := session.StdoutPipe()
+	cerrPipe, err := session.StderrPipe()
 	if err != nil {
 		return offset, delta, err
 	}
-	cout := bufio.NewReader(coutPipe)
+	cerr := bufio.NewReader(cerrPipe)
 
 	err = session.Start("trace time")
 	if err != nil {
@@ -146,7 +146,7 @@ func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration,
 	}
 
 	// Expect one line of "how to use timesync" output.
-	_, err = cout.ReadString('\n')
+	_, err = cerr.ReadString('\n')
 	if err != nil {
 		return offset, delta, err
 	}
@@ -156,7 +156,6 @@ func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration,
 	// Read one line; expect a timestamp.
 	for i := 0; i < 10; i++ {
 		start := time.Now()
-
 		n, err := cin.Write([]byte("t"))
 		if err != nil {
 			return offset, delta, err
@@ -166,12 +165,13 @@ func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration,
 		}
 
 		// Read a line ending with '\n'.
-		usStr, err := cout.ReadString('\n')
+		usBytes, err := cerr.ReadBytes('\n')
+
+		end := time.Now()
+
 		if err != nil {
 			return offset, delta, err
 		}
-
-		end := time.Now()
 
 		// If this wasn't the fastest RTT we've seen so far, then continue.
 		d := end.Sub(start)
@@ -184,13 +184,13 @@ func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration,
 		t1 := start.Add(delta / 2)
 
 		// Parse remote timestamp.
+		usStr := string(usBytes[:len(usBytes)-1])
 		floatUSecs, err := strconv.ParseFloat(usStr, 64)
 		if err != nil {
 			return offset, delta, errors.New("Failed to parse timestamp")
 		}
-		secs := math.Floor(floatUSecs / 1000000)
-		nanoSecs := (floatUSecs - secs) * 1000
-		t2 := time.Unix(int64(secs), int64(nanoSecs))
+		nanoSecs := int64(math.Round(floatUSecs * 1000.0))
+		t2 := time.Unix(nanoSecs/1000000000, nanoSecs%1000000000)
 
 		// Store offset between local and remote timestamps.
 		offset = t1.Sub(t2)
