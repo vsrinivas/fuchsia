@@ -5,9 +5,8 @@
 #ifndef GARNET_BIN_COBALT_APP_SYSTEM_DATA_UPDATER_IMPL_H_
 #define GARNET_BIN_COBALT_APP_SYSTEM_DATA_UPDATER_IMPL_H_
 
-#include <stdlib.h>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <stdlib.h>
 
 #include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/encoder/system_data.h"
@@ -25,11 +24,12 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   // |experiments|  All experiments the device has a notion of and the
   // arms the device belongs to for each of them. These are the only
   // experiments the device can collect data for.
-  void SetExperimentState(
-      std::vector<fuchsia::cobalt::Experiment> experiments,
-      SetExperimentStateCallback callback) override;
+  void SetExperimentState(std::vector<fuchsia::cobalt::Experiment> experiments,
+                          SetExperimentStateCallback callback) override;
 
-  void SetChannel(::fidl::StringPtr current_channel, ::fidl::StringPtr target_channel, SetChannelCallback callback) override;
+  void SetChannel(::fidl::StringPtr current_channel,
+                  ::fidl::StringPtr ignored_target_channel,
+                  SetChannelCallback callback) override;
 
   encoder::SystemData* system_data_;  // Not owned.
 
