@@ -4,30 +4,24 @@
 
 #include <lib/async-testutils/test_loop_dispatcher.h>
 
-#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#define TO_NODE(type, ptr) ((list_node_t*)&ptr->state)
-#define FROM_NODE(type, ptr) ((type*)((char*)(ptr)-offsetof(type, state)))
-
 namespace async {
 
 // An element in the loop that can be activated. It is either a task or a wait.
-class TestLoopDispatcher::Activable {
+class TestLoopDispatcher::Activated {
 public:
-    virtual ~Activable() {}
+    virtual ~Activated() {}
 
     // Dispatch the element, calling its handler.
-    virtual void Dispatch(zx_port_packet_t* packet) const = 0;
+    virtual void Dispatch() const = 0;
     // Cancel the element, calling its handler with a canceled status.
     virtual void Cancel() const = 0;
-    // Enqueue the element in a port, to check if is is activated.
-    virtual void Enqueue(zx::port* port) const = 0;
-    // Returns whether this |Activable| corresponds to the given task or wait.
+    // Returns whether this |Activated| corresponds to the given task or wait.
     virtual bool Matches(void* task_or_wait) const = 0;
     // Returns the due time for this |Activable|. If the |Activable| is a task,
     // this corresponds to its deadline, otherwise this is an infinite time in
@@ -35,26 +29,17 @@ public:
     virtual zx::time DueTime() const = 0;
 };
 
-class TestLoopDispatcher::TaskActivable : public Activable {
+class TestLoopDispatcher::TaskActivated : public Activated {
 public:
-    TaskActivable(async_dispatcher_t* dispatcher, async_task_t* task)
+    TaskActivated(async_dispatcher_t* dispatcher, async_task_t* task)
         : dispatcher_(dispatcher), task_(task) {}
 
-    void Dispatch(zx_port_packet_t* packet) const override {
-        task_->handler(dispatcher_, task_, packet->status);
+    void Dispatch() const override {
+        task_->handler(dispatcher_, task_, ZX_OK);
     }
 
     void Cancel() const override {
         task_->handler(dispatcher_, task_, ZX_ERR_CANCELED);
-    }
-
-    void Enqueue(zx::port* port) const override {
-        zx_port_packet_t timer_packet{};
-        timer_packet.type = ZX_PKT_TYPE_USER;
-        zx_status_t status = port->queue(&timer_packet);
-        ZX_ASSERT_MSG(status == ZX_OK,
-                      "zx_port_queue: %s",
-                      zx_status_get_string(status));
     }
 
     bool Matches(void* task_or_wait) const override {
@@ -70,27 +55,17 @@ private:
     async_task_t* const task_;
 };
 
-class TestLoopDispatcher::WaitActivable : public Activable {
+class TestLoopDispatcher::WaitActivated : public Activated {
 public:
-    WaitActivable(async_dispatcher_t* dispatcher, async_wait_t* wait)
-        : dispatcher_(dispatcher), wait_(wait) {}
+    WaitActivated(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_port_packet_t packet)
+        : dispatcher_(dispatcher), wait_(wait), packet_(std::move(packet)) {}
 
-    void Dispatch(zx_port_packet_t* packet) const override {
-        wait_->handler(dispatcher_, wait_, packet->status, &packet->signal);
+    void Dispatch() const override {
+        wait_->handler(dispatcher_, wait_, packet_.status, &packet_.signal);
     }
 
     void Cancel() const override {
         wait_->handler(dispatcher_, wait_, ZX_ERR_CANCELED, nullptr);
-    }
-
-    void Enqueue(zx::port* port) const override {
-        zx_status_t status = zx_object_wait_async(wait_->object, port->get(),
-                                                  0,
-                                                  wait_->trigger,
-                                                  ZX_WAIT_ASYNC_ONCE);
-        ZX_ASSERT_MSG(status == ZX_OK,
-                      "zx_object_wait_async: %s",
-                      zx_status_get_string(status));
     }
 
     bool Matches(void* task_or_wait) const override { return task_or_wait == wait_; }
@@ -102,11 +77,16 @@ public:
 private:
     async_dispatcher_t* const dispatcher_;
     async_wait_t* const wait_;
+    zx_port_packet_t const packet_;
 };
 
 TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
     : time_keeper_(time_keeper) {
     ZX_DEBUG_ASSERT(time_keeper_);
+    zx_status_t status = zx::port::create(0u, &port_);
+    ZX_ASSERT_MSG(status == ZX_OK,
+                  "zx_port_create: %s",
+                  zx_status_get_string(status));
 }
 
 TestLoopDispatcher::~TestLoopDispatcher() {
@@ -121,24 +101,44 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
 
     if (in_shutdown_) {
-      return ZX_ERR_CANCELED;
+        return ZX_ERR_CANCELED;
     }
 
-    activables_.push_back(std::make_unique<WaitActivable>(this, wait));
+    zx_status_t status = zx_object_wait_async(wait->object, port_.get(),
+                                              reinterpret_cast<uintptr_t>(wait),
+                                              wait->trigger,
+                                              ZX_WAIT_ASYNC_ONCE);
+    if (status != ZX_OK) {
+        return status;
+    }
+    pending_waits_.insert(wait);
     return ZX_OK;
 }
 
 zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
 
-    return CancelTaskOrWait(wait);
+    auto it = pending_waits_.find(wait);
+    if (it != pending_waits_.end()) {
+        pending_waits_.erase(it);
+        return zx_port_cancel(port_.get(),
+                              wait->object, reinterpret_cast<uintptr_t>(wait));
+    }
+
+    return CancelActivatedTaskOrWait(wait);
 }
 
 zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
 
     if (in_shutdown_) {
-      return ZX_ERR_CANCELED;
+        return ZX_ERR_CANCELED;
+    }
+
+    if (task->deadline <= Now().get()) {
+        ExtractActivated();
+        activated_.push_back(std::make_unique<TaskActivated>(this, task));
+        return ZX_OK;
     }
 
     future_tasks_.insert(task);
@@ -154,18 +154,13 @@ zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
         return ZX_OK;
     }
 
-    return CancelTaskOrWait(task);
+    return CancelActivatedTaskOrWait(task);
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
-    for (const auto& [activable, _] : activated_) {
-        if (activable->DueTime() < zx::time::infinite()) {
-            return activable->DueTime();
-        }
-    }
-    for (const auto& activable : activables_) {
-        if (activable->DueTime() < zx::time::infinite()) {
-            return activable->DueTime();
+    for (const auto& activated : activated_) {
+        if (activated->DueTime() < zx::time::infinite()) {
+            return activated->DueTime();
         }
     }
     if (!future_tasks_.empty()) {
@@ -187,35 +182,22 @@ bool TestLoopDispatcher::DispatchNextDueMessage() {
 
     auto activated_element = std::move(activated_.front());
     activated_.erase(activated_.begin());
-    activated_element.first->Dispatch(&activated_element.second);
+    activated_element->Dispatch();
     return true;
 }
 
 void TestLoopDispatcher::ExtractActivated() {
-    if (!activated_.empty()) {
-        return;
+    zx_port_packet_t packet;
+    while (port_.wait(zx::time(0), &packet) == ZX_OK) {
+        async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
+        pending_waits_.erase(wait);
+        activated_.push_back(std::make_unique<WaitActivated>(this, wait, std::move(packet)));
     }
 
-    // Move all tasks that reach their deadline to the activable list.
+    // Move all tasks that reach their deadline to the activated list.
     while (!future_tasks_.empty() && (*future_tasks_.begin())->deadline <= Now().get()) {
-        activables_.push_back(std::make_unique<TaskActivable>(this, (*future_tasks_.begin())));
+        activated_.push_back(std::make_unique<TaskActivated>(this, (*future_tasks_.begin())));
         future_tasks_.erase(future_tasks_.begin());
-    }
-
-    for (auto activable_iterator = activables_.begin(); activable_iterator != activables_.end();) {
-        zx::port port;
-        zx_status_t status = zx::port::create(0u, &port);
-        ZX_ASSERT_MSG(status == ZX_OK,
-                      "zx_port_create: %s",
-                      zx_status_get_string(status));
-        (*activable_iterator)->Enqueue(&port);
-        zx_port_packet_t packet;
-        if (port.wait(zx::time(0), &packet) == ZX_OK) {
-            activated_.emplace_back(std::move(*activable_iterator), packet);
-            activable_iterator = activables_.erase(activable_iterator);
-        } else {
-            ++activable_iterator;
-        }
     }
 }
 
@@ -227,43 +209,29 @@ void TestLoopDispatcher::Shutdown() {
         future_tasks_.erase(future_tasks_.begin());
         task->handler(this, task, ZX_ERR_CANCELED);
     }
-    while (!activables_.empty()) {
-        auto activable = std::move(activables_.front());
-        activables_.erase(activables_.begin());
-        activable->Cancel();
+    while (!pending_waits_.empty()) {
+        auto wait = *pending_waits_.begin();
+        pending_waits_.erase(pending_waits_.begin());
+        wait->handler(this, wait, ZX_ERR_CANCELED, nullptr);
     }
     while (!activated_.empty()) {
         auto activated = std::move(activated_.front());
         activated_.erase(activated_.begin());
-        activated.first->Cancel();
+        activated->Cancel();
     }
 }
 
-zx_status_t TestLoopDispatcher::CancelTaskOrWait(void* task_or_wait) {
-    auto activable_it = FindActivable(task_or_wait);
-    if (activable_it != activables_.end()) {
-        activables_.erase(activable_it);
-        return ZX_OK;
-    }
-
-    auto activated_it =
-        std::find_if(
-            activated_.begin(),
-            activated_.end(),
-            [&](const auto& activated) { return activated.first->Matches(task_or_wait); });
+zx_status_t TestLoopDispatcher::CancelActivatedTaskOrWait(void* task_or_wait) {
+    auto activated_it = std::find_if(
+        activated_.begin(),
+        activated_.end(),
+        [&](const auto& activated) { return activated->Matches(task_or_wait); });
     if (activated_it != activated_.end()) {
         activated_.erase(activated_it);
         return ZX_OK;
     }
 
     return ZX_ERR_NOT_FOUND;
-}
-
-TestLoopDispatcher::ActivableList::iterator TestLoopDispatcher::FindActivable(void* task_or_wait) {
-    return std::find_if(
-        activables_.begin(),
-        activables_.end(),
-        [&](const auto& activable) { return activable->Matches(task_or_wait); });
 }
 
 } // namespace async

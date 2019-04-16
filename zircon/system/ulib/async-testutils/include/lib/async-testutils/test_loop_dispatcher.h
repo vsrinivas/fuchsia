@@ -5,10 +5,10 @@
 #pragma once
 
 #include <list>
+#include <memory>
 #include <set>
 
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/async-testutils/time-keeper.h>
 #include <lib/async/dispatcher.h>
@@ -47,10 +47,9 @@ public:
     zx::time GetNextTaskDueTime();
 
 private:
-    class Activable;
-    class TaskActivable;
-    class WaitActivable;
-    using ActivableList = std::list<fbl::unique_ptr<Activable>>;
+    class Activated;
+    class TaskActivated;
+    class WaitActivated;
 
     class AsyncTaskComparator {
     public:
@@ -61,10 +60,7 @@ private:
     void ExtractActivated();
 
     // Removes the given task or wait from |activables_| and |activated_|.
-    zx_status_t CancelTaskOrWait(void* task_or_wait);
-
-    // Returns the position in |activables_| containing the given task or wait.
-    ActivableList::iterator FindActivable(void* task_or_wait);
+    zx_status_t CancelActivatedTaskOrWait(void* task_or_wait);
 
     // Dispatches all remaining posted waits and tasks, invoking their handlers
     // with status ZX_ERR_CANCELED.
@@ -80,11 +76,12 @@ private:
     // with the same deadline will be equivalent, and be ordered by order of
     // insertion.
     std::multiset<async_task_t*, AsyncTaskComparator> future_tasks_;
-    // The list of tasks and waits that need to be checked for dispatch. Tasks
-    // are ordered by deadlines.
-    ActivableList activables_;
+    // Pending waits.
+    std::set<async_wait_t*> pending_waits_;
     // Activated elements, ready to be dispatched.
-    std::list<std::pair<fbl::unique_ptr<Activable>, zx_port_packet_t>> activated_;
+    std::list<std::unique_ptr<Activated>> activated_;
+    // Port used to register waits.
+    zx::port port_;
 };
 
 } // namespace async
