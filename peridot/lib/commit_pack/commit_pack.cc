@@ -4,10 +4,14 @@
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 
-#include <lib/fsl/vmo/strings.h>
+#include <fuchsia/ledger/cloud/c/fidl.h>
+#include <lib/fidl/cpp/encoder.h>
+#include <lib/fsl/vmo/vector.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "sdk/fidl/fuchsia.ledger.cloud/serialized_commits_generated.h"
+
+using fuchsia::ledger::cloud::SerializedCommit;
+using fuchsia::ledger::cloud::SerializedCommits;
 
 namespace cloud_provider {
 
@@ -18,56 +22,57 @@ bool operator==(const CommitPackEntry& lhs, const CommitPackEntry& rhs) {
 bool EncodeCommitPack(std::vector<CommitPackEntry> commits,
                       CommitPack* commit_pack) {
   FXL_DCHECK(commit_pack);
-  flatbuffers::FlatBufferBuilder builder;
 
-  auto entries_offsets = builder.CreateVector(
-      commits.size(),
-      static_cast<std::function<flatbuffers::Offset<SerializedCommit>(size_t)>>(
-          [&builder, &commits](size_t i) {
-            const auto& entry = commits[i];
-            return CreateSerializedCommit(
-                builder, convert::ToFlatBufferVector(&builder, entry.id),
-                convert::ToFlatBufferVector(&builder, entry.data));
-          }));
+  SerializedCommits serialized_commits;
+  for (auto& commit : commits) {
+    serialized_commits.commits.push_back(SerializedCommit{
+        convert::ToArray(commit.id), convert::ToArray(commit.data)});
+  }
 
-  builder.Finish(CreateSerializedCommits(builder, entries_offsets));
-  return fsl::VmoFromString(convert::ToStringView(builder),
-                            &commit_pack->buffer);
+  // Serialization of the SerializedCommits in a buffer. In this particular
+  // case, we do not rely on FIDL encoding being stable: the buffer is simply a
+  // way to extend the maximum message size, and we expect the buffer to be
+  // immediately deserialized.
+  // Caveats: see https://fuchsia-review.googlesource.com/c/fuchsia/+/262309
+  // TODO(ambre): rewrite this using a more-supported API when available.
+  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
+  // We need to preallocate the size of the structure in the encoder, the rest
+  // is allocated when the vector is encoded.
+  encoder.Alloc(sizeof(fuchsia_ledger_cloud_SerializedCommits));
+  fidl::Encode(&encoder, &serialized_commits, 0);
+  return fsl::VmoFromVector(encoder.TakeBytes(), &commit_pack->buffer);
 }
 
 bool DecodeCommitPack(const CommitPack& commit_pack,
                       std::vector<CommitPackEntry>* commits) {
   FXL_DCHECK(commits);
-  std::string data;
-  if (!fsl::StringFromVmo(commit_pack.buffer, &data)) {
+  commits->clear();
+
+  std::vector<uint8_t> data;
+  if (!fsl::VectorFromVmo(commit_pack.buffer, &data)) {
     return false;
   }
 
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(data.data()), data.size());
-  if (!VerifySerializedCommitsBuffer(verifier)) {
+  // Deserialization of the SerializedCommits. See the comment in
+  // EncodeCommitPack for details/caveats.
+  // TODO(ambre): rewrite this using a supported API when available.
+  fidl::Message message(fidl::BytePart(data.data(), data.size(), data.size()),
+                        fidl::HandlePart());
+  const char* error_msg;
+  zx_status_t status = message.Decode(SerializedCommits::FidlType, &error_msg);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Decoding invalid CommitPack: " << error_msg;
     return false;
   }
 
-  const SerializedCommits* serialized_commits =
-      GetSerializedCommits(reinterpret_cast<const unsigned char*>(data.data()));
-  if (!serialized_commits->commits()) {
-    return false;
+  fidl::Decoder decoder(std::move(message));
+  SerializedCommits result;
+  SerializedCommits::Decode(&decoder, &result, 0);
+  for (auto& commit : result.commits) {
+    commits->emplace_back();
+    commits->back().id = convert::ToString(commit.id);
+    commits->back().data = convert::ToString(commit.data);
   }
-
-  std::vector<CommitPackEntry> result;
-  result.reserve(serialized_commits->commits()->size());
-
-  for (const auto* serialized_commit : *(serialized_commits->commits())) {
-    if (!serialized_commit->id() || !serialized_commit->data()) {
-      return false;
-    }
-
-    result.push_back({convert::ToString(serialized_commit->id()),
-                      convert::ToString(serialized_commit->data())});
-  }
-
-  commits->swap(result);
   return true;
 }
 

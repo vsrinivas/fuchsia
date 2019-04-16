@@ -86,10 +86,7 @@ protocol DeviceSetWatcher {
     OnError(Status status);
 };
 
-// TODO(ppi): switch to a format defined in a FIDL table, so that the protocol
-// is fully described by the FIDL file.
-/// Contains an ordered list of commits serialized using the SerializedCommits
-/// schema defined in serialized_commits.fbs.
+/// Contains a Buffer containing the FIDL serialization of a SerializedCommits.
 struct CommitPack {
     fuchsia.mem.Buffer buffer;
 };
@@ -97,6 +94,19 @@ struct CommitPack {
 /// A continuation token for paginated requests.
 struct Token {
     bytes opaque_id;
+};
+
+/// A commit as seen by the cloud.
+struct SerializedCommit {
+    // A unique commit id.
+    bytes id;
+    // Opaque data stored by Ledger.
+    bytes data;
+};
+
+/// A list of commits for serialization in CommitPack.
+struct SerializedCommits {
+    vector<SerializedCommit> commits;
 };
 
 /// Handler for cloud sync of a single page.

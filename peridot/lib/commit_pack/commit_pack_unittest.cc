@@ -5,10 +5,6 @@
 #include "peridot/lib/commit_pack/commit_pack.h"
 
 #include <gtest/gtest.h>
-#include <lib/fsl/vmo/strings.h>
-
-#include "peridot/lib/convert/convert.h"
-#include "sdk/fidl/fuchsia.ledger.cloud/serialized_commits_generated.h"
 
 namespace cloud_provider {
 namespace {
@@ -24,41 +20,13 @@ TEST_P(CommitPackTest, BackAndForth) {
   EXPECT_EQ(commits, result);
 }
 
-INSTANTIATE_TEST_SUITE_P(CommitPackTest, CommitPackTest,
-                         ::testing::Values(std::vector<CommitPackEntry>(),
-                                           std::vector<CommitPackEntry>{
-                                               {"id_0", "data_0"},
-                                               {"id_1", "data_1"}}));
-
-TEST_F(CommitPackTest, NullPack) {
-  // Encode SerializedCommits with the field |commits| left null.
-  flatbuffers::FlatBufferBuilder builder;
-  SerializedCommitsBuilder commits_builder(builder);
-  CommitPack commit_pack;
-  flatbuffers::Offset<SerializedCommits> off = commits_builder.Finish();
-  builder.Finish(off);
-  fsl::VmoFromString(convert::ToStringView(builder), &commit_pack.buffer);
-
-  // Should be rejected.
-  std::vector<CommitPackEntry> result;
-  EXPECT_FALSE(DecodeCommitPack(commit_pack, &result));
-}
-
-TEST_F(CommitPackTest, NullFields) {
-  // Encode a SerializedCommit with all null fields.
-  flatbuffers::FlatBufferBuilder builder;
-  SerializedCommitBuilder commit_builder(builder);
-  CommitPack commit_pack;
-  flatbuffers::Offset<SerializedCommit> off = commit_builder.Finish();
-  auto entries_offsets = builder.CreateVector(
-      std::vector<flatbuffers::Offset<SerializedCommit>>({off}));
-  builder.Finish(CreateSerializedCommits(builder, entries_offsets));
-  fsl::VmoFromString(convert::ToStringView(builder), &commit_pack.buffer);
-
-  // Should be rejected.
-  std::vector<CommitPackEntry> result;
-  EXPECT_FALSE(DecodeCommitPack(commit_pack, &result));
-}
+INSTANTIATE_TEST_SUITE_P(
+    CommitPackTest, CommitPackTest,
+    ::testing::Values(
+        std::vector<CommitPackEntry>(),
+        std::vector<CommitPackEntry>{{"id_0", "data_0"}, {"id_1", "data_1"}},
+        // This vector is too large to fit in a zx::channel message.
+        std::vector<CommitPackEntry>(10000, {"id_0", "data_0"})));
 
 }  // namespace
 }  // namespace cloud_provider

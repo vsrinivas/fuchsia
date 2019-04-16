@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/flatbuffers/flatbuffer.gni")
-
-flatbuffer("commit_pack_flatbuffer") {
-  sources = [
-    "//sdk/fidl/fuchsia.ledger.cloud/serialized_commits.fbs",
-  ]
-}
-
 source_set("commit_pack") {
   sources = [
     "commit_pack.cc",
@@ -17,7 +9,6 @@ source_set("commit_pack") {
   ]
 
   deps = [
-    ":commit_pack_flatbuffer",
     "//peridot/lib/convert",
   ]
 
@@ -35,8 +26,6 @@ source_set("unittests") {
 
   deps = [
     ":commit_pack",
-    ":commit_pack_flatbuffer",
-    "//peridot/lib/convert",
     "//third_party/googletest:gtest",
   ]
 }
