@@ -233,10 +233,18 @@ mod abigen {
     // Review" bit on Gerrit.
 
     codegen_test!(empty, AbigenBackend, ["banjo/empty.test.banjo"], "abigen/empty.abigen.out");
+
     codegen_test!(
         abigen_protocol_basic,
         AbigenBackend,
         ["banjo/abigen-protocol-basic.test.banjo"],
         "abigen/abigen-protocol-basic.abigen.out"
+    );
+
+    codegen_test!(
+        abigen_protocol_markup,
+        AbigenBackend,
+        ["banjo/abigen-protocol-markup.test.banjo"],
+        "abigen/abigen-protocol-markup.abigen.out"
     );
 }

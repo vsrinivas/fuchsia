@@ -52,15 +52,19 @@ impl ValuedAttributes {
         ValuedAttributes(result)
     }
 
-    // Returns the value for a given name, prepended with a leading space. Note
-    // that this name is the LHS of the string value, not the outer attribute
-    // name. In the example above, the name would be "p0" or "p1", rather than
-    // "zippy".
-    fn get_arg_spaced(&self, name: &str) -> String {
+    // Returns the value for a given name, prepended with prefix.
+    // Note that this name is the LHS of the string value, not the outer
+    // attribute name. In the example above, the name would be "p0" or "p1",
+    // rather than "zippy".
+    fn get_arg_with_prefix(&self, name: &str, prefix: &str) -> String {
         match self.0.get(name) {
-            Some(annot) => " ".to_owned() + &annot,
+            Some(annot) => prefix.to_owned() + &annot,
             _ => String::default(),
         }
+    }
+
+    fn get_arg(&self, name: &str) -> String {
+        self.get_arg_with_prefix(name, "")
     }
 }
 
@@ -186,8 +190,8 @@ fn get_in_params(
     m.in_params
         .iter()
         .map(|(name, ty)| {
-            let extra = arg_types.get_arg_spaced(name);
-            let arrsize = array_sizes.get_arg_spaced(name);
+            let extra = arg_types.get_arg_with_prefix(name, " ");
+            let arrsize = array_sizes.get_arg(name);
             match ty {
                 ast::Ty::Identifier { id, .. } => {
                     if id.is_base_type() {
@@ -256,7 +260,7 @@ fn get_out_params(
             if index == 0 {
                 return ty_name;
             }
-            let extra = arg_types.get_arg_spaced(name);
+            let extra = arg_types.get_arg_with_prefix(name, " ");
             match ty {
                 ast::Ty::Handle { .. } => format!("{}: {}{}", to_c_name(name), ty_name, extra),
                 _ => format!("{}: {}{}", to_c_name(name), ty_name, extra),
