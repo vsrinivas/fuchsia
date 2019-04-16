@@ -50,4 +50,9 @@ typedef struct GpioConfig {
     };
 } buttons_gpio_config_t;
 
+typedef struct RebootConfig {
+    uint32_t mseconds_delay;  // The time in milliseconds that the reboot buttons must be held.
+    uint8_t button_id; // The id of the reboot button.
+} buttons_reboot_config_t;
+
 #endif  // DDK_METADATA_BUTTONS_H_

@@ -12,12 +12,19 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 
+#include <fuchsia/device/manager/c/fidl.h>
+
 #include <hid/descriptor.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/watcher.h>
+#include <lib/zx/channel.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
@@ -31,7 +38,68 @@ constexpr uint64_t PORT_KEY_SHUTDOWN = 0x01;
 constexpr uint64_t PORT_KEY_INTERRUPT_START = 0x10;
 // clang-format on
 
+namespace {
+
+// The signal to terminate the thread responsible for rebooting.
+constexpr zx_signals_t kSignalRebootTerminate = ZX_USER_SIGNAL_0;
+
+zx_status_t send_reboot() {
+    zx::channel channel_local, channel_remote;
+    zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to create channel: %d\n", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    const char* service = "/svc/" fuchsia_device_manager_Administrator_Name;
+    status = fdio_service_connect(service, channel_remote.get());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to connect to service %s: %d\n", service, status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_device_manager_AdministratorSuspend(channel_local.get(),
+                                                         DEVICE_SUSPEND_FLAG_REBOOT,
+                                                         &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        zxlogf(ERROR, "Call to %s failed: ret: %d  remote: %d\n", service, status, call_status);
+        return status != ZX_OK ? status : call_status;
+    }
+
+    return ZX_OK;
+}
+
+} // namespace
+
 namespace buttons {
+
+int HidButtonsDevice::RebootThread() {
+    while (1) {
+        zx_signals_t signals;
+        zx_status_t status = reboot_timer_.wait_one(ZX_TIMER_SIGNALED | kSignalRebootTerminate,
+                                                    zx::time::infinite(), &signals);
+        reboot_running_ = false;
+
+        if (status == ZX_ERR_CANCELED) {
+            continue;
+        }
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s reboot_timer wait failed with with status %d\n", __FUNCTION__,
+                   status);
+            continue;
+        }
+        if (signals & kSignalRebootTerminate) {
+            return 0;
+        }
+
+        status = send_reboot();
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s Reboot failed with status %d\n", __FUNCTION__, status);
+            continue;
+        }
+    }
+}
 
 int HidButtonsDevice::Thread() {
     while (1) {
@@ -134,6 +202,31 @@ bool HidButtonsDevice::MatrixScan(uint32_t row, uint32_t col, zx_duration_t dela
     return static_cast<bool>(val);
 }
 
+zx_status_t HidButtonsDevice::UpdateReboot(uint8_t button_id, bool pressed) {
+    if (button_id != reboot_button_) {
+        return ZX_OK;
+    }
+    if (pressed && !reboot_running_) {
+        zx_status_t status = reboot_timer_.set(
+            zx::time(zx_deadline_after(ZX_MSEC(reboot_mseconds_delay_))),
+            zx::duration(ZX_MSEC(100)));
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s reboot timer set failed %d\n", __FUNCTION__, status);
+            return status;
+        }
+        reboot_running_ = true;
+    }
+    if (!pressed) {
+        zx_status_t status = reboot_timer_.cancel();
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s reboot timer cancel failed %d\n", __FUNCTION__, status);
+            return status;
+        }
+        reboot_running_ = false;
+    }
+    return ZX_OK;
+}
+
 zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                               size_t len, size_t* out_len) {
     if (!data || !out_len) {
@@ -182,6 +275,13 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
 
         zxlogf(TRACE, "%s GPIO new value %u for button %lu\n", __FUNCTION__, new_value, i);
         fill_button_in_report(buttons_[i].id, new_value, &input_rpt);
+
+        if (reboot_button_ != BUTTONS_ID_MAX) {
+            zx_status_t status = UpdateReboot(buttons_[i].id, new_value);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
     }
     auto out = static_cast<buttons_input_rpt_t*>(data);
     *out = input_rpt;
@@ -382,9 +482,43 @@ zx_status_t HidButtonsDevice::Bind() {
         }
     }
 
+    // Setup reboot config if it exists.
+    buttons_reboot_config_t reboot_config;
+    actual = 0;
+    status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_REBOOT, &reboot_config,
+                                 sizeof(buttons_reboot_config_t), &actual);
+    if (status == ZX_OK) {
+        if (actual != sizeof(buttons_reboot_config_t)) {
+            zxlogf(ERROR, "%s getting reboot config size (%ld) is not equal to"
+                          "expected size (%ld)\n",
+                   __FILE__, actual, sizeof(buttons_reboot_config_t));
+            return ZX_ERR_INTERNAL;
+        }
+        reboot_button_ = reboot_config.button_id;
+        reboot_mseconds_delay_ = reboot_config.mseconds_delay;
+        status = zx::timer::create(0, ZX_CLOCK_MONOTONIC, &reboot_timer_);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s zx_timer_create failed %d\n", __FUNCTION__, status);
+            return status;
+        }
+
+        auto f = [](void* arg) -> int {
+            return reinterpret_cast<HidButtonsDevice*>(arg)->RebootThread();
+        };
+
+        int rc = thrd_create_with_name(&reboot_thread_, f, this, "hid-buttons-reboot-thread");
+        if (rc != thrd_success) {
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
     auto f = [](void* arg) -> int { return reinterpret_cast<HidButtonsDevice*>(arg)->Thread(); };
     int rc = thrd_create_with_name(&thread_, f, this, "hid-buttons-thread");
     if (rc != thrd_success) {
+        if (reboot_button_ != BUTTONS_ID_MAX) {
+            reboot_timer_.signal(0, kSignalRebootTerminate);
+            thrd_join(reboot_thread_, NULL);
+        }
         return ZX_ERR_INTERNAL;
     }
 
@@ -403,6 +537,12 @@ void HidButtonsDevice::ShutDown() {
     zx_status_t status = port_.queue(&packet);
     ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
+
+    if (reboot_button_ != BUTTONS_ID_MAX) {
+        reboot_timer_.signal(0, kSignalRebootTerminate);
+        thrd_join(reboot_thread_, NULL);
+    }
+
     for (uint32_t i = 0; i < gpios_.size(); ++i) {
         gpios_[i].irq.destroy();
     }

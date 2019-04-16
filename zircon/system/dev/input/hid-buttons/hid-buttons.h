@@ -17,6 +17,7 @@
 
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+#include <lib/zx/timer.h>
 
 #include <zircon/thread_annotations.h>
 
@@ -58,6 +59,8 @@ private:
         buttons_gpio_config_t config;
     };
 
+    zx_status_t UpdateReboot(uint8_t button_id, bool pressed);
+    int RebootThread();
     int Thread();
     void ShutDown() TA_EXCL(client_lock_);
     void ReconfigurePolarity(uint32_t idx, uint64_t int_port);
@@ -66,6 +69,13 @@ private:
 
     thrd_t thread_;
     zx::port port_;
+
+    bool reboot_running_ = false;
+    uint8_t reboot_button_ = BUTTONS_ID_MAX;
+    uint32_t reboot_mseconds_delay_ = 0;
+    zx::timer reboot_timer_ = {};
+    thrd_t reboot_thread_;
+
     fbl::Mutex client_lock_;
     ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
     fbl::Array<buttons_button_config_t> buttons_;
