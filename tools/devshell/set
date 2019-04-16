@@ -6,7 +6,7 @@
 ### set up a build directory
 
 ## usage: fx set PRODUCT.BOARD [--with GNLABEL1,GNLABEL2,...]
-##               [--release] [--build-dir BUILDDIR]
+##               [--release] [--auto-dir | --build-dir BUILDDIR]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--with-base GNLABEL1,GNLABEL2,...]
 ##
@@ -32,6 +32,7 @@
 ## If GN fails with an error, `fx set` does not change anything.
 ##
 ## optional arguments:
+##   --auto-dir            Act like `fx --dir out/PRODUCT.BOARD set ...`.
 ##   --with GNLABEL        Labels of additional packages to include in the
 ##                         universe of available packages. These packages can
 ##                         be run ephemerally. Multiple labels can be provided
@@ -176,6 +177,7 @@ function main {
   local gn_after_args=""
   local base=()
   local universe=()
+  local auto_dir=false
   local build_dir=
   local variant=
   local use_goma
@@ -184,6 +186,13 @@ function main {
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --auto-dir)
+        if [[ -n "${_FX_BUILD_DIR}" ]]; then
+          fx-error "fx --dir and fx set --auto-dir are mutually exclusive, pick one."
+          return 1
+        fi
+        auto_dir=true
+        ;;
       --with-base)
         if [[ $# -lt 2 ]]; then
           fx-command-help
@@ -305,23 +314,30 @@ function main {
   build_dir="${build_dir%/}"
 
   local config_build_dir
-  case "$build_dir" in
-    '')
-      # Default is "//out/default".  Store it as relative.
-      config_build_dir="out/default"
-      build_dir="${FUCHSIA_DIR}/${config_build_dir}"
-      ;;
-    //*|out/*)
-      # GN-style "source-relative" path or relative out/something.
-      config_build_dir="${build_dir#//}"
-      build_dir="${FUCHSIA_DIR}/${config_build_dir}"
-      ;;
-    *)
-      fx-error "Invalid build directory: ${build_dir}"
-      fx-error "Please specify a build directory as \"out/something\"."
-      exit 1
-      ;;
-  esac
+  if $auto_dir; then
+    if [[ -n "$build_dir" ]]; then
+      fx-error "--auto-dir and --build-dir are mutually exclusive, pick one."
+      return 1
+    fi
+    config_build_dir="out/${product_name}.${board_name}"
+  else
+    case "$build_dir" in
+      '')
+        # Default is "//out/default".  Store it as relative.
+        config_build_dir="out/default"
+        ;;
+      //*|out/*)
+        # GN-style "source-relative" path or relative out/something.
+        config_build_dir="${build_dir#//}"
+        ;;
+      *)
+        fx-error "Invalid build directory: ${build_dir}"
+        fx-error "Please specify a build directory as \"out/something\"."
+        exit 1
+        ;;
+    esac
+  fi
+  build_dir="${FUCHSIA_DIR}/${config_build_dir}"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -z "${goma_dir}" ]]; then
