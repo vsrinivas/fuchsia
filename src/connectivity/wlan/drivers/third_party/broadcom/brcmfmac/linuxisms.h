@@ -262,16 +262,12 @@ enum {
     WLAN_MAX_KEY_LEN = (32),
     IRQF_SHARED, // TODO(cphoenix) - Used only in PCI
     WLAN_EID_VENDOR_SPECIFIC,
-    NL80211_WPA_VERSION_1,
-    NL80211_WPA_VERSION_2,
-    NL80211_AUTHTYPE_SHARED_KEY,
     BSS_PARAM_FLAGS_CTS_PROT,
     BSS_PARAM_FLAGS_SHORT_PREAMBLE,
     BSS_PARAM_FLAGS_SHORT_SLOT_TIME,
     UPDATE_ASSOC_IES,
     WIPHY_FLAG_SUPPORTS_TDLS,
     REGULATORY_CUSTOM_REG,
-    NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR,
     IFF_ALLMULTI = 0,
     NET_NETBUF_PAD,
     IFF_PROMISC,
@@ -297,13 +293,6 @@ enum nl80211_key_type {
     NL80211_KEYTYPE_GROUP,
     NL80211_KEYTYPE_PAIRWISE,
 };
-
-enum nl80211_band {
-    NL80211_BAND_2GHZ,
-    NL80211_BAND_5GHZ,
-    NL80211_BAND_60GHZ,
-};
-#define NL80211_BAND_COUNT (NL80211_BAND_60GHZ + 1)
 
 enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE };
 
@@ -384,9 +373,6 @@ struct wiphy {
     uint32_t retry_long;
     uint32_t retry_short;
     uint32_t interface_modes;
-    struct ieee80211_supported_band* bands[NL80211_BAND_COUNT];
-    int n_iface_combinations;
-    struct ieee80211_iface_combination* iface_combinations;
     uint32_t max_scan_ssids;
     uint32_t max_scan_ie_len;
     uint32_t max_num_pmkids;
@@ -402,9 +388,6 @@ struct wiphy {
     uint32_t n_vendor_commands;
     const struct wiphy_vendor_command* vendor_commands;
     uint8_t perm_addr[ETH_ALEN];
-    void (*reg_notifier)(struct wiphy*, struct regulatory_request*);
-    uint32_t regulatory_flags;
-    uint32_t features;
     struct brcmf_cfg80211_info* cfg80211_info;
     struct brcmf_device* dev;
 };

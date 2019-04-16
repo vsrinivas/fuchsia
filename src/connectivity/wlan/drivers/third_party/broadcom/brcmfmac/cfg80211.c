@@ -132,34 +132,6 @@ static uint16_t __wl_rates[] = {
 #define wl_a_rates (__wl_rates + 4)
 #define wl_a_rates_size (wl_g_rates_size - 4)
 
-/* This is to override regulatory domains defined in cfg80211 module (reg.c)
- * By default world regulatory domain defined in reg.c puts the flags
- * NL80211_RRF_NO_IR for 5GHz channels (for * 36..48 and 149..165).
- * With respect to these flags, wpa_supplicant doesn't * start p2p
- * operations on 5GHz channels. All the changes in world regulatory
- * domain are to be done here.
- */
-// TODO(cphoenix): Re-enable this when we know how to use it.
-#ifdef REGULATORY_DOMAIN_OVERRIDE
-static const struct ieee80211_regdomain brcmf_regdom = {
-    .n_reg_rules = 4,
-    .alpha2 = "99",
-    .reg_rules = {
-        /* IEEE 802.11b/g, channels 1..11 */
-        REG_RULE(2412 - 10, 2472 + 10, 40, 6, 20, 0),
-        /* If any */
-        /* IEEE 802.11 channel 14 - Only JP enables
-         * this and for 802.11b only
-         */
-        REG_RULE(2484 - 10, 2484 + 10, 20, 6, 20, 0),
-        /* IEEE 802.11a, channel 36..64 */
-        REG_RULE(5150 - 10, 5350 + 10, 80, 6, 20, 0),
-        /* IEEE 802.11a, channel 100..165 */
-        REG_RULE(5470 - 10, 5850 + 10, 80, 6, 20, 0),
-    }
-};
-#endif // REGULATORY_DOMAIN_OVERRIDE
-
 /* Vendor specific ie. id = 221, oui and type defines exact ie */
 struct brcmf_vs_tlv {
     uint8_t id;
@@ -3959,13 +3931,6 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
     brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_notify_connect_status);
     brcmf_fweh_register(cfg->pub, BRCMF_E_PFN_NET_FOUND, brcmf_notify_sched_scan_results);
     brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
-    brcmf_fweh_register(cfg->pub, BRCMF_E_P2P_DISC_LISTEN_COMPLETE,
-                        brcmf_p2p_notify_listen_complete);
-    brcmf_fweh_register(cfg->pub, BRCMF_E_ACTION_FRAME_RX, brcmf_p2p_notify_action_frame_rx);
-    brcmf_fweh_register(cfg->pub, BRCMF_E_ACTION_FRAME_COMPLETE,
-                        brcmf_p2p_notify_action_tx_complete);
-    brcmf_fweh_register(cfg->pub, BRCMF_E_ACTION_FRAME_OFF_CHAN_COMPLETE,
-                        brcmf_p2p_notify_action_tx_complete);
     brcmf_fweh_register(cfg->pub, BRCMF_E_PSK_SUP, brcmf_notify_connect_status);
 }
 
@@ -4299,6 +4264,7 @@ zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_du
     return sync_completion_wait(&event->vif_event_wait, timeout);
 }
 
+#if 0 // NEEDS PORTING
 static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alpha2[2],
                                                 struct brcmf_fil_country_le* ccreq) {
     struct brcmfmac_pd_cc* country_codes;
@@ -4341,68 +4307,13 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
 
     return ZX_OK;
 }
-
-static void brcmf_cfg80211_reg_notifier(struct wiphy* wiphy, struct regulatory_request* req) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = cfg_to_if(cfg);
-    struct brcmf_fil_country_le ccreq;
-    zx_status_t err;
-    int i;
-
-    /* The country code gets set to "00" by default at boot, ignore */
-    if (req->alpha2[0] == '0' && req->alpha2[1] == '0') {
-        return;
-    }
-
-    /* ignore non-ISO3166 country codes */
-    for (i = 0; i < (int)sizeof(req->alpha2); i++)
-        if (req->alpha2[i] < 'A' || req->alpha2[i] > 'Z') {
-            brcmf_err("not an ISO3166 code (0x%02x 0x%02x)\n", req->alpha2[0], req->alpha2[1]);
-            return;
-        }
-
-    brcmf_dbg(TRACE, "Enter: initiator=%d, alpha=%c%c\n", req->initiator, req->alpha2[0],
-              req->alpha2[1]);
-
-    err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq));
-    if (err != ZX_OK) {
-        brcmf_err("Country code iovar returned err = %d\n", err);
-        return;
-    }
-
-    err = brcmf_translate_country_code(ifp->drvr, req->alpha2, &ccreq);
-    if (err != ZX_OK) {
-        return;
-    }
-
-    err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq));
-    if (err != ZX_OK) {
-        brcmf_err("Firmware rejected country setting\n");
-        return;
-    }
-}
+#endif
 
 static void brcmf_free_wiphy(struct wiphy* wiphy) {
-    int i;
-
     if (!wiphy) {
         return;
     }
 
-    if (wiphy->iface_combinations) {
-        for (i = 0; i < wiphy->n_iface_combinations; i++) {
-            free(wiphy->iface_combinations[i].limits);
-        }
-    }
-    free(wiphy->iface_combinations);
-    if (wiphy->bands[NL80211_BAND_2GHZ]) {
-        free(wiphy->bands[NL80211_BAND_2GHZ]->channels);
-        free(wiphy->bands[NL80211_BAND_2GHZ]);
-    }
-    if (wiphy->bands[NL80211_BAND_5GHZ]) {
-        free(wiphy->bands[NL80211_BAND_5GHZ]->channels);
-        free(wiphy->bands[NL80211_BAND_5GHZ]);
-    }
 #if IS_ENABLED(CONFIG_PM)
     if (wiphy->wowlan != &brcmf_wowlan_support) {
         free(wiphy->wowlan);
@@ -4474,11 +4385,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     cfg->d11inf.io_type = (uint8_t)io_type;
     brcmu_d11_attach(&cfg->d11inf);
 
-    brcmf_dbg(INFO, "Registering custom regulatory\n");
-    wiphy->reg_notifier = brcmf_cfg80211_reg_notifier;
-    wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
-    brcmf_dbg(TEMP, "* * Wanted to wiphy_apply_custom_regulatory(wiphy, &brcmf_regdom);");
-
     // NOTE: linux first verifies that 40 MHz operation is enabled in 2.4 GHz channels.
     err = brcmf_enable_bw40_2g(cfg);
     if (err == ZX_OK) {
@@ -4524,16 +4430,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     if (err != ZX_OK) {
         brcmf_err("FWEH activation failed (%d)\n", err);
         goto detach;
-    }
-
-    /* Fill in some of the advertised nl80211 supported features */
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SCAN_RANDOM_MAC)) {
-        wiphy->features |= NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR;
-#ifdef CONFIG_PM
-        if (wiphy->wowlan && wiphy->wowlan->flags & WIPHY_WOWLAN_NET_DETECT) {
-            wiphy->features |= NL80211_FEATURE_ND_RANDOM_MAC_ADDR;
-        }
-#endif
     }
 
     brcmf_dbg(TEMP, "Exit");
