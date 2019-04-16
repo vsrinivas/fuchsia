@@ -7,7 +7,7 @@ reference for types of documentation. For information on documentation style gui
 
 ## Conceptual, procedural, or reference documentation
 
-Most documentation can be divided into four categories:
+Most documentation can be divided into these categories:
 
 - [Reference](#reference-documentation) - Documentation that provides a source of information about
   parts of a system such as API parameters.
@@ -22,7 +22,7 @@ Most documentation can be divided into four categories:
 including, but not limited to APIs and CLIs. Reference documentation should allow the user to
 understand how to use a specific feature quickly and easily.
 
-**You should write a conceptual document** if you plan on explaining a concept about a product. 
+**You should write a conceptual document** if you plan on explaining a concept about a product.
 Conceptual documents explain a specific concept, but for the most part they do not include actual
 examples. They provide essential facts, background, and diagrams to help your readers build a
 foundational understanding of a product or topic. You should not explain industry standards that
@@ -32,7 +32,7 @@ in with your feature, but you should not explain the basics behind that industry
 **You should write a procedural document** if you plan on explaining to a user how to use a specific
 feature and are able to guide a user through simple numbered steps. Procedural documents tend to
 reinforce the concepts that were explained in a conceptual document by giving one or more
-examples that might be useful for users. 
+examples that might be useful for users.
 
 Procedural documents are divided into two categories:
 
@@ -51,7 +51,7 @@ How can you decide what type of document is appropriate for your use case? Consi
   procedures can be a codelab since a hand-held example is ideal to understand the function of the
   alarm manager.
 - How to operate the radio. This is a procedural document. This can be a how to guide since the
-  use of a radio tends to be quite intuitive and in most cases wouldn't require a hand-held example. 
+  use of a radio tends to be quite intuitive and in most cases wouldn't require a hand-held example.
 - How does a transistor work? This is a conceptual document that would be geared towards a more
   advanced user.
 - Functions of the car radio. This is a reference document.
@@ -68,9 +68,10 @@ limited to APIs and CLIs. The style of reference documentation should be the sam
 documentation of that type. For example, API documentation should define all of the API's parameters,
 indicate if a parameter is required or optional, and show examples of the use of the API. These
 examples should be very generic and simple. If you feel like you need a more elaborate example,
-consider creating a procedural document to reinforce your reference documentation. 
+consider creating a procedural document to reinforce your reference documentation.
 
-For the style guide for API documentation, see [API style guide](../development/api/documentation.md).
+For the style guide for API documentation, see
+[API style guide](../development/api/documentation.md).
 
 ## Conceptual documentation {#conceptual-documentation}
 
@@ -170,3 +171,4 @@ Consider the following when you think that you might need to create a codelab:
 - If a procedural document is meant for beginner users, avoid adding procedures that you might
   consider better suited for advanced users. If your document is intended for advanced users, state
   it up front and give them a list of prerequisites before they go through your how to or codelab.
+  
