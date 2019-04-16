@@ -13,8 +13,7 @@
 
 namespace overnetstack {
 
-static const char* kServiceName =
-    "__overnet__mdns__test__1db2_6473_a3b1_500c__._udp.";
+static const char* kServiceName = "_temp_overnet._udp.";
 
 static fuchsia::mdns::ControllerPtr Connect(
     sys::ComponentContext* component_context, const char* why) {

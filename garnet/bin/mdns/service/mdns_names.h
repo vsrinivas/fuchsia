@@ -16,17 +16,16 @@ struct MdnsNames {
   static const std::string kAnyServiceFullName;
 
   // Constructs a local host name from a simple host name. For example, produces
-  // "host.local." from "host". The simple host name must not end in a ".".
+  // "host.local." from "host".
   static std::string LocalHostFullName(const std::string& host_name);
 
   // Constructs a local service name from a simple service name. For example,
-  // produces "_foo._tcp.local." from "_foo._tcp.". The simple service name
-  // must end in ".".
+  // produces "_foo._tcp.local." from "_foo._tcp.".
   static std::string LocalServiceFullName(const std::string& service_name);
 
   // Constructs a local service name from a simple service name and subtype.
-  // For example, produces "_bar._sub_foo._tcp.local." from "_foo._tcp." and
-  // subtype "_bar.". The simple service name and subtype must both end in ".".
+  // For example, produces "_bar._sub_.foo._tcp.local." from "_foo._tcp." and
+  // subtype "_bar".
   static std::string LocalServiceSubtypeFullName(
       const std::string& service_name, const std::string& subtype);
 
@@ -60,6 +59,12 @@ struct MdnsNames {
 
   // Determines if |instance_name| is a valid simple instance name.
   static bool IsValidInstanceName(const std::string& instance_name);
+
+  // Determines if |subtype_name| is a valid simple subtype name.
+  static bool IsValidSubtypeName(const std::string& subtype_name);
+
+  // Determines if |text_string| is a valid text string.
+  static bool IsValidTextString(const std::string& text_string);
 };
 
 }  // namespace mdns

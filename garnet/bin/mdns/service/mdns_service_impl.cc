@@ -340,6 +340,7 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 void MdnsServiceImpl::SimplePublisher::GetPublication(
     bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
+  FXL_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   callback(Mdns::Publication::Create(port_, text_));
 }
 
@@ -360,6 +361,17 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
 
   responder_.events().OnSubtypesChanged =
       [this](std::vector<std::string> subtypes) {
+        for (auto& subtype : subtypes) {
+          if (!MdnsNames::IsValidSubtypeName(subtype)) {
+            FXL_LOG(ERROR)
+                << "Invalid subtype " << subtype
+                << " passed in OnSubtypesChanged event, closing connection.";
+            responder_ = nullptr;
+            Unpublish();
+            return;
+          }
+        }
+
         SetSubtypes(std::move(subtypes));
       };
 
@@ -376,17 +388,28 @@ void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
     bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
+  FXL_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   FXL_DCHECK(responder_);
   responder_->GetPublication(
       query, subtype,
       [this, callback = std::move(callback)](
           fuchsia::mdns::PublicationPtr publication_ptr) {
         if (publication_ptr) {
+          for (auto& text : publication_ptr->text) {
+            if (!MdnsNames::IsValidTextString(text)) {
+              FXL_LOG(ERROR) << "Invalid text string returned by "
+                                "Responder.GetPublication, closing connection.";
+              responder_ = nullptr;
+              Unpublish();
+              return;
+            }
+          }
+
           if (publication_ptr->ptr_ttl < ZX_SEC(1) ||
               publication_ptr->srv_ttl < ZX_SEC(1) ||
               publication_ptr->txt_ttl < ZX_SEC(1)) {
             FXL_LOG(ERROR) << "TTL less than one second returned by "
-                              "Responder.GetPublication, closing connection";
+                              "Responder.GetPublication, closing connection.";
             responder_ = nullptr;
             Unpublish();
             return;
