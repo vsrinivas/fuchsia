@@ -26,7 +26,7 @@ SessionProvider::SessionProvider(Delegate* const delegate,
       on_zero_sessions_(std::move(on_zero_sessions)) {}
 
 bool SessionProvider::StartSession(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+    fuchsia::ui::views::ViewToken view_token,
     fuchsia::modular::auth::AccountPtr account,
     fuchsia::auth::TokenManagerPtr ledger_token_manager,
     fuchsia::auth::TokenManagerPtr agent_token_manager) {
@@ -69,7 +69,7 @@ bool SessionProvider::StartSession(
       CloneStruct(session_shell_), CloneStruct(story_shell_),
       use_session_shell_for_story_shell_factory_,
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_owner),
+      std::move(account), std::move(view_token),
       /* get_presentation= */
       [this](
           fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {

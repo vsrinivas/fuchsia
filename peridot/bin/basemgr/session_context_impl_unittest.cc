@@ -5,6 +5,7 @@
 #include "peridot/bin/basemgr/session_context_impl.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -41,9 +42,9 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
       &launcher, kSessionId, CloneStruct(app_config) /* sessionmgr_config */,
       CloneStruct(app_config) /* session_shell_config */,
       CloneStruct(app_config) /* story_shell_config */,
-      false, /* use_session_shell_for_story_shell_factory */
+      false /* use_session_shell_for_story_shell_factory */,
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* account */, fuchsia::ui::views::ViewToken(),
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {
       } /* get_presentation */,
       [](bool) {} /* done_callback */);
@@ -76,7 +77,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /* story_shell_config= */ CloneStruct(app_config),
       /* use_session_shell_for_story_shell_factory= */ false,
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      /* account= */ nullptr, /* view_owner_request= */ nullptr,
+      /* account= */ nullptr, fuchsia::ui::views::ViewToken(),
       /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},
       /* done_callback= */

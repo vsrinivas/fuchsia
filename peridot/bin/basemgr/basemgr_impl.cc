@@ -5,13 +5,9 @@
 #include "peridot/bin/basemgr/basemgr_impl.h"
 
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/type_converter.h>
-#include <lib/fit/function.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -123,7 +119,6 @@ void BasemgrImpl::StartBaseShell() {
 
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
-
       /* shell_config= */ GetActiveSessionShellConfig(),
       /* on_swap_session_shell= */ [this] {
         SelectNextSessionShell(/* callback= */ [] {});
@@ -323,9 +318,10 @@ void BasemgrImpl::GetAuthenticationUIContext(
 void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
                           fuchsia::auth::TokenManagerPtr ledger_token_manager,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
   auto did_start_session = session_provider_->StartSession(
-      view_owner.NewRequest(), std::move(account),
+      std::move(view_token), std::move(account),
       std::move(ledger_token_manager), std::move(agent_token_manager));
   if (!did_start_session) {
     FXL_LOG(WARNING) << "Session was already started and the logged in user "
@@ -345,10 +341,7 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // that enable presenter, and production code.
   if (!config_.test() || config_.enable_presenter()) {
     presentation_container_ = std::make_unique<PresentationContainer>(
-        presenter_.get(),
-        scenic::ToViewHolderToken(
-            zx::eventpair(view_owner.TakeChannel().release())),
-
+        presenter_.get(), std::move(view_holder_token),
         /* shell_config= */ GetActiveSessionShellConfig(),
         /* on_swap_session_shell= */ [this] {
           SelectNextSessionShell(/* callback= */ [] {});

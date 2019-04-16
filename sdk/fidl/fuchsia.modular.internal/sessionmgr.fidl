@@ -8,7 +8,7 @@ using fuchsia.auth;
 using fuchsia.modular;
 using fuchsia.modular.auth;
 using fuchsia.ui.policy;
-using fuchsia.ui.viewsv1token;
+using fuchsia.ui.views;
 
 // The basemgr application (there is no |Basemgr| service) requests
 // an instance of this service in order to launch and display a |Sessionmgr|.
@@ -31,7 +31,7 @@ protocol Sessionmgr {
                fuchsia.auth.TokenManager? ledger_token_manager,
                fuchsia.auth.TokenManager? agent_token_manager,
                SessionContext session_context,
-               request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
+               fuchsia.ui.views.ViewToken view_token);
 
     SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
 };

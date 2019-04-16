@@ -16,16 +16,15 @@ use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
 use fidl_fuchsia_modular_internal::{SessionContextMarker, SessionmgrMarker};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fidl_fuchsia_ui_input::PointerEvent;
-use fidl_fuchsia_ui_views::ViewHolderToken;
-use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::{
     client::{App as LaunchedApp, Launcher},
     fuchsia_single_component_package_url,
 };
 use fuchsia_async as fasync;
-use fuchsia_scenic::{Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder};
+use fuchsia_scenic::{
+    new_view_token_pair, Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
+};
 use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use rand::Rng;
 use std::collections::BTreeMap;
@@ -116,10 +115,8 @@ impl VoilaViewAssistant {
         let mut story_shell_config = AppConfig { url: MONDRIAN_URI.to_string(), args: None };
 
         // Set up views.
-        let (view_owner_client, view_owner_server) = create_endpoints::<ViewOwnerMarker>()?;
-        let view_holder_token = ViewHolderToken {
-            value: zx::EventPair::from(zx::Handle::from(view_owner_client.into_channel())),
-        };
+        let (mut view_token, view_holder_token) = new_view_token_pair()?;
+
         let host_node = EntityNode::new(session.clone());
         let host_view_holder = ViewHolder::new(session.clone(), view_holder_token, None);
         host_node.attach(&host_view_holder);
@@ -158,7 +155,7 @@ impl VoilaViewAssistant {
                 None,  /* ledger_token_manager */
                 None,  /* agent_token_manager */
                 session_context_client,
-                Some(view_owner_server),
+                &mut view_token,
             )
             .context("Failed to issue initialize request for sessionmgr")?;
         Ok(())

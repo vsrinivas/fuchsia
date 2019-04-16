@@ -192,9 +192,9 @@ void SessionmgrImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
         session_context,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request) {
+    fuchsia::ui::views::ViewToken view_token) {
   FXL_LOG(INFO) << "SessionmgrImpl::Initialize() called.";
+
   // This is called in the service connection factory callbacks for session
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
@@ -231,8 +231,7 @@ void SessionmgrImpl::Initialize(
   InitializeSessionEnvironment(session_id);
   InitializeUser(std::move(account), std::move(agent_token_manager));
   InitializeSessionShell(std::move(session_shell_config),
-                         scenic::ToViewToken(zx::eventpair(
-                             view_owner_request.TakeChannel().release())));
+                         std::move(view_token));
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {

@@ -5,7 +5,6 @@
 #include "peridot/bin/basemgr/presentation_container.h"
 
 #include <src/lib/fxl/logging.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <cmath>
 
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"

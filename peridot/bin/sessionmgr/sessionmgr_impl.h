@@ -14,7 +14,6 @@
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -78,8 +77,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
           session_context,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request) override;
+      fuchsia::ui::views::ViewToken view_token) override;
 
   // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,

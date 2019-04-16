@@ -11,7 +11,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
@@ -55,8 +55,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fuchsia::modular::auth::AccountPtr account,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
+      fuchsia::ui::views::ViewToken view_token,
       GetPresentationCallback get_presentation,
       OnSessionShutdownCallback on_session_shutdown);
 

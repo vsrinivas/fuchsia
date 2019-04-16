@@ -8,6 +8,8 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 
 #include "peridot/bin/basemgr/session_context_impl.h"
@@ -45,11 +47,10 @@ class SessionProvider {
   // Starts a new sessionmgr process if there isn't one already. Returns false
   // if there is an existing sessionmgr process, and does not start a new
   // session. Returns true if a new session was started successfully.
-  bool StartSession(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fuchsia::modular::auth::AccountPtr account,
-      fuchsia::auth::TokenManagerPtr ledger_token_manager,
-      fuchsia::auth::TokenManagerPtr agent_token_manager);
+  bool StartSession(fuchsia::ui::views::ViewToken view_token,
+                    fuchsia::modular::auth::AccountPtr account,
+                    fuchsia::auth::TokenManagerPtr ledger_token_manager,
+                    fuchsia::auth::TokenManagerPtr agent_token_manager);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.
