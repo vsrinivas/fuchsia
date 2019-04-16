@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_pkg as fpkg, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, macros::*},
-    fuchsia_uri::pkg_uri::FuchsiaPkgUri,
+    fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon::{HandleBased, Status},
     futures::{StreamExt, TryStreamExt},
     std::ffi::CString,
@@ -50,7 +50,7 @@ async fn run_resolver_service(mut stream: fpkg::PackageResolverRequestStream) ->
 }
 
 async fn resolve(package_uri: String, dir: ServerEnd<DirectoryMarker>) -> Result<(), Status> {
-    let uri = FuchsiaPkgUri::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
+    let uri = PkgUri::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
     let name = uri.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
     if name != "routing_integration_test" {
         return Err(Status::NOT_FOUND);

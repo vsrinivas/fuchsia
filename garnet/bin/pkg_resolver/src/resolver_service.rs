@@ -14,7 +14,7 @@ use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use fuchsia_uri::pkg_uri::FuchsiaPkgUri;
+use fuchsia_uri::pkg_uri::PkgUri;
 use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
 use futures::prelude::*;
 use lazy_static::lazy_static;
@@ -72,7 +72,7 @@ pub async fn run_resolver_service(
     Ok(())
 }
 
-fn rewrite_uri(rewrites: &Arc<RwLock<RewriteManager>>, uri: FuchsiaPkgUri) -> FuchsiaPkgUri {
+fn rewrite_uri(rewrites: &Arc<RwLock<RewriteManager>>, uri: PkgUri) -> PkgUri {
     for rule in rewrites.read().list() {
         match rule.apply(&uri) {
             Some(Ok(res)) => {
@@ -100,7 +100,7 @@ async fn resolve<'a>(
     _update_policy: UpdatePolicy,
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-    let uri = FuchsiaPkgUri::parse(&pkg_uri).map_err(|err| {
+    let uri = PkgUri::parse(&pkg_uri).map_err(|err| {
         fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
         Err(Status::INVALID_ARGS)
     })?;
@@ -162,7 +162,7 @@ async fn resolve<'a>(
     Ok(())
 }
 
-async fn wait_for_update_to_complete(chan: Channel, uri: &FuchsiaPkgUri) -> Result<BlobId, Status> {
+async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<BlobId, Status> {
     let mut buf = MessageBuf::new();
 
     let sigs = await!(fasync::OnSignals::new(
@@ -485,12 +485,9 @@ mod tests {
                 Some(variant) => format!("/{}/{}", name, variant),
             };
 
-            let uri = FuchsiaPkgUri::new_package(
-                "fuchsia.com".to_string(),
-                path,
-                merkle.map(|s| s.to_string()),
-            )
-            .unwrap();
+            let uri =
+                PkgUri::new_package("fuchsia.com".to_string(), path, merkle.map(|s| s.to_string()))
+                    .unwrap();
 
             let res = await!(wait_for_update_to_complete(chan, &uri));
             assert_eq!(res, expected_res);

@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_uri::pkg_uri::FuchsiaPkgUri,
+    fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
     std::path::PathBuf,
@@ -35,7 +35,7 @@ impl FuchsiaPkgResolver {
         component_uri: &'a str,
     ) -> Result<fsys::Component, ResolverError> {
         // Parse URI.
-        let fuchsia_pkg_uri = FuchsiaPkgUri::parse(component_uri)
+        let fuchsia_pkg_uri = PkgUri::parse(component_uri)
             .map_err(|e| ResolverError::uri_parse_error(component_uri, e))?;
         fuchsia_pkg_uri
             .resource()
@@ -141,7 +141,7 @@ mod tests {
             package_uri: &str,
             dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
         ) -> Result<(), zx::Status> {
-            let package_uri = FuchsiaPkgUri::parse(&package_uri).expect("bad uri");
+            let package_uri = PkgUri::parse(&package_uri).expect("bad uri");
             if package_uri.name().unwrap() != "hello_world" {
                 return Err(zx::Status::NOT_FOUND);
             }

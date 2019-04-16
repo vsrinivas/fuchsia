@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_uri::pkg_uri::FuchsiaPkgUri;
+use fuchsia_uri::pkg_uri::PkgUri;
 use log::{error, info, warn};
 use omaha_client::install_plan::InstallPlan;
 use omaha_client::protocol::response::{OmahaStatus, Response};
@@ -10,7 +10,7 @@ use omaha_client::protocol::response::{OmahaStatus, Response};
 #[derive(Debug, PartialEq)]
 pub struct FuchsiaInstallPlan {
     /// The fuchsia TUF repo URI, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
-    pub uri: FuchsiaPkgUri,
+    pub uri: PkgUri,
 }
 
 impl InstallPlan for FuchsiaInstallPlan {
@@ -70,10 +70,10 @@ impl InstallPlan for FuchsiaInstallPlan {
             warn!("Only 1 url is supported, found {}", urls.len());
         }
 
-        match FuchsiaPkgUri::parse(&url.codebase) {
+        match PkgUri::parse(&url.codebase) {
             Ok(uri) => Some(FuchsiaInstallPlan { uri: uri }),
             Err(err) => {
-                error!("Failed to parse {} to FuchsiaPkgUri: {}", url.codebase, err);
+                error!("Failed to parse {} to PkgUri: {}", url.codebase, err);
                 None
             }
         }

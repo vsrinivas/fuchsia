@@ -5,12 +5,12 @@
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl,
-    fuchsia_uri::pkg_uri::{FuchsiaPkgUri, ParseError},
+    fuchsia_uri::pkg_uri::{ParseError, PkgUri},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
 };
 
-/// A `Rule` can be used to re-write parts of a [`FuchsiaPkgUri`].
+/// A `Rule` can be used to re-write parts of a [`PkgUri`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Rule {
     host_match: String,
@@ -36,8 +36,7 @@ impl Rule {
         path_prefix_replacement: String,
     ) -> Result<Self, RuleParseError> {
         fn validate_host(s: &str) -> Result<(), RuleParseError> {
-            FuchsiaPkgUri::new_repository(s.to_owned())
-                .map_err(|_err| RuleParseError::InvalidHost)?;
+            PkgUri::new_repository(s.to_owned()).map_err(|_err| RuleParseError::InvalidHost)?;
             Ok(())
         }
 
@@ -60,7 +59,7 @@ impl Rule {
         Ok(Self { host_match, host_replacement, path_prefix_match, path_prefix_replacement })
     }
 
-    /// Apply this `Rule` to the given [`FuchsiaPkgUri`].
+    /// Apply this `Rule` to the given [`PkgUri`].
     ///
     /// In order for a `Rule` to match a particular fuchsia-pkg:// URI, `host` must match `uri`'s
     /// host exactly and `path` must prefix match the `uri`'s path at a '/' boundary.  If `path`
@@ -69,7 +68,7 @@ impl Rule {
     /// When a `Rule` does match the given `uri`, it will replace the matched hostname and path
     /// with the given replacement strings, preserving the unmatched part of the path, the hash
     /// query parameter, and any fragment.
-    pub fn apply(&self, uri: &FuchsiaPkgUri) -> Option<Result<FuchsiaPkgUri, ParseError>> {
+    pub fn apply(&self, uri: &PkgUri) -> Option<Result<PkgUri, ParseError>> {
         if uri.host() != self.host_match {
             return None;
         }
@@ -92,15 +91,15 @@ impl Rule {
         };
 
         Some(match (new_path.as_str(), uri.resource()) {
-            ("/", _) => FuchsiaPkgUri::new_repository(self.host_replacement.clone()),
+            ("/", _) => PkgUri::new_repository(self.host_replacement.clone()),
 
-            (_, None) => FuchsiaPkgUri::new_package(
+            (_, None) => PkgUri::new_package(
                 self.host_replacement.clone(),
                 new_path,
                 uri.hash().map(|s| s.to_owned()),
             ),
 
-            (_, Some(resource)) => FuchsiaPkgUri::new_resource(
+            (_, Some(resource)) => PkgUri::new_resource(
                 self.host_replacement.clone(),
                 new_path,
                 uri.hash().map(|s| s.to_owned()),
@@ -392,10 +391,10 @@ mod rule_tests {
                     .unwrap();
 
                     $(
-                        let input = FuchsiaPkgUri::parse($input).unwrap();
+                        let input = PkgUri::parse($input).unwrap();
                         let output: Option<Result<&str, ParseError>> = $output;
-                        let output: Option<Result<FuchsiaPkgUri, _>> = match output {
-                            Some(Ok(s)) => Some(Ok(FuchsiaPkgUri::parse(s).unwrap())),
+                        let output: Option<Result<PkgUri, _>> = match output {
+                            Some(Ok(s)) => Some(Ok(PkgUri::parse(s).unwrap())),
                             Some(Err(x)) => Some(Err(x)),
                             None => None,
                         };

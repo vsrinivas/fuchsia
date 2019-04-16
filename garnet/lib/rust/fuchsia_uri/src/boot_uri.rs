@@ -12,12 +12,12 @@ use url::Url;
 ///
 /// fuchsia-boot:///path/to#path/to/resource
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FuchsiaBootUri {
+pub struct BootUri {
     path: String,
     resource: Option<String>,
 }
 
-impl FuchsiaBootUri {
+impl BootUri {
     pub fn parse(input: &str) -> Result<Self, ParseError> {
         let uri = Url::parse(input)?;
 
@@ -69,7 +69,7 @@ impl FuchsiaBootUri {
             None => None,
         };
 
-        Ok(FuchsiaBootUri { path, resource })
+        Ok(BootUri { path, resource })
     }
 
     pub fn path(&self) -> &str {
@@ -80,16 +80,16 @@ impl FuchsiaBootUri {
         self.resource.as_ref().map(|s| s.as_str())
     }
 
-    pub fn root_uri(&self) -> FuchsiaBootUri {
-        FuchsiaBootUri { path: self.path.clone(), resource: None }
+    pub fn root_uri(&self) -> BootUri {
+        BootUri { path: self.path.clone(), resource: None }
     }
 
-    pub fn new_path(path: String) -> Result<FuchsiaBootUri, ParseError> {
-        Ok(FuchsiaBootUri { path: path.clone(), resource: None })
+    pub fn new_path(path: String) -> Result<BootUri, ParseError> {
+        Ok(BootUri { path: path.clone(), resource: None })
     }
 
-    pub fn new_resource(path: String, resource: String) -> Result<FuchsiaBootUri, ParseError> {
-        let mut uri = FuchsiaBootUri::new_path(path)?;
+    pub fn new_resource(path: String, resource: String) -> Result<BootUri, ParseError> {
+        let mut uri = BootUri::new_path(path)?;
         if resource.is_empty() || !check_resource(&resource) {
             return Err(ParseError::InvalidResourcePath);
         }
@@ -98,7 +98,7 @@ impl FuchsiaBootUri {
     }
 }
 
-impl fmt::Display for FuchsiaBootUri {
+impl fmt::Display for BootUri {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "fuchsia-boot://{}", self.path)?;
         if let Some(ref resource) = self.resource {
@@ -135,8 +135,8 @@ mod tests {
                 fn $test_name() {
                     let pkg_uri = $pkg_uri.to_string();
                     assert_eq!(
-                        FuchsiaBootUri::parse(&pkg_uri),
-                        Ok(FuchsiaBootUri {
+                        BootUri::parse(&pkg_uri),
+                        Ok(BootUri {
                             path: $pkg_path,
                             resource: $pkg_resource,
                         })
@@ -160,7 +160,7 @@ mod tests {
                 fn $test_name() {
                     for uri in &$uris {
                         assert_eq!(
-                            FuchsiaBootUri::parse(uri),
+                            BootUri::parse(uri),
                             Err($err),
                         );
                     }
@@ -318,18 +318,18 @@ mod tests {
 
     test_format! {
         test_format_path_uri => {
-            parsed = FuchsiaBootUri::new_path("/path/to".to_string()).unwrap(),
+            parsed = BootUri::new_path("/path/to".to_string()).unwrap(),
             formatted = "fuchsia-boot:///path/to",
         }
         test_format_resource_uri => {
-            parsed = FuchsiaBootUri::new_resource("/path/to".to_string(), "path/to/resource".to_string()).unwrap(),
+            parsed = BootUri::new_resource("/path/to".to_string(), "path/to/resource".to_string()).unwrap(),
             formatted = "fuchsia-boot:///path/to#path/to/resource",
         }
     }
 
     #[test]
     fn test_new_path() {
-        let uri = FuchsiaBootUri::new_path("/path/to".to_string()).unwrap();
+        let uri = BootUri::new_path("/path/to".to_string()).unwrap();
         assert_eq!("/path/to", uri.path());
         assert_eq!(None, uri.resource());
         assert_eq!(uri, uri.root_uri());
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn test_new_resource() {
         let uri =
-            FuchsiaBootUri::new_resource("/path/to".to_string(), "foo/bar".to_string()).unwrap();
+            BootUri::new_resource("/path/to".to_string(), "foo/bar".to_string()).unwrap();
         assert_eq!("/path/to", uri.path());
         assert_eq!(Some("foo/bar"), uri.resource());
         let mut uri_no_resource = uri.clone();

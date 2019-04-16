@@ -5,7 +5,7 @@
 use {
     crate::errors::RepositoryParseError,
     fidl_fuchsia_pkg as fidl,
-    fuchsia_uri::pkg_uri::{FuchsiaPkgUri, RepoUri},
+    fuchsia_uri::pkg_uri::{PkgUri, RepoUri},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
     std::mem,
@@ -93,7 +93,7 @@ pub struct RepositoryConfig {
     repo_url: RepoUri,
     root_keys: Vec<RepositoryKey>,
     mirrors: Vec<MirrorConfig>,
-    update_package_uri: Option<FuchsiaPkgUri>,
+    update_package_uri: Option<PkgUri>,
 }
 
 impl RepositoryConfig {
@@ -195,7 +195,7 @@ impl RepositoryConfigBuilder {
         self
     }
 
-    pub fn update_package_uri(mut self, uri: FuchsiaPkgUri) -> Self {
+    pub fn update_package_uri(mut self, uri: PkgUri) -> Self {
         self.config.update_package_uri = Some(uri);
         self
     }
