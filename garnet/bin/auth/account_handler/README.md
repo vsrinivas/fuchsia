@@ -22,8 +22,8 @@ Persona channels may only be obtained from an Account channel.
 
 * */lib/auth/account_common* - Account Handler uses error and identifier
   definitions from this crate
-* */lib/auth/token_manager* - Account Manager uses the TokenManager library to
-  perform the authentication token management and implement the
+* */identity/lib/token_manager* - Account Manager uses the TokenManager library
+  to perform the authentication token management and implement the
   fuchsia.auth.TokenManager FIDL protocol
 
 

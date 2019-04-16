@@ -20,7 +20,7 @@ Fuchsia account system.
 
 ## Key Dependencies
 
-* */lib/auth/token_manager* - Token Manager Factory uses the TokenManager
+* */identity/lib/token_manager* - Token Manager Factory uses the TokenManager
   library to perform its authentication token management and implement the
   fuchsia.auth.TokenManager FIDL protocol
 * *Auth Providers* - Token Manager Factory launches instances of components that

@@ -14,10 +14,10 @@ must also be associated with a `TokenManagerContext`.
 
 ## Key Dependencies
 
-* */lib/auth/store* - Token Manager uses this crate to implement the database of
-  long-lived credentials such as OAuth refresh tokens
-* */lib/auth/cache* - Token Manager uses this crate to implement a cache of
-  short-lived credentials such as OAuth access tokens
+* */identity/lib/token_store* - Token Manager uses this crate to implement the
+  database of long-lived credentials such as OAuth refresh tokens
+* */identity/lib/token_cache* - Token Manager uses this crate to implement a
+  cache of short-lived credentials such as OAuth access tokens
 * *Auth Providers* - Token Manager communicates with components that implement
   the fuchsia.auth.AuthProvider FIDL protocol to establish and exchange
   credentials

@@ -25,7 +25,7 @@ fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
   the Account Handler component to handle the request for each Fuchsia account
 * */lib/auth/account_common* - Account Manager uses error and identifier
   definitions from this crate
-* */lib/auth/token_manager* - Account Manager uses the AuthProviderConnection
+* */identity/lib/token_manager* - Account Manager uses the AuthProviderConnection
   struct to lazily launch and maintain connections to components implementing
   the fuchsia.auth.AuthProviderFactory FIDL protocol
 * *Auth Providers* - Account Manager launches instances of components that
