@@ -29,9 +29,9 @@ Mdns::Mdns() : dispatcher_(async_get_default_dispatcher()) {}
 Mdns::~Mdns() {}
 
 void Mdns::SetVerbose(bool verbose) {
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
   verbose_ = verbose;
-#endif  // ifndef NDEBUG
+#endif  // MDNS_TRACE
 }
 
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
@@ -74,12 +74,12 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
       },
       [this](std::unique_ptr<DnsMessage> message,
              const ReplyAddress& reply_address) {
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
         if (verbose_) {
           FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
                         << *message;
         }
-#endif  // ifndef NDEBUG
+#endif  // MDNS_TRACE
 
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
@@ -391,7 +391,7 @@ void Mdns::SendMessages() {
       message.header_.SetAuthoritativeAnswer(true);
     }
 
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
     if (verbose_) {
       if (reply_address == MdnsAddresses::kV4MulticastReply) {
         FXL_LOG(INFO) << "Outbound message (multicast): " << message;
@@ -400,7 +400,7 @@ void Mdns::SendMessages() {
                       << message;
       }
     }
-#endif  // ifndef NDEBUG
+#endif  // MDNS_TRACE
 
     transceiver_.SendMessage(&message, reply_address);
   }

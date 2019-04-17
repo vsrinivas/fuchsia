@@ -12,7 +12,7 @@
 
 namespace mdns {
 
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
 
 std::ostream& operator<<(std::ostream& os, DnsType value) {
   switch (value) {
@@ -195,6 +195,6 @@ std::ostream& operator<<(std::ostream& os, const DnsMessage& value) {
   return os << fostr::Outdent;
 }
 
-#endif // ifndef NDEBUG
+#endif // ifdef MDNS_TRACE
 
 }  // namespace mdns

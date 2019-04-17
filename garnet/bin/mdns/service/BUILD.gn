@@ -9,6 +9,12 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+declare_args() {
+  # Enables the tracing feature of mdns, which can be turned on using
+  # "mdns-util verbose".
+  enable_mdns_trace = false
+}
+
 group("service") {
   testonly = true
   deps = [
@@ -101,6 +107,12 @@ source_set("source_set") {
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
+
+  if (enable_mdns_trace) {
+    defines = [
+      "MDNS_TRACE",
+    ]
+  }
 }
 
 test("tests") {

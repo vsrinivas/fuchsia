@@ -25,6 +25,7 @@ static const std::string kUdpSuffix = "._udp.";
 
 }  // namespace
 
+// TODO(dalesat): Remove publish/unpublish commands.
 MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
   std::vector<Command> commands{
       {"verbose", CommandVerb::kVerbose, 0, nullptr},
@@ -137,14 +138,12 @@ void MdnsParams::Usage() {
   std::cout << "commands:\n";
   std::cout << "    resolve <host_name>\n";
   std::cout << "    subscribe <service_name>\n";
-  std::cout << "    publish <service_name> <instance_name> <port>\n";
-  std::cout << "    unpublish <service_name> <instance_name>\n";
   std::cout << "    respond <service_name> <instance_name> <port>\n";
-  std::cout << "    verbose (debug build only)\n";
-  std::cout << "    quiet (debug build only)\n";
+  std::cout << "    verbose (requires enable_mdns_trace gn arg)\n";
+  std::cout << "    quiet (requires enable_mdns_trace gn arg)\n";
   std::cout << "options:\n";
   std::cout << "    --timeout=<seconds>       # applies to resolve\n";
-  std::cout << "    --text=<text,...>         # applies to publish, respond\n";
+  std::cout << "    --text=<text,...>         # applies to respond\n";
   std::cout << "    --announce=<subtype,...>  # applies to respond\n";
   std::cout << "options must precede the command\n";
   std::cout << "<host_name> and <instance_name> cannot end in '.'\n";

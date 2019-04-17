@@ -14,7 +14,7 @@
 
 namespace mdns {
 
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
@@ -45,7 +45,7 @@ std::ostream& operator<<(std::ostream& os, const DnsQuestion& value);
 std::ostream& operator<<(std::ostream& os, const DnsResource& value);
 std::ostream& operator<<(std::ostream& os, const DnsMessage& value);
 
-#endif // ifndef NDEBUG
+#endif // ifdef MDNS_TRACE
 
 }  // namespace mdns
 

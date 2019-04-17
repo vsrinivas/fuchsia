@@ -276,9 +276,9 @@ class Mdns : public MdnsAgent::Host {
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>
       instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
-#ifndef NDEBUG
+#ifdef MDNS_TRACE
   bool verbose_ = false;
-#endif  // ifndef NDEBUG
+#endif  // MDNS_TRACE
   std::shared_ptr<ResourceRenewer> resource_renewer_;
   bool prohibit_agent_removal_ = false;
 
