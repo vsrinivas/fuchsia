@@ -19,15 +19,15 @@ public:
         : error_reporter_(error_reporter) {}
 
     AttributesBuilder(ErrorReporter* error_reporter,
-                      std::vector<std::unique_ptr<raw::Attribute>> attributes)
+                      std::vector<raw::Attribute> attributes)
         : error_reporter_(error_reporter), attributes_(std::move(attributes)) {
         for (auto& attribute : attributes_) {
-            names_.emplace(attribute->name);
+            names_.emplace(attribute.name);
         }
     }
 
-    bool Insert(std::unique_ptr<raw::Attribute> attribute);
-    std::vector<std::unique_ptr<raw::Attribute>> Done();
+    bool Insert(raw::Attribute attribute);
+    std::vector<raw::Attribute> Done();
 
 private:
     struct InsertResult {
@@ -43,10 +43,10 @@ private:
         std::string message_fragment;
     };
 
-    InsertResult InsertHelper(std::unique_ptr<raw::Attribute> attribute);
+    InsertResult InsertHelper(raw::Attribute attribute);
 
     ErrorReporter* error_reporter_;
-    std::vector<std::unique_ptr<raw::Attribute>> attributes_;
+    std::vector<raw::Attribute> attributes_;
     std::set<std::string> names_;
 };
 

@@ -238,10 +238,10 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
     return std::make_unique<raw::Attribute>(scope.GetSourceElement(), str_name, str_value);
 }
 
-std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<raw::Attribute>&& doc_comment, ASTScope& scope) {
+std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope) {
     AttributesBuilder attributes_builder(error_reporter_);
     if (doc_comment) {
-        if (!attributes_builder.Insert(std::move(doc_comment)))
+        if (!attributes_builder.Insert(std::move(*doc_comment.get())))
             return Fail();
     }
     ConsumeToken(OfKind(Token::Kind::kLeftSquare));
@@ -251,7 +251,7 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(std::unique_ptr<r
         auto attribute = ParseAttribute();
         if (!Ok())
             return Fail();
-        if (!attributes_builder.Insert(std::move(attribute)))
+        if (!attributes_builder.Insert(std::move(*attribute.get())))
             return Fail();
         if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
             break;
@@ -289,7 +289,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
     // no generic attributes, start the attribute list
     if (doc_comment) {
         AttributesBuilder attributes_builder(error_reporter_);
-        if (!attributes_builder.Insert(std::move(doc_comment)))
+        if (!attributes_builder.Insert(std::move(*doc_comment.get())))
             return Fail();
         return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), attributes_builder.Done());
     }

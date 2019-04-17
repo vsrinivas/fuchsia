@@ -319,9 +319,9 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
     if (!attributes)
         return fidl::StringView();
     for (const auto& attribute : attributes->attributes) {
-        if (StringView(attribute->name) == name) {
-            if (attribute->value != "") {
-                const auto& value = attribute->value;
+        if (StringView(attribute.name) == name) {
+            if (attribute.value != "") {
+                const auto& value = attribute.value;
                 return fidl::StringView(value.data(), value.size());
             }
             // Don't search for another attribute with the same name.
@@ -786,12 +786,6 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
     return root_typespace;
 }
 
-bool NoOpConstraint(ErrorReporter* error_reporter,
-                    const raw::Attribute* attribute,
-                    const Decl* decl) {
-    return true;
-}
-
 AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
                                  const std::set<std::string> allowed_values,
                                  Constraint constraint)
@@ -800,7 +794,7 @@ AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
       constraint_(std::move(constraint)) {}
 
 void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
-                                        const raw::Attribute* attribute,
+                                        const raw::Attribute& attribute,
                                         Placement placement) const {
     if (allowed_placements_.size() == 0)
         return;
@@ -808,22 +802,22 @@ void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
     if (iter != allowed_placements_.end())
         return;
     std::string message("placement of attribute '");
-    message.append(attribute->name);
+    message.append(attribute.name);
     message.append("' disallowed here");
-    error_reporter->ReportError(attribute->location(), message);
+    error_reporter->ReportError(attribute.location(), message);
 }
 
 void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
-                                    const raw::Attribute* attribute) const {
+                                    const raw::Attribute& attribute) const {
     if (allowed_values_.size() == 0)
         return;
-    auto iter = allowed_values_.find(attribute->value);
+    auto iter = allowed_values_.find(attribute.value);
     if (iter != allowed_values_.end())
         return;
     std::string message("attribute '");
-    message.append(attribute->name);
+    message.append(attribute.name);
     message.append("' has invalid value '");
-    message.append(attribute->value);
+    message.append(attribute.value);
     message.append("', should be one of '");
     bool first = true;
     for (const auto& hint : allowed_values_) {
@@ -833,11 +827,11 @@ void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
         message.append("'");
         first = false;
     }
-    error_reporter->ReportError(attribute->location(), message);
+    error_reporter->ReportError(attribute.location(), message);
 }
 
 void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
-                                         const raw::Attribute* attribute,
+                                         const raw::Attribute& attribute,
                                          const Decl* decl) const {
     auto check = error_reporter->Checkpoint();
     auto passed = constraint_(error_reporter, attribute, decl);
@@ -845,18 +839,18 @@ void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
         assert(check.NoNewErrors() && "cannot add errors and pass");
     } else if (check.NoNewErrors()) {
         std::string message("declaration did not satisfy constraint of attribute '");
-        message.append(attribute->name);
+        message.append(attribute.name);
         message.append("' with value '");
-        message.append(attribute->value);
+        message.append(attribute.value);
         message.append("'");
         // TODO(pascallouis): It would be nicer to use the location of
         // the declaration, however we do not keep it around today.
-        error_reporter->ReportError(attribute->location(), message);
+        error_reporter->ReportError(attribute.location(), message);
     }
 }
 
 bool SimpleLayoutConstraint(ErrorReporter* error_reporter,
-                            const raw::Attribute* attribute,
+                            const raw::Attribute& attribute,
                             const Decl* decl) {
     assert(decl->kind == Decl::Kind::kStruct);
     auto struct_decl = static_cast<const Struct*>(decl);
@@ -893,10 +887,10 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceLocation& location,
 }
 
 bool MaxBytesConstraint(ErrorReporter* error_reporter,
-                        const raw::Attribute* attribute,
+                        const raw::Attribute& attribute,
                         const Decl* decl) {
     uint32_t bound;
-    if (!ParseBound(error_reporter, attribute->location(), attribute->value, &bound))
+    if (!ParseBound(error_reporter, attribute.location(), attribute.value, &bound))
         return false;
     uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
     switch (decl->kind) {
@@ -931,17 +925,17 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter,
         message << " bytes allowed, but ";
         message << max_bytes;
         message << " bytes found";
-        error_reporter->ReportError(attribute->location(), message.str());
+        error_reporter->ReportError(attribute.location(), message.str());
         return false;
     }
     return true;
 }
 
 bool MaxHandlesConstraint(ErrorReporter* error_reporter,
-                          const raw::Attribute* attribute,
+                          const raw::Attribute& attribute,
                           const Decl* decl) {
     uint32_t bound;
-    if (!ParseBound(error_reporter, attribute->location(), attribute->value.c_str(), &bound))
+    if (!ParseBound(error_reporter, attribute.location(), attribute.value.c_str(), &bound))
         return false;
     uint32_t max_handles = std::numeric_limits<uint32_t>::max();
     switch (decl->kind) {
@@ -976,14 +970,14 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter,
         message << " allowed, but ";
         message << max_handles;
         message << " found";
-        error_reporter->ReportError(attribute->location(), message.str());
+        error_reporter->ReportError(attribute.location(), message.str());
         return false;
     }
     return true;
 }
 
 bool ResultShapeConstraint(ErrorReporter* error_reporter,
-                           const raw::Attribute* attribute,
+                           const raw::Attribute& attribute,
                            const Decl* decl) {
     assert(decl->kind == Decl::Kind::kUnion);
     auto union_decl = static_cast<const Union*>(decl);
@@ -1026,9 +1020,11 @@ static std::string Trim(std::string s) {
     return s;
 }
 
-bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute* attribute, const Decl* decl) {
+bool TransportConstraint(ErrorReporter* error_reporter,
+                         const raw::Attribute& attribute,
+                         const Decl* decl) {
     // Parse comma separated transports
-    const std::string& value = attribute->value;
+    const std::string& value = attribute.value;
     std::string::size_type prev_pos = 0;
     std::string::size_type pos;
     std::vector<std::string> transports;
@@ -1170,8 +1166,8 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 }
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_reporter,
-                                                          const raw::Attribute* attribute) const {
-    const auto& attribute_name = attribute->name;
+                                                          const raw::Attribute& attribute) const {
+    const auto& attribute_name = attribute.name;
     auto iter = attribute_schemas_.find(attribute_name);
     if (iter != attribute_schemas_.end()) {
         const auto& schema = iter->second;
@@ -1191,7 +1187,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
             message.append("'; did you mean '");
             message.append(name_and_schema.first);
             message.append("'?");
-            error_reporter->ReportWarning(attribute->location(), message);
+            error_reporter->ReportWarning(attribute.location(), message);
             return nullptr;
         }
     }
@@ -1276,10 +1272,10 @@ void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
     if (attributes == nullptr)
         return;
     for (const auto& attribute : attributes->attributes) {
-        auto schema = all_libraries_->RetrieveAttributeSchema(error_reporter_, attribute.get());
+        auto schema = all_libraries_->RetrieveAttributeSchema(error_reporter_, attribute);
         if (schema != nullptr) {
-            schema->ValidatePlacement(error_reporter_, attribute.get(), placement);
-            schema->ValidateValue(error_reporter_, attribute.get());
+            schema->ValidatePlacement(error_reporter_, attribute, placement);
+            schema->ValidateValue(error_reporter_, attribute);
         }
     }
 }
@@ -1289,9 +1285,9 @@ void Library::ValidateAttributesConstraints(const Decl* decl,
     if (attributes == nullptr)
         return;
     for (const auto& attribute : attributes->attributes) {
-        auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute.get());
+        auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
         if (schema != nullptr)
-            schema->ValidateConstraint(error_reporter_, attribute.get(), decl);
+            schema->ValidateConstraint(error_reporter_, attribute, decl);
     }
 }
 
@@ -1596,8 +1592,8 @@ bool Library::CreateMethodResult(const Name& interface_name,
     std::vector<Union::Member> result_members;
     result_members.push_back(std::move(response_member));
     result_members.push_back(std::move(error_member));
-    std::vector<std::unique_ptr<raw::Attribute>> result_attributes;
-    result_attributes.emplace_back(std::make_unique<raw::Attribute>(*method, "Result", ""));
+    std::vector<raw::Attribute> result_attributes;
+    result_attributes.emplace_back(*method, "Result", "");
     auto result_attributelist = std::make_unique<raw::AttributeList>(*method,
                                                                      std::move(result_attributes));
     union_declarations_.push_back(std::make_unique<Union>(std::move(result_attributelist),

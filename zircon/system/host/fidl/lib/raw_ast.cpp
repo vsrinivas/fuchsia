@@ -61,7 +61,7 @@ void Ordinal::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
 }
 
-void Attribute::Accept(TreeVisitor& visitor) {
+void Attribute::Accept(TreeVisitor& visitor) const {
     SourceElementMark sem(visitor, *this);
 }
 

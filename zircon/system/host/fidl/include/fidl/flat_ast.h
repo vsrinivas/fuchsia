@@ -971,7 +971,7 @@ private:
 class AttributeSchema {
 public:
     using Constraint = fit::function<bool(ErrorReporter* error_reporter,
-                                          const raw::Attribute* attribute,
+                                          const raw::Attribute& attribute,
                                           const Decl* decl)>;
 
     // Placement indicates the placement of an attribute, e.g. whether an
@@ -1003,19 +1003,19 @@ public:
     AttributeSchema(AttributeSchema&& schema) = default;
 
     void ValidatePlacement(ErrorReporter* error_reporter,
-                           const raw::Attribute* attribute,
+                           const raw::Attribute& attribute,
                            Placement placement) const;
 
     void ValidateValue(ErrorReporter* error_reporter,
-                       const raw::Attribute* attribute) const;
+                       const raw::Attribute& attribute) const;
 
     void ValidateConstraint(ErrorReporter* error_reporter,
-                            const raw::Attribute* attribute,
+                            const raw::Attribute& attribute,
                             const Decl* decl) const;
 
 private:
     static bool NoOpConstraint(ErrorReporter* error_reporter,
-                               const raw::Attribute* attribute,
+                               const raw::Attribute& attribute,
                                const Decl* decl) {
         return true;
     }
@@ -1043,7 +1043,7 @@ public:
     }
 
     const AttributeSchema* RetrieveAttributeSchema(ErrorReporter* error_reporter,
-                                                   const raw::Attribute* attribute) const;
+                                                   const raw::Attribute& attribute) const;
 
 private:
     std::map<std::vector<StringView>, std::unique_ptr<Library>> all_libraries_;

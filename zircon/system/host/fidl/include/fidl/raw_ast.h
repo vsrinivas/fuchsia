@@ -192,12 +192,12 @@ public:
     void Accept(TreeVisitor& visitor);
 };
 
-class Attribute : public SourceElement {
+class Attribute final : public SourceElement {
 public:
     Attribute(SourceElement const& element, std::string name, std::string value)
         : SourceElement(element), name(std::move(name)), value(std::move(value)) {}
 
-    void Accept(TreeVisitor& visitor);
+    void Accept(TreeVisitor& visitor) const;
 
     const std::string name;
     const std::string value;
@@ -205,12 +205,12 @@ public:
 
 class AttributeList : public SourceElement {
 public:
-    AttributeList(SourceElement const& element, std::vector<std::unique_ptr<Attribute>> attributes)
+    AttributeList(SourceElement const& element, std::vector<Attribute> attributes)
         : SourceElement(element), attributes(std::move(attributes)) {}
 
     bool HasAttribute(std::string name) const {
         for (const auto& attribute : attributes) {
-            if (attribute->name == name)
+            if (attribute.name == name)
                 return true;
         }
         return false;
@@ -218,7 +218,7 @@ public:
 
     void Accept(TreeVisitor& visitor);
 
-    std::vector<std::unique_ptr<Attribute>> attributes;
+    std::vector<Attribute> attributes;
 };
 
 class TypeConstructor final : public SourceElement {

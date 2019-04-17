@@ -292,7 +292,7 @@ protocol MyInterface {
 }
 
 bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
-                          const fidl::raw::Attribute* attribute,
+                          const fidl::raw::Attribute& attribute,
                           const fidl::flat::Decl* decl) {
     switch (decl->kind) {
     case fidl::flat::Decl::Kind::kStruct: {

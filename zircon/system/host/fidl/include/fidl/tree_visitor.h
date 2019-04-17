@@ -110,8 +110,8 @@ public:
         element->Accept(*this);
     }
 
-    virtual void OnAttribute(std::unique_ptr<Attribute>& element) {
-        element->Accept(*this);
+    virtual void OnAttribute(const Attribute& element) {
+        element.Accept(*this);
     }
 
     virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) {
