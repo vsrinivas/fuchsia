@@ -75,8 +75,11 @@ Session::Session(SessionId id, SessionContext session_context,
 
   inspect_resource_count_ =
       inspect_object_.CreateUIntMetric("resource_count", 0);
-  inspect_last_applied_update_presentation_time_ =
-      inspect_object_.CreateUIntMetric("last_applied_update_presentation_time",
+  inspect_last_applied_target_presentation_time_ =
+      inspect_object_.CreateUIntMetric("last_applied_target_presentation_time",
+                                       0);
+  inspect_last_applied_requested_presentation_time_ =
+      inspect_object_.CreateUIntMetric("last_applied_request_presentation_time",
                                        0);
   inspect_last_requested_presentation_time_ =
       inspect_object_.CreateUIntMetric("last_requested_presentation_time", 0);
@@ -231,8 +234,10 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
 
     // TODO(SCN-1202): gather statistics about how close the actual
     // presentation_time was to the requested time.
-    inspect_last_applied_update_presentation_time_.Set(
+    inspect_last_applied_requested_presentation_time_.Set(
         last_applied_update_presentation_time_);
+    inspect_last_applied_target_presentation_time_.Set(
+        target_presentation_time);
     inspect_resource_count_.Set(resource_count_);
   }
 

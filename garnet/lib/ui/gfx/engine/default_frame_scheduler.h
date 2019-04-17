@@ -116,6 +116,8 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   inspect::Object inspect_object_;
   inspect::UIntMetric inspect_frame_number_;
+  inspect::UIntMetric inspect_last_successful_update_start_time_;
+  inspect::UIntMetric inspect_last_successful_render_start_time_;
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 

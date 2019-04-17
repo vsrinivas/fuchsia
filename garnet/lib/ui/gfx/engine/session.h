@@ -197,7 +197,8 @@ class Session {
 
   inspect::Object inspect_object_;
   inspect::UIntMetric inspect_resource_count_;
-  inspect::UIntMetric inspect_last_applied_update_presentation_time_;
+  inspect::UIntMetric inspect_last_applied_target_presentation_time_;
+  inspect::UIntMetric inspect_last_applied_requested_presentation_time_;
   inspect::UIntMetric inspect_last_requested_presentation_time_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last

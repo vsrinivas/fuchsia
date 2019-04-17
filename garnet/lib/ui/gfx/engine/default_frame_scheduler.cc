@@ -26,7 +26,11 @@ DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
   inspect_frame_number_ =
-      inspect_object_.CreateUIntMetric("frame_number", 0);
+      inspect_object_.CreateUIntMetric("most_recent_frame_number", frame_number_);
+  inspect_last_successful_update_start_time_ = inspect_object_.CreateUIntMetric(
+        "inspect_last_successful_update_start_time_", 0);
+  inspect_last_successful_render_start_time_ = inspect_object_.CreateUIntMetric(
+        "inspect_last_successful_render_start_time_", 0);
 }
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
@@ -151,8 +155,13 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   FXL_DCHECK(delegate_.session_updater);
 
   // Apply all updates
+  const zx_time_t update_start_time = async_now(dispatcher_);
   bool any_updates_were_applied =
       ApplyScheduledSessionUpdates(presentation_time);
+
+  if (any_updates_were_applied) {
+    inspect_last_successful_update_start_time_.Set(update_start_time);
+  }
 
   if (!any_updates_were_applied && !render_pending_ && !render_continuously_) {
     // If necessary, schedule another frame.
@@ -189,8 +198,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
 
   auto frame_timings =
       fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time);
-
-  ++frame_number_;
+  inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.
   currently_rendering_ =
@@ -198,6 +206,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   if (currently_rendering_) {
     outstanding_frames_.push_back(frame_timings);
     render_pending_ = false;
+
+    inspect_last_successful_render_start_time_.Set(presentation_time);
   } else {
     // TODO(SCN-1344): Handle failed rendering somehow.
     FXL_LOG(WARNING)
@@ -205,6 +215,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
         << "There may not be any calls to OnFrameRendered or OnFramePresented, "
         << "and no callbacks may be invoked.";
   }
+
+  ++frame_number_;
 
   // If necessary, schedule another frame.
   if (!updatable_sessions_.empty()) {
