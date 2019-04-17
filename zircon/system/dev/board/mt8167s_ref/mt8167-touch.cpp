@@ -108,6 +108,7 @@ zx_status_t Mt8167::TouchInit() {
         { fbl::count_of(gpio_reset_component), gpio_reset_component },
     };
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;
     auto status = ddk::MmioBuffer::Create(kPmicBaseAligned, kPmicSizeAligned, *root_resource,

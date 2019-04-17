@@ -146,6 +146,7 @@ zx_status_t Sherlock::BCM43458LpoClockInit() {
     }
 
     std::optional<ddk::MmioBuffer> buf;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource res(get_root_resource());
     status = ddk::MmioBuffer::Create(T931_PWM_EF_BASE, T931_PWM_LENGTH, *res,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);

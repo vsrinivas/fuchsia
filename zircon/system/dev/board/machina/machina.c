@@ -35,6 +35,7 @@ static zx_status_t machina_pci_init(void) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     status = zx_pci_add_subtract_io_range(get_root_resource(), true /* mmio */,
                                           PCIE_MMIO_BASE_PHYS,
                                           PCIE_MMIO_SIZE, true /* add */);
@@ -60,6 +61,7 @@ static zx_status_t machina_pci_init(void) {
     arg->addr_windows[0].bus_start = 0;
     arg->addr_windows[0].bus_end = (PCIE_ECAM_SIZE / ZX_PCI_ECAM_BYTE_PER_BUS) - 1;
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     status = zx_pci_init(get_root_resource(), arg, arg_size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: error %d in zx_pci_init\n", __FUNCTION__, status);

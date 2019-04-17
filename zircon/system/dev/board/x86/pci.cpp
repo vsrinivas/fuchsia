@@ -307,6 +307,7 @@ zx_status_t pci_init_bookkeeping(void) {
         return status;
     }
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     status = pci_report_current_resources_ex(get_root_resource());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s error attempting to populate PCI allocators %d\n", kLogTag, status);
@@ -398,6 +399,7 @@ zx_status_t pci_init(zx_device_t* parent,
         size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num + 1) * PCIE_ECAM_BYTES_PER_BUS;
         zx_paddr_t vmo_base = mcfg_alloc.base_address +
                               (pinfo.start_bus_num * PCIE_ECAM_BYTES_PER_BUS);
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
         if (status != ZX_OK) {
             zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!\n", status);

@@ -68,6 +68,7 @@ zx_status_t PerformUsbTuning(bool host, bool default_val) {
     std::optional<ddk::MmioBuffer> buf;
     zx_status_t status;
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource resource(get_root_resource());
     status = ddk::MmioBuffer::Create(T931_USBPHY21_BASE, T931_USBPHY21_LENGTH, *resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);

@@ -20,6 +20,7 @@
 
 static zx_status_t ktrace_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
     size_t length;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_status_t status = zx_ktrace_read(get_root_resource(), buf, off, count, &length);
     if (status == ZX_OK) {
         *actual = length;
@@ -29,6 +30,7 @@ static zx_status_t ktrace_read(void* ctx, void* buf, size_t count, zx_off_t off,
 
 static zx_off_t ktrace_get_size(void* ctx) {
     size_t size;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_status_t status = zx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
     return status != ZX_OK ? (zx_off_t)status : (zx_off_t)size;
 }
@@ -43,6 +45,7 @@ static zx_status_t ktrace_ioctl(void* ctx, uint32_t op,
         }
         //TODO: ktrace-only handle once resources are further along
         zx_handle_t h;
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_status_t status = zx_handle_duplicate(get_root_resource(), ZX_RIGHT_SAME_RIGHTS, &h);
         if (status < 0) {
             return status;
@@ -58,6 +61,7 @@ static zx_status_t ktrace_ioctl(void* ctx, uint32_t op,
         }
         memcpy(name, cmd, cmdlen);
         name[cmdlen] = 0;
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_status_t status = zx_ktrace_control(get_root_resource(), KTRACE_ACTION_NEW_PROBE, 0, name);
         if (status < 0) {
             return status;
@@ -71,13 +75,16 @@ static zx_status_t ktrace_ioctl(void* ctx, uint32_t op,
             return ZX_ERR_INVALID_ARGS;
         }
         uint32_t group_mask = *(uint32_t *)cmd;
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         return zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, group_mask, NULL);
     }
     case IOCTL_KTRACE_STOP: {
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
         return ZX_OK;
     }
     case IOCTL_KTRACE_REWIND: {
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
         return ZX_OK;
     }
@@ -88,24 +95,28 @@ static zx_status_t ktrace_ioctl(void* ctx, uint32_t op,
 
 static zx_status_t fidl_Start(void* ctx, uint32_t group_mask, fidl_txn_t* txn) {
     zx_status_t status =
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, group_mask, NULL);
     return fuchsia_tracing_kernel_ControllerStart_reply(txn, status);
 }
 
 static zx_status_t fidl_Stop(void* ctx, fidl_txn_t* txn) {
     zx_status_t status =
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
     return fuchsia_tracing_kernel_ControllerStop_reply(txn, status);
 }
 
 static zx_status_t fidl_Rewind(void* ctx, fidl_txn_t* txn) {
     zx_status_t status =
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
      return fuchsia_tracing_kernel_ControllerRewind_reply(txn, status);
 }
 
 static zx_status_t fidl_GetBytesWritten(void* ctx, fidl_txn_t* txn) {
     size_t size = 0;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_status_t status = zx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
     return fuchsia_tracing_kernel_ControllerGetBytesWritten_reply(txn, status, size);
 }

@@ -114,6 +114,7 @@ AcpiHwLegacySleep (
     arg.acpi_transition_s_state.target_s_state = SleepState;
     arg.acpi_transition_s_state.sleep_type_a = AcpiGbl_SleepTypeA;
     arg.acpi_transition_s_state.sleep_type_b = AcpiGbl_SleepTypeB;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_status_t zx_status = zx_system_powerctl(get_root_resource(),
                                                ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE,
                                                &arg);

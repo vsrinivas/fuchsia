@@ -169,6 +169,7 @@ zx_status_t Mt8167::Msdc2Init() {
     msdc2_dev.gpio_list = msdc2_gpios;
     msdc2_dev.gpio_count = msdc2_gpio_count;
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> iocfg_mmio;
     zx_status_t status = ddk::MmioBuffer::Create(kIocfgBaseAligned, kIocfgSizeAligned,

@@ -227,6 +227,7 @@ zx_status_t AmlPcieDevice::Init() {
         return st;
     }
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     st = zx_pci_add_subtract_io_range(get_root_resource(), false,
                                       atu_io_.cpu_addr, atu_io_.length, true);
     if (st != ZX_OK) {
@@ -234,6 +235,7 @@ zx_status_t AmlPcieDevice::Init() {
         return st;
     }
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     st = zx_pci_add_subtract_io_range(get_root_resource(), true,
                                       atu_mem_.cpu_addr, atu_mem_.length, true);
     if (st != ZX_OK) {
@@ -273,6 +275,7 @@ zx_status_t AmlPcieDevice::Init() {
     arg->addr_windows[1].bus_start = 1;
     arg->addr_windows[1].bus_end = 1;
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     st = zx_pci_init(get_root_resource(), arg, arg_size);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init pci bus driver, st = %d\n", st);

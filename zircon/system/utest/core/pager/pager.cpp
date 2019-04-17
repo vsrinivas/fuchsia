@@ -1704,9 +1704,11 @@ bool invalid_pager_supply_pages() {
     ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, 0, aux_vmo.get(), 1), ZX_ERR_INVALID_ARGS);
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     // The get_root_resource() function is a weak reference here.  In the
     // standalone pager-test program, it's not defined because the root
     // resource handle is not available to to the test.  In the unified
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     // standalone core-tests program, get_root_resource() is available.
     if (&get_root_resource) {
         // unsupported aux vmo type
@@ -1714,6 +1716,7 @@ bool invalid_pager_supply_pages() {
         // We're not actually going to do anything with this vmo, and since the
         // kernel doesn't do any checks with the address if you're using the
         // root resource, just use addr 0.
+        // Please do not use get_root_resource() in new code. See ZX-1497.
         ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
                                          physical_vmo.reset_and_get_address()),
                   ZX_OK);
@@ -1774,8 +1777,10 @@ bool invalid_pager_supply_pages() {
         zx::bti bti;
         zx::pmt pmt;
         if (i == kHasPinned) {
+            // Please do not use get_root_resource() in new code. See ZX-1497.
             zx::unowned_resource root_res(get_root_resource());
             zx_iommu_desc_dummy_t desc;
+            // Please do not use get_root_resource() in new code. See ZX-1497.
             ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
                                       &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
             ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);

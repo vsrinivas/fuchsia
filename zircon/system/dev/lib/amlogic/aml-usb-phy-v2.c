@@ -19,6 +19,7 @@ static zx_status_t set_usb_pll(zx_paddr_t reg_base) {
     mmio_buffer_t buf;
     zx_status_t status;
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     status = mmio_buffer_init_physical(&buf, reg_base, ZX_PAGE_SIZE, get_root_resource(),
                                        ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
@@ -42,6 +43,7 @@ zx_status_t aml_usb_phy_v2_init(zx_handle_t bti) {
     mmio_buffer_t usbctrl_buf;
 
     status = mmio_buffer_init_physical(&reset_buf, S905D2_RESET_BASE, S905D2_RESET_LENGTH,
+                                       // Please do not use get_root_resource() in new code. See ZX-1497.
                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init io_buffer_init_physical failed %d\n", status);
@@ -49,6 +51,7 @@ zx_status_t aml_usb_phy_v2_init(zx_handle_t bti) {
     }
 
     status = mmio_buffer_init_physical(&usbctrl_buf, S905D2_USBCTRL_BASE, S905D2_USBCTRL_LENGTH,
+                                       // Please do not use get_root_resource() in new code. See ZX-1497.
                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init io_buffer_init_physical failed %d\n", status);

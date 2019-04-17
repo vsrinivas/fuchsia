@@ -444,6 +444,7 @@ zx_status_t iommu_manager_init(void) {
     iommu_mgr.num_iommus = 0;
 
     zx_iommu_desc_dummy_t dummy;
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_status_t status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &dummy,
                                          sizeof(dummy), &iommu_mgr.dummy_iommu);
     if (status != ZX_OK) {
@@ -524,6 +525,7 @@ zx_status_t iommu_manager_init(void) {
             }
 
             zx_handle_t iommu_handle;
+            // Please do not use get_root_resource() in new code. See ZX-1497.
             status = zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_INTEL,
                                      desc, desc_len, &iommu_handle);
             if (status != ZX_OK) {

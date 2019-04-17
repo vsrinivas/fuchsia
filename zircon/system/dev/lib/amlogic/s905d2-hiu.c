@@ -14,6 +14,7 @@
 
 zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 

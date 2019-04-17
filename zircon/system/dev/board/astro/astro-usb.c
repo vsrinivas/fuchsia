@@ -57,6 +57,7 @@ static zx_status_t astro_usb_tuning(bool host, bool default_val) {
     zx_status_t status;
 
     status = mmio_buffer_init_physical(&buf, S905D2_USBPHY21_BASE, S905D2_USBPHY21_LENGTH,
+                                       // Please do not use get_root_resource() in new code. See ZX-1497.
                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         return status;

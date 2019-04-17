@@ -53,6 +53,7 @@ static const pbus_dev_t xhci_dev = {
 
 zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     zx_status_t status = mmio_buffer_init_physical(&bus->usb_phy, 0xffe09000, 4096,
+                                                 // Please do not use get_root_resource() in new code. See ZX-1497.
                                                  get_root_resource(),
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
@@ -60,6 +61,7 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
         return status;
     }
 
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     status = zx_interrupt_create(get_root_resource(), USB_PHY_IRQ,
                     ZX_INTERRUPT_MODE_DEFAULT, &bus->usb_phy_irq_handle);
     if (status != ZX_OK) {

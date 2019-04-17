@@ -50,6 +50,7 @@ fail:
 }
 
 static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
+    // Please do not use get_root_resource() in new code. See ZX-1497.
     root_resource_handle = get_root_resource();
 
     pbus_x86_t* x86 = calloc(1, sizeof(pbus_x86_t));
