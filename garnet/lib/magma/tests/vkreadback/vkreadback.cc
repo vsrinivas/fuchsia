@@ -22,22 +22,25 @@ bool VkReadbackTest::Initialize()
 
 bool VkReadbackTest::InitVulkan()
 {
-    // Current loader seems to require this extension be provided, though it
-    // should be core in 1.1
-    std::vector<const char*> instance_exts;
-    if (ext_ != NONE) {
-        instance_exts.emplace_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-    }
+    VkApplicationInfo app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = nullptr,
+        .pApplicationName = "vkreadback",
+        .applicationVersion = 0,
+        .pEngineName = nullptr,
+        .engineVersion = 0,
+        .apiVersion = VK_API_VERSION_1_1,
+    };
 
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
         0,                                      // VkInstanceCreateFlags       flags;
-        nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
+        &app_info,                              // const VkApplicationInfo*    pApplicationInfo;
         0,                                      // uint32_t                    enabledLayerCount;
         nullptr,                                // const char* const*          ppEnabledLayerNames;
-        static_cast<uint32_t>(instance_exts.size()),
-        instance_exts.data(),
+        0,                                      // instance extensions count
+        nullptr,                                // instance extensions,
     };
     VkAllocationCallbacks* allocation_callbacks = nullptr;
     VkInstance instance;
@@ -74,6 +77,12 @@ bool VkReadbackTest::InitVulkan()
         DLOG("deviceType 0x%x", properties.deviceType);
 
         if (ext_ == NONE) {
+            continue;
+        }
+
+        if (VK_VERSION_MAJOR(properties.apiVersion) == 1 &&
+            VK_VERSION_MINOR(properties.apiVersion) == 0) {
+            printf("Skipping 1.1 checks\n");
             continue;
         }
 
