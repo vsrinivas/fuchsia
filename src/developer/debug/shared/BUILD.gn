@@ -49,18 +49,8 @@ static_library("shared") {
       "buffered_zx_socket.h",
       "event_handlers.cc",
       "event_handlers.h",
-
-      # Implementation of message loop using async-loop.
-      "message_loop_async.cc",
-      "message_loop_async.h",
-
-      # New interface to abstract message loop from the debug agent.
       "message_loop_target.cc",
       "message_loop_target.h",
-
-      # Original message loop (previously MessageLoopZircon).
-      "message_loop_zircon.cc",
-      "message_loop_zircon.h",
       "zircon_utils.cc",
       "zircon_utils.h",
     ]

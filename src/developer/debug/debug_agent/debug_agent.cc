@@ -536,11 +536,6 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   *reply = {};
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
 
-  if (!debug_ipc::MessageLoopTarget::Current()->SupportsFidl()) {
-    reply->status = ZX_ERR_NOT_SUPPORTED;
-    return;
-  }
-
   ComponentLauncher component_launcher(services_);
 
   ComponentDescription description;

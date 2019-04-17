@@ -20,9 +20,7 @@
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_async.h"
 #include "src/developer/debug/shared/message_loop_target.h"
-#include "src/developer/debug/shared/message_loop_zircon.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/files/unique_fd.h"
 
@@ -30,21 +28,6 @@ using namespace debug_ipc;
 
 namespace debug_agent {
 namespace {
-
-std::unique_ptr<debug_ipc::MessageLoopTarget> GetMessageLoop(
-    MessageLoopTarget::Type type) {
-  switch (type) {
-    case MessageLoopTarget::Type::kAsync:
-      return std::make_unique<debug_ipc::MessageLoopAsync>();
-    case MessageLoopTarget::Type::kZircon:
-      return std::make_unique<debug_ipc::MessageLoopZircon>();
-    case MessageLoopTarget::Type::kLast:
-      break;
-  }
-
-  FXL_NOTREACHED();
-  return nullptr;
-}
 
 // SocketConnection ------------------------------------------------------------
 
@@ -173,9 +156,6 @@ const std::map<std::string, std::string>& GetOptions() {
   static std::map<std::string, std::string> options = {
       {"auwind", R"(
       [Experimental] Use the unwinder from AOSP.)"},
-      {"legacy-message-loop", R"(
-      [DEPRECATED] Use the originalbackend message loop.
-                   Will be removed eventually.)"},
       {"debug-mode", R"(
       Run the agent on debug mode. This will enable conditional logging messages
       and timing profiling. Mainly useful for people developing zxdb.)"},
@@ -241,13 +221,6 @@ int main(int argc, char* argv[]) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
   }
 
-  // By default use the async agent message loop.
-  auto message_loop_type = MessageLoopTarget::Type::kAsync;
-  if (cmdline.HasOption("legacy-message-loop")) {
-    // Use new async loop.
-    message_loop_type = MessageLoopTarget::Type::kZircon;
-  }
-
   // TODO(donosoc): Do correct category setup.
   debug_ipc::SetLogCategories({LogCategory::kAll});
   if (cmdline.HasOption("debug-mode")) {
@@ -267,14 +240,11 @@ int main(int argc, char* argv[]) {
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
 
-    printf("Using %s message loop.\n",
-           MessageLoopTarget::TypeToString(message_loop_type));
-    auto message_loop = debug_agent::GetMessageLoop(message_loop_type);
+    auto message_loop = std::make_unique<MessageLoopTarget>();
     zx_status_t status = message_loop->InitTarget();
     if (status != ZX_OK) {
-      const char* type = MessageLoopTarget::TypeToString(message_loop_type);
-      FXL_LOG(ERROR) << "Could not initialize message loop (type: " << type
-                     << "): " << debug_ipc::ZxStatusToString(status);
+      FXL_LOG(ERROR) << "Could not initialize message loop: "
+                     << debug_ipc::ZxStatusToString(status);
     }
 
     // The scope ensures the objects are destroyed before calling Cleanup on the

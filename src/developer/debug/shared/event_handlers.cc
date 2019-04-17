@@ -7,7 +7,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "src/developer/debug/shared/message_loop_async.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -53,7 +53,7 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
                             const zx_packet_signal_t* signal) {
   FXL_DCHECK(status == ZX_OK);
 
-  auto* loop = MessageLoopAsync::Current();
+  auto* loop = MessageLoopTarget::Current();
   FXL_DCHECK(loop);
 
   // Search for the AsyncHandle that triggered this signal.
@@ -140,7 +140,7 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
                            << ExceptionTypeToString(packet->type);
   }
 
-  auto* loop = MessageLoopAsync::Current();
+  auto* loop = MessageLoopTarget::Current();
   FXL_DCHECK(loop);
 
   auto handler_it = loop->exception_handlers().find(exception);

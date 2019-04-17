@@ -4,12 +4,12 @@
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 
-#include "src/developer/debug/shared/message_loop_async.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 
 namespace debug_agent {
 
 MessageLoopWrapper::MessageLoopWrapper() {
-  loop_ = std::make_unique<debug_ipc::MessageLoopAsync>();
+  loop_ = std::make_unique<debug_ipc::MessageLoopTarget>();
   loop_->Init();
 }
 
