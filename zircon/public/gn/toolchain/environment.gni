@@ -616,10 +616,81 @@ template("environment") {
       variant_selectors -= excluded_selectors
     }
   }
+  if (excluded_variants != []) {
+    # Now excluded_variants lists toolchain names we know we never actually
+    # want to compile anything in.  However, environment_redirect() has to
+    # pick a default to redirect through even though it has no way to see
+    # exclude_variant_tags or the other factors that make this environment
+    # actually exclude a variant.  So, the first likely-looking one in
+    # variants + default_variants has to exist so it can redirect to the
+    # right one.  When the one it would choose is in excluded_variants, we
+    # need to make that toolchain exist as a dummy for those redirects.
+    redirect_default = ""
+
+    # This must be kept in synch with the loop in environment_redirect().
+    foreach(default, variants + default_variants) {
+      if (redirect_default == "") {
+        if (default == "$default") {
+          foreach(shorthand, variant_shorthands) {
+            if (default != "" &&
+                (default == shorthand.name ||
+                 get_path_info(default, "dir") == shorthand.name)) {
+              default = ""
+            }
+          }
+          if (default != "") {
+            default = {
+              variant = default
+            }
+          }
+        }
+        if (default != "" &&
+            (!defined(default.environment) || default.environment == [] ||
+             default.environment + [ environment ] - [ environment ] !=
+             default.environment ||
+             default.environment + [ base_environment ] -
+             [ base_environment ] != default.environment)) {
+          redirect_default = default.variant
+        }
+      }
+    }
+    if (redirect_default != "" && excluded_variants + [ redirect_default ] -
+                                  [ redirect_default ] == excluded_variants) {
+      # It's not excluded, so we don't have to do anything.
+      redirect_default = ""
+    }
+    if (redirect_default != "") {
+      # Define an additional toolchain under the expected name.  It may wind
+      # up instantiating a lot of targets, which is unfortunate since its
+      # only purpose is to resolve redirect group() targets.  But to make
+      # sure nothing goes awry because the code evaluated is confused by
+      # wrong toolchain definitions, make it a copy in all by name of a
+      # variant where we actually do expect to instantiate and build targets.
+      toolchain_variants += [
+        {
+          forward_variables_from(toolchain_variants[0], "*", [ "name" ])
+          name = redirect_default
+        },
+      ]
+    }
+  }
 
   # Reuse the selectors local so we can shadow variant_selectors below.
+  # Also annotate each selector with its variant's tags for the
+  # $exclude_variant_tags parameter to _variant_target() to match against.
   selectors = []
-  selectors = variant_selectors
+  foreach(selector, variant_selectors) {
+    selectors += [
+      {
+        forward_variables_from(selector, "*")
+        foreach(variant, toolchain_variants) {
+          if (variant.name == selector.variant) {
+            tags = variant.tags
+          }
+        }
+      },
+    ]
+  }
   variant_selectors = []
 
   # Define a primary toolchain, and possibly also a shlib toolchain, for each

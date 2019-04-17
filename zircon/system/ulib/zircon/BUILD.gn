@@ -19,6 +19,8 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
           ]) {
     environment_redirect(target) {
       environment_label = "$zx/public/gn/toolchain:user"
+      shlib = true
+      exclude_variant_tags = exclude_tags
       deps = [
         ":$target",
       ]

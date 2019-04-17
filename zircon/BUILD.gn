@@ -170,11 +170,10 @@ if (current_toolchain == default_toolchain) {
   ]
   legacy_cpu_deps = [
     ":ids",
+    ":legacy-deps",
     ":legacy-fdio",
-    ":legacy-image",
     ":legacy-tests",
     ":all-ulib",
-    "$zx/system/ulib:asan-manifest",
   ]
 
   build_api_module("legacy_dirs") {
@@ -193,7 +192,7 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_targets" ]
       walk_keys = [ "legacy_barrier" ]
-      deps = legacy_deps
+      deps = legacy_deps + [ ":legacy-image-$cpu" ]
       foreach(dep, legacy_cpu_deps) {
         deps += [ "$dep-$cpu" ]
       }
@@ -226,34 +225,6 @@ if (current_toolchain == default_toolchain) {
         ":legacy-fdio-redirect-$cpu",
       ]
     }
-
-    # Collect from the target below in the appropriate toolchain.
-    environment_redirect("legacy-fdio-redirect-$cpu") {
-      visibility = [ ":legacy-fdio-$cpu" ]
-      cpu = cpu
-      environment_label = "$zx/public/gn/toolchain:user"
-      deps = [
-        ":legacy-fdio-variant-redirect",
-      ]
-    }
-  }
-} else {
-  # This does variant selection as if it were an executable called "fdio",
-  # so it should get to the configured default variant.  But the target is
-  # nothing but a redirect to reach shared_library("fdio") and its
-  # `link_output` metadata.
-  _variant_target("legacy-fdio-variant-redirect") {
-    visibility = [ ":*" ]
-    target = {
-      type = "group"
-      match = "executable"
-      output_name = "fdio"
-      shlib = true
-    }
-    deps = [
-      "$zx/system/ulib/fdio",
-    ]
-    no_implicit_deps = true
   }
 }
 
@@ -300,13 +271,19 @@ foreach(cpu, standard_fuchsia_cpus) {
       ]
     }
 
-    zbi("legacy-image-$cpu") {
+    zbi_input("legacy-image-$cpu") {
       output_dir = root_build_dir
       testonly = true
       cpu = cpu
       deps = [
+        ":asan-manifest-$cpu",
         ":legacy-deps-$cpu",
       ]
+      metadata = {
+        # legacy-$cpu depends on this to get all these deps built.
+        # But they shouldn't contribute metadata to the build_api_module().
+        legacy_barrier = []
+      }
     }
 
     zbi_input("legacy-tests-$cpu") {
@@ -317,6 +294,37 @@ foreach(cpu, standard_fuchsia_cpus) {
         ":legacy-tests-deps-$cpu",
       ]
     }
+
+    # The legacy Fuchsia GN build needs to consume a manifest of libraries
+    # built for ASan (and all the libraries themselves).
+    zbi_input("asan-manifest-$cpu") {
+      testonly = true
+      deps = [
+        ":asan-libs-$cpu",
+      ]
+      metadata = {
+        images = [
+          {
+            cpu = cpu
+            type = "manifest"
+            name = "asan-libs"
+            path = rebase_path("$target_gen_dir/$target_name.manifest",
+                               root_build_dir)
+          },
+        ]
+      }
+    }
+  }
+
+  environment_redirect("asan-libs-$cpu") {
+    testonly = true
+    cpu = cpu
+    environment_label = "$zx/public/gn/toolchain:user"
+    variant = "asan"
+    deps = [
+      "$zx/system/core/devmgr:driver_deps.asan",
+      "$zx/system/ulib",
+    ]
   }
 
   environment_redirect("core-tests-$cpu-deps") {
@@ -347,6 +355,16 @@ foreach(cpu, standard_fuchsia_cpus) {
       "$zx/system/uapp",
       "$zx/system/ulib",
       "$zx/third_party/uapp",
+    ]
+  }
+
+  environment_redirect("legacy-fdio-redirect-$cpu") {
+    visibility = [ ":legacy-fdio-$cpu" ]
+    environment_label = "$zx/public/gn/toolchain:user"
+    cpu = cpu
+    shlib = true
+    deps = [
+      "$zx/system/ulib/fdio",
     ]
   }
 
@@ -475,7 +493,11 @@ build_api_module("legacy_images") {
     ":tools",
   ]
   foreach(cpu, standard_fuchsia_cpus) {
-    deps += [ ":legacy-$cpu" ]
+    deps += [
+      ":asan-manifest-$cpu",
+      ":legacy-$cpu",
+      ":legacy-image-$cpu",
+    ]
   }
 }
 

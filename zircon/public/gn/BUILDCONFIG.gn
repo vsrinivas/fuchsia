@@ -771,6 +771,10 @@ template("library") {
 #         Optional: Metadata for main target and variant-suffixed target.
 #         Type: metadata scope
 #         Default: {}
+#       exclude_variant_tags
+#         Optional: Never select a variant with any of these tags.
+#         Type: list(string)
+#         Default: []
 #
 #   See executable() or loadable_module() for other parameters.
 #   They will be forwarded to the underlying ${target.type} target.
@@ -781,6 +785,7 @@ template("_variant_target") {
     }
     variant_metadata = {
     }
+    exclude_variant_tags = []
     forward_variables_from(invoker.target, "*")
     if (!defined(match)) {
       match = type
@@ -874,6 +879,12 @@ template("_variant_target") {
       if (selector.output_name != []) {
         if (selector.output_name + [ target.output_name ] -
             [ target.output_name ] == selector.output_name) {
+          selector_matches = false
+        }
+      }
+      if (selector.tags != []) {
+        if (selector.tags + target.exclude_variant_tags -
+            target.exclude_variant_tags != selector.tags) {
           selector_matches = false
         }
       }
