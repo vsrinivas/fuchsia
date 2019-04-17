@@ -101,6 +101,7 @@ fx-config-read
 
 GET_FILES=get_git_files
 while [ $# -gt 0 ]; do
+  ARG="$1"
   case "$1" in
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
