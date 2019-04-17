@@ -318,6 +318,16 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 			err = root.templates.ExecuteTemplate(buffer, template, data)
 			return buffer.String(), err
 		},
+		// Determines if an interface is discoverable.
+		"isDiscoverable": func(i types.Interface) bool {
+			_, found := i.LookupAttribute("Discoverable")
+			return found
+		},
+		// Determines if a method is transitional.
+		"isTransitional": func(m types.Method) bool {
+			_, found := m.LookupAttribute("Transitional")
+			return found
+		},
 	}
 
 	template.Must(tmpls.Funcs(funcMap).Parse(string(returnBytes[:])))
