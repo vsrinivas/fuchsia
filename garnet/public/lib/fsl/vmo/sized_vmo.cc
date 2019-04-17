@@ -69,4 +69,8 @@ zx_status_t SizedVmo::Duplicate(zx_rights_t rights, SizedVmo* output) const {
   return status;
 }
 
+zx_status_t SizedVmo::ReplaceAsExecutable(const zx::handle& vmex) {
+  return vmo_.replace_as_executable(vmex, &vmo_);
+}
+
 }  // namespace fsl

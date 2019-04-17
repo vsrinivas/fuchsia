@@ -60,12 +60,19 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   if (fd < 0)
     return ZX_ERR_IO;
 
+  zx::vmo vmo;
   zx::vmo executable_vmo;
   zx_status_t status =
-      fdio_get_vmo_clone(fd, executable_vmo.reset_and_get_address());
+      fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
   close(fd);
-  if (status != ZX_OK)
-    return status;
+  if (status != ZX_OK) {
+      return status;
+  }
+
+  status = vmo.replace_as_executable(zx::handle(), &executable_vmo);
+  if (status != ZX_OK) {
+      return status;
+  }
 
   ::fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> loader_iface;
 

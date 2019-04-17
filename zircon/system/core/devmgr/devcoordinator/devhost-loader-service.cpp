@@ -44,10 +44,18 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
     if (!fd) {
         return ZX_ERR_NOT_FOUND;
     }
-    zx_status_t status = fdio_get_vmo_clone(fd.get(), vmo);
+    zx::vmo nonexec_vmo;
+    zx::vmo exec_vmo;
+    zx_status_t status = fdio_get_vmo_clone(fd.get(), nonexec_vmo.reset_and_get_address());
     if (status != ZX_OK) {
         return status;
     }
+    status = nonexec_vmo.replace_as_executable(zx::handle(), &exec_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *vmo = exec_vmo.release();
     return zx_object_set_property(*vmo, ZX_PROP_NAME, path.c_str(), path.size());
 }
 

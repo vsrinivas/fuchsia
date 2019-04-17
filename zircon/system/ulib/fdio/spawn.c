@@ -69,25 +69,40 @@ static_assert(offsetof(fdio_spawn_action_t, name) == 8,
 static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
-static zx_status_t load_path(const char* path, zx_handle_t* vmo) {
+static zx_status_t load_path(const char* path, zx_handle_t* out_vmo) {
     int fd = open(path, O_RDONLY);
     if (fd < 0)
         return ZX_ERR_NOT_FOUND;
 
-    zx_status_t status = fdio_get_vmo_clone(fd, vmo);
+    zx_handle_t vmo;
+    zx_handle_t exec_vmo;
+    zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
     close(fd);
 
-    if (status == ZX_OK) {
-        if (strlen(path) >= ZX_MAX_NAME_LEN) {
-            const char* p = strrchr(path, '/');
-            if (p != NULL) {
-                path = p + 1;
-            }
-        }
-
-        zx_object_set_property(*vmo, ZX_PROP_NAME, path, strlen(path));
+    if (status != ZX_OK) {
+        return status;
     }
 
+    status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
+    if (status != ZX_OK) {
+        zx_handle_close(vmo);
+        return status;
+    }
+
+    if (strlen(path) >= ZX_MAX_NAME_LEN) {
+        const char* p = strrchr(path, '/');
+        if (p != NULL) {
+            path = p + 1;
+        }
+    }
+
+    status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, path, strlen(path));
+    if (status != ZX_OK) {
+        zx_handle_close(exec_vmo);
+        return status;
+    }
+
+    *out_vmo = exec_vmo;
     return status;
 }
 

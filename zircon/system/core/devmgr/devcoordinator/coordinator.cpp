@@ -278,11 +278,18 @@ static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
         log(ERROR, "devcoordinator: cannot open driver '%s'\n", libname.data());
         return ZX_ERR_IO;
     }
+    zx::vmo nonexec_vmo;
     zx::vmo vmo;
-    zx_status_t r = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
+    zx_status_t r = fdio_get_vmo_clone(fd, nonexec_vmo.reset_and_get_address());
     close(fd);
-    if (r < 0) {
+    if (r != ZX_OK) {
         log(ERROR, "devcoordinator: cannot get driver vmo '%s'\n", libname.data());
+        return r;
+    }
+    r = nonexec_vmo.replace_as_executable(zx::handle(), &vmo);
+    if (r != ZX_OK) {
+        log(ERROR, "devcoordinator: cannot mark driver vmo exec '%s'\n", libname.data());
+        return r;
     }
     const char* vmo_name = strrchr(libname.data(), '/');
     if (vmo_name != nullptr) {
@@ -914,7 +921,11 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
         close(fd);
         if (fwfd >= 0) {
             *size = lseek(fwfd, 0, SEEK_END);
-            zx_status_t r = fdio_get_vmo_clone(fwfd, vmo->reset_and_get_address());
+            zx::vmo nonexec_vmo;
+            zx_status_t r = fdio_get_vmo_clone(fwfd, nonexec_vmo.reset_and_get_address());
+            if (r == ZX_OK) {
+                r = zx_vmo_replace_as_executable(nonexec_vmo.release(), ZX_HANDLE_INVALID, vmo->reset_and_get_address());
+            }
             close(fwfd);
             return r;
         }
