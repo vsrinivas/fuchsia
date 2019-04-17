@@ -102,9 +102,9 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         audio_rb_position_notify_t pos_notif;
 
         uint32_t bytes_read, junk;
-        res = rb_ch_.read(0,
-                          &pos_notif, sizeof(pos_notif), &bytes_read,
-                          nullptr, 0, &junk);
+        res = rb_ch_.rea2(0,
+                          &pos_notif, nullptr, sizeof(pos_notif), 0,
+                          &bytes_read, &junk);
         if (res != ZX_OK) {
             printf("Failed to read notification from ring buffer channel (res %d)\n", res);
             break;

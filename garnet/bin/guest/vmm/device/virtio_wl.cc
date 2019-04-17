@@ -85,7 +85,7 @@ class Connection : public VirtioWl::Vfd {
   zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
     TRACE_DURATION("machina", "Connection::AvailableForRead");
     zx_status_t status =
-        channel_.read(0, nullptr, 0u, bytes, nullptr, 0u, handles);
+        channel_.rea2(0, nullptr, nullptr, 0u, 0u, bytes, handles);
     return status == ZX_ERR_BUFFER_TOO_SMALL ? ZX_OK : status;
   }
   zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
@@ -95,8 +95,8 @@ class Connection : public VirtioWl::Vfd {
     if (bytes == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    return channel_.read_etc(0, bytes, num_bytes, actual_bytes, handles,
-                             num_handles, actual_handles);
+    return channel_.rea2_etc(0, bytes, handles, num_bytes, num_handles,
+                             actual_bytes, actual_handles);
   }
   zx_status_t Write(const void* bytes, uint32_t num_bytes,
                     const zx_handle_t* handles, uint32_t num_handles,

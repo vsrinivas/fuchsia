@@ -233,8 +233,8 @@ public:
                                            size_t* buffer_size_out) override
     {
         uint32_t buffer_actual_size;
-        zx_status_t status = notification_channel_.read(0, buffer, buffer_size, &buffer_actual_size,
-                                                        nullptr, 0, nullptr);
+        zx_status_t status = notification_channel_.rea2(0, buffer, nullptr, buffer_size, 0,
+                                                        &buffer_actual_size, nullptr);
         *buffer_size_out = buffer_actual_size;
         if (status == ZX_ERR_SHOULD_WAIT) {
             *buffer_size_out = 0;

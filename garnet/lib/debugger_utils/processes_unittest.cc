@@ -32,8 +32,8 @@ void WaitChannelReadable(const zx::channel& channel) {
 void ReadUint64Packet(const zx::channel& channel, uint64_t expected_value) {
   uint64_t packet;
   uint32_t packet_size;
-  ASSERT_EQ(channel.read(0, &packet, sizeof(packet), &packet_size,
-                         nullptr, 0, nullptr), ZX_OK);
+  ASSERT_EQ(channel.rea2(0, &packet, nullptr, sizeof(packet), 0,
+                         &packet_size, nullptr), ZX_OK);
   EXPECT_EQ(packet_size, sizeof(packet));
   EXPECT_EQ(packet, expected_value);
 }
@@ -173,9 +173,8 @@ TEST(Processes, PassHandle) {
 
   zx::thread thread;
   uint32_t actual_bytes, actual_handles;
-  ASSERT_EQ(our_channel.read(0u, nullptr, 0u,
-                             &actual_bytes, thread.reset_and_get_address(),
-                             1u, &actual_handles), ZX_OK);
+  ASSERT_EQ(our_channel.rea2(0u, nullptr, thread.reset_and_get_address(),
+                             0u, 1u, &actual_bytes, &actual_handles), ZX_OK);
   EXPECT_EQ(actual_bytes, 0u);
   EXPECT_EQ(actual_handles, 1u);
 

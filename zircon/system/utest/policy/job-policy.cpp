@@ -370,8 +370,8 @@ static bool TestInvokingPolicyWithException(
     } else {
         zx_exception_info_t info;
         ASSERT_EQ(exc_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
-        ASSERT_EQ(exc_channel.read(0, &info, sizeof(info), nullptr,
-                                   exception.reset_and_get_address(), 1, nullptr),
+        ASSERT_EQ(exc_channel.rea2(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
+                                   nullptr, nullptr),
                   ZX_OK);
 
         ASSERT_EQ(info.type, ZX_EXCP_POLICY_ERROR);

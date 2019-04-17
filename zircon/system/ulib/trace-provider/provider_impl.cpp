@@ -94,9 +94,9 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     uint32_t num_bytes = 0u;
     zx_handle_t handles[2];
     uint32_t num_handles = 0u;
-    zx_status_t status = channel_.read(
-        0u, buffer, sizeof(buffer), &num_bytes,
-        handles, static_cast<uint32_t>(fbl::count_of(handles)), &num_handles);
+    zx_status_t status = channel_.rea2(
+        0u, buffer, handles, sizeof(buffer), static_cast<uint32_t>(fbl::count_of(handles)),
+        &num_bytes, &num_handles);
     if (status != ZX_OK) {
         fprintf(stderr, "TraceProvider: channel read failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));

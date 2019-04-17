@@ -209,7 +209,7 @@ zx_status_t AudioDeviceStream::GetSupportedFormats(
             return res;
         }
 
-        res = stream_ch_.read(0u, &resp, sizeof(resp), &rxed, nullptr, 0, nullptr);
+        res = stream_ch_.rea2(0u, &resp, nullptr, sizeof(resp), 0, &rxed, nullptr);
         if (res != ZX_OK) {
             printf("Failed to read next response after processing %u/%u formats (res %d)\n",
                     processed_formats, expected_formats, res);
@@ -392,7 +392,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
 
             audio_stream_plug_detect_notify_t state;
             uint32_t bytes_read;
-            res = stream_ch_.read(0, &state, sizeof(state), &bytes_read, nullptr, 0, nullptr);
+            res = stream_ch_.rea2(0, &state, nullptr, sizeof(state), 0, &bytes_read, nullptr);
             if (res != ZX_OK) {
                 printf("Read failure while waiting for plug notification (res %d)\n", res);
                 break;

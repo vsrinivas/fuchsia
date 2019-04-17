@@ -132,8 +132,8 @@ static void ReadUint64Packet(const zx::channel& channel,
                              uint64_t expected_value) {
   uint64_t packet;
   uint32_t packet_size;
-  FXL_CHECK(channel.read(0, &packet, sizeof(packet), &packet_size,
-                         nullptr, 0, nullptr) == ZX_OK);
+  FXL_CHECK(channel.rea2(0, &packet, nullptr, sizeof(packet), 0,
+                         &packet_size,  nullptr) == ZX_OK);
   FXL_CHECK(packet_size == sizeof(packet));
   FXL_CHECK(packet == expected_value);
 }

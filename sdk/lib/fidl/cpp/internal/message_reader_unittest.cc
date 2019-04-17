@@ -310,8 +310,8 @@ TEST(MessageReader, ShouldWaitFromRead) {
     uint32_t actual_bytes, actual_handles;
     EXPECT_EQ(
         ZX_ERR_BUFFER_TOO_SMALL,
-        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, 0,
-                              &actual_bytes, nullptr, 0, &actual_handles));
+        reader.channel().rea2(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr,
+                              0, 0, &actual_bytes, &actual_handles));
     return ZX_OK;
   };
 
@@ -364,8 +364,8 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
     uint32_t actual_bytes, actual_handles;
     EXPECT_EQ(
         ZX_ERR_BUFFER_TOO_SMALL,
-        reader.channel().read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, 0,
-                              &actual_bytes, nullptr, 0, &actual_handles));
+        reader.channel().rea2(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr,
+                              0, 0, &actual_bytes, &actual_handles));
     reader.Unbind();
     return ZX_OK;
   };

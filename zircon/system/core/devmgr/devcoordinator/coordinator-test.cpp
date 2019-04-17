@@ -63,8 +63,7 @@ TEST(CoordinatorTestCase, OpenVirtcon) {
 
     zx::channel sender_channel;
     uint32_t actual_handles;
-    status = server.read(0, nullptr, 0, nullptr, sender_channel.reset_and_get_address(), 1,
-                         &actual_handles);
+    status = server.rea2(0, nullptr, sender_channel.reset_and_get_address(), 0, 1, nullptr, &actual_handles);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(1, actual_handles);
     ASSERT_TRUE(sender_channel.is_valid());
@@ -150,8 +149,8 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
-                                     fbl::count_of(handles), &actual_handles);
+    zx_status_t status = remote.rea2(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                     &actual_bytes, &actual_handles);
     ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(1, actual_handles);
@@ -235,8 +234,8 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
-                                     fbl::count_of(handles), &actual_handles);
+    zx_status_t status = remote.rea2(0, bytes, handles, sizeof(bytes),
+                                     fbl::count_of(handles), &actual_bytes, &actual_handles);
     ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(3, actual_handles);
@@ -268,8 +267,8 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
-                                     fbl::count_of(handles), &actual_handles);
+    zx_status_t status = remote.rea2(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                     &actual_bytes, &actual_handles);
     ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(1, actual_handles);

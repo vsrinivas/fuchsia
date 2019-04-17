@@ -137,12 +137,12 @@ public:
         zx_status_t status = ZX_OK;
 
         while (ZX_OK == (status = channel_.wait_one(ZX_CHANNEL_READABLE, PROPAGATE_TIME, &obs))) {
-            status = channel_.read(0u,
+            status = channel_.rea2(0u,
                                    static_cast<void*>(read_buf),
-                                   READBUF_SIZE,
-                                   &actual_sz,
                                    nullptr,
+                                   READBUF_SIZE,
                                    0,
+                                   &actual_sz,
                                    &actual_handles);
             ASSERT_EQ(ZX_OK, status);
             auto* msg = reinterpret_cast<fidl_message_header_t*>(read_buf);

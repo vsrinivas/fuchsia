@@ -36,7 +36,7 @@ std::string GetValue(size_t index, size_t min_value_size = 0u) {
                                             size_t expected_handles) {
   uint32_t actual_bytes, actual_handles;
   zx_status_t status =
-      channel.read(0, nullptr, 0, &actual_bytes, nullptr, 0, &actual_handles);
+      channel.rea2(0, nullptr, nullptr, 0, 0, &actual_bytes, &actual_handles);
   if (status != ZX_ERR_BUFFER_TOO_SMALL) {
     return ::testing::AssertionFailure()
            << "Channel read status = " << status

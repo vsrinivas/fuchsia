@@ -73,9 +73,8 @@ zx_status_t TestWithHelper::GetHelperThread(zx::thread* out_thread) {
   }
 
   uint32_t actual_bytes, actual_handles;
-  status = channel_.read(0u, nullptr, 0u,
-                         &actual_bytes, out_thread->reset_and_get_address(),
-                         1u, &actual_handles);
+  status = channel_.rea2(0u, nullptr, out_thread->reset_and_get_address(),
+                         0u, 1u, &actual_bytes, &actual_handles);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "channel->read failed: " << ZxErrorString(status);
     return status;

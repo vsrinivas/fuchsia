@@ -39,7 +39,7 @@ typedef struct {
 bool check_for_empty(watch_buffer_t* wb, const zx::channel& c) {
     char name[NAME_MAX + 1];
     ASSERT_NULL(wb->ptr);
-    ASSERT_EQ(c.read(0, &name, sizeof(name), nullptr, nullptr, 0, nullptr), ZX_ERR_SHOULD_WAIT);
+    ASSERT_EQ(c.rea2(0, &name, nullptr,  sizeof(name), 0, nullptr, nullptr), ZX_ERR_SHOULD_WAIT);
     return true;
 }
 
@@ -71,7 +71,7 @@ bool check_for_event(watch_buffer_t* wb, const zx::channel& c, const char* expec
     ASSERT_EQ(c.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(5)), &observed), ZX_OK);
     ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     uint32_t actual;
-    ASSERT_EQ(c.read(0, wb->buf, sizeof(wb->buf), &actual, nullptr, 0, nullptr), ZX_OK);
+    ASSERT_EQ(c.rea2(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr), ZX_OK);
     wb->size = actual;
     wb->ptr = wb->buf;
     return check_local_event(wb, expected, event);

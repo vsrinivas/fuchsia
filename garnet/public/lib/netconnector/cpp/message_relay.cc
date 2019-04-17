@@ -60,8 +60,8 @@ void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher,
   while (channel_) {
     uint32_t actual_byte_count;
     uint32_t actual_handle_count;
-    zx_status_t status = channel_.read(0, nullptr, 0, &actual_byte_count,
-                                       nullptr, 0, &actual_handle_count);
+    zx_status_t status = channel_.rea2(0, nullptr, nullptr, 0, 0, &actual_byte_count,
+                                       &actual_handle_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait->Begin(dispatcher);
@@ -93,8 +93,8 @@ void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher,
 
     std::vector<uint8_t> message(actual_byte_count);
     status =
-        channel_.read(0, message.data(), message.size(), &actual_byte_count,
-                      nullptr, 0, &actual_handle_count);
+        channel_.rea2(0, message.data(), nullptr, message.size(),
+                      0, &actual_byte_count, &actual_handle_count);
 
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to read from channel, status " << status;

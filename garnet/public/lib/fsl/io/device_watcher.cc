@@ -85,7 +85,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
     uint32_t size;
     uint8_t buf[fuchsia_io_MAX_BUF];
     zx_status_t status =
-        dir_watch_.read(0, buf, sizeof(buf), &size, nullptr, 0, nullptr);
+        dir_watch_.rea2(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
     FXL_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
 
     auto weak = weak_ptr_factory_.GetWeakPtr();
