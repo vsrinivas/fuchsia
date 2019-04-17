@@ -12,6 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
@@ -25,6 +26,7 @@
 
 namespace storage {
 namespace {
+using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
@@ -218,6 +220,77 @@ TEST_F(ObjectImplTest, VmoObject) {
 
   VmoObject object(identifier, std::move(vmo));
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
+}
+
+TEST_F(ObjectImplTest, ObjectReferences) {
+  // Create various types of identifiers for the object children and values.
+  constexpr size_t kInlineSize = kStorageHashSize;
+  const ObjectIdentifier inline_blob = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                          RandomString(environment_.random(), kInlineSize)));
+  ASSERT_TRUE(GetObjectDigestInfo(inline_blob.object_digest()).is_inlined());
+
+  const ObjectIdentifier inline_treenode = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE,
+                          RandomString(environment_.random(), kInlineSize)));
+  ASSERT_TRUE(
+      GetObjectDigestInfo(inline_treenode.object_digest()).is_inlined());
+
+  constexpr size_t kNoInlineSize = kStorageHashSize + 1;
+  const ObjectIdentifier noinline_blob = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                          RandomString(environment_.random(), kNoInlineSize)));
+  ASSERT_FALSE(GetObjectDigestInfo(noinline_blob.object_digest()).is_inlined());
+
+  const ObjectIdentifier noinline_treenode = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE,
+                          RandomString(environment_.random(), kNoInlineSize)));
+  ASSERT_FALSE(
+      GetObjectDigestInfo(noinline_treenode.object_digest()).is_inlined());
+
+  // Create a TreeNode object.
+  const std::string data =
+      btree::EncodeNode(/*level=*/0,
+                        {
+                            Entry{"key01", inline_blob, KeyPriority::EAGER},
+                            Entry{"key02", noinline_blob, KeyPriority::EAGER},
+                            Entry{"key03", inline_blob, KeyPriority::LAZY},
+                            Entry{"key04", noinline_blob, KeyPriority::LAZY},
+                        },
+                        {
+                            {0, inline_treenode},
+                            {1, noinline_treenode},
+                        });
+  const ChunkObject tree_object(std::make_unique<DataChunkPiece>(
+      CreateObjectIdentifier(
+          ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, data)),
+      DataSource::DataChunk::Create(data)));
+
+  // Check that inline children are not included in the references.
+  ObjectReferencesAndPriority references;
+  ASSERT_EQ(Status::OK, tree_object.AppendReferences(&references));
+  EXPECT_THAT(references,
+              UnorderedElementsAre(
+                  Pair(noinline_blob.object_digest(), KeyPriority::EAGER),
+                  Pair(noinline_blob.object_digest(), KeyPriority::LAZY),
+                  Pair(noinline_treenode.object_digest(), KeyPriority::EAGER)));
+
+  // Create a blob object with the exact same data and check that it does not
+  // return any reference.
+  const ChunkObject blob_object(std::make_unique<DataChunkPiece>(
+      CreateObjectIdentifier(
+          ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data)),
+      DataSource::DataChunk::Create(data)));
+  references.clear();
+  ASSERT_EQ(Status::OK, blob_object.AppendReferences(&references));
+  EXPECT_THAT(references, IsEmpty());
+
+  // Create an invalid tree node object and check that we return an error.
+  const ChunkObject invalid_object(std::make_unique<DataChunkPiece>(
+      CreateObjectIdentifier(
+          ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, "")),
+      DataSource::DataChunk::Create("")));
+  ASSERT_EQ(Status::FORMAT_ERROR, invalid_object.AppendReferences(&references));
 }
 
 }  // namespace

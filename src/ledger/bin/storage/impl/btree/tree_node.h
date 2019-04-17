@@ -57,6 +57,10 @@ class TreeNode {
   // to be in [0, GetKeyCount() - 1].
   Status GetEntry(int index, Entry* entry) const;
 
+  // Adds to |references| the references from this node to its non-inlined
+  // children and values.
+  void AppendReferences(ObjectReferencesAndPriority* references) const;
+
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not,
   // |INTERNAL_NOT_FOUND| is returned and index stores the index of the child

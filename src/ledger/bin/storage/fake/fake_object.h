@@ -31,9 +31,10 @@ class FakeObject : public Object {
   explicit FakeObject(std::unique_ptr<const Piece> piece);
   explicit FakeObject(ObjectIdentifier identifier, fxl::StringView content);
 
-  // Object:
   ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
+  Status AppendReferences(
+      ObjectReferencesAndPriority* references) const override;
 
  private:
   std::unique_ptr<const Piece> piece_;

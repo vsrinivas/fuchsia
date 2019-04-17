@@ -228,6 +228,45 @@ TEST_F(TreeNodeTest, References) {
 
   const ObjectDigest digest0 = object0->GetIdentifier().object_digest();
   const ObjectDigest digest1 = object1->GetIdentifier().object_digest();
+
+  // Check that references returned by each TreeNode are correct.
+  ObjectReferencesAndPriority references;
+  root->AppendReferences(&references);
+  EXPECT_THAT(
+      references,
+      UnorderedElementsAre(
+          // Keys
+          Pair(digest1, KeyPriority::LAZY),   // key03
+          Pair(digest1, KeyPriority::EAGER),  // key07
+          // Children
+          Pair(child0->GetIdentifier().object_digest(), KeyPriority::EAGER),
+          Pair(child1->GetIdentifier().object_digest(), KeyPriority::EAGER),
+          Pair(child2->GetIdentifier().object_digest(), KeyPriority::EAGER)));
+  references.clear();
+  child0->AppendReferences(&references);
+  EXPECT_THAT(references,
+              UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
+                                   Pair(digest1, KeyPriority::EAGER),  // key01
+                                   Pair(digest0, KeyPriority::EAGER)   // key02
+                                   ));
+  references.clear();
+  child1->AppendReferences(&references);
+  EXPECT_THAT(
+      references,
+      UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),  // key04 and key06
+                           Pair(digest1, KeyPriority::EAGER)  // key05
+                           ));
+  references.clear();
+  child2->AppendReferences(&references);
+  EXPECT_THAT(references,
+              UnorderedElementsAre(
+                  Pair(digest0, KeyPriority::EAGER),  // key08 and key10
+                  Pair(digest1, KeyPriority::LAZY)    // key09
+                  // No reference to key11 (points to inline object02)
+                  ));
+
+  // Check that references have been correctly added to PageStorage during
+  // object creation.
   EXPECT_THAT(
       fake_storage_.GetReferences(),
       // All the pieces are small enough not to get split so we know all objects

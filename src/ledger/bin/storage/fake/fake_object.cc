@@ -35,5 +35,10 @@ Status FakeObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
+Status FakeObject::AppendReferences(
+    ObjectReferencesAndPriority* references) const {
+  return Status::OK;
+}
+
 }  // namespace fake
 }  // namespace storage

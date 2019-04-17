@@ -68,8 +68,15 @@ class LevelDBPiece : public BasePiece {
   std::unique_ptr<leveldb::Iterator> iterator_;
 };
 
+// Common methods shared by all object implementations.
+class BaseObject : public Object {
+ public:
+  Status AppendReferences(
+      ObjectReferencesAndPriority* references) const override;
+};
+
 // Object whose data is backed by a single chunk piece.
-class ChunkObject : public Object {
+class ChunkObject : public BaseObject {
  public:
   // |piece| must be of type CHUNK; index pieces cannot be turned into objects
   // automatically.
@@ -84,7 +91,7 @@ class ChunkObject : public Object {
 };
 
 // Object whose data is backed by a VMO.
-class VmoObject : public Object {
+class VmoObject : public BaseObject {
  public:
   VmoObject(ObjectIdentifier identifier, fsl::SizedVmo vmo);
   ~VmoObject() override;

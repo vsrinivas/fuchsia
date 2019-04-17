@@ -8,6 +8,7 @@
 
 #include <utility>
 
+#include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
@@ -78,6 +79,25 @@ fxl::StringView LevelDBPiece::GetData() const {
 }
 
 ObjectIdentifier LevelDBPiece::GetIdentifier() const { return identifier_; }
+
+Status BaseObject::AppendReferences(
+    ObjectReferencesAndPriority* references) const {
+  FXL_DCHECK(references);
+  // Blobs have no references.
+  const auto digest_info = GetObjectDigestInfo(GetIdentifier().object_digest());
+  if (digest_info.object_type == ObjectType::BLOB) {
+    return Status::OK;
+  }
+  FXL_DCHECK(digest_info.object_type == ObjectType::TREE_NODE);
+  // Parse the object into a TreeNode.
+  std::unique_ptr<const btree::TreeNode> node;
+  Status status = btree::TreeNode::FromObject(*this, &node);
+  if (status != Status::OK) {
+    return status;
+  }
+  node->AppendReferences(references);
+  return Status::OK;
+}
 
 ChunkObject::ChunkObject(std::unique_ptr<const Piece> piece)
     : piece_(std::move(piece)) {

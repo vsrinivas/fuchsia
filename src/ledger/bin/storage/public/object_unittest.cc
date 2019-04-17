@@ -25,6 +25,11 @@ class StringObject : public Object {
     return Status::OK;
   }
 
+  Status AppendReferences(
+      ObjectReferencesAndPriority* references) const override {
+    return Status::OK;
+  }
+
  private:
   std::string value_;
 };

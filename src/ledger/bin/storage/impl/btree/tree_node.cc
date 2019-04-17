@@ -23,6 +23,30 @@
 
 namespace storage {
 namespace btree {
+namespace {
+
+// Extracts |children| and |entries| references to non-inline values into
+// |references|.
+void ExtractReferences(const std::vector<Entry>& entries,
+                       const std::map<size_t, ObjectIdentifier>& children,
+                       ObjectReferencesAndPriority* references) {
+  for (const auto& [size, identifier] : children) {
+    const auto& digest = identifier.object_digest();
+    FXL_DCHECK(storage::IsDigestValid(digest));
+    if (!GetObjectDigestInfo(digest).is_inlined()) {
+      // Node-node references are always treated as eager.
+      references->emplace(digest, KeyPriority::EAGER);
+    }
+  }
+  for (const auto& entry : entries) {
+    const auto& digest = entry.object_identifier.object_digest();
+    if (!GetObjectDigestInfo(digest).is_inlined()) {
+      references->emplace(digest, entry.priority);
+    }
+  }
+}
+
+}  // namespace
 
 TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level,
                    std::vector<Entry> entries,
@@ -83,20 +107,7 @@ void TreeNode::FromEntries(
     fit::function<void(Status, ObjectIdentifier)> callback) {
   FXL_DCHECK(children.empty() || children.rbegin()->first <= entries.size());
   ObjectReferencesAndPriority tree_references;
-  for (const auto& [size, identifier] : children) {
-    const auto& digest = identifier.object_digest();
-    FXL_DCHECK(storage::IsDigestValid(digest));
-    if (!GetObjectDigestInfo(digest).is_inlined()) {
-      // Node-node references are always treated as eager.
-      tree_references.emplace(digest, KeyPriority::EAGER);
-    }
-  }
-  for (const auto& entry : entries) {
-    const auto& digest = entry.object_identifier.object_digest();
-    if (!GetObjectDigestInfo(digest).is_inlined()) {
-      tree_references.emplace(digest, entry.priority);
-    }
-  }
+  ExtractReferences(entries, children, &tree_references);
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
       ObjectType::TREE_NODE, storage::DataSource::Create(std::move(encoding)),
@@ -109,6 +120,10 @@ Status TreeNode::GetEntry(int index, Entry* entry) const {
   FXL_DCHECK(index >= 0 && index < GetKeyCount());
   *entry = entries_[index];
   return Status::OK;
+}
+
+void TreeNode::AppendReferences(ObjectReferencesAndPriority* references) const {
+  ExtractReferences(entries_, children_, references);
 }
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,

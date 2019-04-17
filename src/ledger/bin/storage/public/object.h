@@ -31,6 +31,12 @@ class Object {
   // Returns a vmo containing the data.
   virtual Status GetVmo(fsl::SizedVmo* vmo) const;
 
+  // Adds tree-level references from this object to other objects into
+  // |references|. Does not clear |references|. Does not add piece-level
+  // references (use |Piece::AppendReferences| instead).
+  virtual Status AppendReferences(
+      ObjectReferencesAndPriority* references) const = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Object);
 };
@@ -50,10 +56,9 @@ class Piece {
   // piece is not deleted.
   virtual fxl::StringView GetData() const = 0;
 
-  // If this piece references other pieces (eg. an index referencing some
-  // chunks), adds them to |references|. Does not clear |references|. Does not
-  // add |Object| references even if the piece represents a full object of its
-  // own.
+  // Adds piece-level references from this piece to other pieces into
+  // |references|. Does not clear |references|. Does not add tree-level
+  // references (use |Object::AppendReferences| instead).
   virtual Status AppendReferences(
       ObjectReferencesAndPriority* references) const = 0;
 
