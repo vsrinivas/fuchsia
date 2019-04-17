@@ -38,6 +38,10 @@ table LoggerOptions {
     /// modification. If none provided, assume null. See |Listen| of
     /// fuchsia.logger.Log for more information.
     3: fuchsia.logger.LogFilterOptions filter_options;
+    /// Use the parent environment's syslog for output, only enriching
+    /// tags with environment names. If false or not provided,
+    /// environment logs are printed to stdout.
+    4: bool syslog_output;
 };
 
 /// Options used to create environment.

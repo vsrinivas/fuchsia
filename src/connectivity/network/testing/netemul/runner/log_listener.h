@@ -29,7 +29,8 @@ class LogListenerImpl final : public fuchsia::logger::LogListener {
   explicit LogListenerImpl(
       fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
       std::string prefix, std::ostream* stream, bool klogs_enabled,
-      async_dispatcher_t* dispatcher = nullptr);
+      async_dispatcher_t* dispatcher = nullptr,
+      zx::socket log_sink = zx::socket());
 
   /* Actual implementation (overrides) of fuchsia::logger::LogListener stubs */
 
@@ -71,6 +72,18 @@ class LogListenerImpl final : public fuchsia::logger::LogListener {
   //
   // Output stream where formatted logs will be sent to.
   std::ostream* stream_;
+
+  // log_sock_
+  //
+  // System log socket that will be redirected to if stream_
+  // is not available.
+  zx::socket log_sock_;
+
+  // dropped_logs_
+  //
+  // counter for number of dropped logs when logging to
+  // log_sock_.
+  uint32_t dropped_logs_;
 
   // klogs_enabled_
   //

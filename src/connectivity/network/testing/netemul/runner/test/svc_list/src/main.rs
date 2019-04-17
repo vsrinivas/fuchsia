@@ -132,6 +132,7 @@ async fn run_test() -> Result<(), Error> {
             enabled: Some(true),
             klogs_enabled: Some(false),
             filter_options: None,
+            syslog_output: None,
         }),
     };
     // launch the child env
@@ -209,6 +210,7 @@ async fn launch_grandchild() -> Result<(), Error> {
             enabled: Some(true),
             klogs_enabled: Some(false),
             filter_options: None,
+            syslog_output: None,
         }),
     };
 

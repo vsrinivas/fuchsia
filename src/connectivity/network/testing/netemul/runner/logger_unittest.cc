@@ -1,0 +1,261 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/wire_format.h>
+#include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/string_printf.h>
+
+#include "log_listener.h"
+
+namespace netemul {
+namespace testing {
+
+constexpr const char* kLoggerUrl =
+    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+constexpr uint64_t kDummyTid = 0xAA;
+constexpr uint64_t kDummyPid = 0xBB;
+constexpr int64_t kDummyTime = 0xCCAACC;
+constexpr int32_t kDummySeverity = 3;
+
+class TestListener : public fuchsia::logger::LogListener {
+ public:
+  explicit TestListener(
+      fidl::InterfaceRequest<fuchsia::logger::LogListener> req)
+      : binding_(this, std::move(req)) {
+    binding_.set_error_handler(
+        [](zx_status_t s) { FAIL() << "Connection to test listener closed"; });
+  }
+
+  void Log(fuchsia::logger::LogMessage log) override {
+    // ignore all klog:
+    if (std::find(log.tags.begin(), log.tags.end(), "klog") == log.tags.end()) {
+      messages_.emplace_back(std::move(log));
+    }
+  }
+
+  void LogMany(std::vector<fuchsia::logger::LogMessage> log) override {
+    for (auto& l : log) {
+      Log(std::move(l));
+    }
+  }
+
+  void Done() override {}
+
+  std::vector<fuchsia::logger::LogMessage>& messages() { return messages_; }
+
+ private:
+  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  std::vector<fuchsia::logger::LogMessage> messages_;
+};
+
+class LoggerTest : public sys::testing::TestWithEnvironment {
+ protected:
+  void Init(std::string env_name) {
+    auto services = CreateServices();
+    services->AddServiceWithLaunchInfo(
+        fuchsia::sys::LaunchInfo{.url = kLoggerUrl},
+        fuchsia::logger::LogSink::Name_);
+    services->AddServiceWithLaunchInfo(
+        fuchsia::sys::LaunchInfo{.url = kLoggerUrl},
+        fuchsia::logger::Log::Name_);
+    env = CreateNewEnclosingEnvironment(
+        "some_logger", std::move(services),
+        fuchsia::sys::EnvironmentOptions{.allow_parent_runners = false,
+                                         .inherit_parent_services = false,
+                                         .kill_on_oom = true,
+                                         .delete_storage_on_death = true});
+    ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+
+    fuchsia::logger::LogSinkPtr sink;
+    env->ConnectToService(sink.NewRequest(dispatcher()));
+    zx::socket mine, remote;
+    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &mine, &remote));
+    sink->Connect(std::move(remote));
+    log_listener = std::make_unique<internal::LogListenerImpl>(
+        proxy.NewRequest(dispatcher()), std::move(env_name), nullptr, false,
+        dispatcher(), std::move(mine));
+    fuchsia::logger::LogPtr syslog;
+    syslog.set_error_handler(
+        [](zx_status_t err) { FAIL() << "Lost connection to syslog"; });
+
+    env->ConnectToService(syslog.NewRequest(dispatcher()));
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> test_handle;
+    test_listener = std::make_unique<TestListener>(test_handle.NewRequest());
+    syslog->Listen(std::move(test_handle), nullptr);
+  }
+
+  fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags,
+                                               std::string message) {
+    return fuchsia::logger::LogMessage{.severity = kDummySeverity,
+                                       .time = kDummyTime,
+                                       .pid = kDummyPid,
+                                       .tid = kDummyTid,
+                                       .dropped_logs = 0,
+                                       .tags = std::move(tags),
+                                       .msg = std::move(message)};
+  }
+
+  void ValidateMessage(const fuchsia::logger::LogMessage& msg,
+                       const std::vector<std::string>& tags,
+                       const std::string& message) {
+    EXPECT_EQ(msg.severity, kDummySeverity);
+    EXPECT_EQ(msg.time, kDummyTime);
+    EXPECT_EQ(msg.pid, kDummyPid);
+    EXPECT_EQ(msg.tid, kDummyTid);
+    EXPECT_EQ(msg.dropped_logs, 0ul);
+    EXPECT_EQ(msg.msg, message);
+    EXPECT_EQ(tags.size(), msg.tags.size());
+    for (const auto& t : tags) {
+      EXPECT_NE(std::find(msg.tags.begin(), msg.tags.end(), t), msg.tags.end())
+          << "Can't find tag " << t << " in "
+          << fxl::JoinStrings(msg.tags, ",");
+    }
+  }
+
+  std::vector<fuchsia::logger::LogMessage> WaitForMessages() {
+    RunLoopUntil([this]() { return !test_listener->messages().empty(); });
+    auto ret = std::move(test_listener->messages());
+    test_listener->messages().clear();
+    return ret;
+  }
+
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env;
+  std::unique_ptr<internal::LogListenerImpl> log_listener;
+  std::unique_ptr<TestListener> test_listener;
+  fuchsia::logger::LogListenerPtr proxy;
+};
+
+TEST_F(LoggerTest, SyslogRedirect) {
+  Init("netemul");
+  std::string env_name = "@netemul";
+
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"));
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], {"tag", env_name}, "Hello");
+}
+
+TEST_F(LoggerTest, TooManyTags) {
+  Init("netemul");
+  std::string env_name = "@netemul";
+
+  std::vector<std::string> tags;
+  tags.reserve(FX_LOG_MAX_TAGS);
+  for (int i = 0; i < FX_LOG_MAX_TAGS; i++) {
+    tags.emplace_back(fxl::StringPrintf("t%d", i));
+  }
+
+  proxy->Log(CreateLogMessage(tags, "Hello"));
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], tags, "[@netemul] Hello");
+}
+
+TEST_F(LoggerTest, LongEnvironmentName) {
+  std::stringstream ss;
+  for (int i = 0; i < FX_LOG_MAX_TAG_LEN + 5; i++) {
+    ss << static_cast<char>('a' + (i % 26));
+  }
+  auto env_name = ss.str();
+  Init(env_name);
+  std::string expect_tag = "@" + env_name.substr(0, FX_LOG_MAX_TAG_LEN - 2);
+
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"));
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], {"tag", expect_tag}, "Hello");
+}
+
+TEST_F(LoggerTest, VeryLongEnvironmentName) {
+  std::stringstream ss;
+  for (int i = 0; i < FX_LOG_MAX_DATAGRAM_LEN; i++) {
+    ss << static_cast<char>('a' + (i % 26));
+  }
+  auto env_name = ss.str();
+  Init(std::move(env_name));
+
+  std::vector<std::string> tags;
+  tags.reserve(FX_LOG_MAX_TAGS);
+  for (int i = 0; i < FX_LOG_MAX_TAGS; i++) {
+    tags.emplace_back(fxl::StringPrintf("t%d", i));
+  }
+  // if environment name is too long to fit in message,
+  // we'll just not add it.
+
+  proxy->Log(CreateLogMessage(tags, "Hello"));
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], tags, "Hello");
+}
+
+TEST_F(LoggerTest, LongMessageLongTags) {
+  std::stringstream ss;
+  for (size_t i = 0; i < sizeof(fx_log_packet_t::data); i++) {
+    ss << static_cast<char>('a' + (i % 26));
+  }
+
+  auto msg = ss.str();
+  Init("netemul");
+  std::string prefix = "[@netemul] ";
+  std::vector<std::string> tags;
+  tags.reserve(FX_LOG_MAX_TAGS);
+  size_t tags_len = 1;
+  for (int i = 0; i < FX_LOG_MAX_TAGS; i++) {
+    auto& t = tags.emplace_back(fxl::StringPrintf("t%d", i));
+    tags_len += t.length() + 1;
+  }
+
+  // If message is really long, the environment name will
+  // take some of the space when tags are full
+
+  proxy->Log(CreateLogMessage(tags, msg));
+
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], tags,
+                  prefix + msg.substr(0, sizeof(fx_log_packet_t::data) -
+                                             tags_len - prefix.length() - 1));
+}
+
+TEST_F(LoggerTest, LongMessage) {
+  std::stringstream ss;
+  for (size_t i = 0; i < sizeof(fx_log_packet_t::data); i++) {
+    ss << static_cast<char>('a' + (i % 26));
+  }
+
+  auto msg = ss.str();
+  std::string env_name = "@netemul";
+  Init("netemul");
+
+  std::string tag = "tag";
+  size_t tags_len = 1 + (1 + tag.length()) + (1 + env_name.length());
+
+  proxy->Log(CreateLogMessage({tag}, msg));
+
+  // Since we're adding more tags with environment name,
+  // long messages neeed to be trimmed.
+
+  auto msgs = WaitForMessages();
+  ValidateMessage(msgs[0], {tag, env_name},
+                  msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - 1));
+}
+
+TEST_F(LoggerTest, MultipleMessages) {
+  std::string env_name = "@netemul";
+  Init("netemul");
+
+  constexpr int messages = 10;
+  for (int i = 0; i < messages; i++) {
+    proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%d", i)));
+  }
+
+  int consumed = 0;
+  while (consumed < messages) {
+    auto msgs = WaitForMessages();
+    for (const auto& msg : msgs) {
+      ValidateMessage(msg, {"tag", env_name},
+                      fxl::StringPrintf("Hello%d", consumed));
+      consumed++;
+    }
+  }
+}
+
+}  // namespace testing
+}  // namespace netemul

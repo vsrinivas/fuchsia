@@ -101,6 +101,7 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             enabled: Some(true),
             klogs_enabled: Some(false),
             filter_options: None,
+            syslog_output: None,
         }),
     };
     // launch the child env

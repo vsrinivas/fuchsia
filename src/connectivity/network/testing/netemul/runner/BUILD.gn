@@ -49,6 +49,7 @@ source_set("src") {
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
+    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
@@ -98,6 +99,7 @@ executable("bin") {
 executable("sandbox_unittest") {
   testonly = true
   sources = [
+    "logger_unittest.cc",
     "sandbox_unittest.cc",
   ]
 
@@ -107,6 +109,8 @@ executable("sandbox_unittest") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
