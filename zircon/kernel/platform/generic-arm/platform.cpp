@@ -69,9 +69,6 @@ static zbi_header_t* zbi_root = nullptr;
 
 static zbi_nvram_t lastlog_nvram;
 
-static uint cpu_cluster_count = 0;
-static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
-
 static bool halt_on_panic = false;
 static bool uart_disabled = false;
 
@@ -91,9 +88,6 @@ static uint8_t mexec_zbi[4096];
 static size_t mexec_zbi_length = 0;
 
 static volatile int panic_started;
-
-// TODO(ZX-3068) This is temporary until we fully deprecate ZBI_CPU_CONFIG.
-static bool use_topology = false;
 
 static constexpr bool kProcessZbiEarly = true;
 
@@ -221,38 +215,6 @@ static void topology_cpu_init(void) {
     }
 }
 
-static void platform_cpu_init(void) {
-    for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
-        for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
-            if (cluster != 0 || cpu != 0) {
-                const uint cpu_num = arch_mpid_to_cpu_num(cluster, cpu);
-                const uint64_t mpid = ARM64_MPID(cluster, cpu);
-
-                // create a stack for the cpu we're about to start
-                zx_status_t status = arm64_create_secondary_stack(cpu_num, mpid);
-
-                DEBUG_ASSERT(status == ZX_OK);
-
-                // start the cpu
-                status = platform_start_cpu(mpid);
-
-                if (status != ZX_OK) {
-                    // TODO(maniscalco): Is continuing really the right thing to do here?
-
-                    // start failed, free the stack
-                    zx_status_t status = arm64_free_secondary_stack(cpu_num);
-                    DEBUG_ASSERT(status == ZX_OK);
-                    continue;
-                }
-
-                // the cpu booted
-                //
-                // bootstrap thread is now responsible for freeing its stack
-            }
-        }
-    }
-}
-
 static inline bool is_zbi_container(void* addr) {
     DEBUG_ASSERT(addr);
 
@@ -335,16 +297,7 @@ static zbi_result_t process_zbi_item_early(zbi_header_t* item,
         save_mexec_zbi(item);
         break;
     }
-    case ZBI_TYPE_CPU_CONFIG: {
-        zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(payload);
-        cpu_cluster_count = cpu_config->cluster_count;
-        for (uint32_t i = 0; i < cpu_cluster_count; i++) {
-            cpu_cluster_cpus[i] = cpu_config->clusters[i].cpu_count;
-        }
-        arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
-        save_mexec_zbi(item);
-        break;
-    }
+
     case ZBI_TYPE_NVRAM: {
         zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(payload);
         memcpy(&lastlog_nvram, nvram, sizeof(lastlog_nvram));
@@ -359,40 +312,125 @@ static zbi_result_t process_zbi_item_early(zbi_header_t* item,
     return ZBI_RESULT_OK;
 }
 
+static constexpr zbi_topology_node_t fallback_topology = {
+    .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+    .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+    .entity = {
+        .processor = {
+            .logical_ids = {0},
+            .logical_id_count = 1,
+            .flags = 0,
+            .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+            .architecture_info = {
+                .arm = {
+                    .cluster_1_id = 0,
+                    .cluster_2_id = 0,
+                    .cluster_3_id = 0,
+                    .cpu_id = 0,
+                    .gic_id = 0,
+                }
+            }
+        }
+    }
+};
+
+static void init_topology(zbi_topology_node_t* nodes, size_t node_count) {
+    auto result = system_topology::GetMutableSystemTopology()
+            .Update(nodes, node_count);
+    if (result != ZX_OK) {
+        printf("Failed to initialize system topology! error: %d \n",
+               result);
+
+        // Try to fallback to a topology of just this processor.
+        result = system_topology::GetMutableSystemTopology()
+                .Update(&fallback_topology, 1);
+        ASSERT(result == ZX_OK);
+    }
+
+    arch_set_num_cpus(static_cast<uint>(
+        system_topology::GetSystemTopology().processor_count()));
+
+    // TODO(ZX-3068) Print the whole topology of the system.
+    if (LK_DEBUGLEVEL >= INFO) {
+        for (auto* proc :
+             system_topology::GetSystemTopology().processors()) {
+            auto& info = proc->entity.processor.architecture_info.arm;
+            dprintf(INFO, "System topology: CPU %u:%u:%u:%u\n",
+                    info.cluster_3_id,
+                    info.cluster_2_id,
+                    info.cluster_1_id,
+                    info.cpu_id);
+        }
+    }
+}
+
 // Called after heap is up, but before multithreading.
 static zbi_result_t process_zbi_item_late(zbi_header_t* item,
                                           void* payload, void*) {
     switch (item->type) {
+    case ZBI_TYPE_CPU_CONFIG: {
+        zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(payload);
+
+        // Convert old zbi_cpu_config into zbi_topology structure.
+
+        // Allocate some memory to work in.
+        size_t node_count = 0;
+        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
+            // Each cluster will get a node.
+            node_count++;
+            node_count += cpu_config->clusters[cluster].cpu_count;
+        }
+
+        fbl::AllocChecker checker;
+        auto flat_topology = ktl::unique_ptr<zbi_topology_node_t[]> {
+            new (&checker) zbi_topology_node_t[node_count]};
+        if (!checker.check()) {
+            return ZBI_RESULT_ERROR;
+        }
+
+        // Initialize to 0.
+        memset(flat_topology.get(), 0, sizeof(zbi_topology_node_t) * node_count);
+
+        // Create topology structure.
+        size_t flat_index = 0;
+        uint16_t logical_id = 0;
+        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
+            const auto cluster_index = flat_index;
+            auto& node = flat_topology.get()[flat_index++];
+            node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
+            node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
+
+            // We don't have this data so it is a guess that little cores are
+            // first.
+            node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
+
+            for (size_t i = 0; i < cpu_config->clusters[cluster].cpu_count; i++) {
+                auto& node = flat_topology.get()[flat_index++];
+                node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
+                node.parent_index = static_cast<uint16_t>(cluster_index);
+                node.entity.processor.logical_id_count = 1;
+                node.entity.processor.logical_ids[0] = logical_id++;
+                node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
+                node.entity.processor.architecture_info.arm.cluster_1_id =
+                        static_cast<uint8_t>(cluster);
+                node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
+            }
+        }
+        DEBUG_ASSERT(flat_index == node_count);
+
+        // Initialize topology subsystem.
+        init_topology(flat_topology.get(), node_count);
+        save_mexec_zbi(item);
+        break;
+    }
     case ZBI_TYPE_CPU_TOPOLOGY: {
         const int node_count = item->length / item->extra;
 
         zbi_topology_node_t* nodes =
             reinterpret_cast<zbi_topology_node_t*>(payload);
 
-        auto result = system_topology::GetMutableSystemTopology()
-                          .Update(nodes, node_count);
-        if (result != ZX_OK) {
-            printf("Failed to initialize system topology! error: %d \n",
-                   result);
-        } else {
-            use_topology = true;
-            arch_set_num_cpus(static_cast<uint>(
-                system_topology::GetSystemTopology().processor_count()));
-
-            // TODO(ZX-3068) Print the whole topology of the system.
-            if (LK_DEBUGLEVEL >= INFO) {
-                for (auto* proc :
-                     system_topology::GetSystemTopology().processors()) {
-                    auto& info = proc->entity.processor.architecture_info.arm;
-                    dprintf(INFO, "System topology: CPU %u:%u:%u:%u\n",
-                            info.cluster_3_id,
-                            info.cluster_2_id,
-                            info.cluster_1_id,
-                            info.cpu_id);
-                }
-            }
-        }
-
+        init_topology(nodes, node_count);
+        save_mexec_zbi(item);
         break;
     }
     }
@@ -500,11 +538,7 @@ LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread,
              LK_INIT_LEVEL_THREADING - 1)
 
 void platform_init(void) {
-    if (use_topology) {
-        topology_cpu_init();
-    } else {
-        platform_cpu_init();
-    }
+    topology_cpu_init();
 }
 
 // after the fact create a region to reserve the peripheral map(s)

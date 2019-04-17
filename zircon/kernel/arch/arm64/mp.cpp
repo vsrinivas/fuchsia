@@ -27,11 +27,6 @@ struct MpidCpuidPair {
     uint cpu_id;
 };
 
-// TODO(ZX-3068) Switch completely to list and remove map.
-bool use_cpu_map = true;
-
-// map of cluster/cpu to cpu_id
-uint arm64_cpu_map[SMP_CPU_MAX_CLUSTERS][SMP_CPU_MAX_CLUSTER_CPUS] = {{0}};
 MpidCpuidPair arm64_cpu_list[SMP_MAX_CPUS];
 size_t arm64_cpu_list_count = 0;
 
@@ -47,34 +42,6 @@ uint arm_num_cpus = 1;
 // per cpu structures, each cpu will point to theirs using the x18 register
 arm64_percpu arm64_percpu_array[SMP_MAX_CPUS];
 
-// initializes cpu_map and arm_num_cpus
-void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus) {
-    ASSERT(cluster_count <= SMP_CPU_MAX_CLUSTERS);
-
-    // assign cpu_ids sequentially
-    uint cpu_id = 0;
-    for (uint cluster = 0; cluster < cluster_count; cluster++) {
-        uint cpus = *cluster_cpus++;
-        ASSERT(cpus <= SMP_CPU_MAX_CLUSTER_CPUS);
-        for (uint cpu = 0; cpu < cpus; cpu++) {
-            // given cluster:cpu, translate to global cpu id
-            arm64_cpu_map[cluster][cpu] = cpu_id;
-
-            // given global gpu_id, translate to cluster and cpu number within cluster
-            arm64_cpu_cluster_ids[cpu_id] = cluster;
-            arm64_cpu_cpu_ids[cpu_id] = cpu;
-
-            // set the per cpu structure's cpu id
-            arm64_percpu_array[cpu_id].cpu_num = cpu_id;
-
-            cpu_id++;
-        }
-    }
-    arm_num_cpus = cpu_id;
-    use_cpu_map = true;
-    smp_mb();
-}
-
 void arch_register_mpid(uint cpu_id, uint64_t mpid) {
     // TODO(ZX-3068) transition off of these maps to the topology.
     arm64_cpu_cluster_ids[cpu_id] = (mpid & 0xFF00) >> MPIDR_AFF1_SHIFT; // "cluster" here is AFF1.
@@ -83,37 +50,25 @@ void arch_register_mpid(uint cpu_id, uint64_t mpid) {
     arm64_percpu_array[cpu_id].cpu_num = cpu_id;
 
     arm64_cpu_list[arm64_cpu_list_count++] = {.mpid = mpid, .cpu_id = cpu_id};
-
-    use_cpu_map = false;
 }
 
 // do the 'slow' lookup by mpidr to cpu number
 static uint arch_curr_cpu_num_slow() {
     uint64_t mpidr = __arm_rsr64("mpidr_el1");
-    if (use_cpu_map) {
-        uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
-        uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
+    mpidr &= kMpidAffMask;
 
-        return arm64_cpu_map[cluster][cpu];
-    } else {
-        mpidr &= kMpidAffMask;
-        for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
-            if (arm64_cpu_list[i].mpid == mpidr) {
-                return arm64_cpu_list[i].cpu_id;
-            }
+    for (size_t i = 0; i < arm64_cpu_list_count; ++i) {
+        if (arm64_cpu_list[i].mpid == mpidr) {
+            return arm64_cpu_list[i].cpu_id;
         }
-
-        // The only time we shouldn't find a cpu is when the list isn't
-        // defined yet during early boot, in this case the only processor up is 0
-        // so returning 0 is correct.
-        DEBUG_ASSERT(arm64_cpu_list_count == 0);
-
-        return 0;
     }
-}
 
-cpu_num_t arch_mpid_to_cpu_num(uint cluster, uint cpu) {
-    return arm64_cpu_map[cluster][cpu];
+    // The only time we shouldn't find a cpu is when the list isn't
+    // defined yet during early boot, in this case the only processor up is 0
+    // so returning 0 is correct.
+    DEBUG_ASSERT(arm64_cpu_list_count == 0);
+
+    return 0;
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {

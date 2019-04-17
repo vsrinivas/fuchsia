@@ -22,26 +22,30 @@ zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector, fbl::AllocChecke
 
 } // namespace
 
-zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
-    if (flat_nodes == nullptr || count == 0 || !Validate(flat_nodes, static_cast<int>(count))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
+zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
     if (nodes_.get() != nullptr) {
         return ZX_ERR_ALREADY_EXISTS;
     }
 
+    if (flat_nodes == nullptr || count == 0 || !Validate(flat_nodes, static_cast<int>(count))) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     fbl::AllocChecker checker;
-    nodes_.reset(new (&checker) Node[count]{{}});
+    fbl::unique_ptr<Node[]> nodes(new (&checker) Node[count]{{}});
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    // Create local instances, if successful we will move them to the Graph's fields.
+    fbl::Vector<Node*> processors;
+    fbl::Vector<Node*> processors_by_logical_id;
+
     Node* node = nullptr;
-    zbi_topology_node_t* flat_node = nullptr;
+    const zbi_topology_node_t* flat_node = nullptr;
     for (size_t i = 0; i < count; ++i) {
         flat_node = &flat_nodes[i];
-        node = &nodes_[i];
+        node = &nodes[i];
 
         node->entity_type = flat_node->entity_type;
 
@@ -50,18 +54,16 @@ zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
         case ZBI_TOPOLOGY_ENTITY_PROCESSOR:
             node->entity.processor = flat_node->entity.processor;
 
-            processors_.push_back(node, &checker);
+            processors.push_back(node, &checker);
             if (!checker.check()) {
-                nodes_.reset(nullptr);
                 return ZX_ERR_NO_MEMORY;
             }
 
             for (int i = 0; i < node->entity.processor.logical_id_count; ++i) {
                 const auto index = node->entity.processor.logical_ids[i];
-                GrowVector(index + 1, &processors_by_logical_id_, &checker);
-                processors_by_logical_id_[index] = node;
+                GrowVector(index + 1, &processors_by_logical_id, &checker);
+                processors_by_logical_id[index] = node;
                 if (!checker.check()) {
-                    nodes_.reset(nullptr);
                     return ZX_ERR_NO_MEMORY;
                 }
             }
@@ -82,19 +84,22 @@ zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
             ZX_DEBUG_ASSERT_MSG(flat_node->parent_index >= 0 && flat_node->parent_index < count,
                                 "parent_index out of range: %u\n", flat_node->parent_index);
 
-            node->parent = &nodes_[flat_node->parent_index];
+            node->parent = &nodes[flat_node->parent_index];
             node->parent->children.push_back(node, &checker);
             if (!checker.check()) {
-                nodes_.reset(nullptr);
                 return ZX_ERR_NO_MEMORY;
             }
         }
     }
 
+    nodes_.swap(nodes);
+    processors_ = std::move(processors);
+    processors_by_logical_id_ = std::move(processors_by_logical_id);
+
     return ZX_OK;
 }
 
-bool Graph::Validate(zbi_topology_node_t* nodes, int count) const {
+bool Graph::Validate(const zbi_topology_node_t* nodes, int count) const {
     uint16_t parents[kMaxTopologyDepth];
     for (size_t i = 0; i < kMaxTopologyDepth; ++i) {
         parents[i] = ZBI_TOPOLOGY_NO_PARENT;
@@ -103,7 +108,7 @@ bool Graph::Validate(zbi_topology_node_t* nodes, int count) const {
     uint8_t current_type = ZBI_TOPOLOGY_ENTITY_UNDEFINED;
     int current_depth = 0;
 
-    zbi_topology_node_t* node;
+    const zbi_topology_node_t* node;
     for (int current_index = count - 1; current_index >= 0; current_index--) {
         node = &nodes[current_index];
 

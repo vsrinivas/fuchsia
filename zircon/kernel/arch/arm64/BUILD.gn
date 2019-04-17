@@ -61,10 +61,6 @@ if (current_toolchain == default_toolchain) {
   }
 
   source_set("arm64") {
-    defines = [
-      "SMP_CPU_MAX_CLUSTER_CPUS=$smp_max_cpus",
-      "SMP_CPU_MAX_CLUSTERS=$smp_max_clusters",
-    ]
     sources = [
       "arch.cpp",
       "asm.S",

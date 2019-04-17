@@ -8,7 +8,6 @@ source_set("generic-arm") {
   sources = [
     "platform.cpp",
   ]
-  defines = [ "SMP_CPU_MAX_CLUSTERS=$smp_max_clusters" ]
   deps = [
     "$zx/kernel/dev/hdcp/amlogic_s912",
     "$zx/kernel/dev/hw_rng",

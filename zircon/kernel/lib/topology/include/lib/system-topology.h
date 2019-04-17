@@ -47,7 +47,7 @@ public:
     // we MUST redesign this process to consider concurrent readers.
     // Returns ZX_ERR_ALREADY_EXISTS if state already set or ZX_ERR_INVALID_ARGS if provided graph
     // fails validation.
-    zx_status_t Update(zbi_topology_node_t* nodes, size_t count);
+    zx_status_t Update(const zbi_topology_node_t* nodes, size_t count);
 
     // Provides iterable container of pointers to all processor nodes.
     IterableProcessors processors() const {
@@ -75,7 +75,7 @@ private:
     //   - there are no cycles.
     //   - It is stored in a "depth first" ordering, with parents adjacent to
     //   their children.
-    bool Validate(zbi_topology_node_t* nodes, int count) const;
+    bool Validate(const zbi_topology_node_t* nodes, int count) const;
 
     fbl::unique_ptr<Node[]> nodes_;
     fbl::Vector<Node*> processors_;

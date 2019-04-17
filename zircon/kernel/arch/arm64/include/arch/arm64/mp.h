@@ -107,8 +107,6 @@ static inline uint arch_cpu_num_to_cpu_id(uint cpu) {
     return arm64_cpu_cpu_ids[cpu];
 }
 
-cpu_num_t arch_mpid_to_cpu_num(uint cluster, uint cpu);
-
 #define READ_PERCPU_FIELD32(field) \
     arm64_read_percpu_u32(offsetof(struct arm64_percpu, field))
 
