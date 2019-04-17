@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/context_repository_unittest"
-    },
-    "sandbox": {
-        "services": []
     }
 }

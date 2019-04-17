@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/netstack_fidlconv_test"
-    },
-    "sandbox": {
-        "services": []
     }
 }

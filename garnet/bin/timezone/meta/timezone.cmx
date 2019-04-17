@@ -3,7 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-global-persistent-storage" ],
-        "services": []
+        "features": [
+            "deprecated-global-persistent-storage"
+        ]
     }
 }

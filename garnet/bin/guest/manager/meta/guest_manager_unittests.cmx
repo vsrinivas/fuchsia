@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/guest_manager_unittests"
-    },
-    "sandbox": {
-        "services": []
     }
 }

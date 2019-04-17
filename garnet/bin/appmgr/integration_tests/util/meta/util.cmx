@@ -6,7 +6,6 @@
         "features": [
             "isolated-persistent-storage",
             "deprecated-global-persistent-storage"
-        ],
-        "services": []
+        ]
     }
 }

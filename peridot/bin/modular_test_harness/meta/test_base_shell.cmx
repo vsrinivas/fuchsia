@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "bin/test_base_shell_bin"
-    },
-    "sandbox": {
-        "services": []
     }
 }

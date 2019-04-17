@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/story_command_executor_unittest"
-    },
-    "sandbox": {
-        "services": []
     }
 }

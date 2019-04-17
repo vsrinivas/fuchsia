@@ -61,9 +61,7 @@
                     }
                 ],
                 "test": [
-                    {
-                        "arguments": []
-                    }
+                    {}
                 ]
             },
             "networks": [

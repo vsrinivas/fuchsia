@@ -44,9 +44,7 @@
                     }
                 ],
                 "test": [
-                    {
-                        "arguments": []
-                    }
+                    {}
                 ]
             },
             "networks": [

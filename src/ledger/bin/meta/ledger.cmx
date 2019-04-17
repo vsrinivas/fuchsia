@@ -3,7 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.netconnector.NetConnector",
             "fuchsia.net.SocketProvider",

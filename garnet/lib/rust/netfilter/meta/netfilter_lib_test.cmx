@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/netfilter_lib_test"
-    },
-    "sandbox": {
-        "services": []
     }
 }

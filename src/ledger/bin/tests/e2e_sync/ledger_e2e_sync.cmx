@@ -15,7 +15,6 @@
         "binary": "test/disabled/ledger_e2e_sync"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.net.oldhttp.HttpService",

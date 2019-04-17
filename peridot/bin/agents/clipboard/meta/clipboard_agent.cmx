@@ -3,7 +3,6 @@
         "binary": "bin/clipboard_agent"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",

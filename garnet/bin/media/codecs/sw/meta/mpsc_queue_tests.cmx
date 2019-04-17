@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/mpsc_queue_tests"
-    },
-    "sandbox": {
-        "services": []
     }
 }

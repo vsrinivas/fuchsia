@@ -15,7 +15,6 @@
         "binary": "test/disabled/launch_validation_tests_firestore"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Launcher"

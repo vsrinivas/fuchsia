@@ -3,7 +3,6 @@
         "binary": "test/mediasession_bin_test"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.sys.Launcher"
         ]

@@ -3,7 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "shell" ],
-        "services": []
+        "features": [
+            "shell"
+        ]
     }
 }

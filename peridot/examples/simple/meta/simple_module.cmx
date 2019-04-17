@@ -3,7 +3,6 @@
         "binary": "bin/simple_module"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",

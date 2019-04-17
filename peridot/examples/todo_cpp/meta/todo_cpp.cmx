@@ -3,7 +3,6 @@
         "binary": "bin/todo_cpp"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",

@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/ledger_lib_unittests"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
     }
 }

@@ -36,9 +36,7 @@
                     }
                 },
                 "test": [
-                    {
-                        "arguments": []
-                    }
+                    {}
                 ]
             },
             "timeout": 120

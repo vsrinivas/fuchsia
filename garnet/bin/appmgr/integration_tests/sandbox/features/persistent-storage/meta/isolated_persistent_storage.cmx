@@ -3,7 +3,6 @@
         "binary": "test/isolated_persistent_storage"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

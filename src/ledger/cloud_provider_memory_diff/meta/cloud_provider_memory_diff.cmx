@@ -3,7 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

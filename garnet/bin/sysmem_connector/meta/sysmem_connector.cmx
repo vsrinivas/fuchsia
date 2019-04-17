@@ -6,7 +6,6 @@
         "dev": [
             "class/sysmem"
         ],
-        "features": [],
         "services": [
             "fuchsia.tracelink.Registry"
         ]

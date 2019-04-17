@@ -3,7 +3,8 @@
         "binary": "test/timezone_unittests"
     },
     "sandbox": {
-        "services": [],
-        "features": [ "system-temp"]
+        "features": [
+            "system-temp"
+        ]
     }
 }

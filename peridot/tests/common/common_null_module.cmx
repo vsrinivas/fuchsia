@@ -5,8 +5,7 @@
             "composition_pattern": "ticker",
             "intent_filters": [
                 {
-                    "action": "com.google.fuchsia.common.null",
-                    "parameters": []
+                    "action": "com.google.fuchsia.common.null"
                 }
             ],
             "suggestion_headline": "Null module"

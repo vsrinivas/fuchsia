@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/vsock_service_lib_lib_test"
-    },
-    "sandbox": {
-        "dev": [],
-        "services": []
     }
 }

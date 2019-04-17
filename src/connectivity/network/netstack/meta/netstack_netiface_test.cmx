@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/netstack_netiface_test"
-    },
-    "sandbox": {
-        "services": []
     }
 }

@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/story_visibility_system_unittest"
-    },
-    "sandbox": {
-        "services": []
     }
 }

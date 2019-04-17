@@ -3,7 +3,8 @@
         "binary": "test/run_test_component_test"
     },
     "sandbox": {
-        "features": [ "shell" ],
-        "services": []
+        "features": [
+            "shell"
+        ]
     }
 }

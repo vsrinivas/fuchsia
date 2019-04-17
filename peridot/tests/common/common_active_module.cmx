@@ -4,8 +4,7 @@
             "@version": 2,
             "intent_filters": [
                 {
-                    "action": "com.google.fuchsia.common.active",
-                    "parameters": []
+                    "action": "com.google.fuchsia.common.active"
                 }
             ],
             "suggestion_headline": "Active module"

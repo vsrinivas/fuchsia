@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/cloud_provider_firestore_unittests"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
     }
 }

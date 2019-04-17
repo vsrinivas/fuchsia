@@ -3,7 +3,6 @@
         "binary": "test/ledger_e2e_local"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.sys.Launcher"
         ]

@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/pkg_url_unittests"
-    },
-    "sandbox": {
-        "services": []
     }
 }

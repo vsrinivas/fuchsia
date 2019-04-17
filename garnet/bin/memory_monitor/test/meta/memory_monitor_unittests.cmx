@@ -3,7 +3,8 @@
         "binary": "test/memory_monitor_unittests"
     },
     "sandbox": {
-        "services": [],
-        "dev": [ "misc/sysinfo" ]
+        "dev": [
+            "misc/sysinfo"
+        ]
     }
 }

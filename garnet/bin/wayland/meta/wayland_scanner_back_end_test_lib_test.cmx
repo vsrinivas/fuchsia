@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/wayland_scanner_back_end_test_lib_test"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
     }
 }

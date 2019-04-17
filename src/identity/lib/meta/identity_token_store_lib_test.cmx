@@ -3,7 +3,8 @@
         "binary": "test/identity_token_store_lib_test"
     },
     "sandbox": {
-        "features": ["system-temp"],
-        "services": []
+        "features": [
+            "system-temp"
+        ]
     }
 }

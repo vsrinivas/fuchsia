@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/vmm_unittests"
-    },
-    "sandbox": {
-        "services": []
     }
 }

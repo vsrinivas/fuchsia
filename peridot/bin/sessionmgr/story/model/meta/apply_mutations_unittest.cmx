@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/apply_mutations_unittest"
-    },
-    "sandbox": {
-        "services": []
     }
 }
