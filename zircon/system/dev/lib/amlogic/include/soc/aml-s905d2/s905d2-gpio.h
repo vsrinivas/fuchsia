@@ -67,6 +67,7 @@
 
 #define S905D2_AO_PAD_DS_A  0x07
 #define S905D2_AO_PAD_DS_B  0x08
+#define S905D2_PAD_DS_REG0A 0xd0
 #define S905D2_PAD_DS_REG1A 0xd1
 #define S905D2_PAD_DS_REG2A 0xd2
 #define S905D2_PAD_DS_REG2B 0xd3

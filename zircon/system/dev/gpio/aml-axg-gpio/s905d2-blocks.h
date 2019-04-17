@@ -19,6 +19,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG4,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOZ_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG4A,
         .lock = MTX_INIT,
     },
     {
@@ -34,6 +35,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG4,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOZ_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG4A,
         .lock = MTX_INIT,
     },
     // GPIO A Block
@@ -50,6 +52,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG5,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOA_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG5A,
         .lock = MTX_INIT,
     },
     {
@@ -65,6 +68,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG5,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOA_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG5A,
         .lock = MTX_INIT,
     },
     // GPIO BOOT Block
@@ -81,6 +85,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOBOOT_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG0A,
         .lock = MTX_INIT,
     },
     {
@@ -96,6 +101,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOBOOT_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG0A,
         .lock = MTX_INIT,
     },
     // GPIO C Block
@@ -112,6 +118,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .output_shift = 0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOC_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG1A,
         .lock = MTX_INIT,
     },
     // GPIO X Block
@@ -128,6 +135,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG2,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOX_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG2A,
         .lock = MTX_INIT,
     },
     {
@@ -143,6 +151,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_PAD_PULL_UP_EN_REG2,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOX_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG2A,
         .lock = MTX_INIT,
     },
     {
@@ -158,6 +167,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .output_shift = 0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOX_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG2B,
         .lock = MTX_INIT,
     },
     // GPIO H Block
@@ -174,6 +184,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .output_shift = 0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOH_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG3A,
         .lock = MTX_INIT,
     },
     {
@@ -189,6 +200,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .output_shift = 0,
         .mmio_index = 0,
         .pin_start = S905D2_GPIOH_PIN_START,
+        .ds_offset = S905D2_PAD_DS_REG3A,
         .lock = MTX_INIT,
     },
     // GPIO AO Block
@@ -205,6 +217,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_GPIOAO_PULL_EN_REG,
         .mmio_index = 1,
         .lock = MTX_INIT,
+        .ds_offset = S905D2_AO_PAD_DS_A,
         .pin_start = S905D2_GPIOA0_PIN_START,
     },
     {
@@ -220,8 +233,10 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_GPIOAO_PULL_EN_REG,
         .mmio_index = 1,
         .pin_start = S905D2_GPIOA0_PIN_START,
+        .ds_offset = S905D2_AO_PAD_DS_A,
         .lock = MTX_INIT,
     },
+    // GPIO E Block
     {
         .start_pin = (S905D2_GPIOE_START + 0),
         .pin_block = S905D2_GPIOE_START,
@@ -235,6 +250,7 @@ static aml_gpio_block_t s905d2_gpio_blocks[] = {
         .pull_en_offset = S905D2_GPIOAO_PULL_EN_REG,
         .mmio_index = 1,
         .pin_start = S905D2_GPIOA0_PIN_START,
+        .ds_offset = S905D2_AO_PAD_DS_B,
         .lock = MTX_INIT,
     },
 };

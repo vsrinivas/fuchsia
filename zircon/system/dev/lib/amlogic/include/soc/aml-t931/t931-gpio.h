@@ -31,6 +31,7 @@
 
 #define T931_AO_PAD_DS_A                   S905D2_AO_PAD_DS_A
 #define T931_AO_PAD_DS_B                   S905D2_AO_PAD_DS_B
+#define T931_PAD_DS_REG0A                  S905D2_PAD_DS_REG0A
 #define T931_PAD_DS_REG1A                  S905D2_PAD_DS_REG1A
 #define T931_PAD_DS_REG2A                  S905D2_PAD_DS_REG2A
 #define T931_PAD_DS_REG2B                  S905D2_PAD_DS_REG2B
