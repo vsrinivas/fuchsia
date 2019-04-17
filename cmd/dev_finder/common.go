@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"fuchsia.googlesource.com/tools/mdns"
@@ -48,8 +50,8 @@ type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice, chan<- error)
 type devFinderCmd struct {
 	// Outputs in JSON format if true.
 	json bool
-	// The mDNS port to connect to.
-	mdnsPort int
+	// The mDNS ports to connect to.
+	mdnsPorts string
 	// The timeout in ms to either give up or to exit the program after finding at least one
 	// device.
 	timeout int
@@ -71,7 +73,7 @@ type fuchsiaDevice struct {
 
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
-	f.IntVar(&cmd.mdnsPort, "port", 5353, "The port your mDNS servers operate on.")
+	f.StringVar(&cmd.mdnsPorts, "port", "5353,5356", "Comma separated list of ports to issue mDNS queries to.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
@@ -98,25 +100,32 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		return nil, fmt.Errorf("invalid timeout value: %v", cmd.timeout)
 	}
 
-	var m mdns.MDNS
-	errChan := make(chan error)
-	devChan := make(chan *fuchsiaDevice)
-	m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
-		response := mDNSResponse{recv, addr, rxPacket}
-		cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)
-	})
-	m.AddErrorHandler(func(err error) {
-		errChan <- err
-	})
-	m.AddWarningHandler(func(addr net.Addr, err error) {
-		log.Printf("from: %v warn: %v\n", addr, err)
-	})
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
 	defer cancel()
-	if err := m.Start(ctx, cmd.mdnsPort); err != nil {
-		return nil, fmt.Errorf("starting mdns: %v", err)
+	errChan := make(chan error)
+	devChan := make(chan *fuchsiaDevice)
+	for _, p := range strings.Split(cmd.mdnsPorts, ",") {
+		var m mdns.MDNS
+		m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
+			response := mDNSResponse{recv, addr, rxPacket}
+			cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)
+		})
+		m.AddErrorHandler(func(err error) {
+			errChan <- err
+		})
+		m.AddWarningHandler(func(addr net.Addr, err error) {
+			log.Printf("from: %v warn: %v\n", addr, err)
+		})
+		i, err := strconv.ParseUint(p, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse port number %v: %v\n", p, err)
+		}
+		if err := m.Start(ctx, int(i)); err != nil {
+			return nil, fmt.Errorf("starting mdns: %v", err)
+		}
+		m.Send(packet)
 	}
-	m.Send(packet)
+
 	devices := make([]*fuchsiaDevice, 0)
 	for {
 		select {
