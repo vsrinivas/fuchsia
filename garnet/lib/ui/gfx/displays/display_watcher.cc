@@ -4,13 +4,13 @@
 
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
-
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/fidl/cpp/message.h>
-#include <zircon/device/display-controller.h>
-
-#include "src/lib/fxl/logging.h"
-#include "src/lib/files/unique_fd.h"
+#include <lib/fzl/fdio.h>
+#include <src/lib/fxl/logging.h>
+#include <zircon/status.h>
 
 namespace scenic_impl {
 namespace gfx {
@@ -39,22 +39,49 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,
 
   FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".("
                 << filename << ")";
-  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
-    callback(fxl::UniqueFD(), zx::channel());
+    callback(zx::channel(), zx::channel());
     return;
   }
 
-  zx::channel dc_handle;
-  if (ioctl_display_controller_get_handle(
-          fd.get(), dc_handle.reset_and_get_address()) != sizeof(zx_handle_t)) {
-    FXL_DLOG(ERROR) << "Failed to get device channel";
-    callback(fxl::UniqueFD(), zx::channel());
+  zx::channel device_server, device_client;
+  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to create device channel: "
+                    << zx_status_get_string(status);
+    callback(zx::channel(), zx::channel());
     return;
   }
 
-  callback(std::move(fd), std::move(dc_handle));
+  zx::channel dc_server, dc_client;
+  status = zx::channel::create(0, &dc_server, &dc_client);
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to create controller channel: "
+                    << zx_status_get_string(status);
+    callback(zx::channel(), zx::channel());
+    return;
+  }
+
+  fzl::FdioCaller caller(std::move(fd));
+  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+      caller.borrow_channel(), device_server.release(), dc_server.release(),
+      &status);
+  if (fidl_status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to call service handle: "
+                    << zx_status_get_string(fidl_status);
+    callback(zx::channel(), zx::channel());
+    return;
+  }
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "Failed to open controller : "
+                    << zx_status_get_string(status);
+    callback(zx::channel(), zx::channel());
+    return;
+  }
+
+  callback(std::move(device_client), std::move(dc_client));
 }
 
 }  // namespace gfx

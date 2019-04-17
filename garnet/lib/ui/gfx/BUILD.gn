@@ -220,6 +220,7 @@ source_set("gfx") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
     "//zircon/public/lib/fit",
   ]
 
@@ -231,6 +232,8 @@ source_set("gfx") {
     "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
   ]
 }

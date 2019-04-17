@@ -5,13 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_WATCHER_H_
 #define GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_WATCHER_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
-
-#include "lib/fsl/io/device_watcher.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/zx/event.h"
+#include <lib/fsl/io/device_watcher.h>
+#include <memory>
+#include <src/lib/fxl/macros.h>
 
 namespace scenic_impl {
 namespace gfx {
@@ -20,10 +17,10 @@ namespace gfx {
 // attributes through a callback.
 class DisplayWatcher {
  public:
-  // Callback that accepts display metrics.
-  // |metrics| may be null if the display was not successfully acquired.
+  // Callback provides channels to the display controller device and FIDL
+  // interface.
   using DisplayReadyCallback =
-      fit::function<void(fxl::UniqueFD fd, zx::channel dc_handle)>;
+      fit::function<void(zx::channel device, zx::channel controller)>;
 
   DisplayWatcher();
   ~DisplayWatcher();

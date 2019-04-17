@@ -5,6 +5,7 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
 #include <lib/fzl/fdio.h>
@@ -25,7 +26,7 @@
 static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
 
 static int dc_dir_fd;
-static int dc_fd;
+static zx_handle_t dc_device;
 
 // At any point, |dc_ph| will either be waiting on the display controller device directory
 // for a display controller instance or it will be waiting on a display controller interface
@@ -568,7 +569,7 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
             handle_display_removed(list_peek_head_type(&display_list, display_info_t, node)->id);
         }
 
-        close(dc_fd);
+        zx_handle_close(dc_device);
         zx_handle_close(dc_ph.handle);
 
         vc_find_display_controller();
@@ -618,30 +619,45 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
         return ZX_OK;
     }
 
-    printf("vc: new display device %s/%s/virtcon\n", kDisplayControllerDir, name);
+    printf("vc: new display device %s/%s\n", kDisplayControllerDir, name);
 
     char buf[64];
-    snprintf(buf, 64, "%s/%s/virtcon", kDisplayControllerDir, name);
+    snprintf(buf, 64, "%s/%s", kDisplayControllerDir, name);
     fbl::unique_fd fd(open(buf, O_RDWR));
     if (!fd) {
         printf("vc: failed to open display controller device\n");
         return ZX_OK;
     }
 
-    zx::channel dc_channel;
-    if (ioctl_display_controller_get_handle(fd.get(), dc_channel.reset_and_get_address())
-            != sizeof(zx_handle_t)) {
-        printf("vc: failed to get display controller handle\n");
-        return ZX_OK;
+    zx::channel device_server, device_client;
+    zx_status_t status = zx::channel::create(0, &device_server, &device_client);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    zx_handle_close(dc_ph.handle);
-    dc_fd = fd.release();
-    dc_ph.handle = dc_channel.release();
+    zx::channel dc_server, dc_client;
+    status = zx::channel::create(0, &dc_server, &dc_client);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr
-                                         ? fuchsia_hardware_display_VirtconMode_FALLBACK
-                                         : fuchsia_hardware_display_VirtconMode_INACTIVE);
+    fzl::FdioCaller caller(std::move(fd));
+    zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenVirtconController(
+        caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
+    if (fidl_status != ZX_OK) {
+        return fidl_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    dc_device = device_client.release();
+    zx_handle_close(dc_ph.handle);
+    dc_ph.handle = dc_client.release();
+
+    status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr
+                             ? fuchsia_hardware_display_VirtconMode_FALLBACK
+                             : fuchsia_hardware_display_VirtconMode_INACTIVE);
     if (status != ZX_OK) {
         printf("vc: Failed to set initial ownership %d\n", status);
         vc_find_display_controller();

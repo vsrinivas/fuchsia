@@ -268,16 +268,14 @@ private:
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
 // controller. Methods on this class are thread safe.
-using ClientParent = ddk::Device<ClientProxy, ddk::Ioctlable, ddk::Closable>;
+using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
 class ClientProxy : public ClientParent {
 public:
     ClientProxy(Controller* controller, bool is_vc);
     ~ClientProxy();
-    zx_status_t Init();
+    zx_status_t Init(zx::channel server_channel);
 
     zx_status_t DdkClose(uint32_t flags);
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* actual);
     void DdkRelease();
 
     // Requires holding controller_->mtx() lock
@@ -302,8 +300,7 @@ private:
     Client handler_;
     bool enable_vsync_ = false;
 
-    zx::channel server_handle_;
-    zx::channel client_handle_;
+    zx::channel server_channel_;
 };
 
 } // namespace display

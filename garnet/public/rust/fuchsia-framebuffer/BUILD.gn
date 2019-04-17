@@ -9,6 +9,7 @@ rustc_library("fuchsia-framebuffer") {
   version = "0.1.0"
   edition = "2018"
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-runtime",

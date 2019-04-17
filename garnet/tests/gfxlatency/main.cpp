@@ -34,6 +34,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zircon/status.h>
 
 #include <utility>
 
@@ -814,19 +815,38 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  int32_t dc_fd = open("/dev/class/display-controller/000", O_RDWR);
-  if (dc_fd < 0) {
+  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
+  if (!fd) {
     fprintf(stderr, "failed to open display controller\n");
     return -1;
   }
 
-  if (ioctl_display_controller_get_handle(dc_fd, &dc_handle) !=
-      sizeof(zx_handle_t)) {
-    fprintf(stderr, "failed to get display controller handle\n");
+  zx::channel device_server, device_client;
+  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
+  if (status != ZX_OK) {
+    fprintf(stderr, "failed to create device channel %d (%s)\n", status, zx_status_get_string(status));
+    return -1;
+  }
+  zx::channel dc_server, dc_client;
+  status = zx::channel::create(0, &dc_server, &dc_client);
+  if (status != ZX_OK) {
+    fprintf(stderr, "failed to create controller channel %d (%s)\n", status, zx_status_get_string(status));
     return -1;
   }
 
-  zx_status_t status;
+  fzl::FdioCaller caller(std::move(fd));
+  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
+  if (fidl_status != ZX_OK) {
+    fprintf(stderr, "failed to call service handle %d (%s)\n", fidl_status, zx_status_get_string(fidl_status));
+    return -1;
+  }
+  if (status != ZX_OK) {
+    fprintf(stderr, "failed to open controller %d (%s)\n", status, zx_status_get_string(status));
+    return -1;
+  }
+  dc_handle = dc_client.release();
+
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   uint32_t actual_bytes, actual_handles;
   bool has_display = false;
@@ -1998,6 +2018,5 @@ int main(int argc, char* argv[]) {
   if (touchpadfd >= 0)
     close(touchpadfd);
   zx_handle_close(dc_handle);
-  close(dc_fd);
   return 0;
 }

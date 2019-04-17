@@ -1864,7 +1864,7 @@ void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
 
     memcpy(msg + 1, image_ids, sizeof(uint64_t) * count);
 
-    zx_status_t status = server_handle_.write(0, data, size, nullptr, 0);
+    zx_status_t status = server_channel_.write(0, data, size, nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(WARN, "Failed to send vsync event %d\n", status);
     }
@@ -1874,7 +1874,7 @@ void ClientProxy::OnClientDead() {
     controller_->OnClientDead(this);
     // After OnClientDead, there won't be any more vsync calls. Since that is the only use of
     // the channel off of the loop thread, there's no need to worry about synchronization.
-    server_handle_.reset();
+    server_channel_.reset();
 }
 
 void ClientProxy::Close() {
@@ -1916,28 +1916,8 @@ void ClientProxy::Close() {
     }
 }
 
-zx_status_t ClientProxy::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                             size_t out_len, size_t* actual) {
-    switch (op) {
-    case IOCTL_DISPLAY_CONTROLLER_GET_HANDLE: {
-        if (out_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        if (client_handle_.get() == ZX_HANDLE_INVALID) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
-
-        *reinterpret_cast<zx_handle_t*>(out_buf) = client_handle_.release();
-        *actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 zx_status_t ClientProxy::DdkClose(uint32_t flags) {
+    printf("DdkClose\n");
     Close();
     return ZX_OK;
 }
@@ -1946,15 +1926,9 @@ void ClientProxy::DdkRelease() {
     delete this;
 }
 
-zx_status_t ClientProxy::Init() {
-    zx_status_t status;
-    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
-                                    client_handle_.reset_and_get_address())) != ZX_OK) {
-        zxlogf(ERROR, "Failed to create channels %d\n", status);
-        return status;
-    }
-
-    return handler_.Init(server_handle_.get());
+zx_status_t ClientProxy::Init(zx::channel server_channel) {
+    server_channel_ = std::move(server_channel);
+    return handler_.Init(server_channel_.get());
 }
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc)

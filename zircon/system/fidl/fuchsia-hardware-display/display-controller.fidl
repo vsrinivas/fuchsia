@@ -171,26 +171,49 @@ struct ClientCompositionOp {
     ClientCompositionOpcode opcode;
 };
 
-// Interface for accessing the display hardware.
-//
-// The driver supports two simultaneous clients - a primary client and a virtcon
-// client. The primary client is obtained by directly opening the devfs device,
-// while the virtcon client is obtained by opening a 'virtcon' child of the
-// device.
-//
-// A display configuration can be separated into two parts: the layer layout and
-// the layer contents. The layout includes all parts of a configuration other
-// than the image handles. The active configuration is composed of the most
-// recently applied layout and an active image from each layer - see
-// SetLayerImage for details on how the active image is defined. Note the
-// requirement that each layer has an active image. Whenever a new active
-// configuration is available, it is immediately given to the hardware. This
-// allows the layout and each layer's contents to advance independently when
-// possible.
-//
+/// Provider for display controllers.
+///
+/// The driver supports two simultaneous clients - a primary client and a virtcon
+/// client.
+[Layout = "Simple"]
+protocol Provider {
+    /// Open a virtcon client. |device| should be a handle to one endpoint of a
+    /// channel that (on success) will become an open connection to a new
+    /// instance of a display client device. An protocol request |controller|
+    /// provides an interface to the Controller for the new device. Closing the
+    /// connection to |device| will also close the |controller| interface. If
+    /// the display device already has a virtcon controller then this method
+    /// will return ZX_ERR_ALREADY_BOUND.
+    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify |device| and
+    // |controller|.
+    OpenVirtconController(handle<channel> device, request<Controller> controller) -> (zx.status s);
 
-// Performing illegal actions on the interface will result in the interface
-// being closed.
+    /// Open a primary client. |device| should be a handle to one endpoint of a
+    /// channel that (on success) will become an open connection to a new
+    /// instance of a display client device. An protocol request |controller|
+    /// provides an interface to the Controller for the new device. Closing the
+    /// connection to |device| will also close the |controller| interface. If
+    /// the display device already has a primary controller then this method
+    /// will return ZX_ERR_ALREADY_BOUND.
+    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify |device| and
+    // |controller|.
+    OpenController(handle<channel> device, request<Controller> controller) -> (zx.status s);
+};
+
+/// Interface for accessing the display hardware.
+///
+/// A display configuration can be separated into two parts: the layer layout and
+/// the layer contents. The layout includes all parts of a configuration other
+/// than the image handles. The active configuration is composed of the most
+/// recently applied layout and an active image from each layer - see
+/// SetLayerImage for details on how the active image is defined. Note the
+/// requirement that each layer has an active image. Whenever a new active
+/// configuration is available, it is immediately given to the hardware. This
+/// allows the layout and each layer's contents to advance independently when
+/// possible.
+///
+/// Performing illegal actions on the interface will result in the interface
+/// being closed.
 protocol Controller {
     // Event fired when displays are added or removed. This event will be fired
     // when the callback is registered if there are any connected displays.

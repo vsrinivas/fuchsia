@@ -5,27 +5,26 @@
 #![allow(dead_code)]
 
 use failure::{format_err, Error, ResultExt};
-use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET_HANDLE};
-use fdio::make_ioctl;
 use fdio::watch_directory;
-use fidl_fuchsia_hardware_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
+use fidl::endpoints;
+use fidl_fuchsia_hardware_display::{
+    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ImagePlane,
+    ProviderSynchronousProxy,
+};
 use fuchsia_async as fasync;
 use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon::{
     self as zx,
     sys::{
-        zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, zx_handle_t,
+        zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING,
         ZX_CACHE_FLUSH_DATA, ZX_TIME_INFINITE,
     },
-    Handle, VmarFlags, Vmo,
+    VmarFlags, Vmo,
 };
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use shared_buffer::SharedBuffer;
 use std::cell::RefCell;
-use std::fs::{File, OpenOptions};
-use std::mem;
-use std::os::unix::io::AsRawFd;
-use std::ptr;
+use std::fs::OpenOptions;
 use std::rc::Rc;
 use std::{thread, time};
 
@@ -295,38 +294,13 @@ impl Drop for Frame {
 }
 
 pub struct FrameBuffer {
-    display_controller: File,
+    display_controller: zx::Channel,
     controller: ControllerProxy,
     config: Config,
     layer_id: u64,
 }
 
 impl FrameBuffer {
-    fn get_display_handle(file: &File) -> Result<Handle, Error> {
-        let fd = file.as_raw_fd() as i32;
-        let ioctl_display_controller_get_handle =
-            make_ioctl(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY_CONTROLLER, 1);
-        let mut display_handle: zx_handle_t = 0;
-        let display_handle_ptr: *mut std::os::raw::c_void =
-            &mut display_handle as *mut _ as *mut std::os::raw::c_void;
-        let result_size = unsafe {
-            fdio_ioctl(
-                fd,
-                ioctl_display_controller_get_handle,
-                ptr::null(),
-                0,
-                display_handle_ptr,
-                mem::size_of::<zx_handle_t>(),
-            )
-        };
-
-        if result_size != mem::size_of::<zx_handle_t>() as isize {
-            return Err(format_err!("ioctl_display_controller_get_handle failed: {}", result_size));
-        }
-
-        Ok(unsafe { Handle::from_raw(display_handle) })
-    }
-
     fn create_config_from_event_stream(
         proxy: &ControllerProxy,
         executor: &mut fasync::Executor,
@@ -445,14 +419,23 @@ impl FrameBuffer {
             first_path.unwrap()
         };
         let file = OpenOptions::new().read(true).write(true).open(device_path)?;
-        let zx_handle = Self::get_display_handle(&file)?;
-        let channel = fasync::Channel::from_channel(zx_handle.into())?;
-        let proxy = ControllerProxy::new(channel);
+
+        let channel = fdio::clone_channel(&file)?;
+        let mut provider = ProviderSynchronousProxy::new(channel);
+
+        let (device_client, device_server) = zx::Channel::create()?;
+        let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
+        let status = provider.open_controller(device_server, dc_server, zx::Time::INFINITE)?;
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!("Failed to open display controller"));
+        }
+
+        let proxy = dc_client.into_proxy()?;
         let config = Self::create_config_from_event_stream(&proxy, executor)?;
         let layer = Self::configure_layer(config, &proxy, executor)?;
 
         Ok(FrameBuffer {
-            display_controller: file,
+            display_controller: device_client,
             controller: proxy,
             config: config,
             layer_id: layer,

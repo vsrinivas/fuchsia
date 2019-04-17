@@ -14,11 +14,13 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
 #include <fbl/algorithm.h>
+#include <fbl/vector.h>
+#include <fbl/unique_fd.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
+#include <lib/fzl/fdio.h>
 
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
@@ -28,6 +30,7 @@
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "virtual-layer.h"
 
+static zx_handle_t device_handle;
 static zx_handle_t dc_handle;
 static bool has_ownership;
 
@@ -47,16 +50,42 @@ static bool wait_for_driver_event(zx_time_t deadline) {
 
 static bool bind_display(fbl::Vector<Display>* displays) {
     printf("Opening controller\n");
-    int vfd = open("/dev/class/display-controller/000", O_RDWR);
-    if (vfd < 0) {
+    fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
+    if (!fd) {
         printf("Failed to open display controller (%d)\n", errno);
         return false;
     }
 
-    if (ioctl_display_controller_get_handle(vfd, &dc_handle) != sizeof(zx_handle_t)) {
-        printf("Failed to get display controller handle\n");
+    zx::channel device_server, device_client;
+    zx_status_t status = zx::channel::create(0, &device_server, &device_client);
+    if (status != ZX_OK) {
+        printf("Failed to create device channel %d (%s)\n", status, zx_status_get_string(status));
         return false;
     }
+
+    zx::channel dc_server, dc_client;
+    status = zx::channel::create(0, &dc_server, &dc_client);
+    if (status != ZX_OK) {
+        printf("Failed to create controller channel %d (%s)\n", status,
+               zx_status_get_string(status));
+        return false;
+    }
+
+    fzl::FdioCaller caller(std::move(fd));
+    zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+        caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
+    if (fidl_status != ZX_OK) {
+        printf("Failed to call service handle %d (%s)\n", fidl_status,
+               zx_status_get_string(fidl_status));
+        return false;
+    }
+    if (status != ZX_OK) {
+        printf("Failed to open controller %d (%s)\n", status, zx_status_get_string(status));
+        return false;
+    }
+
+    dc_handle = dc_client.release();
+    device_handle = device_client.release();
 
     uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
@@ -511,6 +540,9 @@ int main(int argc, const char* argv[]) {
 
     printf("Done rendering\n");
     zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
+
+    zx_handle_close(dc_handle);
+    zx_handle_close(device_handle);
 
     return 0;
 }

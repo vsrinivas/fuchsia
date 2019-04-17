@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
+
 #include "fuchsia/ui/scenic/cpp/fidl.h"
 
 namespace scenic_impl {
@@ -34,8 +35,8 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
 
   display_available_cb_ = std::move(callback);
   display_watcher_.WaitForDisplay(
-      [this](fxl::UniqueFD fd, zx::channel dc_handle) {
-        dc_fd_ = std::move(fd);
+      [this](zx::channel device, zx::channel dc_handle) {
+        dc_device_ = std::move(device);
         dc_channel_ = dc_handle.get();
         display_controller_.Bind(std::move(dc_handle));
 

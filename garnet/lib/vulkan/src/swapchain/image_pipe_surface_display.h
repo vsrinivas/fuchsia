@@ -5,12 +5,13 @@
 #ifndef GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
 #define GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
 
-#include <map>
-#include "image_pipe_surface.h"
-
 #include <lib/async-loop/cpp/loop.h>
-#include "fuchsia/hardware/display/cpp/fidl.h"
-#include "fuchsia/sysmem/cpp/fidl.h"
+
+#include <map>
+
+#include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include "image_pipe_surface.h"
 
 namespace image_pipe_swapchain {
 
@@ -18,7 +19,6 @@ namespace image_pipe_swapchain {
 class ImagePipeSurfaceDisplay : public ImagePipeSurface {
  public:
   ImagePipeSurfaceDisplay();
-  ~ImagePipeSurfaceDisplay() override;
 
   bool Init() override;
 
@@ -50,7 +50,7 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
   async::Loop loop_;
   std::map<uint64_t, uint64_t> image_id_map;
 
-  int dc_fd_ = -1;
+  zx::channel dc_device_;
   bool display_connection_exited_ = false;
   bool got_message_response_ = false;
   bool have_display_ = false;

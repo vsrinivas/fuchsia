@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
         "services": [
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic"

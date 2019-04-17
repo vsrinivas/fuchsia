@@ -8,8 +8,10 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/display-controller.h>
+
 #include <cmath>
 
 namespace display_test {
@@ -204,19 +206,38 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
 
 void Runner::InitDisplay() {
   zx_status_t status;
-  fxl::UniqueFD fd(open(kDisplayController, O_RDWR));
+  fbl::unique_fd fd(open(kDisplayController, O_RDWR));
   if (!fd.is_valid()) {
     ZX_ASSERT_MSG(false, "Failed to open display controller");
   }
 
-  zx::channel dc_handle;
-  if (ioctl_display_controller_get_handle(
-          fd.get(), dc_handle.reset_and_get_address()) != sizeof(zx_handle_t)) {
-    ZX_ASSERT_MSG(false, "Failed to obtain display controller handle");
+  zx::channel device_server, device_client;
+  status = zx::channel::create(0, &device_server, &device_client);
+  if (status != ZX_OK) {
+    ZX_ASSERT_MSG(false, "Failed to create device channel %d\n", status);
   }
 
-  dc_fd_ = std::move(fd);
-  if ((status = display_controller_.Bind(std::move(dc_handle),
+  zx::channel dc_server, dc_client;
+  status = zx::channel::create(0, &dc_server, &dc_client);
+  if (status != ZX_OK) {
+    ZX_ASSERT_MSG(false, "Failed to get create controller channel %d\n",
+                  status);
+  }
+
+  fzl::FdioCaller dev(std::move(fd));
+  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+      dev.borrow_channel(), device_server.release(), dc_server.release(),
+      &status);
+  if (fidl_status != ZX_OK) {
+    ZX_ASSERT_MSG(false, "Failed to call service handle %d\n", status);
+  }
+  if (status != ZX_OK) {
+    ZX_ASSERT_MSG(false, "Failed to open controller %d\n", status);
+  }
+
+  display_controller_conn_ = std::move(device_client);
+
+  if ((status = display_controller_.Bind(std::move(dc_client),
                                          loop_->dispatcher())) != ZX_OK) {
     ZX_ASSERT_MSG(false, "Failed to bind to display controller %d\n", status);
   }

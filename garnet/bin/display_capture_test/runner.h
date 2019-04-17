@@ -11,14 +11,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/io/device_watcher.h>
-#include "src/lib/files/unique_fd.h"
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
+
 #include <deque>
 
 #include "context.h"
 #include "image.h"
 #include "layer.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace display_test {
 
@@ -61,9 +62,8 @@ class Runner {
   void FrameNotifyCallback(const fuchsia::camera::FrameAvailableEvent& resp);
 
   void InitDisplay();
-  void OnDisplaysChanged(
-      ::std::vector<fuchsia::hardware::display::Info> added,
-      ::std::vector<uint64_t> removed);
+  void OnDisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
+                         ::std::vector<uint64_t> removed);
   void OnClientOwnershipChange(bool is_owner);
   void OnVsync(uint64_t display_id, uint64_t timestamp,
                ::std::vector<uint64_t> image_ids);
@@ -82,7 +82,7 @@ class Runner {
   PrimaryLayer* calibration_layer_;
 
   const char* display_name_;
-  fxl::UniqueFD dc_fd_;
+  zx::channel display_controller_conn_;
   fuchsia::hardware::display::ControllerPtr display_controller_;
   uint64_t display_id_ = 0;
 

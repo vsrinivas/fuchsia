@@ -10,7 +10,9 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 #include <lib/fidl/coding.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/device/display-controller.h>
@@ -22,7 +24,7 @@
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "lib/framebuffer/framebuffer.h"
 
-static int32_t dc_fd = -1;
+static zx_handle_t device_handle = ZX_HANDLE_INVALID;
 static zx_handle_t dc_handle = ZX_HANDLE_INVALID;
 
 static int32_t txid;
@@ -84,23 +86,44 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     }
 
     // TODO(stevensd): Don't hardcode display controller 0
-    zx_status_t status;
-    dc_fd = open("/dev/class/display-controller/000", O_RDWR);
-    if (dc_fd < 0) {
+    fbl::unique_fd dc_fd(open("/dev/class/display-controller/000", O_RDWR));
+    if (!dc_fd) {
         *err_msg_out = "Failed to open display controller";
         return ZX_ERR_NO_RESOURCES;
     }
-    fbl::AutoCall close_dc_fd([]() {
-        close(dc_fd);
-        dc_fd = -1;
-    });
 
-    if (ioctl_display_controller_get_handle(dc_fd, &dc_handle) != sizeof(zx_handle_t)) {
-        *err_msg_out = "Failed to get display controller handle";
-        return ZX_ERR_INTERNAL;
+    zx::channel device_server, device_client;
+    zx_status_t status = zx::channel::create(0, &device_server, &device_client);
+    if (status != ZX_OK) {
+        *err_msg_out = "Failed to create device channel";
+        return status;
     }
+
+    zx::channel dc_server, dc_client;
+    status = zx::channel::create(0, &dc_server, &dc_client);
+    if (status != ZX_OK) {
+        *err_msg_out = "Failed to create controller channel";
+        return status;
+    }
+
+    fzl::FdioCaller caller(std::move(dc_fd));
+    zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+        caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
+    if (fidl_status != ZX_OK) {
+        *err_msg_out = "Failed to call service handle";
+        return fidl_status;
+    }
+    if (status != ZX_OK) {
+        *err_msg_out = "Failed to open controller";
+        return status;
+    }
+
+    device_handle = device_client.release();
+    dc_handle = dc_client.release();
     fbl::AutoCall close_dc_handle([]() {
+        zx_handle_close(device_handle);
         zx_handle_close(dc_handle);
+        device_handle = ZX_HANDLE_INVALID;
         dc_handle = ZX_HANDLE_INVALID;
     });
 
@@ -283,7 +306,6 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
 
     clear_inited.cancel();
     vmo = local_vmo.release();
-    close_dc_fd.cancel();
     close_dc_handle.cancel();
 
     return ZX_OK;
@@ -294,11 +316,10 @@ void fb_release() {
         return;
     }
 
+    zx_handle_close(device_handle);
     zx_handle_close(dc_handle);
+    device_handle = ZX_HANDLE_INVALID;
     dc_handle = ZX_HANDLE_INVALID;
-
-    close(dc_fd);
-    dc_fd = -1;
 
     if (in_single_buffer_mode) {
         zx_handle_close(vmo);

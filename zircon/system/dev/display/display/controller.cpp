@@ -752,10 +752,11 @@ bool Controller::GetDisplayIdentifiers(uint64_t display_id, const char** manufac
 }
 
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-    return DdkOpenAt(dev_out, "", flags);
+    return ZX_OK;
 }
 
-zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
+zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
+                                     zx::channel client_channel) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
     if (!ac.check()) {
@@ -765,7 +766,6 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
     fbl::AutoLock lock(&mtx_);
 
-    bool is_vc = strcmp("virtcon", path) == 0;
     if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
         zxlogf(TRACE, "Already bound\n");
         return ZX_ERR_ALREADY_BOUND;
@@ -777,21 +777,27 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = client->Init();
+    zx_status_t status = client->Init(std::move(client_channel));
     if (status != ZX_OK) {
         zxlogf(TRACE, "Failed to init client %d\n", status);
         return status;
     }
 
-    if ((status = client->DdkAdd(is_vc ? "dc-vc" : "dc", DEVICE_ADD_INSTANCE)) != ZX_OK) {
+    status = client->DdkAdd(is_vc ? "dc-vc" : "dc",
+                            DEVICE_ADD_INSTANCE,
+                            nullptr /* props */,
+                            0 /* prop_count */,
+                            0 /* proto_id */,
+                            nullptr /* proxy_args */,
+                            device_channel.release());
+    if (status != ZX_OK) {
         zxlogf(TRACE, "Failed to add client %d\n", status);
         return status;
     }
 
     ClientProxy* client_ptr = client.release();
-    *dev_out = client_ptr->zxdev();
 
-    zxlogf(TRACE, "New client connected at \"%s\"\n", path);
+    zxlogf(TRACE, "New client connected.\n");
 
     if (is_vc) {
         vc_client_ = client_ptr;
@@ -829,6 +835,28 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
             delete task;
     });
     return task.release()->Post(loop_.dispatcher());
+}
+
+zx_status_t Controller::OpenVirtconController(zx_handle_t device, zx_handle_t controller,
+                                              fidl_txn_t* txn) {
+    zx::channel device_channel(device);
+    zx::channel controller_channel(controller);
+    zx_status_t status = CreateClient(true /* is_vc */, std::move(device_channel),
+                                      std::move(controller_channel));
+    return fuchsia_hardware_display_ProviderOpenVirtconController_reply(txn, status);
+}
+
+zx_status_t Controller::OpenController(zx_handle_t device, zx_handle_t controller,
+                                       fidl_txn_t* txn) {
+    zx::channel device_channel(device);
+    zx::channel controller_channel(controller);
+    zx_status_t status = CreateClient(false /* is_vc */, std::move(device_channel),
+                                      std::move(controller_channel));
+    return fuchsia_hardware_display_ProviderOpenController_reply(txn, status);
+}
+
+zx_status_t Controller::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_display_Provider_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {

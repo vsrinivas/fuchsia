@@ -29,6 +29,7 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",
   ]

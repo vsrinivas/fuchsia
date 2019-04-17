@@ -11,6 +11,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/i2cimpl.h>
 #include <fbl/array.h>
+#include <lib/fidl-utils/bind.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
@@ -65,7 +66,7 @@ public:
     bool switching_client = false;
 };
 
-using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
+using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
@@ -75,7 +76,7 @@ public:
     static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkUnbind();
     void DdkRelease();
     zx_status_t Bind(fbl::unique_ptr<display::Controller>* device_ptr);
@@ -124,6 +125,16 @@ private:
     void HandleClientOwnershipChanges() __TA_REQUIRES(mtx_);
     void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx_);
     void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
+    zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
+
+    zx_status_t OpenVirtconController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
+    zx_status_t OpenController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
+
+    static constexpr fuchsia_hardware_display_Provider_ops_t fidl_ops_ = {
+        .OpenVirtconController =
+                fidl::Binder<Controller>::BindMember<&Controller::OpenVirtconController>,
+        .OpenController = fidl::Binder<Controller>::BindMember<&Controller::OpenController>,
+    };
 
     // mtx_ is a global lock on state shared among clients.
     mtx_t mtx_;

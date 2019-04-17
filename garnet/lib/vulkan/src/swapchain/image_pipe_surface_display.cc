@@ -3,16 +3,21 @@
 // found in the LICENSE file.
 
 #include "image_pipe_surface_display.h"
+
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <zircon/device/display-controller.h>
+#include <lib/fzl/fdio.h>
+#include <limits.h>
 #include <zircon/pixelformat.h>
+#include <zircon/status.h>
+
 #include <cstdio>
+
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
-
-#include <limits.h>
 
 namespace image_pipe_swapchain {
 
@@ -28,24 +33,47 @@ bool ImagePipeSurfaceDisplay::Init() {
     fprintf(stderr, "Couldn't connect to sysmem service\n");
     return false;
   }
-  int dc_fd = open("/dev/class/display-controller/000", O_RDWR);
-  if (dc_fd < 0) {
+
+  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
+  if (!fd) {
     fprintf(stderr, "No display controller\n");
     return false;
   }
 
-  zx_handle_t dc_handle;
-
-  if (ioctl_display_controller_get_handle(dc_fd, &dc_handle) !=
-      sizeof(zx_handle_t)) {
-    close(dc_fd);
-    fprintf(stderr, "No display controller 2\n");
+  zx::channel device_server, device_client;
+  status = zx::channel::create(0, &device_server, &device_client);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create device channel %d (%s)\n", status,
+            zx_status_get_string(status));
     return false;
   }
 
-  dc_fd_ = dc_fd;
+  zx::channel dc_server, dc_client;
+  status = zx::channel::create(0, &dc_server, &dc_client);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create controller channel %d (%s)\n", status,
+            zx_status_get_string(status));
+    return false;
+  }
 
-  display_controller_.Bind(zx::channel(dc_handle), loop_.dispatcher());
+  fzl::FdioCaller caller(std::move(fd));
+  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
+      caller.borrow_channel(), device_server.release(), dc_server.release(),
+      &status);
+  if (fidl_status != ZX_OK) {
+    fprintf(stderr, "Failed to call service handle %d (%s)\n", fidl_status,
+            zx_status_get_string(fidl_status));
+    return false;
+  }
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to open controller %d (%s)\n", status,
+            zx_status_get_string(status));
+    return false;
+  }
+
+  dc_device_ = std::move(device_client);
+
+  display_controller_.Bind(std::move(dc_client), loop_.dispatcher());
 
   display_controller_.set_error_handler(
       fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerError));
@@ -58,11 +86,6 @@ bool ImagePipeSurfaceDisplay::Init() {
       return false;
   }
   return true;
-}
-
-ImagePipeSurfaceDisplay::~ImagePipeSurfaceDisplay() {
-  if (dc_fd_ >= 0)
-    close(dc_fd_);
 }
 
 void ImagePipeSurfaceDisplay::ControllerError(zx_status_t status) {

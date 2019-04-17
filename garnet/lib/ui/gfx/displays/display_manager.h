@@ -5,6 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_
 #define GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_
 
+#include <lib/fit/function.h>
+#include <lib/zx/event.h>
+#include <zircon/pixelformat.h>
+
 #include <cstdint>
 
 #include "fuchsia/hardware/display/cpp/fidl.h"
@@ -13,10 +17,6 @@
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
 #include "src/lib/fxl/macros.h"
-
-#include <lib/fit/function.h>
-#include <zircon/pixelformat.h>
-#include <lib/zx/event.h>
 
 namespace scenic_impl {
 namespace gfx {
@@ -91,7 +91,7 @@ class DisplayManager {
                        ::std::vector<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
-  fxl::UniqueFD dc_fd_;
+  zx::channel dc_device_;
   fuchsia::hardware::display::ControllerSyncPtr display_controller_;
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
