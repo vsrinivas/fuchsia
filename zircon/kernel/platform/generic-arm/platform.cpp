@@ -534,8 +534,7 @@ void platform_init_pre_thread(uint) {
     process_zbi(zbi_root, !kProcessZbiEarly);
 }
 
-LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread,
-             LK_INIT_LEVEL_THREADING - 1)
+LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread, LK_INIT_LEVEL_VM)
 
 void platform_init(void) {
     topology_cpu_init();

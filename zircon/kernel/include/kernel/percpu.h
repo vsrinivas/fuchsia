@@ -26,7 +26,8 @@ class Percpus {
 
     // Get the |cpu_num|th percpu entry.
     static inline percpu& Get(cpu_num_t cpu_num) {
-        DEBUG_ASSERT(cpu_num < count_);
+        DEBUG_ASSERT_MSG(cpu_num < count_,
+                         "%u < %zu", cpu_num, count_);
         return *index_[cpu_num];
     }
 

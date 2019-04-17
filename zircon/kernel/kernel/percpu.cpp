@@ -9,6 +9,7 @@
 #include <arch/ops.h>
 #include <kernel/align.h>
 #include <lib/counters.h>
+#include <lib/system-topology.h>
 #include <lk/init.h>
 
 percpu Percpus::boot_percpu_;
@@ -35,8 +36,8 @@ void percpu::Init(cpu_num_t cpu_num) {
 }
 
 void Percpus::HeapInit(uint32_t) {
-    // TODO(ZX-3433) Use a dynamic size.
-    count_ = SMP_MAX_CPUS;
+    count_ = system_topology::GetSystemTopology().logical_processor_count();
+    DEBUG_ASSERT(count_ != 0);
 
     index_ = static_cast<percpu**>(memalign(MAX_CACHE_LINE, sizeof(percpu*) * count_));
     index_[0] = &boot_percpu_;
@@ -59,6 +60,6 @@ void Percpus::HeapInit(uint32_t) {
     }
 }
 
-// We need to bring up the heap percpus before booting any other cores. We expect the heap to come
-// up before threading.
-LK_INIT_HOOK(percpu_heap_init, Percpus::HeapInit, LK_INIT_LEVEL_HEAP)
+// We need to bring up the heap percpus before booting any other cores. We expect the vm to come
+// up before threading. The system_topology is initialized at VM + 2 so we will be after that.
+LK_INIT_HOOK(percpu_heap_init, Percpus::HeapInit, LK_INIT_LEVEL_VM + 3)

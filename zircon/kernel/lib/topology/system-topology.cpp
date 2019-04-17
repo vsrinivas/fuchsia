@@ -40,6 +40,7 @@ zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
     // Create local instances, if successful we will move them to the Graph's fields.
     fbl::Vector<Node*> processors;
     fbl::Vector<Node*> processors_by_logical_id;
+    size_t logical_processor_count = 0;
 
     Node* node = nullptr;
     const zbi_topology_node_t* flat_node = nullptr;
@@ -55,6 +56,7 @@ zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
             node->entity.processor = flat_node->entity.processor;
 
             processors.push_back(node, &checker);
+            logical_processor_count += node->entity.processor.logical_id_count;
             if (!checker.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -95,6 +97,7 @@ zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
     nodes_.swap(nodes);
     processors_ = std::move(processors);
     processors_by_logical_id_ = std::move(processors_by_logical_id);
+    logical_processor_count_ = logical_processor_count;
 
     return ZX_OK;
 }

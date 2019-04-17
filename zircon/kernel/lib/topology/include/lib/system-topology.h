@@ -42,9 +42,9 @@ public:
     // Takes the flat topology array, validates it, and sets it as the current topology. Returns an
     // error if the topology is invalid.
     //
-    // This should only be called during early boot (platform_init), after that this data is
-    // considered static so no locks are used. If it is desired to set this later in operation than
-    // we MUST redesign this process to consider concurrent readers.
+    // This should only be called during early boot,  after that this data is considered static so
+    // no locks are used. If it is desired to set this later in operation than we MUST redesign
+    // this process to consider concurrent readers.
     // Returns ZX_ERR_ALREADY_EXISTS if state already set or ZX_ERR_INVALID_ARGS if provided graph
     // fails validation.
     zx_status_t Update(const zbi_topology_node_t* nodes, size_t count);
@@ -54,8 +54,16 @@ public:
         return processors_;
     }
 
+    // Number of processor nodes in the topology, this is equivilant to the
+    // number of physical processor cores.
     size_t processor_count() const {
         return processors_.size();
+    }
+
+    // Number of logical processors in system, this will be different from
+    // processor_count() if the system supports SMT.
+    size_t logical_processor_count() const {
+      return logical_processor_count_;
     }
 
     // Finds the processor node that is assigned the given logical id.
@@ -79,6 +87,7 @@ private:
 
     fbl::unique_ptr<Node[]> nodes_;
     fbl::Vector<Node*> processors_;
+    size_t logical_processor_count_ = 0;
 
     // This is in essence a map with logical ID being the index in the vector.
     // It will contain duplicates for SMT processors so we need it in addition to processors_.
