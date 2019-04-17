@@ -6,7 +6,6 @@ host_tool("zbi") {
   sources = [
     "zbi.cpp",
   ]
-  configs += [ "$zx/public/gn/config:libc++fs" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/third_party/ulib/cksum",

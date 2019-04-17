@@ -24,7 +24,6 @@ config("compiler") {
   ]
   ldflags = [
     "-nostdlib++",
-    "${clang_prefix}/../lib/libc++abi.a",
     "${clang_prefix}/../lib/libc++.a",
   ]
   configs = [ ":sysroot" ]

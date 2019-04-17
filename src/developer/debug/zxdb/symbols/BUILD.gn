@@ -123,18 +123,6 @@ static_library("symbols") {
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/lib/elflib",
   ]
-
-  if (is_mac) {
-    # This is necessary to find "c++fs" on Mac.
-    # See https://reviews.llvm.org/D45639
-    lib_dirs = [ rebase_path("${clang_prefix}/../lib", ".", root_build_dir) ]
-  }
-
-  libs = [
-    # For the C++17 filesystem API. Currently this isn't in libc++ by
-    # default. If it gets added in the future, we can remove this.
-    "c++fs",
-  ]
 }
 
 static_library("test_support") {
