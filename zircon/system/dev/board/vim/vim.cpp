@@ -174,11 +174,6 @@ int Vim::Thread() {
         return -1;
     }
 
-    if ((status = Led2472gInit()) != ZX_OK) {
-        zxlogf(ERROR, "Thread: Led2472gInit failed: %d\n", status);
-        return -1;
-    }
-
     // Remove this when not needed for testing any longer
     if ((status = pbus_.DeviceAdd(&tee_dev)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);

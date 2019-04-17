@@ -67,6 +67,14 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_PCF8563_RTC,
     },
+    // led2472g
+    {
+        .bus_id = 0,
+        .address = 0x46,
+        .vid = PDEV_VID_GENERIC,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_LED2472G,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {
