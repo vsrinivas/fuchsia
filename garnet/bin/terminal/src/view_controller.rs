@@ -10,8 +10,8 @@ use fidl_fuchsia_ui_input::{
 };
 use fidl_fuchsia_ui_scenic::{self as scenic, SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr, View};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;

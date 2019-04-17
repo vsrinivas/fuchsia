@@ -1,12 +1,12 @@
 use crate::view_controller::{FontFacePtr, ViewController, ViewControllerPtr};
 use carnelian::FontFace;
 use failure::Error;
-use fidl::endpoints::{create_endpoints, create_proxy, RequestStream};
+use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy};
 use fidl_fuchsia_ui_views::ViewToken;
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_scenic::Session;
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
@@ -33,10 +33,10 @@ impl App {
         })))
     }
 
-    pub fn spawn_view_provider_server(app: &AppPtr, chan: fasync::Channel) {
+    pub fn spawn_view_provider_server(app: &AppPtr, stream: ViewProviderRequestStream) {
         let app = app.clone();
         fasync::spawn(
-            ViewProviderRequestStream::from_channel(chan)
+            stream
                 .try_for_each(move |req| {
                     let ViewProviderRequest::CreateView { token, .. } = req;
                     let view_token = ViewToken { value: token };

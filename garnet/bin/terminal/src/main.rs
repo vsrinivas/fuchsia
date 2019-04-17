@@ -10,9 +10,8 @@ mod view_controller;
 
 use app::App;
 use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fuchsia_async as fasync;
+use futures::StreamExt;
 use std::env;
 
 fn main() -> Result<(), Error> {
@@ -21,13 +20,10 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let app = App::new()?;
 
-    let fut = fuchsia_app::server::ServicesServer::new()
-        .add_service((ViewProviderMarker::NAME, move |chan| {
-            App::spawn_view_provider_server(&app, chan)
-        }))
-        .start()
-        .context("Error starting view provider server")?;
+    let mut fs = fuchsia_component::server::ServiceFs::new_local();
+    fs.dir("public").add_fidl_service(|stream| App::spawn_view_provider_server(&app, stream));
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fut)?;
+    let () = executor.run_singlethreaded(fs.collect());
     Ok(())
 }
