@@ -49,8 +49,8 @@ struct ObjectDigestInfo {
   // Whether the piece is stored inline.
   InlinedPiece inlined;
 
-  bool is_inlined() { return inlined == InlinedPiece::YES; }
-  bool is_chunk() { return piece_type == PieceType::CHUNK; }
+  bool is_inlined() const { return inlined == InlinedPiece::YES; }
+  bool is_chunk() const { return piece_type == PieceType::CHUNK; }
 };
 
 // Returns whether the given digest is valid.
