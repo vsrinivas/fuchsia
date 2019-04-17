@@ -33,7 +33,6 @@ package("token_manager_factory") {
 }
 
 package("account_manager") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     "//garnet/bin/auth/account_manager:account_manager",
   ]
@@ -49,7 +48,6 @@ package("account_manager") {
 }
 
 package("account_handler") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     "//garnet/bin/auth/account_handler:account_handler",
   ]
