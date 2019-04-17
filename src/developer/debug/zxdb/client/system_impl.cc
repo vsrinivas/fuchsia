@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/client/system_impl.h"
 
+#include <filesystem>
 #include <set>
 
 #include "src/developer/debug/shared/logging/debug.h"
@@ -292,6 +293,9 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
     auto path = store.GetString(setting_name);
 
     if (!path.empty()) {
+      std::error_code ec;
+      std::filesystem::create_directory(
+          std::filesystem::path(path) / ".build-id", ec);
       GetSymbols()->build_id_index().AddSymbolSource(path);
     }
   } else if (setting_name == ClientSettings::System::kSymbolServers) {
