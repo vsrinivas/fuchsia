@@ -59,6 +59,7 @@ group("default") {
   deps = [
     ":copy_host_tests",
     "//build/images:packages",
+    "//sdk:core",
   ]
   if (preinstall_package_labels != [] || monolith_package_labels != []) {
     deps += [ "//build/images" ]
