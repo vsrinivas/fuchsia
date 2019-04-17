@@ -95,8 +95,8 @@ static void iwl_mvm_rx_fw_logs(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rx
 /*
  * module init and exit functions
  */
-int __init iwl_mvm_init(void) {
-    int ret;
+zx_status_t iwl_mvm_init(void) {
+    zx_status_t ret;
 
 #if 0   // NEEDS_PORTING
     ret = iwl_mvm_rate_control_register();

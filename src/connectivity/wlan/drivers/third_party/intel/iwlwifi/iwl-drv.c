@@ -61,6 +61,9 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-tm-gnl.h"
 #endif
 
+// For iwl_mvm_init(). This is not a best dependancy. But there is no better way to include it now.
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+
 #define FIRMWARE_DIR "iwlwifi"
 #define DRV_DESCRIPTION "Intel(R) Wireless WiFi driver for Fuchsia"
 
@@ -68,6 +71,7 @@
 static struct dentry* iwl_dbgfs_root;
 #endif
 
+// TODO(yjlou@): consider moving to iwl-drv.h for clean-up.
 /**
  * struct iwl_drv - drv common data
  * @list: list of drv structures using this opmode
@@ -1621,16 +1625,13 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
      */
     sync_completion_signal(&drv->request_firmware_complete);
 
-#if 0   // NEEDS_PORTING
-    /*
-     * Load the module last so we don't block anything
-     * else from proceeding if the module fails to load
-     * or hangs loading.
-     */
-    if (load_module) {
-        request_module("%s", op->name);
+    // Call to MVM module.
+    zx_status_t status = iwl_mvm_init();
+    if (status != ZX_OK) {
+        IWL_ERR(drv, "Cannot start MVM: %s\n", zx_status_get_string(status));
+        goto free;
     }
-#endif  // NEEDS_PORTING
+
     goto free;
 
 try_again:
@@ -1789,13 +1790,11 @@ struct iwl_mod_params iwlwifi_mod_params = {
 };
 
 zx_status_t iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* ops) {
-    return ZX_OK;
-#if 0   // NEEDS_PORTING
-    int i;
+    size_t i;
     struct iwl_drv* drv;
     struct iwlwifi_opmode_table* op;
 
-    mutex_lock(&iwlwifi_opmode_table_mtx);
+    mtx_lock(&iwlwifi_opmode_table_mtx);
     for (i = 0; i < ARRAY_SIZE(iwlwifi_opmode_table); i++) {
         op = &iwlwifi_opmode_table[i];
         if (strcmp(op->name, name)) {
@@ -1803,15 +1802,15 @@ zx_status_t iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* 
         }
         op->ops = ops;
         /* TODO: need to handle exceptional case */
-        list_for_each_entry(drv, &op->drv, list)
-        drv->op_mode = _iwl_op_mode_start(drv, op);
+        list_for_every_entry(&op->drv, drv, struct iwl_drv, list) {
+            drv->op_mode = _iwl_op_mode_start(drv, op);
+        }
 
-        mutex_unlock(&iwlwifi_opmode_table_mtx);
-        return 0;
+        mtx_unlock(&iwlwifi_opmode_table_mtx);
+        return ZX_OK;
     }
-    mutex_unlock(&iwlwifi_opmode_table_mtx);
-    return -EIO;
-#endif  // NEEDS_PORTING
+    mtx_unlock(&iwlwifi_opmode_table_mtx);
+    return ZX_ERR_IO;
 }
 
 void iwl_opmode_deregister(const char* name) {

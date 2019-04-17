@@ -2013,4 +2013,8 @@ void iwl_mvm_sta_add_debugfs(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
 void iwl_mvm_ax_softap_testmode_sta_add_debugfs(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                                 struct ieee80211_sta* sta, struct dentry* dir);
 #endif
+
+// The entry point for ops.c.
+zx_status_t iwl_mvm_init(void);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
