@@ -2802,7 +2802,6 @@ mod test {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
         Encoder::encode(buf, handle_buf, &mut body_start).unwrap();
-        println!("buffer: {:?}", buf);
         Decoder::decode_into(buf, handle_buf, &mut body_out).unwrap();
 
         assert_eq!(body_start.0, &mut body_out.0);
