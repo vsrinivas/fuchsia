@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "third_party/leveldb/include/leveldb/db.h"
@@ -67,10 +68,16 @@ ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) {
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult CheckPieceValue(std::unique_ptr<Piece> piece,
+::testing::AssertionResult CheckPieceValue(const Piece& piece,
                                            ObjectIdentifier identifier,
                                            fxl::StringView data) {
-  fxl::StringView found_data = piece->GetData();
+  if (piece.GetIdentifier() != identifier) {
+    return ::testing::AssertionFailure()
+           << "Expected id: " << identifier
+           << ", but got: " << piece.GetIdentifier();
+  }
+
+  fxl::StringView found_data = piece.GetData();
 
   if (data != found_data) {
     return ::testing::AssertionFailure()
@@ -78,39 +85,27 @@ ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) {
            << ", but got: " << convert::ToHex(found_data);
   }
 
-  // Turn the piece into an object and check object-specific methods.
-  // This works because we only create CHUNK pieces below.
-  ChunkObject object(std::move(piece));
-  return CheckObjectValue(object, identifier, data);
+  return ::testing::AssertionSuccess();
 }
 
-class ObjectImplTest : public ledger::TestWithEnvironment {
- public:
-  std::string RandomString(size_t size) {
-    std::string result;
-    result.resize(size);
-    environment_.random()->Draw(&result);
-    return result;
-  }
-};
+using ObjectImplTest = ledger::TestWithEnvironment;
 
 TEST_F(ObjectImplTest, InlinedPiece) {
-  std::string data = RandomString(12);
+  std::string data = RandomString(environment_.random(), 12);
   ObjectIdentifier identifier = CreateObjectIdentifier(
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
-  auto piece = std::make_unique<InlinePiece>(identifier);
-  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
+  const InlinePiece piece(identifier);
+  EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
 }
 
 TEST_F(ObjectImplTest, DataChunkPiece) {
-  std::string data = RandomString(12);
+  std::string data = RandomString(environment_.random(), 12);
   ObjectIdentifier identifier = CreateObjectIdentifier(
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
-  auto piece = std::make_unique<DataChunkPiece>(
-      identifier, DataSource::DataChunk::Create(data));
-  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
+  const DataChunkPiece piece(identifier, DataSource::DataChunk::Create(data));
+  EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
 }
 
 TEST_F(ObjectImplTest, LevelDBPiece) {
@@ -128,7 +123,7 @@ TEST_F(ObjectImplTest, LevelDBPiece) {
   leveldb::WriteOptions write_options_;
   leveldb::ReadOptions read_options_;
 
-  std::string data = RandomString(256);
+  std::string data = RandomString(environment_.random(), 256);
   ObjectIdentifier identifier = CreateObjectIdentifier(
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
@@ -140,12 +135,21 @@ TEST_F(ObjectImplTest, LevelDBPiece) {
   ASSERT_TRUE(iterator->Valid());
   ASSERT_TRUE(iterator->key() == "");
 
-  auto piece = std::make_unique<LevelDBPiece>(identifier, std::move(iterator));
-  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
+  const LevelDBPiece piece(identifier, std::move(iterator));
+  EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
+}
+
+TEST_F(ObjectImplTest, ChunkObject) {
+  std::string data = RandomString(environment_.random(), 12);
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+
+  ChunkObject object(std::make_unique<InlinePiece>(identifier));
+  EXPECT_TRUE(CheckObjectValue(object, identifier, data));
 }
 
 TEST_F(ObjectImplTest, VmoObject) {
-  std::string data = RandomString(256);
+  std::string data = RandomString(environment_.random(), 256);
   ObjectIdentifier identifier = CreateObjectIdentifier(
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
