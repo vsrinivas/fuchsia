@@ -131,7 +131,8 @@ group("feedback_agent") {
 group("auth") {
   testonly = true
   public_deps = [
-    "//garnet/bin/auth:token_manager_factory",
+    "//garnet/bin/auth:account_handler",
+    "//garnet/bin/auth:account_manager",
     "//garnet/bin/auth:token_manager_factory",
   ]
 }

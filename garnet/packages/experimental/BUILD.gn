@@ -15,21 +15,10 @@ group("a11y") {
   ]
 }
 
-group("auth") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/auth:account_handler",
-    "//garnet/bin/auth:account_handler",
-    "//garnet/bin/auth:account_manager",
-    "//garnet/bin/auth:account_manager",
-  ]
-}
-
 group("all") {
   testonly = true
   public_deps = [
     "//garnet/packages/experimental:a11y",
-    "//garnet/packages/experimental:auth",
     "//garnet/packages/experimental:kms",
     "//garnet/packages/experimental:linux_guest",
     "//garnet/packages/experimental:linux_runner",
