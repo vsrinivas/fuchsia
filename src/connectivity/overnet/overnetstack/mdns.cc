@@ -200,28 +200,37 @@ overnet::Status MdnsIntroducer::Start() {
 
 MdnsIntroducer::~MdnsIntroducer() {}
 
-class MdnsAdvertisement::Impl {
+class MdnsAdvertisement::Impl : public fuchsia::mdns::Responder {
  public:
   Impl(sys::ComponentContext* component_context, UdpNub* nub)
       : controller_(Connect(component_context, "Advertisement")),
-        node_id_(nub->node_id()) {
+        node_id_(nub->node_id()),
+        binding_(this),
+        port_(nub->port()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
-    controller_->DEPRECATEDPublishServiceInstance(
-        kServiceName, node_id_.ToString(), nub->port(), {}, true,
-        [node_id = node_id_, port = nub->port()](fuchsia::mdns::Result result) {
+    controller_->PublishServiceInstance(
+        kServiceName, node_id_.ToString(), true, binding_.NewBinding(),
+        [node_id = node_id_, port = port_](fuchsia::mdns::Result result) {
           std::cout << "Advertising " << node_id << " on port " << port
                     << " via mdns gets: " << result << "\n";
         });
   }
-  ~Impl() {
-    controller_->DEPRECATEDUnpublishServiceInstance(kServiceName,
-                                                    node_id_.ToString());
-  }
+  ~Impl() = default;
 
  private:
+  // fuchsia::mdns::Responder implementation.
+  void GetPublication(bool query, fidl::StringPtr subtype,
+                      GetPublicationCallback callback) {
+    callback(subtype->empty() ? std::make_unique<fuchsia::mdns::Publication>(
+                                    fuchsia::mdns::Publication{.port = port_})
+                              : nullptr);
+  }
+
   const fuchsia::mdns::ControllerPtr controller_;
   const overnet::NodeId node_id_;
+  fidl::Binding<fuchsia::mdns::Responder> binding_;
+  const uint16_t port_;
 };
 
 MdnsAdvertisement::MdnsAdvertisement(OvernetApp* app, UdpNub* udp_nub)
