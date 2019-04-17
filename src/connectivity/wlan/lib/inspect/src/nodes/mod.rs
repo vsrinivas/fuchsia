@@ -6,7 +6,7 @@ mod list;
 
 pub use list::BoundedListNode;
 
-use crate::{InspectValue, ToInspectValue};
+use crate::log::WriteInspect;
 
 use fidl_fuchsia_inspect as fidl_inspect;
 use fuchsia_inspect::{self as finspect, object::ObjectUtil};
@@ -26,7 +26,7 @@ pub trait NodeExt {
     fn set_time_at(&mut self, timestamp: zx::Time) -> &mut Self;
     fn insert_str<S: Into<String>>(&mut self, key: &str, value: S) -> &mut Self;
     fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self;
-    fn insert<V: ToInspectValue>(&mut self, key: &str, value: V) -> &mut Self;
+    fn insert<V: WriteInspect>(&mut self, key: &str, value: V) -> &mut Self;
 }
 
 impl NodeExt for finspect::ObjectTreeNode {
@@ -66,20 +66,8 @@ impl NodeExt for finspect::ObjectTreeNode {
         self.insert_str(key, format!("{:?}", value))
     }
 
-    fn insert<V: ToInspectValue>(&mut self, key: &str, value: V) -> &mut Self {
-        let key = key.to_string();
-        match value.to_inspect_value() {
-            InspectValue::Property(value) => {
-                self.add_property(fidl_inspect::Property { key, value });
-            }
-            InspectValue::Metric(value) => {
-                self.add_metric(fidl_inspect::Metric { key, value });
-            }
-            InspectValue::Object(mut value) => {
-                value.name = key;
-                self.add_child_tree(finspect::ObjectTreeNode::new(value));
-            }
-        }
+    fn insert<V: WriteInspect>(&mut self, key: &str, value: V) -> &mut Self {
+        value.write_inspect(self, key);
         self
     }
 }
