@@ -185,11 +185,6 @@ int Vim::Thread() {
         return -1;
     }
 
-    if ((status = RtcInit()) != ZX_OK) {
-        zxlogf(ERROR, "Thread: RtcInit failed: %d\n", status);
-        return -1;
-    }
-
     if ((status = SdInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: SdInit failed: %d\n", status);
         return -1;

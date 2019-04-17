@@ -13,7 +13,6 @@ driver("vim") {
     "vim-i2c.cpp",
     "vim-led2472g.cpp",
     "vim-mali.cpp",
-    "vim-rtc.cpp",
     "vim-sd.cpp",
     "vim-sdio.cpp",
     "vim-sysmem.cpp",

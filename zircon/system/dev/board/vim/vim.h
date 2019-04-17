@@ -60,7 +60,6 @@ private:
     zx_status_t DisplayInit();
     zx_status_t VideoInit();
     zx_status_t Led2472gInit();
-    zx_status_t RtcInit();
     zx_status_t CanvasInit();
     zx_status_t ClkInit();
     zx_status_t EnableWifi32K();

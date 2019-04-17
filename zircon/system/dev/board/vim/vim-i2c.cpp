@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -56,6 +58,24 @@ static const pbus_irq_t i2c_irqs[] = {
 */
 };
 
+static const i2c_channel_t i2c_channels[] = {
+    // RTC
+    {
+        .bus_id = 1,
+        .address = 0x51,
+        .vid = PDEV_VID_NXP,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_PCF8563_RTC,
+    },
+};
+
+static const pbus_metadata_t i2c_metadata[] = {
+    {
+        .type = DEVICE_METADATA_I2C_CHANNELS,
+        .data_buffer = &i2c_channels,
+        .data_size = sizeof(i2c_channels),
+    }
+};
 zx_status_t Vim::I2cInit() {
 
     pbus_dev_t i2c_dev = {};
@@ -67,6 +87,8 @@ zx_status_t Vim::I2cInit() {
     i2c_dev.mmio_count = countof(i2c_mmios);
     i2c_dev.irq_list = i2c_irqs;
     i2c_dev.irq_count = countof(i2c_irqs);
+    i2c_dev.metadata_list = i2c_metadata;
+    i2c_dev.metadata_count = countof(i2c_metadata);
 
     // setup pinmux for our I2C busses
     // I2C_A and I2C_B are exposed on the 40 pin header and I2C_C on the FPC connector
