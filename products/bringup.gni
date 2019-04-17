@@ -11,9 +11,3 @@ base_package_labels = []
 cache_package_labels = []
 
 universe_package_labels = [ "//garnet/packages/prod:vboot_reference" ]
-
-monolith = []
-
-preinstall = []
-
-available = []

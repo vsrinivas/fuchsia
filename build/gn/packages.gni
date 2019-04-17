@@ -7,19 +7,6 @@ declare_args() {
   # priority, and the package will be added to OTA images as part of the
   # verified boot set of static packages.
 
-  # These arguments should be set by the product definition gni file.
-
-  # a list of packages included in OTA images, base system images, and the
-  # distribution repository.
-  monolith = []
-
-  # a list of packages pre-installed on the system (also added to the
-  # distribution repository)
-  preinstall = []
-
-  # a list of packages only added to the distribution repository)
-  available = []
-
   # Does nothing.
   #
   # Will be removed after 30 April 2019.
@@ -44,6 +31,10 @@ declare_args() {
   # images, and the distribution repository.
   extra_package_labels = []
 }
+
+monolith = []
+preinstall = []
+available = []
 
 monolith += board_packages
 monolith += fuchsia_packages
