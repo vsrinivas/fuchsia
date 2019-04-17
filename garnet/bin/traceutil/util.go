@@ -75,6 +75,10 @@ func getBuildRoot(fxRoot string) string {
 	panic("Can not determine output directory based on executable path.")
 }
 
+func getZirconBuildRoot() string {
+	return buildRoot+".zircon"
+}
+
 func getHtmlGenerator() string {
 	return path.Join(fuchsiaRoot, "third_party", "catapult",
 		"tracing", "bin", "trace2html")

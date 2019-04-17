@@ -35,7 +35,7 @@ func newSigner(keyFile string) (ssh.Signer, error) {
 }
 
 func findDefaultTarget() (string, error) {
-	netaddr := path.Join(fuchsiaRoot, "out", "default.zircon", "tools", "netaddr")
+	netaddr := path.Join(getZirconBuildRoot(), "tools", "netaddr")
 	output, err := getCommandOutput(netaddr, "--fuchsia")
 	output = strings.TrimSpace(output)
 	if err != nil {
