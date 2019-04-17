@@ -47,6 +47,9 @@ typedef char* acpi_string;
 #define le32_to_cpup(x) (*x)
 #define cpu_to_le32(x) (x)
 
+#define lower_32_bits(x) (x & 0xffffffff)
+#define upper_32_bits(x) (x >> 32)
+
 #define BITS_PER_LONG (sizeof(long) * 8)
 
 #define BITS_TO_LONGS(nr) (nr / BITS_PER_LONG)

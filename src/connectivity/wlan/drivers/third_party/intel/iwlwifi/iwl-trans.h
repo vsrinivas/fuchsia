@@ -1079,6 +1079,7 @@ static inline int iwl_trans_test_mode_cmd(struct iwl_trans* trans, bool enable) 
     return -ENOTSUPP;
 }
 #endif
+#endif   // NEEDS_PORTING
 
 static inline void iwl_trans_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
     trans->ops->write8(trans, ofs, val);
@@ -1101,6 +1102,7 @@ static inline void iwl_trans_write_prph(struct iwl_trans* trans, uint32_t ofs,
     return trans->ops->write_prph(trans, ofs, val);
 }
 
+#if 0   // NEEDS_PORTING
 static inline int iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr,
                                      void* buf, int dwords) {
     return trans->ops->read_mem(trans, addr, buf, dwords);
@@ -1150,16 +1152,14 @@ iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask, ui
     trans->ops->set_bits_mask(trans, reg, mask, value);
 }
 
-#if 0   // NEEDS_PORTING
 #define iwl_trans_grab_nic_access(trans, flags) \
-    __cond_lock(nic_access, likely((trans)->ops->grab_nic_access(trans, flags)))
+    ((trans)->ops->grab_nic_access(trans, flags))
 
-static inline void __releases(nic_access)
-iwl_trans_release_nic_access(struct iwl_trans* trans, unsigned long* flags) {
+static inline void iwl_trans_release_nic_access(struct iwl_trans* trans, unsigned long* flags) {
     trans->ops->release_nic_access(trans, flags);
-    __release(nic_access);
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_trans_fw_error(struct iwl_trans* trans) {
     if (WARN_ON_ONCE(!trans->op_mode)) {
         return;

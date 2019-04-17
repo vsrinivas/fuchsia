@@ -31,59 +31,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/delay.h>
-#include <linux/device.h>
-#include <linux/export.h>
 
-#include "iwl-csr.h"
-#include "iwl-debug.h"
-#include "iwl-drv.h"
-#include "iwl-fh.h"
-#include "iwl-io.h"
-#include "iwl-prph.h"
+#include <zircon/syscalls.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 
 void iwl_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
-    trace_iwlwifi_dev_iowrite8(trans->dev, ofs, val);
     iwl_trans_write8(trans, ofs, val);
 }
-IWL_EXPORT_SYMBOL(iwl_write8);
 
 void iwl_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
-    trace_iwlwifi_dev_iowrite32(trans->dev, ofs, val);
     iwl_trans_write32(trans, ofs, val);
 }
-IWL_EXPORT_SYMBOL(iwl_write32);
 
 void iwl_write64(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
-    trace_iwlwifi_dev_iowrite64(trans->dev, ofs, val);
     iwl_trans_write32(trans, ofs, lower_32_bits(val));
     iwl_trans_write32(trans, ofs + 4, upper_32_bits(val));
 }
-IWL_EXPORT_SYMBOL(iwl_write64);
 
 uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs) {
     uint32_t val = iwl_trans_read32(trans, ofs);
 
-    trace_iwlwifi_dev_ioread32(trans->dev, ofs, val);
     return val;
 }
-IWL_EXPORT_SYMBOL(iwl_read32);
 
 #define IWL_POLL_INTERVAL 10 /* microseconds */
 
-int iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                 int timeout) {
+zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
+                         int timeout) {
     int t = 0;
 
     do {
         if ((iwl_read32(trans, addr) & mask) == (bits & mask)) { return t; }
-        udelay(IWL_POLL_INTERVAL);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
         t += IWL_POLL_INTERVAL;
     } while (t < timeout);
 
-    return -ETIMEDOUT;
+    return ZX_ERR_TIMED_OUT;
 }
-IWL_EXPORT_SYMBOL(iwl_poll_bit);
 
 uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg) {
     uint32_t value = 0x5a5a5a5a;
@@ -95,7 +85,6 @@ uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg) {
 
     return value;
 }
-IWL_EXPORT_SYMBOL(iwl_read_direct32);
 
 void iwl_write_direct32(struct iwl_trans* trans, uint32_t reg, uint32_t value) {
     unsigned long flags;
@@ -105,7 +94,6 @@ void iwl_write_direct32(struct iwl_trans* trans, uint32_t reg, uint32_t value) {
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_write_direct32);
 
 void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
     unsigned long flags;
@@ -115,40 +103,32 @@ void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_write_direct64);
 
-int iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout) {
+zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout) {
     int t = 0;
 
     do {
         if ((iwl_read_direct32(trans, addr) & mask) == mask) { return t; }
-        udelay(IWL_POLL_INTERVAL);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
         t += IWL_POLL_INTERVAL;
     } while (t < timeout);
 
-    return -ETIMEDOUT;
+    return ZX_ERR_TIMED_OUT;
 }
-IWL_EXPORT_SYMBOL(iwl_poll_direct_bit);
 
 uint32_t iwl_read_prph_no_grab(struct iwl_trans* trans, uint32_t ofs) {
     uint32_t val = iwl_trans_read_prph(trans, ofs);
-    trace_iwlwifi_dev_ioread_prph32(trans->dev, ofs, val);
     return val;
 }
-IWL_EXPORT_SYMBOL(iwl_read_prph_no_grab);
 
 void iwl_write_prph_no_grab(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
-    trace_iwlwifi_dev_iowrite_prph32(trans->dev, ofs, val);
     iwl_trans_write_prph(trans, ofs, val);
 }
-IWL_EXPORT_SYMBOL(iwl_write_prph_no_grab);
 
 void iwl_write_prph64_no_grab(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
-    trace_iwlwifi_dev_iowrite_prph64(trans->dev, ofs, val);
     iwl_write_prph_no_grab(trans, ofs, val & 0xffffffff);
     iwl_write_prph_no_grab(trans, ofs + 4, val >> 32);
 }
-IWL_EXPORT_SYMBOL(iwl_write_prph64_no_grab);
 
 uint32_t iwl_read_prph(struct iwl_trans* trans, uint32_t ofs) {
     unsigned long flags;
@@ -160,7 +140,6 @@ uint32_t iwl_read_prph(struct iwl_trans* trans, uint32_t ofs) {
     }
     return val;
 }
-IWL_EXPORT_SYMBOL(iwl_read_prph);
 
 void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
     unsigned long flags;
@@ -170,19 +149,18 @@ void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_write_prph);
 
-int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                      int timeout) {
+zx_status_t iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
+                              int timeout) {
     int t = 0;
 
     do {
         if ((iwl_read_prph(trans, addr) & mask) == (bits & mask)) { return t; }
-        udelay(IWL_POLL_INTERVAL);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
         t += IWL_POLL_INTERVAL;
     } while (t < timeout);
 
-    return -ETIMEDOUT;
+    return ZX_ERR_TIMED_OUT;
 }
 
 void iwl_set_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
@@ -193,7 +171,6 @@ void iwl_set_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_set_bits_prph);
 
 void iwl_set_bits_mask_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t bits, uint32_t mask) {
     unsigned long flags;
@@ -203,7 +180,6 @@ void iwl_set_bits_mask_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t bits
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_set_bits_mask_prph);
 
 void iwl_clear_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
     unsigned long flags;
@@ -215,7 +191,6 @@ void iwl_clear_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
         iwl_trans_release_nic_access(trans, &flags);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_clear_bits_prph);
 
 void iwl_force_nmi(struct iwl_trans* trans) {
     if (trans->cfg->device_family < IWL_DEVICE_FAMILY_9000) {
@@ -224,7 +199,6 @@ void iwl_force_nmi(struct iwl_trans* trans) {
         iwl_write_prph(trans, UREG_NIC_SET_NMI_DRIVER, UREG_NIC_SET_NMI_DRIVER_NMI_FROM_DRIVER_MSK);
     }
 }
-IWL_EXPORT_SYMBOL(iwl_force_nmi);
 
 static const char* get_rfh_string(int cmd) {
 #define IWL_CMD(x) \
@@ -262,8 +236,8 @@ struct reg {
 };
 
 static int iwl_dump_rfh(struct iwl_trans* trans, char** buf) {
-    int i, q;
-    int num_q = trans->num_rx_queues;
+    size_t i;
+    int q, num_q = trans->num_rx_queues;
     static const uint32_t rfh_tbl[] = {
         RFH_RXF_DMA_CFG, RFH_GEN_CFG, RFH_GEN_STATUS, FH_TSSR_TX_STATUS_REG, FH_TSSR_TX_ERROR_REG,
     };
@@ -343,7 +317,7 @@ static const char* get_fh_string(int cmd) {
 }
 
 int iwl_dump_fh(struct iwl_trans* trans, char** buf) {
-    int i;
+    size_t i;
     static const uint32_t fh_tbl[] = {
         FH_RSCSR_CHNL0_STTS_WPTR_REG,      FH_RSCSR_CHNL0_RBDCB_BASE_REG, FH_RSCSR_CHNL0_WPTR,
         FH_MEM_RCSR_CHNL0_CONFIG_REG,      FH_MEM_RSSR_SHARED_CTRL_REG,   FH_MEM_RSSR_RX_STATUS_REG,
