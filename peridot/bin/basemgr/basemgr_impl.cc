@@ -437,6 +437,8 @@ void BasemgrImpl::ShowSetupOrLogin() {
     }
   };
 
+  // TODO(MF-347): Handle scenario where device settings manager channel is
+  // dropped before error handler is set.
   // TODO(MF-134): Modular should not be handling factory reset.
   // If the device needs factory reset, remove all the users before proceeding
   // with setup.

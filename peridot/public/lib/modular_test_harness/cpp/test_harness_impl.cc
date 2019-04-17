@@ -175,6 +175,12 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
       env_services->AllowParentService(svc_name);
     }
   }
+  // Add account manager and device settings manager which by basemgr has hard
+  // dependencies on.
+  env_services->AllowParentService(
+      fuchsia::auth::account::AccountManager::Name_);
+  env_services->AllowParentService(
+      fuchsia::devicesettings::DeviceSettingsManager::Name_);
   enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
       "modular_test_harness", parent_env_, std::move(env_services));
 

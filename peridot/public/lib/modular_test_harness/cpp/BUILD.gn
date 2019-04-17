@@ -30,6 +30,8 @@ source_set("test_harness_impl") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
