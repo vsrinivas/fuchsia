@@ -9,7 +9,22 @@
 # prefix in that area's list.
 exceptions = {
     '//src/cobalt': [
-        '//garnet/lib/wlan/mlme:mlme',
+        '//src/connectivity/wlan/lib/mlme/cpp:mlme',
+    ],
+    '//src/connectivity/network': [
+        '//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib',
+        '//garnet/go/src/grand_unified_binary:grand_unified_binary',
+        '//garnet/lib/inet:inet',
+        '//garnet/public/go/third_party',
+        '//src/connectivity/network/testing/netemul/lib/network:ethertap',
+    ],
+    '//src/connectivity/network/netstack3': [
+        '//garnet/lib/rust',
+    ],
+    '//src/connectivity/network/testing/netemul/runner': [
+        '//garnet/lib/cmx:cmx',
+        '//garnet/lib/process:process',
+        '//garnet/lib/rust/',
     ],
     '//src/connectivity/overnet': [
         '//garnet/examples/fidl/services:echo',
@@ -17,21 +32,39 @@ exceptions = {
     '//src/connectivity/telephony': [
         '//zircon/system/fidl/fuchsia-hardware-telephony-transport',
     ],
-    '//src/developer': [
+    '//src/connectivity/wlan': [
+        '//garnet/lib/rust/connectivity-testing',
+        '//garnet/lib/rust/ethernet',
+        '//garnet/lib/wlan/',
+        '//src/connectivity/wlan/drivers/lib',
+        '//src/connectivity/wlan/drivers/testing',
+    ],
+    '//src/connectivity/wlan/drivers': [
+        '//garnet/lib/wlan/',
+        '//garnet/lib/rust/fuchsia-wlan-dev',
+    ],
+    '//src/connectivity/wlan/tools/wlantool': [
+        '//garnet/lib/wlan/',
+    ],
+    '//src/connectivity/wlan/wlancfg': [
+        '//garnet/lib/wlan/',
+    ],
+    '//src/connectivity/wlan/wlanstack': [
+        '//garnet/lib/wlan/',
+        '//garnet/lib/rust/fuchsia-wlan-dev',
+        '//src/connectivity/wlan/testing/wlantap-client',
+    ],
+    '//src/developer/debug': [
          '//garnet/lib/process:process',
          '//garnet/third_party/libunwindstack:libunwindstack',
-    ],
-    '//src/identity': [
-        '//garnet/bin/auth',
-        '//garnet/lib/auth',
+         '//garnet/third_party/llvm',
     ],
     '//src/ledger': [
-        '//peridot/lib',
+        '//peridot/lib/',
         '//peridot/third_party/modp_b64:modp_b64',
-        '//src/connectivity/overnet/lib/protocol:fidl_stream',
     ],
     '//src/ledger/bin/testing/ledger_test_instance_provider': [
-        '//peridot/lib',
+        '//peridot/lib/',
         '//src/ledger/bin/fidl:fidl',
     ],
     '//src/media/playback/mediaplayer': [

@@ -38,7 +38,13 @@ allowed_deps = [
     '//garnet/bin/cmc:cmc(//build/toolchain:host_x64)',
     '//zircon/public/tool',
     '//garnet/go/src/fidl:fidlgen(//build/toolchain:host_x64)',
+    '//garnet/go/src/fidl:fidlgen_llcpp(//build/toolchain:host_x64)',
     '//garnet/go/src/fidlmerge:fidlmerge(//build/toolchain:host_x64)',
+
+    # This is currently implicitly generated as a dependency on any C++
+    # generation of a FIDL target.
+    # TODO(ctiller): File an issue for cleaning this up.
+    '//src/connectivity/overnet/lib/protocol:fidl_stream',
 ]
 
 target_types_to_check = [
