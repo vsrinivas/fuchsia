@@ -12,25 +12,25 @@
 #include <zircon/assert.h>
 
 #include <memory>
-#include <stdarg.h>
 #include <set>
+#include <stdarg.h>
 
-template<typename Stub, typename Binding, auto vLogger>
+template <typename Stub, typename Binding, auto vLogger>
 class FidlServer {
-  public:
+public:
     using BindingType = Binding;
     using ErrorHandler = fit::function<void(zx_status_t)>;
 
     // Instances are effectively channel-owned via binding_ and
     // channel_owned_server_.  Any channel error or server-detected protocol
     // error results in deletion of the Stub instance.
-    template<typename... Args>
+    template <typename... Args>
     static void CreateChannelOwned(zx::channel server_request, Args&&... args) {
         auto local_owner = Create(std::forward<Args>(args)...);
         // Make channel-owned / self-owned:
         Stub* stub = local_owner.get();
         stub->channel_owned_server_ = std::move(local_owner);
-        stub->SetErrorHandler([stub](zx_status_t status){
+        stub->SetErrorHandler([stub](zx_status_t status) {
             // A clean close is ZX_ERR_PEER_CLOSED.  The status passed to an
             // error handler is never ZX_OK.
             ZX_DEBUG_ASSERT(status != ZX_OK);
@@ -50,7 +50,7 @@ class FidlServer {
         stub->Bind(std::move(server_request));
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static std::unique_ptr<Stub> Create(Args&&... args) {
         return std::unique_ptr<Stub>(new Stub(std::forward<Args>(args)...));
     }
@@ -64,8 +64,7 @@ class FidlServer {
         binding_.Bind(std::move(server_request));
     }
 
-  protected:
-
+protected:
     // This picks up async_get_default_dispatcher(), which seems fine to share
     // with the devhost code, at least for now.
     FidlServer(const char* logging_prefix, uint32_t concurrency_cap)
@@ -99,7 +98,7 @@ class FidlServer {
         // could if it became an actual problem.
         auto canary = std::make_unique<bool>(true);
         canaries_.insert(canary.get());
-        PostUnsafe([this, canary = std::move(canary), to_run = std::move(to_run)]{
+        PostUnsafe([this, canary = std::move(canary), to_run = std::move(to_run)] {
             if (!*canary) {
                 // We haven't touched |this|, which is already gone.  Get out.
                 return;
@@ -129,9 +128,9 @@ class FidlServer {
     // appropriate.
     void FailAsync(zx_status_t status, const char* format, ...) {
         if (is_failing_) {
-          // Fail() is intentionally idempotent.  We only really care about
-          // the first failure.
-          return;
+            // Fail() is intentionally idempotent.  We only really care about
+            // the first failure.
+            return;
         }
         is_failing_ = true;
 
@@ -149,7 +148,7 @@ class FidlServer {
             // any time.  The canary essentially serves the same purpose as the
             // async_cancel_wait() in ~Binding, but we can't cancel a Post() so
             // we use canary instead.
-            Post([error_handler = std::move(error_handler), status]{
+            Post([error_handler = std::move(error_handler), status] {
                 // error_handler() will typically ~this
                 error_handler(status);
                 // |this| is likely gone now.
@@ -184,7 +183,7 @@ class FidlServer {
 
     const char* logging_prefix_ = nullptr;
 
-  private:
+private:
     // Any async arc can put a bool* in canaries_. If ~FidlServer runs, the
     // pointed-at canary will be set to false.  The async arc can notice the
     // false value and avoid touching FidlServer (can instead just clean up

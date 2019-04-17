@@ -5,16 +5,15 @@
 #pragma once
 
 #include <lib/fidl/coding.h>
-
 #include <zircon/assert.h>
 
 // TODO(dustingreen): Switch to llcpp, DecodedMessage, etc, probably.
-template<typename FidlCStruct, auto FidlCMetaTable>
+template <typename FidlCStruct, auto FidlCMetaTable>
 class FidlStruct {
-  public:
+public:
     // These are used to select which constructor.
-    enum DefaultType {Default};
-    enum NullType {Null};
+    enum DefaultType { Default };
+    enum NullType { Null };
 
     // For request structs, the request handler is expected to close all the
     // handles, but the incoming struct itself isn't owned by the hander, and
@@ -121,8 +120,7 @@ class FidlStruct {
         return *this;
     }
 
-  private:
-
+private:
     void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
         if (ptr_) {
             fidl_close_handles(FidlCMetaTable, ptr_, nullptr);

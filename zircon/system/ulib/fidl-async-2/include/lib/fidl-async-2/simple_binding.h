@@ -75,7 +75,7 @@
 // will be something like fuchsia_sysmem_InterfaceName_dispatch.
 template <typename Stub, typename Ops, auto Dispatch>
 class SimpleBinding {
-  public:
+public:
     using Binding = SimpleBinding<Stub, Ops, Dispatch>;
     using ErrorHandler = fit::function<void(zx_status_t)>;
     class Txn;
@@ -83,13 +83,15 @@ class SimpleBinding {
 
     // A concurrency_cap of std::numeric_limits<uint32_t>::max() is accepted and
     // means unlimited, but an unlimited cap is not recommended.
-    SimpleBinding(async_dispatcher_t* dispatcher, Stub* ops_ctx, const Ops* ops, uint32_t concurrency_cap)
+    SimpleBinding(async_dispatcher_t* dispatcher, Stub* ops_ctx, const Ops* ops,
+                  uint32_t concurrency_cap)
         : dispatcher_(dispatcher),
           ops_ctx_(ops_ctx),
           ops_(ops),
           concurrency_cap_(concurrency_cap) {
-        static_assert(std::is_same<decltype(Dispatch),
-                      zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)>::value,
+        static_assert(std::is_same<
+                          decltype(Dispatch),
+                          zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*, const Ops* ops)>::value,
                       "Invalid dispatch function");
         ZX_DEBUG_ASSERT(dispatcher_);
         ZX_DEBUG_ASSERT(ops_ctx_);
@@ -180,8 +182,8 @@ class SimpleBinding {
     // move to its own unique_ptr<> for async _reply() later.
     class Txn {
         friend Binding;
-      public:
 
+    public:
         ~Txn() {
             // It's not allowed to just delete an in-flight txn without
             // responding, unless the channel is already !is_bound() or the
@@ -201,7 +203,9 @@ class SimpleBinding {
             // up-to-one move from stack to heap.
             ZX_DEBUG_ASSERT_COND(!is_moved_out_ || !binding_);
             ZX_DEBUG_ASSERT_COND(!(is_moved_out_ && is_moved_in_));
-            ZX_DEBUG_ASSERT(!is_recognized_ || is_completed_ || (!binding_ || !binding_->is_bound()));
+            ZX_DEBUG_ASSERT(!is_recognized_ ||
+                            is_completed_ ||
+                            (!binding_ || !binding_->is_bound()));
             if (binding_) {
                 binding_->txn_list_.erase(*this);
                 // If there's no binding_, it means either Txn was moved out in
@@ -216,7 +220,8 @@ class SimpleBinding {
         // Let the dispatcher know that this txn ended up at a handler that takes a txn.
         static void RecognizeTxn(fidl_txn_t* raw_txn) {
             ZX_DEBUG_ASSERT(raw_txn);
-            Txn* stack_txn = reinterpret_cast<Txn*>(reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
+            Txn* stack_txn = reinterpret_cast<Txn*>(
+                reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
             ZX_DEBUG_ASSERT(&stack_txn->raw_txn_ == raw_txn);
             // Shouldn't be moved out yet - recognize should be done extremely
             // near the start of any dispatch method with a fidl_txn_t*
@@ -227,7 +232,9 @@ class SimpleBinding {
             // RecognizeTxn() is only valid during initial dispatch of this txn,
             // and only valid on stack-based Txn instances not heap-based Txn
             // instances.
-            ZX_DEBUG_ASSERT_COND(stack_txn->binding_ && stack_txn->binding_->stack_txn_during_dispatch_ && stack_txn->binding_->stack_txn_during_dispatch_ == stack_txn);
+            ZX_DEBUG_ASSERT_COND(stack_txn->binding_ &&
+                                 stack_txn->binding_->stack_txn_during_dispatch_ &&
+                                 stack_txn->binding_->stack_txn_during_dispatch_ == stack_txn);
             // A Txn should only be recognized once, since it's easy enough to
             // just call RecognizeTxn() at the start of every handler that takes
             // a fidl_txn_t* parameter.
@@ -247,12 +254,15 @@ class SimpleBinding {
         // calling Dispatch() will ~Txn.
         static TxnPtr TakeTxn(fidl_txn_t* raw_txn) {
             ZX_DEBUG_ASSERT(raw_txn);
-            Txn* stack_txn = reinterpret_cast<Txn*>(reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
+            Txn* stack_txn = reinterpret_cast<Txn*>(
+                reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
             ZX_DEBUG_ASSERT(&stack_txn->raw_txn_ == raw_txn);
             // Needs to be a stack-based Txn not a heap-based Txn.
             ZX_DEBUG_ASSERT_COND(!stack_txn->is_moved_in_);
             // TakeTxn() is only valid during initial dispatch of this txn.
-            ZX_DEBUG_ASSERT_COND(stack_txn->binding_ && stack_txn->binding_->stack_txn_during_dispatch_ && stack_txn->binding_->stack_txn_during_dispatch_ == stack_txn);
+            ZX_DEBUG_ASSERT_COND(stack_txn->binding_ &&
+                                 stack_txn->binding_->stack_txn_during_dispatch_ &&
+                                 stack_txn->binding_->stack_txn_during_dispatch_ == stack_txn);
             // Move the stack-based Txn to the heap, managed by a
             // unique_ptr<Txn>. By allocating on the stack initially, and moving
             // here, we can complete a request sync without any heap allocation.
@@ -273,12 +283,12 @@ class SimpleBinding {
             return raw_txn_;
         }
 
-      private:
+    private:
         // This is used to create on the stack, which is where all logical
         // Txn(s) are initially created.
         Txn(Binding* binding, uint32_t txid)
             : binding_(binding),
-              raw_txn_({.reply=FidlReplyRaw}),
+              raw_txn_({.reply = FidlReplyRaw}),
               txid_(txid) {
             binding_->txn_list_.push_front(this);
         }
@@ -343,7 +353,8 @@ class SimpleBinding {
 
         // This function is our fidl_txn_t.reply() function.
         static zx_status_t FidlReplyRaw(fidl_txn_t* raw_txn, const fidl_msg_t* msg) {
-            Txn* txn = reinterpret_cast<Txn*>(reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
+            Txn* txn = reinterpret_cast<Txn*>(
+                reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
             ZX_DEBUG_ASSERT(&txn->raw_txn_ == raw_txn);
             return txn->FidlReplyCooked(msg);
         }
@@ -369,7 +380,7 @@ class SimpleBinding {
 
             // This method ensures that the handles sent in here are closed
             // unless successfully transferred into the channel.
-            auto close_handles = fit::defer([msg]{
+            auto close_handles = fit::defer([msg] {
                 zx_status_t close_status =
                     zx_handle_close_many(msg->handles, msg->num_handles);
                 ZX_DEBUG_ASSERT(close_status == ZX_OK);
@@ -400,7 +411,8 @@ class SimpleBinding {
             // will transfer them on success.  So this method shouldn't close
             // the handles.
             close_handles.cancel();
-            return zx_channel_write(binding_->channel(), 0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
+            return zx_channel_write(binding_->channel(), 0, msg->bytes, msg->num_bytes,
+                                    msg->handles, msg->num_handles);
             // ~self_delete
         }
 
@@ -430,8 +442,7 @@ class SimpleBinding {
         fbl::DoublyLinkedListNodeState<Txn*> txn_list_node_state_;
     };
 
-  private:
-
+private:
     zx_handle_t channel() {
         ZX_DEBUG_ASSERT(channel_.is_valid());
         return channel_.get();
@@ -459,7 +470,8 @@ class SimpleBinding {
     }
 
     // async_wait_handler_t
-    static void AsyncWaitHandlerRaw(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status, const zx_packet_signal_t* signal) {
+    static void AsyncWaitHandlerRaw(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                    zx_status_t status, const zx_packet_signal_t* signal) {
         auto binding = reinterpret_cast<Binding*>(reinterpret_cast<uint8_t*>(wait) - offsetof(Binding, wait_));
         ZX_DEBUG_ASSERT(&binding->wait_ == wait);
         binding->AsyncWaitHandlerCooked(dispatcher, status, signal);
@@ -508,7 +520,7 @@ class SimpleBinding {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
                 stack_txn_during_dispatch_ = &stack_txn;
 #endif
-                auto cleanup_after_dispatch = fit::defer([this, &binding_is_gone_canary]{
+                auto cleanup_after_dispatch = fit::defer([this, &binding_is_gone_canary] {
                     // Set binding_is_gone_canary_ back to nullptr before
                     // binding_is_gone_canary leaves the stack, but only if
                     // |this| binding still exists.
@@ -600,8 +612,7 @@ class SimpleBinding {
     async_wait_t wait_{};
 
     struct TxnListTraits {
-        inline static fbl::DoublyLinkedListNodeState<Txn*>& node_state(
-                Txn& obj) {
+        inline static fbl::DoublyLinkedListNodeState<Txn*>& node_state(Txn& obj) {
             return obj.txn_list_node_state_;
         }
     };
