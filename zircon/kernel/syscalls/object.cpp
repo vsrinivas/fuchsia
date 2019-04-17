@@ -513,7 +513,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         pmm_count_total_states(state_count);
 
         size_t total = 0;
-        for (int i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
+        for (uint32_t i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
             total += state_count[i];
         }
 

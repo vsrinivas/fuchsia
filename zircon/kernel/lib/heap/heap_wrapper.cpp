@@ -288,7 +288,7 @@ void* heap_page_alloc(size_t pages) {
     vm_page_t *p, *temp;
     list_for_every_entry_safe (&list, p, temp, vm_page_t, queue_node) {
         list_delete(&p->queue_node);
-        p->state = VM_PAGE_STATE_HEAP;
+        p->set_state(VM_PAGE_STATE_HEAP);
     }
 
     LTRACEF("pages %zu: pa %#lx, va %p\n", pages, pa, paddr_to_physmap(pa));
@@ -310,7 +310,7 @@ void heap_page_free(void* _ptr, size_t pages) {
     while (pages > 0) {
         vm_page_t* p = paddr_to_vm_page(vaddr_to_paddr(ptr));
         if (p) {
-            DEBUG_ASSERT(p->state == VM_PAGE_STATE_HEAP);
+            DEBUG_ASSERT(p->state() == VM_PAGE_STATE_HEAP);
             DEBUG_ASSERT(!list_in_list(&p->queue_node));
 
             list_add_tail(&list, &p->queue_node);

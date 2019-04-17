@@ -652,7 +652,7 @@ static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t*
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
     list_for_every_entry (&list, p, vm_page_t, queue_node) {
-        p->state = VM_PAGE_STATE_WIRED;
+        p->set_state(VM_PAGE_STATE_WIRED);
     }
 }
 

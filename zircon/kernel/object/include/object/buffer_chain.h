@@ -102,8 +102,8 @@ public:
         BufferChain::BufferList temp;
         vm_page_t* page;
         list_for_every_entry (&pages, page, vm_page_t, queue_node) {
-            DEBUG_ASSERT(page->state == VM_PAGE_STATE_ALLOC);
-            page->state = VM_PAGE_STATE_IPC;
+            DEBUG_ASSERT(page->state() == VM_PAGE_STATE_ALLOC);
+            page->set_state(VM_PAGE_STATE_IPC);
             void* va = paddr_to_physmap(page->paddr());
             temp.push_front(new (va) BufferChain::Buffer);
         }

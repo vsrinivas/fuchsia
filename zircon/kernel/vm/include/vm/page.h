@@ -13,8 +13,8 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-enum vm_page_state {
-    VM_PAGE_STATE_FREE,
+enum vm_page_state : uint32_t {
+    VM_PAGE_STATE_FREE = 0,
     VM_PAGE_STATE_ALLOC,
     VM_PAGE_STATE_OBJECT,
     VM_PAGE_STATE_WIRED,
@@ -37,7 +37,8 @@ typedef struct vm_page {
 
     struct {
         uint32_t flags : 8;
-        uint32_t state : VM_PAGE_STATE_BITS;
+        // logically private; use |state()| and |set_state()|
+        uint32_t state_priv : VM_PAGE_STATE_BITS;
     };
     // offset: 0x1c
 
@@ -52,7 +53,7 @@ typedef struct vm_page {
 
     // helper routines
     bool is_free() const {
-        return state == VM_PAGE_STATE_FREE;
+        return state_priv == VM_PAGE_STATE_FREE;
     }
 
     void dump() const;
@@ -60,6 +61,11 @@ typedef struct vm_page {
     // return the physical address
     // future plan to store in a compressed form
     paddr_t paddr() const { return paddr_priv; }
+
+    vm_page_state state() const { return vm_page_state(state_priv); }
+
+    void set_state(vm_page_state new_state);
+
 } vm_page_t;
 
 // assert that the page structure isn't growing uncontrollably

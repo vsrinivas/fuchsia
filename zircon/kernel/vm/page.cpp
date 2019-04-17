@@ -41,7 +41,14 @@ const char* page_state_to_string(unsigned int state) {
 
 void vm_page::dump() const {
     printf("page %p: address %#" PRIxPTR " state %s flags %#x\n", this, paddr(),
-           page_state_to_string(state), flags);
+           page_state_to_string(state_priv), flags);
+}
+
+void vm_page::set_state(vm_page_state new_state) {
+    constexpr uint32_t kMask = (1 << VM_PAGE_STATE_BITS) - 1;
+    DEBUG_ASSERT_MSG(new_state == (new_state & kMask), "invalid state %u\n", new_state);
+
+    state_priv = (new_state & kMask);
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {

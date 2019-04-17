@@ -71,9 +71,9 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
 
         p.paddr_priv = base() + i * PAGE_SIZE;
         if (i >= array_start_index && i < array_end_index) {
-            p.state = VM_PAGE_STATE_WIRED;
+            p.set_state(VM_PAGE_STATE_WIRED);
         } else {
-            p.state = VM_PAGE_STATE_FREE;
+            p.set_state(VM_PAGE_STATE_FREE);
             list_add_tail(&list, &p.queue_node);
         }
     }
@@ -138,7 +138,7 @@ retry:
 
 void PmmArena::CountStates(size_t state_count[VM_PAGE_STATE_COUNT_]) const {
     for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
-        state_count[page_array_[i].state]++;
+        state_count[page_array_[i].state()]++;
     }
 }
 

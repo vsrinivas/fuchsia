@@ -551,7 +551,7 @@ zx_status_t X86PageTableBase::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     }
     virt_ = reinterpret_cast<pt_entry_t*>(paddr_to_physmap(pa));
     phys_ = pa;
-    p->state = VM_PAGE_STATE_MMU;
+    p->set_state(VM_PAGE_STATE_MMU);
 
     // TODO(abdulla): Remove when PMM returns pre-zeroed pages.
     arch_zero_page(virt_);

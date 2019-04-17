@@ -81,13 +81,13 @@ void boot_reserve_wire() {
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
     list_for_every_entry (&reserved_page_list, p, vm_page_t, queue_node) {
-        p->state = VM_PAGE_STATE_WIRED;
+        p->set_state(VM_PAGE_STATE_WIRED);
     }
 }
 
 void boot_reserve_unwire_page(struct vm_page* page) {
-    DEBUG_ASSERT(page->state == VM_PAGE_STATE_WIRED);
-    page->state = VM_PAGE_STATE_ALLOC;
+    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_WIRED);
+    page->set_state(VM_PAGE_STATE_ALLOC);
     // Remove from the reserved page list.
     list_delete(&page->queue_node);
 }
