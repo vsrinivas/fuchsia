@@ -20,7 +20,6 @@
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -297,17 +296,6 @@ void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
   for (auto& observer : observers())
     observer.OnSymbolLoadFailure(this, err);
-}
-
-void ProcessImpl::NotifyFailedToFindDebugSymbols(const std::string& build_id) {
-  for (const auto& status : symbols_.GetStatus()) {
-    if (status.build_id == build_id) {
-      OnSymbolLoadFailure(Err(fxl::StringPrintf(
-          "Could not load symbols for \"%s\" because there was no mapping for "
-          "build ID \"%s\".",
-          status.name.c_str(), status.build_id.c_str())));
-    }
-  }
 }
 
 }  // namespace zxdb

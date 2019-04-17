@@ -11,13 +11,11 @@
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_ipc {
 struct Module;
@@ -64,6 +62,10 @@ class ProcessSymbols {
 
   // Replaces all modules with the given list.
   void SetModules(const std::vector<debug_ipc::Module>& modules);
+
+  // Try to load the symbols for a given build ID again, presumably because we
+  // have downloaded them and now expect the index to hit.
+  void RetryLoadBuildID(const std::string& build_id);
 
   // Appends the ModuleSymbols implementation to the current list (unlike
   // SetModules which does a replacement). This is typically used to populate
@@ -113,6 +115,9 @@ class ProcessSymbols {
     // HaveSymbolsLoadedForModuleAt().
     std::unique_ptr<LoadedModuleSymbols> symbols;
   };
+
+  // Update the symbols in TargetSymbols to match the contents of modules_.
+  void DoRefreshTargetSymbols();
 
   // Creates the ModuleInfo structure, attempts to load the symbols, and
   // updates the modules_ list for this process. *err will be filled with the

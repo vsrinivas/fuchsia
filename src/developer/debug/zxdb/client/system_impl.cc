@@ -18,6 +18,8 @@
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -135,9 +137,61 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
 }
 
 void SystemImpl::RequestDownload(const std::string& build_id) {
+  for (auto& server : symbol_servers_) {
+    if (server->state() != SymbolServer::State::kReady) {
+      continue;
+    }
+
+    server->Fetch(build_id, [build_id, weak_this = weak_factory_.GetWeakPtr()](
+                                const Err& err, const std::string& path) {
+      if (!weak_this) {
+        return;
+      }
+
+      auto& symbols = weak_this->symbols_;
+
+      if (!path.empty()) {
+        if (err.has_error()) {
+          // If we got a path but still had an error, something went wrong with
+          // the cache repo. Add the path manually.
+          symbols.build_id_index().AddBuildIDMapping(build_id, path);
+        }
+
+        for (const auto& target : weak_this->targets_) {
+          if (auto process = target->process()) {
+            process->GetSymbols()->RetryLoadBuildID(build_id);
+          }
+        }
+      } else {
+        weak_this->NotifyFailedToFindDebugSymbols(err, build_id);
+      }
+    });
+
+    return;
+  }
+}
+
+void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
+                                                const std::string& build_id) {
   for (const auto& target : targets_) {
-    if (auto process = target->process()) {
-      process->NotifyFailedToFindDebugSymbols(build_id);
+    // Notify only those targets which are processes and which have attempted
+    // and failed to load symbols for this build ID previously.
+    auto process = target->process();
+    if (!process)
+      continue;
+
+    for (const auto& status : process->GetSymbols()->GetStatus()) {
+      if (status.build_id != build_id)
+        continue;
+
+      if (!err.has_error()) {
+        process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
+            "Could not load symbols for \"%s\" because there was no mapping "
+            "for build ID \"%s\".",
+            status.name.c_str(), status.build_id.c_str())));
+      } else {
+        process->OnSymbolLoadFailure(err);
+      }
     }
   }
 }

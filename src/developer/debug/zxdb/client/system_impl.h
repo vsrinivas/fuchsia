@@ -77,6 +77,12 @@ class SystemImpl final : public System,
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
   void AddNewJobContext(std::unique_ptr<JobContextImpl> job_context);
 
+  // Called when we have attempted to download debug symbols and failed. If err
+  // is set then something went wrong during the attempt, otherwise the symbols
+  // simply weren't available from any of the servers.
+  void NotifyFailedToFindDebugSymbols(const Err& err,
+                                      const std::string& build_id);
+
   std::vector<std::unique_ptr<SymbolServer>> symbol_servers_;
   std::vector<std::unique_ptr<TargetImpl>> targets_;
   std::vector<std::unique_ptr<JobContextImpl>> job_contexts_;

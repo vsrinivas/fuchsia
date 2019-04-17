@@ -157,7 +157,102 @@ void CloudStorageSymbolServer::Authenticate(
 void CloudStorageSymbolServer::Fetch(
     const std::string& build_id,
     std::function<void(const Err&, const std::string&)> cb) {
-  cb(Err("Not implemented."), "");
+  if (state_ != SymbolServer::State::kReady) {
+    cb(Err("Server not ready."), "");
+    return;
+  }
+
+  std::string url = "https://storage.googleapis.com/";
+  url += bucket_ + build_id + ".debug";
+
+  auto curl = Curl::Create();
+  FXL_DCHECK(curl);
+
+  curl->SetURL(url);
+  curl->headers().push_back(std::string("Authorization: Bearer ") +
+                            access_token_);
+
+  auto cache_path = session()->system().settings().GetString(
+      ClientSettings::System::kSymbolCache);
+  std::string path;
+
+  if (cache_path.empty()) {
+    // We don't have a folder specified where downloaded symbols go. We'll just
+    // drop it in tmp and at least you'll be able to use them for this session.
+    path = std::tmpnam(nullptr);
+  } else {
+    std::error_code ec;
+    auto path_obj = std::filesystem::path(cache_path) / ".build-id";
+
+    if (!std::filesystem::is_directory(path_obj, ec)) {
+      // Something's wrong with the build ID folder we were provided. We'll
+      // just drop it in tmp.
+      path = std::tmpnam(nullptr);
+    } else {
+      // Download to a temporary file, so if we get cancelled (or we get sent
+      // a 404 page instead of the real symbols) we don't pollute the build ID
+      // folder.
+      std::string name = build_id + ".debug.part";
+      path = path_obj / name;
+    }
+  }
+
+  FXL_DCHECK(!path.empty());
+
+  FILE* file = std::fopen(path.c_str(), "wb");
+  if (!file) {
+    cb(Err("Error opening temporary file."), "");
+    return;
+  }
+
+  curl->set_data_callback([file](const std::string& data) {
+    return std::fwrite(data.data(), 1, data.size(), file);
+  });
+
+  // TODO: Make Async. See comment in Authenticate.
+  if (auto result = curl->Perform()) {
+    std::string error = "Could not contact server: ";
+    error += result.ToString();
+
+    error_log_.push_back(error);
+    IncrementRetries();
+    state_ = SymbolServer::State::kAuth;
+    cb(Err(error), "");
+    return;
+  }
+
+  std::fclose(file);
+
+  Err err;
+  std::string final_path;
+  auto code = curl->ResponseCode();
+  if (code != 200) {
+    if (code != 404 && code != 410) {
+      err = Err("Error downloading symbols: " + std::to_string(code));
+      error_log_.push_back(err.msg());
+      IncrementRetries();
+    }
+
+    std::error_code ec;
+    std::filesystem::remove(path, ec);
+  } else if (!cache_path.empty()) {
+    auto target_path =
+        std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
+    auto target_name = build_id.substr(2) + ".debug";
+
+    std::error_code ec;
+    std::filesystem::create_directory(target_path, ec);
+    if (std::filesystem::is_directory(target_path, ec)) {
+      std::filesystem::rename(path, target_path / target_name, ec);
+      final_path = target_path / target_name;
+    } else {
+      final_path = path;
+      err = Err("Could not move file in to cache.");
+    }
+  }
+
+  cb(err, final_path);
+  return;
 }
 
 }  // namespace

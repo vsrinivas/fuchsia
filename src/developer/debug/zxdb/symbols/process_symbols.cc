@@ -80,14 +80,7 @@ void ProcessSymbols::SetModules(const std::vector<debug_ipc::Module>& modules) {
       added_modules.push_back(info->symbols.get());
   }
 
-  // Update the TargetSymbols.
-  target_symbols_->RemoveAllModules();
-  for (auto& [base, mod_info] : modules_) {
-    if (mod_info.symbols->module_ref()) {
-      target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
-          mod_info.symbols->module_ref()));
-    }
-  }
+  DoRefreshTargetSymbols();
 
   // Send notifications last so everything is in a consistent state.
   for (auto& added_module : added_modules)
@@ -225,6 +218,48 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
                    std::forward_as_tuple(std::move(info)))
           .first;
   return &inserted_iter->second;
+}
+
+void ProcessSymbols::RetryLoadBuildID(const std::string& build_id) {
+  for (auto& [base, mod] : modules_) {
+    if (mod.build_id != build_id) {
+      continue;
+    }
+
+    fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
+    Err err =
+        target_symbols_->system_symbols()->GetModule(build_id, &module_symbols);
+
+    if (!err.has_error() && !module_symbols) {
+      err = Err("Symbols were downloaded but did not appear in index.");
+    }
+
+    if (err.has_error()) {
+      notifications_->OnSymbolLoadFailure(err);
+      return;
+    }
+
+    mod.symbols = std::make_unique<LoadedModuleSymbols>(
+        std::move(module_symbols), build_id, base);
+
+    // If we can have multiple modules with the same build ID in the process
+    // then this logic will be wrong. I don't see how that happens as of today,
+    // though.
+    DoRefreshTargetSymbols();
+    notifications_->DidLoadModuleSymbols(mod.symbols.get());
+    return;
+  }
+}
+
+void ProcessSymbols::DoRefreshTargetSymbols() {
+  // Update the TargetSymbols.
+  target_symbols_->RemoveAllModules();
+  for (auto& [base, mod_info] : modules_) {
+    if (mod_info.symbols->module_ref()) {
+      target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
+          mod_info.symbols->module_ref()));
+    }
+  }
 }
 
 // static

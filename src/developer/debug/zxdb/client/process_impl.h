@@ -65,8 +65,8 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   // Returns true if the caller should show the output. False means silence.
   bool HandleIO(const debug_ipc::NotifyIO&);
 
-  // Called when we have attempted to download debug symbols and failed.
-  void NotifyFailedToFindDebugSymbols(const std::string& build_id);
+  // ProcessSymbols::Notifications implementation (public portion):
+  void OnSymbolLoadFailure(const Err& err) override;
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .
@@ -75,7 +75,6 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   // ProcessSymbols::Notifications implementation:
   void DidLoadModuleSymbols(LoadedModuleSymbols* module) override;
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override;
-  void OnSymbolLoadFailure(const Err& err) override;
 
   TargetImpl* const target_;  // The target owns |this|.
   const uint64_t koid_;
