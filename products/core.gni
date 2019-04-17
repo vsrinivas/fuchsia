@@ -6,6 +6,8 @@ import("//products/bringup.gni")
 
 enable_netboot = false
 
+zircon_enable_kernel_debugging_features = false
+
 meta_package_labels += [
   "//build/images:shell-commands",
   "//garnet/bin/component_index:component_index",

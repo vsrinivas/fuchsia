@@ -26,6 +26,10 @@ declare_args() {
   # to explicitly set Zircon's `variants` here.
   zircon_extra_args = {
   }
+
+  # Whether to include various features (non-shipping, insecure, etc.) in the
+  # kernel build.
+  zircon_enable_kernel_debugging_features = false
 }
 
 declare_args() {
@@ -50,6 +54,7 @@ declare_args() {
     }
     variants = _zircon_variants
     default_deps = [ ":legacy-$target_cpu" ]
+    enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
     forward_variables_from(zircon_extra_args, "*")
   }
 }

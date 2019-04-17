@@ -4,6 +4,8 @@
 
 enable_netboot = true
 
+zircon_enable_kernel_debugging_features = true
+
 meta_package_labels = [ "//build/images:config-data" ]
 
 base_package_labels = []
