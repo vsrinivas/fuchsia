@@ -21,6 +21,7 @@ namespace sherlock {
 namespace {
 
 constexpr uint32_t kClk24MAltFunc = 7;
+constexpr uint32_t kClkGpioDriveStrength = 3;
 
 constexpr pbus_mmio_t mipi_mmios[] = {
     // CSI PHY0
@@ -230,6 +231,7 @@ static pbus_dev_t isp_dev = []() {
 zx_status_t Sherlock::CameraInit() {
     // Set GPIO alternate functions.
     gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength);
 
     zx_status_t status = pbus_.DeviceAdd(&isp_dev);
     if (status != ZX_OK) {

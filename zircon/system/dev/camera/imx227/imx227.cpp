@@ -44,8 +44,14 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
         if (!gpios_[i].is_valid()) {
             return ZX_ERR_NO_RESOURCES;
         }
-        // Set the GPIO to output and set initial value to 0.
-        gpios_[i].ConfigOut(0);
+        // Set the GPIO to output and set them to their initial values
+        // before the power up sequence.
+        if (i == CAM_SENSOR_RST) {
+            gpios_[i].ConfigOut(1);
+
+        } else {
+            gpios_[i].ConfigOut(0);
+        }
     }
 
     // I2c for communicating with the sensor.
@@ -142,17 +148,17 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
 
 zx_status_t Imx227Device::IspCallbacksInit() {
     // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
-    gpios_[VANA_ENABLE].ConfigOut(1);
+    gpios_[VANA_ENABLE].Write(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
-    gpios_[VDIG_ENABLE].ConfigOut(1);
+    gpios_[VDIG_ENABLE].Write(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // Enable 24M clock for sensor.
     clk_.Enable(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
-    gpios_[CAM_SENSOR_RST].ConfigOut(0);
+    gpios_[CAM_SENSOR_RST].Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // Get Sensor ID to validate initialization sequence.
@@ -289,7 +295,7 @@ zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
 }
 
 void Imx227Device::IspCallbacksStartStreaming() {
-    zxlogf(INFO, "%s Camera Sensor Start Streaming\n",__func__);
+    zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
     ctx_.streaming_flag = 1;
     WriteReg(0x0100, 0x01);
 }
