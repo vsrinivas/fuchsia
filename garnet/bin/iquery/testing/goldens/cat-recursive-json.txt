@@ -4,91 +4,91 @@ iquery --recursive --format=json objects
         "path": "objects",
         "contents": {
             "root": {
-                "table0x0": {
+                "table:0x0": {
                     "b64:BQEC": "b64:AQI=",
                     "b64:BQED": "The key of this value is a binary value.",
                     "binary_data": "b64:IAAREgU=",
                     "object_name": "Example Table",
-                    "row0x1": {
-                        "cell0x2": {
+                    "row:0x1": {
+                        "cell:0x2": {
                             "name": "(0,0)",
                             "double_value": "6.666667",
                             "value": "0"
                         },
-                        "cell0x3": {
+                        "cell:0x3": {
                             "name": "(0,1)",
                             "double_value": "13.333333",
                             "value": "0"
                         },
-                        "cell0x4": {
+                        "cell:0x4": {
                             "name": "(0,2)",
                             "double_value": "20.000000",
                             "value": "0"
                         }
                     },
-                    "row0x11": {
-                        "cell0x12": {
+                    "row:0x11": {
+                        "cell:0x12": {
                             "name": "(4,0)",
                             "double_value": "86.666667",
                             "value": "0"
                         },
-                        "cell0x13": {
+                        "cell:0x13": {
                             "name": "(4,1)",
                             "double_value": "93.333333",
                             "value": "4"
                         },
-                        "cell0x14": {
+                        "cell:0x14": {
                             "name": "(4,2)",
                             "double_value": "100.000000",
                             "value": "8"
                         }
                     },
-                    "row0x5": {
-                        "cell0x6": {
+                    "row:0x5": {
+                        "cell:0x6": {
                             "name": "(1,0)",
                             "double_value": "26.666667",
                             "value": "0"
                         },
-                        "cell0x7": {
+                        "cell:0x7": {
                             "name": "(1,1)",
                             "double_value": "33.333333",
                             "value": "1"
                         },
-                        "cell0x8": {
+                        "cell:0x8": {
                             "name": "(1,2)",
                             "double_value": "40.000000",
                             "value": "2"
                         }
                     },
-                    "row0x9": {
-                        "cell0xa": {
+                    "row:0x9": {
+                        "cell:0xa": {
                             "name": "(2,0)",
                             "double_value": "46.666667",
                             "value": "0"
                         },
-                        "cell0xb": {
+                        "cell:0xb": {
                             "name": "(2,1)",
                             "double_value": "53.333333",
                             "value": "2"
                         },
-                        "cell0xc": {
+                        "cell:0xc": {
                             "name": "(2,2)",
                             "double_value": "60.000000",
                             "value": "4"
                         }
                     },
-                    "row0xd": {
-                        "cell0x10": {
+                    "row:0xd": {
+                        "cell:0x10": {
                             "name": "(3,2)",
                             "double_value": "80.000000",
                             "value": "6"
                         },
-                        "cell0xe": {
+                        "cell:0xe": {
                             "name": "(3,0)",
                             "double_value": "66.666667",
                             "value": "0"
                         },
-                        "cell0xf": {
+                        "cell:0xf": {
                             "name": "(3,1)",
                             "double_value": "73.333333",
                             "value": "3"

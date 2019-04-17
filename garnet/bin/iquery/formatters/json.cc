@@ -16,6 +16,52 @@ namespace {
 
 using cobalt::crypto::Base64Encode;
 
+template <typename WriterType, typename ArrayType>
+void FormatArray(WriterType& writer, const ArrayType& array) {
+  auto buckets = array.GetBuckets();
+  if (buckets.size() != 0) {
+    writer->StartObject();
+    writer->String("buckets");
+    writer->StartArray();
+    for (const auto& bucket : buckets) {
+      writer->StartObject();
+      writer->String("floor");
+      writer->String(FormatNumericValue(bucket.floor));
+      writer->String("upper_bound");
+      writer->String(FormatNumericValue(bucket.upper_limit));
+      writer->String("count");
+      writer->String(FormatNumericValue(bucket.count));
+      writer->EndObject();
+    }
+    writer->EndArray();
+    writer->EndObject();
+  } else {
+    writer->StartArray();
+    for (const auto& val : array.value()) {
+      writer->String(FormatNumericValue(val));
+    }
+    writer->EndArray();
+  }
+}
+
+template <typename WriterType>
+void FormatMetricValue(WriterType& writer,
+                       const inspect::hierarchy::Metric& metric) {
+  switch (metric.format()) {
+    case inspect::hierarchy::MetricFormat::INT_ARRAY:
+      FormatArray(writer, metric.Get<inspect::hierarchy::IntArray>());
+      break;
+    case inspect::hierarchy::MetricFormat::UINT_ARRAY:
+      FormatArray(writer, metric.Get<inspect::hierarchy::UIntArray>());
+      break;
+    case inspect::hierarchy::MetricFormat::DOUBLE_ARRAY:
+      FormatArray(writer, metric.Get<inspect::hierarchy::DoubleArray>());
+      break;
+    default:
+      writer->String(FormatNumericMetricValue(metric));
+  }
+}
+
 // Create the appropriate Json exporter according to the given options.
 // NOTE(donoso): For some reason, rapidjson decided that while Writer is a class
 //               PrettyWriter inherits from, it is *not* a virtual interface.
@@ -111,7 +157,7 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
   // Metrics.
   for (const auto& metric : root.node().metrics()) {
     writer->String(FormatStringBase64Fallback(metric.name()));
-    writer->String(FormatMetricValue(metric));
+    FormatMetricValue(writer, metric);
   }
 
   for (const auto& child : root.children()) {

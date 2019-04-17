@@ -1,8 +1,8 @@
-iquery --ls --format=json objects#table0x0
+iquery --ls --format=json objects#table:0x0
 [
-    "row0x1",
-    "row0x11",
-    "row0x5",
-    "row0x9",
-    "row0xd"
+    "row:0x1",
+    "row:0x11",
+    "row:0x5",
+    "row:0x9",
+    "row:0xd"
 ]

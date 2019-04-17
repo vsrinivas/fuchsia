@@ -1,6 +1,15 @@
 iquery --recursive --absolute_paths --sort objects/root.inspect
 /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect:
-  /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0:
+  array:0x15 = [1, 10, -3]
+  array:0x16 = [1, 10, 2]
+  array:0x17 = [0.250000, 1.250000, -0.750000]
+  histogram:0x18 = [<min>=10, -10=5, -5=5, 0=5, 5=15]
+  histogram:0x19 = [0=5, 5=5, 10=5, 15=5, 20=20]
+  histogram:0x1a = [-inf=11, 0.000000=5, 0.500000=5, 1.000000=4, 1.500000=15]
+  histogram:0x1b = [<min>=10, -10=5, -5=10, 5=15, 25=0]
+  histogram:0x1c = [0=1, 1=1, 2=2, 4=4, 8=32]
+  histogram:0x1d = [-inf=11, 0.000000=12, 1.250000=17, 5.000000=0, 16.250000=0]
+  /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0:
     Binary: 
 0000  05 01 02                                          ...              = Binary: 
 0000  01 02                                             ..              
@@ -9,68 +18,69 @@ iquery --recursive --absolute_paths --sort objects/root.inspect
     binary_data = Binary: 
 0000  20 00 11 12 05                                     ....           
     object_name = Example Table
-    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x1:
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x1/cell0x2:
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x1:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x1/cell:0x2:
         name = (0,0)
         double_value = 6.666667
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x1/cell0x3:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x1/cell:0x3:
         name = (0,1)
         double_value = 13.333333
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x1/cell0x4:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x1/cell:0x4:
         name = (0,2)
         double_value = 20.000000
         value = 0
-    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x11:
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x11/cell0x12:
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x11:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x11/cell:0x12:
         name = (4,0)
         double_value = 86.666667
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x11/cell0x13:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x11/cell:0x13:
         name = (4,1)
         double_value = 93.333333
         value = 4
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x11/cell0x14:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x11/cell:0x14:
         name = (4,2)
         double_value = 100.000000
         value = 8
-    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x5:
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x5/cell0x6:
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x5:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x5/cell:0x6:
         name = (1,0)
         double_value = 26.666667
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x5/cell0x7:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x5/cell:0x7:
         name = (1,1)
         double_value = 33.333333
         value = 1
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x5/cell0x8:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x5/cell:0x8:
         name = (1,2)
         double_value = 40.000000
         value = 2
-    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x9:
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x9/cell0xa:
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x9:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x9/cell:0xa:
         name = (2,0)
         double_value = 46.666667
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x9/cell0xb:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x9/cell:0xb:
         name = (2,1)
         double_value = 53.333333
         value = 2
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0x9/cell0xc:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x9/cell:0xc:
         name = (2,2)
         double_value = 60.000000
         value = 4
-    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0xd:
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0xd/cell0x10:
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0xd:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0xd/cell:0x10:
         name = (3,2)
         double_value = 80.000000
         value = 6
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0xd/cell0xe:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0xd/cell:0xe:
         name = (3,0)
         double_value = 66.666667
         value = 0
-      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table0x0/row0xd/cell0xf:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0xd/cell:0xf:
         name = (3,1)
         double_value = 73.333333
         value = 3
+

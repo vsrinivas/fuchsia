@@ -23,6 +23,54 @@ inline std::string Indent(int indent) {
   return std::string(indent * INDENT_SIZE, ' ');
 }
 
+template <typename ArrayType>
+std::string FormatArray(const ArrayType& array) {
+  std::ostringstream ss;
+  auto buckets = array.GetBuckets();
+  if (!buckets.empty()) {
+    ss << "[";
+    bool first = true;
+    for (const auto& bucket : buckets) {
+      if (!first) {
+        ss << ", ";
+      }
+      first = false;
+      if (bucket.floor != 0 &&
+          bucket.floor == std::numeric_limits<decltype(bucket.floor)>::min()) {
+        ss << "<min>=" << bucket.count;
+      } else {
+        ss << FormatNumericValue(bucket.floor) << "=" << bucket.count;
+      }
+    }
+    ss << "]";
+  } else {
+    ss << "[";
+    bool first = true;
+    for (const auto& val : array.value()) {
+      if (!first) {
+        ss << ", ";
+      }
+      first = false;
+      ss << FormatNumericValue(val);
+    }
+    ss << "]";
+  }
+  return ss.str();
+}
+
+std::string FormatMetricValue(const inspect::hierarchy::Metric& metric) {
+  switch (metric.format()) {
+    case inspect::hierarchy::MetricFormat::INT_ARRAY:
+      return FormatArray(metric.Get<inspect::hierarchy::IntArray>());
+    case inspect::hierarchy::MetricFormat::UINT_ARRAY:
+      return FormatArray(metric.Get<inspect::hierarchy::UIntArray>());
+    case inspect::hierarchy::MetricFormat::DOUBLE_ARRAY:
+      return FormatArray(metric.Get<inspect::hierarchy::DoubleArray>());
+    default:
+      return FormatNumericMetricValue(metric);
+  }
+}
+
 // This version exists so we can pass in the indentation and path from the entry
 // point.
 std::string RecursiveFormatCat(const Options& options,
@@ -50,7 +98,7 @@ std::string RecursiveFormatCat(const Options& options,
                 {reinterpret_cast<const char*>(val.data()), val.size()})
          << std::endl;
     } else {
-      ss << "<Unknown metric format>" << std::endl;
+      ss << "<Unknown property format>" << std::endl;
     }
   }
 

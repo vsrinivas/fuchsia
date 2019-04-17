@@ -1,6 +1,6 @@
 # Full paths lists the relative path to the object listed.
-iquery --full_paths objects#table0x0
-objects#table0x0:
+iquery --full_paths objects#table:0x0
+objects#table:0x0:
   Binary: 
 0000  05 01 02                                          ...              = Binary: 
 0000  01 02                                             ..              

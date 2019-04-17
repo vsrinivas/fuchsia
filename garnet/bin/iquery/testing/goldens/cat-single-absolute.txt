@@ -1,6 +1,6 @@
 # Absolute paths gives the full path to each object from the root directory.
-iquery --absolute_paths objects#table0x0
-/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0:
+iquery --absolute_paths objects#table:0x0
+/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0:
   Binary: 
 0000  05 01 02                                          ...              = Binary: 
 0000  01 02                                             ..              

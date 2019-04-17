@@ -3,18 +3,21 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/inspect/component.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/inspect/component.h>
-#include <lib/sys/cpp/component_context.h>
 
+#include <variant>
 #include <vector>
+
+#include "lib/inspect/inspect.h"
 
 size_t current_suffix = 0;
 void ResetUniqueNames() { current_suffix = 0; }
 std::string UniqueName(const char* name) {
-  return fxl::StringPrintf("%s0x%lx", name, current_suffix++);
+  return fxl::StringPrintf("%s:0x%lx", name, current_suffix++);
 }
 
 // A single cell in the table.
@@ -100,6 +103,16 @@ class Table {
   std::vector<Row> rows_;
 };
 
+template <typename HistogramType, typename NumericType>
+HistogramType PopulatedHistogram(HistogramType histogram, NumericType floor,
+                                 NumericType step, size_t count) {
+  for (size_t i = 0; i < count; i++) {
+    histogram.Insert(floor);
+    floor += step;
+  }
+  return histogram;
+}
+
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
@@ -141,11 +154,71 @@ int main(int argc, char** argv) {
   const int row_count = atoi(rows.c_str());
   const int col_count = atoi(columns.c_str());
 
+  std::vector<
+      std::variant<inspect::IntArray, inspect::UIntArray, inspect::DoubleArray>>
+      arrays;
+  std::vector<std::variant<inspect::LinearIntHistogramMetric,
+                           inspect::LinearUIntHistogramMetric,
+                           inspect::LinearDoubleHistogramMetric,
+                           inspect::ExponentialIntHistogramMetric,
+                           inspect::ExponentialUIntHistogramMetric,
+                           inspect::ExponentialDoubleHistogramMetric>>
+      histograms;
+
   for (auto* root :
        std::vector<inspect::Object*>({&root_object_fidl, &root_object_vmo})) {
     ResetUniqueNames();
     tables.emplace_back(row_count, col_count,
                         root->CreateChild(UniqueName("table")));
+
+    {
+      auto array = root->CreateIntArray(UniqueName("array"), 3);
+      array.Set(0, 1);
+      array.Add(1, 10);
+      array.Subtract(2, 3);
+      arrays.emplace_back(std::move(array));
+    }
+
+    {
+      auto array = root->CreateUIntArray(UniqueName("array"), 3);
+      array.Set(0, 1);
+      array.Add(1, 10);
+      array.Set(2, 3);
+      array.Subtract(2, 1);
+      arrays.emplace_back(std::move(array));
+    }
+
+    {
+      auto array = root->CreateDoubleArray(UniqueName("array"), 3);
+      array.Set(0, 0.25);
+      array.Add(1, 1.25);
+      array.Subtract(2, 0.75);
+      arrays.emplace_back(std::move(array));
+    }
+
+    histograms.emplace_back(
+        PopulatedHistogram(root->CreateLinearIntHistogramMetric(
+                               UniqueName("histogram"), -10, 5, 3),
+                           -20, 1, 40));
+    histograms.emplace_back(PopulatedHistogram(
+        root->CreateLinearUIntHistogramMetric(UniqueName("histogram"), 5, 5, 3),
+        0, 1, 40));
+    histograms.emplace_back(
+        PopulatedHistogram(root->CreateLinearDoubleHistogramMetric(
+                               UniqueName("histogram"), 0, .5, 3),
+                           -1.0, .1, 40.0));
+    histograms.emplace_back(
+        PopulatedHistogram(root->CreateExponentialIntHistogramMetric(
+                               UniqueName("histogram"), -10, 5, 2, 3),
+                           -20, 1, 40));
+    histograms.emplace_back(
+        PopulatedHistogram(root->CreateExponentialUIntHistogramMetric(
+                               UniqueName("histogram"), 1, 1, 2, 3),
+                           0, 1, 40));
+    histograms.emplace_back(
+        PopulatedHistogram(root->CreateExponentialDoubleHistogramMetric(
+                               UniqueName("histogram"), 0, 1.25, 3, 3),
+                           -1.0, .1, 40.0));
   }
 
   loop.Run();

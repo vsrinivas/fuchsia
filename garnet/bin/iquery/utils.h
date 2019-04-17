@@ -29,11 +29,24 @@ std::string FormatStringHexFallback(fxl::StringView val);
 // string by outputting the string encoded in Base64.
 std::string FormatStringBase64Fallback(fxl::StringView val);
 
+// Format a numeric type as a string.
+template <typename T>
+std::string FormatNumericValue(T value);
+
 // Metric values have a lot of representations (int, uint, etc.).
 // This functions returns a string representing the correct value.
-std::string FormatMetricValue(const inspect::hierarchy::Metric& metric);
+std::string FormatNumericMetricValue(const inspect::hierarchy::Metric& metric);
 
 bool IsStringPrintable(fxl::StringView input);
+
+template <>
+std::string FormatNumericValue(int64_t value);
+
+template <>
+std::string FormatNumericValue(uint64_t value);
+
+template <>
+std::string FormatNumericValue(double value);
 
 }  // namespace iquery
 

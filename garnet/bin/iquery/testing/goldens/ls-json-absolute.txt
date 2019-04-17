@@ -1,8 +1,8 @@
-iquery --ls --format=json --absolute_paths objects#table0x0
+iquery --ls --format=json --absolute_paths objects#table:0x0
 [
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0/row0x1",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0/row0x11",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0/row0x5",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0/row0x9",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table0x0/row0xd"
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0/row:0x1",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0/row:0x11",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0/row:0x5",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0/row:0x9",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects#table:0x0/row:0xd"
 ]

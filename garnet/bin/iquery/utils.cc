@@ -11,6 +11,7 @@
 #include <third_party/cobalt/util/crypto_util/base64.h>
 
 #include <iostream>
+#include <inttypes.h>
 
 #include "garnet/bin/iquery/options.h"
 #include "lib/inspect/hierarchy.h"
@@ -70,14 +71,29 @@ std::string FormatStringBase64Fallback(fxl::StringView val) {
   }
 }
 
-std::string FormatMetricValue(const Metric& metric) {
+template <>
+std::string FormatNumericValue(int64_t value) {
+  return fxl::StringPrintf("%" PRId64, value);
+}
+
+template <>
+std::string FormatNumericValue(uint64_t value) {
+  return fxl::StringPrintf("%" PRIu64, value);
+}
+
+template <>
+std::string FormatNumericValue(double value) {
+  return fxl::StringPrintf("%.6f", value);
+}
+
+std::string FormatNumericMetricValue(const Metric& metric) {
   switch (metric.format()) {
     case inspect::hierarchy::MetricFormat::INT:
-      return fxl::StringPrintf("%ld", metric.Get<IntMetric>().value());
+      return FormatNumericValue(metric.Get<IntMetric>().value());
     case inspect::hierarchy::MetricFormat::UINT:
-      return fxl::StringPrintf("%lu", metric.Get<UIntMetric>().value());
+      return FormatNumericValue(metric.Get<UIntMetric>().value());
     case inspect::hierarchy::MetricFormat::DOUBLE:
-      return fxl::StringPrintf("%f", metric.Get<DoubleMetric>().value());
+      return FormatNumericValue(metric.Get<DoubleMetric>().value());
     default:
       FXL_LOG(WARNING) << "Unknown metric type";
       return "";

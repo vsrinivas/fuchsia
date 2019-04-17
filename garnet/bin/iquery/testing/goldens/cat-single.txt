@@ -1,6 +1,6 @@
 # Output the object properties for one object in text format.
-iquery objects#table0x0
-table0x0:
+iquery objects#table:0x0
+table:0x0:
   Binary: 
 0000  05 01 02                                          ...              = Binary: 
 0000  01 02                                             ..              
