@@ -23,6 +23,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-025](ftp-025.md) | 2019-01-09 | 2019-01-24 | Bit Flags &mdash; Just a Little Bit
 [FTP-030](ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
 [FTP-027](ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use
+[FTP-024](ftp-024.md) | 2019-04-02 | 2019-04-11 | Mandatory Source Compatibility
 
 ## Rejected Proposals
 
