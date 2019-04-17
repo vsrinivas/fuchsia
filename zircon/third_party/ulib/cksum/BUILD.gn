@@ -7,6 +7,11 @@ library("cksum") {
   static = true
   host = true
 
+  sdk = "source"
+  sdk_headers = [
+    "lib/cksum.h",
+  ]
+
   sources = [
     "adler32.c",
     "crc16.c",
