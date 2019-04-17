@@ -275,7 +275,7 @@ static bool kill_test() {
 
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     // Process should be in the dead state here.
     zx_info_job_t job_info;
@@ -376,7 +376,7 @@ static bool wait_test() {
 
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(process), ZX_OK, "");

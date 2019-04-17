@@ -145,7 +145,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
                              JobPolicy policy)
-    : SoloDispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
+    : SoloDispatcher(__ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       parent_(ktl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
@@ -271,7 +271,7 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
     zx_signals_t set = 0u;
     if (process_count_ == 0u) {
         DEBUG_ASSERT(procs_.is_empty());
-        set |= ZX_JOB_NO_PROCESSES;
+        set |= __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 0u) {
         DEBUG_ASSERT(jobs_.is_empty());
@@ -306,7 +306,7 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
     zx_signals_t clear = 0u;
     if (process_count_ == 1u) {
         DEBUG_ASSERT(!procs_.is_empty());
-        clear |= ZX_JOB_NO_PROCESSES;
+        clear |= __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 1u) {
         DEBUG_ASSERT(!jobs_.is_empty());
