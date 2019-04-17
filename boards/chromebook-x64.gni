@@ -4,7 +4,7 @@
 
 target_cpu = "x64"
 
-board_name = "pc"
+board_name = "chromebook-x64"
 
 fuchsia_packages = []
 board_packages = []
