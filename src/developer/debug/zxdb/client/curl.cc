@@ -4,9 +4,136 @@
 
 #include "src/developer/debug/zxdb/client/curl.h"
 
+#include <map>
+
+#include "src/developer/debug/shared/fd_watcher.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/lib/fxl/logging.h"
+
 namespace zxdb {
+namespace {
+
+class CurlFDWatcher : public debug_ipc::FDWatcher {
+ public:
+  static CurlFDWatcher instance;
+  static std::map<int, debug_ipc::MessageLoop::WatchHandle> watches;
+  static bool cleanup_pending;
+
+  void OnFDReady(int fd, bool read, bool write, bool err) override;
+
+ private:
+  CurlFDWatcher() = default;
+};
+
+bool CurlFDWatcher::cleanup_pending = false;
+CurlFDWatcher CurlFDWatcher::instance;
+std::map<int, debug_ipc::MessageLoop::WatchHandle> CurlFDWatcher::watches;
+
+void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
+  int _ignore;
+  int action = 0;
+
+  if (read)
+    action |= CURL_CSELECT_IN;
+  if (write)
+    action |= CURL_CSELECT_OUT;
+  if (err)
+    action |= CURL_CSELECT_ERR;
+
+  auto result =
+      curl_multi_socket_action(Curl::multi_handle, fd, action, &_ignore);
+  FXL_DCHECK(result == CURLM_OK);
+
+  if (cleanup_pending) {
+    return;
+  }
+
+  cleanup_pending = true;
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, []() {
+    cleanup_pending = false;
+
+    int _ignore;
+    while (auto info = curl_multi_info_read(Curl::multi_handle, &_ignore)) {
+      if (info->msg != CURLMSG_DONE) {
+        // CURLMSG_DONE is the only value for msg, documented or otherwise,
+        // so this is mostly future-proofing at writing.
+        continue;
+      }
+
+      Curl* curl;
+      auto result =
+          curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
+      FXL_DCHECK(result == CURLE_OK);
+
+      auto cb = curl->multi_cb_;
+      curl->multi_cb_ = nullptr;
+      curl->FreeSList();
+      auto rem_result =
+          curl_multi_remove_handle(Curl::multi_handle, info->easy_handle);
+      FXL_DCHECK(rem_result == CURLM_OK);
+
+      auto ref = curl->self_ref_;
+      curl->self_ref_ = nullptr;
+
+      cb(ref.get(), Curl::Error(info->data.result));
+    }
+  });
+}
+
+// Callback given to CURL which it uses to inform us it would like to do IO on
+// a socket and that we should add it to our polling in the event loop.
+int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
+  if (what == CURL_POLL_REMOVE || what == CURL_POLL_NONE) {
+    CurlFDWatcher::watches.erase(s);
+  } else {
+    debug_ipc::MessageLoop::WatchMode mode;
+
+    switch (what) {
+      case CURL_POLL_IN:
+        mode = debug_ipc::MessageLoop::WatchMode::kRead;
+        break;
+      case CURL_POLL_OUT:
+        mode = debug_ipc::MessageLoop::WatchMode::kWrite;
+        break;
+      case CURL_POLL_INOUT:
+        mode = debug_ipc::MessageLoop::WatchMode::kReadWrite;
+        break;
+      default:
+        FXL_NOTREACHED();
+        return -1;
+    };
+
+    CurlFDWatcher::watches[s] = debug_ipc::MessageLoop::Current()->WatchFD(
+        mode, s, &CurlFDWatcher::instance);
+  }
+
+  return 0;
+}
+
+// Callback given to CURL which it uses to inform us it would like to receive a
+// timer notification at a given time in the future.
+int TimerCallback(CURLM* multi, long timeout_ms, void*) {
+  debug_ipc::MessageLoop::Current()->PostTimer(
+      FROM_HERE, timeout_ms, [multi]() {
+        int _ignore;
+        auto result =
+            curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+        FXL_DCHECK(result == CURLM_OK);
+      });
+
+  return 0;
+}
+
+template <typename T>
+void curl_easy_setopt_CHECK(CURL* handle, CURLoption option, T t) {
+  auto result = curl_easy_setopt(handle, option, t);
+  FXL_DCHECK(result == CURLE_OK);
+}
+
+}  // namespace
 
 size_t Curl::global_init = 0;
+CURLM* Curl::multi_handle = nullptr;
 
 size_t DoHeaderCallback(char* data, size_t size, size_t nitems, void* curl) {
   Curl* self = reinterpret_cast<Curl*>(curl);
@@ -18,31 +145,45 @@ size_t DoDataCallback(char* data, size_t size, size_t nitems, void* curl) {
   return self->data_callback_(std::string(data, size * nitems));
 }
 
-std::unique_ptr<Curl> Curl::Create() {
-  if (!global_init && !curl_global_init(CURL_GLOBAL_SSL)) {
-    global_init++;
+Curl::Curl() {
+  if (!global_init++) {
+    auto res = curl_global_init(CURL_GLOBAL_SSL);
+    FXL_DCHECK(!res);
   }
 
-  if (!global_init) {
-    return nullptr;
-  }
+  curl_ = curl_easy_init();
+  FXL_DCHECK(curl_);
 
-  auto curl = std::unique_ptr<Curl>(new Curl(curl_easy_init()));
-  if (!curl->curl_) {
-    return nullptr;
-  }
-
-  return curl;
+  // The curl handle has a private pointer which we can stash the address of
+  // our wrapper class in. Then anywhere the curl handle appears in the API we
+  // can grab our wrapper.
+  curl_easy_setopt_CHECK(curl_, CURLOPT_PRIVATE, this);
 }
 
 Curl::~Curl() {
-  if (curl_) {
-    curl_easy_cleanup(curl_);
+  FXL_DCHECK(!multi_cb_);
 
-    if (!--global_init) {
-      curl_global_cleanup();
-    }
+  if (!curl_) {
+    return;
   }
+
+  curl_easy_cleanup(curl_);
+
+  if (!--global_init) {
+    if (multi_handle) {
+      auto result = curl_multi_cleanup(multi_handle);
+      FXL_DCHECK(result == CURLM_OK);
+      multi_handle = nullptr;
+    }
+
+    curl_global_cleanup();
+  }
+}
+
+std::shared_ptr<Curl> Curl::MakeShared() {
+  auto ret = std::make_shared<Curl>();
+  ret->weak_self_ref_ = ret;
+  return ret;
 }
 
 void Curl::set_post_data(const std::map<std::string, std::string>& items) {
@@ -68,40 +209,86 @@ std::string Curl::Escape(const std::string& input) {
   return ret;
 }
 
-Curl::Error Curl::Perform() {
-  curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, DoHeaderCallback);
-  curl_easy_setopt(curl_, CURLOPT_HEADERDATA, this);
-  curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, DoDataCallback);
-  curl_easy_setopt(curl_, CURLOPT_WRITEDATA, this);
+void Curl::PrepareToPerform() {
+  FXL_DCHECK(!multi_cb_);
+
+  curl_easy_setopt_CHECK(curl_, CURLOPT_HEADERFUNCTION, DoHeaderCallback);
+  curl_easy_setopt_CHECK(curl_, CURLOPT_HEADERDATA, this);
+  curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEFUNCTION, DoDataCallback);
+  curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEDATA, this);
+
+  // API documentation specifies "A long value of 1" enables this option, so we
+  // convert very specifically. Why take chances on sensible behavior?
+  curl_easy_setopt_CHECK(curl_, CURLOPT_NOBODY, get_body_ ? 0L : 1L);
 
   if (post_data_.empty()) {
-    curl_easy_setopt(curl_, CURLOPT_POST, 0);
+    curl_easy_setopt_CHECK(curl_, CURLOPT_POST, 0);
   } else {
-    curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, post_data_.data());
-    curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, post_data_.size());
+    curl_easy_setopt_CHECK(curl_, CURLOPT_POSTFIELDS, post_data_.data());
+    curl_easy_setopt_CHECK(curl_, CURLOPT_POSTFIELDSIZE, post_data_.size());
   }
 
-  struct curl_slist* list = nullptr;
+  FXL_DCHECK(!slist_);
   for (const auto& header : headers_) {
-    list = curl_slist_append(list, header.c_str());
+    slist_ = curl_slist_append(slist_, header.c_str());
   }
 
-  curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, list);
-  auto ret = curl_easy_perform(curl_);
-  curl_slist_free_all(list);
+  curl_easy_setopt_CHECK(curl_, CURLOPT_HTTPHEADER, slist_);
+}
 
-  return Error(ret);
+void Curl::FreeSList() {
+  if (slist_)
+    curl_slist_free_all(slist_);
+  slist_ = nullptr;
+}
+
+Curl::Error Curl::Perform() {
+  PrepareToPerform();
+  auto ret = Error(curl_easy_perform(curl_));
+  FreeSList();
+  return ret;
+}
+
+void Curl::Perform(std::function<void(Curl*, Curl::Error)> cb) {
+  self_ref_ = weak_self_ref_.lock();
+  FXL_DCHECK(self_ref_)
+      << "To use async Curl::Perform you must construct with Curl::MakeShared";
+
+  PrepareToPerform();
+  InitMulti();
+  auto result = curl_multi_add_handle(multi_handle, curl_);
+  FXL_DCHECK(result == CURLM_OK);
+
+  multi_cb_ = cb;
+
+  int _ignore;
+  result =
+      curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+  FXL_DCHECK(result == CURLM_OK);
+}
+
+void Curl::InitMulti() {
+  if (multi_handle) {
+    return;
+  }
+
+  multi_handle = curl_multi_init();
+  FXL_DCHECK(multi_handle);
+
+  auto result =
+      curl_multi_setopt(multi_handle, CURLMOPT_SOCKETFUNCTION, SocketCallback);
+  FXL_DCHECK(result == CURLM_OK);
+  result =
+      curl_multi_setopt(multi_handle, CURLMOPT_TIMERFUNCTION, TimerCallback);
+  FXL_DCHECK(result == CURLM_OK);
 }
 
 long Curl::ResponseCode() {
   long ret;
 
-  // The function itself should always return CURLE_OK for this set of
-  // arguments. I don't want to grow a dependency on a utility library if the
-  // only thing I'm taking is a debug check macro, but if I had one I'd use it
-  // here.
-  curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &ret);
+  auto result = curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &ret);
+  FXL_DCHECK(result == CURLE_OK);
   return ret;
 }
 
-}  // namespace curl
+}  // namespace zxdb

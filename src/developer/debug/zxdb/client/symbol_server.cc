@@ -83,16 +83,15 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
     return result;
   }
 
-  auto curl = Curl::Create();
-  FXL_DCHECK(curl);
+  Curl curl;
 
   result = kAuthServer;
   result += "?client_id=";
-  result += curl->Escape(kClientId);
+  result += curl.Escape(kClientId);
   result += "&redirect_uri=urn:ietf:wg:oauth:2.0:oob";
   result += "&response_type=code";
   result += "&scope=";
-  result += curl->Escape(kScope);
+  result += curl.Escape(kScope);
 
   return result;
 }
@@ -106,10 +105,9 @@ void CloudStorageSymbolServer::Authenticate(
 
   state_ = SymbolServer::State::kBusy;
 
-  auto curl = Curl::Create();
-  FXL_DCHECK(curl);
+  Curl curl;
 
-  curl->SetURL(kTokenServer);
+  curl.SetURL(kTokenServer);
 
   std::map<std::string, std::string> post_data;
   post_data["code"] = data;
@@ -118,17 +116,17 @@ void CloudStorageSymbolServer::Authenticate(
   post_data["redirect_uri"] = "urn:ietf:wg:oauth:2.0:oob";
   post_data["grant_type"] = "authorization_code";
 
-  curl->set_post_data(post_data);
+  curl.set_post_data(post_data);
 
   rapidjson::Document document;
-  curl->set_data_callback([&document](const std::string& data) {
+  curl.set_data_callback([&document](const std::string& data) {
     document.Parse(data);
     return data.size();
   });
 
   // TODO: Make async once curlcpp has curl_multi support and we've wired it in
   // to the event loop.
-  if (auto result = curl->Perform()) {
+  if (auto result = curl.Perform()) {
     std::string error = "Could not contact authentication server: ";
     error += result.ToString();
 
@@ -165,12 +163,11 @@ void CloudStorageSymbolServer::Fetch(
   std::string url = "https://storage.googleapis.com/";
   url += bucket_ + build_id + ".debug";
 
-  auto curl = Curl::Create();
-  FXL_DCHECK(curl);
+  Curl curl;
 
-  curl->SetURL(url);
-  curl->headers().push_back(std::string("Authorization: Bearer ") +
-                            access_token_);
+  curl.SetURL(url);
+  curl.headers().push_back(std::string("Authorization: Bearer ") +
+                           access_token_);
 
   auto cache_path = session()->system().settings().GetString(
       ClientSettings::System::kSymbolCache);
@@ -205,12 +202,12 @@ void CloudStorageSymbolServer::Fetch(
     return;
   }
 
-  curl->set_data_callback([file](const std::string& data) {
+  curl.set_data_callback([file](const std::string& data) {
     return std::fwrite(data.data(), 1, data.size(), file);
   });
 
   // TODO: Make Async. See comment in Authenticate.
-  if (auto result = curl->Perform()) {
+  if (auto result = curl.Perform()) {
     std::string error = "Could not contact server: ";
     error += result.ToString();
 
@@ -225,7 +222,7 @@ void CloudStorageSymbolServer::Fetch(
 
   Err err;
   std::string final_path;
-  auto code = curl->ResponseCode();
+  auto code = curl.ResponseCode();
   if (code != 200) {
     if (code != 404 && code != 410) {
       err = Err("Error downloading symbols: " + std::to_string(code));
