@@ -1087,6 +1087,7 @@ if (target_cpu == "x64") {
     testonly = true
     public_deps = [
       "//garnet/lib/magma/gnbuild/magma-intel-gen",
+      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma-intel-gen-config",
       "//garnet/packages/prod:sysmem_connector",
     ]
   }

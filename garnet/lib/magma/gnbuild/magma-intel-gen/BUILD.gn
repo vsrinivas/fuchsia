@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
@@ -18,24 +19,6 @@ if (target_cpu == "x64") {
       "//third_party/mesa:magma_vulkan",
     ]
 
-    # api_version must be present but is unused
-    icd_data = [
-      "{",
-      "\"file_format_version\": \"1.0.0\",",
-      "\"ICD\": {",
-      "\"library_path\": \"libvulkan_intel.so\",",
-      "\"api_version\": \"0.0.0\"",
-      "}",
-      "}",
-    ]
-    write_file("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json", icd_data)
-
-    resources = [
-      {
-        path = rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json")
-        dest = "vulkan/icd.d/libvulkan_intel.json"
-      },
-    ]
     libraries = [
       {
         name = "libvulkan_intel.so"
@@ -57,6 +40,28 @@ if (target_cpu == "x64") {
         },
       ]
     }
+  }
+
+  config_data("magma-intel-gen-config") {
+    # api_version must be present but is unused
+    icd_data = [
+      "{",
+      "\"file_format_version\": \"1.0.0\",",
+      "\"ICD\": {",
+      "\"library_path\": \"libvulkan_intel.so\",",
+      "\"api_version\": \"0.0.0\"",
+      "}",
+      "}",
+    ]
+    write_file("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json", icd_data)
+
+    for_pkg = "vulkan-icd"
+    sources = [
+      rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"),
+    ]
+    outputs = [
+      "icd.d/libvulkan_intel.json",
+    ]
   }
 
   test_package("magma_intel_gen_nonhardware_tests") {
