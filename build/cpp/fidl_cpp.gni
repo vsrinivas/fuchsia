@@ -121,9 +121,12 @@ template("fidl_cpp_library") {
       ":${invoker.root_target}_tables",
     ]
 
-    if (defined(invoker.library_public_deps)) {
-      public_deps += invoker.library_public_deps
+    foreach(dep, invoker.library_public_deps) {
+      label = get_label_info(dep, "label_no_toolchain")
+      public_deps += [ "${label}${invoker.target_suffix}" ]
     }
+
+    public_deps += invoker.additional_public_deps
 
     if (defined(invoker.deps)) {
       public_deps += invoker.deps
@@ -174,15 +177,16 @@ template("fidl_cpp") {
 
     foreach(generator_settings, invoker.generators) {
       library_public_deps = []
-      library_public_deps += generator_settings.additional_public_deps
       if (defined(invoker.public_deps)) {
         library_public_deps += invoker.public_deps
       }
 
       if (defined(generator_settings.target_suffix)) {
         lib_name = "${target_name}_${generator_settings.target_suffix}"
+        target_suffix = "_${generator_settings.target_suffix}"
       } else {
         lib_name = target_name
+        target_suffix = ""
       }
 
       fidl_cpp_library(lib_name) {
@@ -191,6 +195,7 @@ template("fidl_cpp") {
         generator = generator_settings.fidlgen_generator
         generated_source_base = generator_settings.output_stem
         root_target = target_name
+        additional_public_deps = generator_settings.additional_public_deps
       }
     }
   }

@@ -41,11 +41,13 @@ var Kinds = struct {
 type Decl interface{}
 
 type Type struct {
-	Decl     string
-	LLDecl   string
-	Dtor     string
-	LLDtor   string
-	DeclType types.DeclType
+	Decl                string
+	Dtor                string
+	LLDecl              string
+	LLDtor              string
+	OvernetEmbeddedDecl string
+	OvernetEmbeddedDtor string
+	DeclType            types.DeclType
 }
 
 type Const struct {
@@ -238,13 +240,14 @@ type Parameter struct {
 }
 
 type Root struct {
-	PrimaryHeader   string
-	Headers         []string
-	LLHeaders       []string
-	HandleTypes     []string
-	Library         types.LibraryIdentifier
-	LibraryReversed types.LibraryIdentifier
-	Decls           []Decl
+	PrimaryHeader          string
+	Headers                []string
+	LLHeaders              []string
+	OvernetEmbeddedHeaders []string
+	HandleTypes            []string
+	Library                types.LibraryIdentifier
+	LibraryReversed        types.LibraryIdentifier
+	Decls                  []Decl
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -403,8 +406,12 @@ func formatLibrary(library types.LibraryIdentifier, sep string) string {
 	return changeIfReserved(types.Identifier(name), "")
 }
 
-func formatNamespace(library types.LibraryIdentifier) string {
-	return "::" + formatLibrary(library, "::")
+func formatNamespace(library types.LibraryIdentifier, appendNamespace string) string {
+	ns := "::" + formatLibrary(library, "::")
+	if len(appendNamespace) > 0 {
+		ns = ns + "::" + appendNamespace
+	}
+	return ns
 }
 
 func formatLibraryPrefix(library types.LibraryIdentifier) string {
@@ -440,11 +447,11 @@ func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
+func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext, appendNamespace string) string {
 	val := types.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	if c.isInExternalLibrary(val) {
-		strs = append(strs, formatNamespace(val.Library))
+		strs = append(strs, formatNamespace(val.Library, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
@@ -477,10 +484,10 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant, t *Type) string {
+func (c *compiler) compileConstant(val types.Constant, t *Type, appendNamespace string) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		v := c.compileCompoundIdentifier(val.Identifier, "")
+		v := c.compileCompoundIdentifier(val.Identifier, "", appendNamespace)
 		if t != nil && (t.DeclType == types.BitsDeclType || t.DeclType == types.EnumDeclType) {
 			v = fmt.Sprintf("%s::%s", t.Decl, v)
 		}
@@ -510,6 +517,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~Array")
 		r.LLDtor = fmt.Sprintf("~Array")
+		r.OvernetEmbeddedDecl = r.Decl
+		r.OvernetEmbeddedDtor = r.Dtor
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
@@ -520,6 +529,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
 			r.Dtor = fmt.Sprintf("~vector")
 		}
+		r.OvernetEmbeddedDecl = r.Decl
+		r.OvernetEmbeddedDtor = r.Dtor
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
 		if val.Nullable {
@@ -529,23 +540,33 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = "::std::string"
 			r.Dtor = "~basic_string"
 		}
+		r.OvernetEmbeddedDecl = r.Decl
+		r.OvernetEmbeddedDtor = r.Dtor
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.LLDecl = r.Decl
 		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
 		r.LLDtor = r.Dtor
+		r.OvernetEmbeddedDecl = fmt.Sprintf("::overnet::ClosedPtr<::overnet::Zx%s>",
+			strings.Title(fmt.Sprintf("%s", val.HandleSubtype)))
+		r.OvernetEmbeddedDtor = "~ClosedPtr"
 	case types.RequestType:
-		t := c.compileCompoundIdentifier(val.RequestSubtype, "")
-		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
+			c.compileCompoundIdentifier(val.RequestSubtype, "", ""))
 		r.LLDecl = r.Decl
 		r.Dtor = "~InterfaceRequest"
 		r.LLDtor = r.Dtor
+		r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Request>",
+			c.compileCompoundIdentifier(val.RequestSubtype, "", "embedded"))
+		r.OvernetEmbeddedDtor = "~unique_ptr"
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
+		r.OvernetEmbeddedDecl = r.Decl
 	case types.IdentifierType:
-		t := c.compileCompoundIdentifier(val.Identifier, "")
+		t := c.compileCompoundIdentifier(val.Identifier, "", "")
+		tEmbbeded := c.compileCompoundIdentifier(val.Identifier, "", "embedded")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
@@ -566,23 +587,29 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.XUnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-				r.Dtor = fmt.Sprintf("~unique_ptr")
 				if declType == types.XUnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", t)
 				} else {
 					r.LLDecl = fmt.Sprintf("%s*", t)
 				}
+				r.Dtor = "~unique_ptr"
+				r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s>", tEmbbeded)
+				r.OvernetEmbeddedDtor = "~unique_ptr"
 			} else {
 				r.Decl = t
 				r.LLDecl = r.Decl
 				r.Dtor = formatDestructor(val.Identifier)
 				r.LLDtor = r.Dtor
+				r.OvernetEmbeddedDecl = tEmbbeded
+				r.OvernetEmbeddedDtor = r.Dtor
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 			r.LLDecl = r.Decl
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 			r.LLDtor = r.Dtor
+			r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Proxy>", tEmbbeded)
+			r.OvernetEmbeddedDtor = "~unique_ptr"
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
 		}
@@ -593,23 +620,23 @@ func (c *compiler) compileType(val types.Type) Type {
 	return r
 }
 
-func (c *compiler) compileBits(val types.Bits) Bits {
+func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	r := Bits{
 		Namespace: c.namespace,
 		Type:      c.compileType(val.Type).Decl,
-		Name:      c.compileCompoundIdentifier(val.Name, ""),
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace),
 		Members:   []BitsMember{},
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
 			changeIfReserved(v.Name, ""),
-			c.compileConstant(v.Value, nil),
+			c.compileConstant(v.Value, nil, appendNamespace),
 		})
 	}
 	return r
 }
 
-func (c *compiler) compileConst(val types.Const) Const {
+func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 	if val.Type.Kind == types.StringType {
 		return Const{
 			Attributes: val.Attributes,
@@ -618,8 +645,8 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Type: Type{
 				Decl: "char",
 			},
-			Name:  c.compileCompoundIdentifier(val.Name, "[]"),
-			Value: c.compileConstant(val.Value, nil),
+			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace),
+			Value: c.compileConstant(val.Value, nil, appendNamespace),
 		}
 	} else {
 		t := c.compileType(val.Type)
@@ -628,23 +655,23 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Extern:     false,
 			Decorator:  "constexpr",
 			Type:       t,
-			Name:       c.compileCompoundIdentifier(val.Name, ""),
-			Value:      c.compileConstant(val.Value, &t),
+			Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace),
+			Value:      c.compileConstant(val.Value, &t, appendNamespace),
 		}
 	}
 }
 
-func (c *compiler) compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	r := Enum{
 		Namespace: c.namespace,
 		Type:      c.compilePrimitiveSubtype(val.Type),
-		Name:      c.compileCompoundIdentifier(val.Name, ""),
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace),
 		Members:   []EnumMember{},
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
 			changeIfReserved(v.Name, ""),
-			c.compileConstant(v.Value, nil),
+			c.compileConstant(v.Value, nil, appendNamespace),
 		})
 	}
 	return r
@@ -708,14 +735,14 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		Attributes:      val.Attributes,
 		Namespace:       c.namespace,
-		Name:            c.compileCompoundIdentifier(val.Name, ""),
-		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz"),
+		Name:            c.compileCompoundIdentifier(val.Name, "", ""),
+		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz", ""),
 		ServiceName:     val.GetServiceName(),
-		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy"),
-		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub"),
-		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender"),
-		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync"),
-		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
+		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
+		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub", ""),
+		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
+		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync", ""),
+		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
 		Methods:         []Method{},
 	}
 
@@ -761,12 +788,12 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	return r
 }
 
-func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val types.StructMember, appendNamespace string) StructMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, appendNamespace)
 	}
 
 	return StructMember{
@@ -778,8 +805,8 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := c.compileCompoundIdentifier(val.Name, "")
+func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struct {
+	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace)
 	r := Struct{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -792,24 +819,24 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, c.compileStructMember(v))
+		r.Members = append(r.Members, c.compileStructMember(v, appendNamespace))
 	}
 
 	if len(r.Members) == 0 {
 		r.Members = []StructMember{
-			c.compileStructMember(types.EmptyStructMember("__reserved")),
+			c.compileStructMember(types.EmptyStructMember("__reserved"), appendNamespace),
 		}
 	}
 
 	return r
 }
 
-func (c *compiler) compileTableMember(val types.TableMember) TableMember {
+func (c *compiler) compileTableMember(val types.TableMember, appendNamespace string) TableMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, appendNamespace)
 	}
 
 	return TableMember{
@@ -838,8 +865,8 @@ func (m byOrdinal) Less(i, j int) bool {
 	return m[i].Ordinal < m[j].Ordinal
 }
 
-func (c *compiler) compileTable(val types.Table) Table {
-	name := c.compileCompoundIdentifier(val.Name, "")
+func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
+	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace)
 	r := Table{
 		Attributes:     val.Attributes,
 		Namespace:      c.namespace,
@@ -854,7 +881,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 		if v.Reserved {
 			continue
 		}
-		m := c.compileTableMember(v)
+		m := c.compileTableMember(v, appendNamespace)
 		r.BiggestOrdinal = m.Ordinal
 		r.Members = append(r.Members, m)
 	}
@@ -877,7 +904,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
-	name := c.compileCompoundIdentifier(val.Name, "")
+	name := c.compileCompoundIdentifier(val.Name, "", "")
 	r := Union{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -910,7 +937,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 }
 
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
-	name := c.compileCompoundIdentifier(val.Name, "")
+	name := c.compileCompoundIdentifier(val.Name, "", "")
 	r := XUnion{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -938,7 +965,7 @@ func Compile(r types.Root) Root {
 		raw_library = append(raw_library, identifier)
 	}
 	c := compiler{
-		formatNamespace(library),
+		formatNamespace(library, ""),
 		formatLibraryPrefix(raw_library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
@@ -958,17 +985,17 @@ func Compile(r types.Root) Root {
 	decls := map[types.EncodedCompoundIdentifier]Decl{}
 
 	for _, v := range r.Bits {
-		d := c.compileBits(v)
+		d := c.compileBits(v, "")
 		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Consts {
-		d := c.compileConst(v)
+		d := c.compileConst(v, "")
 		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Enums {
-		d := c.compileEnum(v)
+		d := c.compileEnum(v, "")
 		decls[v.Name] = &d
 	}
 
@@ -978,12 +1005,12 @@ func Compile(r types.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		d := c.compileStruct(v)
+		d := c.compileStruct(v, "")
 		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Tables {
-		d := c.compileTable(v)
+		d := c.compileTable(v, "")
 		decls[v.Name] = &d
 	}
 
@@ -1011,10 +1038,9 @@ func Compile(r types.Root) Root {
 			continue
 		}
 		libraryIdent := types.ParseLibraryName(l.Name)
-		h := fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent))
-		root.Headers = append(root.Headers, h)
-		h = fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent))
-		root.LLHeaders = append(root.LLHeaders, h)
+		root.Headers = append(root.Headers, fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent)))
+		root.LLHeaders = append(root.LLHeaders, fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent)))
+		root.OvernetEmbeddedHeaders = append(root.OvernetEmbeddedHeaders, fmt.Sprintf("%s/cpp/overnet_embedded.h", formatLibraryPath(libraryIdent)))
 	}
 
 	// zx::channel is always referenced by the interfaces in llcpp bindings API

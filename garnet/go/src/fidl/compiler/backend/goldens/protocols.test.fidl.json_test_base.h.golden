@@ -17,6 +17,9 @@ class KitchenSink_TestBase : public KitchenSink {
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
   }
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
+    NotImplemented_("MutateSocket");
+  }
 
 };
 
@@ -29,6 +32,9 @@ class ChannelProtocol_TestBase : public ChannelProtocol {
   }
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
+  }
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
+    NotImplemented_("MutateSocket");
   }
 
 };
@@ -43,6 +49,9 @@ class SocketControlProtocol_TestBase : public SocketControlProtocol {
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
   }
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
+    NotImplemented_("MutateSocket");
+  }
 
 };
 
@@ -55,6 +64,9 @@ class OvernetInternalProtocol_TestBase : public OvernetInternalProtocol {
   }
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
+  }
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
+    NotImplemented_("MutateSocket");
   }
 
 };

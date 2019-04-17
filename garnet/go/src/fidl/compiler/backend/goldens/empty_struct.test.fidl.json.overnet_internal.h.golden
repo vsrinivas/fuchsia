@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "src/connectivity/overnet/lib/protocol/fidl_stream.h"
 
 #include "test/name/cpp/fidl.h"

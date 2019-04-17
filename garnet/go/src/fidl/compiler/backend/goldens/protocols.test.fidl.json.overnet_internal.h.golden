@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "src/connectivity/overnet/lib/protocol/fidl_stream.h"
 
 #include "test/name/cpp/fidl.h"
@@ -51,6 +53,10 @@ class KitchenSink {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class KitchenSink_Proxy : public ::overnet::FidlStream, public KitchenSink {
@@ -59,6 +65,7 @@ class KitchenSink_Proxy : public ::overnet::FidlStream, public KitchenSink {
   ~KitchenSink_Proxy() override;
   void MethodA(int64_t a, int64_t b) override final;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override final;
 
  private:
   zx_status_t Dispatch_(::fidl::Message* message) override final;
@@ -97,6 +104,10 @@ class OvernetInternalProtocol {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class OvernetInternalProtocol_Proxy : public ::overnet::FidlStream, public OvernetInternalProtocol {
@@ -105,6 +116,7 @@ class OvernetInternalProtocol_Proxy : public ::overnet::FidlStream, public Overn
   ~OvernetInternalProtocol_Proxy() override;
   void MethodA(int64_t a, int64_t b) override final;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override final;
 
  private:
   zx_status_t Dispatch_(::fidl::Message* message) override final;

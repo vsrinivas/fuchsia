@@ -176,6 +176,10 @@ extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
 constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
+  
+constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 }  // namespace
 
@@ -266,6 +270,43 @@ void KitchenSink_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callback) 
   ::fidl::Encode(&_encoder, &b, 24);
   controller_->Send(&test_name_KitchenSinkMethodBRequestTable, _encoder.GetMessage(), std::make_unique<KitchenSink_MethodB_ResponseHandler>(std::move(callback)));
 }
+namespace {
+
+class KitchenSink_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  KitchenSink_MutateSocket_ResponseHandler(KitchenSink::MutateSocketCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for KitchenSink::MutateSocket\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_KitchenSinkMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback_(std::move(arg0));
+    return ZX_OK;
+  }
+
+ private:
+  KitchenSink::MutateSocketCallback callback_;
+
+  KitchenSink_MutateSocket_ResponseHandler(const KitchenSink_MutateSocket_ResponseHandler&) = delete;
+  KitchenSink_MutateSocket_ResponseHandler& operator=(const KitchenSink_MutateSocket_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void KitchenSink_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  controller_->Send(&test_name_KitchenSinkMutateSocketRequestTable, _encoder.GetMessage(), std::make_unique<KitchenSink_MutateSocket_ResponseHandler>(std::move(callback)));
+}
 
 KitchenSink_Stub::KitchenSink_Stub(KitchenSink_clazz* impl) : impl_(impl) {
   (void)impl_;
@@ -285,6 +326,23 @@ class KitchenSink_MethodB_Responder {
     _encoder.Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(&_encoder, &result, 16);
     response_.Send(&test_name_KitchenSinkMethodBResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
+class KitchenSink_MutateSocket_Responder {
+ public:
+  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()(::zx::socket b) {
+    ::fidl::Encoder _encoder(ordinal_);
+    _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(&_encoder, &b, 16);
+    response_.Send(&test_name_KitchenSinkMutateSocketResponseTable, _encoder.GetMessage());
   }
 
  private:
@@ -314,6 +372,10 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       break;
     }
     case kKitchenSink_MethodB_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMethodBRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_KitchenSinkMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -324,6 +386,22 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
       auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
       impl_->MethodB(std::move(arg0), std::move(arg1), KitchenSink_MethodB_Responder(std::move(response), ordinal));
+      break;
+    }
+    case kKitchenSink_MutateSocket_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_KitchenSinkMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      impl_->MutateSocket(std::move(arg0), KitchenSink_MutateSocket_Responder(std::move(response), ordinal));
       break;
     }
     default: {
@@ -364,6 +442,19 @@ zx_status_t KitchenSink_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* out_re
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  return ZX_OK;
+}
+zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_KitchenSinkMutateSocketRequestTable, &test_name_KitchenSinkMutateSocketResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
   return ZX_OK;
 }
 
@@ -381,6 +472,10 @@ extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
 constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
+  
+constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 }  // namespace
 
@@ -471,6 +566,43 @@ void KitchenSink_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callback) 
   ::fidl::Encode(&_encoder, &b, 24);
   controller_->Send(&test_name_KitchenSinkMethodBRequestTable, _encoder.GetMessage(), std::make_unique<KitchenSink_MethodB_ResponseHandler>(std::move(callback)));
 }
+namespace {
+
+class KitchenSink_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  KitchenSink_MutateSocket_ResponseHandler(KitchenSink::MutateSocketCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for KitchenSink::MutateSocket\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_KitchenSinkMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback_(std::move(arg0));
+    return ZX_OK;
+  }
+
+ private:
+  KitchenSink::MutateSocketCallback callback_;
+
+  KitchenSink_MutateSocket_ResponseHandler(const KitchenSink_MutateSocket_ResponseHandler&) = delete;
+  KitchenSink_MutateSocket_ResponseHandler& operator=(const KitchenSink_MutateSocket_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void KitchenSink_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  controller_->Send(&test_name_KitchenSinkMutateSocketRequestTable, _encoder.GetMessage(), std::make_unique<KitchenSink_MutateSocket_ResponseHandler>(std::move(callback)));
+}
 
 KitchenSink_Stub::KitchenSink_Stub(KitchenSink_clazz* impl) : impl_(impl) {
   (void)impl_;
@@ -490,6 +622,23 @@ class KitchenSink_MethodB_Responder {
     _encoder.Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(&_encoder, &result, 16);
     response_.Send(&test_name_KitchenSinkMethodBResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
+class KitchenSink_MutateSocket_Responder {
+ public:
+  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()(::zx::socket b) {
+    ::fidl::Encoder _encoder(ordinal_);
+    _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(&_encoder, &b, 16);
+    response_.Send(&test_name_KitchenSinkMutateSocketResponseTable, _encoder.GetMessage());
   }
 
  private:
@@ -519,6 +668,10 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       break;
     }
     case kKitchenSink_MethodB_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMethodBRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_KitchenSinkMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -529,6 +682,22 @@ zx_status_t KitchenSink_Stub::Dispatch_(
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
       auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
       impl_->MethodB(std::move(arg0), std::move(arg1), KitchenSink_MethodB_Responder(std::move(response), ordinal));
+      break;
+    }
+    case kKitchenSink_MutateSocket_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_KitchenSinkMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketRequestTable, error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      impl_->MutateSocket(std::move(arg0), KitchenSink_MutateSocket_Responder(std::move(response), ordinal));
       break;
     }
     default: {
@@ -571,6 +740,19 @@ zx_status_t KitchenSink_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* out_re
   *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
   return ZX_OK;
 }
+zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_KitchenSinkMutateSocketRequestTable, &test_name_KitchenSinkMutateSocketResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  return ZX_OK;
+}
 
 #endif // __Fuchsia__
 
@@ -586,6 +768,10 @@ extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
 constexpr uint32_t kChannelProtocol_MethodB_Ordinal = 180770075u;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+  
+constexpr uint32_t kChannelProtocol_MutateSocket_Ordinal = 1258480262u;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -676,6 +862,43 @@ void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callba
   ::fidl::Encode(&_encoder, &b, 24);
   controller_->Send(&test_name_ChannelProtocolMethodBRequestTable, _encoder.GetMessage(), std::make_unique<ChannelProtocol_MethodB_ResponseHandler>(std::move(callback)));
 }
+namespace {
+
+class ChannelProtocol_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  ChannelProtocol_MutateSocket_ResponseHandler(ChannelProtocol::MutateSocketCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for ChannelProtocol::MutateSocket\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_ChannelProtocolMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback_(std::move(arg0));
+    return ZX_OK;
+  }
+
+ private:
+  ChannelProtocol::MutateSocketCallback callback_;
+
+  ChannelProtocol_MutateSocket_ResponseHandler(const ChannelProtocol_MutateSocket_ResponseHandler&) = delete;
+  ChannelProtocol_MutateSocket_ResponseHandler& operator=(const ChannelProtocol_MutateSocket_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void ChannelProtocol_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kChannelProtocol_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  controller_->Send(&test_name_ChannelProtocolMutateSocketRequestTable, _encoder.GetMessage(), std::make_unique<ChannelProtocol_MutateSocket_ResponseHandler>(std::move(callback)));
+}
 
 ChannelProtocol_Stub::ChannelProtocol_Stub(ChannelProtocol_clazz* impl) : impl_(impl) {
   (void)impl_;
@@ -695,6 +918,23 @@ class ChannelProtocol_MethodB_Responder {
     _encoder.Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(&_encoder, &result, 16);
     response_.Send(&test_name_ChannelProtocolMethodBResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
+class ChannelProtocol_MutateSocket_Responder {
+ public:
+  ChannelProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()(::zx::socket b) {
+    ::fidl::Encoder _encoder(ordinal_);
+    _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(&_encoder, &b, 16);
+    response_.Send(&test_name_ChannelProtocolMutateSocketResponseTable, _encoder.GetMessage());
   }
 
  private:
@@ -724,6 +964,10 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       break;
     }
     case kChannelProtocol_MethodB_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMethodBRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_ChannelProtocolMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -734,6 +978,22 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
       auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
       impl_->MethodB(std::move(arg0), std::move(arg1), ChannelProtocol_MethodB_Responder(std::move(response), ordinal));
+      break;
+    }
+    case kChannelProtocol_MutateSocket_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMutateSocketRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_ChannelProtocolMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_ChannelProtocolMutateSocketRequestTable, error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      impl_->MutateSocket(std::move(arg0), ChannelProtocol_MutateSocket_Responder(std::move(response), ordinal));
       break;
     }
     default: {
@@ -776,6 +1036,19 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* ou
   *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
   return ZX_OK;
 }
+zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  ::fidl::Encoder _encoder(kChannelProtocol_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_ChannelProtocolMutateSocketRequestTable, &test_name_ChannelProtocolMutateSocketResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  return ZX_OK;
+}
 
 #endif // __Fuchsia__
 
@@ -791,6 +1064,10 @@ extern "C" const fidl_type_t test_name_SocketControlProtocolEventAEventTable;
 constexpr uint32_t kSocketControlProtocol_MethodB_Ordinal = 677342235u;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBResponseTable;
+  
+constexpr uint32_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213u;
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -881,6 +1158,43 @@ void SocketControlProtocol_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback 
   ::fidl::Encode(&_encoder, &b, 24);
   controller_->Send(&test_name_SocketControlProtocolMethodBRequestTable, _encoder.GetMessage(), std::make_unique<SocketControlProtocol_MethodB_ResponseHandler>(std::move(callback)));
 }
+namespace {
+
+class SocketControlProtocol_MutateSocket_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  SocketControlProtocol_MutateSocket_ResponseHandler(SocketControlProtocol::MutateSocketCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for SocketControlProtocol::MutateSocket\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_SocketControlProtocolMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback_(std::move(arg0));
+    return ZX_OK;
+  }
+
+ private:
+  SocketControlProtocol::MutateSocketCallback callback_;
+
+  SocketControlProtocol_MutateSocket_ResponseHandler(const SocketControlProtocol_MutateSocket_ResponseHandler&) = delete;
+  SocketControlProtocol_MutateSocket_ResponseHandler& operator=(const SocketControlProtocol_MutateSocket_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void SocketControlProtocol_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kSocketControlProtocol_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  controller_->Send(&test_name_SocketControlProtocolMutateSocketRequestTable, _encoder.GetMessage(), std::make_unique<SocketControlProtocol_MutateSocket_ResponseHandler>(std::move(callback)));
+}
 
 SocketControlProtocol_Stub::SocketControlProtocol_Stub(SocketControlProtocol_clazz* impl) : impl_(impl) {
   (void)impl_;
@@ -900,6 +1214,23 @@ class SocketControlProtocol_MethodB_Responder {
     _encoder.Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(&_encoder, &result, 16);
     response_.Send(&test_name_SocketControlProtocolMethodBResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
+class SocketControlProtocol_MutateSocket_Responder {
+ public:
+  SocketControlProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()(::zx::socket b) {
+    ::fidl::Encoder _encoder(ordinal_);
+    _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(&_encoder, &b, 16);
+    response_.Send(&test_name_SocketControlProtocolMutateSocketResponseTable, _encoder.GetMessage());
   }
 
  private:
@@ -929,6 +1260,10 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
       break;
     }
     case kSocketControlProtocol_MethodB_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMethodBRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_SocketControlProtocolMethodBRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -939,6 +1274,22 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
       auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
       auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
       impl_->MethodB(std::move(arg0), std::move(arg1), SocketControlProtocol_MethodB_Responder(std::move(response), ordinal));
+      break;
+    }
+    case kSocketControlProtocol_MutateSocket_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMutateSocketRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_SocketControlProtocolMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_SocketControlProtocolMutateSocketRequestTable, error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      impl_->MutateSocket(std::move(arg0), SocketControlProtocol_MutateSocket_Responder(std::move(response), ordinal));
       break;
     }
     default: {
@@ -979,6 +1330,19 @@ zx_status_t SocketControlProtocol_SyncProxy::MethodB(int64_t a, int64_t b, int64
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  return ZX_OK;
+}
+zx_status_t SocketControlProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  ::fidl::Encoder _encoder(kSocketControlProtocol_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_SocketControlProtocolMutateSocketRequestTable, &test_name_SocketControlProtocolMutateSocketResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
   return ZX_OK;
 }
 
@@ -1314,6 +1678,10 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1324,6 +1692,10 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1346,6 +1718,10 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1358,6 +1734,10 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1714,6 +2094,10 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
   uint32_t ordinal = message.ordinal();
   switch (ordinal) {
     case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable, &error_msg);
       if (status != ZX_OK) {
@@ -1724,6 +2108,10 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
       break;
     }
     case kWithErrorSyntax_ErrorAsEnum_Ordinal: {
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithErrorSyntaxErrorAsEnumRequestTable, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithErrorSyntaxErrorAsEnumRequestTable, &error_msg);
       if (status != ZX_OK) {

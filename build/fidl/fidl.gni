@@ -113,6 +113,16 @@ template("fidl") {
                 ":$target_name",
               ]
         },
+        {
+          target_suffix = "overnet_embedded"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
+          fidlgen_generator = "overnet_embedded"
+          output_stem = "cpp/overnet_embedded"
+          additional_public_deps = [
+            "//src/connectivity/overnet/lib/embedded:runtime",
+            ":$target_name",
+          ]
+        },
       ]
       generators += llcpp_generators
     }

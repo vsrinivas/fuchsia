@@ -39,6 +39,10 @@ constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
 constexpr uint32_t kKitchenSink_EventA_Ordinal = 1795426833u;
 [[maybe_unused]]
 constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
+[[maybe_unused]]
+constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 }  // namespace
 
@@ -167,6 +171,85 @@ zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, i
 }
 
 
+zx_status_t KitchenSink::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
+  _request._hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+zx_status_t KitchenSink::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  _request_buffer.set_actual(sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<KitchenSink::MutateSocketResponse> KitchenSink::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<KitchenSink::MutateSocketResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<KitchenSink::MutateSocketResponse>());
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<KitchenSink::MutateSocketResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<KitchenSink::MutateSocketResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
 bool KitchenSink::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -195,6 +278,17 @@ bool KitchenSink::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       auto message = result.message.message();
       impl->MethodB(std::move(message->a), std::move(message->b),
         Interface::MethodBCompleter::Sync(txn));
+      return true;
+    }
+    case kKitchenSink_MutateSocket_Ordinal: {
+      auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->MutateSocket(std::move(message->a),
+        Interface::MutateSocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -274,6 +368,35 @@ void KitchenSink::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
+void KitchenSink::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
+  _response._hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_response_bytes)));
+}
+
+void KitchenSink::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::socket b) {
+  if (_buffer.capacity() < MutateSocketResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
+  _response._hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  _buffer.set_actual(sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
+}
+
+void KitchenSink::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMessage<MutateSocketResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -282,6 +405,10 @@ constexpr uint32_t kChannelProtocol_MethodA_Ordinal = 1432785874u;
 constexpr uint32_t kChannelProtocol_EventA_Ordinal = 477676034u;
 [[maybe_unused]]
 constexpr uint32_t kChannelProtocol_MethodB_Ordinal = 180770075u;
+[[maybe_unused]]
+constexpr uint32_t kChannelProtocol_MutateSocket_Ordinal = 1258480262u;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -410,6 +537,85 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffe
 }
 
 
+zx_status_t ChannelProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
+  _request._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+zx_status_t ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  _request_buffer.set_actual(sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse> ChannelProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>());
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
 bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -438,6 +644,17 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       auto message = result.message.message();
       impl->MethodB(std::move(message->a), std::move(message->b),
         Interface::MethodBCompleter::Sync(txn));
+      return true;
+    }
+    case kChannelProtocol_MutateSocket_Ordinal: {
+      auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->MutateSocket(std::move(message->a),
+        Interface::MutateSocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -517,6 +734,35 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
+void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
+  _response._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_response_bytes)));
+}
+
+void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::socket b) {
+  if (_buffer.capacity() < MutateSocketResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
+  _response._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  _buffer.set_actual(sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
+}
+
+void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMessage<MutateSocketResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -525,6 +771,10 @@ constexpr uint32_t kSocketControlProtocol_MethodA_Ordinal = 1007842318u;
 constexpr uint32_t kSocketControlProtocol_EventA_Ordinal = 955483393u;
 [[maybe_unused]]
 constexpr uint32_t kSocketControlProtocol_MethodB_Ordinal = 677342235u;
+[[maybe_unused]]
+constexpr uint32_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213u;
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -653,6 +903,85 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request
 }
 
 
+zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
+  _request._hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  _request_buffer.set_actual(sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse> SocketControlProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<SocketControlProtocol::MutateSocketResponse>());
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<SocketControlProtocol::MutateSocketResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
 bool SocketControlProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -681,6 +1010,17 @@ bool SocketControlProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
       auto message = result.message.message();
       impl->MethodB(std::move(message->a), std::move(message->b),
         Interface::MethodBCompleter::Sync(txn));
+      return true;
+    }
+    case kSocketControlProtocol_MutateSocket_Ordinal: {
+      auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->MutateSocket(std::move(message->a),
+        Interface::MutateSocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -760,6 +1100,35 @@ void SocketControlProtocol::Interface::MethodBCompleterBase::Reply(::fidl::Decod
 }
 
 
+void SocketControlProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
+  _response._hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_response_bytes)));
+}
+
+void SocketControlProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::socket b) {
+  if (_buffer.capacity() < MutateSocketResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
+  _response._hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  _buffer.set_actual(sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
+}
+
+void SocketControlProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMessage<MutateSocketResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -768,6 +1137,10 @@ constexpr uint32_t kOvernetInternalProtocol_MethodA_Ordinal = 1993818253u;
 constexpr uint32_t kOvernetInternalProtocol_EventA_Ordinal = 1746007436u;
 [[maybe_unused]]
 constexpr uint32_t kOvernetInternalProtocol_MethodB_Ordinal = 952134976u;
+[[maybe_unused]]
+constexpr uint32_t kOvernetInternalProtocol_MutateSocket_Ordinal = 1691201382u;
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -896,6 +1269,85 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _reque
 }
 
 
+zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
+  _request._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _request = *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
+  _request.a = std::move(a);
+  _request_buffer.set_actual(sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_b = std::move(_response.b);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse> OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<OvernetInternalProtocol::MutateSocketResponse>());
+  }
+  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<OvernetInternalProtocol::MutateSocketResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
 bool OvernetInternalProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -924,6 +1376,17 @@ bool OvernetInternalProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fi
       auto message = result.message.message();
       impl->MethodB(std::move(message->a), std::move(message->b),
         Interface::MethodBCompleter::Sync(txn));
+      return true;
+    }
+    case kOvernetInternalProtocol_MutateSocket_Ordinal: {
+      auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->MutateSocket(std::move(message->a),
+        Interface::MutateSocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -999,6 +1462,35 @@ void OvernetInternalProtocol::Interface::MethodBCompleterBase::Reply(::fidl::Byt
 void OvernetInternalProtocol::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMessage<MethodBResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kOvernetInternalProtocol_MethodB_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void OvernetInternalProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
+  _response._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_response_bytes)));
+}
+
+void OvernetInternalProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::socket b) {
+  if (_buffer.capacity() < MutateSocketResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
+  _response._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
+  _response.b = std::move(b);
+  _buffer.set_actual(sizeof(MutateSocketResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
+}
+
+void OvernetInternalProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMessage<MutateSocketResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

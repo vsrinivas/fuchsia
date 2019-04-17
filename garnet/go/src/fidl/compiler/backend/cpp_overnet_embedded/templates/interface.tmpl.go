@@ -4,84 +4,30 @@
 
 package templates
 
-// OvernetInternal transports are used by Overnet to communicate between peers,
-// and are not intended for general purpose consumption.
-
-const OvernetInternal = `
-{{- define "Header" }}
-#pragma once
-
-#include "src/connectivity/overnet/lib/protocol/fidl_stream.h"
-
-#include "{{ range $index, $path := .Library }}{{ if $index }}/{{ end }}{{ $path }}{{ end }}/cpp/fidl.h"
-  {{- range .Library }}
-  namespace {{ . }} {
-  {{- end }}
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Interface }}
-      {{ if index .Transports "OvernetInternal" }}
-        {{ template "InterfaceForwardDeclaration" . }}
-      {{ end }}
-    {{- end }}
-  {{ end }}
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Interface }}
-      {{ if index .Transports "OvernetInternal" }}
-        {{ template "InterfaceDeclaration" . }}
-      {{ end }}
-    {{- end }}
-  {{ end }}
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Interface }}
-      {{ if index .Transports "OvernetInternal" }}
-        {{ template "InterfaceTraits" . }}
-      {{ end }}
-    {{- end }}
-  {{ end }}
-  {{- range .LibraryReversed }}
-  }  // namespace {{ . }}
-  {{- end }}
-{{- end }}
-
-{{- define "Source" }}
-#include <{{ .PrimaryHeader }}>
-#include "lib/fidl/cpp/internal/implementation.h"
-  {{- range .Library }}
-  namespace {{ . }} {
-  {{- end }}
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Interface }}
-      {{ if index .Transports "OvernetInternal" }}
-        {{ template "InterfaceDefinition" . }}
-      {{ end }}
-    {{- end }}
-  {{ end }}
-  {{- range .LibraryReversed }}
-  }  // namespace {{ . }}
-  {{- end }}
-{{- end }}
-
+const Interface = `
 {{- define "InterfaceForwardDeclaration" }}
 class {{ .Name }};
+using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 class {{ .ProxyName }};
 class {{ .StubName }};
+class {{ .EventSenderName }};
 {{- end }}
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.OvernetEmbeddedDecl }} {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "OutParams" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }}* out_{{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.OvernetEmbeddedDecl }}* out_{{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.OvernetEmbeddedDecl }}
   {{- end -}}
 {{ end }}
 
@@ -105,6 +51,7 @@ class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
   using Stub_ = {{ .StubName }};
+  using EventSender_ = {{ .EventSenderName }};
   {{- if .ServiceName }}
   static const char Name_[];
   {{- end }}
@@ -112,10 +59,8 @@ class {{ .Name }} {
 
   {{- range .Methods }}
     {{- if .HasResponse }}
-      {{- if .HasRequest }}
   using {{ .CallbackType }} =
       {{ .CallbackWrapper }}<void({{ template "ParamTypes" .Response }})>;
-      {{- end }}
     {{- end }}
     {{- if .HasRequest }}
       {{ range .DocComments }}
@@ -126,56 +71,71 @@ class {{ .Name }} {
       {{- else }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
       {{- end }}
-    {{- else if .HasResponse }}
-      {{- if .Transitional }}
-  virtual void {{ template "EventMethodSignature" . }} { };
-      {{- else }}
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .EventSenderName }} {
+ public:
+  virtual ~{{ .EventSenderName }}();
+
+  {{- range .Methods }}
+    {{- if not .HasRequest }}
+      {{- if .HasResponse }}
   virtual void {{ template "EventMethodSignature" . }} = 0;
       {{- end }}
     {{- end }}
   {{- end }}
 };
 
-class {{ .ProxyName }} : public ::overnet::FidlStream, public {{ .Name }} {
+class {{ .ProxyName }} : public ::overnet::internal::FidlChannel, public {{ .Name }} {
  public:
- {{ .ProxyName }}() = default;
+  explicit {{ .ProxyName }}(::overnet::ClosedPtr<::overnet::ZxChannel> channel);
   ~{{ .ProxyName }}() override;
 
   {{- range .Methods }}
     {{- if .HasRequest }}
-  void {{ template "RequestMethodSignature" . }} override final;
+  void {{ template "RequestMethodSignature" . }} override;
+    {{- else if .HasResponse }}
+  {{ .CallbackType }} {{ .Name }};
     {{- end }}
   {{- end }}
 
  private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
+  zx_status_t Dispatch_(::fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+
   {{ .ProxyName }}(const {{ .ProxyName }}&) = delete;
   {{ .ProxyName }}& operator=(const {{ .ProxyName }}&) = delete;
 };
 
-class {{ .StubName }} : public ::overnet::FidlStream, public {{ .Name }} {
+class {{ .StubName }} : public ::overnet::internal::FidlChannel, public {{ .EventSenderName }} {
  public:
   typedef class {{ .Name }} {{ .ClassName }};
-  {{ .StubName }}() = default;
+  explicit {{ .StubName }}({{ .ClassName }}* impl, ::overnet::ClosedPtr<::overnet::ZxChannel> channel);
   ~{{ .StubName }}() override;
 
   {{- range .Methods }}
     {{- if not .HasRequest }}
       {{- if .HasResponse }}
-  virtual void {{ template "EventMethodSignature" . }} override final;
+  void {{ template "EventMethodSignature" . }} override;
       {{- end }}
     {{- end }}
   {{- end }}
 
  private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
+  zx_status_t Dispatch_(::fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+
+  {{ .ClassName }}* impl_;
 };
 {{- end }}
 
 {{- define "InterfaceDefinition" }}
 namespace {
 
-{{ range .Methods }}
+{{- range .Methods }}
+  {{ if ne .GenOrdinal .Ordinal }}
+constexpr uint32_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}u;
+  {{- end }}
 constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
@@ -193,26 +153,36 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 {{- end }}
 
+{{ .EventSenderName }}::~{{ .EventSenderName }}() = default;
+
+{{ .ProxyName }}::{{ .ProxyName }}(::overnet::ClosedPtr<::overnet::ZxChannel> channel)
+    : FidlChannel(::std::move(channel)) {}
+
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
-zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message* message) {
+zx_status_t {{ .ProxyName }}::Dispatch_(::fuchsia::overnet::protocol::ZirconChannelMessage message) {
   zx_status_t status = ZX_OK;
-  switch (message->ordinal()) {
+  ::overnet::internal::Decoder decoder(std::move(message), io_.get());
+  switch (decoder.ordinal()) {
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
+          {{- if ne .GenOrdinal .Ordinal }}
+    case {{ .GenOrdinalName }}:
+          {{- end }}
     case {{ .OrdinalName }}: {
+      if (!{{ .Name }}) {
+        status = ZX_OK;
+        break;
+      }
       const char* error_msg = nullptr;
-      status = message->Decode(&{{ .ResponseTypeName }}, &error_msg);
+      status = decoder.FidlDecode(&{{ .ResponseTypeName }}, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(*message, &{{ .ResponseTypeName }}, error_msg);
-        ZX_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
         break;
       }
         {{- if .Response }}
-      ::fidl::Decoder decoder(std::move(*message));
           {{- range $index, $param := .Response }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.OvernetEmbeddedDecl }}>(&decoder, {{ .Offset }});
           {{- end }}
         {{- end }}
       {{ .Name }}(
@@ -235,8 +205,13 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message* message) {
 
 {{ range .Methods }}
   {{- if .HasRequest }}
+    {{- if .HasResponse }}
+namespace {
+
+}  // namespace
+{{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
     {{- if .Request }}
   _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
@@ -244,17 +219,17 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
-  Send_(_encoder.GetMessage(), [callback=std::move(callback)](::fidl::Message message) {
+  io_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage(),
+       [callback = std::move(callback), io = io_](fuchsia::overnet::protocol::ZirconChannelMessage response) -> zx_status_t {
+    ::overnet::internal::Decoder decoder(std::move(response), io.get());
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
+    zx_status_t status = decoder.FidlDecode(&{{ .ResponseTypeName }}, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
       return status;
     }
       {{- if .Response }}
-    ::fidl::Decoder decoder(std::move(message));
         {{- range $index, $param := .Response }}
-    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.OvernetEmbeddedDecl }}>(&decoder, {{ .Offset }});
         {{- end }}
       {{- end }}
     callback(
@@ -265,47 +240,56 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
     return ZX_OK;
   });
     {{- else }}
-  Send_(_encoder.GetMessage());
+  io_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage());
     {{- end }}
 }
   {{- end }}
 {{- end }}
 
+{{ .StubName }}::{{ .StubName }}({{ .ClassName }}* impl, ::overnet::ClosedPtr<::overnet::ZxChannel> channel)
+    : ::overnet::internal::FidlChannel(std::move(channel)), impl_(impl) {
+  (void)impl_;
+}
+
 {{ .StubName }}::~{{ .StubName }}() = default;
 
-zx_status_t {{ .StubName }}::Dispatch_(::fidl::Message* message) {
+zx_status_t {{ .StubName }}::Dispatch_(
+    ::fuchsia::overnet::protocol::ZirconChannelMessage message) {
   zx_status_t status = ZX_OK;
-  switch (message->ordinal()) {
+  ::overnet::internal::Decoder decoder(std::move(message), io_.get());
+  uint32_t ordinal = decoder.ordinal();
+  switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
+        {{- if ne .GenOrdinal .Ordinal }}
+    case {{ .GenOrdinalName }}:
+        {{- end }}
     case {{ .OrdinalName }}: {
       const char* error_msg = nullptr;
-      status = message->Decode(&{{ .RequestTypeName }}, &error_msg);
+      status = decoder.FidlDecode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(*message, &{{ .RequestTypeName }}, error_msg);
-        ZX_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
         break;
       }
         {{- if .Request }}
-      ::fidl::Decoder decoder(std::move(*message));
           {{- range $index, $param := .Request }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.OvernetEmbeddedDecl }}>(&decoder, {{ .Offset }});
           {{- end }}
         {{- end }}
-      {{ .Name }}(
+      impl_->{{ .Name }}(
         {{- range $index, $param := .Request -}}
           {{- if $index }}, {{ end }}std::move(arg{{ $index }})
         {{- end -}}
         {{- if .HasResponse -}}
-          {{- if .Request }}, {{ end -}}[this]({{ template "Params" .Response }}) {
-            ::fidl::Encoder _encoder({{ .OrdinalName }});
+          {{- if .Request }}, {{ end -}}
+          [this]({{ template "Params" .Response }}) {
+            ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
             {{- if .Response }}
             _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
               {{- range .Response }}
             ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
               {{- end }}
             {{- end }}
-            Send_(_encoder.GetMessage());
+            io_->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
           }
         {{- end -}}
       );
@@ -325,14 +309,14 @@ zx_status_t {{ .StubName }}::Dispatch_(::fidl::Message* message) {
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::overnet::internal::Encoder _encoder({{ .OrdinalName }}, io_.get());
     {{- if .Response }}
   _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
       {{- range .Response }}
   ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
-  Send_(_encoder.GetMessage());
+  controller()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
 }
     {{- end }}
   {{- end }}
@@ -340,7 +324,40 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 
 {{ end }}
 
-{{- define "OvernetInternalTestBase" }}
+{{- define "InterfaceTraits" }}
+template <>
+struct CodingTraits<std::unique_ptr<{{ .Namespace }}::embedded::{{ .ProxyName }}>> {
+  static void Encode(overnet::internal::Encoder* encoder,
+    std::unique_ptr<{{ .Namespace }}::embedded::{{ .ProxyName }}>* interface,
+    size_t offset) {
+    auto channel = (*interface)->TakeChannel_();
+    interface->reset();
+    ::fidl::Encode(encoder, &channel, offset);
+  }
+  static void Decode(overnet::internal::Decoder* decoder,
+    std::unique_ptr<{{ .Namespace }}::embedded::{{ .ProxyName }}>* interface,
+    size_t offset) {
+    *interface = ::std::make_unique<{{ .Namespace }}::embedded::{{ .ProxyName }}>(
+      ::overnet::ZxChannel::Decode(decoder, offset));
+  }
+};
+
+template <>
+struct CodingTraits<std::unique_ptr<{{ .Namespace }}::embedded::{{ .StubName }}>> {
+  static void Encode(overnet::internal::Encoder* encoder,
+    std::unique_ptr<{{ .Namespace }}::embedded::{{ .StubName }}>* interface,
+    size_t offset) {
+    auto channel = (*interface)->TakeChannel_();
+    interface->reset();
+    ::fidl::Encode(encoder, &channel, offset);
+  }
+  static void Decode(overnet::internal::Decoder* decoder,
+    std::unique_ptr<{{ .Namespace }}::embedded::{{ .StubName }}>* interface,
+    size_t offset);
+};
+{{- end }}
+
+{{- define "InterfaceTestBase" }}
 class {{ .Name }}_TestBase : public {{ .Name }} {
   public:
   virtual ~{{ .Name }}_TestBase() { }
@@ -356,7 +373,4 @@ class {{ .Name }}_TestBase : public {{ .Name }} {
 
 };
 {{ end }}
-
-{{- define "InterfaceTraits" }}
-{{- end }}
 `

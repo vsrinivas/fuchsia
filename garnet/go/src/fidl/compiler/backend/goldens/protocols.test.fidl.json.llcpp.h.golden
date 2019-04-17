@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 #include <zircon/fidl.h>
 
 namespace test {
@@ -120,6 +121,8 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   uint8_t __reserved{};
 };
 
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 class KitchenSink final {
  public:
@@ -170,6 +173,28 @@ class KitchenSink final {
     using ResponseType = MethodBResponse;
   };
 
+  struct MutateSocketResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket b;
+
+    static constexpr const fidl_type_t* Type = &test_name_KitchenSinkMutateSocketResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct MutateSocketRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket a;
+
+    static constexpr const fidl_type_t* Type = &test_name_KitchenSinkMutateSocketRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = MutateSocketResponse;
+  };
+
 
   class SyncClient final {
    public:
@@ -192,6 +217,14 @@ class KitchenSink final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -223,6 +256,20 @@ class KitchenSink final {
 
     virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
 
+    class MutateSocketCompleterBase : public _Base {
+     public:
+      void Reply(::zx::socket b);
+      void Reply(::fidl::BytePart _buffer, ::zx::socket b);
+      void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
+
+    virtual void MutateSocket(::zx::socket a, MutateSocketCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -253,6 +300,8 @@ class KitchenSink final {
 
 };
 
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
 class ChannelProtocol final {
  public:
@@ -303,6 +352,28 @@ class ChannelProtocol final {
     using ResponseType = MethodBResponse;
   };
 
+  struct MutateSocketResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket b;
+
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMutateSocketResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct MutateSocketRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket a;
+
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMutateSocketRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = MutateSocketResponse;
+  };
+
 
   class SyncClient final {
    public:
@@ -325,6 +396,14 @@ class ChannelProtocol final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -356,6 +435,20 @@ class ChannelProtocol final {
 
     virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
 
+    class MutateSocketCompleterBase : public _Base {
+     public:
+      void Reply(::zx::socket b);
+      void Reply(::fidl::BytePart _buffer, ::zx::socket b);
+      void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
+
+    virtual void MutateSocket(::zx::socket a, MutateSocketCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -386,6 +479,8 @@ class ChannelProtocol final {
 
 };
 
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
 class SocketControlProtocol final {
  public:
@@ -436,6 +531,28 @@ class SocketControlProtocol final {
     using ResponseType = MethodBResponse;
   };
 
+  struct MutateSocketResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket b;
+
+    static constexpr const fidl_type_t* Type = &test_name_SocketControlProtocolMutateSocketResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct MutateSocketRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket a;
+
+    static constexpr const fidl_type_t* Type = &test_name_SocketControlProtocolMutateSocketRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = MutateSocketResponse;
+  };
+
 
   class SyncClient final {
    public:
@@ -458,6 +575,14 @@ class SocketControlProtocol final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -489,6 +614,20 @@ class SocketControlProtocol final {
 
     virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
 
+    class MutateSocketCompleterBase : public _Base {
+     public:
+      void Reply(::zx::socket b);
+      void Reply(::fidl::BytePart _buffer, ::zx::socket b);
+      void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
+
+    virtual void MutateSocket(::zx::socket a, MutateSocketCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -519,6 +658,8 @@ class SocketControlProtocol final {
 
 };
 
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
 class OvernetInternalProtocol final {
  public:
@@ -569,6 +710,28 @@ class OvernetInternalProtocol final {
     using ResponseType = MethodBResponse;
   };
 
+  struct MutateSocketResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket b;
+
+    static constexpr const fidl_type_t* Type = &test_name_OvernetInternalProtocolMutateSocketResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct MutateSocketRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::socket a;
+
+    static constexpr const fidl_type_t* Type = &test_name_OvernetInternalProtocolMutateSocketRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = MutateSocketResponse;
+  };
+
 
   class SyncClient final {
    public:
@@ -591,6 +754,14 @@ class OvernetInternalProtocol final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -621,6 +792,20 @@ class OvernetInternalProtocol final {
     using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
 
     virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+
+    class MutateSocketCompleterBase : public _Base {
+     public:
+      void Reply(::zx::socket b);
+      void Reply(::fidl::BytePart _buffer, ::zx::socket b);
+      void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
+
+    virtual void MutateSocket(::zx::socket a, MutateSocketCompleter::Sync _completer) = 0;
 
   };
 
@@ -1114,6 +1299,22 @@ static_assert(sizeof(::test::name::KitchenSink::MethodBResponse)
 static_assert(offsetof(::test::name::KitchenSink::MethodBResponse, result) == 16);
 
 template <>
+struct IsFidlType<::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::KitchenSink::MutateSocketRequest)
+    == ::test::name::KitchenSink::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::test::name::KitchenSink::MutateSocketRequest, a) == 16);
+
+template <>
+struct IsFidlType<::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::KitchenSink::MutateSocketResponse)
+    == ::test::name::KitchenSink::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::test::name::KitchenSink::MutateSocketResponse, b) == 16);
+
+template <>
 struct IsFidlType<::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
@@ -1147,6 +1348,22 @@ struct IsFidlMessage<::test::name::ChannelProtocol::MethodBResponse> : public st
 static_assert(sizeof(::test::name::ChannelProtocol::MethodBResponse)
     == ::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
 static_assert(offsetof(::test::name::ChannelProtocol::MethodBResponse, result) == 16);
+
+template <>
+struct IsFidlType<::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::ChannelProtocol::MutateSocketRequest)
+    == ::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::test::name::ChannelProtocol::MutateSocketRequest, a) == 16);
+
+template <>
+struct IsFidlType<::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::ChannelProtocol::MutateSocketResponse)
+    == ::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::test::name::ChannelProtocol::MutateSocketResponse, b) == 16);
 
 template <>
 struct IsFidlType<::test::name::SocketControlProtocol::MethodARequest> : public std::true_type {};
@@ -1184,6 +1401,22 @@ static_assert(sizeof(::test::name::SocketControlProtocol::MethodBResponse)
 static_assert(offsetof(::test::name::SocketControlProtocol::MethodBResponse, result) == 16);
 
 template <>
+struct IsFidlType<::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::SocketControlProtocol::MutateSocketRequest)
+    == ::test::name::SocketControlProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::test::name::SocketControlProtocol::MutateSocketRequest, a) == 16);
+
+template <>
+struct IsFidlType<::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::SocketControlProtocol::MutateSocketResponse)
+    == ::test::name::SocketControlProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::test::name::SocketControlProtocol::MutateSocketResponse, b) == 16);
+
+template <>
 struct IsFidlType<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
@@ -1217,6 +1450,22 @@ struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodBResponse> : p
 static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBResponse)
     == ::test::name::OvernetInternalProtocol::MethodBResponse::PrimarySize);
 static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBResponse, result) == 16);
+
+template <>
+struct IsFidlType<::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::MutateSocketRequest)
+    == ::test::name::OvernetInternalProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MutateSocketRequest, a) == 16);
+
+template <>
+struct IsFidlType<::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::MutateSocketResponse)
+    == ::test::name::OvernetInternalProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MutateSocketResponse, b) == 16);
 
 template <>
 struct IsFidlType<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};

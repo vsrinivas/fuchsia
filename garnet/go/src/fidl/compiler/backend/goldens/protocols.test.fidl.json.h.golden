@@ -232,6 +232,10 @@ class KitchenSink {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class KitchenSink_EventSender {
@@ -246,6 +250,7 @@ class KitchenSink_Sync {
   virtual ~KitchenSink_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
 class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
@@ -257,6 +262,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
   KitchenSink_Proxy(const KitchenSink_Proxy&) = delete;
@@ -285,6 +291,7 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
   ~KitchenSink_SyncProxy() override;
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -308,6 +315,10 @@ class KitchenSink {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class KitchenSink_EventSender {
@@ -322,6 +333,7 @@ class KitchenSink_Sync {
   virtual ~KitchenSink_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
 class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
@@ -333,6 +345,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
   KitchenSink_Proxy(const KitchenSink_Proxy&) = delete;
@@ -361,6 +374,7 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
   ~KitchenSink_SyncProxy() override;
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -384,6 +398,10 @@ class ChannelProtocol {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class ChannelProtocol_EventSender {
@@ -398,6 +416,7 @@ class ChannelProtocol_Sync {
   virtual ~ChannelProtocol_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
 class ChannelProtocol_Proxy : public ::fidl::internal::Proxy, public ChannelProtocol {
@@ -409,6 +428,7 @@ class ChannelProtocol_Proxy : public ::fidl::internal::Proxy, public ChannelProt
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
   ChannelProtocol_Proxy(const ChannelProtocol_Proxy&) = delete;
@@ -437,6 +457,7 @@ class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
   ~ChannelProtocol_SyncProxy() override;
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -460,6 +481,10 @@ class SocketControlProtocol {
       fit::function<void(int64_t)>;
       
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback =
+      fit::function<void(::zx::socket)>;
+      
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
 };
 
 class SocketControlProtocol_EventSender {
@@ -474,6 +499,7 @@ class SocketControlProtocol_Sync {
   virtual ~SocketControlProtocol_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
 class SocketControlProtocol_Proxy : public ::fidl::internal::Proxy, public SocketControlProtocol {
@@ -485,6 +511,7 @@ class SocketControlProtocol_Proxy : public ::fidl::internal::Proxy, public Socke
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
   SocketControlProtocol_Proxy(const SocketControlProtocol_Proxy&) = delete;
@@ -513,6 +540,7 @@ class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
   ~SocketControlProtocol_SyncProxy() override;
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;

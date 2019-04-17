@@ -11,6 +11,7 @@ import (
 
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
+	"fidl/compiler/backend/cpp_overnet_embedded"
 	"fidl/compiler/backend/cpp_overnet_internal"
 	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
@@ -25,6 +26,7 @@ type GenerateFidl interface {
 var generators = map[string]GenerateFidl{
 	"cpp":              cpp.NewFidlGenerator(),
 	"overnet_internal": cpp_overnet_internal.NewFidlGenerator(),
+	"overnet_embedded": cpp_overnet_embedded.NewFidlGenerator(),
 	"go":               golang.NewFidlGenerator(),
 	"rust":             rust.NewFidlGenerator(),
 	"syzkaller":        syzkaller.FidlGenerator{},

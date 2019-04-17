@@ -19,6 +19,9 @@ extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
 constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
+constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 }  // namespace
 
@@ -77,6 +80,23 @@ void KitchenSink_Proxy::MethodB(int64_t a, int64_t b, MethodBCallback callback) 
     return ZX_OK;
   });
 }
+void KitchenSink_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  Send_(_encoder.GetMessage(), [callback=std::move(callback)](::fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_KitchenSinkMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_KitchenSinkMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback(std::move(arg0));
+    return ZX_OK;
+  });
+}
 
 KitchenSink_Stub::~KitchenSink_Stub() = default;
 
@@ -116,6 +136,24 @@ zx_status_t KitchenSink_Stub::Dispatch_(::fidl::Message* message) {
           });
       break;
     }
+    case kKitchenSink_MutateSocket_Ordinal: {
+      const char* error_msg = nullptr;
+      status = message->Decode(&test_name_KitchenSinkMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(*message, &test_name_KitchenSinkMutateSocketRequestTable, error_msg);
+        ZX_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(*message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      MutateSocket(std::move(arg0), [this](::zx::socket b) {
+            ::fidl::Encoder _encoder(kKitchenSink_MutateSocket_Ordinal);
+            _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+            ::fidl::Encode(&_encoder, &b, 16);
+            Send_(_encoder.GetMessage());
+          });
+      break;
+    }
     default: {
       status = ZX_ERR_NOT_SUPPORTED;
       break;
@@ -150,6 +188,9 @@ extern "C" const fidl_type_t test_name_OvernetInternalProtocolEventAEventTable;
 constexpr uint32_t kOvernetInternalProtocol_MethodB_Ordinal = 952134976u;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMethodBResponseTable;
+constexpr uint32_t kOvernetInternalProtocol_MutateSocket_Ordinal = 1691201382u;
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -208,6 +249,23 @@ void OvernetInternalProtocol_Proxy::MethodB(int64_t a, int64_t b, MethodBCallbac
     return ZX_OK;
   });
 }
+void OvernetInternalProtocol_Proxy::MutateSocket(::zx::socket a, MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(kOvernetInternalProtocol_MutateSocket_Ordinal);
+  _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &a, 16);
+  Send_(_encoder.GetMessage(), [callback=std::move(callback)](::fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_OvernetInternalProtocolMutateSocketResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_OvernetInternalProtocolMutateSocketResponseTable, error_msg);
+      return status;
+    }
+    ::fidl::Decoder decoder(std::move(message));
+    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+    callback(std::move(arg0));
+    return ZX_OK;
+  });
+}
 
 OvernetInternalProtocol_Stub::~OvernetInternalProtocol_Stub() = default;
 
@@ -243,6 +301,24 @@ zx_status_t OvernetInternalProtocol_Stub::Dispatch_(::fidl::Message* message) {
             ::fidl::Encoder _encoder(kOvernetInternalProtocol_MethodB_Ordinal);
             _encoder.Alloc(24 - sizeof(fidl_message_header_t));
             ::fidl::Encode(&_encoder, &result, 16);
+            Send_(_encoder.GetMessage());
+          });
+      break;
+    }
+    case kOvernetInternalProtocol_MutateSocket_Ordinal: {
+      const char* error_msg = nullptr;
+      status = message->Decode(&test_name_OvernetInternalProtocolMutateSocketRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(*message, &test_name_OvernetInternalProtocolMutateSocketRequestTable, error_msg);
+        ZX_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(*message));
+      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
+      MutateSocket(std::move(arg0), [this](::zx::socket b) {
+            ::fidl::Encoder _encoder(kOvernetInternalProtocol_MutateSocket_Ordinal);
+            _encoder.Alloc(24 - sizeof(fidl_message_header_t));
+            ::fidl::Encode(&_encoder, &b, 16);
             Send_(_encoder.GetMessage());
           });
       break;

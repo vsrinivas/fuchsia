@@ -365,6 +365,12 @@ zx_status_t {{ .StubName }}::Dispatch_(
     case {{ .GenOrdinalName }}:
         {{- end }}
     case {{ .OrdinalName }}: {
+      {{- if .HasResponse }}
+      if (!response.needs_response()) {
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .RequestTypeName }}, "Message needing a response with no txid");
+        return ZX_ERR_INVALID_ARGS;
+      }
+      {{- end }}
       const char* error_msg = nullptr;
       status = message.Decode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
