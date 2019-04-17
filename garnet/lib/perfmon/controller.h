@@ -33,7 +33,7 @@ class Controller {
   static bool IsSupported();
 
   // Fetch the properties of this device.
-  static bool GetProperties(perfmon_properties_t* props);
+  static bool GetProperties(perfmon_ioctl_properties_t* props);
 
   static bool Create(uint32_t buffer_size_in_mb,
                      const perfmon_config_t& config,

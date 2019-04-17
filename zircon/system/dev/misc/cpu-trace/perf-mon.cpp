@@ -123,7 +123,7 @@ zx_status_t PerfmonDevice::PmuGetProperties(void* reply, size_t replymax,
                                             size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    perfmon_properties_t props{};
+    perfmon_ioctl_properties_t props{};
     if (replymax < sizeof(props)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }

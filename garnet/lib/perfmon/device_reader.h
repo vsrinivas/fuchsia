@@ -23,7 +23,7 @@ class DeviceReader final : public Reader {
 
   ~DeviceReader();
 
-  bool GetProperties(perfmon_properties_t* props);
+  bool GetProperties(perfmon_ioctl_properties_t* props);
 
   bool GetConfig(perfmon_config_t* config);
 

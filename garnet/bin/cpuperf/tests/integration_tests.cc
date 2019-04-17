@@ -39,7 +39,7 @@ TEST(Cpuperf, ValueRecords) {
 }
 
 TEST(Cpuperf, LastBranchRecord) {
-  perfmon_properties_t properties;
+  perfmon_ioctl_properties_t properties;
   ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
   if (!(properties.flags & PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH)) {
     // Not supported on this h/w. Punt.

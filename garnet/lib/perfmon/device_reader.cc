@@ -38,7 +38,7 @@ DeviceReader::~DeviceReader() {
   UnmapBuffer();
 }
 
-bool DeviceReader::GetProperties(perfmon_properties_t* props) {
+bool DeviceReader::GetProperties(perfmon_ioctl_properties_t* props) {
   auto status = ioctl_perfmon_get_properties(fd_, props);
   if (status < 0)
     FXL_LOG(ERROR) << "ioctl_perfmon_get_properties failed: " << status;

@@ -272,7 +272,7 @@ typedef struct {
     // Various flags.
     uint32_t flags;
 #define PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH (1u << 0)
-} perfmon_properties_t;
+} perfmon_ioctl_properties_t;
 
 // The type of the |rate| field of perfmon_config_t.
 typedef uint32_t perfmon_rate_t;
@@ -328,12 +328,12 @@ typedef struct {
 // ioctls
 
 // Fetch the cpu trace properties of the system.
-// Output: perfmon_properties_t
+// Output: perfmon_ioctl_properties_t
 #define IOCTL_PERFMON_GET_PROPERTIES \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 0)
 IOCTL_WRAPPER_OUT(ioctl_perfmon_get_properties,
                   IOCTL_PERFMON_GET_PROPERTIES,
-                  perfmon_properties_t)
+                  perfmon_ioctl_properties_t)
 
 // The allocation configuration for a data collection run.
 // This is generally the first call to allocate resources for a trace,

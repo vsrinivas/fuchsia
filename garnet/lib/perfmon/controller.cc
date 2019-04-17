@@ -53,7 +53,7 @@ bool Controller::IsSupported() {
   return S_ISCHR(stat_buffer.st_mode);
 }
 
-bool Controller::GetProperties(perfmon_properties_t* props) {
+bool Controller::GetProperties(perfmon_ioctl_properties_t* props) {
   int raw_fd = open(kPerfMonDev, O_WRONLY);
   if (raw_fd < 0) {
     FXL_LOG(ERROR) << "Failed to open " << kPerfMonDev << ": errno=" << errno;

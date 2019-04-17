@@ -12,7 +12,7 @@ Several ioctls are provided to control performance data collection.
 ### *ioctl_perfmon_get_properties*
 
 ```
-ssize_t ioctl_perfmon_get_properties(int fd, perfmon_properties_t* props);
+ssize_t ioctl_perfmon_get_properties(int fd, perfmon_ioctl_properties_t* props);
 ```
 
 Return various aspects of PMU properties in |*props|.
