@@ -21,7 +21,7 @@ use fidl_fuchsia_media::{
     AudioMarker, AudioRendererProxy, AudioSampleFormat, AudioStreamType, Metadata, Property,
     StreamPacket, TimelineFunction, METADATA_LABEL_ARTIST, NO_TIMESTAMP,
 };
-use fidl_fuchsia_mediasession::*;
+use fidl_fuchsia_media_sessions::*;
 use fuchsia_async as fasync;
 use fuchsia_component as component;
 use fuchsia_zircon as zx;
@@ -106,7 +106,7 @@ fn clone_playback_status(playback_status: &PlaybackStatus) -> PlaybackStatus {
         shuffle_on: playback_status.shuffle_on,
         has_next_item: playback_status.has_next_item,
         has_prev_item: playback_status.has_prev_item,
-        error: playback_status.error.as_ref().map(|e| fidl_fuchsia_mediasession::Error {
+        error: playback_status.error.as_ref().map(|e| fidl_fuchsia_media_sessions::Error {
             code: e.code,
             description: e.description.clone(),
         }),

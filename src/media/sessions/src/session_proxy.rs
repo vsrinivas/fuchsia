@@ -9,7 +9,7 @@ use crate::{
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::*;
 use fidl_fuchsia_media::Metadata;
-use fidl_fuchsia_mediasession::*;
+use fidl_fuchsia_media_sessions::*;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};

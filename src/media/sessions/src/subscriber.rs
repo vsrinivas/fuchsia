@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::MAX_EVENTS_SENT_WITHOUT_ACK;
-use fidl_fuchsia_mediasession::{ActiveSession, RegistryControlHandle, SessionsChange};
+use fidl_fuchsia_media_sessions::{ActiveSession, RegistryControlHandle, SessionsChange};
 
 pub trait SubscriberEvent: Sized {
     fn send(self, handle: &RegistryControlHandle) -> bool;

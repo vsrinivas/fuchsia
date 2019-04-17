@@ -11,7 +11,7 @@ use crate::{
 };
 use failure::ResultExt;
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_mediasession::{PublisherRequest, PublisherRequestStream, SessionMarker};
+use fidl_fuchsia_media_sessions::{PublisherRequest, PublisherRequestStream, SessionMarker};
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, TryStreamExt};
 use std::{ops::DerefMut, sync::Arc};

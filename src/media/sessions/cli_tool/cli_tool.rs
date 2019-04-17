@@ -3,7 +3,7 @@
 
 use failure::Error;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_mediasession::*;
+use fidl_fuchsia_media_sessions::*;
 use fuchsia_app as app;
 use fuchsia_async as fasync;
 use fuchsia_zircon::AsHandleRef;

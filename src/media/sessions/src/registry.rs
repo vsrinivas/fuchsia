@@ -7,7 +7,7 @@ use crate::{
     session_list::SessionList, session_proxy::*, subscriber::Subscriber, Result,
 };
 use fidl::endpoints::RequestStream;
-use fidl_fuchsia_mediasession::{
+use fidl_fuchsia_media_sessions::{
     ActiveSession, RegistryControlHandle, RegistryRequest, RegistryRequestStream, SessionDelta,
     SessionEntry, SessionsChange,
 };

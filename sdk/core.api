@@ -22,6 +22,7 @@ sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.media.playback
+sdk://fidl/fuchsia.media.sessions
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.net

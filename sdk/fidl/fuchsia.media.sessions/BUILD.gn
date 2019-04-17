@@ -4,7 +4,9 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.mediasession") {
+fidl("fuchsia.media.sessions") {
+  sdk_category = "partner"
+
   sources = [
     "image.fidl",
     "playback_capabilities.fidl",

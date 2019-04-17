@@ -8,7 +8,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_math::Size;
 use fidl_fuchsia_media::TimelineFunction;
-use fidl_fuchsia_mediasession::*;
+use fidl_fuchsia_media_sessions::*;
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;

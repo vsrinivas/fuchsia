@@ -5,7 +5,7 @@
 
 use fidl_fuchsia_math::*;
 use fidl_fuchsia_media::*;
-use fidl_fuchsia_mediasession::*;
+use fidl_fuchsia_media_sessions::*;
 
 pub struct Clonable<T>(pub T);
 
