@@ -28,7 +28,7 @@ using enclosing process, clients will typically setup a layout for the test usin
 (facet)[#facet] in the component-under-test's cmx manifest.
 
 In service provider mode, `netemul_sandbox` will expose the
-[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) protocol that allows
+[fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) protocol that allows
 users to create netemul's managed environments or run full sandboxes from components.
 
 In sum, users have two options to use netemul for a given component under test:
@@ -37,7 +37,7 @@ component under test *within* a netemul environment. See [Runner sample setup](#
 for an example of how to run a component like this.
 * use `netemul_sandbox` as a service provider injected into the component under test's environment
 by using the standard `fuchsia.test` facet. The component under test can then simply use the provided
-[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) service to spawn and
+[fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) service to spawn and
 control hermetic environments and emulated networks.
 
 ## Runner sample setup
@@ -69,13 +69,13 @@ run it:
 }
 ```
 
-`netemul_sandbox`'s [tests](test)
+`netemul_sandbox`'s [tests](runner/test)
 use the pattern thoroughly and can be a good source of examples.
 
 *Note 1*: the `bin/app` entry is just there to match the manifest schema, it is not used nor points
 to anything of importance.
 
-*Note 2*: Make sure to match the build file pattern used [here](test/BUILD.gn) for tests that are
+*Note 2*: Make sure to match the build file pattern used [here](runner/test/BUILD.gn) for tests that are
 defined solely by a cmx manifest, otherwise you risk your test being enumerated by the integration
 test framework.
 
@@ -83,7 +83,7 @@ test framework.
 ## Sandbox service sample setup
 
 If your component under test doesn't need to (or shouldn't) be *inside* a netemul environment, you
-can use the  [fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) service
+can use the  [fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) service
 by injecting it into your test component's environment. Your component's cmx manifest will look like:
 ```json
 {
@@ -108,7 +108,7 @@ by injecting it into your test component's environment. Your component's cmx man
 The `fuchsia.test` facet when run by `run_test_component` (the standard way of running tests) will
 spawn an instance of the sandbox service for use by the component under test.
 
-A rust example of how to use the sandbox service can be found [here](test/sandbox_service/src/main.rs).
+A rust example of how to use the sandbox service can be found [here](runner/test/sandbox_service/src/main.rs).
 
 
 ## Services
@@ -120,7 +120,7 @@ that can be used to manipulate and configure the environment. Just don't forget 
 ### NetworkContext
 
 `netemul_sandbox` creates a **single** *NetworkContext* instance (see
-[fuchsia.netemul.network](../../public/lib/netemul/fidl/network.fidl))
+[fuchsia.netemul.network](lib/fidl/network.fidl))
 and makes it available to **all** environments that are created under it. That is to say, *NetworkContext*
 intentionally breaks hermeticity. This service is the core motivator behind *Netemul Runner*, as it
 is able to create virtual networks that can be used to connect different hermetic test environments.
@@ -132,7 +132,7 @@ to use it or, alternatively, the virtual networks can be setup using the configu
 ### Managed Environment
 
 Every environment in the sandbox will be exposed to the service
-[fuchsia.netemul.environment.ManagedEnvironment](../../public/lib/netemul/fidl/environment.fidl).
+[fuchsia.netemul.environment.ManagedEnvironment](lib/fidl/environment.fidl).
 You can use the provided service to launch other child environments (which may or may not inherit settings).
 **Every** managed environment is completely hermetic from a services perspective, apart from
 basic configuration that may be inherited. If you wish to have service inheritance in your spawned
@@ -158,13 +158,13 @@ for more information. If enabled, log prints will be tagged with the environment
 ### SyncManager
 
 Along the same lines as *NetworkContext*, `netemul_sandbox` creates a **single** *Syncmanager* instance
-(see [fuchsia.netemul.sync](../../public/lib/netemul/fidl/sync.fidl))
+(see [fuchsia.netemul.sync](lib/fidl/sync.fidl))
 that is shared between all created environments. Clients can (and are encouraged to) use the *Bus*
 service or the other provided primitives to synchronize multiple test agents that are spawned
 across different environments.
 
 For example
-(see [netstack_socks test](test/netstack_socks/src/main.rs)
+(see [easy_nestack_cfg test](runner/test/easy_netstack_cfg/src/main.rs)
 for working code), a test that creates a TCP *server* on one environment and a *client* on another is encouraged
 to use the *Bus* service to have the *server* communicate with the *client* out-of-band first and ensure it's
 actually ready to listen for incoming connections.
