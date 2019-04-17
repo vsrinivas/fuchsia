@@ -29,6 +29,7 @@ enum BackendName {
     Rust,
     Json,
     Ast,
+    Abigen,
 }
 
 impl FromStr for BackendName {
@@ -42,8 +43,9 @@ impl FromStr for BackendName {
             "rust" => Ok(BackendName::Rust),
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
+            "abigen" => Ok(BackendName::Abigen),
             _ => Err(format!(
-                "Unrecognized backend for banjo. Current valid ones are: C, Cpp, Rust, Ast"
+                "Unrecognized backend for banjo. Current valid ones are: C, Cpp, Rust, Ast, Abigen"
             )),
         }
     }
@@ -172,6 +174,7 @@ fn main() -> Result<(), Error> {
         BackendName::Cpp => Box::new(CppBackend::new(&mut output)),
         BackendName::CppInternal => Box::new(CppInternalBackend::new(&mut output)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
+        BackendName::Abigen => Box::new(AbigenBackend::new(&mut output)),
         e => {
             eprintln!("{:?} backend is not yet implemented", e);
             ::std::process::exit(1);

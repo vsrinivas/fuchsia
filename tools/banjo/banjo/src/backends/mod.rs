@@ -4,8 +4,11 @@
 
 use {crate::ast::BanjoAst, failure::Error, std::io};
 
-pub use self::{ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppInternalBackend};
+pub use self::{
+    abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppInternalBackend,
+};
 
+mod abigen;
 mod ast;
 mod c;
 mod cpp;

@@ -225,3 +225,18 @@ mod cpp_internal {
         "cpp/callback-internal.h"
     );
 }
+
+mod abigen {
+    use super::*;
+
+    // Note that .abigen.out is used to avoid unnecessarily requiring an "API
+    // Review" bit on Gerrit.
+
+    codegen_test!(empty, AbigenBackend, ["banjo/empty.test.banjo"], "abigen/empty.abigen.out");
+    codegen_test!(
+        abigen_protocol_basic,
+        AbigenBackend,
+        ["banjo/abigen-protocol-basic.test.banjo"],
+        "abigen/abigen-protocol-basic.abigen.out"
+    );
+}
