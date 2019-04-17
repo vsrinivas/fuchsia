@@ -134,8 +134,8 @@ async fn resolve<'a>(
     // FIXME: use the package cache to fetch the package instead of amber.
 
     // Ask amber to cache the package.
-    let chan =
-        await!(amber.get_update_complete(&name, uri.variant(), uri.hash())).map_err(|err| {
+    let chan = await!(amber.get_update_complete(&name, uri.variant(), uri.package_hash()))
+        .map_err(|err| {
             fx_log_err!("error communicating with amber: {:?}", err);
             Status::INTERNAL
         })?;

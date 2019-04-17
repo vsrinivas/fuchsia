@@ -32,7 +32,7 @@ use url::Url;
 /// - fuchsia-pkg://example.com/some-package/some-variant#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource (obsolete)
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PkgUri {
     host: String,
     path: String,
@@ -116,7 +116,7 @@ impl PkgUri {
         &self.path
     }
 
-    pub fn hash(&self) -> Option<&str> {
+    pub fn package_hash(&self) -> Option<&str> {
         self.hash.as_ref().map(|s| &**s)
     }
 
@@ -246,7 +246,7 @@ impl<'de> Deserialize<'de> for PkgUri {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(transparent)]
 pub struct RepoUri {
     uri: PkgUri,
@@ -410,7 +410,7 @@ mod tests {
                         assert_eq!(uri.path(), $pkg_path);
                         assert_eq!(uri.name(), $pkg_name);
                         assert_eq!(uri.variant(), $pkg_variant);
-                        assert_eq!(uri.hash(), $pkg_hash);
+                        assert_eq!(uri.package_hash(), $pkg_hash);
                         assert_eq!(uri.resource(), $pkg_resource);
                     }
 
@@ -753,7 +753,7 @@ mod tests {
         assert_eq!("/", uri.path());
         assert_eq!(None, uri.name());
         assert_eq!(None, uri.variant());
-        assert_eq!(None, uri.hash());
+        assert_eq!(None, uri.package_hash());
         assert_eq!(None, uri.resource());
 
         assert_eq!(PkgUri::new_repository("".to_string()), Err(ParseError::InvalidHost));
@@ -773,7 +773,7 @@ mod tests {
         assert_eq!(Some("stable"), uri.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
-            uri.hash()
+            uri.package_hash()
         );
         assert_eq!(None, uri.resource());
         assert_eq!(uri, uri.root_uri());
@@ -829,7 +829,7 @@ mod tests {
         assert_eq!(Some("stable"), uri.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a"),
-            uri.hash()
+            uri.package_hash()
         );
         assert_eq!(Some("foo/bar"), uri.resource());
         let mut uri_no_resource = uri.clone();

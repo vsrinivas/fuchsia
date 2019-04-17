@@ -96,13 +96,13 @@ impl Rule {
             (_, None) => PkgUri::new_package(
                 self.host_replacement.clone(),
                 new_path,
-                uri.hash().map(|s| s.to_owned()),
+                uri.package_hash().map(|s| s.to_owned()),
             ),
 
             (_, Some(resource)) => PkgUri::new_resource(
                 self.host_replacement.clone(),
                 new_path,
-                uri.hash().map(|s| s.to_owned()),
+                uri.package_hash().map(|s| s.to_owned()),
                 resource.to_owned(),
             ),
         })
