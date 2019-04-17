@@ -5,13 +5,14 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_UTIL_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_UTIL_H_
 
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/zx/event.h>
 
 namespace a11y_manager {
 
 // Utility function to extract Koid from an event.
-zx_koid_t GetKoid(const zx::object_base& object);
+zx_koid_t GetKoid(const fuchsia::ui::views::ViewRef& view_ref);
 
 }  // namespace a11y_manager
 

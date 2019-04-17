@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -29,18 +30,19 @@ class SemanticsManagerImpl
   // coordinates from Scenic. Currently, this only supports 2D hit-tests
   // using bounding boxes.
   fuchsia::accessibility::semantics::NodePtr GetHitAccessibilityNode(
-      const zx::event& view_ref, const fuchsia::math::PointF point);
+      const fuchsia::ui::views::ViewRef& view_ref,
+      const fuchsia::math::PointF point);
 
   // Provides the manager a way to query a node if it already knows
   // what view id and node id it wants to query for. This method returns
   // a copy of the queried node. It may return a nullptr if no node is found.
   fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
-      const zx::event& view_ref, const int32_t node_id);
+      const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id);
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterView(
-      zx::event view_ref,
+      fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<
           fuchsia::accessibility::semantics::SemanticActionListener>
           handle,

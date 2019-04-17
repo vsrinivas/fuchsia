@@ -6,8 +6,8 @@
 
 namespace a11y_manager {
 
-zx_koid_t GetKoid(const zx::object_base& object) {
-  return fsl::GetKoid(object.get());
+zx_koid_t GetKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  return fsl::GetKoid(view_ref.reference.get());
 }
 
 }  // namespace a11y_manager

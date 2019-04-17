@@ -75,7 +75,6 @@ library fuchsia.ui.views;
 /// See also: |fuchsia.intl.PropertyProvider|, |fuchsia.accessibility.PropertyProvider|.
 ///
 /// TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
-
 [Discoverable]
 protocol View {
     /// DEPRECATED
@@ -105,5 +104,26 @@ protocol View {
     SetConfig(ViewConfig config);
 };
 
-// TODO: Use a real ViewRef once it's ready.
-struct ViewRef {};
+/// A ViewRef is a kernel object that identifies a unique View
+/// across the system. When two ViewRefs refer to the same View,
+/// they have identical KOIDs.
+///
+/// We use a ViewRef to identify a View, to validate a View, and to
+/// signal invalidation.
+///
+/// For example, accessibility accepts a ViewRef to validate that
+/// a client has a valid View, and subsequently uses that ViewRef
+/// to group the semantic nodes associated with that View.
+///
+/// Another example: We use ViewRefs to create a FocusChain
+/// (TBD), which identifies Views considered as "in-focus" down
+/// the View hierarchy. When a View is destroyed, Scenic signals
+/// to all ViewRef holders that the ViewRef is now invalid.
+///
+/// Scenic creates and associates a ViewRef for each View. Scenic
+/// creates a copy of a ViewRef upon request by that View. The
+/// clone is transferrable, cloneable, and waitable, but not
+/// signalable (latter is reserved for Scenic).
+struct ViewRef {
+    handle<event> reference;
+};

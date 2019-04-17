@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/a11y/a11y_manager/semantics/semantics_manager_impl.h"
+
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
-
-#include "semantics_manager_impl.h"
 
 namespace a11y_manager {
 
@@ -20,7 +20,7 @@ void SemanticsManagerImpl::AddBinding(
 }
 
 void SemanticsManagerImpl::RegisterView(
-    zx::event view_ref,
+    fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<
         fuchsia::accessibility::semantics::SemanticActionListener>
         handle,
@@ -44,7 +44,8 @@ void SemanticsManagerImpl::RegisterView(
 
 fuchsia::accessibility::semantics::NodePtr
 SemanticsManagerImpl::GetHitAccessibilityNode(
-    const zx::event& view_ref, const fuchsia::math::PointF point) {
+    const fuchsia::ui::views::ViewRef& view_ref,
+    const fuchsia::math::PointF point) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->IsSameView(view_ref))
       return binding->impl()->GetHitAccessibilityNode(point);
@@ -53,8 +54,8 @@ SemanticsManagerImpl::GetHitAccessibilityNode(
 }
 
 fuchsia::accessibility::semantics::NodePtr
-SemanticsManagerImpl::GetAccessibilityNode(const zx::event& view_ref,
-                                           const int32_t node_id) {
+SemanticsManagerImpl::GetAccessibilityNode(
+    const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->IsSameView(view_ref))
       return binding->impl()->GetAccessibilityNode(node_id);

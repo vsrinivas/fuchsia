@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/a11y/a11y_manager/semantics/semantic_tree_impl.h"
+
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
 #include <src/lib/fxl/logging.h>
-
-#include "garnet/bin/a11y/a11y_manager/semantics/semantic_tree_impl.h"
 
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
@@ -74,7 +74,7 @@ SemanticTreeImpl::GetAccessibilityNode(uint32_t node_id) {
   return node_ptr;
 }
 
-bool SemanticTreeImpl::IsSameView(const zx::event& view_ref) {
+bool SemanticTreeImpl::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
   return GetKoid(view_ref) == GetKoid(view_ref_);
 }
 

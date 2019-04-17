@@ -4,6 +4,8 @@
 
 library fuchsia.accessibility.semantics;
 
+using fuchsia.ui.views;
+
 /// An interface to manage connections with views for the purposes of gathering semantic information
 /// about their current UI state.
 ///
@@ -12,7 +14,7 @@ library fuchsia.accessibility.semantics;
 /// semantic tree for that view.
 [Discoverable]
 protocol SemanticsManager {
-    RegisterView(handle<event> view_ref, // TODO: replace with ViewRef type once it exists
+    RegisterView(fuchsia.ui.views.ViewRef view_ref,
                  SemanticActionListener listener,
                  request<SemanticTree> semantic_tree_request);
 };

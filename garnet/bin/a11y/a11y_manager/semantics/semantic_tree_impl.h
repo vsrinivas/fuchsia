@@ -24,7 +24,7 @@ class SemanticTreeImpl
     : public fuchsia::accessibility::semantics::SemanticTree {
  public:
   explicit SemanticTreeImpl(
-      zx::event view_ref,
+      fuchsia::ui::views::ViewRef view_ref,
       fuchsia::accessibility::semantics::SemanticActionListenerPtr
           client_action_listener,
       vfs::PseudoDir* debug_dir)
@@ -66,7 +66,7 @@ class SemanticTreeImpl
           OnAccessibilityActionRequestedCallback callback);
 
   // Compares a view with the current view of the semantic tree, based on KOID.
-  bool IsSameView(const zx::event& view_ref);
+  bool IsSameView(const fuchsia::ui::views::ViewRef& view_ref);
 
  private:
   // Representation of single semantic tree update/delete transaction.
@@ -136,7 +136,7 @@ class SemanticTreeImpl
   // List of pending semantic tree transactions.
   std::vector<SemanticTreeTransaction> pending_transactions_;
 
-  zx::event view_ref_;
+  fuchsia::ui::views::ViewRef view_ref_;
   fuchsia::accessibility::semantics::SemanticActionListenerPtr
       client_action_listener_;
   vfs::PseudoDir* const debug_dir_;
