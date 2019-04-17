@@ -5,30 +5,62 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ETHERTAP_CLIENT_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ETHERTAP_CLIENT_H_
 
+#include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+#include <src/lib/fxl/macros.h>
 #include <stdlib.h>
 #include <zircon/types.h>
+
 #include <memory>
 #include <string>
 #include <vector>
-#include "ethertap_types.h"
 
 namespace netemul {
 
 class EthertapConfig {
  public:
   std::string name = "etap";
-  uint32_t options = 0;
-  uint32_t features = 0;
-  uint32_t mtu = 1500;
-  Mac mac;
+  fuchsia::hardware::ethertap::Config tap_cfg;
 
-  explicit EthertapConfig(std::string tap_name) : name(std::move(tap_name)) {
-    mac.RandomLocalUnicast(name);
+  explicit EthertapConfig(std::string tap_name) : EthertapConfig() {
+    name = std::move(tap_name);
+    RandomLocalUnicast(name);
   }
-  explicit EthertapConfig(const Mac& mac) : mac(mac) {}
+  explicit EthertapConfig(const fuchsia::hardware::ethernet::MacAddress& mac)
+      : EthertapConfig() {
+    mac.Clone(&tap_cfg.mac);
+  }
+
+  EthertapConfig() {
+    tap_cfg.features = 0;
+    tap_cfg.options = 0;
+    tap_cfg.mtu = 1500;
+  }
+
+  EthertapConfig(EthertapConfig&& oth) {
+    name = std::move(oth.name);
+    tap_cfg = std::move(oth.tap_cfg);
+  }
+
+  EthertapConfig(const EthertapConfig& oth) {
+    name = oth.name;
+    oth.tap_cfg.Clone(&tap_cfg);
+  }
+
+  // helper to set the unicast bits in the containing tap configuration.
+  void SetMacUnicast();
+  // helper to set the locally administered bits in the containing tap
+  // configuration.
+  void SetMacLocallyAdministered();
+  // helper function to check if contained mac address is locally administered.
+  bool IsMacLocallyAdministered();
+
+  // helper to generate a random local unicast mac with a given string seed
+  void RandomLocalUnicast(const std::string& str_seed);
+
+  FXL_DISALLOW_ASSIGN(EthertapConfig);
 };
 
 // Helper class to create and operate Ethertap Devices.
@@ -63,7 +95,7 @@ class EthertapClient {
   // Creates an EthertapClient with given configuration.
   // A null reference will be returned if the client can't be created.
   static std::unique_ptr<EthertapClient> Create(
-      const EthertapConfig& config, async_dispatcher_t* dispatcher = nullptr);
+      EthertapConfig config, async_dispatcher_t* dispatcher = nullptr);
 };
 
 }  // namespace netemul

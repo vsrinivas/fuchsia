@@ -34,7 +34,7 @@ constexpr uint32_t ETH_SIGNAL_STATUS =
 struct WatchCbArgs {
   std::string result;
   const std::string& base_dir;
-  const Mac& search_mac;
+  const EthernetClient::Mac& search_mac;
 };
 
 class FifoHolder {
@@ -298,8 +298,8 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // Not a match, keep looking.
     return ZX_OK;
   }
-  if (memcmp(args->search_mac.d, &info.mac.octets[0],
-             sizeof(args->search_mac.d)) != 0) {
+  if (memcmp(args->search_mac.octets.data(), info.mac.octets.data(),
+             args->search_mac.octets.size()) != 0) {
     // not a match, keep looking
     return ZX_OK;
   }
@@ -416,8 +416,8 @@ void EthernetClient::set_online(bool online) {
   }
 }
 
-std::string EthernetClientFactory::MountPointWithMAC(const Mac& mac,
-                                                     unsigned int deadline_ms) {
+std::string EthernetClientFactory::MountPointWithMAC(
+    const EthernetClient::Mac& mac, unsigned int deadline_ms) {
   WatchCbArgs args{.base_dir = base_dir_, .search_mac = mac};
 
   int ethdir = open(base_dir_.c_str(), O_RDONLY);
@@ -440,7 +440,8 @@ std::string EthernetClientFactory::MountPointWithMAC(const Mac& mac,
 }
 
 EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(
-    const Mac& mac, unsigned int deadline_ms, async_dispatcher_t* dispatcher) {
+    const EthernetClient::Mac& mac, unsigned int deadline_ms,
+    async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }

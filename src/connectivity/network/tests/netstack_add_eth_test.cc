@@ -39,7 +39,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   ASSERT_TRUE(tap) << "failed to create ethertap device";
 
   netemul::EthernetClientFactory eth_factory;
-  auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
+  auto eth = eth_factory.RetrieveWithMAC(eth_config.tap_cfg.mac);
   ASSERT_TRUE(eth) << "failed to retrieve ethernet client";
 
   bool list_ifs = false;
@@ -109,7 +109,7 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   ASSERT_TRUE(tap) << "failed to create ethertap device";
 
   netemul::EthernetClientFactory eth_factory;
-  auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
+  auto eth = eth_factory.RetrieveWithMAC(eth_config.tap_cfg.mac);
   ASSERT_TRUE(eth) << "failed to retrieve ethernet client";
 
   bool list_ifs = false;
@@ -178,7 +178,7 @@ TEST_F(NetstackLaunchTest, DHCPRequestSent) {
   tap->SetLinkUp(true);
 
   netemul::EthernetClientFactory eth_factory;
-  auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
+  auto eth = eth_factory.RetrieveWithMAC(eth_config.tap_cfg.mac);
   ASSERT_TRUE(eth) << "failed to retrieve ethernet client";
 
   fuchsia::netstack::NetstackPtr netstack;

@@ -31,31 +31,33 @@ class EndpointImpl : public data::Consumer {
   void CloneConfig(Endpoint::Config* config) { config_.Clone(config); }
 
   zx_status_t Setup(const std::string& name) {
-    Mac mac;
+    EthertapConfig config;
     if (config_.mac) {
-      memcpy(mac.d, &config_.mac->octets[0], sizeof(mac.d));
+      config_.mac->Clone(&config.tap_cfg.mac);
     } else {
       // if mac is not provided, random mac is assigned with a seed based on
       // name
-      mac.RandomLocalUnicast(name);
+      config.RandomLocalUnicast(name);
     }
 
-    EthertapConfig config(mac);
     config.name = name;
-    config.mtu = config_.mtu;
+    config.tap_cfg.mtu = config_.mtu;
     ethertap_ = EthertapClient::Create(config);
     if (!ethertap_) {
       return ZX_ERR_INTERNAL;
     }
 
-    ethernet_mount_path_ = EthernetClientFactory().MountPointWithMAC(mac);
+    ethernet_mount_path_ =
+        EthernetClientFactory().MountPointWithMAC(config.tap_cfg.mac);
     // can't find mount path for ethernet!!
     if (ethernet_mount_path_.empty()) {
       fprintf(
           stderr,
           "Failed to locate ethertap device %s %02X:%02X:%02X:%02X:%02X:%02X\n",
-          name.c_str(), mac.d[0], mac.d[1], mac.d[2], mac.d[3], mac.d[4],
-          mac.d[5]);
+          name.c_str(), config.tap_cfg.mac.octets[0],
+          config.tap_cfg.mac.octets[1], config.tap_cfg.mac.octets[2],
+          config.tap_cfg.mac.octets[3], config.tap_cfg.mac.octets[4],
+          config.tap_cfg.mac.octets[5]);
       return ZX_ERR_INTERNAL;
     }
 

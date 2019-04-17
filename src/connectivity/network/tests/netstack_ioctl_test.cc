@@ -54,7 +54,7 @@ TEST_F(NetstackIoctlTest, RunIoctlClient) {
   tap->SetLinkUp(true);
 
   netemul::EthernetClientFactory eth_factory;
-  auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
+  auto eth = eth_factory.RetrieveWithMAC(eth_config.tap_cfg.mac);
   ASSERT_TRUE(eth) << "failed to retrieve ethernet client";
 
   fuchsia::netstack::NetstackPtr netstack;

@@ -11,8 +11,6 @@
 
 #include <memory>
 
-#include "ethertap_types.h"
-
 namespace netemul {
 
 struct EthernetConfig {
@@ -30,6 +28,7 @@ class EthernetClient {
   using DataCallback = fit::function<void(const void* buf, size_t len)>;
   using PeerClosedCallback = fit::function<void()>;
   using LinkStatusChangedCallback = fit::function<void(bool link_up)>;
+  using Mac = fuchsia::hardware::ethernet::MacAddress;
 
   explicit EthernetClient(
       async_dispatcher_t* dispatcher,
@@ -82,12 +81,12 @@ class EthernetClientFactory {
 
   // finds the mount point of an ethernet device with given Mac.
   // This is achieved based on directory watching and will only fail on timeout.
-  std::string MountPointWithMAC(const Mac& mac,
+  std::string MountPointWithMAC(const EthernetClient::Mac& mac,
                                 unsigned int deadline_ms = 2000);
 
   // Same as MountPointWithMac, but returns an instance of EthernetClient
   // already bound to the found mount point.
-  EthernetClient::Ptr RetrieveWithMAC(const Mac& mac,
+  EthernetClient::Ptr RetrieveWithMAC(const EthernetClient::Mac& mac,
                                       unsigned int deadline_ms = 2000,
                                       async_dispatcher_t* dispatcher = nullptr);
 

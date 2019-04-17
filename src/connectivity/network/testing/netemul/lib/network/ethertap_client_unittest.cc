@@ -24,23 +24,21 @@ using sys::testing::TestWithEnvironment;
 class EthertapClientTest : public TestWithEnvironment {
  public:
   // pushes an interface into local vectors
-  void PushInterface(Mac* mac = nullptr) {
+  void PushInterface() {
     EthertapConfig config(fxl::StringPrintf("etap-%lu", taps_.size()));
-    config.mtu = TEST_MTU_SIZE;
-    config.options = fuchsia::hardware::ethertap::OPT_TRACE;
+    config.tap_cfg.mtu = TEST_MTU_SIZE;
+    config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_TRACE;
 
-    if (mac) {
-      memcpy(mac->d, config.mac.d, sizeof(config.mac.d));
-    }
+    ASSERT_TRUE(config.IsMacLocallyAdministered());
 
-    ASSERT_TRUE(config.mac.IsLocallyAdministered());
     fprintf(stderr, "startup with mac %02X:%02X:%02X:%02X:%02X:%02X\n",
-            config.mac.d[0], config.mac.d[1], config.mac.d[2], config.mac.d[3],
-            config.mac.d[4], config.mac.d[5]);
+            config.tap_cfg.mac.octets[0], config.tap_cfg.mac.octets[1],
+            config.tap_cfg.mac.octets[2], config.tap_cfg.mac.octets[3],
+            config.tap_cfg.mac.octets[4], config.tap_cfg.mac.octets[5]);
 
     auto tap = EthertapClient::Create(config);
     ASSERT_TRUE(tap);
-    auto eth = EthernetClientFactory().RetrieveWithMAC(config.mac);
+    auto eth = EthernetClientFactory().RetrieveWithMAC(config.tap_cfg.mac);
     ASSERT_TRUE(eth);
     bool ok = false;
 
@@ -191,8 +189,7 @@ TEST_F(EthertapClientTest, EthertapLink) {
 }
 
 TEST_F(EthertapClientTest, EthertapClose) {
-  Mac mac;
-  PushInterface(&mac);
+  PushInterface();
   bool ok = false;
   eth()->device()->GetStatus([&ok](uint32_t status) { ok = true; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
