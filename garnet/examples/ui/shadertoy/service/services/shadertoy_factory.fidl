@@ -5,7 +5,6 @@
 library fuchsia.examples.shadertoy;
 
 using fuchsia.images;
-using fuchsia.ui.viewsv1token;
 
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|
 // instances.

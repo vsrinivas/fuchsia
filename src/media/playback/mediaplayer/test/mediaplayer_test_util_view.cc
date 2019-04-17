@@ -341,10 +341,6 @@ void MediaPlayerTestUtilView::Layout() {
       -kProgressBarSliderElevation);
 
   // Ask the view to fill the space.
-  ::fuchsia::ui::viewsv1::ViewProperties view_properties;
-  view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
-  view_properties.view_layout->size.width = content_rect_.width;
-  view_properties.view_layout->size.height = content_rect_.height;
   video_view_holder_->SetViewProperties(0, 0, 0, content_rect_.width,
                                         content_rect_.height, 1000.f, 0, 0, 0,
                                         0, 0, 0);

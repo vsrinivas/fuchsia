@@ -15,6 +15,5 @@ fidl("services") {
   public_deps = [
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
   ]
 }

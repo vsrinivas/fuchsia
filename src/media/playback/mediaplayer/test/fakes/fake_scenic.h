@@ -5,27 +5,23 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SCENIC_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SCENIC_H_
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_session.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_view_manager.h"
 
 namespace media_player {
 namespace test {
 
-// Implements ViewManager for testing.
-class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
+// Implements Scenic for testing.
+class FakeScenic : public fuchsia::ui::scenic::Scenic {
  public:
   FakeScenic();
 
   ~FakeScenic() override;
 
   FakeSession& session() { return fake_session_; }
-
-  FakeViewManager& view_manager() { return fake_view_manager_; }
 
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
@@ -34,14 +30,14 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
   }
 
   // Binds this scenic.
-  void Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request) {
+  void Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
   // Scenic implementation.
   void CreateSession(
-      ::fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> session,
-      ::fidl::InterfaceHandle<::fuchsia::ui::scenic::SessionListener> listener)
+      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
       override;
 
   void GetDisplayInfo(GetDisplayInfoCallback callback) override;
@@ -53,9 +49,8 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
 
  private:
   async_dispatcher_t* dispatcher_;
-  fidl::BindingSet<::fuchsia::ui::scenic::Scenic> bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   FakeSession fake_session_;
-  FakeViewManager fake_view_manager_;
 };
 
 }  // namespace test

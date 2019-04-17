@@ -4,16 +4,17 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 
+#include <fuchsia/math/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/optional.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/split_string.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/split_string.h>
 
 namespace examples {
 

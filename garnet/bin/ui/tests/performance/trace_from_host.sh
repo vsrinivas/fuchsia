@@ -46,7 +46,7 @@ ALL_ARGS="${@}"
 if ! [[ ${ALL_ARGS} =~ "--nokill" ]]
 then
   echo "Killing processes and setting renderer params: $@"
-  (set -x; fx shell "killall root_presenter; killall scenic; killall basemgr; killall view_manager; killall flutter*")
+  (set -x; fx shell "killall root_presenter; killall scenic; killall basemgr; killall flutter*")
   (set -x; fx shell "fuchsia-pkg://fuchsia.com/set_renderer_params#meta/set_renderer_params.cmx --render_continuously $@")
   echo "== Press control-C to start tracing (after basemgr starts.) =="
   (set -x; fx shell "run fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx &")

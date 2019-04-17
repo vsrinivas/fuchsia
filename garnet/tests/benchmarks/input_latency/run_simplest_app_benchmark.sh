@@ -31,9 +31,8 @@ echo "== $BENCHMARK_LABEL: Killing processes..."
 killall root_presenter* || true
 killall scenic* || true
 killall basemgr* || true
-killall view_manager* || true
 killall flutter* || true
-killall set_root_view* || true
+killall present_view* || true
 
 echo "== $BENCHMARK_LABEL: Starting app..."
 /bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx

@@ -45,8 +45,7 @@ j:1029               796.8M  783.9M         root
         p:3529       356.8k    356k     28k root_presenter
         p:3587       124.2M  124.0M    404k flutter:userpicker_device_shell
         p:3810       288.8k    288k     28k ktrace_provider
-        p:3955       332.8k    332k     28k view_manager
-        p:4110        49.2M   49.1M    356k scene_manager
+        p:4110        49.2M   49.1M    356k scenic
         p:4269       456.8k    456k     28k icu_data
         p:4404       456.8k    456k     28k fonts
         p:24555      296.8k    296k     28k oauth_token_manager

@@ -505,13 +505,6 @@ void PlayerImpl::Seek(int64_t position) {
   Update();
 }
 
-void PlayerImpl::CreateView(
-    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request) {
-  CreateView2(zx::eventpair(view_owner_request.TakeChannel().release()));
-}
-
 void PlayerImpl::CreateView2(zx::eventpair view_token) {
   MaybeCreateRenderer(StreamType::Medium::kVideo);
   if (!video_renderer_) {

@@ -5,21 +5,21 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
 
-#include <map>
-#include <memory>
-
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/ui/input/device_state.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <map>
+#include <memory>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
@@ -111,9 +111,8 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener)
       override;
 
-  // Sets |display_metrics_| and updates view_manager and Scenic.
-  // Returns false if the updates were skipped (if display initialization hasn't
-  // happened yet).
+  // Sets |display_metrics_| and updates Scenic.  Returns false if the updates
+  // were skipped (if display initialization hasn't happened yet).
   bool ApplyDisplayModelChanges(bool print_log, bool present_changes);
   bool ApplyDisplayModelChangesHelper(bool print_log);
 

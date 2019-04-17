@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H
-#define LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H
+#ifndef GARNET_LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H_
+#define GARNET_LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
 
-#include "src/lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/macros.h"
 
 class VkCubeView : public scenic::BaseView {
  public:
@@ -44,4 +43,4 @@ class VkCubeView : public scenic::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);
 };
 
-#endif  // LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H
+#endif  // GARNET_LIB_VULKAN_TESTS_VKCUBE_VKCUBE_VIEW_H_

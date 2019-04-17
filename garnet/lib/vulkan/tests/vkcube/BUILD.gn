@@ -29,7 +29,6 @@ executable("vkcube_on_scenic") {
     "//garnet/public/lib/ui/scenic",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/vulkan",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//src/lib/fxl",
   ]
   public_deps = [

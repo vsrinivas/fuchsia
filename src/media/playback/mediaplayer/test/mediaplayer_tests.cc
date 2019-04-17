@@ -47,7 +47,6 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 
     services->AddService(fake_audio_.GetRequestHandler());
     services->AddService(fake_scenic_.GetRequestHandler());
-    services->AddService(fake_scenic_.view_manager().GetRequestHandler());
 
     // Create the synthetic environment.
     environment_ =

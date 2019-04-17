@@ -52,7 +52,6 @@ source_set("cpp") {
     "//garnet/bin/ui/root_presenter:*",
     "//garnet/bin/ui/snapshot:*",
     "//garnet/bin/ui/tests/performance/vulkan_is_supported/*",
-    "//garnet/bin/ui/view_manager/*",
     "//garnet/examples/media/use_media_decoder/*",
     "//garnet/examples/media/use_media_decoder/*",
     "//garnet/examples/media/use_media_decoder/*",

@@ -8,8 +8,7 @@ using fuchsia.math;
 using fuchsia.media;
 using fuchsia.media.audio;
 using fuchsia.net.oldhttp;
-using fuchsia.ui.viewsv1;
-using fuchsia.ui.viewsv1token;
+using fuchsia.ui.views;
 using zx;
 
 /// Plays media.
@@ -39,9 +38,8 @@ protocol Player {
     Seek(int64 position);
 
     /// Creates a video view.
-    // DEPRECATED
-    CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
-               request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
+    [Transitional]
+    CreateView(fuchsia.ui.views.ViewToken view_token);
 
     /// Creates a video view.
     // Temporary, in use for V2 transition.

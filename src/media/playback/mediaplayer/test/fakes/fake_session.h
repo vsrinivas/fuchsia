@@ -5,8 +5,8 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include <memory>
@@ -22,16 +22,16 @@
 namespace media_player {
 namespace test {
 
-// Implements ViewManager for testing.
-class FakeSession : public ::fuchsia::ui::scenic::Session {
+// Implements Scenic for testing.
+class FakeSession : public fuchsia::ui::scenic::Session {
  public:
   FakeSession();
 
   ~FakeSession() override;
 
   // Binds the session.
-  void Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> request,
-            ::fuchsia::ui::scenic::SessionListenerPtr listener);
+  void Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
+            fuchsia::ui::scenic::SessionListenerPtr listener);
 
   // Indicates that the session should print out expected frame info.
   void DumpExpectations(uint32_t display_height);
@@ -50,19 +50,19 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
   }
 
   // Session implementation.
-  void Enqueue(std::vector<::fuchsia::ui::scenic::Command> cmds) override;
+  void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
   void Present(uint64_t presentation_time,
                std::vector<::zx::event> acquire_fences,
                std::vector<::zx::event> release_fences,
                PresentCallback callback) override;
 
-  void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-               ::fuchsia::ui::gfx::vec3 ray_direction,
+  void HitTest(uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
+               fuchsia::ui::gfx::vec3 ray_direction,
                HitTestCallback callback) override;
 
-  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                        ::fuchsia::ui::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(fuchsia::ui::gfx::vec3 ray_origin,
+                        fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestDeviceRayCallback callback) override;
 
   void SetDebugName(std::string debug_name) override {}
@@ -102,8 +102,8 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
   void PresentScene();
 
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<::fuchsia::ui::scenic::Session> binding_;
-  ::fuchsia::ui::scenic::SessionListenerPtr listener_;
+  fidl::Binding<fuchsia::ui::scenic::Session> binding_;
+  fuchsia::ui::scenic::SessionListenerPtr listener_;
 
   std::unordered_map<uint32_t, Resource> resources_by_id_;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TESTAPP_TEST_CONSTANTS_H
-#define GARNET_BIN_COBALT_TESTAPP_TEST_CONSTANTS_H
+#ifndef SRC_COBALT_BIN_TESTAPP_TEST_CONSTANTS_H_
+#define SRC_COBALT_BIN_TESTAPP_TEST_CONSTANTS_H_
 
 #include <string>
 
@@ -62,8 +62,8 @@ const uint32_t kErrorOccurredIndex = 2;
 
 // Common metric constants.
 const std::string kApplicationComponentNames[] = {
-    "audio_core", "chromium",     "logger", "netstack", "scheduler",
-    "sysmng",     "view_manager", "",       "unknown"};
+    "audio_core", "chromium", "logger", "netstack",
+    "scheduler",  "sysmng",   "scenic", "unknown"};
 
 // file_system_cache_misses metric constants.
 const uint32_t kFileSystemCacheMissesIndices[] = {0, 1};
@@ -133,4 +133,4 @@ const size_t kNumBackfillDays = 2;
 }  // namespace testapp
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TESTAPP_TEST_CONSTANTS_H
+#endif  // SRC_COBALT_BIN_TESTAPP_TEST_CONSTANTS_H_

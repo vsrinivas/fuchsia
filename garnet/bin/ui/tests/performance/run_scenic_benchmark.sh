@@ -103,7 +103,7 @@ DATE=`date +%Y-%m-%dT%H:%M:%S`
 TRACE_FILE="/tmp/trace-${DATE}.json"
 
 echo "== $BENCHMARK_LABEL: Killing processes..."
-killall root_presenter*; killall scenic*; killall basemgr*; killall view_manager*; killall flutter*; killall present_view*
+killall root_presenter*; killall scenic*; killall basemgr*; killall flutter*; killall present_view*
 
 echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
 /pkgfs/packages/run/0/bin/run fuchsia-pkg://fuchsia.com/set_renderer_params#meta/set_renderer_params.cmx --render_continuously $RENDERER_PARAMS

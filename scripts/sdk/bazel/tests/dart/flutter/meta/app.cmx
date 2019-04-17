@@ -2,6 +2,7 @@
     "program": {
         "data": "data/app"
     },
+    "runner": "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cmx",
     "sandbox": {
         "services": [
             "fuchsia.fonts.Provider",
@@ -11,9 +12,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.viewsv1.ViewManager"
+            "fuchsia.ui.scenic.Scenic"
         ]
-    },
-    "runner": "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cmx"
+    }
 }

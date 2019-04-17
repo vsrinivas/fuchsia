@@ -53,11 +53,6 @@ class PlayerImpl : public fuchsia::media::playback::Player {
 
   void Seek(int64_t position) override;
 
-  void CreateView(
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request) override;
-
   void CreateView2(zx::eventpair view_token) override;
 
   void BindGainControl(
