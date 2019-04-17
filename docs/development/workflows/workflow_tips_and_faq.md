@@ -323,8 +323,8 @@ tools with the MacOS Application Firewall.
 
 ## Q: When/how do I make a soft vs hard transition when changing APIs?
 
-See [this section](/development/workflows/multilayer_changes.md#hard-and-soft-transitions)
-about hard and soft transitions.
+See [this section](multilayer_changes.md#hard-and-soft-transitions) about hard
+and soft transitions.
 
 ## Q: How do I update a FIDL protocol?
 
