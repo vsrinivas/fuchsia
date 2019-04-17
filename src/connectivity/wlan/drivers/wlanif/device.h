@@ -59,6 +59,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void MeshPeeringEstablished(::fuchsia::wlan::mlme::MeshPeeringParams params) override;
     void GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest req,
                              GetMeshPathTableReqCallback cb) override;
+    void StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest req,
+                            StartCaptureFramesCallback cb) override;
+    void StopCaptureFrames() override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);
@@ -78,6 +81,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void SignalReport(wlanif_signal_report_indication_t* ind);
     void EapolInd(wlanif_eapol_indication_t* ind);
     void StatsQueryResp(wlanif_stats_query_response_t* resp);
+    void RelayCapturedFrame(wlanif_captured_frame_result* result);
 
     // wlanif_protocol_t (ethmac_protocol -> wlanif_impl_protocol)
     zx_status_t EthStart(const ethmac_ifc_protocol_t* ifc);

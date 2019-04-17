@@ -3411,6 +3411,17 @@ zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_
     return ZX_OK;
 }
 
+void brcmf_hook_start_capture_frames(void* ctx, wlanif_start_capture_frames_req_t* req,
+                                     wlanif_start_capture_frames_resp_t* resp) {
+    brcmf_err("start_capture_frames not supported\n");
+    resp->status = ZX_ERR_NOT_SUPPORTED;
+    resp->supported_mgmt_frames = 0;
+}
+
+void brcmf_hook_stop_capture_frames(void* ctx) {
+    brcmf_err("stop_capture_frames not supported\n");
+}
+
 static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .start = brcmf_if_start,
     .stop = brcmf_if_stop,
@@ -3431,6 +3442,8 @@ static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .query = brcmf_hook_query,
     .stats_query_req = brcmf_hook_stats_query_req,
     .data_queue_tx = brcmf_hook_data_queue_tx,
+    .start_capture_frames = brcmf_hook_start_capture_frames,
+    .stop_capture_frames = brcmf_hook_stop_capture_frames,
 };
 
 static void brcmf_release_zx_if_device(void* ctx) {

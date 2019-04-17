@@ -242,6 +242,38 @@ typedef struct wlanif_eapol_req {
     uint8_t* data;
 } wlanif_eapol_req_t;
 
+// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
+// which management frame subtypes are supported for capture.
+//
+// These values are set at `1 << MgmtFrameSubtypeValue`
+// See IEEE Std 802.11-2016, 9.2.4.1.3, for value of each management frame subtype
+enum {
+    WLAN_MGMT_CAPTURE_FLAG_ASSOC_REQ = 1 << 0,
+    WLAN_MGMT_CAPTURE_FLAG_ASSOC_RESP = 1 << 1,
+    WLAN_MGMT_CAPTURE_FLAG_REASSOC_REQ = 1 << 2,
+    WLAN_MGMT_CAPTURE_FLAG_REASSOC_RESP = 1 << 3,
+    WLAN_MGMT_CAPTURE_FLAG_PROBE_REQ = 1 << 4,
+    WLAN_MGMT_CAPTURE_FLAG_PROBE_RESP = 1 << 5,
+    WLAN_MGMT_CAPTURE_FLAG_TIMING_AD = 1 << 6,
+
+    WLAN_MGMT_CAPTURE_FLAG_BEACON = 1 << 8,
+    WLAN_MGMT_CAPTURE_FLAG_ATIM = 1 << 9,
+    WLAN_MGMT_CAPTURE_FLAG_DISASSOC = 1 << 10,
+    WLAN_MGMT_CAPTURE_FLAG_AUTH = 1 << 11,
+    WLAN_MGMT_CAPTURE_FLAG_DEAUTH = 1 << 12,
+    WLAN_MGMT_CAPTURE_FLAG_ACTION = 1 << 13,
+    WLAN_MGMT_CAPTURE_FLAG_ACTION_NO_ACK = 1 << 14,
+};
+
+typedef struct wlanif_start_capture_frames_req {
+    uint32_t mgmt_frame_flags;
+} wlanif_start_capture_frames_req_t;
+
+typedef struct wlanif_start_capture_frames_resp {
+    int32_t status;
+    uint32_t supported_mgmt_frames;
+} wlanif_start_capture_frames_resp_t;
+
 typedef struct wlanif_scan_result {
     uint64_t txn_id;
     wlanif_bss_description_t bss;
@@ -459,6 +491,11 @@ typedef struct wlanif_stats_query_response {
     wlanif_stats_t stats;
 } wlanif_stats_query_response_t;
 
+typedef struct wlanif_captured_frame_result {
+    size_t data_len;
+    uint8_t* data;
+} wlanif_captured_frame_result_t;
+
 typedef struct wlanif_impl_ifc {
     // MLME operations
     void (*on_scan_result)(void* cookie, wlanif_scan_result_t* result);
@@ -480,6 +517,7 @@ typedef struct wlanif_impl_ifc {
     void (*signal_report)(void* cookie, wlanif_signal_report_indication_t* ind);
     void (*eapol_ind)(void* cookie, wlanif_eapol_indication_t* ind);
     void (*stats_query_resp)(void* cookie, wlanif_stats_query_response_t* resp);
+    void (*relay_captured_frame)(void* cookie, wlanif_captured_frame_result_t* result);
 
     // Data operations
     void (*data_recv)(void* cookie, void* data, size_t length, uint32_t flags);
@@ -512,6 +550,9 @@ typedef struct wlanif_impl_protocol_ops {
 
     // MLME extensions
     void (*stats_query_req)(void* ctx);
+    void (*start_capture_frames)(void* ctx, wlanif_start_capture_frames_req_t* req,
+                                 wlanif_start_capture_frames_resp_t* resp);
+    void (*stop_capture_frames)(void* ctx);
 
     // Data operations
     zx_status_t (*data_queue_tx)(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf);

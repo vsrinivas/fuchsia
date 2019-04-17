@@ -87,6 +87,8 @@ static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
                      { DEV(cookie)->EapolInd(ind); },
     .stats_query_resp = [](void* cookie, wlanif_stats_query_response_t* resp)
                             { DEV(cookie)->StatsQueryResp(resp); },
+    .relay_captured_frame = [](void* cookie, wlanif_captured_frame_result_t* result)
+                                { DEV(cookie)->RelayCapturedFrame(result); },
 
     // Ethernet operations
     .data_recv = [](void* cookie, void* data, size_t length, uint32_t flags)
@@ -652,6 +654,26 @@ void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
     }
 }
 
+void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest req,
+                                StartCaptureFramesCallback cb) {
+    wlanif_start_capture_frames_req_t impl_req = {};
+    impl_req.mgmt_frame_flags = ConvertMgmtCaptureFlags(req.mgmt_frame_flags);
+
+    wlanif_start_capture_frames_resp_t impl_resp = {};
+
+    // forward request to driver
+    wlanif_impl_.ops->start_capture_frames(wlanif_impl_.ctx, &impl_req, &impl_resp);
+
+    wlan_mlme::StartCaptureFramesResponse resp;
+    resp.status = impl_resp.status;
+    resp.supported_mgmt_frames = ConvertMgmtCaptureFlags(impl_resp.supported_mgmt_frames);
+    cb(resp);
+}
+
+void Device::StopCaptureFrames() {
+    wlanif_impl_.ops->stop_capture_frames(wlanif_impl_.ctx);
+}
+
 void Device::OnScanResult(wlanif_scan_result_t* result) {
     std::lock_guard<std::mutex> lock(lock_);
     if (!binding_.is_bound()) {
@@ -956,6 +978,19 @@ void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
     wlan_mlme::StatsQueryResponse fidl_resp;
     ConvertIfaceStats(&fidl_resp.stats, resp->stats);
     binding_.events().StatsQueryResp(std::move(fidl_resp));
+}
+
+void Device::RelayCapturedFrame(wlanif_captured_frame_result* result) {
+    std::lock_guard<std::mutex> lock(lock_);
+    if (!binding_.is_bound()) {
+        return;
+    }
+
+    wlan_mlme::CapturedFrameResult fidl_result;
+    fidl_result.frame.resize(result->data_len);
+    fidl_result.frame.assign(result->data, result->data + result->data_len);
+
+    binding_.events().RelayCapturedFrame(std::move(fidl_result));
 }
 
 zx_status_t Device::EthStart(const ethmac_ifc_protocol_t* ifc) {

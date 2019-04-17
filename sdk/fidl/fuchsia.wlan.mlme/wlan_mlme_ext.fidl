@@ -82,5 +82,42 @@ enum ControlledPortState {
     OPEN = 1;
 };
 
+// START_CAPTURE_FRAMES.request
+
+/// Bits used to request management frame subtypes to be captured. Also used in
+/// StartCaptureFramesResponse to indicate what management frames are supported.
+///
+/// These values are set at `1 << MgmtFrameSubtypeValue`
+/// See IEEE Std 802.11-2016, 9.2.4.1.3, for value of each management frame subtype
+bits MgmtFrameCaptureFlags:uint32 {
+    ASSOC_REQ = 0x1;
+    ASSOC_RESP = 0x2;
+    REASSOC_REQ = 0x4;
+    REASSOC_RESP = 0x8;
+    PROBE_REQ = 0x10;
+    PROBE_RESP = 0x20;
+    TIMING_AD = 0x40;
+    BEACON = 0x100;
+    ATIM = 0x200;
+    DISASSOC = 0x400;
+    AUTH = 0x800;
+    DEAUTH = 0x1000;
+    ACTION = 0x2000;
+    ACTION_NO_ACK = 0x4000;
+};
+
+struct StartCaptureFramesRequest {
+    MgmtFrameCaptureFlags mgmt_frame_flags;
+};
+
+struct StartCaptureFramesResponse {
+    int32 status;
+    MgmtFrameCaptureFlags supported_mgmt_frames;
+};
+
+struct CapturedFrameResult {
+    bytes frame;
+};
+
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
 // MLME primitives.

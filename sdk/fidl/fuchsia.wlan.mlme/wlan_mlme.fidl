@@ -674,9 +674,9 @@ struct ResetRequest {
 // MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
 
 // See dot11CountryString of IEEE Std 802.11-2016, Annex C
-const uint8 countryEnvironAll = 32;        // an ASCII ' ' character
-const uint8 countryEnvironOutdoor = 79;    // an ASCII 'O' character
-const uint8 countryEnvironIndoor = 73;     // an ASCII 'I' character
+const uint8 countryEnvironAll = 32; // an ASCII ' ' character
+const uint8 countryEnvironOutdoor = 79; // an ASCII 'O' character
+const uint8 countryEnvironIndoor = 73; // an ASCII 'I' character
 const uint8 countryEnvironNonCountry = 88; // an ASCII 'X' character
 
 // Information derived from Country Element, IEEE Std 802.11-2016, 9.4.2.9.
@@ -955,4 +955,8 @@ protocol MLME {
 
     ListMinstrelPeers() -> (MinstrelListResponse resp);
     GetMinstrelStats(MinstrelStatsRequest req) -> (MinstrelStatsResponse resp);
+
+    StartCaptureFrames(StartCaptureFramesRequest req) -> (StartCaptureFramesResponse resp);
+    StopCaptureFrames();
+    -> RelayCapturedFrame(CapturedFrameResult result);
 };
