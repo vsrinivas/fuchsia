@@ -29,6 +29,10 @@ declare_args() {
   # the base and cache package sets, which means you do not need to redundantly
   # include those labels in this variable.
   universe_package_labels = []
+
+  # A list of package labels to include in the 'base' package set. Used by the
+  # board definition rather than the product definition.
+  board_package_labels = []
 }
 
 # Write a file that can be sourced by `fx`.  This file is produced
@@ -192,7 +196,7 @@ write_file("$root_build_dir/platforms.json", target_platforms, "json")
 group("additional_base_packages") {
   testonly = true
   visibility = [ "//build/images:monolith_packages" ]
-  public_deps = base_package_labels
+  public_deps = base_package_labels + board_package_labels
 }
 
 group("additional_cache_packages") {
