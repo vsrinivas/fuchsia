@@ -17,6 +17,7 @@ executable("tile") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
