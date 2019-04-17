@@ -5,11 +5,11 @@
 #ifndef LIB_CALLBACK_WAITER_H_
 #define LIB_CALLBACK_WAITER_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <utility>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -191,7 +191,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     };
   }
 
-  // Finalizes the waiter. Must be called at most once.
+  // Finalizes the waiter. Must be called at most once. The |callback| must be
+  // valid until called or until the waiter is cancelled.
   void Finalize(fit::function<void(R)> callback) {
     if (state_ == State::CANCELLED) {
       return;
@@ -207,7 +208,11 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   }
 
   // Cancels the waiter.
-  void Cancel() { state_ = State::CANCELLED; }
+  void Cancel() {
+    state_ = State::CANCELLED;
+    // Ensure the callback is not retained.
+    result_callback_ = nullptr;
+  }
 
  protected:
   explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
@@ -250,8 +255,11 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
       return;
     }
     state_ = State::FINISHED;
-    result_callback_(accumulator_.Result());
-    // The callback might delete this class.
+    // Ensure the callback does not live after finalization. Since it might
+    // delete this class, we move it to the stack first.
+    auto result_callback = std::move(result_callback_);
+    result_callback_ = nullptr;
+    result_callback(accumulator_.Result());
     return;
   }
 
@@ -259,7 +267,9 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   State state_ = State::STARTED;
   // Number of callbacks returned by NewCallback() that have not yet completed.
   size_t pending_callbacks_ = 0;
-  // Finalization callback. Must be set in state FINALIZED.
+  // Finalization callback. Must be set before moving to state FINISHED.  Must
+  // be unset in states CANCELLED and FINISHED: we should not retain callbacks
+  // that will not be called.
   fit::function<void(R)> result_callback_;
 };
 

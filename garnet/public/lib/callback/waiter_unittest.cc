@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/callback/waiter.h"
+
+#include <lib/fit/defer.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
@@ -215,6 +218,34 @@ TEST(Waiter, FinalizeThenCancel) {
   waiter->Cancel();
   callback();
   EXPECT_FALSE(called);
+}
+
+TEST(Waiter, CancelDeletesCallback) {
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+
+  auto callback = waiter->NewCallback();
+
+  bool called = false;
+  auto on_destruction = fit::defer(callback::SetWhenCalled(&called));
+  waiter->Finalize([on_destruction = std::move(on_destruction)] {});
+
+  EXPECT_FALSE(called);
+  waiter->Cancel();
+  EXPECT_TRUE(called);
+}
+
+TEST(Waiter, FinalizeDeletesCallback) {
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+
+  auto callback = waiter->NewCallback();
+
+  bool called = false;
+  auto on_destruction = fit::defer(callback::SetWhenCalled(&called));
+  waiter->Finalize([on_destruction = std::move(on_destruction)] {});
+
+  EXPECT_FALSE(called);
+  callback();
+  EXPECT_TRUE(called);
 }
 
 TEST(AnyWaiter, FailureThenSuccess) {
