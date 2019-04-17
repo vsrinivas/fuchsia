@@ -24,37 +24,8 @@ namespace perfmon {
 #define FIXED_CTR_ENABLE_OS 1
 #define FIXED_CTR_ENABLE_USR 2
 
-// There's only a few fixed events, so handle them directly.
-enum FixedEventId {
-#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-};
-
-// Verify each fixed counter regnum < IPM_MAX_FIXED_COUNTERS.
-#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
-    && (regnum) < IPM_MAX_FIXED_COUNTERS
-static_assert(1
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-    , "");
-
-enum MiscEventId {
-#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
-};
-
-// Misc event ids needn't be consecutive.
-// Build a lookup table we can use to track duplicates.
-enum MiscEventNumber {
-#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
-    symbol ## _NUMBER,
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
-    NUM_MISC_EVENTS
-};
-
 // This table is sorted at startup.
-static perfmon_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
+static perfmon_event_id_t misc_event_table_contents[IPM_NUM_MISC_EVENTS] = {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
     PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
@@ -125,7 +96,7 @@ static void PmuInitMiscEventTable() {
 }
 
 // Map a misc event id to its ordinal (unique number in range
-// 0 ... NUM_MISC_EVENTS - 1).
+// 0 ... IPM_NUM_MISC_EVENTS - 1).
 // Returns -1 if |id| is unknown.
 static int PmuLookupMiscEvent(perfmon_event_id_t id) {
     auto p = reinterpret_cast<perfmon_event_id_t*>(
@@ -137,7 +108,7 @@ static int PmuLookupMiscEvent(perfmon_event_id_t id) {
         return -1;
     }
     ptrdiff_t result = p - misc_event_table;
-    assert(result < NUM_MISC_EVENTS);
+    assert(result < IPM_NUM_MISC_EVENTS);
     return (int) result;
 }
 
@@ -202,39 +173,30 @@ zx_status_t PerfmonDevice::InitOnce() {
 }
 
 
-// Each arch provides its own |PmuStageConfig()| method.
+// Architecture-provided helpers for |PmuStageConfig()|.
 
-typedef struct {
-    // Maximum number of each event we can handle.
-    unsigned max_num_fixed;
-    unsigned max_num_programmable;
-    unsigned max_num_misc;
-
-    // The number of events in use.
-    unsigned num_fixed;
-    unsigned num_programmable;
-    unsigned num_misc;
-
-    // The maximum value the counter can have before overflowing.
-    uint64_t max_fixed_value;
-    uint64_t max_programmable_value;
-
-    // For catching duplicates of the fixed counters.
-    bool have_fixed[IPM_MAX_FIXED_COUNTERS];
-    // For catching duplicates of the misc events, 1 bit per event.
-    uint64_t have_misc[(NUM_MISC_EVENTS + 63) / 64];
-
-    bool have_timebase0_user;
-} StagingState;
-
-static bool PmuLbrSupported() {
+static bool LbrSupported() {
     return PerfmonDevice::pmu_hw_properties().lbr_stack_size > 0;
 }
 
-static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
-                                       StagingState* ss,
-                                       unsigned input_index,
-                                       X86PmuConfig* ocfg) {
+void PerfmonDevice::InitializeStagingState(StagingState* ss) {
+    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
+    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
+    ss->max_num_misc = pmu_hw_properties_.num_misc_events;
+    ss->max_fixed_value =
+        (pmu_hw_properties_.fixed_counter_width < 64
+         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
+         : ~0ul);
+    ss->max_programmable_value =
+        (pmu_hw_properties_.programmable_counter_width < 64
+         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
+         : ~0ul);
+}
+
+zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_config_t* icfg,
+                                            StagingState* ss,
+                                            unsigned input_index,
+                                            PmuConfig* ocfg) {
     const unsigned ii = input_index;
     const perfmon_event_id_t id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
@@ -284,7 +246,7 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
     }
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
-        if (!PmuLbrSupported()) {
+        if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -304,10 +266,10 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
-                                              StagingState* ss,
-                                              unsigned input_index,
-                                              X86PmuConfig* ocfg) {
+zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_config_t* icfg,
+                                                   StagingState* ss,
+                                                   unsigned input_index,
+                                                   PmuConfig* ocfg) {
     const unsigned ii = input_index;
     perfmon_event_id_t id = icfg->events[ii];
     unsigned group = PERFMON_EVENT_ID_GROUP(id);
@@ -390,7 +352,7 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
     }
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
-        if (!PmuLbrSupported()) {
+        if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -410,10 +372,10 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t PmuStageMiscConfig(const perfmon_config_t* icfg,
-                                      StagingState* ss,
-                                      unsigned input_index,
-                                      X86PmuConfig* ocfg) {
+zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_config_t* icfg,
+                                              StagingState* ss,
+                                              unsigned input_index,
+                                              PmuConfig* ocfg) {
     const unsigned ii = input_index;
     perfmon_event_id_t id = icfg->events[ii];
     int event = PmuLookupMiscEvent(id);
@@ -448,123 +410,8 @@ static zx_status_t PmuStageMiscConfig(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
-    zxlogf(TRACE, "%s called\n", __func__);
-
-    if (active_) {
-        return ZX_ERR_BAD_STATE;
-    }
+zx_status_t PerfmonDevice::VerifyStaging(StagingState* ss, PmuConfig* ocfg) {
     PmuPerTraceState* per_trace = per_trace_state_.get();
-    if (!per_trace) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    // If we subsequently get an error, make sure any previous configuration
-    // can't be used.
-    per_trace->configured = false;
-
-    perfmon_config_t ioctl_config;
-    perfmon_config_t* icfg = &ioctl_config;
-    if (cmdlen != sizeof(*icfg)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(icfg, cmd, sizeof(*icfg));
-
-    X86PmuConfig* ocfg = &per_trace->config;
-    memset(ocfg, 0, sizeof(*ocfg));
-
-    // Validate the config and convert it to our internal form.
-    // TODO(dje): Multiplexing support.
-
-    StagingState staging_state;
-    StagingState* ss = &staging_state;
-    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
-    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
-    ss->max_num_misc = pmu_hw_properties_.num_misc_events;
-    ss->num_fixed = 0;
-    ss->num_programmable = 0;
-    ss->num_misc = 0;
-    ss->max_fixed_value =
-        (pmu_hw_properties_.fixed_counter_width < 64
-         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
-         : ~0ul);
-    ss->max_programmable_value =
-        (pmu_hw_properties_.programmable_counter_width < 64
-         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
-         : ~0ul);
-    for (unsigned i = 0; i < countof(ss->have_fixed); ++i) {
-        ss->have_fixed[i] = false;
-    }
-    for (unsigned i = 0; i < countof(ss->have_misc); ++i) {
-        ss->have_misc[i] = false;
-    }
-    ss->have_timebase0_user = false;
-
-    zx_status_t status;
-    unsigned ii;  // ii: input index
-    for (ii = 0; ii < countof(icfg->events); ++ii) {
-        perfmon_event_id_t id = icfg->events[ii];
-        zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
-        if (id == 0) {
-            break;
-        }
-        unsigned group = PERFMON_EVENT_ID_GROUP(id);
-
-        if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
-            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        switch (group) {
-        case PERFMON_GROUP_FIXED:
-            status = PmuStageFixedConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK) {
-                return status;
-            }
-            break;
-        case PERFMON_GROUP_ARCH:
-        case PERFMON_GROUP_MODEL:
-            status = PmuStageProgrammableConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK) {
-                return status;
-            }
-            break;
-        case PERFMON_GROUP_MISC:
-            status = PmuStageMiscConfig(icfg, ss, ii, ocfg);
-            if (status != ZX_OK) {
-                return status;
-            }
-            break;
-        default:
-            zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
-                   __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
-            ss->have_timebase0_user = true;
-        }
-    }
-    if (ii == 0) {
-        zxlogf(ERROR, "%s: No events provided\n", __func__);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Ensure there are no holes.
-    for (; ii < countof(icfg->events); ++ii) {
-        if (icfg->events[ii] != 0) {
-            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    if (ss->have_timebase0_user) {
-        ocfg->timebase_event = icfg->events[0];
-    }
-
-#if TRY_FREEZE_ON_PMI
-    ocfg->debug_ctrl |= IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_MASK;
-#endif
 
     // Require something to be enabled in order to start tracing.
     // This is mostly a sanity check.
@@ -574,8 +421,10 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    per_trace->ioctl_config = *icfg;
-    per_trace->configured = true;
+#if TRY_FREEZE_ON_PMI
+    ocfg->debug_ctrl |= IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_MASK;
+#endif
+
     return ZX_OK;
 }
 

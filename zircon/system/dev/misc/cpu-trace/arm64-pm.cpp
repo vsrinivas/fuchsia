@@ -93,28 +93,25 @@ zx_status_t PerfmonDevice::InitOnce() {
 }
 
 
-// Each arch provides its own |PmuStageConfig()| method.
+// Architecture-provided helpers for |PmuStageConfig()|.
 
-struct StagingState {
-    // Maximum number of each event we can handle.
-    unsigned max_num_fixed;
-    unsigned max_num_programmable;
+void PerfmonDevice::InitializeStagingState(StagingState* ss) {
+    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
+    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
+    ss->max_fixed_value =
+        (pmu_hw_properties_.fixed_counter_width < 64
+         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
+         : ~0ul);
+    ss->max_programmable_value =
+        (pmu_hw_properties_.programmable_counter_width < 64
+         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
+         : ~0ul);
+}
 
-    // The number of events in use.
-    unsigned num_fixed;
-    unsigned num_programmable;
-
-    // The maximum value the counter can have before overflowing.
-    uint64_t max_fixed_value;
-    uint64_t max_programmable_value;
-
-    bool have_timebase0_user;
-};
-
-static zx_status_t pmu_stage_fixed_config(const perfmon_config_t* icfg,
-                                          StagingState* ss,
-                                          unsigned input_index,
-                                          Arm64PmuConfig* ocfg) {
+zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_config_t* icfg,
+                                            StagingState* ss,
+                                            unsigned input_index,
+                                            PmuConfig* ocfg) {
     const unsigned ii = input_index;
     const perfmon_event_id_t id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
@@ -150,10 +147,10 @@ static zx_status_t pmu_stage_fixed_config(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t pmu_stage_programmable_config(const perfmon_config_t* icfg,
-                                                 StagingState* ss,
-                                                 unsigned input_index,
-                                                 Arm64PmuConfig* ocfg) {
+zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_config_t* icfg,
+                                                   StagingState* ss,
+                                                   unsigned input_index,
+                                                   PmuConfig* ocfg) {
     const unsigned ii = input_index;
     perfmon_event_id_t id = icfg->events[ii];
     unsigned group = PERFMON_EVENT_ID_GROUP(id);
@@ -211,116 +208,14 @@ static zx_status_t pmu_stage_programmable_config(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
-    zxlogf(TRACE, "%s called\n", __func__);
-
-    if (active_) {
-        return ZX_ERR_BAD_STATE;
-    }
-    PmuPerTraceState* per_trace = per_trace_state_.get();
-    if (!per_trace) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    // If we subsequently get an error, make sure any previous configuration
-    // can't be used.
-    per_trace->configured = false;
-
-    perfmon_config_t* icfg = &per_trace->ioctl_config;
-    if (cmdlen != sizeof(*icfg)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(icfg, cmd, sizeof(*icfg));
-
-    Arm64PmuConfig* ocfg = &per_trace->config;
-    memset(ocfg, 0, sizeof(*ocfg));
-
-    // Validate the config and convert it to our internal form.
-    // TODO(dje): Multiplexing support.
-
-    StagingState staging_state;
-    StagingState* ss = &staging_state;
-    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
-    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
-    ss->num_fixed = 0;
-    ss->num_programmable = 0;
-    ss->max_fixed_value =
-        (pmu_hw_properties_.fixed_counter_width < 64
-         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
-         : ~0ul);
-    ss->max_programmable_value =
-        (pmu_hw_properties_.programmable_counter_width < 64
-         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
-         : ~0ul);
-    ss->have_timebase0_user = false;
-
-    zx_status_t status;
-    unsigned ii;  // ii: input index
-    for (ii = 0; ii < countof(icfg->events); ++ii) {
-        perfmon_event_id_t id = icfg->events[ii];
-        zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
-        if (id == 0) {
-            break;
-        }
-        unsigned group = PERFMON_EVENT_ID_GROUP(id);
-
-        if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
-            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        switch (group) {
-        case PERFMON_GROUP_FIXED:
-            status = pmu_stage_fixed_config(icfg, ss, ii, ocfg);
-            if (status != ZX_OK) {
-                return status;
-            }
-            break;
-        case PERFMON_GROUP_ARCH:
-            status = pmu_stage_programmable_config(icfg, ss, ii, ocfg);
-            if (status != ZX_OK) {
-                return status;
-            }
-            break;
-        default:
-            zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
-                   __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
-            ss->have_timebase0_user = true;
-        }
-    }
-    if (ii == 0) {
-        zxlogf(ERROR, "%s: No events provided\n", __func__);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Ensure there are no holes.
-    for (; ii < countof(icfg->events); ++ii) {
-        if (icfg->events[ii] != PERFMON_EVENT_ID_NONE) {
-            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (icfg->rate[ii] != 0) {
-            zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (icfg->flags[ii] != 0) {
-            zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    if (ss->have_timebase0_user) {
-        ocfg->timebase_event = icfg->events[0];
-    }
-
-    // TODO(dje): Basic sanity check that some data will be collected.
-
-    per_trace->configured = true;
-    return ZX_OK;
+zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_config_t* icfg,
+                                           StagingState* ss,
+                                           unsigned input_index,
+                                           PmuConfig* ocfg) {
+    // There are no misc events yet.
+    zxlogf(ERROR, "%s: Invalid event [%u] (no misc events)\n",
+           __func__, input_index);
+    return ZX_ERR_INVALID_ARGS;
 }
 
 } // namespace perfmon

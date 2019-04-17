@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
@@ -269,6 +270,115 @@ zx_status_t PerfmonDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
     }
     memcpy(reply, &h, sizeof(h));
     *out_actual = sizeof(h);
+    return ZX_OK;
+}
+
+zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
+    zxlogf(TRACE, "%s called\n", __func__);
+
+    if (active_) {
+        return ZX_ERR_BAD_STATE;
+    }
+    PmuPerTraceState* per_trace = per_trace_state_.get();
+    if (!per_trace) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // If we subsequently get an error, make sure any previous configuration
+    // can't be used.
+    per_trace->configured = false;
+
+    perfmon_config_t ioctl_config;
+    perfmon_config_t* icfg = &ioctl_config;
+    if (cmdlen != sizeof(*icfg)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(icfg, cmd, sizeof(*icfg));
+
+    PmuConfig* ocfg = &per_trace->config;
+    *ocfg = {};
+
+    // Validate the config and convert it to our internal form.
+    // TODO(dje): Multiplexing support.
+
+    StagingState staging_state{};
+    StagingState* ss = &staging_state;
+    InitializeStagingState(ss);
+
+    zx_status_t status;
+    unsigned ii;  // ii: input index
+    for (ii = 0; ii < fbl::count_of(icfg->events); ++ii) {
+        perfmon_event_id_t id = icfg->events[ii];
+        zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
+        if (id == 0) {
+            break;
+        }
+        unsigned group = PERFMON_EVENT_ID_GROUP(id);
+
+        if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
+            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        switch (group) {
+        case PERFMON_GROUP_FIXED:
+            status = StageFixedConfig(icfg, ss, ii, ocfg);
+            if (status != ZX_OK) {
+                return status;
+            }
+            break;
+        case PERFMON_GROUP_ARCH:
+        case PERFMON_GROUP_MODEL:
+            status = StageProgrammableConfig(icfg, ss, ii, ocfg);
+            if (status != ZX_OK) {
+                return status;
+            }
+            break;
+        case PERFMON_GROUP_MISC:
+            status = StageMiscConfig(icfg, ss, ii, ocfg);
+            if (status != ZX_OK) {
+                return status;
+            }
+            break;
+        default:
+            zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n",
+                   __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+            ss->have_timebase0_user = true;
+        }
+    }
+    if (ii == 0) {
+        zxlogf(ERROR, "%s: No events provided\n", __func__);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Ensure there are no holes.
+    for (; ii < fbl::count_of(icfg->events); ++ii) {
+        if (icfg->events[ii] != PERFMON_EVENT_ID_NONE) {
+            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->rate[ii] != 0) {
+            zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->flags[ii] != 0) {
+            zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+
+    if (ss->have_timebase0_user) {
+        ocfg->timebase_event = icfg->events[0];
+    }
+
+    // TODO(dje): Basic sanity check that some data will be collected.
+
+    per_trace->ioctl_config = *icfg;
+    per_trace->configured = true;
     return ZX_OK;
 }
 

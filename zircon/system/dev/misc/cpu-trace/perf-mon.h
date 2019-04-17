@@ -18,8 +18,10 @@
 
 #if defined(__x86_64__)
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
+#include "intel-pm-impl.h"
 #elif defined(__aarch64__)
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm.h>
+#include "arm64-pm-impl.h"
 #else
 #error "unsupported architecture"
 #endif
@@ -143,6 +145,26 @@ class PerfmonDevice : public DeviceType {
 
     zx_status_t IoctlWorker(uint32_t op, const void* cmd, size_t cmdlen,
                             void* reply, size_t replymax, size_t* out_actual);
+
+    // Architecture-provided helpers for |PmuStageConfig()|.
+    // Initialize |ss| in preparation for processing the PMU configuration.
+    void InitializeStagingState(StagingState* ss);
+    // Stage fixed counter |input_index| in |icfg|.
+    zx_status_t StageFixedConfig(const perfmon_config_t* icfg,
+                                 StagingState* ss, unsigned input_index,
+                                 PmuConfig* ocfg);
+    // Stage fixed counter |input_index| in |icfg|.
+    zx_status_t StageProgrammableConfig(const perfmon_config_t* icfg,
+                                        StagingState* ss, unsigned input_index,
+                                        PmuConfig* ocfg);
+    // Stage fixed counter |input_index| in |icfg|.
+    zx_status_t StageMiscConfig(const perfmon_config_t* icfg,
+                                StagingState* ss, unsigned input_index,
+                                PmuConfig* ocfg);
+    // Verify the result. This is where the architecture can do any last
+    // minute verification.
+    zx_status_t VerifyStaging(StagingState* ss, PmuConfig* ocfg);
+    // End of architecture-provided helpers.
 
     // Static properties of the PMU computed when the device driver is loaded.
     static PmuHwProperties pmu_hw_properties_;
