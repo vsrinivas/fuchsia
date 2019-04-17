@@ -1078,7 +1078,7 @@ group("bluetooth_all") {
 group("magma-arm-mali") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-arm-mali",
+    "//garnet/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
     "//garnet/packages/prod:sysmem_connector",
   ]
 }
@@ -1087,8 +1087,7 @@ if (target_cpu == "x64") {
   group("magma-intel-gen") {
     testonly = true
     public_deps = [
-      "//garnet/lib/magma/gnbuild/magma-intel-gen",
-      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma-intel-gen-config",
+      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
       "//garnet/packages/prod:sysmem_connector",
     ]
   }

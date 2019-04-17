@@ -9,6 +9,13 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
+  group("magma-vulkan") {
+    public_deps = [
+      ":magma-intel-gen",
+      ":magma-intel-gen-config",
+    ]
+  }
+
   package("magma-intel-gen") {
     deprecated_system_image = true
     if (magma_enable_developer_build) {

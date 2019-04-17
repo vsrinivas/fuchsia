@@ -2,12 +2,46 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+group("magma-vulkan") {
+  public_deps = [
+    ":magma-arm-mali",
+  ]
+  if (have_libvulkan) {
+    public_deps += [ ":magma-arm-mali-config" ]
+  }
+}
+
 if (have_prebuilt_libvulkan_arm) {
   libvulkan_gen_path = "$target_gen_dir/libvulkan"
+}
+
+if (have_libvulkan) {
+  icd_list = []
+  if (build_libvulkan != []) {
+    foreach(entry, build_libvulkan) {
+      dir = get_label_info(entry, "dir")
+      if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
+          dir == "//third_party/arm-mali-bifrost/fuchsia") {
+        icd_list += [
+          {
+            name = get_label_info(entry, "name")
+          },
+        ]
+      }
+    }
+  } else if (have_prebuilt_libvulkan_arm) {
+    icd_list += [
+      {
+        name = "libvulkan_arm"
+        library_path = "$libvulkan_gen_path/libvulkan_arm.so"
+      },
+    ]
+  }
 }
 
 package("magma-arm-mali") {
@@ -37,58 +71,22 @@ package("magma-arm-mali") {
   }
 
   if (have_libvulkan) {
-    icd_list = []
-
+    resources = []
+    libraries = []
     if (build_libvulkan != []) {
       foreach(entry, build_libvulkan) {
         dir = get_label_info(entry, "dir")
         if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
             dir == "//third_party/arm-mali-bifrost/fuchsia") {
           deps += [ entry ]
-          icd_list += [
-            {
-              name = get_label_info(entry, "name")
-            },
-          ]
         }
       }
     } else if (have_prebuilt_libvulkan_arm) {
       deps += [ ":prebuilt_libvulkan" ]
-      icd_list += [
-        {
-          name = "libvulkan_arm"
-          library_path = "$libvulkan_gen_path/libvulkan_arm.so"
-        },
-      ]
     }
 
     foreach(entry, icd_list) {
       icd_name = entry.name
-      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-      icd_data = []
-      icd_data = [
-        "{",
-        "\"file_format_version\": \"1.0.0\",",
-        "\"ICD\": {",
-        "\"library_path\": \"$icd_name.so\",",
-        "\"api_version\": \"1.0.68\"",
-        "}",
-        "}",
-      ]
-      write_file(filename, icd_data)
-    }
-
-    resources = []
-    libraries = []
-
-    foreach(entry, icd_list) {
-      icd_name = entry.name
-      resources += [
-        {
-          path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
-          dest = "vulkan/icd.d/$icd_name.json"
-        },
-      ]
       if (defined(entry.library_path)) {
         libraries += [
           {
@@ -104,6 +102,33 @@ package("magma-arm-mali") {
         ]
       }
     }
+  }
+}
+
+if (have_libvulkan) {
+  config_data("magma-arm-mali-config") {
+    sources = []
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+      icd_data = []
+      icd_data = [
+        "{",
+        "\"file_format_version\": \"1.0.0\",",
+        "\"ICD\": {",
+        "\"library_path\": \"$icd_name.so\",",
+        "\"api_version\": \"1.0.68\"",
+        "}",
+        "}",
+      ]
+      write_file(filename, icd_data)
+      sources += [ rebase_path(filename) ]
+    }
+
+    for_pkg = "vulkan-icd"
+    outputs = [
+      "icd.d/{{source_file_part}}",
+    ]
   }
 }
 
