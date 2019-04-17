@@ -45,6 +45,7 @@ func (env Environment) Name() string {
 
 	addToken(env.Dimensions.DeviceType)
 	addToken(env.Dimensions.OS)
+	addToken(env.Dimensions.Testbed)
 	if env.ServiceAccount != "" {
 		addToken(strings.Split(env.ServiceAccount, "@")[0])
 	}
@@ -62,6 +63,9 @@ type DimensionSet struct {
 
 	// The CPU type that the test is meant to run on.
 	CPU string `json:"cpu,omitempty"`
+
+	// Testbed denotes a physical test device configuration to run a test on (e.g., multi-device set-ups or devices inside chambers for connectivity testing).
+	Testbed string `json:"testbed,omitempty"`
 }
 
 // ResolvesTo gives a partial ordering on DimensionSets in which one resolves to
@@ -71,6 +75,9 @@ func (dims DimensionSet) resolvesTo(other DimensionSet) bool {
 		return false
 	}
 	if dims.OS != "" && dims.OS != other.OS {
+		return false
+	}
+	if dims.Testbed != "" && dims.Testbed != other.Testbed {
 		return false
 	}
 	return true
