@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.media;
+library fuchsia.media.drm;
 
 using fuchsia.io;
 using fuchsia.mem;
@@ -18,38 +18,6 @@ const string ENCRYPTION_MODE_CBC1 = "cbc1";
 const string ENCRYPTION_MODE_CENS = "cens";
 const string ENCRYPTION_MODE_CBCS = "cbcs";
 
-// Common initialization data formats. These are defined as strings rather than
-// enums so as to not limit the types a ContentDecryptionModule may support.
-const string LICENSE_INIT_DATA_TYPE_CENC = "cenc";
-const string LICENSE_INIT_DATA_TYPE_KEYIDS = "keyids";
-const string LICENSE_INIT_DATA_TYPE_WEBM = "webm";
-const string LICENSE_INIT_DATA_TYPE_HLS = "hls";
-
-enum LicenseSessionType {
-    /// A session for which the license, keys, and record of the session are not
-    /// persisted.
-    TEMPORARY = 1;
-    /// A session for which the license, keys, and record of the session will be
-    /// persisted for offline use and can subsequently be loaded using
-    /// LoadSession().
-    PERSISTENT_LICENSE = 2;
-    /// A session for which the the record of the session will be persisted, but
-    /// the keys and license will not be.
-    PERSISTENT_USAGE_RECORD = 3;
-};
-
-enum LicenseMessageType {
-    REQUEST = 1;
-    RENEWAL = 2;
-    RELEASE = 3;
-};
-
-enum LicenseInitDataType {
-    CENC = 0;
-    KEYIDS = 1;
-    WEBM = 2;
-};
-
 enum KeyStatus {
     USABLE = 0;
     EXPIRED = 1;
@@ -58,28 +26,6 @@ enum KeyStatus {
     OUTPUT_DOWNSCALED = 4;
     STATUS_PENDING = 5;
     INTERNAL_ERROR = 6;
-};
-
-struct LicenseInitData {
-    /// The type is a string that indicates the format of the accompanying init
-    /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
-    /// also define their own.
-    string type;
-    bytes data;
-};
-
-/// LicenseMessage is for messages originating from the LicenseSession that the
-/// caller must route to the license server.
-struct LicenseMessage {
-    LicenseMessageType type;
-    fuchsia.mem.Buffer message;
-};
-
-/// LicenseServerMessage is for messages originating from the license server
-/// that the caller must provide to the LicenseSession via
-/// |ProcessLicenseServerMessage|.
-struct LicenseServerMessage {
-    fuchsia.mem.Buffer message;
 };
 
 /// ProvisionMessage is for messages originating from the CDM that the caller
@@ -99,53 +45,6 @@ struct KeyId {
     array<uint8>:KEY_ID_SIZE data;
 };
 
-struct KeyInfo {
-    KeyId key_id;
-    KeyStatus status;
-};
-
-table DecryptorParams {
-    /// Requires the decryptor to only output to secure buffers.
-    1: bool require_secure_mode;
-
-    /// Initial format details for the StreamProcessor.
-    2: FormatDetails input_details;
-};
-
-protocol LicenseSession {
-    /// Generate a license request for a session based on the |init_data|. When
-    /// the LicenseMessage has been created, the |OnLicenseMessageGenerated|
-    /// event will be triggered with the message to be sent to the license
-    /// server.
-    GenerateLicenseRequest(LicenseInitData init_data);
-
-    /// Inititiate the release process for the license session. This will cause
-    /// the CDM to generate a LicenseMessage through the
-    /// |OnLicenseMessageGenerated| event. The client must route that message
-    /// to the license server and the server's response to
-    /// |ProcessLicenseServerMessage|. Once the LicenseSession has received the
-    /// license server's reply, it will close the LicenseSession channel as this
-    /// session will no longer be usable.
-    GenerateLicenseRelease();
-
-    /// Update the LicenseSession with a message from the license server. All
-    /// responses from license requests, renewals, and releases should be routed
-    /// to the LicenseSession through this method.
-    ProcessLicenseServerMessage(LicenseServerMessage message);
-
-    /// Create a Decryptor StreamProcessor interface to be used to decrypt
-    /// content.
-    CreateDecryptor(DecryptorParams params, request<StreamProcessor> decryptor);
-
-    /// The LicenseSession has generated a message to be sent to the license
-    /// server. The client is responsible for transporting this message to the
-    /// license server.
-    -> OnLicenseMessageGenerated(LicenseMessage message);
-
-    /// The LicenseSession has updated key status information.
-    -> OnKeysChanged(vector<KeyInfo> key_info);
-};
-
 [FragileBase]
 protocol ContentDecryptionModule {
     /// Set the certificate to be used for encrypting outgoing messages.
@@ -161,7 +60,8 @@ protocol ContentDecryptionModule {
     /// Load an existing session from persistent storage using the given
     /// |session_id|. If the session is not found, then the |license_session|
     /// will be closed.
-    LoadLicenseSession(string session_id, request<LicenseSession> license_session);
+    LoadLicenseSession(string session_id,
+                       request<LicenseSession> license_session);
 
     /// Update the CDM with a message from the provisioning server. Not all
     /// underlying CDM systems will require provisioning for individual

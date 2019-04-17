@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.media.drm") {
+  sdk_category = "partner"
+
+  sources = [
+    "content_decryption.fidl",
+    "license_session.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
