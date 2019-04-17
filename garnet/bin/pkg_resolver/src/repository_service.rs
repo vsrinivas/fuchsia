@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use crate::repository_manager::RepositoryManager;
-use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_pkg::{
     MirrorConfig as FidlMirrorConfig, RepositoryConfig as FidlRepositoryConfig,
-    RepositoryIteratorMarker, RepositoryIteratorRequest, RepositoryManagerRequest,
+    RepositoryIteratorRequest, RepositoryIteratorRequestStream, RepositoryManagerRequest,
     RepositoryManagerRequestStream,
 };
 use fuchsia_async as fasync;
@@ -35,23 +34,24 @@ impl RepositoryService {
         while let Some(event) = await!(stream.try_next())? {
             match event {
                 RepositoryManagerRequest::Add { repo, responder } => {
-                    let status = self.insert(repo);
+                    let status = self.serve_insert(repo);
                     responder.send(Status::from(status).into_raw())?;
                 }
                 RepositoryManagerRequest::Remove { repo_url, responder } => {
-                    let status = self.remove(repo_url);
+                    let status = self.serve_remove(repo_url);
                     responder.send(Status::from(status).into_raw())?;
                 }
                 RepositoryManagerRequest::AddMirror { repo_url, mirror, responder } => {
-                    let status = self.insert_mirror(repo_url, mirror);
+                    let status = self.serve_insert_mirror(repo_url, mirror);
                     responder.send(Status::from(status).into_raw())?;
                 }
                 RepositoryManagerRequest::RemoveMirror { repo_url, mirror_url, responder } => {
-                    let status = self.remove_mirror(repo_url, mirror_url);
+                    let status = self.serve_remove_mirror(repo_url, mirror_url);
                     responder.send(Status::from(status).into_raw())?;
                 }
                 RepositoryManagerRequest::List { iterator, control_handle: _ } => {
-                    self.list(iterator);
+                    let stream = iterator.into_stream()?;
+                    self.serve_list(stream);
                 }
             }
         }
@@ -59,15 +59,15 @@ impl RepositoryService {
         Ok(())
     }
 
-    fn insert(&mut self, _repo: FidlRepositoryConfig) -> Result<(), Status> {
+    fn serve_insert(&mut self, _repo: FidlRepositoryConfig) -> Result<(), Status> {
         Err(Status::INTERNAL)
     }
 
-    fn remove(&mut self, _repo_url: String) -> Result<(), Status> {
+    fn serve_remove(&mut self, _repo_url: String) -> Result<(), Status> {
         Err(Status::INTERNAL)
     }
 
-    fn insert_mirror(
+    fn serve_insert_mirror(
         &mut self,
         _repo_url: String,
         _mirror: FidlMirrorConfig,
@@ -75,45 +75,32 @@ impl RepositoryService {
         Err(Status::INTERNAL)
     }
 
-    fn remove_mirror(&mut self, _repo_url: String, _mirror_url: String) -> Result<(), Status> {
+    fn serve_remove_mirror(
+        &mut self,
+        _repo_url: String,
+        _mirror_url: String,
+    ) -> Result<(), Status> {
         Err(Status::INTERNAL)
     }
 
-    fn list(&self, iter: ServerEnd<RepositoryIteratorMarker>) {
-        let mut chunks = {
-            let repo_manager = self.repo_manager.read();
-            let mut results = repo_manager.list().collect::<Vec<_>>();
+    fn serve_list(&self, mut stream: RepositoryIteratorRequestStream) {
+        let mut results = self
+            .repo_manager
+            .read()
+            .list()
+            .map(|(_, config)| config.clone().into())
+            .collect::<Vec<FidlRepositoryConfig>>();
 
-            results.sort_unstable_by_key(|(k, _)| &**k);
-
-            // This is a bit obnoxious. fidl iterators need to pass along a chunk of
-            // ExactSizedIterators that own their items. Unfortunately this is a bit complicated to
-            // create. Hypothetically if there was a `Vec::into_chunks` Iterator we could do this
-            // in one go, but alas it doesn't exist.
-            results
-                .chunks(LIST_CHUNK_SIZE)
-                .map(|chunk| {
-                    chunk
-                        .into_iter()
-                        .map(|&(_, config)| config.clone().into())
-                        .collect::<Vec<FidlRepositoryConfig>>()
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-        };
+        results.sort_unstable_by(|a, b| a.repo_url.cmp(&b.repo_url));
 
         fasync::spawn(
             async move {
-                let mut stream = iter.into_stream()?;
+                let mut iter = results.into_iter();
 
                 while let Some(RepositoryIteratorRequest::Next { responder }) =
                     await!(stream.try_next())?
                 {
-                    if let Some(chunk) = chunks.next() {
-                        responder.send(&mut chunk.into_iter())?;
-                    } else {
-                        responder.send(&mut vec![].into_iter())?;
-                    }
+                    responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
                 }
                 Ok(())
             }
@@ -128,14 +115,16 @@ impl RepositoryService {
 mod tests {
     use super::*;
     use crate::test_util::create_dir;
-    use fidl::endpoints::create_proxy;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_pkg::RepositoryIteratorMarker;
     use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs};
     use fuchsia_uri::pkg_uri::RepoUri;
     use std::convert::TryInto;
 
     async fn list(service: &RepositoryService) -> Vec<RepositoryConfig> {
-        let (list_iterator, server_end) = create_proxy().unwrap();
-        service.list(server_end);
+        let (list_iterator, stream) =
+            create_proxy_and_stream::<RepositoryIteratorMarker>().unwrap();
+        service.serve_list(stream);
 
         let mut results: Vec<RepositoryConfig> = Vec::new();
         loop {
@@ -163,19 +152,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list() {
         // First, create a bunch of repo configs we're going to use for testing.
-        let configs = (0..1000)
+        let configs = (0..200)
             .map(|i| {
                 let uri = RepoUri::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
                 RepositoryConfigBuilder::new(uri).build()
             })
             .collect::<Vec<_>>();
 
-        let repo_configs = configs
-            .iter()
-            .map(|c| (c.repo_url().host(), RepositoryConfigs::Version1(vec![c.clone()])))
-            .collect::<Vec<_>>();
-
-        let dir = create_dir(repo_configs);
+        let dir = create_dir(vec![("configs", RepositoryConfigs::Version1(configs.clone()))]);
 
         let (mgr, errors) = RepositoryManager::load_dir(dir).unwrap();
         assert_eq!(errors.len(), 0);
