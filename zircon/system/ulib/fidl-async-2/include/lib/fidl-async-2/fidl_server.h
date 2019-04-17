@@ -65,14 +65,15 @@ public:
     }
 
 protected:
+    FidlServer(async_dispatcher_t* dispatcher, const char* logging_prefix, uint32_t concurrency_cap)
+        : dispatcher_(dispatcher),
+          binding_(dispatcher_, static_cast<Stub*>(this), &Stub::kOps, concurrency_cap),
+          logging_prefix_(logging_prefix) {}
+
     // This picks up async_get_default_dispatcher(), which seems fine to share
     // with the devhost code, at least for now.
     FidlServer(const char* logging_prefix, uint32_t concurrency_cap)
-        : dispatcher_(async_get_default_dispatcher()),
-          binding_(dispatcher_, static_cast<Stub*>(this), &Stub::kOps, concurrency_cap),
-          logging_prefix_(logging_prefix) {
-        // nothing else to do here
-    }
+        : FidlServer(async_get_default_dispatcher(), logging_prefix, concurrency_cap) {}
 
     ~FidlServer() {
         for (bool* canary : canaries_) {
