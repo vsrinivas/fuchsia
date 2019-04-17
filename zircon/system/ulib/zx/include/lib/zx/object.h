@@ -276,15 +276,22 @@ template <typename T> bool operator>=(const object<T>& a, zx_handle_t b) {
 template <typename T>
 class unowned final {
 public:
-    explicit unowned(zx_handle_t h) : value_(h) {}
-    explicit unowned(const T& owner) : unowned(owner.get()) {}
-    explicit unowned(unowned& other) : unowned(*other) {}
+    explicit unowned(zx_handle_t h)
+        : value_(h) {}
+    explicit unowned(const T& owner)
+        : unowned(owner.get()) {}
+    explicit unowned(const unowned& other)
+        : unowned(*other) {}
     constexpr unowned() = default;
     unowned(unowned&& other) = default;
 
     ~unowned() { release_value(); }
 
-    unowned& operator=(unowned& other) {
+    unowned& operator=(const unowned& other) {
+        if (&other == this) {
+            return *this;
+        }
+
         *this = unowned(other);
         return *this;
     }
