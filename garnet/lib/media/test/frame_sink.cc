@@ -4,16 +4,15 @@
 
 #include "lib/media/test/frame_sink.h"
 
-#include "lib/media/test/frame_sink_view.h"
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
+#include <lib/media/test/frame_sink_view.h>
 #include <lib/zx/vmo.h>
+#include <src/lib/fxl/logging.h>
 
 #include <memory>
 
@@ -81,8 +80,9 @@ void FrameSink::PutFrame(
     // Tell Scenic to show the first frame around now-ish.
     present_time = zx_clock_get_monotonic() + ZX_SEC(1);
   } else {
-    present_time =
-        last_requested_present_time_ + ZX_SEC(1.0 / frames_per_second_);
+    auto delta = ZX_USEC(1000000 / frames_per_second_);
+    FXL_CHECK(delta > 0);
+    present_time = last_requested_present_time_ + delta;
   }
   last_requested_present_time_ = present_time;
 
