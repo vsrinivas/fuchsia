@@ -113,8 +113,9 @@ config("compiler") {
       # These are done by default in the Clang toolchain.
       cflags += [ "-fasynchronous-unwind-tables" ]
       ldflags += [
-        "-Wl,--eh-frame-hdr",
         "-Wl,--build-id",
+        "-Wl,--eh-frame-hdr",
+        "-Wl,--hash-style=gnu",
       ]
 
       # In the Clang toolchain assembly files with no explicit marker don't
