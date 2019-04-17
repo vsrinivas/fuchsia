@@ -109,13 +109,19 @@ mod tests {
         let sandbox = client::connect_to_service::<SandboxMarker>()
             .context("Can't connect to sandbox")
             .unwrap();
+        let sandbox2 = client::connect_to_service::<SandboxMarker>()
+            .context("Can't connect to sandbox 2")
+            .unwrap();
         let env1 = create_env_with_netstack(&sandbox).unwrap();
         let env2 = create_env_with_netstack(&sandbox).unwrap();
+        let env3 = create_env_with_netstack(&sandbox2).unwrap();
 
         let _net1 = await!(create_network(&env1, "network")).unwrap();
         let net1_retrieve = await!(get_network(&env1, "network"));
         assert!(net1_retrieve.is_ok(), "can retrieve net1 from env1");
         let net2_retrieve = await!(get_network(&env2, "network"));
-        assert!(net2_retrieve.is_err(), "net should not exist in env2");
+        assert!(net2_retrieve.is_ok(), "can retrieve net1 from env2");
+        let net3_retrieve = await!(get_network(&env3, "network"));
+        assert!(net3_retrieve.is_err(), "net1 should not exist in env3");
     }
 }

@@ -47,9 +47,11 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
   void CreateEnvironment(
       fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req,
       ManagedEnvironment::Options options) override {
-    SandboxEnv::Ptr env = std::make_shared<SandboxEnv>();
-    auto root =
-        ManagedEnvironment::CreateRoot(parent_env_, env, std::move(options));
+    if (!shared_env_) {
+      shared_env_ = std::make_shared<SandboxEnv>();
+    }
+    auto root = ManagedEnvironment::CreateRoot(parent_env_, shared_env_,
+                                               std::move(options));
     root->SetRunningCallback(
         [root = root.get(), req = std::move(req)]() mutable {
           root->Bind(std::move(req));
@@ -69,6 +71,7 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
 
  private:
   std::unique_ptr<async::Loop> loop_;
+  std::shared_ptr<SandboxEnv> shared_env_;
   fidl::Binding<FSandbox> binding_;
   std::vector<std::unique_ptr<::netemul::Sandbox>> sandboxes_;
   std::vector<std::unique_ptr<ManagedEnvironment>> environments_;
