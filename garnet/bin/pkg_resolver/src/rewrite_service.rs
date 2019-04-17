@@ -112,7 +112,7 @@ mod tests {
     use {
         super::*,
         crate::rewrite_manager::{tests::make_dynamic_rule_config, Transaction},
-        fidl::endpoints::{create_endpoints, ServiceMarker},
+        fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg_rewrite::{EditTransactionMarker, RuleIteratorMarker},
     };
 
@@ -127,12 +127,6 @@ mod tests {
             )
             .unwrap()
         };
-    }
-
-    fn create_proxy_and_stream<T: ServiceMarker>(
-    ) -> Result<(T::Proxy, T::RequestStream), fidl::Error> {
-        let (client, server) = create_endpoints::<T>()?;
-        Ok((client.into_proxy()?, server.into_stream()?))
     }
 
     async fn verify_list_call(
