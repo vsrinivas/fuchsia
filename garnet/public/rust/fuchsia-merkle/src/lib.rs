@@ -4,6 +4,8 @@
 
 //! `fuchsia_merkle` contains types and methods for building and working with merkle trees.
 
+#![deny(missing_docs)]
+
 /// The size of a single block of data (or hashes), in bytes.
 pub const BLOCK_SIZE: usize = 8192;
 
