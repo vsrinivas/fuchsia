@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,6 +8,7 @@ executable("waterfall") {
     "waterfall_demo.h",
     "waterfall_main.cc",
   ]
+
   deps = [
     ":scenes",
     "//garnet/examples/escher/common",
@@ -19,6 +20,10 @@ executable("waterfall") {
     "//garnet/public/lib/escher",
     "//third_party/glm",
   ]
+
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/trace" ]
+  }
 }
 
 source_set("scenes") {
@@ -27,24 +32,8 @@ source_set("scenes") {
     "scenes/demo_scene.h",
     "scenes/paper_demo_scene1.cc",
     "scenes/paper_demo_scene1.h",
-    "scenes/ring_tricks1.cc",
-    "scenes/ring_tricks1.h",
-    "scenes/ring_tricks2.cc",
-    "scenes/ring_tricks2.h",
-    "scenes/ring_tricks3.cc",
-    "scenes/ring_tricks3.h",
     "scenes/scene.cc",
     "scenes/scene.h",
-    "scenes/uber_scene.cc",
-    "scenes/uber_scene.h",
-    "scenes/uber_scene2.cc",
-    "scenes/uber_scene2.h",
-    "scenes/uber_scene3.cc",
-    "scenes/uber_scene3.h",
-    "scenes/wobbly_ocean_scene.cc",
-    "scenes/wobbly_ocean_scene.h",
-    "scenes/wobbly_rings_scene.cc",
-    "scenes/wobbly_rings_scene.h",
   ]
 
   deps = [

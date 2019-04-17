@@ -154,11 +154,12 @@ source_set("gtest_escher") {
   ]
 }
 
+# Guarantees that buildbots at least build the Escher examples on Linux,
+# even if they are not run.
 group("force_waterfall_to_build_on_host") {
   if (is_linux) {
     deps = [
       "//garnet/examples/escher/waterfall($host_toolchain)",
-      "//garnet/examples/escher/waterfall2($host_toolchain)",
     ]
   }
 }

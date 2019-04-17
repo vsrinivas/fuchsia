@@ -59,7 +59,6 @@ group("escher") {
   testonly = true
   public_deps = [
     "//garnet/examples/escher:escher_waterfall",
-    "//garnet/examples/escher:escher_waterfall2",
   ]
 }
 

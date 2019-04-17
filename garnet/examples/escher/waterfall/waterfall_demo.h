@@ -1,9 +1,9 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
-#define GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL2_WATERFALL_DEMO_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL2_WATERFALL_DEMO_H_
 
 #include <stdlib.h>
 #include <cmath>
@@ -14,15 +14,10 @@
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 
 #include "lib/escher/escher.h"
-
-#include "lib/escher/geometry/types.h"
-#include "lib/escher/material/color_utils.h"
-#include "lib/escher/renderer/moment_shadow_map_renderer.h"
-#include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/renderer/shadow_map_renderer.h"
-#include "lib/escher/scene/stage.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/fs/hack_filesystem.h"
+#include "lib/escher/paper/paper_renderer2.h"
 #include "lib/escher/util/stopwatch.h"
-#include "lib/escher/vk/vulkan_swapchain_helper.h"
 #include "src/lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {
@@ -32,7 +27,6 @@ class WaterfallDemo : public Demo {
 
   enum ShadowMode {
     kNone,
-    kSsdo,
     kShadowMap,
     kMomentShadowMap,
     kNumShadowModes,
@@ -48,38 +42,37 @@ class WaterfallDemo : public Demo {
 
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
-  void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
+
+  void InitializePaperScene(const DemoHarness::WindowParams& window_params);
   void InitializeDemoScenes();
+
+  double ComputeFps();
+
+  escher::PaperRendererConfig renderer_config_;
+  escher::PaperRenderer2Ptr renderer_;
+
+  escher::PaperScenePtr paper_scene_;
+
+  // 4 camera projection modes:
+  // - orthographic full-screen
+  // - perspective where floor plane is full-screen, and parallel to screen
+  // - perspective from tilted viewpoint (from x-center of stage).
+  // - perspective from tilted viewpoint (from corner).
+  int camera_projection_mode_ = 0;
+
+  int current_scene_ = 0;
+  std::vector<std::unique_ptr<Scene>> demo_scenes_;
+
+  // Used for FPS calculations and animating lighting params.
+  escher::Stopwatch stopwatch_;
+  // Used for animating object shapes and positions.
+  escher::Stopwatch animation_stopwatch_;
+
+  uint64_t frame_count_ = 0;
+  uint64_t first_frame_microseconds_;
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;
-
-  ShadowMode shadow_mode_ = ShadowMode::kMomentShadowMap;
-  int current_scene_ = 0;
-  // True if the Model objects should be binned by pipeline, false if they
-  // should be rendered in their natural order.
-  bool sort_by_pipeline_ = true;
-  // True if SSDO should be accelerated by generating a lookup table each frame.
-  bool enable_ssdo_acceleration_ = true;
-  bool stop_time_ = false;
-  // True if the direction of the light source is animating.
-  bool animate_light_ = true;
-
-  // 3 camera projection modes:
-  // - orthogonal full-screen
-  // - perspective where floor plane is full-screen, and parallel to screen
-  // - perspective from diagonal viewpoint.
-  int camera_projection_mode_ = 0;
-
-  std::vector<std::unique_ptr<Scene>> scenes_;
-  escher::PaperRendererPtr renderer_;
-  escher::ShadowMapRendererPtr shadow_renderer_;
-  escher::ShadowMapRendererPtr moment_shadow_renderer_;
-  escher::Stage stage_;
-  double light_azimuth_radians_ = 0.f;
-
-  escher::Stopwatch stopwatch_;
-  uint64_t first_frame_microseconds_;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL2_WATERFALL_DEMO_H_

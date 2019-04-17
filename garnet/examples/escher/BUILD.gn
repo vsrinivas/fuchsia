@@ -6,16 +6,18 @@ import("//build/package.gni")
 import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
+# NOTE: whenever a new example is added, also add it to
+# //garnet/public/lib/escher/test:force_waterfall_to_build_on_host
 group("escher") {
   deps = [
     ":escher_waterfall",
-    ":escher_waterfall2",
   ]
 }
 
 package("escher_waterfall") {
   deps = [
     "waterfall",
+    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = "waterfall"
@@ -24,29 +26,6 @@ package("escher_waterfall") {
     {
       path = rebase_path("meta/escher_examples.cmx")
       dest = "escher_waterfall.cmx"
-    },
-  ]
-
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain_fb.loadable_modules
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
-}
-
-package("escher_waterfall2") {
-  deps = [
-    "waterfall2",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
-  ]
-
-  binary = "waterfall2"
-
-  meta = [
-    {
-      path = rebase_path("meta/escher_examples.cmx")
-      dest = "escher_waterfall2.cmx"
     },
   ]
 
