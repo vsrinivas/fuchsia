@@ -10,8 +10,4 @@ fidl("fuchsia.speech") {
   sources = [
     "speech_to_text.fidl",
   ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.media",
-  ]
 }
