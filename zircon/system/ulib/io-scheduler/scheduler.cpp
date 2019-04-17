@@ -41,6 +41,7 @@ void Scheduler::Shutdown() {
         // Delete any existing stream in the case where no worker threads were launched.
         stream_map_.clear();
         ZX_DEBUG_ASSERT(stream_map_.is_empty());
+        num_streams_ = 0;
     }
 
     client_ = nullptr;

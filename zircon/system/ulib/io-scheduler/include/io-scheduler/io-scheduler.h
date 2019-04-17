@@ -91,6 +91,8 @@ enum class OpClass : uint32_t {
 constexpr uint32_t kOpFlagComplete =    (1u << 0);
 constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
 
+constexpr uint32_t kOpGroupNone = 0;
+
 // Reserved 64-bit words for internal use.
 constexpr size_t kOpReservedQuads = 12;
 

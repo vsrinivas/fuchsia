@@ -46,17 +46,26 @@ int Worker::ThreadEntry(void* arg) {
 void Worker::WorkerLoop() {
     const size_t max_ops = 10;
     SchedulerClient* client = sched_->client();
+    zx_status_t status;
     for ( ; ; ) {
         size_t actual_count = 0;
         SchedulerOp* op_list[max_ops];
-        zx_status_t status = client->Acquire(op_list, max_ops, &actual_count, true);
+        status = client->Acquire(op_list, max_ops, &actual_count, true);
         if (status == ZX_ERR_CANCELED) {
             // Cancel received, no more ops to read. Drain the streams and exit.
             break;
         }
-        // Temporary: delay since this loop doesn't do any real work yet and has nothing else to
-        // wait on. Will be deleted when loop body fills out.
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+        if (status != ZX_OK) {
+            fprintf(stderr, "Unexpected return status from Acquire() %d\n", status);
+            client->Fatal();
+            break;
+        }
+        // Dummy issue loop. In the future, ops will be added to the scheduler.
+        for (size_t i = 0; i < actual_count; i++) {
+            status = client->Issue(op_list[i]);
+            ZX_DEBUG_ASSERT(status == ZX_OK);   // Require synchronous completion, for now.
+            client->Release(op_list[i]);
+        }
     }
 }
 
