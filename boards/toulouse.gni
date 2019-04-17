@@ -5,11 +5,10 @@
 target_cpu = "x64"
 
 fuchsia_packages = []
-board_packages = []
 
-board_package_labels = [
+board_packages = [
   # Include all drivers for now.
-  "//garnet/packages/prod:drivers",
+  "garnet/packages/prod/drivers",
 ]
 
 # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
