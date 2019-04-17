@@ -28,16 +28,16 @@ enum KeyStatus {
     INTERNAL_ERROR = 6;
 };
 
-/// ProvisionMessage is for messages originating from the CDM that the caller
+/// ProvisioningRequest is for messages originating from the CDM that the caller
 /// must route to the provisioning server.
-struct ProvisionMessage {
+struct ProvisioningRequest {
     fuchsia.mem.Buffer message;
 };
 
-/// ProvisionServerMessage is for messages originating from the provisioning
+/// ProvisioningResponse is for messages originating from the provisioning
 /// server that the caller must provide to the CDM via
-/// |ProcessProvisionServerMessage|.
-struct ProvisionServerMessage {
+/// `ProcessProvisioningResponse`.
+struct ProvisioningResponse {
     fuchsia.mem.Buffer message;
 };
 
@@ -63,12 +63,19 @@ protocol ContentDecryptionModule {
     LoadLicenseSession(string session_id,
                        request<LicenseSession> license_session);
 
+    /// If the underlying CDM system requires provisioning for individual
+    /// providers (the owner of the CDM instance), then this method can be used
+    /// to generate ProvisioningRequests. This message must be routed to the
+    /// provisioning server by the client and the server's response provided to
+    /// the CDM by calling `ProcessProvisioningResponse`.
+    GenerateProvisioningRequest() -> (ProvisioningRequest request);
+
     /// Update the CDM with a message from the provisioning server. Not all
     /// underlying CDM systems will require provisioning for individual
     /// providers. If they do, this method will carry the provisioning message
     /// to the CDM instance so that it may persistently store the provider
     /// certificate.
-    ProcessProvisionServerMessage(ProvisionServerMessage message);
+    ProcessProvisioningResponse(ProvisioningResponse response);
 
     /// Remove the persistent session data associated with the session without
     /// waiting for server acknowledgement. No LicenseMessage will be generated.
@@ -101,14 +108,6 @@ protocol ContentDecryptionModule {
     /// Query the CDM for the list of supported encryption modes, such as
     /// 'cenc', 'cbc1', 'cens', or 'cbcs'.
     GetSupportedEncryptionModes() -> (vector<string> encryption_modes);
-
-    /// If the underlying CDM system requires provisioning for individual
-    /// providers (the owner of the CDM instance), then it will generate a
-    /// ProvisionMessage the first time a LicenseSession attempts to request a
-    /// license. This message must be routed to the provisioning server by the
-    /// client and the server's response provided to the CDM by calling
-    /// |ProcessProvisionServerMessage|.
-    -> OnProvisionMessageGenerated(ProvisionMessage message);
 };
 
 // There are two ways to create the desired ContentDecryptionModule. Which
