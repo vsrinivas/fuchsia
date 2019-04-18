@@ -518,13 +518,21 @@ void xhci_free(xhci_t* xhci) {
     delete xhci;
 }
 
-void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
-                       xhci_command_context_t* context) {
-    // FIXME - check that command ring is not full?
-
+zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
+                              xhci_command_context_t* context) {
     fbl::AutoLock al(&xhci->command_ring_lock);
 
     xhci_transfer_ring_t* cr = &xhci->command_ring;
+    size_t free_count = xhci_transfer_ring_free_trbs(cr);
+
+    zxlogf(TRACE, "xhci_post_command: free_count: %zu command: %u ptr: %lx control_bits %x\n",
+           free_count, command, ptr, control_bits);
+
+    if (free_count == 0) {
+        zxlogf(ERROR, "xhci_post_command: command ring full!\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     xhci_trb_t* trb = cr->current;
     auto index = trb - cr->start;
     xhci->command_contexts[index] = context;
@@ -534,9 +542,12 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
     trb_set_control(trb, command, control_bits);
 
     xhci_increment_ring(cr);
+    context->next_trb = cr->current;
 
     hw_mb();
     XHCI_WRITE32(&xhci->doorbells[0], 0);
+
+    return ZX_OK;
 }
 
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {
@@ -557,6 +568,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
     {
         fbl::AutoLock al(&xhci->command_ring_lock);
         context = xhci->command_contexts[index];
+        xhci_set_dequeue_ptr(&xhci->command_ring, context->next_trb);
         xhci->command_contexts[index] = nullptr;
     }
 

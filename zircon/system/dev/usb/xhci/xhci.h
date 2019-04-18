@@ -106,6 +106,7 @@ typedef void (*xhci_command_complete_cb)(void* data, uint32_t cc, xhci_trb_t* co
 
 struct xhci_command_context_t {
     xhci_command_complete_cb callback;
+    xhci_trb_t* next_trb;
     void* data;
 };
 
@@ -225,8 +226,8 @@ int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep);
 void xhci_set_dbcaa(xhci_t* xhci, uint32_t slot_id, zx_paddr_t paddr);
 zx_status_t xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter);
-void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
-                       xhci_command_context_t* context);
+zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
+                              xhci_command_context_t* context);
 void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);
 void xhci_wait_bits64(volatile uint64_t* ptr, uint64_t bits, uint64_t expected);
 

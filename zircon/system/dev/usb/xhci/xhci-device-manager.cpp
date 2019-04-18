@@ -398,7 +398,11 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_ENABLE_SLOT, 0, 0, &command.context);
+    result = xhci_post_command(xhci, TRB_CMD_ENABLE_SLOT, 0, 0, &command.context);
+    if (result != ZX_OK) {
+        return result;
+    }
+
     int cc = xhci_sync_command_wait(&command);
     if (cc == TRB_CC_SUCCESS) {
         slot_id = xhci_sync_command_slot_id(&command);
@@ -475,7 +479,11 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     xhci_sync_command_init(&command);
     // command expects device context index, so increment ep_index by 1
     uint32_t control = (slot_id << TRB_SLOT_ID_START) | ((ep_index + 1) << TRB_ENDPOINT_ID_START);
-    xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
+    zx_status_t result = xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
+    if (result != ZX_OK) {
+        return result;
+    }
+
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS && cc != TRB_CC_CONTEXT_STATE_ERROR) {
         // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,

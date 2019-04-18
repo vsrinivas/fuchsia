@@ -35,7 +35,11 @@ static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
     // command expects device context index, so increment ep_index by 1
     uint32_t control = (slot_id << TRB_SLOT_ID_START) |
                         ((ep_index + 1) << TRB_ENDPOINT_ID_START);
-    xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control, &command.context);
+    zx_status_t status = xhci_post_command(xhci, TRB_CMD_SET_TR_DEQUEUE, ptr, control,
+                                           &command.context);
+    if (status != ZX_OK) {
+        return status;
+    }
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS) {
         zxlogf(ERROR, "TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
@@ -79,7 +83,13 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
         // command expects device context index, so increment ep_index by 1
         uint32_t control = (slot_id << TRB_SLOT_ID_START) |
                             ((ep_index + 1) << TRB_ENDPOINT_ID_START);
-        xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control, &command.context);
+        zx_status_t status = xhci_post_command(xhci, TRB_CMD_RESET_ENDPOINT, 0, control,
+                                               &command.context);
+        if (status != ZX_OK) {
+            ep->lock.Release();
+            return status;
+        }
+
         // Release the lock before waiting for the command. The command may not complete,
         // if there is another transfer event on the completer thread waiting for the lock
         // on the same endpoint.
@@ -477,7 +487,12 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
         // command expects device context index, so increment ep_index by 1
         uint32_t control = (slot_id << TRB_SLOT_ID_START) |
                            ((ep_index + 1) << TRB_ENDPOINT_ID_START);
-        xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control, &command.context);
+        zx_status_t status = xhci_post_command(xhci, TRB_CMD_STOP_ENDPOINT, 0, control,
+                                               &command.context);
+        if (status != ZX_OK) {
+            ep->lock.Release();
+            return status;
+        }
 
         // We can't block on command completion while holding the lock.
         // It is safe to unlock here because no additional transactions will be
