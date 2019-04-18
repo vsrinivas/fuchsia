@@ -12,25 +12,35 @@ you will need to build fuchsia with an extra test package that will be included
 into the system image. You can do this by running:
 
 ```
-% fx set x64 \
-  --product garnet/products/default.gni \
-  --available garnet/packages/tests/system_ota \
+% fx set core.x64 \
+  --with-base //third_party/sbase:cat \
+  --with-base //third_party/sbase:ls \
+  --with //garnet/tests/system_ota_tests \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"'
 % fx build
 ```
 
-Finally, you can run the test with:
+Next, you need to authenticate against luci to be able to download build
+artifacts. Install chromium's `depot_tools` by following
+[these instructions](https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html).
+Then, login to luci by running:
 
 ```
-% ~/fuchsia/out/x64/tools/system_ota_test \
-  -fuchsia-build-dir ~/fuchsia/out/x64 \
-  -zircon-tools-dir ~/fuchsia/out/build-zircon/tools \
-  -builder-name fuchsia/ci/fuchsia-x64-release \
-  upgrade
+% cd depot_tools
+% ./luci-auth login
+...
+```
+
+Now, you should be able to run the tests with:
+
+```
+~/fuchsia/out/default/host_x64/system_ota_tests_upgrade \
+  -ssh-private-key ~/fuchsia/.ssh/pkey \
+  -builder-name fuchsia/ci/fuchsia-x64-release
 ```
 
 This will run through the whole test. There are more options to the test, to see
-them all run `~/fuchsia/out/x64/tools/system_ota_test -- -h`.
+them all run `~/fuchsia/out/default/host_x64/system_ota_tests_upgrade -- -h`.
 
 ## Running the tests locally in QEMU
 
@@ -73,9 +83,10 @@ an OTA. To restore this behavior, you need an extra build argument to send
 output to the terminal:
 
 ```
-% fx set x64 \
-  --product garnet/products/default.gni \
-  --available garnet/packages/tests/system_ota \
+% fx set core.x64 \
+  --with-base //third_party/sbase:cat \
+  --with-base //third_party/sbase:ls \
+  --with //garnet/tests/system_ota_tests \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"' \
   --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
 % fx build
