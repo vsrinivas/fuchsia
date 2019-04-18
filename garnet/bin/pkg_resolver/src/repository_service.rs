@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::repository_manager::RepositoryManager;
+use crate::repository_manager::{CannotRemoveStaticRepositories, RepositoryManager};
 use fidl_fuchsia_pkg::{
     MirrorConfig as FidlMirrorConfig, RepositoryConfig as FidlRepositoryConfig,
     RepositoryIteratorRequest, RepositoryIteratorRequestStream, RepositoryManagerRequest,
     RepositoryManagerRequestStream,
 };
+use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use fuchsia_uri::pkg_uri::RepoUri;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 const LIST_CHUNK_SIZE: usize = 100;
@@ -59,12 +62,34 @@ impl RepositoryService {
         Ok(())
     }
 
-    fn serve_insert(&mut self, _repo: FidlRepositoryConfig) -> Result<(), Status> {
-        Err(Status::INTERNAL)
+    fn serve_insert(&mut self, repo: FidlRepositoryConfig) -> Result<(), Status> {
+        let repo = match RepositoryConfig::try_from(repo) {
+            Ok(repo) => repo,
+            Err(err) => {
+                fx_log_err!("invalid repository config: {}", err);
+                return Err(Status::INVALID_ARGS);
+            }
+        };
+
+        self.repo_manager.write().insert(repo);
+
+        Ok(())
     }
 
-    fn serve_remove(&mut self, _repo_url: String) -> Result<(), Status> {
-        Err(Status::INTERNAL)
+    fn serve_remove(&mut self, repo_url: String) -> Result<(), Status> {
+        let repo_url = match RepoUri::parse(&repo_url) {
+            Ok(repo_url) => repo_url,
+            Err(err) => {
+                fx_log_err!("invalid repository URI: {}", err);
+                return Err(Status::INVALID_ARGS);
+            }
+        };
+
+        match self.repo_manager.write().remove(&repo_url) {
+            Ok(Some(_)) => Ok(()),
+            Ok(None) => Err(Status::NOT_FOUND),
+            Err(CannotRemoveStaticRepositories) => Err(Status::ACCESS_DENIED),
+        }
     }
 
     fn serve_insert_mirror(
@@ -84,14 +109,12 @@ impl RepositoryService {
     }
 
     fn serve_list(&self, mut stream: RepositoryIteratorRequestStream) {
-        let mut results = self
+        let results = self
             .repo_manager
             .read()
             .list()
-            .map(|(_, config)| config.clone().into())
+            .map(|config| config.clone().into())
             .collect::<Vec<FidlRepositoryConfig>>();
-
-        results.sort_unstable_by(|a, b| a.repo_url.cmp(&b.repo_url));
 
         fasync::spawn(
             async move {
@@ -161,7 +184,7 @@ mod tests {
 
         let dir = create_dir(vec![("configs", RepositoryConfigs::Version1(configs.clone()))]);
 
-        let (mgr, errors) = RepositoryManager::load_dir(dir).unwrap();
+        let (mgr, errors) = RepositoryManager::load_dir(dir);
         assert_eq!(errors.len(), 0);
 
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
@@ -169,5 +192,37 @@ mod tests {
         // Fetch the list of results and make sure the results are what we expected.
         let results = await!(list(&service));
         assert_eq!(results, configs);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_insert_list_remove() {
+        let mgr = Arc::new(RwLock::new(RepositoryManager::new()));
+        let mut service = RepositoryService::new(mgr);
+
+        // First, create a bunch of repo configs we're going to use for testing.
+        let configs = (0..1000)
+            .map(|i| {
+                let uri = RepoUri::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
+                RepositoryConfigBuilder::new(uri).build()
+            })
+            .collect::<Vec<_>>();
+
+        // Insert all the configs and make sure it is successful.
+        for config in &configs {
+            assert_eq!(service.serve_insert(config.clone().into()), Ok(()));
+        }
+
+        // Fetch the list of results and make sure the results are what we expected.
+        let results = await!(list(&service));
+        assert_eq!(results, configs);
+
+        // Remove all the configs and make sure nothing is left.
+        for config in &configs {
+            assert_eq!(service.serve_remove(config.repo_url().to_string()), Ok(()));
+        }
+
+        // We should now not receive anything.
+        let results = await!(list(&service));
+        assert_eq!(results, vec![]);
     }
 }

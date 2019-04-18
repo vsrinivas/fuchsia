@@ -59,6 +59,18 @@ enum Command {
 
 #[derive(StructOpt)]
 enum RepoCommand {
+    #[structopt(name = "add", about = "add a repository")]
+    Add {
+        #[structopt(short = "f", long = "file", help = "path to a repository config file")]
+        file: PathBuf,
+    },
+
+    #[structopt(name = "add", about = "add a repository")]
+    Remove {
+        #[structopt(long = "repo-url", help = "the repository url to remove")]
+        repo_url: String,
+    },
+
     #[structopt(name = "list", about = "list repositories")]
     List,
 }
@@ -157,6 +169,22 @@ fn main() -> Result<(), Error> {
                     .context("Failed to connect to resolver service")?;
 
                 match cmd {
+                    RepoCommand::Add { file } => {
+                        let repo: RepositoryConfig = serde_json::from_reader(File::open(file)?)?;
+
+                        let res = await!(repo_manager.add(repo.into()))?;
+                        zx::Status::ok(res)?;
+
+                        Ok(())
+                    }
+
+                    RepoCommand::Remove { repo_url } => {
+                        let res = await!(repo_manager.remove(&repo_url))?;
+                        zx::Status::ok(res)?;
+
+                        Ok(())
+                    }
+
                     RepoCommand::List => {
                         let (iter, server_end) = fidl::endpoints::create_proxy()?;
                         repo_manager.list(server_end)?;

@@ -5,8 +5,10 @@
 use {
     failure::Fail,
     fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigs},
-    std::collections::hash_map::{self, Entry},
-    std::collections::HashMap,
+    fuchsia_uri::pkg_uri::RepoUri,
+    std::collections::btree_set,
+    std::collections::hash_map::Entry,
+    std::collections::{BTreeSet, HashMap},
     std::fmt,
     std::fs,
     std::io,
@@ -16,88 +18,163 @@ use {
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
 #[derive(Debug, PartialEq, Eq)]
 pub struct RepositoryManager {
-    configs: HashMap<String, RepositoryConfig>,
+    static_configs: HashMap<RepoUri, RepositoryConfig>,
+    dynamic_configs: HashMap<RepoUri, RepositoryConfig>,
 }
 
 impl RepositoryManager {
     /// Construct a new [RepositoryManager].
     pub fn new() -> Self {
-        RepositoryManager { configs: HashMap::new() }
-    }
-
-    /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_host`.
-    #[allow(dead_code)]
-    pub fn get(&self, repo_host: &str) -> Option<&RepositoryConfig> {
-        self.configs.get(repo_host)
+        RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
     }
 
     /// Load a directory of [RepositoryConfigs] files into a [RepositoryManager], or error out if we
     /// encounter io errors during the load. It returns a [RepositoryManager], as well as all the
     /// individual [LoadError] errors encountered during the load.
-    pub fn load_dir<T: AsRef<Path>>(dir: T) -> io::Result<(Self, Vec<LoadError>)> {
-        let dir = dir.as_ref();
-        let entries: Result<Vec<_>, _> = dir.read_dir()?.collect();
-        let mut entries = entries?;
+    pub fn load_dir<T: AsRef<Path>>(static_config_dir: T) -> (Self, Vec<LoadError>) {
+        let (static_configs, errors) = load_configs_dir(static_config_dir);
+        let mgr = RepositoryManager { static_configs, dynamic_configs: HashMap::new() };
+        (mgr, errors)
+    }
 
-        // Make sure we always process entries in order to make config loading order deterministic.
-        entries.sort_by_key(|e| e.file_name());
+    /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_url`,
+    /// or `None` if it does not exist.
+    pub fn get(&self, repo_url: &RepoUri) -> Option<&RepositoryConfig> {
+        self.dynamic_configs.get(repo_url).or_else(|| self.static_configs.get(repo_url))
+    }
 
-        let mut map = HashMap::new();
-        let mut errors = Vec::new();
+    /// Inserts a [RepositoryConfig] into this manager.
+    ///
+    /// If the manager did not have a [RepositoryConfig] with a corresponding repository url for
+    /// the repository, `None` is returned.
+    ///
+    /// If the manager did have this repository present as a dynamic config, the value is replaced
+    /// and the old [RepositoryConfig] is returned. If this repository is a static config, the
+    /// static config is shadowed by the dynamic config until it is removed.
+    pub fn insert(&mut self, config: RepositoryConfig) -> Option<RepositoryConfig> {
+        self.dynamic_configs.insert(config.repo_url().clone(), config)
+    }
 
-        for entry in entries {
-            let path = entry.path();
-
-            // Skip over any directories in this path.
-            match entry.file_type() {
-                Ok(file_type) => {
-                    if !file_type.is_file() {
-                        continue;
-                    }
-                }
-                Err(err) => {
-                    errors.push(LoadError::Io { path, error: err });
-                    continue;
-                }
-            }
-
-            let expected_host = path.file_stem().and_then(|name| name.to_str());
-
-            let configs = match serde_json::from_reader(fs::File::open(&path)?) {
-                Ok(RepositoryConfigs::Version1(configs)) => configs,
-                Err(err) => {
-                    errors.push(LoadError::Parse { path: path, error: err });
-                    continue;
-                }
-            };
-
-            // Insert the configs in filename lexographical order, and treating any duplicated
-            // configs as a recoverable error. As a special case, if the file the config comes from
-            // happens to be named the same as the repository hostname, use that config over some
-            // other config that came from some other file.
-            for config in configs {
-                match map.entry(config.repo_url().host().to_string()) {
-                    Entry::Occupied(mut entry) => {
-                        let replaced_config = if Some(&**entry.key()) == expected_host {
-                            entry.insert(config)
-                        } else {
-                            config
-                        };
-                        errors.push(LoadError::Overridden { replaced_config });
-                    }
-                    Entry::Vacant(entry) => {
-                        entry.insert(config);
-                    }
-                }
-            }
+    /// Removes a [RepositoryConfig] identified by the config `repo_url`.
+    pub fn remove(
+        &mut self,
+        repo_url: &RepoUri,
+    ) -> Result<Option<RepositoryConfig>, CannotRemoveStaticRepositories> {
+        if let Some(config) = self.dynamic_configs.remove(repo_url) {
+            return Ok(Some(config));
         }
 
-        Ok((RepositoryManager { configs: map }, errors))
+        if self.static_configs.get(repo_url).is_some() {
+            Err(CannotRemoveStaticRepositories)
+        } else {
+            Ok(None)
+        }
     }
 
     /// Returns an iterator over all the managed [RepositoryConfig]s.
     pub fn list(&self) -> List {
-        List { iter: self.configs.iter() }
+        let keys = self
+            .dynamic_configs
+            .iter()
+            .chain(self.static_configs.iter())
+            .map(|(k, _)| k)
+            .collect::<BTreeSet<_>>();
+
+        List { keys: keys.into_iter(), repo_mgr: self }
+    }
+}
+
+/// Load a directory of [RepositoryConfigs] files into a [RepositoryManager], or error out if we
+/// encounter io errors during the load. It returns a [RepositoryManager], as well as all the
+/// individual [LoadError] errors encountered during the load.
+fn load_configs_dir<T: AsRef<Path>>(
+    dir: T,
+) -> (HashMap<RepoUri, RepositoryConfig>, Vec<LoadError>) {
+    let dir = dir.as_ref();
+
+    let mut entries = match dir.read_dir() {
+        Ok(entries) => {
+            let entries: Result<Vec<_>, _> = entries.collect();
+
+            match entries {
+                Ok(entries) => entries,
+                Err(err) => {
+                    return (HashMap::new(), vec![LoadError::Io { path: dir.into(), error: err }]);
+                }
+            }
+        }
+        Err(err) => {
+            return (HashMap::new(), vec![LoadError::Io { path: dir.into(), error: err }]);
+        }
+    };
+
+    // Make sure we always process entries in order to make config loading order deterministic.
+    entries.sort_by_key(|e| e.file_name());
+
+    let mut map = HashMap::new();
+    let mut errors = Vec::new();
+
+    for entry in entries {
+        let path = entry.path();
+
+        // Skip over any directories in this path.
+        match entry.file_type() {
+            Ok(file_type) => {
+                if !file_type.is_file() {
+                    continue;
+                }
+            }
+            Err(err) => {
+                errors.push(LoadError::Io { path, error: err });
+                continue;
+            }
+        }
+
+        let expected_uri = path
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .and_then(|name| RepoUri::new(name.to_string()).ok());
+
+        let configs = match load_configs_file(&path) {
+            Ok(configs) => configs,
+            Err(err) => {
+                errors.push(err);
+                continue;
+            }
+        };
+
+        // Insert the configs in filename lexographical order, and treating any duplicated
+        // configs as a recoverable error. As a special case, if the file the config comes from
+        // happens to be named the same as the repository hostname, use that config over some
+        // other config that came from some other file.
+        for config in configs {
+            match map.entry(config.repo_url().clone()) {
+                Entry::Occupied(mut entry) => {
+                    let replaced_config = if Some(entry.key()) == expected_uri.as_ref() {
+                        entry.insert(config)
+                    } else {
+                        config
+                    };
+                    errors.push(LoadError::Overridden { replaced_config });
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(config);
+                }
+            }
+        }
+    }
+
+    (map, errors)
+}
+
+fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, LoadError> {
+    let path = path.as_ref();
+    match fs::File::open(&path) {
+        Ok(f) => match serde_json::from_reader(f) {
+            Ok(RepositoryConfigs::Version1(configs)) => Ok(configs),
+            Err(err) => Err(LoadError::Parse { path: path.into(), error: err }),
+        },
+        Err(err) => Err(LoadError::Io { path: path.into(), error: err }),
     }
 }
 
@@ -143,16 +220,25 @@ impl fmt::Display for LoadError {
 ///
 /// See its documentation for more.
 pub struct List<'a> {
-    iter: hash_map::Iter<'a, String, RepositoryConfig>,
+    keys: btree_set::IntoIter<&'a RepoUri>,
+    repo_mgr: &'a RepositoryManager,
 }
 
 impl<'a> Iterator for List<'a> {
-    type Item = (&'a String, &'a RepositoryConfig);
+    type Item = &'a RepositoryConfig;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        if let Some(key) = self.keys.next() {
+            self.repo_mgr.get(key)
+        } else {
+            None
+        }
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Fail)]
+#[fail(display = "cannot remove static repositories")]
+pub struct CannotRemoveStaticRepositories;
 
 #[cfg(test)]
 mod tests {
@@ -166,13 +252,117 @@ mod tests {
     use std::io::Write;
 
     #[test]
+    fn test_insert_get_remove() {
+        let mut repos = RepositoryManager::new();
+        assert_eq!(
+            repos,
+            RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
+        );
+
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        assert_eq!(repos.get(&fuchsia_uri), None);
+
+        let config1 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![0]))
+            .build();
+        let config2 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![1]))
+            .build();
+
+        assert_eq!(repos.insert(config1.clone()), None);
+        assert_eq!(
+            repos,
+            RepositoryManager {
+                static_configs: HashMap::new(),
+                dynamic_configs: hashmap! {
+                    fuchsia_uri.clone() => config1.clone(),
+                },
+            }
+        );
+
+        assert_eq!(repos.insert(config2.clone()), Some(config1.clone()));
+        assert_eq!(
+            repos,
+            RepositoryManager {
+                static_configs: HashMap::new(),
+                dynamic_configs: hashmap! {
+                    fuchsia_uri.clone() => config2.clone(),
+                },
+            }
+        );
+
+        assert_eq!(repos.get(&fuchsia_uri), Some(&config2));
+        assert_eq!(repos.remove(&fuchsia_uri), Ok(Some(config2.clone())));
+        assert_eq!(
+            repos,
+            RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
+        );
+        assert_eq!(repos.remove(&fuchsia_uri), Ok(None));
+    }
+
+    #[test]
+    fn shadowing_static_config() {
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+
+        let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![1]))
+            .build();
+
+        let fuchsia_config2 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![2]))
+            .build();
+
+        let dir = create_dir(vec![(
+            "fuchsia.com.json",
+            RepositoryConfigs::Version1(vec![fuchsia_config1.clone()]),
+        )]);
+
+        let (mut repomgr, errors) = RepositoryManager::load_dir(dir.path());
+        assert!(errors.is_empty(), "errors: {:?}", errors);
+
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
+        assert_eq!(repomgr.insert(fuchsia_config2.clone()), None);
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config2));
+        assert_eq!(repomgr.remove(&fuchsia_uri), Ok(Some(fuchsia_config2)));
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
+    }
+
+    #[test]
+    fn cannot_remove_static_config() {
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+
+        let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![1]))
+            .build();
+
+        let dir = create_dir(vec![(
+            "fuchsia.com.json",
+            RepositoryConfigs::Version1(vec![fuchsia_config1.clone()]),
+        )]);
+
+        let (mut repomgr, errors) = RepositoryManager::load_dir(dir.path());
+        assert!(errors.is_empty(), "errors: {:?}", errors);
+
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
+        assert_eq!(repomgr.remove(&fuchsia_uri), Err(CannotRemoveStaticRepositories));
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
+    }
+
+    #[test]
     fn test_load_dir_not_exists() {
         let dir = tempfile::tempdir().unwrap();
 
-        match RepositoryManager::load_dir(dir.path().join("not-exists")) {
-            Ok(_) => panic!("should not have created repo"),
-            Err(err) => {
-                assert_eq!(err.kind(), std::io::ErrorKind::NotFound, "{}", err);
+        let does_not_exist_dir = dir.path().join("not-exists");
+        let (_, errors) = RepositoryManager::load_dir(&does_not_exist_dir);
+        assert_eq!(errors.len(), 1, "{:?}", errors);
+
+        match &errors[0] {
+            LoadError::Io { path, error } => {
+                assert_eq!(path, &does_not_exist_dir);
+                assert_eq!(error.kind(), std::io::ErrorKind::NotFound, "{}", error);
+            }
+            err => {
+                panic!("unexpected error: {}", err);
             }
         }
     }
@@ -183,12 +373,12 @@ mod tests {
         let invalid_path = dir.path().join("invalid");
 
         let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
-        let example_config = RepositoryConfigBuilder::new(example_uri)
+        let example_config = RepositoryConfigBuilder::new(example_uri.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
             .build();
 
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri)
+        let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
 
@@ -205,7 +395,7 @@ mod tests {
                 .unwrap();
         }
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
         assert_eq!(errors.len(), 1, "{:?}", errors);
 
         match &errors[0] {
@@ -220,10 +410,11 @@ mod tests {
         assert_eq!(
             repomgr,
             RepositoryManager {
-                configs: hashmap! {
-                    "example.com".to_string() => example_config,
-                    "fuchsia.com".to_string() => fuchsia_config,
-                }
+                static_configs: hashmap! {
+                    example_uri => example_config,
+                    fuchsia_uri => fuchsia_config,
+                },
+                dynamic_configs: HashMap::new(),
             }
         );
     }
@@ -231,26 +422,27 @@ mod tests {
     #[test]
     fn test_load_dir() {
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri).build();
+        let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri.clone()).build();
 
         let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
-        let example_config = RepositoryConfigBuilder::new(example_uri).build();
+        let example_config = RepositoryConfigBuilder::new(example_uri.clone()).build();
 
         let dir = create_dir(vec![
             ("example.com.json", RepositoryConfigs::Version1(vec![example_config.clone()])),
             ("fuchsia.com.json", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
         assert!(errors.is_empty(), "errors: {:?}", errors);
 
         assert_eq!(
             repomgr,
             RepositoryManager {
-                configs: hashmap! {
-                    "example.com".to_string() => example_config,
-                    "fuchsia.com".to_string() => fuchsia_config,
-                }
+                static_configs: hashmap! {
+                    example_uri => example_config,
+                    fuchsia_uri => fuchsia_config,
+                },
+                dynamic_configs: HashMap::new(),
             }
         );
     }
@@ -275,7 +467,7 @@ mod tests {
             .add_root_key(RepositoryKey::Ed25519(vec![3]))
             .build();
 
-        let oem_config = RepositoryConfigBuilder::new(fuchsia_uri)
+        let oem_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![4]))
             .build();
 
@@ -294,7 +486,7 @@ mod tests {
             ),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
 
         let overridden_configs =
             vec![fuchsia_config, fuchsia_com_config, example_config, oem_config];
@@ -314,9 +506,10 @@ mod tests {
         assert_eq!(
             repomgr,
             RepositoryManager {
-                configs: hashmap! {
-                    "fuchsia.com".to_string() => fuchsia_com_json_config,
-                }
+                static_configs: hashmap! {
+                    fuchsia_uri => fuchsia_com_json_config,
+                },
+                dynamic_configs: HashMap::new(),
             }
         );
     }
@@ -340,7 +533,7 @@ mod tests {
             ("2", RepositoryConfigs::Version1(vec![fuchsia_config2.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
 
         assert_eq!(errors.len(), 1);
         match &errors[0] {
@@ -355,9 +548,10 @@ mod tests {
         assert_eq!(
             repomgr,
             RepositoryManager {
-                configs: hashmap! {
-                    "fuchsia.com".to_string() => fuchsia_config1,
-                }
+                static_configs: hashmap! {
+                    fuchsia_uri => fuchsia_config1,
+                },
+                dynamic_configs: HashMap::new(),
             }
         );
     }
@@ -365,7 +559,7 @@ mod tests {
     #[test]
     fn test_list_empty() {
         let repomgr = RepositoryManager::new();
-        assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![]);
+        assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
     #[test]
@@ -381,20 +575,9 @@ mod tests {
             ("fuchsia.com", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path()).unwrap();
+        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
         assert_eq!(errors.len(), 0);
 
-        let mut results = repomgr.list().collect::<Vec<_>>();
-
-        // Sort the results so it's easy to compare.
-        results.sort_unstable_by_key(|(k, _)| &**k);
-
-        assert_eq!(
-            results,
-            vec![
-                (&"example.com".into(), &example_config),
-                (&"fuchsia.com".into(), &fuchsia_config),
-            ]
-        );
+        assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![&example_config, &fuchsia_config,]);
     }
 }

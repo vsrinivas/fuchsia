@@ -42,13 +42,12 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let repo_manager = static_repo_manager();
-
     let amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
-    let rewrite_manager = load_rewrite_manager();
+    let repo_manager = Arc::new(RwLock::new(load_repo_manager()));
+    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager()));
 
     let resolver_cb = {
         // Capture a clone of rewrite_manager's Arc so the new client callback has a copy from
@@ -100,41 +99,33 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn static_repo_manager() -> Arc<RwLock<RepositoryManager>> {
+fn load_repo_manager() -> RepositoryManager {
     let static_repo_dir = Path::new(STATIC_REPO_DIR);
 
-    if !static_repo_dir.exists() {
-        return Arc::new(RwLock::new(RepositoryManager::new()));
+    if static_repo_dir.exists() {
+        return RepositoryManager::new();
     }
 
-    match RepositoryManager::load_dir(static_repo_dir) {
-        Ok((repo_manager, errors)) => {
-            // report any errors we saw, but don't error out because otherwise we won't be able
-            // to update the system.
-            for err in errors {
-                fx_log_err!("error loading static repo config: {}", err);
-            }
-            Arc::new(RwLock::new(repo_manager))
-        }
-        Err(err) => {
-            fx_log_err!(
-                "unable to load any static repo configs, defaulting to empty list: {}",
-                err
-            );
-            Arc::new(RwLock::new(RepositoryManager::new()))
-        }
+    let (repo_manager, errors) = RepositoryManager::load_dir(static_repo_dir);
+
+    // report any errors we saw, but don't error out because otherwise we won't be able
+    // to update the system.
+    for err in errors {
+        fx_log_err!("error loading static repo config: {}", err);
     }
+
+    repo_manager
 }
 
-fn load_rewrite_manager() -> Arc<RwLock<RewriteManager>> {
+fn load_rewrite_manager() -> RewriteManager {
     let dynamic_rules_path = Path::new(DYNAMIC_RULES_PATH);
 
     if !dynamic_rules_path.exists() {
-        return Arc::new(RwLock::new(RewriteManager::new(dynamic_rules_path.to_owned())));
+        return RewriteManager::new(dynamic_rules_path.to_owned());
     }
 
-    Arc::new(RwLock::new(RewriteManager::load(dynamic_rules_path).unwrap_or_else(|e| {
+    RewriteManager::load(dynamic_rules_path).unwrap_or_else(|e| {
         fx_log_err!("unable to load dynamic rewrite rules from disk, using defaults: {}", e);
         RewriteManager::new(dynamic_rules_path.to_owned())
-    })))
+    })
 }
