@@ -12,8 +12,6 @@
 #include "src/lib/fxl/command_line.h"
 
 int main(int argc, char** argv) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
@@ -26,7 +24,7 @@ int main(int argc, char** argv) {
       .environment_services = environment_services,
       .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
       .sysmgr_args = {},
-      .run_virtual_console = !command_line.HasOption("disable-virtual-console"),
+      .run_virtual_console = true,
       .retry_sysmgr_crash = true};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 

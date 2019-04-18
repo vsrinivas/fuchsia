@@ -214,10 +214,10 @@ int fuchsia_starter(void* arg) {
             drivers_loaded = true;
         }
 
-        fbl::Vector<const char*> argv_appmgr;
-        argv_appmgr.push_back("/system/bin/appmgr");
-        coordinator->boot_args().Collect("appmgr.arg", &argv_appmgr);
-        argv_appmgr.push_back(nullptr);
+        const char* argv_appmgr[] = {
+            "/system/bin/appmgr",
+            nullptr,
+        };
 
         struct stat s;
         if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
@@ -231,7 +231,7 @@ int fuchsia_starter(void* arg) {
                 appmgr_hnd_count++;
             }
             devmgr::devmgr_launch(g_handles.fuchsia_job, "appmgr",
-                                  argv_appmgr.get(), nullptr, -1, appmgr_hnds, appmgr_ids,
+                                  argv_appmgr, nullptr, -1, appmgr_hnds, appmgr_ids,
                                   appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
             appmgr_started = true;
         }

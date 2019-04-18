@@ -40,5 +40,5 @@ recovery_packages += [
 assemble_system("recovery") {
   base_packages = recovery_packages
   netboot = true
-  devmgr_config = [ "appmgr.arg=--disable-virtual-console" ]
+  devmgr_config = [ "virtcon.disable=true" ]
 }
