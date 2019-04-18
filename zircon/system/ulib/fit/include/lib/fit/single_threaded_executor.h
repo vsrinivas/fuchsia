@@ -73,7 +73,7 @@ run_single_threaded(promise_impl<Continuation> promise) {
     using result_type = typename promise_impl<Continuation>::result_type;
     single_threaded_executor exec;
     result_type saved_result;
-    exec.schedule_task(promise.then([&saved_result](result_type result) {
+    exec.schedule_task(promise.then([&saved_result](result_type& result) {
         saved_result = std::move(result);
     }));
     exec.run();
