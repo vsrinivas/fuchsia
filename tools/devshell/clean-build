@@ -15,4 +15,4 @@ if [[ "$#" -gt 0 ]]; then
 fi
 
 fx-command-run clean
-fx-command-run full-build
+fx-command-run build
