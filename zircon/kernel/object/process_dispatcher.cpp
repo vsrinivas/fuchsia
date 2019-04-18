@@ -83,7 +83,7 @@ static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
 zx_status_t ProcessDispatcher::Create(
     fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
     KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
-    fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+    KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
     zx_rights_t* root_vmar_rights) {
     fbl::AllocChecker ac;
     KernelHandle new_handle(fbl::AdoptRef(new (&ac) ProcessDispatcher(job, name, flags)));
@@ -95,10 +95,10 @@ zx_status_t ProcessDispatcher::Create(
         return result;
 
     // Create a dispatcher for the root VMAR.
-    fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
+    KernelHandle<VmAddressRegionDispatcher> new_vmar_handle;
     result = VmAddressRegionDispatcher::Create(new_handle.dispatcher()->aspace()->RootVmar(),
                                                ARCH_MMU_FLAG_PERM_USER,
-                                               &new_vmar_dispatcher,
+                                               &new_vmar_handle,
                                                root_vmar_rights);
     if (result != ZX_OK)
         return result;
@@ -111,8 +111,7 @@ zx_status_t ProcessDispatcher::Create(
 
     *rights = default_rights();
     *handle = ktl::move(new_handle);
-    *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
-            &new_vmar_dispatcher);
+    *root_vmar_handle = ktl::move(new_vmar_handle);
 
     return ZX_OK;
 }

@@ -344,25 +344,26 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     }
 
     // create a new process dispatcher
-    KernelHandle<ProcessDispatcher> process_handle;
-    fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
+    KernelHandle<ProcessDispatcher> new_process_handle;
+    KernelHandle<VmAddressRegionDispatcher> new_vmar_handle;
     zx_rights_t proc_rights, vmar_rights;
     result = ProcessDispatcher::Create(ktl::move(job), sp, options,
-                                       &process_handle, &proc_rights,
-                                       &vmar_dispatcher, &vmar_rights);
+                                       &new_process_handle, &proc_rights,
+                                       &new_vmar_handle, &vmar_rights);
     if (result != ZX_OK)
         return result;
 
-    uint32_t koid = (uint32_t)process_handle.dispatcher()->get_koid();
+    uint32_t koid = (uint32_t)new_process_handle.dispatcher()->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
     // Give arch-specific tracing a chance to record process creation.
-    arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
+    arch_trace_process_create(
+        koid, new_vmar_handle.dispatcher()->vmar()->aspace()->arch_aspace().arch_table_phys());
 
-    result = proc_handle->make(ktl::move(process_handle), proc_rights);
+    result = proc_handle->make(ktl::move(new_process_handle), proc_rights);
     if (result == ZX_OK)
-        result = vmar_handle->make(ktl::move(vmar_dispatcher), vmar_rights);
+        result = vmar_handle->make(ktl::move(new_vmar_handle), vmar_rights);
     return result;
 }
 

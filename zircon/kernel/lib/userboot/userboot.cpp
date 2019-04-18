@@ -72,25 +72,29 @@ public:
     zx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> root_vmar,
                     uintptr_t* vdso_base, uintptr_t* entry) {
         // Create a VMAR (placed anywhere) to hold the combined image.
-        fbl::RefPtr<VmAddressRegionDispatcher> vmar;
+        KernelHandle<VmAddressRegionDispatcher> vmar_handle;
         zx_rights_t vmar_rights;
         zx_status_t status = root_vmar->Allocate(0, size(),
                                                  ZX_VM_CAN_MAP_READ |
                                                  ZX_VM_CAN_MAP_WRITE |
                                                  ZX_VM_CAN_MAP_EXECUTE |
                                                  ZX_VM_CAN_MAP_SPECIFIC,
-                                                 &vmar, &vmar_rights);
+                                                 &vmar_handle, &vmar_rights);
         if (status != ZX_OK)
             return status;
 
         // Map userboot proper.
-        status = RoDso::Map(vmar, 0);
+        status = RoDso::Map(vmar_handle.dispatcher(), 0);
         if (status == ZX_OK) {
-            *entry = vmar->vmar()->base() + USERBOOT_ENTRY;
+            *entry = vmar_handle.dispatcher()->vmar()->base() + USERBOOT_ENTRY;
 
             // Map the vDSO right after it.
-            *vdso_base = vmar->vmar()->base() + RoDso::size();
-            status = vdso_->Map(ktl::move(vmar), RoDso::size());
+            *vdso_base = vmar_handle.dispatcher()->vmar()->base() + RoDso::size();
+
+            // Releasing |vmar_handle| is safe because it has a no-op
+            // on_zero_handles(), otherwise the mapping routines would have
+            // to take ownership of the handle and manage its lifecycle.
+            status = vdso_->Map(vmar_handle.release(), RoDso::size());
         }
         return status;
     }
@@ -403,11 +407,11 @@ static zx_status_t attempt_userboot() {
     }
 
     KernelHandle<ProcessDispatcher> process_handle;
-    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
+    KernelHandle<VmAddressRegionDispatcher> vmar_handle;
     zx_rights_t rights, vmar_rights;
     status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
                                        &process_handle, &rights,
-                                       &vmar, &vmar_rights);
+                                       &vmar_handle, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
@@ -417,7 +421,11 @@ static zx_status_t attempt_userboot() {
         return ZX_ERR_NO_MEMORY;
     handles[BOOTSTRAP_PROC] = process_handle_owner.release();
 
-    handles[BOOTSTRAP_VMAR_ROOT] = Handle::Make(vmar, vmar_rights).release();
+    auto vmar = vmar_handle.dispatcher();
+    HandleOwner vmar_handle_owner = Handle::Make(ktl::move(vmar_handle), vmar_rights);
+    if (!vmar_handle_owner)
+        return ZX_ERR_NO_MEMORY;
+    handles[BOOTSTRAP_VMAR_ROOT] = vmar_handle_owner.release();
 
     const VDso* vdso = VDso::Create();
     for (size_t i = BOOTSTRAP_VDSO; i <= BOOTSTRAP_VDSO_LAST_VARIANT; ++i) {

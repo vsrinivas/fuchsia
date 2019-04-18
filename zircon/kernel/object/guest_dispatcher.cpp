@@ -18,7 +18,7 @@ KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")
 // static
 zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
                                     zx_rights_t* guest_rights,
-                                    fbl::RefPtr<Dispatcher>* vmar_dispatcher,
+                                    KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                                     zx_rights_t* vmar_rights) {
     ktl::unique_ptr<Guest> guest;
     zx_status_t status = Guest::Create(&guest);
@@ -33,7 +33,7 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
     }
 
     status = VmAddressRegionDispatcher::Create(disp->guest()->AddressSpace()->RootVmar(), 0,
-                                               vmar_dispatcher, vmar_rights);
+                                               vmar_handle, vmar_rights);
     if (status != ZX_OK) {
         return status;
     }

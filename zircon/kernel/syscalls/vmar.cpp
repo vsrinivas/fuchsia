@@ -49,27 +49,23 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
         return status;
 
     // Create the new VMAR
-    fbl::RefPtr<VmAddressRegionDispatcher> new_vmar;
+    KernelHandle<VmAddressRegionDispatcher> handle;
     zx_rights_t new_rights;
-    status = vmar->Allocate(offset, size, options, &new_vmar, &new_rights);
+    status = vmar->Allocate(offset, size, options, &handle, &new_rights);
     if (status != ZX_OK)
         return status;
 
     // Setup a handler to destroy the new VMAR if the syscall is unsuccessful.
-    // Note that new_vmar is being passed by value, so a new reference is held
-    // there.
-    auto cleanup_handler = fbl::MakeAutoCall([new_vmar]() {
-        new_vmar->Destroy();
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher = handle.dispatcher();
+    auto cleanup_handler = fbl::MakeAutoCall([&vmar_dispatcher]() {
+        vmar_dispatcher->Destroy();
     });
 
-    // Extract the base address before we give away the ref.
-    uintptr_t base = new_vmar->vmar()->base();
-
     // Create a handle and attach the dispatcher to it
-    status = child_vmar->make(ktl::move(new_vmar), new_rights);
+    status = child_vmar->make(ktl::move(handle), new_rights);
 
     if (status == ZX_OK)
-        status = child_addr.copy_to_user(base);
+        status = child_addr.copy_to_user(vmar_dispatcher->vmar()->base());
 
     if (status == ZX_OK)
         cleanup_handler.cancel();

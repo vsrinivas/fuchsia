@@ -96,7 +96,7 @@ zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
 
 zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
                                               uint base_arch_mmu_flags,
-                                              fbl::RefPtr<Dispatcher>* dispatcher,
+                                              KernelHandle<VmAddressRegionDispatcher>* handle,
                                               zx_rights_t* rights) {
 
     // The initial rights should match the VMAR's creation permissions
@@ -113,12 +113,13 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VmAddressRegionDispatcher(ktl::move(vmar), base_arch_mmu_flags);
+    KernelHandle new_handle(
+        fbl::AdoptRef(new (&ac) VmAddressRegionDispatcher(ktl::move(vmar), base_arch_mmu_flags)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = vmar_rights;
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
@@ -134,7 +135,7 @@ VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {
 
 zx_status_t VmAddressRegionDispatcher::Allocate(
     size_t offset, size_t size, uint32_t flags,
-    fbl::RefPtr<VmAddressRegionDispatcher>* new_dispatcher,
+    KernelHandle<VmAddressRegionDispatcher>* handle,
     zx_rights_t* new_rights) {
 
     canary_.Assert();
@@ -156,17 +157,8 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
     if (status != ZX_OK)
         return status;
 
-    // Create the dispatcher.
-    fbl::RefPtr<Dispatcher> dispatcher;
-    status = VmAddressRegionDispatcher::Create(ktl::move(new_vmar),
-                                               base_arch_mmu_flags_,
-                                               &dispatcher, new_rights);
-    if (status != ZX_OK)
-        return status;
-
-    *new_dispatcher =
-        DownCastDispatcher<VmAddressRegionDispatcher>(&dispatcher);
-    return ZX_OK;
+    return VmAddressRegionDispatcher::Create(ktl::move(new_vmar), base_arch_mmu_flags_, handle,
+                                             new_rights);
 }
 
 zx_status_t VmAddressRegionDispatcher::Destroy() {

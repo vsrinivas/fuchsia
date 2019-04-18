@@ -36,7 +36,7 @@ public:
     static zx_status_t Create(
         fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
         KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
-        fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+        KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
         zx_rights_t* root_vmar_rights);
 
     // Traits to belong in the parent job's raw list.

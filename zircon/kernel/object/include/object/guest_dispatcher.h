@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include <object/handle.h>
+#include <object/port_dispatcher.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
-#include <object/port_dispatcher.h>
 
 class Guest;
 class VmObject;
@@ -17,7 +18,7 @@ class GuestDispatcher final : public SoloDispatcher<GuestDispatcher, ZX_DEFAULT_
 public:
     static zx_status_t Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
                               zx_rights_t* guest_rights,
-                              fbl::RefPtr<Dispatcher>* vmar_dispatcher,
+                              KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                               zx_rights_t* vmar_rights);
     ~GuestDispatcher();
 

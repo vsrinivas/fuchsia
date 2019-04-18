@@ -11,6 +11,7 @@
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 #include <sys/types.h>
 
@@ -23,7 +24,7 @@ class VmAddressRegionDispatcher final :
 public:
     static zx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
                               uint base_arch_mmu_flags,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
+                              KernelHandle<VmAddressRegionDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~VmAddressRegionDispatcher() final;
@@ -31,7 +32,7 @@ public:
 
     // TODO(teisenbe): Make this the planned batch interface
     zx_status_t Allocate(size_t offset, size_t size, uint32_t flags,
-                         fbl::RefPtr<VmAddressRegionDispatcher>* dispatcher,
+                         KernelHandle<VmAddressRegionDispatcher>* handle,
                          zx_rights_t* rights);
 
     zx_status_t Destroy();
