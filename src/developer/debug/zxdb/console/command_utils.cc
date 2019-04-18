@@ -410,11 +410,6 @@ std::string DescribeThread(const ConsoleContext* context,
       thread->GetKoid(), thread->GetName().c_str());
 }
 
-std::string DescribeSymbolServer(const ConsoleContext* context,
-                                 const SymbolServer* symbol_server) {
-  return symbol_server->name();
-}
-
 OutputBuffer FormatBreakpoint(const ConsoleContext* context,
                               const Breakpoint* breakpoint) {
   BreakpointSettings settings = breakpoint->GetSettings();

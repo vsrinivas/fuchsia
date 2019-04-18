@@ -616,6 +616,21 @@ Examples
       Authenticates with symbol server 2.
 )";
 
+OutputBuffer SymbolServerStateToColorString(SymbolServer::State state) {
+  switch (state) {
+    case SymbolServer::State::kInitializing:
+      return OutputBuffer(Syntax::kComment, "Initializing");
+    case SymbolServer::State::kAuth:
+      return OutputBuffer(Syntax::kHeading, "Authenticating");
+    case SymbolServer::State::kBusy:
+      return OutputBuffer(Syntax::kComment, "Busy");
+    case SymbolServer::State::kReady:
+      return OutputBuffer(Syntax::kHeading, "Ready");
+    case SymbolServer::State::kUnreachable:
+      return OutputBuffer(Syntax::kError, "Unreachable");
+  }
+}
+
 void ListSymbolServers(ConsoleContext* context) {
   std::vector<SymbolServer*> symbol_servers =
       context->session()->system().GetSymbolServers();
@@ -630,36 +645,30 @@ void ListSymbolServers(ConsoleContext* context) {
   std::sort(id_symbol_servers.begin(), id_symbol_servers.end());
 
   std::vector<std::vector<OutputBuffer>> rows;
-  for (const auto& pair : id_symbol_servers) {
+  for (const auto& [id, server] : id_symbol_servers) {
     rows.emplace_back();
     std::vector<OutputBuffer>& row = rows.back();
 
     // "Current symbol_server" marker.
-    if (pair.first == active_symbol_server_id)
+    if (id == active_symbol_server_id)
       row.emplace_back(GetRightArrow());
     else
       row.emplace_back();
 
-    row.emplace_back(fxl::StringPrintf("%d", pair.first));
-    row.emplace_back(pair.second->name());
+    row.emplace_back(fxl::StringPrintf("%d", id));
+    row.emplace_back(server->name());
+    row.emplace_back(SymbolServerStateToColorString(server->state()));
 
-    switch (pair.second->state()) {
-      case SymbolServer::State::kInitializing:
-        row.emplace_back(Syntax::kComment, "Initializing");
-        break;
-      case SymbolServer::State::kAuth:
-        row.emplace_back(Syntax::kHeading, "Authenticating");
-        break;
-      case SymbolServer::State::kBusy:
-        row.emplace_back(Syntax::kComment, "Busy");
-        break;
-      case SymbolServer::State::kReady:
-        row.emplace_back(Syntax::kHeading, "Ready");
-        break;
-      case SymbolServer::State::kUnreachable:
-        row.emplace_back(Syntax::kError, "Unreachable");
-        break;
+    if (server->error_log().empty()) {
+      continue;
     }
+
+    rows.emplace_back();
+    std::vector<OutputBuffer>& line = rows.back();
+
+    line.emplace_back("");
+    line.emplace_back("");
+    line.emplace_back(Syntax::kError, server->error_log().back());
   }
 
   OutputBuffer out;
@@ -694,7 +703,25 @@ bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd,
   // here).
   FXL_DCHECK(cmd.sym_server());
   context->SetActiveSymbolServer(cmd.sym_server());
-  Console::get()->Output(DescribeSymbolServer(context, cmd.sym_server()));
+
+  OutputBuffer out;
+  out.Append(cmd.sym_server()->name() + " - ");
+  out.Append(SymbolServerStateToColorString(cmd.sym_server()->state()));
+  out.Append("\n");
+
+  auto& error_log = cmd.sym_server()->error_log();
+  auto iter = error_log.begin();
+  if (error_log.size() > 10) {
+    iter += error_log.size() - 10;
+    out.Append("  ... " + std::to_string(error_log.size() - 10) +
+               " more ...\n");
+  }
+
+  for (; iter != error_log.end(); iter++) {
+    out.Append("  " + *iter + "\n", TextForegroundColor::kRed);
+  }
+
+  Console::get()->Output(out);
   return true;
 }
 

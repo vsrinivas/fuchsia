@@ -102,9 +102,6 @@ std::string DescribeJobContextName(const JobContext* job_context);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 
-std::string DescribeSymbolServer(const ConsoleContext* context,
-                                 const SymbolServer* symbol_server);
-
 OutputBuffer FormatBreakpoint(const ConsoleContext* context,
                               const Breakpoint* breakpoint);
 
