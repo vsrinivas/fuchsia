@@ -11,6 +11,7 @@
 // timeout.
 
 #include "garnet/testing/benchmarking/benchmarking.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 int main(int argc, const char** argv) {
   auto maybe_benchmarks_runner =
@@ -21,16 +22,27 @@ int main(int argc, const char** argv) {
 
   auto& benchmarks_runner = *maybe_benchmarks_runner;
 
-  // Performance tests implemented in the Zircon repo.
-  benchmarks_runner.AddLibPerfTestBenchmark(
-      "zircon.perf_test",
-      "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test");
+  // Reduce the number of iterations of each perf test within each process
+  // given that we are launching each process multiple times.
+  std::vector<std::string> extra_args = {"--runs", "100"};
 
-  // Performance tests implemented in the Garnet repo (the name
-  // "zircon_benchmarks" is now misleading).
-  benchmarks_runner.AddLibPerfTestBenchmark(
-      "zircon_benchmarks",
-      "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+  // Run these processes multiple times in order to account for
+  // between-process variation in results (e.g. due to memory layout chosen
+  // when a process starts).
+  for (int process = 0; process < 30; ++process) {
+    // Performance tests implemented in the Zircon repo.
+    benchmarks_runner.AddLibPerfTestBenchmark(
+        fxl::StringPrintf("zircon.perf_test_process%06d", process),
+        "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test",
+        extra_args);
+
+    // Performance tests implemented in the Garnet repo (the name
+    // "zircon_benchmarks" is now misleading).
+    benchmarks_runner.AddLibPerfTestBenchmark(
+        fxl::StringPrintf("zircon_benchmarks_process%06d", process),
+        "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
+        extra_args);
+  }
 
   benchmarks_runner.Finish();
 }

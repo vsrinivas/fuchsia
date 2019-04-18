@@ -34,6 +34,11 @@ class TempDirTestCase(unittest.TestCase):
             func()
 
 
+def WriteJsonFile(filename, json_data):
+    with open(filename, 'w') as fh:
+        json.dump(json_data, fh)
+
+
 def ReadGoldenFile(filename):
     data = open(filename, 'r').read()
     matches = list(re.finditer('\n\n### (.*)\n', data, re.M))
@@ -116,17 +121,18 @@ class PerfCompareTest(TempDirTestCase):
 
     def ExampleDataDir(self, mean=1000, stddev=100, drop_one=False):
         dir_path = self.MakeTempDir()
-        results = [{'label': 'ClockGetTimeExample',
-                    'test_suite': 'fuchsia.example.perf_test',
-                    'unit': 'nanoseconds',
-                    'values': GenerateTestData(mean, stddev)}]
+        results = [('ClockGetTimeExample', GenerateTestData(mean, stddev))]
         if not drop_one:
-            results.append({'label': 'SecondExample',
-                            'test_suite': 'fuchsia.example.perf_test',
-                            'unit': 'nanoseconds',
-                            'values': GenerateTestData(2000, 300)})
-        with open(os.path.join(dir_path, 'example.perf_test.json'), 'w') as fh:
-            json.dump(results, fh)
+            results.append(('SecondExample', GenerateTestData(2000, 300)))
+
+        for test_name, values in results:
+            for idx, value in enumerate(values):
+                WriteJsonFile(
+                    os.path.join(dir_path, '%s_%d.json' % (test_name, idx)),
+                    [{'label': test_name,
+                      'test_suite': 'fuchsia.example.perf_test',
+                      'unit': 'nanoseconds',
+                      'values': [value]}])
 
         # Include a summary.json file to check that we skip reading it.
         with open(os.path.join(dir_path, 'summary.json'), 'w') as fh:

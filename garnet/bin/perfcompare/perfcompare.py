@@ -18,20 +18,37 @@ import sys
 # confidence intervals are non-overlapping, we conclude that the
 # performance has improved or regressed for this test.
 #
-# We make the simplifying assumption that the running time for each
-# run of a performance test is normally distributed.  (In practice,
-# this assumption is not true.  We will need to check how much tests
-# deviate from this assumption, and how much that affects the
-# comparison we are doing here.)
+# Data is gathered from a 3-level sampling process:
 #
-# With that assumption, ideally we should use Student's t-distribution
-# for calculating the confidence intervals for the means.  That is
-# easy if the SciPy library is available.  However, this code runs
-# using infra's copy of Python, which doesn't make SciPy available.
-# For now, we instead use the normal distribution for calculating the
-# confidence intervals (giving a Z-test instead of a t-test).
-# Fortunately, for large samples (i.e. large numbers of test runs),
-# the difference between the two is small.
+#  1) Boot Fuchsia one or more times.  (Currently we only boot once.)
+#  2) For each boot, launch the perf test process one or more times.
+#  3) For each process launch, instantiate the performance test and
+#     run the body of the test some number of times.
+#
+# This is intended to account for variation across boots and across process
+# launches.
+#
+# Currently we use z-test confidence intervals.  In future we should either
+# use t-test confidence intervals, or (preferably) use bootstrap confidence
+# intervals.
+#
+#  * We apply the z-test confidence interval to the mean running times from
+#    each process instance (from level #3).  This means we treat the sample
+#    size as being the number of processes launches.  This is rather
+#    ad-hoc: it assumes that there is a lot of between-process variation
+#    and that we need to widen the confidence intervals to reflect that.
+#    Using bootstrapping with resampling across the 3 levels above should
+#    account for that variation without making ad-hoc assumptions.
+#
+#  * This assumes that the values we apply the z-test to are normally
+#    distributed, or approximately normally distributed.  Using
+#    bootstrapping instead would avoid this assumption.
+#
+#  * t-test confidence intervals would be better than z-test confidence
+#    intervals, especially for smaller sample sizes.  The former is easier
+#    to do if the SciPy library is available.  However, this code runs
+#    using infra's copy of Python, which doesn't make SciPy available at
+#    the moment.
 
 
 # ALPHA is a parameter for calculating confidence intervals.  It is
@@ -48,11 +65,16 @@ import sys
 # This is the value of scipy.stats.norm.ppf(ALPHA / 2).
 Z_TEST_OFFSET = -2.5758293035489008
 
+
+def Mean(values):
+    return float(sum(values)) / len(values)
+
+
 # Returns the mean and standard deviation of a sample.  This does the
 # same as scipy.stats.norm.fit().  This does not apply Bessel's
 # correction to the calculation of the standard deviation.
 def MeanAndStddev(values):
-    mean_val = float(sum(values)) / len(values)
+    mean_val = Mean(values)
     sum_of_squares = 0.0
     for val in values:
         diff = val - mean_val
@@ -83,17 +105,17 @@ def ReadJsonFile(filename):
 
 def ResultsFromDir(dir_path):
     results_map = {}
-    # Sorting the result of os.listdir() is not essential.  Currently
-    # it just makes error handling of duplicates more deterministic.
+    # Sorting the result of os.listdir() is not essential, but it makes any
+    # later behaviour more deterministic.
     for filename in sorted(os.listdir(dir_path)):
         if filename == 'summary.json':
             continue
         if filename.endswith('.json'):
             file_path = os.path.join(dir_path, filename)
             for data in ReadJsonFile(file_path):
-                assert data['label'] not in results_map
-                results_map[data['label']] = Stats(data['values'])
-    return results_map
+                new_value = Mean(data['values'])
+                results_map.setdefault(data['label'], []).append(new_value)
+    return {name: Stats(values) for name, values in results_map.iteritems()}
 
 
 def FormatTable(rows, out_fh):
