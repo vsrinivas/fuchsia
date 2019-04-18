@@ -913,11 +913,11 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
         return status;
     }
     const Superblock* info = reinterpret_cast<Superblock*>(blk);
-
+#ifdef __Fuchsia__
     if ((info->flags & kMinfsFlagClean) == 0) {
         FS_TRACE_WARN("minfs: filesystem not unmounted cleanly. Integrity check required\n");
     }
-
+#endif
     fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
@@ -938,6 +938,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 
     ZX_DEBUG_ASSERT(vn->IsDirectory());
 
+#ifdef __Fuchsia__
     // Filesystem is safely mounted at this point. On a read-write filesystem, since we can now
     // serve writes on the filesystem, we need to unset the kMinfsFlagClean flag to indicate
     // that the filesystem may not be in a "clean" state anymore. This helps to make sure we are
@@ -952,6 +953,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
             FS_TRACE_WARN("minfs: failed to unset clean flag\n");
         }
      }
+#endif
     __UNUSED auto r = fs.release();
     *root_out = std::move(vn);
     return ZX_OK;
