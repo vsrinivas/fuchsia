@@ -23,7 +23,7 @@ FeedbackAgent::FeedbackAgent(std::shared_ptr<::sys::ServiceDirectory> services)
 void FeedbackAgent::GetData(GetDataCallback callback) {
   DataProvider_GetData_Response response;
   response.data.set_annotations(GetAnnotations());
-  response.data.set_attachments(GetAttachments());
+  response.data.set_attachments(GetAttachments(services_));
   DataProvider_GetData_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));

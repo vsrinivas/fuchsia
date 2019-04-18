@@ -20,8 +20,7 @@ namespace {
 
 // Returns true if gMock |arg|.key matches |expected_key|.
 MATCHER_P(MatchesKey, expected_key,
-          "matches an annotation with key \"" + std::string(expected_key) +
-              "\"") {
+          "matches an element with key '" + std::string(expected_key) + "'") {
   return arg.key == expected_key;
 }
 
@@ -80,16 +79,10 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
               testing::UnorderedElementsAreArray({
                   MatchesKey("build.snapshot"),
                   MatchesKey("log.kernel"),
+                  MatchesKey("log.system"),
               }));
 }
 
 }  // namespace
-
-// Pretty-prints Annotation in gTest matchers instead of the default byte string
-// in case of failed expectations.
-void PrintTo(const Annotation annotation, std::ostream* os) {
-  *os << annotation;
-}
-
 }  // namespace feedback
 }  // namespace fuchsia

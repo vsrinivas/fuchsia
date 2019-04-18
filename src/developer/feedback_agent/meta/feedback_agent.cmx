@@ -10,6 +10,7 @@
             "build-info"
         ],
         "services": [
+            "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.ui.scenic.Scenic"
         ]

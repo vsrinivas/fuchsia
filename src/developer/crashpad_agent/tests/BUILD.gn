@@ -140,6 +140,7 @@ executable("crashpad_agent_integration_test") {
   ]
 
   deps = [
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",

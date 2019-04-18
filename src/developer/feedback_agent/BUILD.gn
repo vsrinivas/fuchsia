@@ -46,6 +46,8 @@ source_set("src") {
     "feedback_agent.h",
     "image_conversion.cc",
     "image_conversion.h",
+    "log_listener.cc",
+    "log_listener.h",
   ]
 
   public_deps = [
@@ -64,7 +66,9 @@ source_set("src") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/libpng",
+    "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/fidl/fuchsia-sysinfo",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]

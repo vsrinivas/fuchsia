@@ -13,12 +13,14 @@
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/debuglog.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
+
+#include "src/developer/feedback_agent/log_listener.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -59,6 +61,7 @@ std::optional<fuchsia::mem::Buffer> GetKernelLog() {
 
   fsl::SizedVmo vmo;
   if (!fsl::VmoFromString(kernel_log, &vmo)) {
+    FX_LOGS(ERROR) << "Failed to convert kernel log string to vmo";
     return std::nullopt;
   }
   return std::move(vmo).ToTransport();
@@ -85,12 +88,15 @@ void PushBackIfValuePresent(const std::string& key,
 
 }  // namespace
 
-std::vector<Attachment> GetAttachments() {
+std::vector<Attachment> GetAttachments(
+    std::shared_ptr<::sys::ServiceDirectory> services) {
   std::vector<Attachment> attachments;
   PushBackIfValuePresent("build.snapshot",
                          VmoFromFilename("/config/build-info/snapshot"),
                          &attachments);
   PushBackIfValuePresent("log.kernel", GetKernelLog(), &attachments);
+  PushBackIfValuePresent("log.system", CollectSystemLog(services),
+                         &attachments);
   return attachments;
 }
 

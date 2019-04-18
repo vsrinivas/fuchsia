@@ -12,20 +12,27 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
+#include <lib/fostr/fidl/fuchsia/mem/formatting.h>
+#include <lib/fostr/indent.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -37,6 +44,10 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
+
+constexpr zx_time_t kSyslogBaseTimestamp = ZX_SEC(15604);
+constexpr uint64_t kSyslogProcessId = 7559;
+constexpr uint64_t kSyslogThreadId = 7687;
 
 // Returns an empty screenshot, still needed when Scenic::TakeScreenshot()
 // returns false as the FIDL ScreenshotData field is not marked optional in
@@ -155,9 +166,46 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
-// gMock matcher for comparing two GetScreenshotResponse.
+// Returns true if gMock |arg| matches |expected|, assuming two
+// GetScreenshotResponse.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "") {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
+}
+
+// Compares two Attachment.
+template <typename ResultListenerT>
+bool DoAttachmentMatch(const Attachment& actual,
+                       const std::string& expected_key,
+                       const std::string& expected_value,
+                       ResultListenerT* result_listener) {
+  if (actual.key != expected_key) {
+    *result_listener << "Expected key " << expected_key << ", got "
+                     << actual.key;
+    return false;
+  }
+
+  std::string actual_value;
+  if (!fsl::StringFromVmo(actual.value, &actual_value)) {
+    *result_listener << "Cannot parse actual VMO for key " << actual.key
+                     << " to string";
+    return false;
+  }
+
+  if (actual_value.compare(expected_value) != 0) {
+    *result_listener << "Expected value " << expected_value << ", got "
+                     << actual_value;
+    return false;
+  }
+
+  return true;
+}
+
+// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value)
+// matches |expected_value|, assuming two Attachment.
+MATCHER_P2(MatchesAttachment, expected_key, expected_value,
+           "matches an attachment with key '" + std::string(expected_key) +
+               "' and value '" + std::string(expected_value) + "'") {
+  return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
 }
 
 // Stub Scenic service to return canned responses to Scenic::TakeScreenshot().
@@ -207,6 +255,41 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   std::vector<TakeScreenshotResponse> take_screenshot_responses_;
 };
 
+// Stub Log service to return canned responses to Log::DumpLogs().
+class StubLogger : public fuchsia::logger::Log {
+ public:
+  // Returns a request handler for binding to this stub service.
+  // We pass a dispatcher to run it on a different loop than the agent.
+  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(
+      async_dispatcher_t* dispatcher) {
+    return bindings_.GetHandler(this, dispatcher);
+  }
+
+  // fuchsia::logger::Log methods.
+  void Listen(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
+    FXL_NOTIMPLEMENTED();
+  }
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
+    fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+    FXL_CHECK(log_listener_ptr.is_bound());
+    log_listener_ptr->LogMany(messages_);
+    log_listener_ptr->Done();
+  }
+
+  // Stub injection methods.
+  void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
+    messages_ = messages;
+  }
+
+ private:
+  fidl::BindingSet<fuchsia::logger::Log> bindings_;
+  std::vector<fuchsia::logger::LogMessage> messages_;
+};
+
 // Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL
 // interface.
 //
@@ -230,6 +313,9 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   void SetUp() override {
     stub_scenic_.reset(new StubScenic());
     FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler(
+                  service_directory_provider_loop_.dispatcher())) == ZX_OK);
+    stub_logger_.reset(new StubLogger());
+    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(
                   service_directory_provider_loop_.dispatcher())) == ZX_OK);
 
     agent_.reset(
@@ -257,6 +343,11 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
     return stub_scenic_->take_screenshot_responses();
   }
 
+  void set_logger_messages(
+      const std::vector<fuchsia::logger::LogMessage>& messages) {
+    stub_logger_->set_messages(messages);
+  }
+
   std::unique_ptr<FeedbackAgent> agent_;
 
  private:
@@ -264,6 +355,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
   std::unique_ptr<StubScenic> stub_scenic_;
+  std::unique_ptr<StubLogger> stub_logger_;
 
   // Whether the callback for the function under test was called.
   bool called_back_;
@@ -401,7 +493,34 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
   }
 }
 
+fuchsia::logger::LogMessage BuildLogMessage(
+    const int32_t severity, const std::string& text,
+    const zx_time_t timestamp_offset,
+    const std::vector<std::string>& tags = {}) {
+  fuchsia::logger::LogMessage msg{};
+  msg.time = kSyslogBaseTimestamp + timestamp_offset;
+  msg.pid = kSyslogProcessId;
+  msg.tid = kSyslogThreadId;
+  msg.tags = tags;
+  msg.severity = severity;
+  msg.msg = text;
+  return msg;
+}
+
 TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
+  set_logger_messages({
+      BuildLogMessage(0 /*INFO*/, "line 1", 0),
+      BuildLogMessage(1 /*WARN*/, "line 2", ZX_MSEC(1)),
+      BuildLogMessage(2 /*ERROR*/, "line 3", ZX_MSEC(2)),
+      BuildLogMessage(3 /*FATAL*/, "line 4", ZX_MSEC(3)),
+      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", ZX_MSEC(4)),
+      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", ZX_MSEC(5)),
+      BuildLogMessage(0 /*INFO*/, "line 7", ZX_MSEC(6), /*tags=*/{"foo"}),
+      BuildLogMessage(0 /*INFO*/, "line 8", ZX_MSEC(7), /*tags=*/{"bar"}),
+      BuildLogMessage(0 /*INFO*/, "line 9", ZX_MSEC(8),
+                      /*tags=*/{"foo", "bar"}),
+  });
+
   DataProvider_GetData_Result feedback_result;
   agent_->GetData([&feedback_result, this](DataProvider_GetData_Result result) {
     feedback_result = std::move(result);
@@ -410,11 +529,47 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   WaitForCallback();
 
   ASSERT_TRUE(feedback_result.is_response());
+  // As we control the system log attachment, we can expect it to be present and
+  // with a particular value.
+  ASSERT_TRUE(feedback_result.response().data.has_attachments());
+  EXPECT_THAT(feedback_result.response().data.attachments(),
+              testing::Contains(
+                  MatchesAttachment("log.system",
+                                    R"([15604.000][07559][07687][] INFO: line 1
+[15604.001][07559][07687][] WARN: line 2
+[15604.002][07559][07687][] ERROR: line 3
+[15604.003][07559][07687][] FATAL: line 4
+[15604.004][07559][07687][] VLOG(1): line 5
+[15604.005][07559][07687][] VLOG(2): line 6
+[15604.006][07559][07687][foo] INFO: line 7
+[15604.007][07559][07687][bar] INFO: line 8
+[15604.008][07559][07687][foo, bar] INFO: line 9
+)")));
   // There is nothing else we can assert here as no missing annotation nor
   // attachment is fatal.
 }
 
 }  // namespace
+
+// Pretty-prints Attachment in gTest matchers instead of the default byte string
+// in case of failed expectations.
+void PrintTo(const Attachment& attachment, std::ostream* os) {
+  *os << fostr::Indent;
+  *os << fostr::NewLine << "key: " << attachment.key;
+  *os << fostr::NewLine << "value: ";
+  std::string value;
+  if (fsl::StringFromVmo(attachment.value, &value)) {
+    if (value.size() < 1024) {
+      *os << "'" << value << "'";
+    } else {
+      *os << "(string too long)" << attachment.value;
+    }
+  } else {
+    *os << attachment.value;
+  }
+  *os << fostr::Outdent;
+}
+
 }  // namespace feedback
 }  // namespace fuchsia
 

@@ -38,7 +38,7 @@ class FeedbackAgent : public DataProvider {
   // most likely the loss of the connection with Scenic.
   void TerminateAllGetScreenshotCallbacks();
 
-  std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<::sys::ServiceDirectory> services_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   // We keep track of the pending GetScreenshot callbacks so we can terminate

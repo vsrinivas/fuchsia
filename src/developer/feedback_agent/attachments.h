@@ -8,13 +8,15 @@
 #include <vector>
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 
 namespace fuchsia {
 namespace feedback {
 
 // Returns attachments useful to attach in feedback reports (crash or user
 // feedback).
-std::vector<Attachment> GetAttachments();
+std::vector<Attachment> GetAttachments(
+    std::shared_ptr<::sys::ServiceDirectory> services);
 
 }  // namespace feedback
 }  // namespace fuchsia
