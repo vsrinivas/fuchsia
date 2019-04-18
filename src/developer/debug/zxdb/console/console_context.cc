@@ -206,6 +206,19 @@ int ConsoleContext::GetActiveThreadIdForTarget(const Target* target) {
   return record->active_thread_id;
 }
 
+Thread* ConsoleContext::GetActiveThreadForTarget(const Target* target) {
+  const TargetRecord* record = GetTargetRecord(target);
+  if (!record) {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+
+  auto found = record->id_to_thread.find(record->active_thread_id);
+  if (found == record->id_to_thread.end())
+    return nullptr;
+  return found->second.thread;
+}
+
 void ConsoleContext::SetActiveFrameForThread(const Frame* frame) {
   ThreadRecord* record = GetThreadRecord(frame->GetThread());
   if (!record) {

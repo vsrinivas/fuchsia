@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/object_util.h"
 
 namespace debug_agent {
 
@@ -110,7 +112,8 @@ class FakeProcess : public DebuggedProcess {
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
       thread_ = std::make_unique<DebuggedThread>(
-          this, zx::thread(), 1, ThreadCreationOption::kSuspendedKeepSuspended);
+          this, zx::thread(), tid,
+          ThreadCreationOption::kSuspendedKeepSuspended);
     }
     return thread_.get();
   }
@@ -222,6 +225,44 @@ TEST(DebuggedThread, WriteRegisters) {
   ASSERT_EQ(it->second.size(), 2u);
   EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr1));
   EXPECT_TRUE(FindRegister(it->second, RegisterID::kX64_dr7));
+}
+
+TEST(DebuggedThread, FillThreadRecord) {
+  constexpr zx_koid_t kProcessKoid = 0x8723456;
+  FakeProcess fake_process(kProcessKoid);
+
+  zx::thread current_thread;
+  zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
+
+  zx_koid_t current_thread_koid = KoidForObject(current_thread);
+
+  // Set the name of the current thread so we can find it.
+  const std::string thread_name("ProcessInfo test thread name");
+  std::string old_name = NameForObject(current_thread);
+  current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(),
+                              thread_name.size());
+  EXPECT_EQ(thread_name, NameForObject(current_thread));
+
+  auto thread = std::make_unique<DebuggedThread>(
+      &fake_process, std::move(current_thread), current_thread_koid,
+      ThreadCreationOption::kRunningKeepRunning);
+
+  // Request no stack since this thread should be running.
+  debug_ipc::ThreadRecord record;
+  thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone, nullptr,
+                           &record);
+
+  // Put back the old thread name for hygiene.
+  zx::thread::self()->set_property(ZX_PROP_NAME, old_name.c_str(),
+                                   old_name.size());
+
+  // Validate the results.
+  EXPECT_EQ(kProcessKoid, record.process_koid);
+  EXPECT_EQ(current_thread_koid, record.thread_koid);
+  EXPECT_EQ(thread_name, record.name);
+  EXPECT_EQ(debug_ipc::ThreadRecord::State::kRunning, record.state);
+  EXPECT_EQ(debug_ipc::ThreadRecord::StackAmount::kNone, record.stack_amount);
+  EXPECT_TRUE(record.frames.empty());
 }
 
 }  // namespace

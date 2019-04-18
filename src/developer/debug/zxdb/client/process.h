@@ -104,8 +104,16 @@ class Process : public ClientObject {
   // To get the computed threads, call GetThreads() once the callback runs.
   virtual void SyncThreads(std::function<void()> callback) = 0;
 
+  // Pauses (suspends in Zircon terms) all threads in the process, it does not
+  // affect other processes.
+  //
+  // The backend will try to ensure the threads are actually paused before
+  // issuing the on_paused callback. But this is best effort and not
+  // guaranteed: both because there's a timeout for the synchronous suspending
+  // and because a different continue message could race with the reply.
+  virtual void Pause(std::function<void()> on_paused) = 0;
+
   // Applies to all threads in the process.
-  virtual void Pause() = 0;
   virtual void Continue() = 0;
 
   // The callback does NOT mean the step has completed, but rather the setup

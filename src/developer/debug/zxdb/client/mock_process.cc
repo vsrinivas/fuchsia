@@ -54,7 +54,9 @@ void MockProcess::SyncThreads(std::function<void()> cb) {
   MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(); });
 }
 
-void MockProcess::Pause() {}
+void MockProcess::Pause(std::function<void()> on_paused) {
+  MessageLoop::Current()->PostTask(FROM_HERE, [on_paused]() { on_paused(); });
+}
 
 void MockProcess::Continue() {}
 

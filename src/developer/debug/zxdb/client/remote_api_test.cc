@@ -48,8 +48,8 @@ Process* RemoteAPITest::InjectProcess(uint64_t process_koid) {
 Thread* RemoteAPITest::InjectThread(uint64_t process_koid,
                                     uint64_t thread_koid) {
   debug_ipc::NotifyThread notify;
-  notify.process_koid = process_koid;
-  notify.record.koid = thread_koid;
+  notify.record.process_koid = process_koid;
+  notify.record.thread_koid = thread_koid;
   notify.record.name = fxl::StringPrintf("test %" PRIu64, thread_koid);
   notify.record.state = debug_ipc::ThreadRecord::State::kRunning;
 
@@ -65,8 +65,8 @@ void RemoteAPITest::InjectException(
 void RemoteAPITest::InjectExceptionWithStack(
     const debug_ipc::NotifyException& exception,
     std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames) {
-  ThreadImpl* thread = session_->ThreadImplFromKoid(exception.process_koid,
-                                                    exception.thread.koid);
+  ThreadImpl* thread = session_->ThreadImplFromKoid(
+      exception.thread.process_koid, exception.thread.thread_koid);
   FXL_CHECK(thread);  // Tests should always pass valid KOIDs.
 
   // Need to supply at least one stack frame.
@@ -101,9 +101,9 @@ void RemoteAPITest::InjectExceptionWithStack(
   FXL_CHECK(!frames.empty());
 
   debug_ipc::NotifyException exception;
-  exception.process_koid = process_koid;
   exception.type = exception_type;
-  exception.thread.koid = thread_koid;
+  exception.thread.process_koid = process_koid;
+  exception.thread.thread_koid = thread_koid;
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.hit_breakpoints = breakpoints;
 

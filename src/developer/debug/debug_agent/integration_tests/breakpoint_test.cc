@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
@@ -12,6 +11,7 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -134,12 +134,12 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // We run the loop which will stop at the new thread notification.
     loop->Run();
     auto thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
+    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
     mock_stream_backend.clear_thread_notification();
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = thread_notification.process_koid;
+    resume_request.process_koid = thread_notification.record.process_koid;
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -178,7 +178,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
-    EXPECT_EQ(exception.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
@@ -199,8 +199,8 @@ TEST(BreakpointIntegration, HWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo,
-                                                      kExportedFunctionName);
+  uint64_t symbol_offset =
+      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -227,12 +227,12 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     // We run the loop which will stop at the new thread notification.
     loop->Run();
     auto thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
+    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
     mock_stream_backend.clear_thread_notification();
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = thread_notification.process_koid;
+    resume_request.process_koid = thread_notification.record.process_koid;
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -278,7 +278,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
-    EXPECT_EQ(exception.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
@@ -296,7 +296,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We verify that the thread exited.
     thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
+    ASSERT_EQ(thread_notification.record.process_koid, launch_reply.process_id);
     auto& record = thread_notification.record;
     ASSERT_EQ(record.state, debug_ipc::ThreadRecord::State::kDead)
         << "Got: " << debug_ipc::ThreadRecord::StateToString(record.state);

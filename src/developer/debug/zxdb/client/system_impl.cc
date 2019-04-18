@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
+#include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
@@ -395,12 +396,28 @@ void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
   breakpoints_.erase(found);
 }
 
-void SystemImpl::Pause() {
+void SystemImpl::Pause(std::function<void()> on_paused) {
   debug_ipc::PauseRequest request;
   request.process_koid = 0;  // 0 means all processes.
   request.thread_koid = 0;   // 0 means all threads.
   session()->remote_api()->Pause(
-      request, std::function<void(const Err&, debug_ipc::PauseReply)>());
+      request, [weak_system = weak_factory_.GetWeakPtr(),
+                on_paused = std::move(on_paused)](const Err&,
+                                                  debug_ipc::PauseReply reply) {
+        if (weak_system) {
+          // Save the newly paused thread metadata. This may need to be
+          // generalized if we add other messages that update thread metadata.
+          for (const auto& record : reply.threads) {
+            if (auto* process =
+                    weak_system->ProcessImplFromKoid(record.process_koid)) {
+              if (auto* thread =
+                      process->GetThreadImplFromKoid(record.thread_koid))
+                thread->SetMetadata(record);
+            }
+          }
+        }
+        on_paused();
+      });
 }
 
 void SystemImpl::Continue() {

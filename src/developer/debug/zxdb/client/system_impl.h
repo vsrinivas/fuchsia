@@ -54,7 +54,7 @@ class SystemImpl final : public System,
   Breakpoint* CreateNewBreakpoint() override;
   Breakpoint* CreateNewInternalBreakpoint() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
-  void Pause() override;
+  void Pause(std::function<void()> on_paused) override;
   void Continue() override;
 
   // DownloadHandler implementation:

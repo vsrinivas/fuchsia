@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
+
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -46,7 +47,10 @@ class MockThread : public Thread, public Stack::Delegate {
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override {
     return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
   }
-  void Pause() override {}
+  void Pause(std::function<void()> on_paused) override {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [on_paused]() { on_paused(); });
+  }
   void Continue() override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override {}

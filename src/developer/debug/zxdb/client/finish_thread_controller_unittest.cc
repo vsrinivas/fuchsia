@@ -104,9 +104,9 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are
   // "software").
   debug_ipc::NotifyException exception;
-  exception.process_koid = process()->GetKoid();
   exception.type = debug_ipc::NotifyException::Type::kSoftware;
-  exception.thread.koid = thread()->GetKoid();
+  exception.thread.process_koid = process()->GetKoid();
+  exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.hit_breakpoints.emplace_back();
   exception.hit_breakpoints[0].breakpoint_id =

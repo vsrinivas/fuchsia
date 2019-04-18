@@ -686,8 +686,8 @@ void MinidumpRemoteAPI::Attach(
   for (const auto& thread : minidump_->Threads()) {
     auto& notification = notifications.emplace_back();
 
-    notification.process_koid = minidump_->ProcessID();
-    notification.record.koid = thread->ThreadID();
+    notification.record.process_koid = minidump_->ProcessID();
+    notification.record.thread_koid = thread->ThreadID();
     notification.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
   }
 
@@ -799,7 +799,8 @@ void MinidumpRemoteAPI::Threads(
     for (const auto& thread : minidump_->Threads()) {
       auto& record = reply.threads.emplace_back();
 
-      record.koid = thread->ThreadID();
+      record.process_koid = request.process_koid;
+      record.thread_koid = thread->ThreadID();
       record.state = debug_ipc::ThreadRecord::State::kCoreDump;
     }
   }
@@ -935,7 +936,8 @@ void MinidumpRemoteAPI::ThreadStatus(
     return;
   }
 
-  reply.record.koid = thread->ThreadID();
+  reply.record.process_koid = request.process_koid;
+  reply.record.thread_koid = thread->ThreadID();
   reply.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
   reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
 

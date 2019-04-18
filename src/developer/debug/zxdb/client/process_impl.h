@@ -43,7 +43,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
-  void Pause() override;
+  void Pause(std::function<void()> on_paused) override;
   void Continue() override;
   void ContinueUntil(const InputLocation& location,
                      std::function<void(const Err&)> cb) override;

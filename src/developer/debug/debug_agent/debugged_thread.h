@@ -7,8 +7,8 @@
 
 #include <lib/zx/thread.h>
 
-#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/lib/fxl/macros.h"
 
 struct zx_thread_state_general_regs;
 
@@ -75,10 +75,10 @@ class DebuggedThread {
   // operation. That means that if |kRunning| is returned, means that the thread
   // was running and now is suspended.
   enum class SuspendResult {
-    kWasRunning,      // Thread is now suspended.
-    kSuspended,       // Thread remains suspended.
-    kOnException,     // Thread is in exception, *not* suspended (ZX-3772).
-    kError,           // An error ocurred suspending or waiting for the signal.
+    kWasRunning,   // Thread is now suspended.
+    kSuspended,    // Thread remains suspended.
+    kOnException,  // Thread is in exception, *not* suspended (ZX-3772).
+    kError,        // An error ocurred suspending or waiting for the signal.
   };
   SuspendResult Suspend(bool synchronous = false);
 
@@ -92,8 +92,8 @@ class DebuggedThread {
   // will be generated, otherwise a minimal one will be generated.
   //
   // If optional_regs is non-null, it should point to the current registers of
-  // the thread. If null, these will be fetched automatically. See the global
-  // FillThreadRecord() for more.
+  // the thread. If null, these will be fetched automatically (this is an
+  // optimization for cases where the caller has already requested registers).
   void FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
                         const zx_thread_state_general_regs* optional_regs,
                         debug_ipc::ThreadRecord* record) const;
@@ -157,7 +157,6 @@ class DebuggedThread {
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
-
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.

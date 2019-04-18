@@ -28,9 +28,9 @@ class FinishPhysicalFrameThreadControllerTest
   debug_ipc::NotifyException MakeBreakNotification() {
     debug_ipc::NotifyException n;
 
-    n.process_koid = process()->GetKoid();
     n.type = debug_ipc::NotifyException::Type::kSoftware;
-    n.thread.koid = thread()->GetKoid();
+    n.thread.process_koid = process()->GetKoid();
+    n.thread.thread_koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
     n.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
     n.thread.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);

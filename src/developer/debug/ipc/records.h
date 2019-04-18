@@ -95,7 +95,8 @@ struct ThreadRecord {
     kLast  // Not an actual state, for range checking.
   };
 
-  uint64_t koid = 0;
+  uint64_t process_koid = 0;
+  uint64_t thread_koid = 0;
   std::string name;
   State state = State::kNew;
   // Only valid when state is kBlocked.

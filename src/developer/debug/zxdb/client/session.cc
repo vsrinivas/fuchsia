@@ -483,12 +483,12 @@ bool Session::ClearConnectionData() {
 
 void Session::DispatchNotifyThreadStarting(
     const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread starting notification for an "
                             "unexpected process %" PRIu64 ".\n",
-                            notify.process_koid);
+                            notify.record.process_koid);
     return;
   }
 
@@ -521,12 +521,12 @@ void Session::DispatchNotifyThreadStarting(
 
 void Session::DispatchNotifyThreadExiting(
     const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread exiting notification for an "
                             "unexpected process %" PRIu64 ".\n",
-                            notify.process_koid);
+                            notify.record.process_koid);
     return;
   }
 
@@ -538,7 +538,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify,
                                       bool set_metadata) {
   TIME_BLOCK();
   ThreadImpl* thread =
-      ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
+      ThreadImplFromKoid(notify.thread.process_koid, notify.thread.thread_koid);
   if (!thread) {
     SendSessionNotification(
         SessionObserver::NotificationType::kWarning,

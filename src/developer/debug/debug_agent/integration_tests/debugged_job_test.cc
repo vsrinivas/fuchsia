@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
 #include <gtest/gtest.h>
 #include <lib/fdio/spawn.h>
+#include <unistd.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
 
 // This test tests that the debug agent can effectively capture process being
 // launched by zircon, and set breakpoints on them.
@@ -376,7 +375,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   ASSERT_EQ(backend.exceptions().size(), 1u);
   const auto& exception = backend.exceptions().back();
   EXPECT_EQ(exception.type, NotifyException::Type::kSoftware);
-  EXPECT_EQ(exception.process_koid, process_koid);
+  EXPECT_EQ(exception.thread.process_koid, process_koid);
   ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
   const auto& breakpoint_stat = exception.hit_breakpoints.back();
   EXPECT_EQ(breakpoint_stat.breakpoint_id, breakpoint_id);

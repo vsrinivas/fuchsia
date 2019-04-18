@@ -65,9 +65,8 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
     breakpoints_.erase(found);
 }
 
-void DebugAgent::OnConfigAgent(
-    const debug_ipc::ConfigAgentRequest& request,
-    debug_ipc::ConfigAgentReply* reply) {
+void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
+                               debug_ipc::ConfigAgentReply* reply) {
   reply->results = HandleActions(request.actions, &configuration_);
 }
 
@@ -247,11 +246,11 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
     if (proc)
-      proc->OnPause(request);
+      proc->OnPause(request, reply);
   } else {
     // All debugged processes.
     for (const auto& pair : procs_)
-      pair.second->OnPause(request);
+      pair.second->OnPause(request, reply);
   }
 }
 
@@ -299,8 +298,8 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
   auto found = procs_.find(request.process_koid);
   if (found == procs_.end())
     return;
-  GetProcessThreads(found->second->process(), found->second->dl_debug_addr(),
-                    &reply->threads);
+
+  found->second->FillThreadRecords(&reply->threads);
 }
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
@@ -370,7 +369,8 @@ void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                              nullptr, &reply->record);
   } else {
     // When the thread is not found the thread record is set to "dead".
-    reply->record.koid = request.thread_koid;
+    reply->record.process_koid = request.process_koid;
+    reply->record.thread_koid = request.thread_koid;
     reply->record.state = debug_ipc::ThreadRecord::State::kDead;
   }
 }

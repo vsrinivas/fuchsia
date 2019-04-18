@@ -180,7 +180,7 @@ TEST_F(MinidumpTest, Threads) {
 
   auto& thread = reply.threads[0];
 
-  EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.koid);
+  EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.thread_koid);
   EXPECT_EQ("", thread.name);
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kCoreDump, thread.state);
 }

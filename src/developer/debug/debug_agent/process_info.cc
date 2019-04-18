@@ -14,11 +14,10 @@
 #include <iterator>
 #include <map>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_util.h"
-#include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/shared/elf.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -88,35 +87,6 @@ debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(
   }
 }
 
-debug_ipc::ThreadRecord::State ThreadStateToEnums(
-    uint32_t state, debug_ipc::ThreadRecord::BlockedReason* blocked_reason) {
-  struct Mapping {
-    uint32_t int_state;
-    debug_ipc::ThreadRecord::State enum_state;
-  };
-  static const Mapping mappings[] = {
-      {ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew},
-      {ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning},
-      {ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended},
-      {ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked},
-      {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
-      {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
-
-  const uint32_t basic_state = ZX_THREAD_STATE_BASIC(state);
-  *blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
-
-  for (const Mapping& mapping : mappings) {
-    if (mapping.int_state == basic_state) {
-      if (mapping.enum_state == debug_ipc::ThreadRecord::State::kBlocked) {
-        *blocked_reason = ThreadStateBlockedReasonToEnum(state);
-      }
-      return mapping.enum_state;
-    }
-  }
-  FXL_NOTREACHED();
-  return debug_ipc::ThreadRecord::State::kDead;
-}
-
 // Reads a null-terminated string from the given address of the given process.
 zx_status_t ReadNullTerminatedString(const zx::process& process,
                                      zx_vaddr_t vaddr, std::string* dest) {
@@ -152,81 +122,6 @@ zx_status_t ReadNullTerminatedString(const zx::process& process,
 zx_status_t GetProcessInfo(zx_handle_t process, zx_info_process* info) {
   return zx_object_get_info(process, ZX_INFO_PROCESS, info,
                             sizeof(zx_info_process), nullptr, nullptr);
-}
-
-zx_status_t GetProcessThreads(const zx::process& process,
-                              uint64_t dl_debug_addr,
-                              std::vector<debug_ipc::ThreadRecord>* threads) {
-  auto koids = GetChildKoids(process.get(), ZX_INFO_PROCESS_THREADS);
-  threads->resize(koids.size());
-  for (size_t i = 0; i < koids.size(); i++) {
-    (*threads)[i].koid = koids[i];
-
-    zx_handle_t handle;
-    if (zx_object_get_child(process.get(), koids[i], ZX_RIGHT_SAME_RIGHTS,
-                            &handle) == ZX_OK) {
-      FillThreadRecord(process, dl_debug_addr, zx::thread(handle),
-                       debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
-                       &(*threads)[i]);
-    }
-  }
-  return ZX_OK;
-}
-
-void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
-                      const zx::thread& thread,
-                      debug_ipc::ThreadRecord::StackAmount stack_amount,
-                      const zx_thread_state_general_regs* optional_regs,
-                      debug_ipc::ThreadRecord* record) {
-  record->koid = KoidForObject(thread);
-  record->name = NameForObject(thread);
-
-  zx_info_thread info;
-  if (thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) ==
-      ZX_OK) {
-    record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
-  } else {
-    FXL_NOTREACHED();
-    record->state = debug_ipc::ThreadRecord::State::kDead;
-  }
-
-  // The registers are available when suspended or blocked in an exception.
-  if ((info.state == ZX_THREAD_STATE_SUSPENDED ||
-       info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) &&
-      stack_amount != debug_ipc::ThreadRecord::StackAmount::kNone) {
-    // Only record this when we actually attempt to query the stack.
-    record->stack_amount = stack_amount;
-
-    // The registers are required, fetch them if the caller didn't provide.
-    zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
-    zx_thread_state_general_regs* regs = nullptr;
-    if (!optional_regs) {
-      if (thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
-                            sizeof(queried_regs)) == ZX_OK)
-        regs = &queried_regs;
-    } else {
-      // We don't change the values here but *InRegs below returns mutable
-      // references so we need a mutable pointer.
-      regs = const_cast<zx_thread_state_general_regs*>(optional_regs);
-    }
-
-    if (regs) {
-      // Minimal stacks are 2 (current frame and calling one). Full stacks max
-      // out at 256 to prevent edge cases, especially around corrupted stacks.
-      uint32_t max_stack_depth =
-          stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2
-                                                                         : 256;
-
-      UnwindStack(process, dl_debug_addr, thread,
-                  *arch::ArchProvider::Get().IPInRegs(regs),
-                  *arch::ArchProvider::Get().SPInRegs(regs),
-                  *arch::ArchProvider::Get().BPInRegs(regs), max_stack_depth,
-                  &record->frames);
-    }
-  } else {
-    // Didn't bother querying the stack.
-    record->stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
-  }
 }
 
 zx_status_t GetModulesForProcess(const zx::process& process,
@@ -350,6 +245,35 @@ void ReadProcessMemoryBlocks(const zx::process& process, uint64_t address,
                            &blocks->back());
     begin = end;
   }
+}
+
+debug_ipc::ThreadRecord::State ThreadStateToEnums(
+    uint32_t state, debug_ipc::ThreadRecord::BlockedReason* blocked_reason) {
+  struct Mapping {
+    uint32_t int_state;
+    debug_ipc::ThreadRecord::State enum_state;
+  };
+  static const Mapping mappings[] = {
+      {ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew},
+      {ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning},
+      {ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended},
+      {ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked},
+      {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
+      {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
+
+  const uint32_t basic_state = ZX_THREAD_STATE_BASIC(state);
+  *blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+
+  for (const Mapping& mapping : mappings) {
+    if (mapping.int_state == basic_state) {
+      if (mapping.enum_state == debug_ipc::ThreadRecord::State::kBlocked) {
+        *blocked_reason = ThreadStateBlockedReasonToEnum(state);
+      }
+      return mapping.enum_state;
+    }
+  }
+  FXL_NOTREACHED();
+  return debug_ipc::ThreadRecord::State::kDead;
 }
 
 }  // namespace debug_agent

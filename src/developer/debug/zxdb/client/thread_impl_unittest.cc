@@ -81,9 +81,9 @@ TEST_F(ThreadImplTest, Frames) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException break_notification;
-  break_notification.process_koid = kProcessKoid;
   break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
-  break_notification.thread.koid = kThreadKoid;
+  break_notification.thread.process_koid = kProcessKoid;
+  break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   break_notification.thread.frames.resize(1);
   break_notification.thread.frames[0].ip = kAddress1;
@@ -151,9 +151,9 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.process_koid = kProcessKoid;
   notification.type = debug_ipc::NotifyException::Type::kSoftware;
-  notification.thread.koid = kThreadKoid;
+  notification.thread.process_koid = kProcessKoid;
+  notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.resize(1);
   notification.thread.frames[0].ip = kAddress1;
@@ -193,9 +193,9 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.process_koid = kProcessKoid;
   notification.type = debug_ipc::NotifyException::Type::kSoftware;
-  notification.thread.koid = kThreadKoid;
+  notification.thread.process_koid = kProcessKoid;
+  notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.resize(1);
   notification.thread.frames[0].ip = kAddress1;
@@ -240,9 +240,9 @@ TEST_F(ThreadImplTest, JumpTo) {
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack = 0x7890;
   debug_ipc::NotifyException notification;
-  notification.process_koid = kProcessKoid;
   notification.type = debug_ipc::NotifyException::Type::kSoftware;
-  notification.thread.koid = kThreadKoid;
+  notification.thread.process_koid = kProcessKoid;
+  notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.resize(1);
   notification.thread.frames[0].ip = kAddress1;

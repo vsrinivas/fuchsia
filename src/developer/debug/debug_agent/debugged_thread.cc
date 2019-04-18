@@ -13,6 +13,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/unwind.h"
@@ -109,9 +110,8 @@ void DebuggedThread::OnException(uint32_t type) {
                    << static_cast<uint32_t>(exception.type);
 }
 
-void DebuggedThread::HandleSingleStep(
-    debug_ipc::NotifyException* exception,
-    zx_thread_state_general_regs* regs) {
+void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
+                                      zx_thread_state_general_regs* regs) {
   if (current_breakpoint_) {
     // The current breakpoint is set only when stopped at a breakpoint or when
     // single-stepping over one. We're not going to get an exception for a
@@ -160,7 +160,8 @@ void DebuggedThread::HandleSingleStep(
   SendExceptionNotification(exception, regs);
 }
 
-void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+void DebuggedThread::HandleSoftwareBreakpoint(
+    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
   if (UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints) ==
       OnStop::kIgnore)
     return;
@@ -184,7 +185,6 @@ void DebuggedThread::HandleGeneralException(
 
 void DebuggedThread::SendExceptionNotification(
     debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-  exception->process_koid = process_->koid();
   FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, regs,
                    &exception->thread);
 
@@ -243,8 +243,8 @@ DebuggedThread::SuspendResult DebuggedThread::WaitForSuspension(
     return SuspendResult::kOnException;
 
   zx_signals_t observed;
-  zx_status_t status = thread_.wait_one(ZX_THREAD_SUSPENDED, deadline,
-                                        &observed);
+  zx_status_t status =
+      thread_.wait_one(ZX_THREAD_SUSPENDED, deadline, &observed);
   FXL_DCHECK(observed & ZX_THREAD_SUSPENDED);
   if (status != ZX_OK)
     return SuspendResult::kError;
@@ -255,8 +255,58 @@ void DebuggedThread::FillThreadRecord(
     debug_ipc::ThreadRecord::StackAmount stack_amount,
     const zx_thread_state_general_regs* optional_regs,
     debug_ipc::ThreadRecord* record) const {
-  debug_agent::FillThreadRecord(process_->process(), process_->dl_debug_addr(),
-                                thread_, stack_amount, optional_regs, record);
+  record->process_koid = process_->koid();
+  record->thread_koid = koid();
+  record->name = NameForObject(thread_);
+
+  // State (running, blocked, etc.).
+  zx_info_thread info;
+  if (thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) ==
+      ZX_OK) {
+    record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
+  } else {
+    FXL_NOTREACHED();
+    record->state = debug_ipc::ThreadRecord::State::kDead;
+  }
+
+  // The registers are available when suspended or blocked in an exception.
+  if ((info.state == ZX_THREAD_STATE_SUSPENDED ||
+       info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) &&
+      stack_amount != debug_ipc::ThreadRecord::StackAmount::kNone) {
+    // Only record this when we actually attempt to query the stack.
+    record->stack_amount = stack_amount;
+
+    // The registers are required, fetch them if the caller didn't provide.
+    zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
+    zx_thread_state_general_regs* regs = nullptr;
+    if (!optional_regs) {
+      if (thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs,
+                             sizeof(queried_regs)) == ZX_OK)
+        regs = &queried_regs;
+    } else {
+      // We don't change the values here but *InRegs below returns mutable
+      // references so we need a mutable pointer.
+      regs = const_cast<zx_thread_state_general_regs*>(optional_regs);
+    }
+
+    if (regs) {
+      // Minimal stacks are 2 (current frame and calling one). Full stacks max
+      // out at 256 to prevent edge cases, especially around corrupted stacks.
+      uint32_t max_stack_depth =
+          stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2
+                                                                         : 256;
+
+      UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
+                  *arch::ArchProvider::Get().IPInRegs(regs),
+                  *arch::ArchProvider::Get().SPInRegs(regs),
+                  *arch::ArchProvider::Get().BPInRegs(regs), max_stack_depth,
+                  &record->frames);
+    }
+  } else {
+    // Didn't bother querying the stack.
+    record->stack_amount = debug_ipc::ThreadRecord::StackAmount::kNone;
+    record->frames.clear();
+  }
 }
 
 void DebuggedThread::ReadRegisters(
@@ -325,13 +375,9 @@ zx_status_t DebuggedThread::WriteRegisters(
 }
 
 void DebuggedThread::SendThreadNotification() const {
-  debug_ipc::ThreadRecord record;
-  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
-                   &record);
-
   debug_ipc::NotifyThread notify;
-  notify.process_koid = process_->koid();
-  notify.record = record;
+  FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr,
+                   &notify.record);
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(

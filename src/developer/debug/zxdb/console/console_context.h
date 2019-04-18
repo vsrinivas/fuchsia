@@ -65,6 +65,7 @@ class ConsoleContext : public ProcessObserver,
   // active thread ID for a target not running will be 0.
   void SetActiveThreadForTarget(const Thread* thread);
   int GetActiveThreadIdForTarget(const Target* target);
+  Thread* GetActiveThreadForTarget(const Target* target);
 
   // Frames are a little bit different than threads and targets since they
   // have an intrinsic numbering supplied by the Thread object (the index into

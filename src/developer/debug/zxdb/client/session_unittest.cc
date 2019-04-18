@@ -182,9 +182,9 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   sink()->ResetResumeState();
   thread_observer.ResetStopState();
   debug_ipc::NotifyException notify;
-  notify.process_koid = kProcessKoid;
   notify.type = debug_ipc::NotifyException::Type::kSoftware;
-  notify.thread.koid = kThreadKoid;
+  notify.thread.process_koid = kProcessKoid;
+  notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notify.thread.frames.resize(1);
   // Don't need stack pointers for this test.
@@ -229,9 +229,9 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   fxl::WeakPtr<Breakpoint> weak_bp = bp->GetWeakPtr();
 
   debug_ipc::NotifyException notify;
-  notify.process_koid = kProcessKoid;
   notify.type = debug_ipc::NotifyException::Type::kSoftware;
-  notify.thread.koid = kThreadKoid;
+  notify.thread.process_koid = kProcessKoid;
+  notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notify.thread.frames.resize(1);
   // Don't need stack pointers for this test.

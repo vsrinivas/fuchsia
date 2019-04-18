@@ -142,16 +142,29 @@ zx_status_t DebuggedProcess::Init() {
   return ZX_OK;
 }
 
-void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
+void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
+                              debug_ipc::PauseReply* reply) {
+  // This function should do a best effort to ensure the thread(s) are actually
+  // stopped before the reply is sent.
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread)
-      thread->Suspend();
+    if (thread) {
+      thread->Suspend(true);
+
+      // The Suspend call could have failed though most failures should be
+      // rare (perhaps we raced with the thread being destroyed). Either way,
+      // send our current knowledge of the thread's state.
+      debug_ipc::ThreadRecord record;
+      thread->FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal,
+                               nullptr, &record);
+      reply->threads.push_back(std::move(record));
+    }
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
-    // 0 thread ID means resume all in process.
-    SuspendAll();
+    // 0 thread ID means resume all threads.
+    SuspendAll(true);
+    FillThreadRecords(&reply->threads);
   }
 }
 
@@ -232,6 +245,16 @@ void DebuggedProcess::PopulateCurrentThreads() {
                     ThreadCreationOption::kRunningKeepRunning));
       added.first->second->SendThreadNotification();
     }
+  }
+}
+
+void DebuggedProcess::FillThreadRecords(
+    std::vector<debug_ipc::ThreadRecord>* threads) {
+  for (const auto& pair : threads_) {
+    debug_ipc::ThreadRecord record;
+    pair.second->FillThreadRecord(
+        debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &record);
+    threads->push_back(std::move(record));
   }
 }
 
@@ -377,8 +400,9 @@ void DebuggedProcess::OnThreadExiting(zx_koid_t process_koid,
   // Notify the client. Can't call FillThreadRecord since the thread doesn't
   // exist any more.
   debug_ipc::NotifyThread notify;
-  notify.process_koid = process_koid;
-  notify.record.koid = thread_koid;
+  notify.record.process_koid = process_koid;
+  notify.record.process_koid = process_koid;
+  notify.record.thread_koid = thread_koid;
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
 
   debug_ipc::MessageWriter writer;

@@ -65,7 +65,8 @@ void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
 }
 
 void Serialize(const ThreadRecord& record, MessageWriter* writer) {
-  writer->WriteUint64(record.koid);
+  writer->WriteUint64(record.process_koid);
+  writer->WriteUint64(record.thread_koid);
   writer->WriteString(record.name);
   writer->WriteUint32(static_cast<uint32_t>(record.state));
   writer->WriteUint32(static_cast<uint32_t>(record.blocked_reason));
@@ -238,6 +239,7 @@ bool ReadRequest(MessageReader* reader, PauseRequest* request,
 void WriteReply(const PauseReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
+  Serialize(reply.threads, writer);
 }
 
 // QuitAgent -------------------------------------------------------------------
@@ -544,14 +546,12 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer) {
   writer->WriteHeader(type, 0);
-  writer->WriteUint64(notify.process_koid);
   Serialize(notify.record, writer);
 }
 
 void WriteNotifyException(const NotifyException& notify,
                           MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyException, 0);
-  writer->WriteUint64(notify.process_koid);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   Serialize(notify.hit_breakpoints, writer);

@@ -331,9 +331,9 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
 
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
-  notification.process_koid = kProcessKoid;
   notification.type = debug_ipc::NotifyException::Type::kGeneral;
-  notification.thread.koid = kThreadKoid;
+  notification.thread.process_koid = kProcessKoid;
+  notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   mock_remote_api().PopulateBreakpointIds(notification);
   InjectException(notification);

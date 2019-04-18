@@ -27,7 +27,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   const std::string& GetName() const override;
   debug_ipc::ThreadRecord::State GetState() const override;
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override;
-  void Pause() override;
+  void Pause(std::function<void()> on_paused) override;
   void Continue() override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override;

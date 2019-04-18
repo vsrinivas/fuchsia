@@ -9,7 +9,6 @@
 #include <iostream>
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -21,6 +20,7 @@
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -28,7 +28,7 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
                        const debug_ipc::ThreadRecord& record)
     : Thread(process->session()),
       process_(process),
-      koid_(record.koid),
+      koid_(record.thread_koid),
       stack_(this),
       weak_factory_(this) {
   SetMetadata(record);
@@ -49,7 +49,7 @@ debug_ipc::ThreadRecord::BlockedReason ThreadImpl::GetBlockedReason() const {
   return blocked_reason_;
 }
 
-void ThreadImpl::Pause() {
+void ThreadImpl::Pause(std::function<void()> on_paused) {
   // The frames may have been requested when the thread was running which
   // will have marked them "empty but complete." When a pause happens the
   // frames will become available so we want subsequent requests to request
@@ -59,8 +59,24 @@ void ThreadImpl::Pause() {
   debug_ipc::PauseRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
-  session()->remote_api()->Pause(request,
-                                 [](const Err& err, debug_ipc::PauseReply) {});
+  session()->remote_api()->Pause(
+      request, [weak_thread = weak_factory_.GetWeakPtr(),
+                on_paused = std::move(on_paused)](const Err& err,
+                                                  debug_ipc::PauseReply reply) {
+        if (!err.has_error() && weak_thread) {
+          // Save the new metadata.
+          if (reply.threads.size() == 1 &&
+              reply.threads[0].thread_koid == weak_thread->koid_) {
+            weak_thread->SetMetadata(reply.threads[0]);
+          } else {
+            // If the client thread still exists, the agent's record of that
+            // thread should have existed at the time the message was sent so
+            // there should be no reason the update doesn't match.
+            FXL_NOTREACHED();
+          }
+        }
+        on_paused();
+      });
 }
 
 void ThreadImpl::Continue() {
@@ -232,7 +248,7 @@ void ThreadImpl::ReadRegisters(
 }
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
-  FXL_DCHECK(koid_ == record.koid);
+  FXL_DCHECK(koid_ == record.thread_koid);
 
   name_ = record.name;
   state_ = record.state;

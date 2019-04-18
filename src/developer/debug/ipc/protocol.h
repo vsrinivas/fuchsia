@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 6;
+constexpr uint32_t kProtocolVersion = 7;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -162,7 +162,12 @@ struct PauseRequest {
   // If 0, all threads in the given process will be paused.
   uint64_t thread_koid = 0;
 };
-struct PauseReply {};
+// The backend should make a best effort to ensure the requested threads are
+// actually stopped before sending the reply.
+struct PauseReply {
+  // The updated thead state for all affected threads.
+  std::vector<ThreadRecord> threads;
+};
 
 struct QuitAgentRequest {};
 struct QuitAgentReply {};
@@ -347,7 +352,6 @@ struct NotifyProcessExiting {
 
 // Data for thread created and destroyed messages.
 struct NotifyThread {
-  uint64_t process_koid = 0;
   ThreadRecord record;
 };
 
@@ -378,8 +382,6 @@ struct NotifyException {
     kLast  // Not an actual exception type, for range checking.
   };
   static const char* TypeToString(Type);
-
-  uint64_t process_koid = 0;
 
   // Holds the state and a minimal stack (up to 2 frames) of the thread at the
   // moment of notification.

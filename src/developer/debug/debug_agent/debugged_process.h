@@ -67,7 +67,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   zx_status_t Init();
 
   // IPC handlers.
-  void OnPause(const debug_ipc::PauseRequest& request);
+  void OnPause(const debug_ipc::PauseRequest& request,
+               debug_ipc::PauseReply* reply);
   void OnResume(const debug_ipc::ResumeRequest& request);
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply);
@@ -96,6 +97,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // sends the list to the client. Used after an attach where we will not get
   // new thread notifications.
   void PopulateCurrentThreads();
+
+  // Appends the information for all current threads. This writes minimal
+  // stacks.
+  void FillThreadRecords(std::vector<debug_ipc::ThreadRecord>* threads);
 
   // Attempts to load the debug_state_ value from the
   // ZX_PROP_PROCESS_DEBUG_ADDR of the debugged process. Returns true if it

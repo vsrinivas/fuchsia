@@ -25,7 +25,9 @@ bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
 }
 
 bool Deserialize(MessageReader* reader, ThreadRecord* record) {
-  if (!reader->ReadUint64(&record->koid))
+  if (!reader->ReadUint64(&record->process_koid))
+    return false;
+  if (!reader->ReadUint64(&record->thread_koid))
     return false;
   if (!reader->ReadString(&record->name))
     return false;
@@ -272,7 +274,8 @@ bool ReadReply(MessageReader* reader, PauseReply* reply,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return true;
+
+  return Deserialize(reader, &reply->threads);
 }
 
 // QuitAgent -------------------------------------------------------------------
@@ -586,16 +589,12 @@ bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
-  if (!reader->ReadUint64(&notify->process_koid))
-    return false;
   return Deserialize(reader, &notify->record);
 }
 
 bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
-    return false;
-  if (!reader->ReadUint64(&notify->process_koid))
     return false;
   if (!Deserialize(reader, &notify->thread))
     return false;

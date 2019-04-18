@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
 
 namespace zxdb {
@@ -33,8 +34,10 @@ class System : public ClientObject {
   using ProcessTreeCallback =
       std::function<void(const Err&, debug_ipc::ProcessTreeReply)>;
 
-  System(Session* session);
+  explicit System(Session* session);
   ~System() override;
+
+  fxl::WeakPtr<System> GetWeakPtr();
 
   void AddObserver(SystemObserver* observer);
   void RemoveObserver(SystemObserver* observer);
@@ -91,8 +94,15 @@ class System : public ClientObject {
   // this call. Used for both internal and external breakpoints.
   virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
 
+  // Pauses (suspends in Zircon terms) all threads of all attached processes.
+  //
+  // The backend will try to ensure the threads are actually paused before
+  // issuing the on_paused callback. But this is best effort and not
+  // guaranteed: both because there's a timeout for the synchronous suspending
+  // and because a different continue message could race with the reply.
+  virtual void Pause(std::function<void()> on_paused) = 0;
+
   // Applies to all threads of all debugged processes.
-  virtual void Pause() = 0;
   virtual void Continue() = 0;
 
   // Provides the setting schema for this object.
@@ -107,6 +117,8 @@ class System : public ClientObject {
 
  private:
   fxl::ObserverList<SystemObserver> observers_;
+
+  fxl::WeakPtrFactory<System> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(System);
 };

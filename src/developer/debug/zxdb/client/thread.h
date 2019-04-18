@@ -54,16 +54,27 @@ class Thread : public ClientObject {
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
   virtual debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const = 0;
 
-  virtual void Pause() = 0;
+  // Pauses (suspends in Zircon terms) the thread, it does not affect other
+  // threads or processes.
+  //
+  // The backend will try to ensure the thread is actually paused before
+  // issuing the on_paused callback. But this is best effort and not
+  // guaranteed: both because there's a timeout for the synchronous suspending
+  // and because a different continue message could race with the reply.
+  virtual void Pause(std::function<void()> on_paused) = 0;
+
+  // Resumes only this thread.
   virtual void Continue() = 0;
 
   // Continues the thread using the given ThreadController. This is used
   // to implement the more complex forms of stepping.
   //
   // The on_continue callback does NOT indicate that the thread stopped again.
-  // This is because many thread controllers may need to do asynchronous setup
-  // that could fail. It is issued when the thread is actually resumed or when
-  // the resumption fails.
+  // It indicates the thread controller has completed setup properly (some
+  // may fail if they depend on some thread state to start). When the step is
+  // complete an exception will be delivered via the thread observer (it's
+  // not always possible to correlate a given thread suspension with a given
+  // step operation).
   //
   // The on_continue callback may be issued reentrantly from within the stack
   // of the ContinueWith call if the controller was ready synchronously.

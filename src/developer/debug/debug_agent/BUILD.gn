@@ -140,7 +140,6 @@ executable("unit_tests") {
     "mock_process.cc",
     "mock_process.h",
     "process_breakpoint_unittest.cc",
-    "process_info_unittests.cc",
     "process_watchpoint_unittest.cc",
     "system_info_unittests.cc",
   ]

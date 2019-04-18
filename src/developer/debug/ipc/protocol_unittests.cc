@@ -226,6 +226,26 @@ TEST(Protocol, PauseRequest) {
   EXPECT_EQ(initial.thread_koid, second.thread_koid);
 }
 
+TEST(Protocol, PauseReply) {
+  PauseReply initial;
+  initial.threads.resize(2);
+  initial.threads[0].process_koid = 41;
+  initial.threads[0].thread_koid = 1234;
+  initial.threads[0].name = "thread 0";
+  initial.threads[1].process_koid = 42;
+  initial.threads[1].thread_koid = 5678;
+  initial.threads[1].name = "thread 1";
+
+  PauseReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_EQ(initial.threads.size(), second.threads.size());
+  for (size_t i = 0; i < initial.threads.size(); i++) {
+    EXPECT_EQ(initial.threads[i].process_koid, second.threads[i].process_koid);
+    EXPECT_EQ(initial.threads[i].thread_koid, second.threads[i].thread_koid);
+    EXPECT_EQ(initial.threads[i].name, second.threads[i].name);
+  }
+}
+
 // Resume --------------------------------------------------------------------
 
 TEST(Protocol, ResumeRequest) {
@@ -290,18 +310,22 @@ TEST(Protocol, ThreadsRequest) {
 TEST(Protocol, ThreadsReply) {
   ThreadsReply initial;
   initial.threads.resize(2);
-  initial.threads[0].koid = 1234;
+  initial.threads[0].process_koid = 41;
+  initial.threads[0].thread_koid = 1234;
   initial.threads[0].name = "one";
-  initial.threads[1].koid = 7634;
+  initial.threads[1].process_koid = 42;
+  initial.threads[1].thread_koid = 7634;
   initial.threads[1].name = "two";
 
   ThreadsReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   ASSERT_EQ(initial.threads.size(), second.threads.size());
-  EXPECT_EQ(initial.threads[0].koid, second.threads[0].koid);
+  EXPECT_EQ(initial.threads[0].process_koid, second.threads[0].process_koid);
+  EXPECT_EQ(initial.threads[0].thread_koid, second.threads[0].thread_koid);
   EXPECT_EQ(initial.threads[0].name, second.threads[0].name);
-  EXPECT_EQ(initial.threads[1].koid, second.threads[1].koid);
+  EXPECT_EQ(initial.threads[1].process_koid, second.threads[1].process_koid);
+  EXPECT_EQ(initial.threads[1].thread_koid, second.threads[1].thread_koid);
   EXPECT_EQ(initial.threads[1].name, second.threads[1].name);
 }
 
@@ -424,7 +448,8 @@ TEST(Protocol, ThreadStatusRequest) {
 
 TEST(Protocol, ThreadStatusReply) {
   ThreadStatusReply initial;
-  initial.record.koid = 1234;
+  initial.record.process_koid = 42;
+  initial.record.thread_koid = 1234;
   initial.record.name = "Spartacus";
   initial.record.state = ThreadRecord::State::kRunning;
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
@@ -440,7 +465,8 @@ TEST(Protocol, ThreadStatusReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   EXPECT_EQ(2u, second.record.frames.size());
-  EXPECT_EQ(initial.record.koid, second.record.koid);
+  EXPECT_EQ(initial.record.process_koid, second.record.process_koid);
+  EXPECT_EQ(initial.record.thread_koid, second.record.thread_koid);
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
@@ -692,8 +718,8 @@ TEST(Protocol, WriteRegistersReply) {
 
 TEST(Protocol, NotifyThread) {
   NotifyThread initial;
-  initial.process_koid = 9887;
-  initial.record.koid = 1234;
+  initial.record.process_koid = 9887;
+  initial.record.thread_koid = 1234;
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
@@ -705,8 +731,8 @@ TEST(Protocol, NotifyThread) {
   NotifyThread second;
   ASSERT_TRUE(ReadNotifyThread(&reader, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.record.koid, second.record.koid);
+  EXPECT_EQ(initial.record.process_koid, second.record.process_koid);
+  EXPECT_EQ(initial.record.thread_koid, second.record.thread_koid);
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
@@ -714,7 +740,8 @@ TEST(Protocol, NotifyThread) {
 
 TEST(Protocol, NotifyException) {
   NotifyException initial;
-  initial.process_koid = 23;
+  initial.thread.process_koid = 23;
+  initial.thread.thread_koid = 23;
   initial.thread.name = "foo";
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.resize(1);
@@ -736,7 +763,8 @@ TEST(Protocol, NotifyException) {
   ASSERT_TRUE(SerializeDeserializeNotification(
       initial, &second, &WriteNotifyException, &ReadNotifyException));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread.process_koid, second.thread.process_koid);
+  EXPECT_EQ(initial.thread.thread_koid, second.thread.thread_koid);
   EXPECT_EQ(initial.thread.name, second.thread.name);
   EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
   EXPECT_EQ(initial.thread.frames[0].ip, second.thread.frames[0].ip);
