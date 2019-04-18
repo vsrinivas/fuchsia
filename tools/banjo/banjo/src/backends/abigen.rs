@@ -88,9 +88,9 @@ pub fn to_c_name(name: &str) -> String {
 
 pub fn get_shortdesc(attrs: &ast::Attrs) -> String {
     for attr in attrs.0.iter() {
-        if attr.key == "shortdesc" {
+        if attr.key == "Doc" {
             if let Some(ref val) = attr.val {
-                return format!("#^ {}\n", val);
+                return format!("#^ {}\n", val.trim());
             }
         }
     }
