@@ -15,6 +15,9 @@ use syn::{punctuated::*, token::*, *};
 
 type Result<T> = std::result::Result<T, Error>;
 
+const INVALID_FIDL_FIELD_ATTRIBUTE_MSG: &str =
+    "fidl_field_type attribute must be required, optional, or default = value";
+
 /// This macro generates code to validate fidl tables.
 ///
 /// ## Basic Example
@@ -43,12 +46,12 @@ type Result<T> = std::result::Result<T, Error>;
 /// `ValidatedFidlTable`:
 ///
 /// ```
-/// pub enum ValidatedFidlTableValidationError {
-///     MissingField(ValidatedFidlTableMissingFieldError)
+/// pub enum FidlTableValidationError {
+///     MissingField(FidlTableMissingFieldError)
 /// }
 ///
 /// impl TryFrom<FidlTable> for ValidatedFidlTable {
-///     type Error = ValidatedFidlTableValidationError;
+///     type Error = FidlTableValidationError;
 ///     fn try_from(src: FidlTable) -> Result<ValidatedFidlTable, Self::Error> { .. }
 /// }
 /// ```
@@ -149,7 +152,7 @@ fn fidl_table_type(span: Span, attrs: &[Attribute]) -> Result<Ident> {
             span,
             concat!(
                 "To derive ValidFidlTable, struct needs ",
-                "#[fidl_table(FidlTableType)] attribute to mark ",
+                "#[fidl_table_src(FidlTableType)] attribute to mark ",
                 "source Fidl type."
             ),
         )),
@@ -182,7 +185,7 @@ impl TryFrom<Field> for FidlField {
     fn try_from(src: Field) -> Result<Self> {
         let span = src.span().clone();
         let attrs = src.attrs;
-        let kind = FidlFieldKind::try_from((span, attrs.as_slice()))?;
+        let kind = FidlFieldKind::try_from(attrs.as_slice())?;
         match src.ident {
             Some(ident) => Ok(FidlField { ident, kind }),
             None => {
@@ -206,18 +209,15 @@ enum FidlFieldKind {
     HasDefault(Lit),
 }
 
-impl TryFrom<(Span, &[Attribute])> for FidlFieldKind {
+impl TryFrom<&[Attribute]> for FidlFieldKind {
     type Error = Error;
-    fn try_from((span, attrs): (Span, &[Attribute])) -> Result<Self> {
+    fn try_from(attrs: &[Attribute]) -> Result<Self> {
         match unique_list_with_arg(attrs, "fidl_field_type")? {
             Some(NestedMeta::Meta(Meta::Word(field_type))) => {
                 match field_type.to_string().as_str() {
                     "required" => Ok(FidlFieldKind::Required),
                     "optional" => Ok(FidlFieldKind::Optional),
-                    _ => Err(Error::new(
-                        field_type.span(),
-                        "fidl_field_type attribute must be required, optional, or default = value",
-                    )),
+                    _ => Err(Error::new(field_type.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
                 }
             }
             Some(NestedMeta::Meta(Meta::NameValue(ref default_value)))
@@ -225,13 +225,8 @@ impl TryFrom<(Span, &[Attribute])> for FidlFieldKind {
             {
                 Ok(FidlFieldKind::HasDefault(default_value.lit.clone()))
             }
-            _ => Err(Error::new(
-                span,
-                concat!(
-                    "To derive ValidFidlTable, all fields ",
-                    " must have a fidl_field_type attribute."
-                ),
-            )),
+            None => Ok(FidlFieldKind::Required),
+            Some(meta) => Err(Error::new(meta.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
         }
     }
 }
@@ -244,13 +239,13 @@ fn impl_valid_fidl_table(
     let fidl_table_type = fidl_table_type(name.span(), attrs)?;
 
     let missing_field_error_type = {
-        let mut error_type_name = name.to_string();
+        let mut error_type_name = fidl_table_type.to_string();
         error_type_name.push_str("MissingFieldError");
         Ident::new(&error_type_name, Span::call_site())
     };
 
     let error_type_name = {
-        let mut error_type_name = name.to_string();
+        let mut error_type_name = fidl_table_type.to_string();
         error_type_name.push_str("ValidationError");
         Ident::new(&error_type_name, Span::call_site())
     };
@@ -284,11 +279,15 @@ fn impl_valid_fidl_table(
             FidlFieldKind::Required => {
                 let camel_case = field.camel_case();
                 quote!(
-                    #ident: src.#ident.ok_or(#missing_field_error_type::#camel_case)?,
+                    #ident: std::convert::TryFrom::try_from(
+                        src.#ident.ok_or(#missing_field_error_type::#camel_case)?
+                    ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
                 )
             }
             FidlFieldKind::Optional => quote!(
-                #ident: src.#ident,
+                #ident: std::convert::TryFrom::try_from(
+                    src.#ident
+                ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
             ),
             FidlFieldKind::HasDefault(value) => quote!(
                 #ident: src.#ident.unwrap_or(#value),
@@ -317,7 +316,22 @@ fn impl_valid_fidl_table(
         #[derive(Debug)]
         pub enum #error_type_name {
             MissingField(#missing_field_error_type),
+            InvalidField(Box<std::error::Error + Send + Sync>),
             #custom_validator_error
+        }
+
+        impl std::fmt::Display for #error_type_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "Validation error: {:?}", self)
+            }
+        }
+
+        impl std::error::Error for #error_type_name {}
+
+        impl From<Box<std::error::Error + Send + Sync>> for #error_type_name {
+            fn from(src: Box<std::error::Error + Send + Sync>) -> Self {
+                #error_type_name::InvalidField(src)
+            }
         }
 
         impl From<#missing_field_error_type> for #error_type_name {
@@ -330,7 +344,7 @@ fn impl_valid_fidl_table(
 
         impl std::convert::TryFrom<#fidl_table_type> for #name {
             type Error = #error_type_name;
-            fn try_from(src: #fidl_table_type) -> Result<Self, Self::Error> {
+            fn try_from(src: #fidl_table_type) -> std::result::Result<Self, Self::Error> {
                 use ::fidl_table_validation::Validate;
                 let maybe_valid = Self {
                     #field_validations

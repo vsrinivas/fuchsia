@@ -26,7 +26,7 @@ fn rejects_missing_fields() {
     );
 
     match ValidHello::try_from(FidlHello { required: None }) {
-        Err(ValidHelloValidationError::MissingField(ValidHelloMissingFieldError::Required)) => {}
+        Err(FidlHelloValidationError::MissingField(FidlHelloMissingFieldError::Required)) => {}
         _ => panic!("Should have generated an error for missing required field."),
     };
 }
@@ -101,7 +101,7 @@ fn invalid_fails_custom_validator() {
     }
 
     match ValidHello::try_from(FidlHello { should_not_be_12: Some(12) }) {
-        Err(ValidHelloValidationError::Logical(())) => {}
+        Err(FidlHelloValidationError::Logical(())) => {}
         _ => panic!("Wanted error from custom validator."),
     }
 }
@@ -136,4 +136,61 @@ fn valid_passes_custom_validator() {
         ValidHello::try_from(FidlHello { should_not_be_12: None }).expect("validation"),
         ValidHello { should_not_be_12: 10 }
     );
+}
+
+#[test]
+fn nested_valid_field_accepted() {
+    struct NestedFidl {
+        required: Option<usize>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(NestedFidl)]
+    struct ValidNestedFidl {
+        required: usize,
+    }
+
+    struct FidlHello {
+        nested: Option<NestedFidl>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(FidlHello)]
+    struct ValidHello {
+        nested: ValidNestedFidl,
+    }
+
+    assert_eq!(
+        ValidHello::try_from(FidlHello { nested: Some(NestedFidl { required: Some(10) }) })
+            .expect("validation"),
+        ValidHello { nested: ValidNestedFidl { required: 10 } },
+    );
+}
+
+#[test]
+fn nested_invalid_field_rejected() {
+    struct NestedFidl {
+        required: Option<usize>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(NestedFidl)]
+    struct ValidNestedFidl {
+        required: usize,
+    }
+
+    struct FidlHello {
+        nested: Option<NestedFidl>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(FidlHello)]
+    struct ValidHello {
+        nested: ValidNestedFidl,
+    }
+
+    match ValidHello::try_from(FidlHello { nested: Some(NestedFidl { required: None }) }) {
+        Err(FidlHelloValidationError::InvalidField(_)) => {}
+        r => panic!("Wanted invalid field error for invalid nested field; got {:?}", r),
+    }
 }
