@@ -2,8 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
+
+group("magma-vulkan") {
+  public_deps = [
+    ":magma-vsl-gc",
+  ]
+  if (build_libvulkan != []) {
+    public_deps += [ ":magma-vsl-gc-config" ]
+  }
+}
 
 package("magma-vsl-gc") {
   deprecated_system_image = true
@@ -36,8 +46,25 @@ package("magma-vsl-gc") {
     foreach(entry, build_libvulkan) {
       dir = get_label_info(entry, "dir")
       if (dir == "//third_party/verisilicon-gc/fuchsia") {
+        icd_name = get_label_info(entry, "name")
         deps += [ entry ]
 
+        libraries += [
+          {
+            name = "$icd_name.so"
+          },
+        ]
+      }
+    }
+  }
+}
+
+if (build_libvulkan != []) {
+  config_data("magma-vsl-gc-config") {
+    sources = []
+    foreach(entry, build_libvulkan) {
+      dir = get_label_info(entry, "dir")
+      if (dir == "//third_party/verisilicon-gc/fuchsia") {
         icd_name = get_label_info(entry, "name")
         filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
         icd_data = [
@@ -50,20 +77,13 @@ package("magma-vsl-gc") {
           "}",
         ]
         write_file(filename, icd_data)
-
-        resources += [
-          {
-            path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
-            dest = "vulkan/icd.d/$icd_name.json"
-          },
-        ]
-        libraries += [
-          {
-            name = "$icd_name.so"
-          },
-        ]
+        sources += [ rebase_path(file_name) ]
       }
     }
+    for_pkg = "vulkan-icd"
+    outputs = [
+      "icd.d/{{source_file_part}}",
+    ]
   }
 }
 

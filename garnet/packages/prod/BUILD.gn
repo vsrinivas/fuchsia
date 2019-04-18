@@ -1111,7 +1111,7 @@ group("magma-qcom-adreno") {
 group("magma-vsl-gc") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-vsl-gc",
+    "//garnet/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan",
   ]
 }
 
