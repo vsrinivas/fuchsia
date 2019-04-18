@@ -21,6 +21,9 @@ namespace {
 // This is an arbitrary default port.
 constexpr char DEFAULT_SERVER_ADDRESS[] = "0.0.0.0:50051";
 
+// To calculate the slope, a range of time is needed. |prior_time| and  |time|
+// define that range. The very first |prior_time| is one stride prior to the
+// requested start time.
 SampleValue calculate_slope(SampleValue value, SampleValue* prior_value,
                             SampleTimeNs time, SampleTimeNs* prior_time) {
   if (value < *prior_value) {
@@ -401,6 +404,9 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
 void Dockyard::ComputeAveragePerColumn(
     DockyardId dockyard_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
+  // To calculate the slope, a range of time is needed. |prior_time| and
+  // |start_time| define that range. The very first |prior_time| is one stride
+  // prior to the requested start time.
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
@@ -441,7 +447,9 @@ void Dockyard::ComputeAveragePerColumn(
 void Dockyard::ComputeHighestPerColumn(
     DockyardId dockyard_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
-  // const SampleTimeNs stride = CalcStride(request);
+  // To calculate the slope, a range of time is needed. |prior_time| and
+  // |start_time| define that range. The very first |prior_time| is one stride
+  // prior to the requested start time.
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
@@ -485,6 +493,9 @@ void Dockyard::ComputeLowestPerColumn(DockyardId dockyard_id,
                                       const SampleStream& sample_stream,
                                       const StreamSetsRequest& request,
                                       std::vector<SampleValue>* samples) const {
+  // To calculate the slope, a range of time is needed. |prior_time| and
+  // |start_time| define that range. The very first |prior_time| is one stride
+  // prior to the requested start time.
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
@@ -548,6 +559,9 @@ void Dockyard::ComputeSculpted(DockyardId dockyard_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {
+  // To calculate the slope, a range of time is needed. |prior_time| and
+  // |start_time| define that range. The very first |prior_time| is one stride
+  // prior to the requested start time.
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   auto overall_average = OverallAverageForStream(dockyard_id);
