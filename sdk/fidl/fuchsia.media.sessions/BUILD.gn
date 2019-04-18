@@ -19,7 +19,6 @@ fidl("fuchsia.media.sessions") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/fidl/fuchsia.media.playback",
     "//zircon/public/fidl/fuchsia-mem",
   ]
 }
