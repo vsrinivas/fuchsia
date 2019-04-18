@@ -99,12 +99,8 @@ impl<'a> FontFace<'a> {
     }
 }
 
-const BYTES_PER_PIXEL: u32 = 4;
-
 /// Trait abstracting a target to which pixels can be written.
 pub trait PixelSink {
-    /// Write an RGBA pixel at an x,y location in the sink.
-    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]);
     /// Write an RGBA pixel at a byte offset within the sink.
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
 }
@@ -112,15 +108,9 @@ pub trait PixelSink {
 /// Pixel sink targeting a shared buffer.
 pub struct MappingPixelSink {
     mapping: Arc<Mapping>,
-    stride: u32,
 }
 
 impl PixelSink for MappingPixelSink {
-    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]) {
-        let offset = (y * self.stride + x * BYTES_PER_PIXEL) as usize;
-        self.write_pixel_at_offset(offset, &value);
-    }
-
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
         self.mapping.write_at(offset, &value);
     }
@@ -132,20 +122,25 @@ impl PixelSink for MappingPixelSink {
 pub struct Canvas<T: PixelSink> {
     // Assumes a pixel format of BGRA8 and a color space of sRGB.
     pixel_sink: T,
-    stride: u32,
+    row_stride: u32,
+    col_stride: u32,
 }
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targeting a shared buffer with stride.
-    pub fn new(mapping: Arc<Mapping>, stride: u32) -> Canvas<MappingPixelSink> {
-        let sink = MappingPixelSink { mapping, stride };
-        Canvas { pixel_sink: sink, stride }
+    pub fn new(
+        mapping: Arc<Mapping>,
+        row_stride: u32,
+        col_stride: u32,
+    ) -> Canvas<MappingPixelSink> {
+        let pixel_sink = MappingPixelSink { mapping };
+        Canvas { pixel_sink, row_stride, col_stride }
     }
 
     /// Create a canvas targeting a particular pixel sink and
     /// with a specific row stride in bytes.
-    pub fn new_with_sink(pixel_sink: T, stride: u32) -> Canvas<T> {
-        Canvas { pixel_sink, stride }
+    pub fn new_with_sink(pixel_sink: T, row_stride: u32, col_stride: u32) -> Canvas<T> {
+        Canvas { pixel_sink, row_stride, col_stride }
     }
 
     #[inline]
@@ -158,11 +153,10 @@ impl<T: PixelSink> Canvas<T> {
 
     #[inline]
     fn set_pixel_at_location(&mut self, location: &Point, value: u8, paint: &Paint) {
-        let col_stride = BYTES_PER_PIXEL as u32;
         let location = location.floor().to_i32();
         if location.x >= 0 && location.y >= 0 {
             let location = location.to_u32();
-            let row_offset = location.y * self.stride + location.x * col_stride;
+            let row_offset = location.y * self.row_stride + location.x * self.col_stride;
             self.set_pixel_at_offset(row_offset as usize, value, paint);
         }
     }
@@ -191,8 +185,8 @@ impl<T: PixelSink> Canvas<T> {
     /// Fill a rectangle with a particular color.
     pub fn fill_rect(&mut self, rect: &Rect, color: Color) {
         let rect = rect.round_out().to_i32();
-        let col_stride = BYTES_PER_PIXEL;
-        let row_stride = self.stride;
+        let col_stride = self.col_stride;
+        let row_stride = self.row_stride;
         for y in rect.min_y().max(0)..rect.max_y().max(0) {
             for x in rect.min_x()..rect.max_x() {
                 let offset = y as u32 * row_stride + x as u32 * col_stride;

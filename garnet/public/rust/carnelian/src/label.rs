@@ -68,7 +68,7 @@ impl Label {
 
             // Create a canvas to render into the buffer
             let mut canvas =
-                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
+                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride, 4);
 
             // since the label buffer is sized to fit the text, always draw at 0,0
             let location = Point::zero();

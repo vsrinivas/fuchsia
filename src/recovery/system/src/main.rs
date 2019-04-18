@@ -64,19 +64,11 @@ impl<'a, T: PixelSink> RecoveryUI<'a, T> {
     }
 }
 
-const BYTES_PER_PIXEL: u32 = 4;
-
 struct FramePixelSink {
     frame: Frame,
 }
 
 impl PixelSink for FramePixelSink {
-    fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]) {
-        let stride = self.frame.linear_stride_bytes() as u32;
-        let offset = (y * stride + x * BYTES_PER_PIXEL) as usize;
-        self.frame.write_pixel_at_offset(offset, &value);
-    }
-
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
         self.frame.write_pixel_at_offset(offset, &value);
     }
@@ -99,7 +91,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
     let fb = FrameBuffer::new(None, &mut executor).context("Failed to create framebuffer")?;
     let config = fb.get_config();
-    if config.format != PixelFormat::Argb8888 {
+    if config.format != PixelFormat::Argb8888 && config.format != PixelFormat::Rgb565 {
         bail!("Unsupported pixel format {:#?}", config.format);
     }
 
@@ -108,9 +100,9 @@ fn main() -> Result<(), Error> {
 
     let face = FontFace::new(FONT_DATA).unwrap();
 
-    let stride = frame.linear_stride_bytes() as u32;
     let sink = FramePixelSink { frame };
-    let canvas = Canvas::new_with_sink(sink, stride);
+    let canvas =
+        Canvas::new_with_sink(sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes);
 
     let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
@@ -120,14 +112,13 @@ fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{RecoveryUI, BYTES_PER_PIXEL, FONT_DATA};
+    use super::{RecoveryUI, FONT_DATA};
     use carnelian::{Canvas, FontFace, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
     struct TestPixelSink {}
 
     impl PixelSink for TestPixelSink {
-        fn write_pixel_at_location(&mut self, _x: u32, _y: u32, _value: &[u8]) {}
         fn write_pixel_at_offset(&mut self, _offset: usize, _value: &[u8]) {}
     }
 
@@ -141,10 +132,13 @@ mod tests {
             height: 600,
             linear_stride_pixels: 800,
             format: PixelFormat::Argb8888,
-            pixel_size_bytes: BYTES_PER_PIXEL,
+            pixel_size_bytes: 4,
         };
-        let linear_stride_bytes = config.linear_stride_pixels * config.pixel_size_bytes;
-        let canvas = Canvas::new_with_sink(sink, linear_stride_bytes);
+        let canvas = Canvas::new_with_sink(
+            sink,
+            config.linear_stride_bytes() as u32,
+            config.pixel_size_bytes,
+        );
 
         let mut ui = RecoveryUI { face: face, canvas, config, text_size: 24 };
         ui.draw("Heading", "Body");

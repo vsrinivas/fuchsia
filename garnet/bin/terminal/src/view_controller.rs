@@ -154,7 +154,7 @@ impl ViewController {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock();
             let mut canvas =
-                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
+                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride, 4);
             let size = Size::new(14.0, 22.0);
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
             let parser = &mut self.parser;
