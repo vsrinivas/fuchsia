@@ -29,7 +29,7 @@ var generators = map[string]GenerateFidl{
 	"overnet_embedded": cpp_overnet_embedded.NewFidlGenerator(),
 	"go":               golang.NewFidlGenerator(),
 	"rust":             rust.NewFidlGenerator(),
-	"syzkaller":        syzkaller.FidlGenerator{},
+	"syzkaller":        syzkaller.NewFidlGenerator(),
 }
 
 func main() {

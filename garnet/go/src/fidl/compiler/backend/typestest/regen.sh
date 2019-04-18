@@ -7,18 +7,18 @@ fi
 
 FIDLC="${FUCHSIA_BUILD_DIR}/host_x64/fidlc"
 if [ ! -x "${FIDLC}" ]; then
-    echo "error: fidlc missing; did you fx clean-build x64?" 1>&2
+    echo "error: fidlc missing; did you fx clean-build?" 1>&2
     exit 1
 fi
 
 FIDLGEN="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen"
 if [ ! -x "${FIDLGEN}" ]; then
-    echo "error: fidlgen missing; maybe fx clean-build x64?" 1>&2
+    echo "error: fidlgen missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 FIDLGEN_LLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp"
 if [ ! -x "${FIDLGEN_LLCPP}" ]; then
-    echo "error: fidlgen_llcp missing; maybe fx clean-build x64?" 1>&2
+    echo "error: fidlgen_llcpp missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 
@@ -41,6 +41,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     overnet_embedded_source_name=${json_name}.overnet_embedded.cc
     go_impl_name=${json_name}.go
     rust_name=${json_name}.rs
+    syzkaller_name=${json_name}.syz.txt
 
     GOLDENS+=(
       $json_name,
@@ -53,6 +54,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${overnet_internal_source_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
+      "${syzkaller_name}.golden",
     )
 
     echo -e "\033[1mexample: ${src_name}\033[0m"
@@ -115,6 +117,14 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -output-base "${GOLDENS_DIR}/${json_name}" \
         -include-base "${GOLDENS_DIR}"
     mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
+
+    echo "  syzkaller: ${json_name} > ${syzkaller_name}"
+    ${FIDLGEN} \
+        -generators syzkaller \
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}/${json_name}" \
+        -include-base "${GOLDENS_DIR}"
+    mv "${GOLDENS_DIR}/${syzkaller_name}" "${GOLDENS_DIR}/${syzkaller_name}.golden"
 done
 
 > "${GOLDENS_DIR}/goldens.txt"

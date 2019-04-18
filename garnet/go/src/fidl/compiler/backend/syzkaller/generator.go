@@ -13,26 +13,44 @@ import (
 	"text/template"
 )
 
-type FidlGenerator struct{}
-
-func writeSyscallDescription(outputFilename string, tmpl *template.Template, tree ir.Root) error {
-	buf := new(bytes.Buffer)
-	if err := tmpl.Execute(buf, tree); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(outputFilename, buf.Bytes(), 0666)
+type FidlGenerator struct {
+	tmpls *template.Template
 }
 
-func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := ir.Compile(fidl)
-
-	srcPath := config.OutputBase + ".txt"
-
+func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("SyzkallerTemplates")
 	template.Must(tmpls.Parse(templates.SyscallDescription))
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 
-	return writeSyscallDescription(srcPath, tmpls.Lookup("GenerateSyscallDescription"), tree)
+	return &FidlGenerator{
+		tmpls: tmpls,
+	}
+}
+
+func (gen FidlGenerator) writeSyscallDescription(outputFilename string, tree ir.Root) error {
+	data, err := gen.GenerateImpl(tree)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(outputFilename, data, 0666)
+}
+
+func (gen *FidlGenerator) GenerateImpl(tree ir.Root) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	tmpl := gen.tmpls.Lookup("GenerateSyscallDescription")
+	if err := tmpl.Execute(buf, tree); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+	tree := ir.Compile(fidl)
+	srcPath := config.OutputBase + ".syz.txt"
+
+	return gen.writeSyscallDescription(srcPath, tree)
 }

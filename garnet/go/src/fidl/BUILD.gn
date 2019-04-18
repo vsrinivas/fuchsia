@@ -110,3 +110,11 @@ go_test("fidlgen_rust_test") {
     ":fidlgen_test_lib",
   ]
 }
+
+go_test("fidlgen_syzkaller_test") {
+  gopackage = "fidl/compiler/backend/syzkaller"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}

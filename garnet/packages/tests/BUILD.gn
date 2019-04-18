@@ -507,6 +507,7 @@ group("fidl") {
     "//garnet/go/src/fidl:fidlgen_golang_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_llcpp_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_rust_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_syzkaller_test($host_toolchain)",
     "//garnet/public/lib/fidl/rust/fidl:rust_fidl_tests",
     "//garnet/tests/fidl-changes",
     "//garnet/tests/fidl-dangerous-identifiers",
