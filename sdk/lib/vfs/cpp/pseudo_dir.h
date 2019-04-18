@@ -47,6 +47,13 @@ class PseudoDir : public Directory {
   // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name.
   zx_status_t RemoveEntry(const std::string& name);
 
+  // Removes a directory entry with the given |name| and |node|.
+  //
+  // Returns |ZX_OK| on success.
+  // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given |name| and
+  // matching |node| pointer.
+  zx_status_t RemoveEntry(const std::string& name, Node* node);
+
   // Removes all directory entries.
   void RemoveAllEntries();
 

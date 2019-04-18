@@ -62,6 +62,18 @@ zx_status_t PseudoDir::RemoveEntry(const std::string& name) {
   return ZX_OK;
 }
 
+zx_status_t PseudoDir::RemoveEntry(const std::string& name, Node* node) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  auto entry = entries_by_name_.find(name);
+  if (entry == entries_by_name_.end() || entry->second->node() != node) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  entries_by_id_.erase(entry->second->id());
+  entries_by_name_.erase(name);
+
+  return ZX_OK;
+}
+
 zx_status_t PseudoDir::Lookup(const std::string& name, Node** out_node) const {
   std::lock_guard<std::mutex> guard(mutex_);
 

@@ -110,6 +110,23 @@ TEST_F(PseudoDirUnit, RemoveEntry) {
   ASSERT_TRUE(dir_.IsEmpty());
 }
 
+TEST_F(PseudoDirUnit, RemoveEntryWithNode) {
+  Init(5);
+  for (int i = 0; i < 5; i++) {
+    ASSERT_EQ(2, nodes_[i].use_count());
+    ASSERT_EQ(ZX_OK, dir_.RemoveEntry(node_names_[i], nodes_[i].get()))
+        << "for " << node_names_[i];
+
+    // cannot access
+    vfs::Node* n;
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup(node_names_[i], &n))
+        << "for " << node_names_[i];
+    // check that use count went down by 1
+    ASSERT_EQ(1, nodes_[i].use_count());
+  }
+  ASSERT_TRUE(dir_.IsEmpty());
+}
+
 TEST_F(PseudoDirUnit, RemoveUniqueNode) {
   Init(0);
 
@@ -536,8 +553,9 @@ TEST_F(PseudoDirConnection, ServeOnValidFlags) {
 TEST_F(PseudoDirConnection, OpenSelf) {
   std::string paths[] = {
       ".",      "./",
-      ".//",    "././",  "././/.",
-      "././//", "././/", "././././/././././////./././//././/./././/././."};
+      ".//",    "././",
+      "././/.", "././//",
+      "././/",  "././././/././././////./././//././/./././/././."};
   auto subdir = std::make_shared<vfs::PseudoDir>();
   dir_.AddSharedEntry("subdir", subdir);
   auto ptr = dir_.Serve();
