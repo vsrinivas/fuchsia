@@ -83,6 +83,21 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     # than as an independent library.  Legacy integration likewise does not
     # use a //zircon/public/lib/zircon buts instead uses libs=["zircon"].
     # See //zircon/public/sysroot.
+    #
+    # The stripped binary doesn't even have section headers, so the linker
+    # can't handle it.  Eventually we'll have linker stubs.  For now, just
+    # use the unstripped library to link against.  (In the case of the vDSO
+    # we don't really need to strip it in the first place, since its
+    # segments are embedded in the kernel and the stripped file is never
+    # put on a device.  But there's no reasonable way to disable the
+    # standard stripping behavior for a single target.)  The legacy build
+    # needs there to be a -L directory where libzircon.so is the name to
+    # link against so -lzircon works.  So mock up such a directory using a
+    # linker script to redirect to the actual unstripped file name, which
+    # is not that.
+    link_file = "$target_gen_dir/libzircon.so"
+    debug_file = rebase_path("$target_out_dir/libzircon.so.debug")
+    write_file(link_file, [ "INPUT($debug_file)" ])
     metadata = {
       legacy_sysroot = [
         {
@@ -109,7 +124,8 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
         },
         {
           sdk = {
-            source = rebase_path("$target_out_dir/libzircon.so", root_build_dir)
+            source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                 root_build_dir)
             link = "lib/libzircon.so"
           }
         },
@@ -122,15 +138,15 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
         },
       ]
 
-      # TODO(BLD-353): This is not actually for the SDK (see above).
-      # This is special-cased so no //zircon/public/lib/zircon gets
-      # made, but //build/config/fuchsia:compiler_sysroot can look up
-      # the metadata to find the right lib_dirs.
+      # TODO(BLD-353): This is not actually for the SDK (see above).  This
+      # is special-cased so no //zircon/public/lib/zircon gets made, but
+      # //build/config/fuchsia:compiler_sysroot can look up the metadata to
+      # find the right lib_dirs.
       legacy_targets = [
         {
           target_name = "zircon"
           libs = []
-          libs = [ rebase_path("$target_out_dir/libzircon.so", root_build_dir) ]
+          libs = [ rebase_path(link_file, root_build_dir) ]
         },
       ]
     }

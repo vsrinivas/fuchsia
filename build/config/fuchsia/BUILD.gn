@@ -177,6 +177,12 @@ config("fdio_config") {
   libs = rebase_path(read_file(api_file, "json"), ".", zircon_root_build_dir)
   assert(libs != [], "$api_file empty?")
   assert(libs == [ libs[0] ], "$api_file has multiple entries?")
+  link_file = libs[0]
+  if (get_path_info(link_file, "file") != "libfdio.so") {
+    link_file = rebase_path(link_file)
+    write_file("$target_gen_dir/libfdio.so", [ "INPUT($link_file)" ])
+    libs[0] = "$target_gen_dir/libfdio.so"
+  }
 }
 
 config("executable_config") {

@@ -376,19 +376,25 @@ template("library") {
       libfile = "$target_out_dir/$libfile"
       if (sdk == "static") {
         libs_file = "${libfile}.a"
+        link_file = libs_file
       } else {
         libs_file = "${libfile}.so"
+        debug_files += [ rebase_path("${libs_file}.debug", root_build_dir) ]
         install_files += [
           {
             source = rebase_path(libs_file, root_build_dir)
             dest = "dist/" + get_path_info(libs_file, "file")
           },
         ]
-        debug_files += [ rebase_path("${libs_file}.debug", root_build_dir) ]
+
+        # TODO(TC-446): The stripped binary doesn't even have section
+        # headers, so the linker can't handle it.  Eventually we'll have
+        # linker stubs.  For now, just use the unstripped library to link.
+        link_file = "${libs_file}.debug"
       }
       install_files += [
         {
-          source = rebase_path(libs_file, root_build_dir)
+          source = rebase_path(link_file, root_build_dir)
           dest = "lib/" + get_path_info(libs_file, "file")
         },
       ]
@@ -413,7 +419,7 @@ template("library") {
               sources += [ "//zircon/$file" ]
             }
           } else {
-            libs = [ rebase_path(libs_file, root_build_dir) ]
+            libs = [ rebase_path(link_file, root_build_dir) ]
           }
           deps = []
           public_deps = []

@@ -296,7 +296,12 @@ library("c") {
       },
       {
         sdk = {
-          source = rebase_path("$target_out_dir/libc.so", root_build_dir)
+          # TODO(TC-446): The stripped binary doesn't even have section
+          # headers, so the linker can't handle it.  Eventually we'll have
+          # linker stubs.  For now, just use the unstripped library to link
+          # against.  This matches what library() gives the SDK via
+          # zircon_library().
+          source = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
           link = "lib/libc.so"
         }
       },

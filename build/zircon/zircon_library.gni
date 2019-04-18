@@ -121,10 +121,23 @@ template("zircon_library") {
     }
 
     if (defined(invoker.libs)) {
+      # Rust targets use -L... -lfoo instead of explicit files.  So they
+      # need to collect the -L list via metadata, and directories on that
+      # list needs to hold exact names libfoo.so or libfoo.a for -lfoo.
       metadata = {
-        zircon_lib_dirs =
-            get_path_info(rebase_path(invoker.libs, "", zircon_root_build_dir),
-                          "dir")
+        zircon_lib_dirs = []
+        foreach(file, invoker.libs) {
+          if (get_path_info(file, "extension") == "so" ||
+              get_path_info(file, "extension") == "a") {
+            zircon_lib_dirs += [ rebase_path(get_path_info(file, "dir"),
+                                             "",
+                                             zircon_root_build_dir) ]
+          } else {
+            file = rebase_path(file, "", zircon_root_build_dir)
+            write_file("$target_gen_dir/lib$library.so", [ "INPUT($file)" ])
+            zircon_lib_dirs += [ rebase_path(target_gen_dir) ]
+          }
+        }
         if (defined(invoker.lib_dirs)) {
           zircon_lib_dirs +=
               rebase_path(invoker.lib_dirs, "", zircon_root_build_dir)

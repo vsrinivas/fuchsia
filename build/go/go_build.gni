@@ -180,7 +180,7 @@ template("go_build") {
       ]
 
       foreach(target, zircon_legacy_targets) {
-        if (target.target_name == "zircon" || target.target_name == "fdio") {
+        if (target.target_name == "zircon") {
           _libs = target.libs
           lib = _libs[0]
           assert(_libs == [ lib ])
@@ -191,6 +191,13 @@ template("go_build") {
           ]
         }
       }
+
+      # See //build/config/fuchsia:fdio_config.
+      args += [
+        "--lib-dir",
+        rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
+                                   "target_gen_dir")),
+      ]
     } else {
       args += [
         "--go-root",

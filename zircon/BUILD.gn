@@ -303,6 +303,7 @@ foreach(cpu, standard_fuchsia_cpus) {
         ":asan-libs-$cpu",
       ]
       metadata = {
+        # //build/images/manifest.gni finds this by name and cpu.
         images = [
           {
             cpu = cpu
@@ -312,6 +313,12 @@ foreach(cpu, standard_fuchsia_cpus) {
                                root_build_dir)
           },
         ]
+
+        # This prevents build_api_module("legacy-$cpu") from visiting the
+        # ASan incarnations of all the libraries.  The legacy build wants
+        # only the manifest of ASan shared libraries.  It wants the targets
+        # themselves only from the primary build.
+        legacy_barrier = []
       }
     }
   }
