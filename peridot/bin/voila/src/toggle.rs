@@ -7,7 +7,7 @@ use failure::Error;
 use fidl_fuchsia_ui_input::{PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 
-use crate::message::VoilaMessage;
+use crate::{message::VoilaMessage, TOGGLE_Z};
 
 pub struct Toggle {
     background_node: ShapeNode,
@@ -41,7 +41,7 @@ impl Toggle {
         self.container.set_translation(
             bounds.origin.x + (bounds.size.width / 2.0),
             bounds.origin.y + (bounds.size.height / 2.0),
-            0.0,
+            TOGGLE_Z,
         );
 
         let color = if self.is_on { self.bg_color_on } else { self.bg_color_off };

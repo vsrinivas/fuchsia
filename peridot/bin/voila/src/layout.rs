@@ -6,7 +6,7 @@ use carnelian::{Point, Rect, Size};
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
 use fuchsia_scenic::{EntityNode, SessionPtr, ViewHolder};
 
-use crate::toggle::Toggle;
+use crate::{toggle::Toggle, REPLICA_Z};
 
 const CONTROLLER_VIEW_HEIGHT: f32 = 25.0;
 
@@ -82,7 +82,7 @@ fn layout_replica(
         downward_input: false,
     };
     view.host_view_holder.set_view_properties(view_properties);
-    view.host_node.set_translation(replica_bounds.origin.x, replica_bounds.origin.y, 0.0);
+    view.host_node.set_translation(replica_bounds.origin.x, replica_bounds.origin.y, REPLICA_Z);
     view.bounds = Some(replica_bounds);
 
     // Update the controller view.

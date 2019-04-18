@@ -46,6 +46,11 @@ const CLOUD_PROVIDER_URI: &str = fuchsia_single_component_package_url!("cloud_pr
 const ERMINE_URI: &str = fuchsia_single_component_package_url!("ermine");
 const MONDRIAN_URI: &str = fuchsia_single_component_package_url!("mondrian");
 
+const BACKGROUND_Z: f32 = 0.0;
+const CIRCLE_Z: f32 = BACKGROUND_Z - 8.0;
+const REPLICA_Z: f32 = BACKGROUND_Z - 9.0;
+const TOGGLE_Z: f32 = BACKGROUND_Z - 9.0;
+
 struct VoilaAppAssistant {}
 
 impl AppAssistant for VoilaAppAssistant {
@@ -193,11 +198,11 @@ impl ViewAssistant for VoilaViewAssistant {
             context.size.width,
             context.size.height,
         ));
-        self.background_node.set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
 
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
         self.circle_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
-        self.circle_node.set_translation(center_x, center_y, 0.0);
+        self.circle_node.set_translation(center_x, center_y, CIRCLE_Z);
 
         let mut views: Vec<&mut ChildViewData> =
             self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();
