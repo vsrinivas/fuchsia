@@ -33,19 +33,19 @@ Fuchsia has adopted a [readability rubric](../../../api/fidl.md) for FIDL librar
 
 ### Dart
 
-- [Documentation](../languages/dart.md)
+- [Documentation](../tutorial/tutorial-dart.md)
 - [Echo server example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_async_dart/)
 - [Echo client example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_async_dart/)
 
 ### Go
 
-- [Documentation](../languages/go.md)
+- [Documentation](../tutorial/tutorial-go.md)
 - [Echo server example](/garnet/examples/fidl/echo_server_go/)
 - [Echo client example](/garnet/examples/fidl/echo_client_go/)
 
 ### Rust
 
-- [Documentation](../languages/rust.md)
+- [Documentation](../tutorial/tutorial-dart.md)
 - [Echo server example](/garnet/examples/fidl/echo_server_rust/)
 - [Echo client example](/garnet/examples/fidl/echo_client_rust/)
 

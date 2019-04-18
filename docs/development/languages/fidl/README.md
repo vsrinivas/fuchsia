@@ -15,7 +15,6 @@ The following topics are presented:
 
 * [C](languages/c.md)
 * [C++](languages/cpp.md)
-* [Dart](languages/dart.md)
-* [Go](languages/go.md)
-* [Rust](languages/rust.md)
-
+* [Dart](tutorial/tutorial-dart.md)
+* [Go](tutorial/tutorial-go.md)
+* [Rust](tutorial/tutorial-rust.md)
