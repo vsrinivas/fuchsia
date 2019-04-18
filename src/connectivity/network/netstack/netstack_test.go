@@ -5,18 +5,22 @@
 package netstack
 
 import (
+	"fmt"
 	"syscall/zx"
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"netstack/fidlconv"
 	"netstack/link/eth"
+	"netstack/util"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
@@ -182,9 +186,12 @@ func TestStaticIPConfiguration(t *testing.T) {
 	}
 
 	ifs.mu.Lock()
-	if ifs.mu.nic.Addr != testIpAddress {
-		t.Error("expected static IP to be set when configured")
+	if info, err := ifs.toNetInterface2Locked(); err != nil {
+		t.Errorf("couldn't get interface info: %s", err)
+	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testIpAddress {
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want %+v", got, testIpAddress)
 	}
+
 	if ifs.mu.dhcp.enabled {
 		t.Error("expected dhcp state to be disabled initially")
 	}
@@ -247,8 +254,10 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if ifs.mu.nic.Addr != testIpAddress {
-		t.Error("expected static IP to be set when configured")
+	if info, err := ifs.toNetInterface2Locked(); err != nil {
+		t.Errorf("couldn't get interface info: %s", err)
+	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testIpAddress {
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want %+v", got, testIpAddress)
 	}
 }
 
@@ -270,6 +279,132 @@ func newNetstack(t *testing.T) *Netstack {
 
 	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	return ns
+}
+
+func TestAddRemoveListV4InterfaceAddresses(t *testing.T) {
+	ns := newNetstack(t)
+	d := deviceForAddEth(ethernet.Info{}, t)
+	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkDefaultAddress := func(t *testing.T) {
+		t.Helper()
+		var info netstack.NetInterface2
+		interfaces, found := ns.getNetInterfaces2Locked(), false
+		for _, ni := range interfaces {
+			if ni.Id == uint32(ifState.nicid) {
+				found = true
+				info = ni
+			}
+		}
+		if !found {
+			t.Fatalf("NIC %d not found in %+v", ifState.nicid, interfaces)
+		}
+		if got, want := info.Addr, fidlconv.ToNetIpAddress(zeroIpAddr); got != want {
+			t.Errorf("got Addr = %+v, want = %+v", got, want)
+		}
+		if got, want := info.Netmask, fidlconv.ToNetIpAddress(tcpip.Address(zeroIpMask)); got != want {
+			t.Errorf("got Netmask = %+v, want = %+v", got, want)
+		}
+	}
+
+	t.Run("defaults", checkDefaultAddress)
+
+	v4addr := fidlconv.ToNetIpAddress(tcpip.Address("\x01\x01\x01\x01"))
+	// Because prefixesBySpecificity is ordered from most to least constrained and we check that the
+	// most recently added prefix length lines up with the netmask we read, this test implicitly
+	// asserts that the least-constrained subnet is used to compute the netmask.
+	prefixesBySpecificity := []uint8{32, 24, 16, 8}
+	for _, prefixLenToAdd := range prefixesBySpecificity {
+		t.Run(fmt.Sprintf("prefixLenToAdd=%d", prefixLenToAdd), func(t *testing.T) {
+			addr := stack.InterfaceAddress{
+				IpAddress: v4addr,
+				PrefixLen: prefixLenToAdd,
+			}
+
+			if err := ns.addInterfaceAddr(uint64(ifState.nicid), addr); err != nil {
+				t.Fatalf("got ns.addInterfaceAddr(_) = %s want nil", err)
+			}
+
+			t.Run(netstack.NetstackName, func(t *testing.T) {
+				interfaces := ns.getNetInterfaces2Locked()
+				for _, i := range interfaces {
+					if i.Addr == addr.IpAddress && i.Netmask == getNetmask(prefixLenToAdd, 8*header.IPv4AddressSize) {
+						return
+					}
+				}
+				t.Errorf("could not find addr %+v in %+v", addr, interfaces)
+			})
+
+			t.Run(stack.StackName, func(t *testing.T) {
+				interfaces := ns.getNetInterfaces()
+				for _, i := range interfaces {
+					for _, a := range i.Properties.Addresses {
+						if a == addr {
+							return
+						}
+					}
+				}
+				t.Errorf("could not find addr %+v in %+v", addr, interfaces)
+			})
+		})
+	}
+
+	// From least to most specific, remove each interface address and assert that the
+	// next-most-specific interface address' prefix length is reflected in the netmask read.
+	for i := len(prefixesBySpecificity) - 1; i >= 0; i-- {
+		prefixLenToRemove := prefixesBySpecificity[i]
+		t.Run(fmt.Sprintf("prefixLenToRemove=%d", prefixLenToRemove), func(t *testing.T) {
+			addr := stack.InterfaceAddress{
+				IpAddress: v4addr,
+				PrefixLen: prefixLenToRemove,
+			}
+			if err := ns.removeInterfaceAddress(ifState.nicid, ipv4.ProtocolNumber, fidlconv.ToTCPIPAddress(addr.IpAddress), addr.PrefixLen); err != nil {
+				t.Fatalf("got ns.removeInterfaceAddress(_) = %s want nil", err)
+			}
+
+			t.Run(stack.StackName, func(t *testing.T) {
+				interfaces := ns.getNetInterfaces()
+				for _, i := range interfaces {
+					for _, a := range i.Properties.Addresses {
+						if a == addr {
+							t.Errorf("unexpectedly found addr %+v in %+v", addr, interfaces)
+						}
+					}
+				}
+			})
+
+			t.Run(netstack.NetstackName, func(t *testing.T) {
+				var info netstack.NetInterface2
+				interfaces, found := ns.getNetInterfaces2Locked(), false
+				for _, ni := range interfaces {
+					if ni.Id == uint32(ifState.nicid) {
+						info = ni
+						found = true
+					}
+				}
+
+				if !found {
+					t.Fatalf("couldn't find NIC %d in %+v", ifState.nicid, interfaces)
+				}
+
+				if i > 0 {
+					want := getNetmask(prefixesBySpecificity[i-1], 8*header.IPv4AddressSize)
+					if got := info.Netmask; got != want {
+						t.Errorf("got Netmask = %+v, want = %+v", got, want)
+					}
+				} else {
+					checkDefaultAddress(t)
+				}
+			})
+		})
+	}
+}
+
+func getNetmask(prefix uint8, bits int) net.IpAddress {
+	return fidlconv.ToNetIpAddress(tcpip.Address(util.CIDRMask(int(prefix), bits)))
 }
 
 // Returns an ethernetext.Device struct that implements

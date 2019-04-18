@@ -24,6 +24,7 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -78,14 +79,25 @@ func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
 }
 
 func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
-	// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
-	broadaddr := []byte(ifs.mu.nic.Addr)
-	if len(ifs.mu.nic.Netmask) != len(ifs.mu.nic.Addr) {
-		return netstack.NetInterface2{}, fmt.Errorf("address length doesn't match netmask: %+v\n", ifs.mu.nic)
+	addr, subnet, err := ifs.ns.mu.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
+	mask := subnet.Mask()
+	// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
+	// network protocol.
+	if err == tcpip.ErrNoLinkAddress {
+		addr = zeroIpAddr
+	} else if err == tcpip.ErrUnknownNICID {
+		panic(fmt.Sprintf("stack.GetMainNICAddress(_): NIC %d not found", ifs.nicid))
+	} else if err != nil {
+		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
 	}
 
+	if mask == "" {
+		mask = zeroIpMask
+	}
+
+	broadaddr := []byte(addr)
 	for i := range broadaddr {
-		broadaddr[i] |= ^ifs.mu.nic.Netmask[i]
+		broadaddr[i] |= ^mask[i]
 	}
 
 	var flags uint32
@@ -102,8 +114,8 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		Features:  ifs.mu.nic.Features,
 		Metric:    uint32(ifs.mu.nic.Metric),
 		Name:      ifs.mu.nic.Name,
-		Addr:      fidlconv.ToNetIpAddress(ifs.mu.nic.Addr),
-		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(ifs.mu.nic.Netmask)),
+		Addr:      fidlconv.ToNetIpAddress(addr),
+		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
 		Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
 		Ipv6addrs: toSubnets(ifs.mu.nic.Ipv6addrs),
@@ -315,7 +327,7 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net.IpAddress,
 		return neterr, nil
 	}
 
-	if err := ni.ns.setInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
+	if err := ni.ns.addInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
 		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
 	}
 	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil

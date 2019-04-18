@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"fmt"
 	"sort"
 
 	"syslog/logger"
@@ -18,15 +19,15 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 )
 
 type stackImpl struct {
 	ns *Netstack
 }
 
-func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
+func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets []tcpip.Subnet) *stack.InterfaceInfo {
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
@@ -38,12 +39,20 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 		physicalStatus = stack.PhysicalStatusUp
 	}
 
-	// TODO(tkilbourn): implement interface addresses
-	addrs := make([]stack.InterfaceAddress, 0, 1)
-	if len(ifs.mu.nic.Addr) > 0 {
+	addrs := make([]stack.InterfaceAddress, 0, len(addresses))
+	for _, a := range addresses {
+		if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
+			continue
+		}
+		// We should always be guaranteed a matching subnet, since stack.NIC.Subnets constructs a subnet
+		// with an all-1s netmask for each endpoint on the NIC.
+		subnet := leastConstrainedMatchingSubnet(a.Address, subnets)
+		if subnet == (tcpip.Subnet{}) {
+			panic(fmt.Sprintf("NIC [%d]: address %+v has no matching subnet in %+v", ifs.nicid, a, subnets))
+		}
 		addrs = append(addrs, stack.InterfaceAddress{
-			IpAddress: fidlconv.ToNetIpAddress(ifs.mu.nic.Addr),
-			PrefixLen: fidlconv.GetPrefixLen(ifs.mu.nic.Netmask),
+			IpAddress: fidlconv.ToNetIpAddress(a.Address),
+			PrefixLen: uint8(subnet.Prefix()),
 		})
 	}
 
@@ -69,11 +78,22 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	}
 }
 
+func leastConstrainedMatchingSubnet(address tcpip.Address, subnets []tcpip.Subnet) tcpip.Subnet {
+	var subnet tcpip.Subnet
+	for _, s := range subnets {
+		if s.Contains(address) && !subnet.Contains(s.ID()) {
+			subnet = s
+		}
+	}
+	return subnet
+}
+
 func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	ns.mu.Lock()
 	out := make([]stack.InterfaceInfo, 0, len(ns.mu.ifStates))
 	for _, ifs := range ns.mu.ifStates {
-		out = append(out, *getInterfaceInfo(ifs))
+		addresses, subnets := ns.getAddressesLocked(ifs.nicid)
+		out = append(out, *getInterfaceInfo(ifs, addresses, subnets))
 	}
 	ns.mu.Unlock()
 
@@ -110,10 +130,11 @@ func (ns *Netstack) delInterface(id uint64) *stack.Error {
 func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
 	ns.mu.Lock()
 	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	addresses, subnets := ns.getAddressesLocked(ifs.nicid)
 	ns.mu.Unlock()
 
 	if ok {
-		return getInterfaceInfo(ifs), nil
+		return getInterfaceInfo(ifs, addresses, subnets), nil
 	}
 	return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
 }
@@ -145,30 +166,23 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	nicid := tcpip.NICID(id)
 
 	ns.mu.Lock()
-	ifs, ok := ns.mu.ifStates[nicid]
+	_, ok := ns.mu.ifStates[nicid]
 	ns.mu.Unlock()
 
 	if !ok {
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 
-	ifs.mu.Lock()
-	addr := ifs.mu.nic.Addr
-	ifs.mu.Unlock()
-
 	var protocol tcpip.NetworkProtocolNumber
 	switch ifAddr.IpAddress.Which() {
 	case net.IpAddressIpv4:
-		if addr != header.IPv4Any {
-			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
-		}
 		protocol = ipv4.ProtocolNumber
 	case net.IpAddressIpv6:
 		// TODO(tkilbourn): support IPv6 addresses (NET-1181)
 		return &stack.Error{Type: stack.ErrorTypeNotSupported}
 	}
 
-	if err := ns.setInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
+	if err := ns.addInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
 		logger.Errorf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}

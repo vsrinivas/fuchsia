@@ -12,12 +12,10 @@ import (
 
 // TODO(NET-1223):This should be moved into netstack.go.
 type NIC struct {
-	Addr          tcpip.Address
 	IsDynamicAddr bool
 	Name          string
 	Features      uint32
 	Metric        routes.Metric // used as a default for routes that use this NIC
-	Netmask       tcpip.AddressMask
 	DNSServers    []tcpip.Address
 	Ipv6addrs     []tcpip.Address
 }
