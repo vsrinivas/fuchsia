@@ -249,8 +249,8 @@ bool ImagePipeSurfaceDisplay::CreateImage(
   fuchsia::sysmem::BufferCollectionConstraints constraints{};
   // Use - 1 because vulkan assumes it's allocating an image by default.
   constraints.min_buffer_count_for_camping = image_count - 1;
-  // Used to ensure we can get a writable VMO out for use with vulkan.
-  constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+  // Used because every constraints need to have a usage.
+  constraints.usage.display = fuchsia::sysmem::displayUsageLayer;
   status = sysmem_collection->SetConstraints(true, constraints);
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: SetConstraints failed: %d\n", status);
@@ -275,8 +275,6 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
 
-  display_controller_->ReleaseBufferCollection(kBufferCollectionId);
-
   for (uint32_t i = 0; i < image_count; ++i) {
     VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
@@ -289,14 +287,6 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     result = pDisp->CreateImage(device, &image_create_info, pAllocator, &image);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "Swapchain: vkCreateImage failed: %d\n", result);
-      return false;
-    }
-
-    zx::vmo display_vmo;
-    status = buffer_collection_info.buffers[i].vmo.duplicate(
-        ZX_RIGHT_SAME_RIGHTS, &display_vmo);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Swapchain: duplicate vmo failed: %d\n", status);
       return false;
     }
 
@@ -343,8 +333,8 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     }
 
     uint64_t fb_image_id;
-    display_controller_->ImportVmoImage(
-        image_config, std::move(display_vmo), 0,
+    display_controller_->ImportImage(
+        image_config, kBufferCollectionId, i,
         [this, &status, &fb_image_id](zx_status_t import_status,
                                       uint64_t image_id) {
           status = import_status;
@@ -369,6 +359,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
   }
 
   pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
+  display_controller_->ReleaseBufferCollection(kBufferCollectionId);
 
   display_controller_->CreateLayer(
       [this, &status](zx_status_t layer_status, uint64_t layer_id) {
