@@ -128,7 +128,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
 void DeclarationOrderTreeVisitor::OnInterfaceDeclaration(
     std::unique_ptr<InterfaceDeclaration> const& element) {
 
-    SourceElementMark sem(*this, *element);
+    SourceElementMark sem(this, *element);
     if (element->attributes != nullptr) {
         OnAttributeList(element->attributes);
     }

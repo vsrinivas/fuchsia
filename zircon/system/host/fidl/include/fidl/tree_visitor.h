@@ -22,10 +22,10 @@ public:
     virtual void OnSourceElementEnd(const SourceElement& element) {
     }
     virtual void OnIdentifier(std::unique_ptr<Identifier> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) {
@@ -57,23 +57,23 @@ public:
         }
     }
     virtual void OnStringLiteral(StringLiteral& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
     virtual void OnNumericLiteral(NumericLiteral& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
     virtual void OnTrueLiteral(TrueLiteral& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
     virtual void OnFalseLiteral(FalseLiteral& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
     virtual void OnOrdinal(Ordinal& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
 #ifdef DISPATCH_TO
@@ -104,85 +104,85 @@ public:
     }
 
     virtual void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnAttribute(const Attribute& element) {
-        element.Accept(*this);
+        element.Accept(this);
     }
 
     virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnUsing(std::unique_ptr<Using> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
 
     virtual void OnBitsMember(std::unique_ptr<BitsMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnEnumMember(std::unique_ptr<EnumMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnParameter(std::unique_ptr<Parameter> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnInterfaceMethod(std::unique_ptr<InterfaceMethod> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnInterfaceDeclaration(std::unique_ptr<InterfaceDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnStructMember(std::unique_ptr<StructMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnTableMember(std::unique_ptr<TableMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnXUnionMember(std::unique_ptr<XUnionMember> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnXUnionDeclaration(std::unique_ptr<XUnionDeclaration> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnFile(std::unique_ptr<File> const& element) {
-        element->Accept(*this);
+        element->Accept(this);
     }
     virtual void OnHandleSubtype(types::HandleSubtype subtype) {
     }
