@@ -33,6 +33,9 @@ int main(int argc, const char** argv) {
     printf("***** Response: %s\n", value->data());
     loop.Quit();
   });
-
+  app.echo().set_error_handler([&loop](zx_status_t status) {
+    printf("Echo server closed connection: %d\n", status);
+    loop.Quit();
+  });
   return loop.Run();
 }
