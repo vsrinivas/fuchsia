@@ -32,3 +32,12 @@ static_library("libmagma_static") {
     "$magma_build_root/src/magma_util/platform:trace",
   ]
 }
+
+# This library is complete, so it's usable outside BUILD.gn
+static_library("libmagma_complete") {
+  complete_static_lib = true
+
+  deps = [
+    ":libmagma_static",
+  ]
+}
