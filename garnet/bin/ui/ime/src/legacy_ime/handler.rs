@@ -200,8 +200,9 @@ impl Ime {
                     return responder.send(txt::Error::BadRevision);
                 }
                 let res = if ime_state.apply_transaction() {
+                    let res = responder.send(txt::Error::Ok);
                     ime_state.increment_revision(None, true);
-                    responder.send(txt::Error::Ok)
+                    res
                 } else {
                     responder.send(txt::Error::BadRequest)
                 };
