@@ -143,6 +143,7 @@ sdk("core") {
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castauth:fuchsia.castauth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.castsetup:fuchsia.castsetup_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.castsysteminfo:fuchsia.castsysteminfo_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
