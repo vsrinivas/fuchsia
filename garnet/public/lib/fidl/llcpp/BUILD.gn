@@ -37,3 +37,41 @@ package("fidl_llcpp_conformance_test") {
     },
   ]
 }
+
+fidl("fidl.llcpp.types.test") {
+  sources = [
+    "types.test.fidl",
+  ]
+}
+
+executable("fidl_llcpp_types_test_bin") {
+  testonly = true
+
+  output_name = "fidl_llcpp_types_test"
+
+  sources = [
+    "union_test.cc",
+  ]
+
+  deps = [
+    ":fidl.llcpp.types.test_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+package("fidl_llcpp_types_test") {
+  testonly = true
+
+  deps = [
+    ":fidl_llcpp_types_test_bin"
+  ]
+
+  tests = [
+    {
+      name = "fidl_llcpp_types_test"
+      environments = basic_envs
+    },
+  ]
+}

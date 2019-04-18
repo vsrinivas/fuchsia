@@ -25,6 +25,20 @@ void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   }
 }
 
+void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.tag_ = Tag::Invalid;
+}
+
 void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, response_) == 4);
   static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, err_) == 4);
@@ -2056,6 +2070,20 @@ void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   default:
     break;
   }
+}
+
+void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.tag_ = Tag::Invalid;
 }
 
 void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAssertionHelper() {

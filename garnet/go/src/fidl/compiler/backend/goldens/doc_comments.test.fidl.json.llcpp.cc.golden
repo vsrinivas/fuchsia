@@ -78,6 +78,17 @@ void ::test::name::Union::Destroy() {
   }
 }
 
+void ::test::name::Union::MoveImpl_(Union&& other) {
+  switch (other.which()) {
+  case Tag::kField:
+    mutable_Field() = std::move(other.mutable_Field());
+    break;
+  default:
+    break;
+  }
+  other.tag_ = Tag::Invalid;
+}
+
 void ::test::name::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::test::name::Union, Field_) == 4);
   static_assert(sizeof(::test::name::Union) == ::test::name::Union::PrimarySize);

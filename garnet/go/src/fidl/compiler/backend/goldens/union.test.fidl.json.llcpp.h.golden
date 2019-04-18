@@ -29,6 +29,19 @@ struct Union {
   Union();
   ~Union();
 
+  Union(Union&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Union& operator=(Union&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
@@ -41,8 +54,16 @@ struct Union {
     return Primitive_;
   }
 
-  void set_Primitive(int32_t const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_Primitive(const T& v) {
     mutable_Primitive() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_Primitive(T&& v) {
+    mutable_Primitive() = std::move(v);
   }
 
   int32_t const & Primitive() const { return Primitive_; }
@@ -57,8 +78,16 @@ struct Union {
     return StringNeedsConstructor_;
   }
 
-  void set_StringNeedsConstructor(::fidl::StringView const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_StringNeedsConstructor(const T& v) {
     mutable_StringNeedsConstructor() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_StringNeedsConstructor(T&& v) {
+    mutable_StringNeedsConstructor() = std::move(v);
   }
 
   ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
@@ -73,8 +102,16 @@ struct Union {
     return VectorStringAlsoNeedsConstructor_;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView> const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_copy_assignable<T>::value>
+  set_VectorStringAlsoNeedsConstructor(const T& v) {
     mutable_VectorStringAlsoNeedsConstructor() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_move_assignable<T>::value>
+  set_VectorStringAlsoNeedsConstructor(T&& v) {
+    mutable_VectorStringAlsoNeedsConstructor() = std::move(v);
   }
 
   ::fidl::VectorView<::fidl::StringView> const & VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
@@ -89,6 +126,7 @@ struct Union {
 
  private:
   void Destroy();
+  void MoveImpl_(Union&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {

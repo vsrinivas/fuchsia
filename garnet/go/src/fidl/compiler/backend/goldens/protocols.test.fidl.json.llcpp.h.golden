@@ -57,6 +57,19 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   WithErrorSyntax_ErrorAsPrimitive_Result();
   ~WithErrorSyntax_ErrorAsPrimitive_Result();
 
+  WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_response() const { return tag_ == Tag::kResponse; }
@@ -69,8 +82,16 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
     return response_;
   }
 
-  void set_response(WithErrorSyntax_ErrorAsPrimitive_Response const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
     mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
@@ -85,8 +106,16 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
     return err_;
   }
 
-  void set_err(uint32_t const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
     mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   uint32_t const & err() const { return err_; }
@@ -101,6 +130,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
  private:
   void Destroy();
+  void MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
@@ -1077,6 +1107,19 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   WithErrorSyntax_ErrorAsEnum_Result();
   ~WithErrorSyntax_ErrorAsEnum_Result();
 
+  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_response() const { return tag_ == Tag::kResponse; }
@@ -1089,8 +1132,16 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
     return response_;
   }
 
-  void set_response(WithErrorSyntax_ErrorAsEnum_Response const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
     mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
@@ -1105,8 +1156,16 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
     return err_;
   }
 
-  void set_err(ErrorEnun const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ErrorEnun>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
     mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ErrorEnun>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   ErrorEnun const & err() const { return err_; }
@@ -1121,6 +1180,7 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
  private:
   void Destroy();
+  void MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {

@@ -110,6 +110,19 @@ struct Union {
   Union();
   ~Union();
 
+  Union(Union&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Union& operator=(Union&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_Field() const { return tag_ == Tag::kField; }
@@ -128,8 +141,19 @@ struct Union {
   // union member comment #1
   //
   // union member comment #3
-  void set_Field(int32_t const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_Field(const T& v) {
     mutable_Field() = v;
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_Field(T&& v) {
+    mutable_Field() = std::move(v);
   }
 
   // union member comment #1
@@ -147,6 +171,7 @@ struct Union {
 
  private:
   void Destroy();
+  void MoveImpl_(Union&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {

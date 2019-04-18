@@ -26,6 +26,19 @@ struct {{ .Name }} {
   {{ .Name }}();
   ~{{ .Name }}();
 
+  {{ .Name }}({{ .Name }}&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  {{ .Name }}& operator=({{ .Name }}&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   {{- range $index, $member := .Members }}
@@ -46,8 +59,19 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  void set_{{ .Name }}({{ .Type.LLDecl }} const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, {{ .Type.LLDecl }}>::value && std::is_copy_assignable<T>::value>
+  set_{{ .Name }}(const T& v) {
     mutable_{{ .Name }}() = v;
+  }
+{{ "" }}
+  {{- range .DocComments }}
+  //{{ . }}
+  {{- end }}
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, {{ .Type.LLDecl }}>::value && std::is_move_assignable<T>::value>
+  set_{{ .Name }}(T&& v) {
+    mutable_{{ .Name }}() = std::move(v);
   }
 {{ "" }}
   {{- range .DocComments }}
@@ -66,6 +90,7 @@ struct {{ .Name }} {
 
  private:
   void Destroy();
+  void MoveImpl_({{ .Name }}&& other);
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
@@ -101,6 +126,19 @@ void {{ .Namespace }}::{{ .Name }}::Destroy() {
   default:
     break;
   }
+}
+
+void {{ .Namespace }}::{{ .Name }}::MoveImpl_({{ .Name }}&& other) {
+  switch (other.which()) {
+  {{- range $index, $member := .Members }}
+  case Tag::{{ $member.TagName }}:
+    mutable_{{ .Name }}() = std::move(other.mutable_{{ .Name }}());
+    break;
+  {{- end }}
+  default:
+    break;
+  }
+  other.tag_ = Tag::Invalid;
 }
 
 void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
