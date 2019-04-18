@@ -20,7 +20,7 @@ namespace examples {
 
 class Swapchain {
  public:
-  Swapchain() = default;
+  explicit Swapchain(bool protected_output);
   ~Swapchain();
 
   typedef struct {
@@ -65,6 +65,7 @@ class Swapchain {
   std::vector<SwapchainImageResources> swapchain_image_resources_;
   uint32_t desired_image_count_ = 2;
   uint32_t current_image_ = 0;
+  bool protected_output_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Swapchain);
 };

@@ -11,9 +11,11 @@
 
 namespace examples {
 
-ImagePipeView::ImagePipeView(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "gfxlatency_on_scenic"),
-      canvas_node_(session()) {
+ImagePipeView::ImagePipeView(scenic::ViewContext view_context,
+                             bool protected_output)
+    : BaseView(std::move(view_context), "vklatency_on_scenic"),
+      canvas_node_(session()),
+      vk_swapchain_(protected_output) {
   zx::channel remote_endpoint;
   zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
 

@@ -18,10 +18,12 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
+  const bool protected_output = command_line.HasOption("protected_output");
+
   scenic::ViewProviderComponent component(
-      [&loop](scenic::ViewContext view_context) {
+      [&loop, protected_output](scenic::ViewContext view_context) {
         return std::make_unique<examples::ImagePipeView>(
-            std::move(view_context));
+            std::move(view_context), protected_output);
       },
       &loop);
 

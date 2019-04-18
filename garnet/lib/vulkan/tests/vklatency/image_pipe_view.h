@@ -20,7 +20,7 @@ namespace examples {
 
 class ImagePipeView : public scenic::BaseView {
  public:
-  explicit ImagePipeView(scenic::ViewContext view_context);
+  ImagePipeView(scenic::ViewContext view_context, bool protected_output);
   ~ImagePipeView() override = default;
 
  private:

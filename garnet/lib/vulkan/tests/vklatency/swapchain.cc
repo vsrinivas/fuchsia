@@ -11,6 +11,8 @@ namespace examples {
 
 namespace {
 
+constexpr uint32_t kVulkanApiVersion = VK_MAKE_VERSION(1, 1, 0);
+
 vk::PipelineStageFlags GetPipelineStageFlags(vk::ImageLayout layout) {
   switch (layout) {
     case vk::ImageLayout::eUndefined:
@@ -95,6 +97,9 @@ void SetImageLayoutOnCommandBuffer(vk::CommandBuffer command_buffer,
 
 }  // anonymous namespace
 
+Swapchain::Swapchain(bool protected_output)
+    : protected_output_(protected_output) {}
+
 Swapchain::~Swapchain() {
   swapchain_image_resources_.clear();
   gr_context_.reset();
@@ -134,7 +139,8 @@ GrContext* Swapchain::GetGrContext() {
   backend_context.fDevice = static_cast<VkDevice>(vk_device_);
   backend_context.fQueue = static_cast<VkQueue>(graphics_queue_);
   backend_context.fGraphicsQueueIndex = graphics_queue_family_index_;
-  backend_context.fInstanceVersion = VK_MAKE_VERSION(1, 1, 0);
+  backend_context.fInstanceVersion = kVulkanApiVersion;
+  // Use fVkExtensions.
   backend_context.fExtensions =
       kKHR_swapchain_GrVkExtensionFlag | kKHR_surface_GrVkExtensionFlag;
   backend_context.fGetProc = [this](const char* proc_name, VkInstance instance,
@@ -170,8 +176,9 @@ bool Swapchain::GetPhysicalDevice() {
       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
   // Create vk instance.
-  auto application_info =
-      vk::ApplicationInfo().setPApplicationName("Canvas Demo");
+  auto application_info = vk::ApplicationInfo()
+                              .setPApplicationName("VkLatency Demo")
+                              .setApiVersion(kVulkanApiVersion);
   auto instance_info = vk::InstanceCreateInfo()
                            .setPApplicationInfo(&application_info)
                            .setEnabledLayerCount(layer_names.size())
@@ -256,14 +263,21 @@ bool Swapchain::CreateDeviceAndQueue() {
   const std::vector<float> queue_priorities(1, 0.0);
   auto queue_create_info =
       vk::DeviceQueueCreateInfo()
+          .setFlags(protected_output_
+                        ? vk::DeviceQueueCreateFlagBits::eProtected
+                        : vk::DeviceQueueCreateFlags())
           .setQueueCount(1)
           .setQueueFamilyIndex(graphics_queue_family_index_)
           .setPQueuePriorities(queue_priorities.data());
-  auto device_create_info = vk::DeviceCreateInfo()
-                                .setQueueCreateInfoCount(1)
-                                .setPQueueCreateInfos(&queue_create_info)
-                                .setEnabledExtensionCount(device_ext.size())
-                                .setPpEnabledExtensionNames(device_ext.data());
+  auto protected_memory =
+      vk::PhysicalDeviceProtectedMemoryFeatures().setProtectedMemory(true);
+  auto device_create_info =
+      vk::DeviceCreateInfo()
+          .setPNext(protected_output_ ? &protected_memory : nullptr)
+          .setQueueCreateInfoCount(1)
+          .setPQueueCreateInfos(&queue_create_info)
+          .setEnabledExtensionCount(device_ext.size())
+          .setPpEnabledExtensionNames(device_ext.data());
   auto create_device = vk_physical_device_.createDevice(device_create_info);
   if (create_device.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "failed to create vulkan device";
@@ -277,6 +291,9 @@ bool Swapchain::CreateDeviceAndQueue() {
   // Create command pool.
   auto cmd_pool_info =
       vk::CommandPoolCreateInfo()
+          .setFlags(protected_output_
+                        ? vk::CommandPoolCreateFlagBits::eProtected
+                        : vk::CommandPoolCreateFlags())
           .setQueueFamilyIndex(graphics_queue_family_index_)
           .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
   auto create_command_pool = vk_device_.createCommandPool(cmd_pool_info);
@@ -292,6 +309,9 @@ bool Swapchain::InitializeSwapchain(uint32_t width, uint32_t height) {
   // Create swapchain.
   auto swapchain_ci =
       vk::SwapchainCreateInfoKHR()
+          .setFlags(protected_output_
+                        ? vk::SwapchainCreateFlagBitsKHR::eProtected
+                        : vk::SwapchainCreateFlagsKHR())
           .setSurface(surface_)
           .setMinImageCount(desired_image_count_)
           .setImageFormat(format_)
@@ -350,6 +370,7 @@ bool Swapchain::PrepareBuffers() {
     auto& image_resource = swapchain_image_resources_.back();
     image_resource.index = i;
     image_resource.image = get_swapchain_images.value[i];
+    image_resource.layout = vk::ImageLayout::eUndefined;
 
     std::vector<vk::Semaphore> semaphores;
     auto semaphore_ci = vk::SemaphoreCreateInfo();
@@ -415,11 +436,14 @@ void Swapchain::SwapImages() {
   current_image_resources.post_raster_command_buffer.end();
 
   // Submit info.
+  auto protected_submit_info =
+      vk::ProtectedSubmitInfo().setProtectedSubmit(true);
   vk::PipelineStageFlags pipe_stage_flags =
       vk::PipelineStageFlagBits::eAllCommands;
   auto submit_info =
       vk::SubmitInfo()
           .setCommandBufferCount(1)
+          .setPNext(protected_output_ ? &protected_submit_info : nullptr)
           .setPCommandBuffers(
               &current_image_resources.post_raster_command_buffer)
           .setPWaitDstStageMask(&pipe_stage_flags)
@@ -461,6 +485,7 @@ void Swapchain::SwapImages() {
   auto pre_raster_submit_info =
       vk::SubmitInfo()
           .setCommandBufferCount(1)
+          .setPNext(protected_output_ ? &protected_submit_info : nullptr)
           .setPCommandBuffers(&next_image_resources.pre_raster_command_buffer)
           .setPWaitDstStageMask(&pipe_stage_flags)
           .setWaitSemaphoreCount(1)
