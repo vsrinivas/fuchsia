@@ -67,3 +67,16 @@ source_set("embedded") {
     "//src/connectivity/overnet/lib/environment:trace_cout",
   ]
 }
+
+source_set("udp_nub") {
+  sources = [
+    "udp_nub.cc",
+    "udp_nub.h",
+  ]
+  public_deps = [
+    ":embedded",
+    "//src/connectivity/overnet/lib/links:packet_nub",
+    "//src/connectivity/overnet/lib/vocabulary:ip_addr",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+  ]
+}
