@@ -123,6 +123,7 @@ The syntax is similar to C:
 const bool enabled_flag = true;
 const int8 offset = -33;
 const uint16 answer = 42;
+const uint16 answer_in_binary = 0b101010;
 const uint32 population_2018 = 7700000000;
 const uint64 diamond = 0x183c7effff7e3c18;
 const uint64 fuchsia = 4054509061583223046;
