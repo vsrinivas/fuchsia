@@ -39,6 +39,18 @@ test_platforms = [
     cpu = "x64"
   },
   {
+    os = "Linux"
+    cpu = "x64"
+  },
+  {
+    os = "Linux"
+    cpu = "arm64"
+  },
+  {
+    os = "Mac"
+    cpu = "x64"
+  },
+  {
     testbed = "bt_rf_chamber_nuc_phone"
     cpu = "x64"
   },
@@ -50,7 +62,6 @@ test_platforms = [
     testbed = "wifi_rf_chamber_nuc"
     cpu = "x64"
   },
-  
   # The platforms below are experimental and may not yet be targeted.
   # See IN-876
   {
@@ -62,19 +73,5 @@ test_platforms = [
   {
     device_type = "Khadas Vim2 Max"
     cpu = "arm64"
-  },
-
-  # See IN-819.
-  {
-    os = "Linux"
-    cpu = "x64"
-  },
-  {
-    os = "Linux"
-    cpu = "arm64"
-  },
-  {
-    os = "Mac"
-    cpu = "x64"
   },
 ]

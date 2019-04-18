@@ -218,6 +218,13 @@ template("test_spec") {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
 
+    if (defined(dims.os) && dims.os == "mac") {
+      # When running tests for a mac build, we only wish to run mac tests; we
+      # enforce the "mac" tag in that case to filter out other tests.
+      assert(defined(env.tags) && ["mac"] + env.tags  - env.tags == [],
+             "Mac environments must have a tag of \"mac\"")
+    }
+
     # TODO(IN-876): Delete this block once astros are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Astro") {
       assert(defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
