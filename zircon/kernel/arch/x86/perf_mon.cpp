@@ -205,10 +205,17 @@ enum LbrFormat {
 static bool perfmon_hw_initialized = false;
 
 static uint16_t perfmon_version = 0;
+
+// The maximum number of programmable counters that can be simultaneously
+// handled, and their maximum width;
 static uint16_t perfmon_num_programmable_counters = 0;
 static uint16_t perfmon_programmable_counter_width = 0;
+
+// The maximum number of fixed counters that can be simultaneously
+// handled, and their maximum width;
 static uint16_t perfmon_num_fixed_counters = 0;
 static uint16_t perfmon_fixed_counter_width = 0;
+
 static uint32_t perfmon_unsupported_events = 0;
 static uint32_t perfmon_capabilities = 0;
 
@@ -226,8 +233,11 @@ static uint64_t perfmon_counter_status_bits = 0;
 // registers. These registers are accessible via mmio.
 static uint32_t perfmon_mchbar_bar = 0;
 
-// The number of "miscellaneous" events we can handle at once.
+// The maximum number of "miscellaneous" events we can handle at once
+// and their width. This is mostly for information purposes, there may be
+// additional constraints which depend on the counters in question.
 static uint16_t perfmon_num_misc_events = 0;
+static uint16_t perfmon_misc_counter_width = 64;
 
 struct MemoryControllerHubData {
     // Where the regs are mapped.
@@ -568,15 +578,18 @@ zx_status_t arch_perfmon_get_properties(ArchPmuProperties* props) {
 
     if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
-    memset(props, 0, sizeof(*props));
+
+    *props = {};
     props->pm_version = perfmon_version;
-    props->num_fixed_events = perfmon_num_fixed_counters;
-    props->num_programmable_events = perfmon_num_programmable_counters;
-    props->num_misc_events = perfmon_num_misc_events;
-    props->fixed_counter_width = perfmon_fixed_counter_width;
-    props->programmable_counter_width = perfmon_programmable_counter_width;
+    props->max_num_fixed_events = perfmon_num_fixed_counters;
+    props->max_num_programmable_events = perfmon_num_programmable_counters;
+    props->max_num_misc_events = perfmon_num_misc_events;
+    props->max_fixed_counter_width = perfmon_fixed_counter_width;
+    props->max_programmable_counter_width = perfmon_programmable_counter_width;
+    props->max_misc_counter_width = perfmon_misc_counter_width;
     props->perf_capabilities = perfmon_capabilities;
     props->lbr_stack_size = perfmon_lbr_stack_size;
+
     return ZX_OK;
 }
 

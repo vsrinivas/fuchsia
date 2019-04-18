@@ -255,20 +255,36 @@ typedef struct {
 typedef struct {
     // S/W API version = PERFMON_API_VERSION.
     uint16_t api_version;
+
     // The H/W Performance Monitor version.
     uint16_t pm_version;
-    // The number of fixed events.
-    uint16_t num_fixed_events;
-    // The number of programmable events.
-    uint16_t num_programmable_events;
-    // For fixed events that are counters, the width in bits.
-    // If different counters have different widths, the choice is architecture
-    // specific.
-    uint16_t fixed_counter_width;
-    // For programmable events that are counters, the width in bits.
-    // If different counters have different widths, the choice is architecture
-    // specific.
-    uint16_t programmable_counter_width;
+
+    // The maximum number of events that can be simultaneously supported.
+    // The combination of events that can be simultaneously supported is
+    // architecture/model specific.
+    uint16_t max_num_events;
+
+    // Padding/reserved.
+    uint16_t reserved;
+
+    // The maximum number of fixed events that can be simultaneously
+    // supported, and their maximum width.
+    // These values are for informational/display purposes.
+    uint16_t max_num_fixed_events;
+    uint16_t max_fixed_counter_width;
+
+    // The maximum number of programmable events that can be simultaneously
+    // supported, and their maximum width.
+    // These values are for informational/display purposes.
+    uint16_t max_num_programmable_events;
+    uint16_t max_programmable_counter_width;
+
+    // The maximum number of misc events that can be simultaneously
+    // supported, and their maximum width.
+    // These values are for informational/display purposes.
+    uint16_t max_num_misc_events;
+    uint16_t max_misc_counter_width;
+
     // Various flags.
     uint32_t flags;
 #define PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH (1u << 0)

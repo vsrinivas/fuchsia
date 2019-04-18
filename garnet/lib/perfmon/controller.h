@@ -12,6 +12,7 @@
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 #include "garnet/lib/perfmon/device_reader.h"
+#include "garnet/lib/perfmon/properties.h"
 
 namespace perfmon {
 
@@ -33,7 +34,7 @@ class Controller {
   static bool IsSupported();
 
   // Fetch the properties of this device.
-  static bool GetProperties(perfmon_ioctl_properties_t* props);
+  static bool GetProperties(Properties* props);
 
   static bool Create(uint32_t buffer_size_in_mb,
                      const perfmon_config_t& config,

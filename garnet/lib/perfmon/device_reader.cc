@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/perfmon/device_reader.h"
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
 
-#include "device_reader.h"
+#include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
 
@@ -38,11 +40,16 @@ DeviceReader::~DeviceReader() {
   UnmapBuffer();
 }
 
-bool DeviceReader::GetProperties(perfmon_ioctl_properties_t* props) {
-  auto status = ioctl_perfmon_get_properties(fd_, props);
-  if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_perfmon_get_properties failed: " << status;
-  return status >= 0;
+bool DeviceReader::GetProperties(Properties* props) {
+  perfmon_ioctl_properties_t properties;
+  auto status = ioctl_perfmon_get_properties(fd_, &properties);
+  if (status < 0) {
+    FXL_LOG(ERROR) << "Failed to get properties: " << status;
+    return false;
+  }
+
+  internal::IoctlToPerfmonProperties(properties, props);
+  return true;
 }
 
 bool DeviceReader::GetConfig(perfmon_config_t* config) {

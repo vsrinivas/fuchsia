@@ -11,7 +11,8 @@
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 
-#include "reader.h"
+#include "garnet/lib/perfmon/properties.h"
+#include "garnet/lib/perfmon/reader.h"
 
 namespace perfmon {
 
@@ -23,7 +24,7 @@ class DeviceReader final : public Reader {
 
   ~DeviceReader();
 
-  bool GetProperties(perfmon_ioctl_properties_t* props);
+  bool GetProperties(Properties* props);
 
   bool GetConfig(perfmon_config_t* config);
 

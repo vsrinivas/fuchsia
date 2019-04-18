@@ -13,6 +13,8 @@
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/perfmon/properties_impl.h"
+
 namespace perfmon {
 
 const char kPerfMonDev[] = "/dev/sys/cpu-trace/perfmon";
@@ -53,7 +55,7 @@ bool Controller::IsSupported() {
   return S_ISCHR(stat_buffer.st_mode);
 }
 
-bool Controller::GetProperties(perfmon_ioctl_properties_t* props) {
+bool Controller::GetProperties(Properties* props) {
   int raw_fd = open(kPerfMonDev, O_WRONLY);
   if (raw_fd < 0) {
     FXL_LOG(ERROR) << "Failed to open " << kPerfMonDev << ": errno=" << errno;
@@ -61,10 +63,15 @@ bool Controller::GetProperties(perfmon_ioctl_properties_t* props) {
   }
   fxl::UniqueFD fd(raw_fd);
 
-  auto status = ioctl_perfmon_get_properties(fd.get(), props);
-  if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_perfmon_get_properties failed: " << status;
-  return status >= 0;
+  perfmon_ioctl_properties_t properties;
+  auto status = ioctl_perfmon_get_properties(fd.get(), &properties);
+  if (status < 0) {
+    FXL_LOG(ERROR) << "Failed to get properties: " << status;
+    return false;
+  }
+
+  internal::IoctlToPerfmonProperties(properties, props);
+  return true;
 }
 
 bool Controller::Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,

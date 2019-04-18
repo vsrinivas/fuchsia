@@ -39,9 +39,9 @@ TEST(Cpuperf, ValueRecords) {
 }
 
 TEST(Cpuperf, LastBranchRecord) {
-  perfmon_ioctl_properties_t properties;
+  perfmon::Properties properties;
   ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
-  if (!(properties.flags & PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH)) {
+  if (!(properties.flags & perfmon::Properties::kFlagHasLastBranch)) {
     // Not supported on this h/w. Punt.
     FXL_LOG(INFO) << "Last Branch Records not supported, skipping test";
     return;

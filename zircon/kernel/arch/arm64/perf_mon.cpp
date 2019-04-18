@@ -211,13 +211,10 @@ zx_status_t arch_perfmon_get_properties(ArchPmuProperties* props) {
 
     *props = {};
     props->pm_version = perfmon_version;
-    props->num_fixed_events = perfmon_num_fixed_counters;
-    props->num_programmable_events = perfmon_num_programmable_counters;
-    // TODO(dje): There will be misc events in time. Keep |num_misc_events|
-    // so that when they're added there's no ABI change.
-    props->num_misc_events = 0;
-    props->fixed_counter_width = kFixedCounterWidth;
-    props->programmable_counter_width = kProgrammableCounterWidth;
+    props->max_num_fixed_events = perfmon_num_fixed_counters;
+    props->max_num_programmable_events = perfmon_num_programmable_counters;
+    props->max_fixed_counter_width = kFixedCounterWidth;
+    props->max_programmable_counter_width = kProgrammableCounterWidth;
 
     return ZX_OK;
 }

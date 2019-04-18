@@ -129,20 +129,20 @@ zx_status_t PerfmonDevice::PmuGetProperties(void* reply, size_t replymax,
     }
 
     props.api_version = PERFMON_API_VERSION;
-    // TODO(dje): Remove cast in subsequent patch.
     props.pm_version = pmu_hw_properties_.pm_version;
-    // To the arch-independent API, the misc events on Intel are currently
-    // all "fixed" in the sense that they don't occupy a limited number of
-    // programmable slots. Ultimately there could still be limitations (e.g.,
-    // some combination of events can't be supported) but that's ok. This
-    // data is for informational/debug purposes.
+    props.max_num_events = PERFMON_MAX_EVENTS;
+
+    // These numbers are for informational/debug purposes. There can be
+    // further restrictions and limitations.
     // TODO(dje): Something more elaborate can wait for publishing them via
     // some namespace.
-    props.num_fixed_events = static_cast<uint16_t>(
-        pmu_hw_properties_.num_fixed_events + pmu_hw_properties_.num_misc_events);
-    props.num_programmable_events = pmu_hw_properties_.num_programmable_events;
-    props.fixed_counter_width = pmu_hw_properties_.fixed_counter_width;
-    props.programmable_counter_width = pmu_hw_properties_.programmable_counter_width;
+    props.max_num_fixed_events = pmu_hw_properties_.max_num_fixed_events;
+    props.max_fixed_counter_width = pmu_hw_properties_.max_fixed_counter_width;
+    props.max_num_programmable_events = pmu_hw_properties_.max_num_programmable_events;
+    props.max_programmable_counter_width = pmu_hw_properties_.max_programmable_counter_width;
+    props.max_num_misc_events = pmu_hw_properties_.max_num_misc_events;
+    props.max_misc_counter_width = pmu_hw_properties_.max_misc_counter_width;
+
 #ifdef __x86_64__
     if (pmu_hw_properties_.lbr_stack_size > 0) {
         props.flags |= PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH;

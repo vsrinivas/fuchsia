@@ -34,6 +34,9 @@ static_library("perfmon") {
       "controller.h",
       "device_reader.cc",
       "device_reader.h",
+      "properties.cc",
+      "properties.h",
+      "properties_impl.h",
     ]
 
     if (current_cpu == "arm64") {

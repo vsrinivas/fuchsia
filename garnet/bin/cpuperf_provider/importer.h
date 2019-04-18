@@ -109,7 +109,7 @@ class Importer {
   };
 
   uint64_t ImportRecords(perfmon::DeviceReader& reader,
-                         const perfmon_ioctl_properties_t& props,
+                         const perfmon::Properties& props,
                          const perfmon_config_t& config);
 
   void ImportSampleRecord(trace_cpu_number_t cpu,

@@ -68,7 +68,7 @@ bool Importer::Import(perfmon::DeviceReader& reader) {
 
   auto start = fxl::TimePoint::Now();
 
-  perfmon_ioctl_properties_t props;
+  perfmon::Properties props;
   if (!reader.GetProperties(&props)) {
     FXL_LOG(ERROR) << "Error reading CPU performance properties";
     return false;
@@ -89,7 +89,7 @@ bool Importer::Import(perfmon::DeviceReader& reader) {
 }
 
 uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
-                                 const perfmon_ioctl_properties_t& props,
+                                 const perfmon::Properties& props,
                                  const perfmon_config_t& config) {
   EventTracker event_data(start_time_);
   uint32_t record_count = 0;

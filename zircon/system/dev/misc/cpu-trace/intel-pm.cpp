@@ -157,15 +157,15 @@ zx_status_t PerfmonDevice::InitOnce() {
     zxlogf(TRACE, "Intel Performance Monitor configuration for this chipset:\n");
     zxlogf(TRACE, "IPM: version: %u\n", pmu_hw_properties_.pm_version);
     zxlogf(TRACE, "IPM: num_programmable_events: %u\n",
-           pmu_hw_properties_.num_programmable_events);
+           pmu_hw_properties_.max_num_programmable_events);
     zxlogf(TRACE, "IPM: num_fixed_events: %u\n",
-           pmu_hw_properties_.num_fixed_events);
+           pmu_hw_properties_.max_num_fixed_events);
     zxlogf(TRACE, "IPM: num_misc_events: %u\n",
-           pmu_hw_properties_.num_misc_events);
+           pmu_hw_properties_.max_num_misc_events);
     zxlogf(TRACE, "IPM: programmable_counter_width: %u\n",
-           pmu_hw_properties_.programmable_counter_width);
+           pmu_hw_properties_.max_programmable_counter_width);
     zxlogf(TRACE, "IPM: fixed_counter_width: %u\n",
-           pmu_hw_properties_.fixed_counter_width);
+           pmu_hw_properties_.max_fixed_counter_width);
     zxlogf(TRACE, "IPM: perf_capabilities: 0x%lx\n",
            pmu_hw_properties_.perf_capabilities);
 
@@ -180,16 +180,16 @@ static bool LbrSupported() {
 }
 
 void PerfmonDevice::InitializeStagingState(StagingState* ss) {
-    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
-    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
-    ss->max_num_misc = pmu_hw_properties_.num_misc_events;
+    ss->max_num_fixed = pmu_hw_properties_.max_num_fixed_events;
+    ss->max_num_programmable = pmu_hw_properties_.max_num_programmable_events;
+    ss->max_num_misc = pmu_hw_properties_.max_num_misc_events;
     ss->max_fixed_value =
-        (pmu_hw_properties_.fixed_counter_width < 64
-         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
+        (pmu_hw_properties_.max_fixed_counter_width < 64
+         ? (1ul << pmu_hw_properties_.max_fixed_counter_width) - 1
          : ~0ul);
     ss->max_programmable_value =
-        (pmu_hw_properties_.programmable_counter_width < 64
-         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
+        (pmu_hw_properties_.max_programmable_counter_width < 64
+         ? (1ul << pmu_hw_properties_.max_programmable_counter_width) - 1
          : ~0ul);
 }
 

@@ -81,13 +81,13 @@ zx_status_t PerfmonDevice::InitOnce() {
     zxlogf(TRACE, "ARM64 Performance Monitor configuration for this chipset:\n");
     zxlogf(TRACE, "PMU: version: %u\n", pmu_hw_properties_.pm_version);
     zxlogf(TRACE, "PMU: num_programmable_events: %u\n",
-           pmu_hw_properties_.num_programmable_events);
+           pmu_hw_properties_.max_num_programmable_events);
     zxlogf(TRACE, "PMU: num_fixed_events: %u\n",
-           pmu_hw_properties_.num_fixed_events);
+           pmu_hw_properties_.max_num_fixed_events);
     zxlogf(TRACE, "PMU: programmable_counter_width: %u\n",
-           pmu_hw_properties_.programmable_counter_width);
+           pmu_hw_properties_.max_programmable_counter_width);
     zxlogf(TRACE, "PMU: fixed_counter_width: %u\n",
-           pmu_hw_properties_.fixed_counter_width);
+           pmu_hw_properties_.max_fixed_counter_width);
 
     return ZX_OK;
 }
@@ -96,15 +96,15 @@ zx_status_t PerfmonDevice::InitOnce() {
 // Architecture-provided helpers for |PmuStageConfig()|.
 
 void PerfmonDevice::InitializeStagingState(StagingState* ss) {
-    ss->max_num_fixed = pmu_hw_properties_.num_fixed_events;
-    ss->max_num_programmable = pmu_hw_properties_.num_programmable_events;
+    ss->max_num_fixed = pmu_hw_properties_.max_num_fixed_events;
+    ss->max_num_programmable = pmu_hw_properties_.max_num_programmable_events;
     ss->max_fixed_value =
-        (pmu_hw_properties_.fixed_counter_width < 64
-         ? (1ul << pmu_hw_properties_.fixed_counter_width) - 1
+        (pmu_hw_properties_.max_fixed_counter_width < 64
+         ? (1ul << pmu_hw_properties_.max_fixed_counter_width) - 1
          : ~0ul);
     ss->max_programmable_value =
-        (pmu_hw_properties_.programmable_counter_width < 64
-         ? (1ul << pmu_hw_properties_.programmable_counter_width) - 1
+        (pmu_hw_properties_.max_programmable_counter_width < 64
+         ? (1ul << pmu_hw_properties_.max_programmable_counter_width) - 1
          : ~0ul);
 }
 

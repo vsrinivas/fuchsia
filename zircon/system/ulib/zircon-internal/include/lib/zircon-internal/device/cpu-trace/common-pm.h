@@ -17,16 +17,21 @@ namespace perfmon {
 struct PmuCommonProperties {
     // The H/W Performance Monitor version.
     uint16_t pm_version;
-    // The number of fixed events.
-    uint16_t num_fixed_events;
-    // The number of programmable events.
-    uint16_t num_programmable_events;
-    // The number of misc events.
-    uint16_t num_misc_events;
-    // For fixed events that are counters, the width in bits.
-    uint16_t fixed_counter_width;
-    // For programmable events that are counters, the width in bits.
-    uint16_t programmable_counter_width;
+
+    // The maximum number of fixed events that can be simultaneously
+    // supported, and their maximum width.
+    uint16_t max_num_fixed_events;
+    uint16_t max_fixed_counter_width;
+
+    // The maximum number of programmable events that can be simultaneously
+    // supported, and their maximum width.
+    uint16_t max_num_programmable_events;
+    uint16_t max_programmable_counter_width;
+
+    // The maximum number of misc events that can be simultaneously
+    // supported, and their maximum width.
+    uint16_t max_num_misc_events;
+    uint16_t max_misc_counter_width;
 };
 
 // Internal abstraction of event ids.
