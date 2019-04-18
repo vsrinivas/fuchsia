@@ -84,11 +84,9 @@ __BEGIN_CDECLS
 // Amlogic
 #define PDEV_VID_AMLOGIC            5
 #define PDEV_PID_AMLOGIC_A113       1
-#define PDEV_PID_AMLOGIC_S905X      2
-#define PDEV_PID_AMLOGIC_S912       3
-#define PDEV_PID_AMLOGIC_S905       4
-#define PDEV_PID_AMLOGIC_S905D2     5
-#define PDEV_PID_AMLOGIC_T931       6
+#define PDEV_PID_AMLOGIC_S912       2
+#define PDEV_PID_AMLOGIC_S905D2     3
+#define PDEV_PID_AMLOGIC_T931       4
 
 #define PDEV_DID_AMLOGIC_GPIO       1
 #define PDEV_DID_AMLOGIC_I2C        2

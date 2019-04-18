@@ -18,8 +18,6 @@
 
 #include <utility>
 
-#include "s905-blocks.h"
-#include "s905x-blocks.h"
 #include "s912-blocks.h"
 
 namespace {
@@ -105,18 +103,6 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
         pinmux_blocks = s912_pinmux_blocks;
         gpio_interrupt = &s912_interrupt_block;
         block_count = countof(s912_gpio_blocks);
-        break;
-    case PDEV_PID_AMLOGIC_S905X:
-        gpio_blocks = s905x_gpio_blocks;
-        pinmux_blocks = s905x_pinmux_blocks;
-        gpio_interrupt = &s905x_interrupt_block;
-        block_count = countof(s905x_gpio_blocks);
-        break;
-    case PDEV_PID_AMLOGIC_S905:
-        gpio_blocks = s905_gpio_blocks;
-        pinmux_blocks = s905_pinmux_blocks;
-        gpio_interrupt = &s905_interrupt_block;
-        block_count = countof(s905_gpio_blocks);
         break;
     default:
         zxlogf(ERROR, "AmlGxlGpio::Create: unsupported SOC PID %u\n", info.pid);
@@ -508,13 +494,10 @@ static zx_driver_ops_t driver_ops = []() {
 } // namespace gpio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 6)
+ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
-    // we support multiple SOC variants
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905X),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905),
 ZIRCON_DRIVER_END(aml_gpio)
 
