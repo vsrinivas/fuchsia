@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/mdns_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
     }
 }

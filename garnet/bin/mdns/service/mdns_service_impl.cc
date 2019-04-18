@@ -19,8 +19,6 @@
 namespace mdns {
 namespace {
 
-static const std::string kPublishAs = "_fuchsia._udp.";
-static constexpr uint64_t kPublishPort = 5353;
 static const std::string kUnsetHostName = "fuchsia-unset-device-name";
 static constexpr zx::duration kReadyPollingInterval = zx::sec(1);
 
@@ -62,8 +60,16 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
+  config_.ReadConfigFiles(host_name);
+  if (!config_.valid()) {
+    FXL_LOG(FATAL) << "Invalid config file(s), terminating: "
+                   << config_.error();
+    return;
+  }
+
   mdns_.Start(component_context_->svc()->Connect<fuchsia::netstack::Netstack>(),
-              host_name, fit::bind_member(this, &MdnsServiceImpl::OnReady));
+              host_name, config_.perform_host_name_probe(),
+              fit::bind_member(this, &MdnsServiceImpl::OnReady));
 }
 
 void MdnsServiceImpl::OnBindRequest(
@@ -78,18 +84,18 @@ void MdnsServiceImpl::OnBindRequest(
 void MdnsServiceImpl::OnReady() {
   ready_ = true;
 
-  // Publish this device as "_fuchsia._udp.".
-  // TODO(NET-2188): Make this a config item.
-  DEPRECATEDPublishServiceInstance(kPublishAs, mdns_.host_name(), kPublishPort,
-                                   fidl::VectorPtr<std::string>(), true,
-                                   [this](fuchsia::mdns::Result result) {
-                                     if (result != fuchsia::mdns::Result::OK) {
-                                       FXL_LOG(ERROR)
-                                           << "Failed to publish as "
-                                           << kPublishAs << ", result "
-                                           << static_cast<uint32_t>(result);
-                                     }
-                                   });
+  // Publish as indicated in config files.
+  for (auto& publication : config_.publications()) {
+    PublishServiceInstance(
+        publication.service_, publication.instance_,
+        publication.publication_->Clone(), true,
+        [this, service = publication.service_](fuchsia::mdns::Result result) {
+          if (result != fuchsia::mdns::Result::OK) {
+            FXL_LOG(ERROR) << "Failed to publish as " << service << ", result "
+                           << static_cast<uint32_t>(result);
+          }
+        });
+  }
 
   for (auto& request : pending_binding_requests_) {
     bindings_.AddBinding(this, std::move(request));
@@ -147,16 +153,26 @@ void MdnsServiceImpl::DEPRECATEDPublishServiceInstance(
     return;
   }
 
-  auto publisher = std::make_unique<SimplePublisher>(
-      inet::IpPort::From_uint16_t(port), std::move(text), callback.share());
+  if (!PublishServiceInstance(
+          service_name, instance_name,
+          Mdns::Publication::Create(inet::IpPort::From_uint16_t(port),
+                                    std::move(text)),
+          perform_probe, callback.share())) {
+    callback(fuchsia::mdns::Result::ALREADY_PUBLISHED_LOCALLY);
+  }
+}
+
+bool MdnsServiceImpl::PublishServiceInstance(
+    std::string service_name, std::string instance_name,
+    std::unique_ptr<Mdns::Publication> publication, bool perform_probe,
+    PublishServiceInstanceCallback callback) {
+  auto publisher = std::make_unique<SimplePublisher>(std::move(publication),
+                                                     callback.share());
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name, perform_probe,
                                     publisher.get())) {
-    callback(fuchsia::mdns::Result::ALREADY_PUBLISHED_LOCALLY);
-    return;
+    return false;
   }
-
-  MdnsNames::LocalInstanceFullName(instance_name, service_name);
 
   std::string instance_full_name =
       MdnsNames::LocalInstanceFullName(instance_name, service_name);
@@ -168,6 +184,8 @@ void MdnsServiceImpl::DEPRECATEDPublishServiceInstance(
 
   publishers_by_instance_full_name_.emplace(instance_full_name,
                                             std::move(publisher));
+
+  return true;
 }
 
 void MdnsServiceImpl::DEPRECATEDUnpublishServiceInstance(
@@ -328,9 +346,9 @@ void MdnsServiceImpl::Subscriber::ReplyReceived() {
 // MdnsServiceImpl::SimplePublisher implementation
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
-    inet::IpPort port, std::vector<std::string> text,
+    std::unique_ptr<Mdns::Publication> publication,
     PublishServiceInstanceCallback callback)
-    : port_(port), text_(std::move(text)), callback_(std::move(callback)) {}
+    : publication_(std::move(publication)), callback_(std::move(callback)) {}
 
 void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
   callback_(success ? fuchsia::mdns::Result::OK
@@ -341,7 +359,7 @@ void MdnsServiceImpl::SimplePublisher::GetPublication(
     bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FXL_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
-  callback(Mdns::Publication::Create(port_, text_));
+  callback(publication_->Clone());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

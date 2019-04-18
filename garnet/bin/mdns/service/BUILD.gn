@@ -48,6 +48,8 @@ source_set("source_set") {
     "address_prober.h",
     "address_responder.cc",
     "address_responder.h",
+    "config.cc",
+    "config.h",
     "dns_formatting.cc",
     "dns_formatting.h",
     "dns_message.cc",
@@ -99,19 +101,20 @@ source_set("source_set") {
     "//garnet/lib/inet",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/rapidjson_utils",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.mdns",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
   ]
 
   if (enable_mdns_trace) {
-    defines = [
-      "MDNS_TRACE",
-    ]
+    defines = [ "MDNS_TRACE" ]
   }
 }
 
@@ -119,6 +122,7 @@ test("tests") {
   output_name = "mdns_tests"
 
   sources = [
+    "test/config_test.cc",
     "test/dns_names_test.cc",
     "test/dns_reading_test.cc",
     "test/interface_transceiver_test.cc",
@@ -156,7 +160,14 @@ config_data("mdns_config") {
     "mdns.config",
   ]
   sources = [
-    rebase_path("service.config"),
+    rebase_path("config/service.config"),
+  ]
+}
+
+config_data("mdns_fuchsia_udp_config") {
+  for_pkg = "mdns"
+  sources = [
+    rebase_path("config/fuchsia_udp.config"),
   ]
 }
 

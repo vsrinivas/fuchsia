@@ -6,9 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
 #include <iostream>
 #include <limits>
 #include <unordered_set>
+
 #include "garnet/bin/mdns/service/address_prober.h"
 #include "garnet/bin/mdns/service/address_responder.h"
 #include "garnet/bin/mdns/service/dns_formatting.h"
@@ -35,7 +37,8 @@ void Mdns::SetVerbose(bool verbose) {
 }
 
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
-                 const std::string& host_name, fit::closure ready_callback) {
+                 const std::string& host_name, bool perform_address_probe,
+                 fit::closure ready_callback) {
   FXL_DCHECK(!host_name.empty());
   FXL_DCHECK(ready_callback);
   FXL_DCHECK(state_ == State::kNotStarted);
@@ -53,23 +56,16 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
 
   transceiver_.Start(
       std::move(netstack),
-      [this]() {
+      [this, perform_address_probe]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we
         // don't do any more address probes. This means that we could have link
         // changes that cause two hosts with the same name to be on the same
         // subnet. To improve matters, we need to be prepared to change a host
         // name we've been using for awhile.
-        // TODO(dalesat): Add option to skip address probe.
-        // The mDNS spec is explicit about the need for address probes and
-        // that host names should be user-friendly. Many embedded devices, on
-        // the other hand, use host names that are guaranteed unique by virtue
-        // of including large random values, serial numbers, etc. This mDNS
-        // implementation should offer the option of turning off address probes
-        // for such devices.
         if (state_ == State::kWaitingForInterfaces &&
             transceiver_.has_interfaces()) {
-          StartAddressProbe(original_host_name_);
+          OnInterfacesStarted(original_host_name_, perform_address_probe);
         }
       },
       [this](std::unique_ptr<DnsMessage> message,
@@ -116,7 +112,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
   // The interface monitor may have already found interfaces. In that case,
   // start the address probe in case we don't get any link change notifications.
   if (state_ == State::kWaitingForInterfaces && transceiver_.has_interfaces()) {
-    StartAddressProbe(original_host_name_);
+    OnInterfacesStarted(original_host_name_, perform_address_probe);
   }
 }
 
@@ -179,17 +175,23 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
 
+void Mdns::OnInterfacesStarted(const std::string& host_name,
+                               bool perform_address_probe) {
+  if (perform_address_probe) {
+    StartAddressProbe(host_name);
+    return;
+  }
+
+  RegisterHostName(host_name);
+  OnReady();
+}
+
 void Mdns::StartAddressProbe(const std::string& host_name) {
   state_ = State::kAddressProbeInProgress;
 
-  host_name_ = host_name;
-  host_full_name_ = MdnsNames::LocalHostFullName(host_name);
-
+  RegisterHostName(host_name);
   std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_
             << "\n";
-
-  address_placeholder_ =
-      std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
 
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
@@ -204,25 +206,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
           return;
         }
 
-        std::cerr << "mDNS: Using unique host name " << host_full_name_ << "\n";
-
-        // Start all the agents.
-        state_ = State::kActive;
-
-        // |resource_renewer_| doesn't need to be started, but we do it
-        // anyway in case that changes.
-        resource_renewer_->Start(host_full_name_);
-
-        for (auto agent : agents_awaiting_start_) {
-          AddAgent(agent);
-        }
-
-        agents_awaiting_start_.clear();
-
-        // Let the client know we're ready.
-        FXL_DCHECK(ready_callback_);
-        ready_callback_();
-        ready_callback_ = nullptr;
+        OnReady();
       });
 
   // We don't use |AddAgent| here, because agents added that way don't
@@ -230,6 +214,35 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   agents_.emplace(address_prober.get(), address_prober);
   address_prober->Start(host_full_name_);
   SendMessages();
+}
+
+void Mdns::RegisterHostName(const std::string& host_name) {
+  host_name_ = host_name;
+  host_full_name_ = MdnsNames::LocalHostFullName(host_name);
+  address_placeholder_ =
+      std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
+}
+
+void Mdns::OnReady() {
+  std::cerr << "mDNS: Using unique host name " << host_full_name_ << "\n";
+
+  // Start all the agents.
+  state_ = State::kActive;
+
+  // |resource_renewer_| doesn't need to be started, but we do it
+  // anyway in case that changes.
+  resource_renewer_->Start(host_full_name_);
+
+  for (auto agent : agents_awaiting_start_) {
+    AddAgent(agent);
+  }
+
+  agents_awaiting_start_.clear();
+
+  // Let the client know we're ready.
+  FXL_DCHECK(ready_callback_);
+  ready_callback_();
+  ready_callback_ = nullptr;
 }
 
 void Mdns::OnHostNameConflict() {
@@ -473,6 +486,14 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
   publication->port_ = port;
   publication->text_ = text;
   return publication;
+}
+
+std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() {
+  auto result = Create(port_, text_);
+  result->ptr_ttl_seconds_ = ptr_ttl_seconds_;
+  result->srv_ttl_seconds_ = srv_ttl_seconds_;
+  result->txt_ttl_seconds_ = txt_ttl_seconds_;
+  return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,9 @@
         "binary": "bin/mdns"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.net.SocketProvider",
             "fuchsia.netstack.Netstack"

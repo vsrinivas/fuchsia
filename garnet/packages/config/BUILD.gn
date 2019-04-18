@@ -47,6 +47,7 @@ group("mdns") {
   testonly = true
   public_deps = [
     "//garnet/bin/mdns/service:mdns_config",
+    "//garnet/bin/mdns/service:mdns_fuchsia_udp_config",
     "//garnet/packages/config:network",
   ]
 }

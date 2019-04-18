@@ -69,8 +69,7 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
   fuchsia::net::Ipv4Address ipv4;
   FXL_DCHECK(ipv4.addr.size() == ip_address.byte_count());
-  std::memcpy(ipv4.addr.data(), ip_address.as_bytes(),
-              ipv4.addr.size());
+  std::memcpy(ipv4.addr.data(), ip_address.as_bytes(), ipv4.addr.size());
 
   fuchsia::netstack::SocketAddressPtr result =
       fuchsia::netstack::SocketAddress::New();
@@ -90,8 +89,7 @@ fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
   fuchsia::net::Ipv6Address ipv6;
   FXL_DCHECK(ipv6.addr.size() == ip_address.byte_count());
-  std::memcpy(ipv6.addr.data(), ip_address.as_bytes(),
-              ipv6.addr.size());
+  std::memcpy(ipv6.addr.data(), ip_address.as_bytes(), ipv6.addr.size());
 
   fuchsia::netstack::SocketAddressPtr result =
       fuchsia::netstack::SocketAddress::New();
@@ -170,11 +168,11 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
   auto publication = Mdns::Publication::Create(
       inet::IpPort::From_uint16_t(publication_ptr->port),
       fidl::To<std::vector<std::string>>(publication_ptr->text));
-  publication->ptr_ttl_seconds =
+  publication->ptr_ttl_seconds_ =
       zx::duration(publication_ptr->ptr_ttl).to_secs();
-  publication->srv_ttl_seconds =
+  publication->srv_ttl_seconds_ =
       zx::duration(publication_ptr->srv_ttl).to_secs();
-  publication->txt_ttl_seconds =
+  publication->txt_ttl_seconds_ =
       zx::duration(publication_ptr->txt_ttl).to_secs();
 
   return publication;

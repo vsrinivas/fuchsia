@@ -13,6 +13,7 @@
 
 #include <unordered_map>
 
+#include "garnet/bin/mdns/service/config.h"
 #include "garnet/bin/mdns/service/mdns.h"
 #include "src/lib/fxl/macros.h"
 
@@ -107,7 +108,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(inet::IpPort port, std::vector<std::string> text,
+    SimplePublisher(std::unique_ptr<Mdns::Publication> publication,
                     PublishServiceInstanceCallback callback);
 
    private:
@@ -118,8 +119,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
                         fit::function<void(std::unique_ptr<Mdns::Publication>)>
                             callback) override;
 
-    inet::IpPort port_;
-    std::vector<std::string> text_;
+    std::unique_ptr<Mdns::Publication> publication_;
     PublishServiceInstanceCallback callback_;
 
     // Disallow copy, assign and move.
@@ -162,7 +162,15 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Handles the ready callback from |mdns_|.
   void OnReady();
 
+  // Publishes a service instance using |SimplePublisher|.
+  bool PublishServiceInstance(std::string service_name,
+                              std::string instance_name,
+                              std::unique_ptr<Mdns::Publication> publication,
+                              bool perform_probe,
+                              PublishServiceInstanceCallback callback);
+
   sys::ComponentContext* component_context_;
+  Config config_;
   bool ready_ = false;
   std::vector<fidl::InterfaceRequest<fuchsia::mdns::Controller>>
       pending_binding_requests_;

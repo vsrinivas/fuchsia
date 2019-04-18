@@ -8,11 +8,13 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
 #include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/mdns_transceiver.h"
@@ -36,11 +38,13 @@ class Mdns : public MdnsAgent::Host {
         inet::IpPort port,
         const std::vector<std::string>& text = std::vector<std::string>());
 
+    std::unique_ptr<Publication> Clone();
+
     inet::IpPort port_;
     std::vector<std::string> text_;
-    uint32_t ptr_ttl_seconds = 4500;  // default 75 minutes
-    uint32_t srv_ttl_seconds = 120;   // default 2 minutes
-    uint32_t txt_ttl_seconds = 4500;  // default 75 minutes
+    uint32_t ptr_ttl_seconds_ = 4500;  // default 75 minutes
+    uint32_t srv_ttl_seconds_ = 120;   // default 2 minutes
+    uint32_t txt_ttl_seconds_ = 4500;  // default 75 minutes
   };
 
   // Abstract base class for client-supplied subscriber.
@@ -140,7 +144,7 @@ class Mdns : public MdnsAgent::Host {
   // calls to |ResolveHostName|, |SubscribeToService| and
   // |PublishServiceInstance|.
   void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name,
-             fit::closure ready_callback);
+             bool perform_address_probe, fit::closure ready_callback);
 
   // Stops the transceiver.
   void Stop();
@@ -204,11 +208,25 @@ class Mdns : public MdnsAgent::Host {
     }
   };
 
+  // Starts the address probe or transitions to ready state, depending on
+  // |perform_address_probe|. This method is called the first time a transceiver
+  // becomes ready.
+  void OnInterfacesStarted(const std::string& host_name,
+                           bool perform_address_probe);
+
   // Starts a probe for a conflicting host name. If a conflict is detected, a
   // new name is generated and this method is called again. If no conflict is
   // detected, |host_full_name_| gets set and the service is ready to start
   // other agents.
   void StartAddressProbe(const std::string& host_name);
+
+  // Sets |host_name_|, |host_full_name_| and |address_placeholder_|.
+  void RegisterHostName(const std::string& host_name);
+
+  // Starts agents and calls the ready callback. This method is called when
+  // at least one transceiver is ready and a unique host name has been
+  // established.
+  void OnReady();
 
   // Determines what host name to try next after a conflict is detected and
   // calls |StartAddressProbe| with that name.

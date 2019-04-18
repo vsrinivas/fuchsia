@@ -145,25 +145,25 @@ void InstanceResponder::SendPublication(
     const Mdns::Publication& publication, const std::string& subtype,
     const ReplyAddress& reply_address) const {
   if (!subtype.empty()) {
-    SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds, reply_address);
+    SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds_, reply_address);
   }
 
   auto ptr_resource = std::make_shared<DnsResource>(
       MdnsNames::LocalServiceFullName(service_name_), DnsType::kPtr);
-  ptr_resource->time_to_live_ = publication.ptr_ttl_seconds;
+  ptr_resource->time_to_live_ = publication.ptr_ttl_seconds_;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 
   auto srv_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
-  srv_resource->time_to_live_ = publication.srv_ttl_seconds;
+  srv_resource->time_to_live_ = publication.srv_ttl_seconds_;
   srv_resource->srv_.port_ = publication.port_;
   srv_resource->srv_.target_ = host_full_name_;
   SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
 
   auto txt_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
-  txt_resource->time_to_live_ = publication.txt_ttl_seconds;
+  txt_resource->time_to_live_ = publication.txt_ttl_seconds_;
   txt_resource->txt_.strings_ = publication.text_;
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
@@ -185,9 +185,9 @@ void InstanceResponder::SendSubtypePtrRecord(
 
 void InstanceResponder::SendGoodbye() const {
   Mdns::Publication publication;
-  publication.ptr_ttl_seconds = 0;
-  publication.srv_ttl_seconds = 0;
-  publication.txt_ttl_seconds = 0;
+  publication.ptr_ttl_seconds_ = 0;
+  publication.srv_ttl_seconds_ = 0;
+  publication.txt_ttl_seconds_ = 0;
 
   SendPublication(publication);
 }
