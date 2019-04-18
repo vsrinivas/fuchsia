@@ -366,6 +366,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
 
   // Expect association context is still blank.
   wlan_assoc_ctx_t expected_ctx = {};
+  std::memset(&expected_ctx, 0, sizeof(expected_ctx));
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
   EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
@@ -481,6 +482,7 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
 
   // Expect association context has not been set (blank).
   wlan_assoc_ctx_t expected_ctx = {};
+  std::memset(&expected_ctx, 0, sizeof(expected_ctx));
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
   EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 
@@ -532,6 +534,7 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
+  std::memset(&expected_ctx, 0, sizeof(expected_ctx));
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
   EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
@@ -648,6 +651,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
+  std::memset(&expected_ctx, 0, sizeof(expected_ctx));
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
   EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
@@ -667,6 +671,7 @@ TEST_F(ApInfraBssTest, Disassociate) {
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
+  std::memset(&expected_ctx, 0, sizeof(expected_ctx));
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
   EXPECT_EQ(std::memcmp(actual_ctx, &expected_ctx, sizeof(expected_ctx)), 0);
 }
