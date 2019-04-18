@@ -184,25 +184,11 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height,
   display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_);
 }
 
-uint64_t DisplayManager::ImportImage(
-    const fuchsia::sysmem::BufferCollectionSyncPtr& collection,
-    uint64_t collection_id, uint32_t index) {
+uint64_t DisplayManager::ImportImage(uint64_t collection_id, uint32_t index) {
   zx_status_t status, result_status = ZX_OK;
-  fuchsia::sysmem::BufferCollectionInfo_2 info;
-
-  // TODO(ZX-3355): Import into the display controller directly, using the
-  // collection id.
-  status = collection->WaitForBuffersAllocated(&result_status, &info);
-  if (status != ZX_OK || result_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Waiting for buffers failed:" << status << " "
-                   << result_status;
-    return fuchsia::hardware::display::invalidId;
-  }
-
   uint64_t id;
-  status = display_controller_->ImportVmoImage(
-      image_config_, std::move(info.buffers[index].vmo), 0, &result_status,
-      &id);
+  status = display_controller_->ImportImage(image_config_, collection_id, index,
+                                            &result_status, &id);
   if (status != ZX_OK || result_status != ZX_OK) {
     return fuchsia::hardware::display::invalidId;
   }

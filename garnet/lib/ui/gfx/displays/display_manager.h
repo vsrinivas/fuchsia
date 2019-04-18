@@ -54,9 +54,7 @@ class DisplayManager {
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
   void ReleaseBufferCollection(uint64_t id);
 
-  uint64_t ImportImage(
-      const fuchsia::sysmem::BufferCollectionSyncPtr& collection,
-      uint64_t collection_id, uint32_t index);
+  uint64_t ImportImage(uint64_t collection_id, uint32_t index);
   void ReleaseImage(uint64_t id);
 
   // Displays |buffer| on |display|. Will wait for |render_finished_event_id|

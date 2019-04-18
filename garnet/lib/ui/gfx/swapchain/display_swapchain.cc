@@ -4,14 +4,13 @@
 
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
 
+#include <fbl/auto_call.h>
 #include <trace/event.h>
 
-#include <fbl/auto_call.h>
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
-
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/naive_image.h"
@@ -230,8 +229,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
     fuchsia::sysmem::BufferCollectionConstraints constraints = {};
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    status = sysmem_collection->SetConstraints(true, constraints);
+    status = sysmem_collection->SetConstraints(false, constraints);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Unable to set constraints:" << status;
       return false;
@@ -322,8 +320,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
 
-    buffer.fb_id = display_manager_->ImportImage(sysmem_collection,
-                                                 display_collection_id, 0);
+    buffer.fb_id = display_manager_->ImportImage(display_collection_id, 0);
     if (buffer.fb_id == fuchsia::hardware::display::invalidId) {
       FXL_LOG(ERROR) << "Importing image failed.";
       return false;
