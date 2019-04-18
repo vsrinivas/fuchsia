@@ -9,6 +9,7 @@
 #include <map>
 
 #include "rapidjson/document.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/curl.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -50,9 +51,18 @@ class CloudStorageSymbolServer : public SymbolServer {
   void Authenticate(const std::string& data,
                     std::function<void(const Err&)> cb) override;
   void Fetch(const std::string& build_id,
-             std::function<void(const Err&, const std::string&)> cb) override;
+             SymbolServer::FetchCallback cb) override;
+  void CheckFetch(
+      const std::string& build_id,
+      std::function<void(const Err&,
+                         std::function<void(SymbolServer::FetchCallback)>)>
+          cb) override;
 
  private:
+  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id);
+  void FetchWithCurl(const std::string& build_id, std::shared_ptr<Curl> curl,
+                     SymbolServer::FetchCallback cb);
+
   void IncrementRetries() {
     if (++retries_ == kMaxRetries) {
       state_ = SymbolServer::State::kUnreachable;
@@ -99,15 +109,16 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
 void CloudStorageSymbolServer::Authenticate(
     const std::string& data, std::function<void(const Err&)> cb) {
   if (state_ != SymbolServer::State::kAuth) {
-    cb(Err("Authentication not required."));
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err("Authentication not required.")); });
     return;
   }
 
   state_ = SymbolServer::State::kBusy;
 
-  Curl curl;
+  auto curl = Curl::MakeShared();
 
-  curl.SetURL(kTokenServer);
+  curl->SetURL(kTokenServer);
 
   std::map<std::string, std::string> post_data;
   post_data["code"] = data;
@@ -116,59 +127,118 @@ void CloudStorageSymbolServer::Authenticate(
   post_data["redirect_uri"] = "urn:ietf:wg:oauth:2.0:oob";
   post_data["grant_type"] = "authorization_code";
 
-  curl.set_post_data(post_data);
+  curl->set_post_data(post_data);
 
-  rapidjson::Document document;
-  curl.set_data_callback([&document](const std::string& data) {
-    document.Parse(data);
+  auto document = std::make_shared<rapidjson::Document>();
+  curl->set_data_callback([document](const std::string& data) {
+    document->Parse(data);
     return data.size();
   });
 
-  // TODO: Make async once curlcpp has curl_multi support and we've wired it in
-  // to the event loop.
-  if (auto result = curl.Perform()) {
-    std::string error = "Could not contact authentication server: ";
-    error += result.ToString();
+  curl->Perform([this, cb, document](Curl*, Curl::Error result) {
+    if (result) {
+      std::string error = "Could not contact authentication server: ";
+      error += result.ToString();
 
-    error_log_.push_back(error);
-    state_ = SymbolServer::State::kAuth;
-    cb(Err(error));
-    return;
-  }
+      error_log_.push_back(error);
+      state_ = SymbolServer::State::kAuth;
+      cb(Err(error));
+      return;
+    }
 
-  if (!document.HasMember("access_token") ||
-      !document.HasMember("refresh_token")) {
-    error_log_.push_back("Authentication failed");
-    state_ = SymbolServer::State::kAuth;
-    cb(Err("Authentication failed"));
-    return;
-  }
+    if (document->HasParseError() || !document->IsObject() ||
+        !document->HasMember("access_token") ||
+        !document->HasMember("refresh_token")) {
+      error_log_.push_back("Authentication failed");
+      state_ = SymbolServer::State::kAuth;
+      cb(Err("Authentication failed"));
+      return;
+    }
 
-  access_token_ = document["access_token"].GetString();
-  refresh_token_ = document["refresh_token"].GetString();
+    access_token_ = (*document)["access_token"].GetString();
+    refresh_token_ = (*document)["refresh_token"].GetString();
 
-  error_log_.clear();
-  state_ = SymbolServer::State::kReady;
-  cb(Err());
+    error_log_.clear();
+    state_ = SymbolServer::State::kReady;
+    cb(Err());
+  });
 }
 
-void CloudStorageSymbolServer::Fetch(
-    const std::string& build_id,
-    std::function<void(const Err&, const std::string&)> cb) {
+std::shared_ptr<Curl> CloudStorageSymbolServer::PrepareCurl(
+    const std::string& build_id) {
   if (state_ != SymbolServer::State::kReady) {
-    cb(Err("Server not ready."), "");
-    return;
+    return nullptr;
   }
 
   std::string url = "https://storage.googleapis.com/";
   url += bucket_ + build_id + ".debug";
 
-  Curl curl;
+  auto curl = Curl::MakeShared();
+  FXL_DCHECK(curl);
 
-  curl.SetURL(url);
-  curl.headers().push_back(std::string("Authorization: Bearer ") +
-                           access_token_);
+  curl->SetURL(url);
+  curl->headers().push_back(std::string("Authorization: Bearer ") +
+                            access_token_);
 
+  return curl;
+}
+
+void CloudStorageSymbolServer::CheckFetch(
+    const std::string& build_id,
+    std::function<void(const Err&,
+                       std::function<void(SymbolServer::FetchCallback)>)>
+        cb) {
+  auto curl = PrepareCurl(build_id);
+
+  if (!curl) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err("Server not ready."), nullptr); });
+    return;
+  }
+
+  curl->get_body() = false;
+
+  curl->Perform([this, build_id, curl, cb](Curl*, Curl::Error result) {
+    Err err;
+    auto code = curl->ResponseCode();
+
+    if (result) {
+      err = Err("Could not contact server: " + result.ToString());
+    } else if (code == 200) {
+      curl->get_body() = true;
+      cb(Err(), [this, build_id, curl](SymbolServer::FetchCallback fcb) {
+        FetchWithCurl(build_id, curl, fcb);
+      });
+      return;
+    } else if (code != 404 && code != 410) {
+      err = Err("Unexpected response: " + std::to_string(code));
+    }
+
+    if (err.has_error()) {
+      error_log_.push_back(err.msg());
+      IncrementRetries();
+    }
+
+    cb(err, nullptr);
+  });
+}
+
+void CloudStorageSymbolServer::Fetch(const std::string& build_id,
+                                     SymbolServer::FetchCallback cb) {
+  auto curl = PrepareCurl(build_id);
+
+  if (!curl) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err("Server not ready."), ""); });
+    return;
+  }
+
+  FetchWithCurl(build_id, curl, cb);
+}
+
+void CloudStorageSymbolServer::FetchWithCurl(const std::string& build_id,
+                                             std::shared_ptr<Curl> curl,
+                                             FetchCallback cb) {
   auto cache_path = session()->system().settings().GetString(
       ClientSettings::System::kSymbolCache);
   std::string path;
@@ -198,58 +268,66 @@ void CloudStorageSymbolServer::Fetch(
 
   FILE* file = std::fopen(path.c_str(), "wb");
   if (!file) {
-    cb(Err("Error opening temporary file."), "");
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err("Error opening temporary file."), ""); });
     return;
   }
 
-  curl.set_data_callback([file](const std::string& data) {
-    return std::fwrite(data.data(), 1, data.size(), file);
-  });
-
-  // TODO: Make Async. See comment in Authenticate.
-  if (auto result = curl.Perform()) {
-    std::string error = "Could not contact server: ";
-    error += result.ToString();
-
-    error_log_.push_back(error);
-    IncrementRetries();
-    state_ = SymbolServer::State::kAuth;
-    cb(Err(error), "");
-    return;
-  }
-
-  std::fclose(file);
-
-  Err err;
-  std::string final_path;
-  auto code = curl.ResponseCode();
-  if (code != 200) {
-    if (code != 404 && code != 410) {
-      err = Err("Error downloading symbols: " + std::to_string(code));
-      error_log_.push_back(err.msg());
-      IncrementRetries();
-    }
+  auto cleanup = [file, path, cache_path, build_id](
+                     bool valid, Err* result) -> std::string {
+    fclose(file);
 
     std::error_code ec;
-    std::filesystem::remove(path, ec);
-  } else if (!cache_path.empty()) {
+    if (!valid) {
+      std::filesystem::remove(path, ec);
+      return "";
+    }
+
+    if (cache_path.empty()) {
+      *result = Err("No symbol cache specified.");
+      return path;
+    }
+
     auto target_path =
         std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
     auto target_name = build_id.substr(2) + ".debug";
 
-    std::error_code ec;
     std::filesystem::create_directory(target_path, ec);
     if (std::filesystem::is_directory(target_path, ec)) {
       std::filesystem::rename(path, target_path / target_name, ec);
-      final_path = target_path / target_name;
+      return target_path / target_name;
     } else {
-      final_path = path;
-      err = Err("Could not move file in to cache.");
+      *result = Err("Could not move file in to cache.");
+      return path;
     }
-  }
+  };
 
-  cb(err, final_path);
-  return;
+  curl->set_data_callback([file](const std::string& data) {
+    return std::fwrite(data.data(), 1, data.size(), file);
+  });
+
+  curl->Perform([this, cleanup, cb](Curl* curl, Curl::Error result) {
+    auto code = curl->ResponseCode();
+
+    Err err;
+    bool valid = false;
+
+    if (result) {
+      err = Err("Could not contact server: " + result.ToString());
+    } else if (code == 200) {
+      valid = true;
+    } else if (code != 404 && code != 410) {
+      err = Err("Error downloading symbols: " + std::to_string(code));
+    }
+
+    if (err.has_error()) {
+      error_log_.push_back(err.msg());
+      IncrementRetries();
+    }
+
+    std::string final_path = cleanup(valid, &err);
+    cb(err, final_path);
+  });
 }
 
 }  // namespace

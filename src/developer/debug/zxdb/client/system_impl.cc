@@ -22,6 +22,101 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+namespace {
+
+// When we want to download symbols for a build ID, we create a Download
+// object. We then fire off requests to all symbol servers we know about asking
+// whether they have the symbols we need. These requests are async, and the
+// callbacks each own a shared_ptr to the Download object. If all the callbacks
+// run and none of them are informed the request was successful, all of the
+// shared_ptrs are dropped and the Download object is freed. The destructor of
+// the Download object calls a callback that handles notifying the rest of the
+// system of those results.
+//
+// If one of the callbacks does report that the symbols were found, a
+// transaction to actually start the download is initiated, and its reply
+// callback is again given a shared_ptr to the download. If we receive more
+// notifications that other servers also have the symbol in the meantime, they
+// are queued and will be tried as a fallback if the download fails. Again,
+// once the download callback runs the shared_ptr is dropped, and when the
+// Download object dies the destructor handles notifying the system.
+class Download {
+ public:
+  explicit Download(const std::string& build_id,
+                    SymbolServer::FetchCallback result_cb)
+      : build_id_(build_id), result_cb_(std::move(result_cb)) {}
+
+  ~Download() {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
+                    path = std::move(path_)]() { result_cb(err, path); });
+  }
+
+  // Notify this Download object that one of the servers has the symbols
+  // available.
+  void Found(std::shared_ptr<Download> self,
+             std::function<void(SymbolServer::FetchCallback)>);
+
+  // Notify this Download object that a transaction failed.
+  void Error(std::shared_ptr<Download> self, const Err& err);
+
+ private:
+  void RunCB(std::shared_ptr<Download> self,
+             std::function<void(SymbolServer::FetchCallback)>& cb);
+
+  std::string build_id_;
+  Err err_;
+  std::string path_;
+  SymbolServer::FetchCallback result_cb_;
+  std::vector<std::function<void(SymbolServer::FetchCallback)>> server_cbs_;
+  bool trying_ = false;
+};
+
+void Download::Found(std::shared_ptr<Download> self,
+                     std::function<void(SymbolServer::FetchCallback)> cb) {
+  FXL_DCHECK(self.get() == this);
+
+  if (trying_) {
+    server_cbs_.push_back(std::move(cb));
+    return;
+  }
+
+  RunCB(self, cb);
+}
+
+void Download::Error(std::shared_ptr<Download> self, const Err& err) {
+  FXL_DCHECK(self.get() == this);
+
+  if (!err_.has_error()) {
+    err_ = err;
+  } else if (err.has_error()) {
+    err_ = Err("Multiple servers could not be reached.");
+  }
+
+  if (!trying_ && !server_cbs_.empty()) {
+    RunCB(self, server_cbs_.back());
+    server_cbs_.pop_back();
+  }
+}
+
+void Download::RunCB(std::shared_ptr<Download> self,
+                     std::function<void(SymbolServer::FetchCallback)>& cb) {
+  FXL_DCHECK(!trying_);
+  trying_ = true;
+
+  cb([self](const Err& err, const std::string& path) {
+    self->trying_ = false;
+
+    if (path.empty()) {
+      self->Error(self, err);
+    } else {
+      self->err_ = err;
+      self->path_ = path;
+    }
+  });
+}
+
+}  // namespace
 
 SystemImpl::SystemImpl(Session* session)
     : System(session), symbols_(this), weak_factory_(this) {
@@ -137,37 +232,46 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
 }
 
 void SystemImpl::RequestDownload(const std::string& build_id) {
+  auto download = std::make_shared<Download>(
+      build_id, [build_id, weak_this = weak_factory_.GetWeakPtr()](
+                    const Err& err, const std::string& path) {
+        if (!weak_this) {
+          return;
+        }
+
+        auto& symbols = weak_this->symbols_;
+
+        if (!path.empty()) {
+          if (err.has_error()) {
+            // If we got a path but still had an error, something went wrong
+            // with the cache repo. Add the path manually.
+            symbols.build_id_index().AddBuildIDMapping(build_id, path);
+          }
+
+          for (const auto& target : weak_this->targets_) {
+            if (auto process = target->process()) {
+              process->GetSymbols()->RetryLoadBuildID(build_id);
+            }
+          }
+        } else {
+          weak_this->NotifyFailedToFindDebugSymbols(err, build_id);
+        }
+      });
+
   for (auto& server : symbol_servers_) {
     if (server->state() != SymbolServer::State::kReady) {
       continue;
     }
 
-    server->Fetch(build_id, [build_id, weak_this = weak_factory_.GetWeakPtr()](
-                                const Err& err, const std::string& path) {
-      if (!weak_this) {
-        return;
-      }
-
-      auto& symbols = weak_this->symbols_;
-
-      if (!path.empty()) {
-        if (err.has_error()) {
-          // If we got a path but still had an error, something went wrong with
-          // the cache repo. Add the path manually.
-          symbols.build_id_index().AddBuildIDMapping(build_id, path);
-        }
-
-        for (const auto& target : weak_this->targets_) {
-          if (auto process = target->process()) {
-            process->GetSymbols()->RetryLoadBuildID(build_id);
-          }
-        }
-      } else {
-        weak_this->NotifyFailedToFindDebugSymbols(err, build_id);
-      }
-    });
-
-    return;
+    server->CheckFetch(
+        build_id,
+        [download](const Err& err,
+                   std::function<void(SymbolServer::FetchCallback)> cb) {
+          if (!cb)
+            download->Error(download, err);
+          else
+            download->Found(download, std::move(cb));
+        });
   }
 }
 

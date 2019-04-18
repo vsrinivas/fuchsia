@@ -16,6 +16,13 @@ namespace zxdb {
 
 class SymbolServer : public ClientObject {
  public:
+  // Callback used to receive the results of trying to fetch symbols. The
+  // string given is the path where the symbols were downloaded. If the string
+  // is empty the symbols were unavailable. The error is only set in the event
+  // of a connection error. If the symbols are simply unavailable the error
+  // will not be set.
+  using FetchCallback = std::function<void(const Err&, const std::string&)>;
+
   enum class State {
     kInitializing,
     kAuth,
@@ -42,9 +49,18 @@ class SymbolServer : public ClientObject {
   virtual std::string AuthInfo() const = 0;
   virtual void Authenticate(const std::string& data,
                             std::function<void(const Err&)> cb) = 0;
-  virtual void Fetch(
+  virtual void Fetch(const std::string& build_id, FetchCallback cb) = 0;
+
+  // Query to see whether the server has symbols for the given build ID, but
+  // don't actually download them. Callback receives a function which it can
+  // call to continue and actually download the symbols. That function has the
+  // same signature as the Fetch method. If the callback == nullptr the symbol
+  // was not found. The error supplied is only set if there was a problem with
+  // the connection, not if the symbols were simply unavailable.
+  virtual void CheckFetch(
       const std::string& build_id,
-      std::function<void(const Err&, const std::string&)> cb) = 0;
+      std::function<void(const Err&, std::function<void(FetchCallback)>)>
+          cb) = 0;
 
  protected:
   explicit SymbolServer(Session* session, const std::string& name)
