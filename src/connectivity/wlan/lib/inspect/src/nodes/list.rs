@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{NodeExt, SharedNodePtr};
+use crate::SharedNodePtr;
+
+use fidl_fuchsia_inspect as fidl_inspect;
+use fuchsia_inspect::{self as finspect, object::ObjectUtil};
 
 /// This struct is intended to represent a list node in Inspect, which doesn't support list
 /// natively. Furthermore, it makes sure that the number of items does not exceed |capacity|
@@ -24,7 +27,14 @@ impl BoundedListNode {
 
     pub fn request_entry(&mut self) -> SharedNodePtr {
         let mut node = self.node.lock();
-        let entry = node.create_child(&self.index.to_string());
+        let entry =
+            finspect::ObjectTreeNode::new(fidl_inspect::Object::new(self.index.to_string()));
+
+        // Safe because the index always increments, so there's never a risk of name collision
+        // with an existing node. Calling this method because the standard `add_child_tree` locks
+        // every child node to check for name collision.
+        node.add_child_tree_unchecked(entry.clone());
+
         if self.index >= self.capacity {
             let stale_node_index = self.index - self.capacity;
             node.remove_child(&stale_node_index.to_string());
