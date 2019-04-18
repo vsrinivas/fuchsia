@@ -8,6 +8,7 @@ group("lib") {
     ":tests",
     "cobalt",
     "elflib",
+    "fidl_table_validation",
     "files",
     "icu_data",
     "pkg_url",
@@ -22,5 +23,6 @@ group("tests") {
   data_deps = [
     "cobalt:tests",
     "containers/cpp:tests",
+    "fidl_table_validation:tests",
   ]
 }
