@@ -25,7 +25,6 @@ NetConnectorParams::NetConnectorParams(const fxl::CommandLine& command_line) {
 
   listen_ = command_line.HasOption("listen");
   show_devices_ = command_line.HasOption("show-devices");
-  mdns_verbose_ = command_line.HasOption("mdns-verbose");
 
   if (listen_ && show_devices_) {
     FXL_LOG(ERROR) << "--listen and --show-devices are mutually exclusive";
@@ -59,7 +58,6 @@ void NetConnectorParams::Usage() {
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
   FXL_LOG(INFO) << "    --show-devices                   show known devices";
-  FXL_LOG(INFO) << "    --mdns-verbose                   log mDNS traffic";
   FXL_LOG(INFO) << "    --listen                         run as listener";
 }
 

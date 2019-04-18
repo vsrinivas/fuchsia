@@ -80,6 +80,13 @@ config_data("netconnector_config") {
     "netconnector.config",
   ]
   sources = [
-    "service.config",
+    "config/service.config",
+  ]
+}
+
+config_data("mdns_config") {
+  for_pkg = "mdns"
+  sources = [
+    rebase_path("config/mdns.config"),
   ]
 }

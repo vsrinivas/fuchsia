@@ -31,6 +31,7 @@ group("vim2_media_config") {
 group("netconnector") {
   testonly = true
   public_deps = [
+    "//garnet/bin/netconnector:mdns_config",
     "//garnet/bin/netconnector:netconnector_config",
     "//garnet/packages/config:network",
   ]

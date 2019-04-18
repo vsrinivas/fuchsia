@@ -48,10 +48,6 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
     fuchsia::mdns::ControllerPtr mdns_service =
         component_context_->svc()->Connect<fuchsia::mdns::Controller>();
 
-    if (params_->mdns_verbose()) {
-      mdns_service->DEPRECATEDSetVerbose(true);
-    }
-
     if (params_->show_devices()) {
       uint64_t version;
       std::vector<std::string> device_names;
@@ -114,34 +110,6 @@ void NetConnectorImpl::StartListener() {
       component_context_->svc()->Connect<fuchsia::mdns::Controller>();
 
   host_name_ = GetHostName();
-
-  mdns_controller_->DEPRECATEDPublishServiceInstance(
-      kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
-      fidl::VectorPtr<std::string>(), true,
-      [this](fuchsia::mdns::Result result) {
-        switch (result) {
-          case fuchsia::mdns::Result::OK:
-            break;
-          case fuchsia::mdns::Result::INVALID_SERVICE_NAME:
-            FXL_LOG(ERROR) << "mDNS service rejected service name "
-                           << kFuchsiaServiceName << ".";
-            break;
-          case fuchsia::mdns::Result::INVALID_INSTANCE_NAME:
-            FXL_LOG(ERROR) << "mDNS service rejected instance name "
-                           << host_name_ << ".";
-            break;
-          case fuchsia::mdns::Result::ALREADY_PUBLISHED_LOCALLY:
-            FXL_LOG(ERROR) << "mDNS service is already publishing a "
-                           << kFuchsiaServiceName << " service instance.";
-            break;
-          case fuchsia::mdns::Result::ALREADY_PUBLISHED_ON_SUBNET:
-            FXL_LOG(ERROR) << "Another device is already publishing a "
-                           << kFuchsiaServiceName
-                           << " service instance for this host's name ("
-                           << host_name_ << ").";
-            break;
-        }
-      });
 
   fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
 

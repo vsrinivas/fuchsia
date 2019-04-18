@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_NETCONNECTOR_NETCONNECTOR_PARAMS_H_
 #define GARNET_BIN_NETCONNECTOR_NETCONNECTOR_PARAMS_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+
 #include <string>
 #include <unordered_map>
-
-#include <fuchsia/sys/cpp/fidl.h>
 
 #include "garnet/lib/inet/ip_address.h"
 #include "src/lib/fxl/command_line.h"
@@ -25,7 +25,6 @@ class NetConnectorParams {
   bool listen() const { return listen_; }
 
   bool show_devices() const { return show_devices_; }
-  bool mdns_verbose() const { return mdns_verbose_; }
 
   std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr> MoveServices() {
     return std::move(launch_infos_by_service_name_);
@@ -52,7 +51,6 @@ class NetConnectorParams {
   bool is_valid_;
   bool listen_ = false;
   bool show_devices_ = false;
-  bool mdns_verbose_ = false;
   std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>
       launch_infos_by_service_name_;
   std::unordered_map<std::string, inet::IpAddress> device_addresses_by_name_;
