@@ -554,9 +554,9 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", ""))
-		r.LLDecl = r.Decl
+		r.LLDecl = "::zx::channel"
 		r.Dtor = "~InterfaceRequest"
-		r.LLDtor = r.Dtor
+		r.LLDtor = "~channel"
 		r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Request>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "embedded"))
 		r.OvernetEmbeddedDtor = "~unique_ptr"
@@ -605,9 +605,9 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
-			r.LLDecl = r.Decl
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
-			r.LLDtor = r.Dtor
+			r.LLDecl = "::zx::channel"
+			r.LLDtor = "~channel"
 			r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Proxy>", tEmbbeded)
 			r.OvernetEmbeddedDtor = "~unique_ptr"
 		default:

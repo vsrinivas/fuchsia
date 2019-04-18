@@ -38,6 +38,16 @@ ordinal_switch.test.fidl.json.overnet_internal.cc.golden
 ordinal_switch.test.fidl.json.overnet_internal.h.golden
 ordinal_switch.test.fidl.json.rs.golden
 ordinal_switch.test.fidl.json_test_base.h.golden
+protocol_request.test.fidl.json
+protocol_request.test.fidl.json.cc.golden
+protocol_request.test.fidl.json.go.golden
+protocol_request.test.fidl.json.h.golden
+protocol_request.test.fidl.json.llcpp.cc.golden
+protocol_request.test.fidl.json.llcpp.h.golden
+protocol_request.test.fidl.json.overnet_internal.cc.golden
+protocol_request.test.fidl.json.overnet_internal.h.golden
+protocol_request.test.fidl.json.rs.golden
+protocol_request.test.fidl.json_test_base.h.golden
 protocols.test.fidl.json
 protocols.test.fidl.json.cc.golden
 protocols.test.fidl.json.go.golden

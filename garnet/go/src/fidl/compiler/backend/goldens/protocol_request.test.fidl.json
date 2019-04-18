@@ -1,0 +1,183 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.name/Child",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 3,
+        "column": 10
+      },
+      "methods": []
+    },
+    {
+      "name": "test.name/Parent",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 6,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 915586153,
+          "generated_ordinal": 915586153,
+          "name": "GetChild",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+            "line": 7,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "test.name/Child",
+                "nullable": false
+              },
+              "name": "c",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+                "line": 7,
+                "column": 26
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 1068158078,
+          "generated_ordinal": 1068158078,
+          "name": "GetChildRequest",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+            "line": 8,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "test.name/Child",
+                "nullable": false
+              },
+              "name": "r",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+                "line": 8,
+                "column": 42
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 1275478777,
+          "generated_ordinal": 1275478777,
+          "name": "TakeChild",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+            "line": 9,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "test.name/Child",
+                "nullable": false
+              },
+              "name": "c",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+                "line": 9,
+                "column": 21
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 1589872250,
+          "generated_ordinal": 1589872250,
+          "name": "TakeChildRequest",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+            "line": 10,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "test.name/Child",
+                "nullable": false
+              },
+              "name": "r",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+                "line": 10,
+                "column": 37
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "test.name/Parent",
+    "test.name/Child"
+  ],
+  "declarations": {
+    "test.name/Child": "interface",
+    "test.name/Parent": "interface"
+  }
+}

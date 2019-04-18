@@ -1,0 +1,11 @@
+library test.name;
+
+protocol Child {
+};
+
+protocol Parent {
+    GetChild() -> (Child c);
+    GetChildRequest() -> (request<Child> r);
+    TakeChild(Child c);
+    TakeChildRequest(request<Child> r);
+};
