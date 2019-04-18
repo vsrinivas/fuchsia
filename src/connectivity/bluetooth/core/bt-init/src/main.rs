@@ -27,10 +27,11 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let cfg = config::Config::load()?;
 
-    // Start bt-snoop service before anything else.
+    // Start bt-snoop service before anything else and hold onto the connection until bt-init exits.
+    let mut snoop_connection;
     if cfg.autostart_snoop() {
-        let res = client::connect_to_service::<SnoopMarker>();
-        if let Err(e) = res {
+        snoop_connection = client::connect_to_service::<SnoopMarker>();
+        if let Err(e) = snoop_connection {
             fx_log_warn!("Failed to start snoop service: {}", e);
         }
     }
