@@ -10,7 +10,7 @@ use failure::Error;
 use fidl_fuchsia_math::RectF;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
-use fuchsia_app::client::{App as LaunchedApp, Launcher};
+use fuchsia_component::client::{App as LaunchedApp, launcher, launch};
 use fuchsia_scenic::{
     new_view_token_pair, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
 };
@@ -41,7 +41,8 @@ impl AppAssistant for EmbeddingAppAssistant {
         _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        let app = Launcher::new()?.launch(
+        let app = launch(
+            &launcher()?,
             "fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx".to_string(),
             None,
         )?;

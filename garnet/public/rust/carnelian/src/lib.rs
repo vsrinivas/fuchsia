@@ -10,6 +10,7 @@
 //! [Rust](https://www.rust-lang.org/).
 
 #![deny(missing_docs)]
+#![feature(futures_api)]
 
 mod app;
 mod canvas;

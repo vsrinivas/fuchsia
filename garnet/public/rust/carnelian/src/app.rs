@@ -7,14 +7,15 @@ use crate::{
     view::{ViewAssistantPtr, ViewController, ViewKey},
 };
 use failure::{bail, Error, ResultExt};
-use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServiceMarker};
-use fidl_fuchsia_ui_app::{ViewProviderMarker, ViewProviderRequest, ViewProviderRequestStream};
+use fidl::endpoints::{create_endpoints, create_proxy};
+use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;
-use fuchsia_app::{self as component, client::connect_to_service, server::FdioServer};
 use fuchsia_async as fasync;
+use fuchsia_component::{self as component, client::connect_to_service};
 use fuchsia_scenic::{Session, SessionPtr};
-use futures::{TryFutureExt, TryStreamExt};
+use fuchsia_zircon as zx;
+use futures::{Future, StreamExt, TryFutureExt, TryStreamExt};
 use std::{
     cell::RefCell,
     collections::BTreeMap,
@@ -106,7 +107,7 @@ impl App {
             fut
         })?;
 
-        executor.run_singlethreaded(fut)?;
+        executor.run_singlethreaded(fut);
 
         Ok(())
     }
@@ -210,9 +211,9 @@ impl App {
         Ok(())
     }
 
-    fn spawn_view_provider_server(chan: fasync::Channel) {
+    fn spawn_view_provider_server(stream: ViewProviderRequestStream) {
         fasync::spawn_local(
-            ViewProviderRequestStream::from_channel(chan)
+            stream
                 .try_for_each(move |req| {
                     let ViewProviderRequest::CreateView { token, .. } = req;
                     let view_token = ViewToken { value: token };
@@ -226,30 +227,36 @@ impl App {
         )
     }
 
-    fn pass_connection_to_assistant(channel: fasync::Channel, service_name: &'static str) {
-        App::with(|app| {
-            app.assistant
-                .as_mut()
-                .unwrap()
-                .handle_service_connection_request(service_name, channel)
-                .unwrap_or_else(|e| eprintln!("error running {} server: {:?}", service_name, e));
-        });
+    fn pass_connection_to_assistant(channel: zx::Channel, service_name: &'static str) {
+        match fasync::Channel::from_channel(channel) {
+            Ok(channel) => {
+                App::with(|app| {
+                    app.assistant
+                        .as_mut()
+                        .unwrap()
+                        .handle_service_connection_request(service_name, channel)
+                        .unwrap_or_else(|e| eprintln!("error running {} server: {:?}", service_name, e));
+                });
+            },
+            Err(e) => eprintln!("error asyncifying channel: {:?}", e),
+        }
     }
 
-    fn start_services(app: &mut App) -> Result<FdioServer, Error> {
+    fn start_services(app: &mut App) -> Result<impl Future<Output = ()>, Error> {
         let outgoing_services_names = app.assistant.as_ref().unwrap().outgoing_services_names();
-        let services_server = component::server::ServicesServer::new();
-        let mut services_server =
-            services_server.add_service((ViewProviderMarker::NAME, move |channel| {
-                Self::spawn_view_provider_server(channel);
-            }));
+        let mut fs = component::server::ServiceFs::new();
+        let mut public = fs.dir("public");
+        public.add_fidl_service(Self::spawn_view_provider_server);
 
         for name in outgoing_services_names {
-            services_server = services_server.add_service((name, move |channel| {
+            public.add_service_at(name, move |channel| {
                 Self::pass_connection_to_assistant(channel, name);
-            }));
+                None
+            });
         }
 
-        Ok(services_server.start()?)
+        fs.take_and_serve_directory_handle()?;
+
+        Ok(fs.collect())
     }
 }
