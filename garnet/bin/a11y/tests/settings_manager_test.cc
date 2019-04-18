@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/a11y/a11y_manager/settings_manager.h"
+
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "garnet/bin/a11y/a11y_manager/settings_manager.h"
 #include "gtest/gtest.h"
+
+// DEPRECATED
 
 namespace a11y_manager {
 namespace {

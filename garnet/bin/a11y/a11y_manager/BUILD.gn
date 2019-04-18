@@ -53,8 +53,6 @@ source_set("lib") {
     "semantics/semantic_tree_impl.h",
     "semantics/semantics_manager_impl.cc",
     "semantics/semantics_manager_impl.h",
-    "settings_manager.cc",
-    "settings_manager.h",
     "toggler_impl.cc",
     "toggler_impl.h",
     "util.cc",

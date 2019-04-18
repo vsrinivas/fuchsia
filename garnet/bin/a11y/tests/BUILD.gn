@@ -17,7 +17,6 @@ executable("a11y_manager_apptests") {
 
   sources = [
     "semantic_tree_test.cc",
-    "settings_manager_test.cc",
   ]
 
   deps = [

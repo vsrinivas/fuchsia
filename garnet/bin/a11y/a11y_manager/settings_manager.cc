@@ -6,9 +6,12 @@
 
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/syscalls.h>
+
 #include <string>
 
 #include "lib/fidl/cpp/clone.h"
+
+// DEPRECATED
 
 namespace {
 
