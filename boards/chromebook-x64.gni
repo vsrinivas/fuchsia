@@ -6,8 +6,6 @@ target_cpu = "x64"
 
 board_name = "chromebook-x64"
 
-fuchsia_packages = []
-
 update_kernels = [ "zbi.signed" ]
 
 use_vboot = true
