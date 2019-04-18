@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-framebuffer",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:rouille",
   ]
 }
 

@@ -7,14 +7,15 @@ import("//build/images/assemble_system.gni")
 import("//garnet/build/pkgfs.gni")
 
 recovery_packages = [
-  "//garnet/go/src/amber:pkgfs",
-  "//garnet/packages/prod:amber",
-  "//garnet/packages/prod:build_info",
-  "//garnet/packages/prod:netcfg",
-  "//garnet/packages/prod:netstack",
-  "//garnet/packages/prod:runtime",
-  "//garnet/packages/prod:wlancfg",
-  "//garnet/packages/prod:wlanstack",
+  "//garnet:build-info",
+  "//garnet/bin/appmgr",
+  "//garnet/bin/netcfg:config",
+  "//garnet/bin/netcfg",
+  "//garnet/bin/sysmgr",
+  "//garnet/go/src/amber",
+  "//src/connectivity/network/netstack",
+  "//src/connectivity/wlan/wlancfg",
+  "//src/connectivity/wlan/wlanstack:wlanstack2",
   "//src/recovery/system",
   pkgfs_package_label,
 ]
@@ -39,7 +40,5 @@ recovery_packages += [
 assemble_system("recovery") {
   base_packages = recovery_packages
   netboot = true
-  devmgr_config = [
-    "appmgr.arg=--disable-virtual-console",
-  ]
+  devmgr_config = [ "appmgr.arg=--disable-virtual-console" ]
 }

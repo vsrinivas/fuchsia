@@ -2,13 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+#![deny(warnings)]
+
 use carnelian::{
     measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size,
 };
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
-use futures::future;
+use futures::StreamExt;
+
+mod setup;
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
@@ -77,13 +82,21 @@ impl PixelSink for FramePixelSink {
     }
 }
 
+async fn run<'a, T: PixelSink>(ui: &'a mut RecoveryUI<'a, T>) -> Result<(), Error> {
+    ui.draw("Fuchsia System Recovery", "Waiting...");
+
+    let mut receiver = setup::start_server()?;
+    while let Some(_event) = await!(receiver.next()) {
+        println!("recovery: received request");
+        ui.draw("Fuchsia System Recovery", "Got event");
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
     println!("recovery: started");
-
-    let face = FontFace::new(FONT_DATA).unwrap();
-
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
-
     let fb = FrameBuffer::new(None, &mut executor).context("Failed to create framebuffer")?;
     let config = fb.get_config();
     if config.format != PixelFormat::Argb8888 {
@@ -93,24 +106,22 @@ fn main() -> Result<(), Error> {
     let frame = fb.new_frame(&mut executor)?;
     frame.present(&fb)?;
 
+    let face = FontFace::new(FONT_DATA).unwrap();
+
     let stride = frame.linear_stride_bytes() as u32;
     let sink = FramePixelSink { frame };
     let canvas = Canvas::new_with_sink(sink, stride);
 
     let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
-    ui.draw("Fuchsia System Recovery", "Waiting...");
-
-    executor.run_singlethreaded(future::empty::<()>());
+    executor.run_singlethreaded(run(&mut ui))?;
     unreachable!();
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{RecoveryUI, FONT_DATA, BYTES_PER_PIXEL};
-    use carnelian::{
-        Canvas, FontFace, PixelSink
-    };
+    use super::{RecoveryUI, BYTES_PER_PIXEL, FONT_DATA};
+    use carnelian::{Canvas, FontFace, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
     struct TestPixelSink {}
