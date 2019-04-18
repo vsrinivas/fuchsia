@@ -711,20 +711,6 @@ bool StatvfsTest() {
     END_TEST;
 }
 
-// Verifies that the values in stats match the other parameters
-bool CheckStats(fuchsia_hardware_block_BlockStats stats, int64_t total_ops, int64_t total_blocks,
-                int64_t total_reads, int64_t total_blocks_read, int64_t total_writes,
-                int64_t total_blocks_written) {
-    BEGIN_HELPER;
-    ASSERT_EQ(stats.ops, total_ops);
-    ASSERT_EQ(stats.blocks, total_blocks);
-    ASSERT_EQ(stats.reads, total_reads);
-    ASSERT_EQ(stats.blocks_read, total_blocks_read);
-    ASSERT_EQ(stats.writes, total_writes);
-    ASSERT_EQ(stats.blocks_written, total_blocks_written);
-    END_HELPER;
-}
-
 bool GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
     BEGIN_HELPER;
 
