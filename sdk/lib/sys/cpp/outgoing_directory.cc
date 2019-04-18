@@ -3,27 +3,25 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/outgoing_directory.h>
-
-#include <utility>
-
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+
+#include <utility>
 
 namespace sys {
 
 OutgoingDirectory::OutgoingDirectory()
     : root_(std::make_unique<vfs::PseudoDir>()),
       public_(GetOrCreateDirectory("public")),
-      debug_(GetOrCreateDirectory("debug")),
-      ctrl_(GetOrCreateDirectory("ctrl")) {}
+      debug_(GetOrCreateDirectory("debug")) {}
 
 OutgoingDirectory::~OutgoingDirectory() = default;
 
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
-  return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                          fuchsia::io::OPEN_RIGHT_WRITABLE,
-                      std::move(directory_request), dispatcher);
+  return root_->Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      std::move(directory_request), dispatcher);
 }
 
 zx_status_t OutgoingDirectory::ServeFromStartupInfo(

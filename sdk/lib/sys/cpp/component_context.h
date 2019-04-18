@@ -30,7 +30,8 @@ class ComponentContextProvider;
 // In addition to receiving services, components can also publish services and
 // data to other components through their outgoing namespace, which is also a
 // directory. The |ComponentContext| provides an ergonomic interface for
-// services and other file system objects through its |outgoing()| property.
+// exposing services and other file system objects through its |outgoing()|
+// property.
 //
 // Instances of this class are thread-safe.
 //
@@ -53,7 +54,7 @@ class ComponentContext final {
   struct MakePrivate;
 
  public:
-  // Create a component context.
+  // Creates a component context.
   //
   // This constructor is rarely used directly. Instead, most clients create a
   // component context using the |Create()| static method.
@@ -76,9 +77,10 @@ class ComponentContext final {
   // function will not return a functional component context.
   //
   // Prefer creating the |ComponentContext| in the |main| function for a
-  // component and passing the object to any |App| class. This pattern makes
-  // testing easier because tests can pass a |FakeComponentContext| to the |App|
-  // class to inject dependencies.
+  // component and passing the context to a class named "App" which encapsulates
+  // the main logic of the program. This pattern makes testing easier because
+  // tests can pass a fake |ComponentContext| from |ComponentContextProvider| to
+  // the |App| class to inject dependencies.
   //
   // The returned unique_ptr is never null.
   //
@@ -95,12 +97,11 @@ class ComponentContext final {
   // ```
   static std::unique_ptr<ComponentContext> Create();
 
-  // The directory of services.
+  // The component's incoming directory of services from its namespace.
   //
   // Use this object to connect to services offered by other components.
   //
-  // The directory of services is thread-safe and is commonly used on multiple
-  // threads.
+  // The returned object is thread-safe.
   //
   // # Example
   //
@@ -109,10 +110,12 @@ class ComponentContext final {
   // ```
   const std::shared_ptr<ServiceDirectory>& svc() const { return svc_; }
 
-  // The outgoing namespace.
+  // The component's outgoing directory.
   //
   // Use this object to publish services and data to the component manager and
   // other components.
+  //
+  // The returned object is thread-safe.
   //
   // # Example
   //

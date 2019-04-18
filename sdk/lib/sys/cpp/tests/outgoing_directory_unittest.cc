@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/outgoing_directory.h>
-
-#include "echo_server.h"
-
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
+#include "echo_server.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -93,15 +91,6 @@ TEST_F(OutgoingDirectoryTest, DebugDir) {
   outgoing_.GetOrCreateDirectory("debug")->RemoveEntry(
       "fidl.examples.echo.Echo");
   TestCanAccessEchoService("debug/fidl.examples.echo.Echo", false);
-}
-
-TEST_F(OutgoingDirectoryTest, CtrlDir) {
-  AddEchoService(outgoing_.ctrl_dir());
-
-  TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo");
-  outgoing_.GetOrCreateDirectory("ctrl")->RemoveEntry(
-      "fidl.examples.echo.Echo");
-  TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo", false);
 }
 
 TEST_F(OutgoingDirectoryTest, GetOrCreateDirectory) {

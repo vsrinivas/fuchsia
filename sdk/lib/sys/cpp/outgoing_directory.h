@@ -17,27 +17,23 @@ namespace sys {
 
 // The directory provided by this component to the component manager.
 //
-// A components outgoing directory contains services, data, and other objects
+// A component's outgoing directory contains services, data, and other objects
 // that can be consumed by either the component manager itself or by other
 // components in the system.
 //
-// The root directory contains several directories with well-known names:
+// The outgoing directory contains several subdirectories with well-known
+// names:
 //
 //  * public. This directory contains the services offered by this component to
 //    other components.
 //  * debug. This directory contains arbitrary debugging output offered by this
 //    component.
-//  * ctrl. This directory contains read-write files the component exposes for
-//    controlling its behavior.
 //
-// The root directory may optionally contain other directories constructed using
-// |GetOrCreateDirectory|. Common optional directories include:
+// The outgoing directory may optionally contain other directories constructed
+// using |GetOrCreateDirectory|. Common optional directories include:
 //
 //  * objects. This directory contains Inspect API files and interfaces for use
 //    in component inspection.
-//
-// The root directory is typically used to service the |PA_DIRECTORY_REQUEST|
-// process argument.
 //
 // Instances of this class are thread-safe.
 class OutgoingDirectory final {
@@ -49,13 +45,13 @@ class OutgoingDirectory final {
   OutgoingDirectory(const OutgoingDirectory&) = delete;
   OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
 
-  // Start serving the root directory on the given channel.
+  // Starts serving the outgoing directory on the given channel.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
   // channel.
   //
-  // If |dispatcher| is NULL, this object will serve the root directory using
-  // the |async_dispatcher_t| from |async_get_default_dispatcher()|.
+  // If |dispatcher| is NULL, this object will serve the outgoing directory
+  // using the |async_dispatcher_t| from |async_get_default_dispatcher()|.
   //
   // # Errors
   //
@@ -67,18 +63,19 @@ class OutgoingDirectory final {
   zx_status_t Serve(zx::channel directory_request,
                     async_dispatcher_t* dispatcher = nullptr);
 
-  // Start serving the root directory on the channel provided to this process at
-  // startup as |PA_DIRECTORY_REQUEST|.
+  // Starts serving the outgoing directory on the channel provided to this
+  // process at startup as |PA_DIRECTORY_REQUEST|.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
   // channel.
   //
-  // If |dispatcher| is NULL, this object will serve the root directory using
-  // the |async_dispatcher_t| from |async_get_default_dispatcher()|.
+  // If |dispatcher| is NULL, this object will serve the outgoing directory
+  // using the |async_dispatcher_t| from |async_get_default_dispatcher()|.
   //
   // # Errors
   //
-  // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
+  // ZX_ERR_BAD_HANDLE: the process did not receive a |PA_DIRECTORY_REQUEST|
+  // startup handle or it was already taken.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
   //
@@ -140,16 +137,12 @@ class OutgoingDirectory final {
     return public_->RemoveEntry(name);
   }
 
-  // Get access to debug directory to publish debug data.
-  // This directory is owned by this class.
+  // Gets the directory to publish debug data.
+  // The returned directory is owned by this class.
   vfs::PseudoDir* debug_dir() { return debug_; }
 
-  // Get access to ctrl directory to publish ctrl data.
-  // This directory is owned by this class.
-  vfs::PseudoDir* ctrl_dir() { return ctrl_; }
-
-  // Get a directory under the output namespace. If the directory was not
-  // previously obtained by this method, it will be created.
+  // Gets a subdirectory with the given |name|, creates it if it does not
+  // already exist.
   // The returned directory is owned by this class.
   vfs::PseudoDir* GetOrCreateDirectory(const std::string& name);
 
@@ -158,7 +151,7 @@ class OutgoingDirectory final {
   // Will fail silently if directory with that name already exists.
   vfs::PseudoDir* AddNewEmptyDirectory(std::string name);
 
-  // The root outgoing directory itself.
+  // The root of the outgoing directory itself.
   std::unique_ptr<vfs::PseudoDir> root_;
 
   // The public subdirectory of the root directory.
@@ -170,11 +163,6 @@ class OutgoingDirectory final {
   //
   // The underlying |vfs::PseudoDir| object is owned by |root_|.
   vfs::PseudoDir* debug_;
-
-  // The ctrl subdirectory of the root directory.
-  //
-  // The underlying |vfs::PseudoDir| object is owned by |root_|.
-  vfs::PseudoDir* ctrl_;
 };
 
 }  // namespace sys

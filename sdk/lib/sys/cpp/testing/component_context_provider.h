@@ -29,7 +29,7 @@ class ComponentContextProvider {
     return outgoing_directory_ptr_;
   }
 
-  // Connect to public service which was published in "public" directory by
+  // Connects to public service which was published in "public" directory by
   // code under test.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToPublicService(
@@ -40,7 +40,7 @@ class ComponentContextProvider {
     return ptr;
   }
 
-  // Connect to public service which was published in "public" directory by
+  // Connects to public service which was published in "public" directory by
   // code under test.
   template <typename Interface>
   void ConnectToPublicService(
@@ -50,7 +50,7 @@ class ComponentContextProvider {
                             request.TakeChannel().release());
   }
 
-  // This can be used to get fake service directory provider and inject services
+  // Gets a fake service directory that can be used to inject services
   // which can be accessed by code under test.
   //
   // # Example
