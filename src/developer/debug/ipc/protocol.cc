@@ -63,6 +63,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "AddOrChangeBreakpoint";
     case MsgHeader::Type::kRemoveBreakpoint:
       return "RemoveBreakpoint";
+    case MsgHeader::Type::kSysInfo:
+      return "SysInfo";
     case MsgHeader::Type::kThreadStatus:
       return "ThreadStatus";
     case MsgHeader::Type::kAddressSpace:

@@ -92,6 +92,8 @@ class DebugAgent : public RemoteAPI,
       debug_ipc::AddOrChangeBreakpointReply* reply) override;
   void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
                           debug_ipc::RemoveBreakpointReply* reply) override;
+  void OnSysInfo(const debug_ipc::SysInfoRequest& request,
+                 debug_ipc::SysInfoReply* reply) override;
   void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                       debug_ipc::ThreadStatusReply* reply) override;
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

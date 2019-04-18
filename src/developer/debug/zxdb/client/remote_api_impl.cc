@@ -120,6 +120,12 @@ void RemoteAPIImpl::RemoveBreakpoint(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::SysInfo(
+    const debug_ipc::SysInfoRequest& request,
+    std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::ThreadStatus(
     const debug_ipc::ThreadStatusRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {

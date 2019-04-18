@@ -75,6 +75,9 @@ class RemoteAPI {
   virtual void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb);
+  virtual void SysInfo(
+      const debug_ipc::SysInfoRequest& request,
+      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb);
   virtual void ThreadStatus(
       const debug_ipc::ThreadStatusRequest& request,
       std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb);

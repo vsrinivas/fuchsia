@@ -78,6 +78,7 @@ enum class Verb {
   kSymNear,
   kSymSearch,
   kSymStat,
+  kSysInfo,
   kUntil,
   kUp,
 

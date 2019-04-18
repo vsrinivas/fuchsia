@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <zircon/features.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -32,6 +33,12 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
+
+namespace {
+
+constexpr size_t kMegabyte = 1024 * 1024;
+
+}  // namespace
 
 DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
                        std::shared_ptr<sys::ServiceDirectory> services)
@@ -357,6 +364,22 @@ void DebugAgent::OnRemoveBreakpoint(
     debug_ipc::RemoveBreakpointReply* reply) {
   TIME_BLOCK();
   RemoveBreakpoint(request.breakpoint_id);
+}
+
+void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
+                           debug_ipc::SysInfoReply* reply) {
+  char version[64];
+  zx_system_get_version(version, sizeof(version));
+  reply->version = version;
+
+  reply->num_cpus = zx_system_get_num_cpus();
+  reply->memory_mb = zx_system_get_physmem() / kMegabyte;
+
+  zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT,
+                         &reply->hw_breakpoint_count);
+
+  zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT,
+                         &reply->hw_watchpoint_count);
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,

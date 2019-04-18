@@ -444,6 +444,30 @@ bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
   return true;
 }
 
+// SysInfo ---------------------------------------------------------------------
+
+void WriteRequest(const SysInfoRequest& request,
+                  uint32_t transaction_id, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kSysInfo, transaction_id);
+}
+
+bool ReadReply(MessageReader* reader, SysInfoReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadString(&reply->version) ||
+      !reader->ReadUint32(&reply->num_cpus) ||
+      !reader->ReadUint32(&reply->memory_mb) ||
+      !reader->ReadUint32(&reply->hw_breakpoint_count) ||
+      !reader->ReadUint32(&reply->hw_watchpoint_count)) {
+    return false;
+  }
+  return true;
+}
+
 // ThreadStatus ----------------------------------------------------------------
 
 void WriteRequest(const ThreadStatusRequest& request, uint32_t transaction_id,

@@ -90,6 +90,12 @@ bool ReadRequest(MessageReader* reader, RemoveBreakpointRequest* request,
 void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// SysInfo
+bool ReadRequest(MessageReader* reader, SysInfoRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const SysInfoReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // ThreadStatus
 bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request,
                  uint32_t* transaction_id);

@@ -432,6 +432,32 @@ TEST(Protocol, RemoveBreakpointReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 }
 
+// SysInfo ---------------------------------------------------------------------
+
+TEST(Protocol, SysInfoRequest) {
+  SysInfoRequest initial;
+  SysInfoRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+}
+
+TEST(Protocol, SysInfoReply) {
+  SysInfoReply initial;
+  initial.version = "VERSION";
+  initial.num_cpus = 16;
+  initial.memory_mb = 4096;
+  initial.hw_breakpoint_count = 6;
+  initial.hw_watchpoint_count = 4;
+
+  SysInfoReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(initial.version, second.version);
+  EXPECT_EQ(initial.num_cpus, second.num_cpus);
+  EXPECT_EQ(initial.memory_mb, second.memory_mb);
+  EXPECT_EQ(initial.hw_breakpoint_count, second.hw_breakpoint_count);
+  EXPECT_EQ(initial.hw_watchpoint_count, second.hw_watchpoint_count);
+}
+
 // ThreadStatus ----------------------------------------------------------------
 
 TEST(Protocol, ThreadStatusRequest) {

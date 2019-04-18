@@ -375,6 +375,27 @@ void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id,
   writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
 }
 
+// SysInfo ---------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, SysInfoRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
+void WriteReply(const SysInfoReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kSysInfo, transaction_id);
+  writer->WriteString(reply.version);
+  writer->WriteUint32(reply.num_cpus);
+  writer->WriteUint32(reply.memory_mb);
+  writer->WriteUint32(reply.hw_breakpoint_count);
+  writer->WriteUint32(reply.hw_watchpoint_count);
+}
+
 // ThreadStatus ----------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request,

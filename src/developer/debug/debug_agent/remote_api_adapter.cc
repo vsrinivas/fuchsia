@@ -100,6 +100,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(Detach);
       DISPATCH(AddOrChangeBreakpoint);
       DISPATCH(RemoveBreakpoint);
+      DISPATCH(SysInfo);
       DISPATCH(ThreadStatus);
       DISPATCH(AddressSpace);
       DISPATCH(JobFilter);

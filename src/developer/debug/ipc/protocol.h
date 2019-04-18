@@ -44,7 +44,7 @@ struct MsgHeader {
     kWriteRegisters,
     kRemoveBreakpoint,
     kResume,
-    kThreadStatus,
+    kSysInfo, kThreadStatus,
     kThreads,
     kWriteMemory,
 
@@ -241,6 +241,15 @@ struct RemoveBreakpointRequest {
   uint32_t breakpoint_id = 0;
 };
 struct RemoveBreakpointReply {};
+
+struct SysInfoRequest {};
+struct SysInfoReply {
+  std::string version;
+  uint32_t num_cpus;
+  uint32_t memory_mb;
+  uint32_t hw_breakpoint_count;
+  uint32_t hw_watchpoint_count;
+};
 
 // The thread state request asks for the current thread status with a full
 // backtrace if it is suspended. If the thread with the given KOID doesn't

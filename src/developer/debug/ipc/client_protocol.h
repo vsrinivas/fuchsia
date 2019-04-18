@@ -102,6 +102,12 @@ void WriteRequest(const RemoveBreakpointRequest& request,
 bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
                uint32_t* transaction_id);
 
+// SysInfo
+void WriteRequest(const SysInfoRequest& request,
+                  uint32_t transaction_id, MessageWriter* writer);
+bool ReadReply(MessageReader* reader, SysInfoReply* reply,
+               uint32_t* transaction_id);
+
 // ThreadStatus.
 void WriteRequest(const ThreadStatusRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);

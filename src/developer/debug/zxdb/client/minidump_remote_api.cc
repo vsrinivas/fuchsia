@@ -914,6 +914,12 @@ void MinidumpRemoteAPI::RemoveBreakpoint(
   ErrNoLive(cb);
 }
 
+void MinidumpRemoteAPI::SysInfo(
+    const debug_ipc::SysInfoRequest& request,
+    std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) {
+  ErrNoLive(cb);
+}
+
 void MinidumpRemoteAPI::ThreadStatus(
     const debug_ipc::ThreadStatusRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {

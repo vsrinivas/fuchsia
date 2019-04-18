@@ -74,6 +74,10 @@ class RemoteAPIImpl : public RemoteAPI {
       const debug_ipc::RemoveBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
       override;
+  void SysInfo(
+      const debug_ipc::SysInfoRequest& request,
+      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb)
+      override;
   void ThreadStatus(
       const debug_ipc::ThreadStatusRequest& request,
       std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)

@@ -75,6 +75,9 @@ class RemoteAPI {
       const debug_ipc::RemoveBreakpointRequest& request,
       debug_ipc::RemoveBreakpointReply* reply) = 0;
 
+  virtual void OnSysInfo(const debug_ipc::SysInfoRequest& request,
+                         debug_ipc::SysInfoReply* reply) = 0;
+
   virtual void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                               debug_ipc::ThreadStatusReply* reply) = 0;
 
