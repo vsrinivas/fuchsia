@@ -202,11 +202,10 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir,
 
 void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
                            const char* name, zx::unowned_channel forwarding_channel) {
+    fbl::String path = fbl::StringPrintf("public/%s", name);
     dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
-            [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
-                const auto request_handle = request.release();
-                return forwarding_channel->write(0, name, static_cast<uint32_t>(strlen(name)),
-                                                 &request_handle, 1);
+            [path, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
+                return fdio_service_connect_at(forwarding_channel->get(), path.c_str(), request.release());
             }));
 }
 

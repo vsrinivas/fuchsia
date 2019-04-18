@@ -50,7 +50,6 @@
 #include "devfs.h"
 #include "devhost-loader-service.h"
 #include "fidl.h"
-#include "fidl-proxy.h"
 #include "vmo-writer.h"
 
 namespace {
@@ -151,7 +150,9 @@ const char* kComponentDriverPath = "/boot/driver/component.so";
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config)
-    : config_(std::move(config)) {}
+    : config_(std::move(config)), outgoing_services_(config_.dispatcher) {
+    InitOutgoingServices();
+}
 
 Coordinator::~Coordinator() {
     drivers_.clear();
@@ -1680,8 +1681,70 @@ void Coordinator::UseFallbackDrivers() {
     drivers_.splice(drivers_.end(), fallback_drivers_);
 }
 
-zx_status_t Coordinator::BindFidlServiceProxy(zx::channel listen_on) {
-    return FidlProxyHandler::Create(this, config_.dispatcher, std::move(listen_on));
+void Coordinator::InitOutgoingServices() {
+    const auto& public_dir = outgoing_services_.public_dir();
+
+    const auto admin = [this](zx::channel request) {
+        static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
+            .Suspend = [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
+                static_cast<Coordinator*>(ctx)->Suspend(flags);
+                return fuchsia_device_manager_AdministratorSuspend_reply(txn, ZX_OK);
+            },
+        };
+
+        const auto status = fidl_bind(this->config_.dispatcher,
+                                      request.release(),
+                                      reinterpret_cast<fidl_dispatch_t*>(
+                                              fuchsia_device_manager_Administrator_dispatch),
+                                      this,
+                                      &kOps);
+           if (status != ZX_OK) {
+              printf("Failed to bind to client channel: %d \n", status);
+           }
+           return status;
+       };
+    public_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
+                         fbl::MakeRefCounted<fs::Service>(admin));
+
+    const auto debug = [this](zx::channel request) {
+        static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
+            .DumpTree = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                VmoWriter writer{zx::vmo(vmo)};
+                static_cast<Coordinator*>(ctx)->DumpState(&writer);
+                return fuchsia_device_manager_DebugDumperDumpTree_reply(
+                        txn, writer.status(), writer.written(), writer.available());
+            },
+            .DumpDrivers = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                VmoWriter writer{zx::vmo(vmo)};
+                static_cast<Coordinator*>(ctx)->DumpDrivers(&writer);
+                return fuchsia_device_manager_DebugDumperDumpDrivers_reply(
+                        txn, writer.status(), writer.written(), writer.available());
+            },
+            .DumpBindingProperties = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                VmoWriter writer{zx::vmo(vmo)};
+                static_cast<Coordinator*>(ctx)->DumpGlobalDeviceProps(&writer);
+                return fuchsia_device_manager_DebugDumperDumpBindingProperties_reply(
+                        txn, writer.status(), writer.written(), writer.available());
+            },
+        };
+
+        auto status = fidl_bind(this->config_.dispatcher,
+                                request.release(),
+                                reinterpret_cast<fidl_dispatch_t*>(
+                                        fuchsia_device_manager_DebugDumper_dispatch),
+                                this,
+                                &kOps);
+        if (status != ZX_OK) {
+            printf("Failed to bind to client channel: %d \n", status);
+        }
+        return status;
+    };
+    public_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
+                         fbl::MakeRefCounted<fs::Service>(debug));
+}
+
+zx_status_t Coordinator::BindOutgoingServices(zx::channel listen_on) {
+    return outgoing_services_.Serve(std::move(listen_on));
 }
 
 void SuspendContext::ContinueSuspend(const zx::resource& root_resource) {

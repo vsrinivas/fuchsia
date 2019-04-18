@@ -454,7 +454,7 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
             return status;
         }
 
-        status = coordinator->BindFidlServiceProxy(std::move(fidl_server));
+        status = coordinator->BindOutgoingServices(std::move(fidl_server));
         if (status != ZX_OK) {
             printf("Unable to start fidl services.\n");
             return status;

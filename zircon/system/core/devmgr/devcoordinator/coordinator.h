@@ -12,6 +12,7 @@
 #include <fbl/vector.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -217,8 +218,6 @@ public:
     zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost);
 
     void DumpState(VmoWriter* vmo) const;
-    void DumpDrivers(VmoWriter* vmo) const;
-    void DumpGlobalDeviceProps(VmoWriter* vmo) const;
 
     const zx::resource& root_resource() const { return config_.root_resource; }
     const zx::event& fshost_event() const { return config_.fshost_event; }
@@ -266,6 +265,8 @@ public:
 
     zx_status_t BindFidlServiceProxy(zx::channel listen_on);
 
+    zx_status_t BindOutgoingServices(zx::channel listen_on);
+
     const Driver* component_driver() const { return component_driver_; }
 
     void ReleaseDevhost(Devhost* dh);
@@ -283,6 +284,9 @@ private:
     // the context of a const member function, therefore it is also const. Given
     // that, we must make dmctl_socket_ mutable.
     mutable zx::socket dmctl_socket_;
+
+    // Services offered to the rest of the system.
+    svc::Outgoing outgoing_services_;
 
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
@@ -318,6 +322,8 @@ private:
 
     void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
     void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
+    void DumpGlobalDeviceProps(VmoWriter* vmo) const;
+    void DumpDrivers(VmoWriter* vmo) const;
 
     void BuildSuspendList();
     void Suspend(SuspendContext ctx);
@@ -334,6 +340,8 @@ private:
 
     zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                    size_t buflen, size_t* size);
+
+    void InitOutgoingServices();
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
