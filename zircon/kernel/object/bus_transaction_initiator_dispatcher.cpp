@@ -17,22 +17,23 @@
 KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create")
 KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy")
 
-zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
-                                                      fbl::RefPtr<Dispatcher>* dispatcher,
-                                                      zx_rights_t* rights) {
+zx_status_t BusTransactionInitiatorDispatcher::Create(
+    fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
+    KernelHandle<BusTransactionInitiatorDispatcher>* handle, zx_rights_t* rights) {
 
     if (!iommu->IsValidBusTxnId(bti_id)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) BusTransactionInitiatorDispatcher(ktl::move(iommu), bti_id);
+    KernelHandle new_handle(fbl::AdoptRef(
+        new (&ac) BusTransactionInitiatorDispatcher(ktl::move(iommu), bti_id)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
@@ -47,10 +48,9 @@ BusTransactionInitiatorDispatcher::~BusTransactionInitiatorDispatcher() {
     kcounter_add(dispatcher_bti_destroy_count, 1);
 }
 
-zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset,
-                                                   uint64_t size, uint32_t perms,
-                                                   fbl::RefPtr<Dispatcher>* pmt,
-                                                   zx_rights_t* pmt_rights) {
+zx_status_t BusTransactionInitiatorDispatcher::Pin(
+    fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
+    KernelHandle<PinnedMemoryTokenDispatcher>* pmt_handle, zx_rights_t* pmt_rights) {
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
@@ -71,7 +71,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
     }
 
     return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), ktl::move(pinned_vmo),
-                                               perms, pmt, pmt_rights);
+                                               perms, pmt_handle, pmt_rights);
 }
 
 void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {

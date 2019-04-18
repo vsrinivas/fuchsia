@@ -296,17 +296,17 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
         return status;
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<BusTransactionInitiatorDispatcher> handle;
     zx_rights_t rights;
     // TODO(teisenbe): Migrate BusTransactionInitiatorDispatcher::Create to
     // taking the iommu_dispatcher
     status = BusTransactionInitiatorDispatcher::Create(iommu_dispatcher->iommu(), bti_id,
-                                                       &dispatcher, &rights);
+                                                       &handle, &rights);
     if (status != ZX_OK) {
         return status;
     }
 
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_bti_pin
@@ -384,16 +384,16 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
         return ZX_ERR_NO_MEMORY;
     }
 
-    fbl::RefPtr<Dispatcher> new_pmt;
+    KernelHandle<PinnedMemoryTokenDispatcher> new_pmt_handle;
     zx_rights_t new_pmt_rights;
-    status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms, &new_pmt,
+    status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms, &new_pmt_handle,
                                  &new_pmt_rights);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = static_cast<PinnedMemoryTokenDispatcher*>(new_pmt.get())
-                 ->EncodeAddrs(compress_results, contiguous, mapped_addrs.get(), addrs_count);
+    status = new_pmt_handle.dispatcher()->EncodeAddrs(compress_results, contiguous,
+                                                      mapped_addrs.get(), addrs_count);
     if (status != ZX_OK) {
         return status;
     }
@@ -403,7 +403,7 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
         return status;
     }
 
-    return pmt->make(ktl::move(new_pmt), new_pmt_rights);
+    return pmt->make(ktl::move(new_pmt_handle), new_pmt_rights);
 }
 
 // zx_status_t zx_bti_release_quarantine

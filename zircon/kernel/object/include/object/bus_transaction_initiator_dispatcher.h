@@ -11,6 +11,7 @@
 #include <fbl/mutex.h>
 #include <kernel/lockdep.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <object/pinned_memory_token_dispatcher.h>
 
 #include <sys/types.h>
@@ -21,7 +22,8 @@ class BusTransactionInitiatorDispatcher final :
     public SoloDispatcher<BusTransactionInitiatorDispatcher, ZX_DEFAULT_BTI_RIGHTS> {
 public:
     static zx_status_t Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
-                              fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
+                              KernelHandle<BusTransactionInitiatorDispatcher>* handle,
+                              zx_rights_t* rights);
 
     ~BusTransactionInitiatorDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_BTI; }
@@ -41,7 +43,7 @@ public:
     // Returns ZX_ERR_INVALID_ARGS if |mapped_addrs_count| is not exactly the
     //   value described above.
     zx_status_t Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
-                    fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* rights);
+                    KernelHandle<PinnedMemoryTokenDispatcher>* handle, zx_rights_t* rights);
 
     // Releases all quarantined PMTs.  The memory pins are released and the VMO
     // references are dropped, so the underlying VMOs may be immediately destroyed, and the

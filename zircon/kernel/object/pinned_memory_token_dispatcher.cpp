@@ -27,7 +27,7 @@ KCOUNTER(dispatcher_pinned_memory_token_destroy_count, "dispatcher.pinned_memory
 
 zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                                                 PinnedVmObject pinned_vmo, uint32_t perms,
-                                                fbl::RefPtr<Dispatcher>* dispatcher,
+                                                KernelHandle<PinnedMemoryTokenDispatcher>* handle,
                                                 zx_rights_t* rights) {
     LTRACE_ENTRY;
     DEBUG_ASSERT(IS_PAGE_ALIGNED(pinned_vmo.offset()) && IS_PAGE_ALIGNED(pinned_vmo.size()));
@@ -42,14 +42,14 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(ktl::move(bti),
-                                                                   ktl::move(pinned_vmo),
-                                                                   ktl::move(addr_array)));
+    KernelHandle new_handle(fbl::AdoptRef(
+        new (&ac) PinnedMemoryTokenDispatcher(ktl::move(bti), ktl::move(pinned_vmo),
+                                              ktl::move(addr_array))));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = pmo->MapIntoIommu(perms);
+    zx_status_t status = new_handle.dispatcher()->MapIntoIommu(perms);
     if (status != ZX_OK) {
         LTRACEF("MapIntoIommu failed: %d\n", status);
         return status;
@@ -58,10 +58,12 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
     // Create must be called with the BTI's lock held, so this is safe to
     // invoke.
     [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        pmo->bti_->AddPmoLocked(pmo.get());
+        new_handle.dispatcher()->bti_->AddPmoLocked(new_handle.dispatcher().get());
     }();
 
-    *dispatcher = ktl::move(pmo);
+    new_handle.dispatcher()->initialized_ = true;
+
+    *handle = ktl::move(new_handle);
     *rights = default_rights();
     return ZX_OK;
 }
@@ -71,6 +73,8 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
 // We disable thread-safety analysis here, because this is part of the
 // initialization routine before other threads have access to this dispatcher.
 zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THREAD_SAFETY_ANALYSIS {
+    DEBUG_ASSERT(!initialized_);
+
     const uint64_t bti_id = bti_->bti_id();
     const size_t min_contig = bti_->minimum_contiguity();
     if (pinned_vmo_.vmo()->is_contiguous()) {
@@ -104,8 +108,7 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
         zx_status_t status = bti_->iommu()->Map(bti_id, pinned_vmo_.vmo(), curr_offset, remaining,
                                                 perms, &vaddr, &mapped_len);
         if (status != ZX_OK) {
-            zx_status_t err = UnmapFromIommuLocked();
-            ASSERT(err == ZX_OK);
+            // We'll revert any partial mappings in on_zero_handles().
             return status;
         }
 
@@ -165,9 +168,6 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
         }
     }
 
-    // Clear this so we won't try again if this gets called again in the
-    // destructor.
-    InvalidateMappedAddrsLocked();
     return status;
 }
 
@@ -195,9 +195,12 @@ void PinnedMemoryTokenDispatcher::on_zero_handles() {
     zx_status_t status = UnmapFromIommuLocked();
     ASSERT(status == ZX_OK);
 
-    if (explicitly_unpinned_) {
+    if (explicitly_unpinned_ || !initialized_) {
         // The cleanup will happen when the reference that on_zero_handles()
         // was called on goes away.
+        //
+        // In the uninitialized case, we were never added to the BTI list
+        // in the first place so no need to worry about quarantine.
     } else {
         // Add to the quarantine list to prevent the underlying VMO from being
         // unpinned.
@@ -208,18 +211,7 @@ void PinnedMemoryTokenDispatcher::on_zero_handles() {
 PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {
     kcounter_add(dispatcher_pinned_memory_token_destroy_count, 1);
 
-    // In most cases the Unmap will already have run via on_zero_handles(), but
-    // it is possible for that to never run if an error occurs between the
-    // creation of the PinnedMemoryTokenDispatcher and the completion of the
-    // zx_bti_pin() syscall.
-    zx_status_t status = UnmapFromIommuLocked();
-    ASSERT(status == ZX_OK);
-
-    // RemovePmo is the only method that will remove dll_pmt_ from a list, and
-    // it's only called here.  dll_pmt_ is only added to a list at the end of
-    // Create, before any reference to the pmt has been given out.
-    // Because of this, it's safe to check InContainer without holding a lock.
-    if (dll_pmt_.InContainer()) {
+    if (initialized_) {
         bti_->RemovePmo(this);
     }
 }

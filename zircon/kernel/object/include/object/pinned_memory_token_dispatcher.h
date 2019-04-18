@@ -13,6 +13,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <zircon/rights.h>
 
 #include <sys/types.h>
@@ -74,8 +75,9 @@ protected:
     static zx_status_t Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                               PinnedVmObject pinned_vmo,
                               uint32_t perms,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
+                              KernelHandle<PinnedMemoryTokenDispatcher>* handle,
                               zx_rights_t* rights);
+
 private:
     PinnedMemoryTokenDispatcher(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                                 PinnedVmObject pinned_vmo,
@@ -99,4 +101,9 @@ private:
 
     const fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_;
     const fbl::Array<dev_vaddr_t> mapped_addrs_ TA_GUARDED(get_lock());
+
+    // Set to true during Create() once we are fully initialized. Do not call
+    // any |bti_| locking methods if this is false, since that indicates we're
+    // being called from Create() and already have the |bti_| lock.
+    bool initialized_ = false;
 };
