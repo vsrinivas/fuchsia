@@ -12,6 +12,7 @@ driver("virtio") {
     "ethernet.cpp",
     "gpu.cpp",
     "input.cpp",
+    "input_kbd.cpp",
     "rng.cpp",
     "socket.cpp",
     "virtio_driver.cpp",

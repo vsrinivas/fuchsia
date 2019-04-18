@@ -12,6 +12,7 @@
 #include <virtio/input.h>
 
 #include "device.h"
+#include "input_kbd.h"
 #include "ring.h"
 
 namespace virtio {
@@ -53,9 +54,6 @@ private:
     zx_status_t GetDescriptor(uint8_t desc_type, void** data, size_t* len);
     void ReceiveEvent(virtio_input_event_t* event);
 
-    void AddKeypressToReport(uint16_t event_code);
-    void RemoveKeypressFromReport(uint16_t event_code);
-
     void SelectConfig(uint8_t select, uint8_t subsel);
 
     virtio_input_config_t config_;
@@ -69,8 +67,7 @@ private:
     hidbus_protocol_ops_t hidbus_ops_;
     hidbus_ifc_protocol_t hidbus_ifc_;
 
-    hid_boot_kbd_report_t report_;
-
+    std::unique_ptr<HidDevice> hid_device_;
     Ring vring_ = {this};
 };
 
