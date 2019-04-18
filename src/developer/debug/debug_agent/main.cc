@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-
 #include <arpa/inet.h>
+#include <cmdline/args_parser.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <istream>
 #include <memory>
 
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
@@ -23,11 +23,73 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using namespace debug_ipc;
 
 namespace debug_agent {
 namespace {
+
+// Valid options for the --unwind flag.
+const char kAospUnwinder[] = "aosp";
+const char kNgUnwinder[] = "ng";
+
+struct CommandLineOptions {
+  int port = 0;
+  bool debug_mode = false;
+  std::string unwind = kNgUnwinder;
+};
+
+const char kHelpIntro[] = R"(debug_agent --port=<port> [ <options> ]
+
+  The debug_agent provides the on-device stub for the ZXDB frontend to talk
+  to. Once you launch the debug_agent, connect zxdb to the same port you
+  provide on the command-line.
+
+Options
+
+)";
+
+const char kHelpHelp[] = R"(  --help
+  -h
+      Prints all command-line switches.)";
+
+const char kPortHelp[] = R"(  --port=<port>
+    [Required] TCP port number to listen to incoming connections on.)";
+
+const char kDebugModeHelp[] = R"(  --debug-mode
+  -d
+      Run the agent on debug mode. This will enable conditional logging
+      messages and timing profiling. Mainly useful for people developing zxdb.)";
+
+const char kUnwindHelp[] = R"(  --unwind=[aosp|ng]
+      Force using either the AOSP or NG unwinder for generating stack traces.)";
+
+cmdline::Status ParseCommandLine(int argc, const char* argv[],
+                                 CommandLineOptions* options) {
+  cmdline::ArgsParser<CommandLineOptions> parser;
+
+  parser.AddSwitch("port", 0, kPortHelp, &CommandLineOptions::port);
+  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp,
+                   &CommandLineOptions::debug_mode);
+  parser.AddSwitch("unwind", 0, kUnwindHelp, &CommandLineOptions::unwind);
+
+  // Special --help switch which doesn't exist in the options structure.
+  bool requested_help = false;
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
+                          [&requested_help]() { requested_help = true; });
+
+  std::vector<std::string> params;
+  cmdline::Status status = parser.Parse(argc, argv, options, &params);
+  if (status.has_error())
+    return status;
+
+  // Handle --help switch since we're the one that knows about the switches.
+  if (requested_help)
+    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+
+  return cmdline::Status::Ok();
+}
 
 // SocketConnection ------------------------------------------------------------
 
@@ -152,92 +214,37 @@ bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
   return true;
 }
 
-const std::map<std::string, std::string>& GetOptions() {
-  static std::map<std::string, std::string> options = {
-      {"auwind", R"(
-      [Experimental] Use the unwinder from AOSP.)"},
-      {"debug-mode", R"(
-      Run the agent on debug mode. This will enable conditional logging messages
-      and timing profiling. Mainly useful for people developing zxdb.)"},
-      {"help", R"(
-      Print this help.)"},
-      {"port", R"(
-      [Required] TCP port number to listen to incoming connections on.)"},
-  };
-
-  return options;
-}
-
-void PrintUsage() {
-  std::string usage = R"(Usage
-
-  debug_agent [options...] --port=<port>
-
-Options
-
-)";
-
-  for (auto& [option, desc] : GetOptions()) {
-    usage.append(
-        fxl::StringPrintf("  --%s%s\n\n", option.c_str(), desc.c_str()));
-  }
-
-  fprintf(stderr, "%s", usage.c_str());
-}
-
-bool ValidateOptions(const fxl::CommandLine& cmdline) {
-  auto& options = debug_agent::GetOptions();
-  for (const auto& option : cmdline.options()) {
-    auto it = options.find(option.name);
-    if (it == options.end()) {
-      fprintf(stderr, "Unknown option \"%s\"\n\n", option.name.c_str());
-      debug_agent::PrintUsage();
-      return false;
-    }
-  }
-
-  return true;
-}
-
 }  // namespace
 }  // namespace debug_agent
 
 // main ------------------------------------------------------------------------
 
-int main(int argc, char* argv[]) {
-  fxl::CommandLine cmdline = fxl::CommandLineFromArgcArgv(argc, argv);
-
-  if (cmdline.HasOption("help")) {
-    debug_agent::PrintUsage();
-    return 0;
+int main(int argc, const char* argv[]) {
+  debug_agent::CommandLineOptions options;
+  cmdline::Status status = ParseCommandLine(argc, argv, &options);
+  if (status.has_error()) {
+    fprintf(stderr, "%s\n", status.error_message().c_str());
+    return 1;
   }
 
-  if (!debug_agent::ValidateOptions(cmdline))
-    return 1;
-
-  if (cmdline.HasOption("aunwind")) {
-    // Use the Android unwinder.
-    printf("Using AOSP unwinder (experimental).\n");
+  // Decode the unwinder type.
+  if (options.unwind == debug_agent::kAospUnwinder) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
+  } else if (options.unwind == debug_agent::kNgUnwinder) {
+    debug_agent::SetUnwinderType(debug_agent::UnwinderType::kNgUnwind);
+  } else {
+    fprintf(stderr, "Invalid option for --unwind. See debug_agent --help.\n");
+    return 1;
   }
 
   // TODO(donosoc): Do correct category setup.
   debug_ipc::SetLogCategories({LogCategory::kAll});
-  if (cmdline.HasOption("debug-mode")) {
+  if (options.debug_mode) {
     printf("Running the debug agent in debug mode.\n");
     debug_ipc::SetDebugMode(true);
   }
 
-  std::string value;
-  if (cmdline.GetOptionValue("port", &value)) {
-    // TCP port listen mode.
-    char* endptr = nullptr;
-    int port = strtol(value.c_str(), &endptr, 10);
-    if (value.empty() || endptr != &value.c_str()[value.size()]) {
-      fprintf(stderr, "ERROR: Port number not a valid number.\n");
-      return 1;
-    }
-
+  if (options.port) {
     auto services = sys::ServiceDirectory::CreateFromNamespace();
 
     auto message_loop = std::make_unique<MessageLoopTarget>();
@@ -251,13 +258,14 @@ int main(int argc, char* argv[]) {
     // MessageLoop.
     {
       debug_agent::SocketServer server;
-      if (!server.Run(message_loop.get(), port, services))
+      if (!server.Run(message_loop.get(), options.port, services))
         return 1;
     }
     message_loop->Cleanup();
   } else {
-    fprintf(stderr, "ERROR: Port number required.\n\n");
-    debug_agent::PrintUsage();
+    fprintf(
+        stderr,
+        "ERROR: --port=<port-number> required. See debug_agent --help.\n\n");
     return 1;
   }
 

@@ -109,6 +109,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/cmdline"
   ]
 }
 

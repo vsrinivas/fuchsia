@@ -34,10 +34,11 @@ source "${FUCHSIA_DIR}/buildtools/vars.sh"
 # Defaults.
 port=
 core=
+unwind_flag=
 agent_out="/dev/null"
 
 # Flag parsing.
-while [[ "$1" =~ ^- ]]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h)
       fx-command-help
@@ -58,6 +59,16 @@ while [[ "$1" =~ ^- ]]; do
         echo "${arg} takes an argument"
         exit 1
       fi
+      ;;
+    --core=*)
+      core="${1:7}"
+      ;;
+    --unwind)
+      shift
+      unwind_flag="--unwind=$1"
+      ;;
+    --unwind=*)
+      unwind_flag="--unwind=${1:9}"
       ;;
     --)
       shift
@@ -103,7 +114,7 @@ if [[ -z "${core}" ]]; then
 # We branch out on whether the user used the verbose-agent flag. If so, we
 # redirect the debug agent output to /dev/null.
   echo -e "Attempting to start the Debug Agent."
-  fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port}" > "${agent_out}" 2>&1 &
+  fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port} ${unwind_flag}" > "${agent_out}" 2>&1 &
   fx_ssh_pid="$!"
 
 # We wait until the debug agent is listening on the given port. We use NC to
