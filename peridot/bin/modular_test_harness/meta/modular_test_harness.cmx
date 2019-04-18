@@ -4,6 +4,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.auth.account.AccountManager",
+            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]
