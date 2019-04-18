@@ -33,6 +33,21 @@ proto_library("protos") {
   ]
 }
 
+static_library("dockyard") {
+  output_name = "dockyard"
+  complete_static_lib = true
+
+  deps = [
+    ":lib",
+  ]
+}
+
+group("libdockyard") {
+  public_deps = [
+    ":dockyard($host_toolchain)",
+  ]
+}
+
 source_set("tests") {
   testonly = true
 
