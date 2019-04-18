@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -13,11 +14,16 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    ":fuchsia.omaha.client-rustc",
+    ":fuchsia.update-rustc",
     "//garnet/lib/rust/fuchsia_uri",
     "//garnet/lib/rust/omaha_client",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:log",
   ]
@@ -53,5 +59,17 @@ test_package("omaha_client_service_bin_tests") {
       name = "omaha_client_service_bin_test"
       environments = basic_envs
     },
+  ]
+}
+
+fidl("fuchsia.update") {
+  sources = [
+    "fuchsia.update.fidl",
+  ]
+}
+
+fidl("fuchsia.omaha.client") {
+  sources = [
+    "fuchsia.omaha.client.fidl",
   ]
 }

@@ -1,0 +1,144 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update;
+
+[Discoverable]
+protocol Manager {
+    /// Immediately check for an update.
+    ///  |options|:  Did a user initiate this request? (USER_INITIATED) This changes
+    ///              some parameters about aggressiveness of retries and throttling.
+    ///  |monitor|:  An interface on which to receive the status events for this update check.
+    ///               It's only valid for a single update check, after that it won't receive any
+    ///               more events.
+    ///
+    ///  -> Was the update check successfully started (state machine in a proper state
+    ///     to do so).
+    CheckNow(Options options, request<Monitor>? monitor)
+        -> (CheckStartedResult result);
+
+    /// Get the current state of the Manager (is an update available, is it currently
+    /// checking for an update, etc).
+    GetState() -> (State state);
+
+    /// Get all status events, for all update checks (interactive and background).
+    AddMonitor(request<Monitor> monitor);
+};
+
+/// Receiver of updates for either an individual update check, or to continuously
+/// receive updates for all checks.
+protocol Monitor {
+    /// Receive the current state as it changes.
+    -> OnState(State state);
+
+    // TODO: support progress reporting.
+};
+
+/// Configuration options for an update attempt (this is common with the Fuchsia
+///  OTA Interface v2)
+table Options {
+    /// What initiated this update attempt.
+    1: Initiator initiator;
+};
+
+/// Who or what initiated the update check.
+enum Initiator {
+    /// The update check was initiated by an interactive user, or the user is
+    /// otherwise blocked and waiting for the result of this update check.
+    USER = 0;
+
+    /// The update check was initiated by a service, in the background.
+    SERVICE = 1;
+};
+
+/// The various states that the manager can be in.
+///
+///     +----------------------+
+/// --->|         IDLE         |<--------------------------------+
+/// |   +----------------------+                                 |
+/// |              |               +----------------------+      |
+/// |              |<--------------|   UPDATE_AVAILABLE   |      |
+/// |              |               +----------------------+      |
+/// |              v                       ^                     |
+/// |   +----------------------+           |                     |
+/// |<--| CHECKING_FOR_UPDATES |-----------------+               |
+/// |   +----------------------+                 |               |
+/// |              v                             |               |
+/// |   +----------------------+                 |               |
+/// |   |  PERFORMING_UPDATE   |---------------->|               |
+/// |   +----------------------+                 |               |
+/// |              v                             |               |
+/// |   +----------------------+                 |               |
+/// |   |  WAITING_FOR_REBOOT  |---------------->|               |
+/// |   +----------------------+                 |               |
+/// |              v                             v               |
+/// |   +----------------------+     +----------------------+    |
+/// +---|  FINALIZING_UPDATE   |---->|  ENCOUNTERED_ERROR   |----+
+///     +----------------------+     +----------------------+
+///
+enum ManagerState {
+    /// The Manager is currently idle (in between updates).
+    ///
+    /// Next states:
+    /// * |CHECKING_FOR_UPDATES|
+    IDLE = 0;
+    /// The Manager is currently checking for an update.
+    ///
+    /// Next states:
+    /// * |IDLE| update is not available
+    /// * |UPDATE_AVAILABLE| update is available but not allowed by policy
+    /// * |PERFORMING_UPDATE| update is available and allowed by policy
+    /// * |ENCOUNTERED_ERROR| on error
+    CHECKING_FOR_UPDATES = 1;
+    /// The Manager has found an available update but is not allowed to update
+    /// due to policy.
+    ///
+    /// Next states:
+    /// * |CHECKING_FOR_UPDATES| when CheckNow() is called or a background update starts
+    UPDATE_AVAILABLE = 2;
+    /// The Manager has started the available update.
+    ///
+    /// Next states:
+    /// * |WAITING_FOR_REBOOT| on success
+    /// * |ENCOUNTERED_ERROR| on error
+    PERFORMING_UPDATE = 3;
+    /// The update has been performed, and the device is waiting to be rebooted.
+    ///
+    /// Next states:
+    /// * |FINALIZING_UPDATE| after device reboot
+    /// * |ENCOUNTERED_ERROR| on error
+    WAITING_FOR_REBOOT = 4;
+    /// The update is being finalized after reboot.
+    ///
+    /// Next states:
+    /// * |IDLE| on success
+    /// * |ENCOUNTERED_ERROR| on error
+    FINALIZING_UPDATE = 5;
+    /// The Manager is reporting to Omaha that an error has occurred during the
+    /// update.
+    ///
+    /// Next states:
+    /// * |IDLE|
+    ENCOUNTERED_ERROR = 6;
+};
+
+enum CheckStartedResult {
+    /// The update check has been started.
+    STARTED = 0;
+    /// The update check was not started, as an update is already in progress, |monitor| is
+    /// attached to that update and will immediately get a OnState() call on current state.
+    IN_PROGRESS = 1;
+    /// The update check was not started, because too many requests to check have
+    /// been made in a short period of time.
+    THROTTLED = 2;
+};
+
+table State {
+    /// The current state of the Manager. Always present.
+    1: ManagerState state;
+
+    /// The version available from Omaha. Will be present in |UPDATE_AVAILABLE| or starting
+    /// from |PERFORMING_UPDATE|.
+    2: string version_available;
+};

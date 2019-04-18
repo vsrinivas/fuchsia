@@ -1,0 +1,26 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.omaha.client;
+
+using zx;
+
+const uint32 MAX_CHANNEL_NAME_LENGTH = 128;
+
+[Discoverable]
+protocol OmahaClientConfiguration {
+    /// Set the target update channel that the device should be tracking.
+    ///  |channel|: The new channel name
+    ///  |allow_factory_reset|: If the next update (on the new channel) results in a downgrade of
+    ///      any component, then the mutable system data will be erased if |allow_factory_reset|
+    ///      is true, otherwise it will not get an update until the new channel has an update with
+    ///      a higher version number than the current system.
+    ///   -> |ZX_OK| if the new channel name was successfully persisted, otherwise return the zx
+    ///      status omaha client encountered trying to persist new channel.
+    SetChannel(string:MAX_CHANNEL_NAME_LENGTH channel,
+               bool allow_factory_reset) -> (zx.status status);
+
+    /// Get the target update channel that the device is tracking.
+    GetChannel() -> (string:MAX_CHANNEL_NAME_LENGTH channel);
+};

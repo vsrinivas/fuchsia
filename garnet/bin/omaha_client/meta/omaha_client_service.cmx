@@ -5,6 +5,10 @@
     "sandbox": {
         "features": [
             "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider"
         ]
     }
 }
