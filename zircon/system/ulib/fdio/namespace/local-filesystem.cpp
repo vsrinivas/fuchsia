@@ -251,6 +251,11 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
             return ZX_ERR_NOT_FOUND;
         }
 
+        vn = vn->Lookup(name);
+        if (vn == nullptr) {
+            return ZX_ERR_NOT_FOUND;
+        }
+
         size_t children_count = 0;
         vn->ForAllChildren([&children_count](const LocalVnode& vn) {
             if (++children_count > 1) {
@@ -268,11 +273,6 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
             // If this node has one or fewer children, it's a viable candidate for removal.
             // Only set this if it's the "highest" node we've seen satisfying this property.
             removable_origin_vn = vn;
-        }
-
-        vn = vn->Lookup(name);
-        if (vn == nullptr) {
-            return ZX_ERR_NOT_FOUND;
         }
 
         if (!next) {

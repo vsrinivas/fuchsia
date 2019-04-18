@@ -267,6 +267,8 @@ bool UnbindNonRootTest() {
     int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(fdio_ns_bind_fd(ns, "/my/local/path", fd), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/top", fd), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/another_top", fd), ZX_OK);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(fdio_ns_chdir(ns), ZX_OK);
 
@@ -280,6 +282,8 @@ bool UnbindNonRootTest() {
     ASSERT_EQ(fdio_ns_unbind(ns, "/my/local"), ZX_ERR_NOT_FOUND);
     ASSERT_EQ(fdio_ns_unbind(ns, "/my/local/path/okay/too/much/though"), ZX_ERR_NOT_FOUND);
     ASSERT_EQ(fdio_ns_unbind(ns, "/my/local/path"), ZX_OK);
+    // Ensure unbinding a top-level node when another still exists works.
+    ASSERT_EQ(fdio_ns_unbind(ns, "/top"), ZX_OK);
 
     // Removing the namespace entry should remove all nodes back up to the root.
     ASSERT_EQ(stat("my", &st), -1);
