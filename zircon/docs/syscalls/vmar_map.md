@@ -36,7 +36,9 @@ closing the VMO handle does not remove the mapping added by this function.
 - **ZX_VM_SPECIFIC_OVERWRITE**  Same as **ZX_VM_SPECIFIC**, but can
   overlap another mapping.  It is still an error to partially-overlap another VMAR.
   If the range meets these requirements, it will atomically (with respect to all
-  other map/unmap/protect operations) replace existing mappings in the area.
+  other map/unmap/protect operations) replace existing mappings in the range
+  specified by *vmar_offset* and *len*. If that range partially overlaps any
+  mappings, then the portions of those mappings outside the range will remain mapped.
 - **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *handle*
   does not have **ZX_VM_CAN_MAP_READ** permissions, the *handle* does
   not have the **ZX_RIGHT_READ** right, or the *vmo* handle does not have the
