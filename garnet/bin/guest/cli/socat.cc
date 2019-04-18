@@ -3,22 +3,23 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/guest/cli/socat.h"
-#include <iostream>
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+
+#include <iostream>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 
-class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
+class HostVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
  public:
-  GuestVsockAcceptor(uint32_t port, async::Loop* loop)
+  HostVsockAcceptor(uint32_t port, async::Loop* loop)
       : port_(port), console_(loop) {}
 
-  // |fuchsia::guest::GuestVsockAcceptor|
+  // |fuchsia::guest::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     if (port != port_) {
@@ -52,7 +53,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
   fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
   environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
-  GuestVsockAcceptor acceptor(port, loop);
+  HostVsockAcceptor acceptor(port, loop);
   fidl::Binding<fuchsia::guest::HostVsockAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
@@ -65,8 +66,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
 }
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
-                          async::Loop* loop,
-                          sys::ComponentContext* context) {
+                          async::Loop* loop, sys::ComponentContext* context) {
   fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
   context->svc()->Connect(environment_manager.NewRequest());
   fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;

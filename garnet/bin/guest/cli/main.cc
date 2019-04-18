@@ -7,12 +7,15 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <iostream>
+#include <optional>
 
 #include "garnet/bin/guest/cli/balloon.h"
 #include "garnet/bin/guest/cli/launch.h"
 #include "garnet/bin/guest/cli/list.h"
 #include "garnet/bin/guest/cli/serial.h"
 #include "garnet/bin/guest/cli/socat.h"
+#include "garnet/bin/guest/cli/vshc.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 static void usage() {
@@ -25,7 +28,8 @@ static void usage() {
             << "  list\n"
             << "  serial        <env_id> <cid>\n"
             << "  socat         <env_id> <cid> <port>\n"
-            << "  socat-listen  <env_id> <host-port>\n";
+            << "  socat-listen  <env_id> <host-port>\n"
+            << "  vsh           [<env_id> [<cid> [<port>]]]\n";
 }
 
 template <class T>
@@ -41,69 +45,96 @@ static bool parse_number(const char* arg, const char* name, T* value,
 
 static bool parse_args(int argc, const char** argv, async::Loop* loop,
                        sys::ComponentContext* context, fit::closure* func) {
-  if (argc < 2) {
+  if (argc < 1) {
     return false;
   }
-  fxl::StringView cmd_view(argv[1]);
-  if (cmd_view == "balloon" && argc == 5) {
+  fxl::StringView cmd_view(argv[0]);
+  if (cmd_view == "balloon" && argc == 4) {
     uint32_t env_id, cid, num_pages;
-    if (!parse_number(argv[2], "environment ID", &env_id)) {
+    if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
-    } else if (!parse_number(argv[3], "context ID", &cid)) {
+    } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
-    } else if (!parse_number(argv[4], "number of pages", &num_pages)) {
+    } else if (!parse_number(argv[3], "number of pages", &num_pages)) {
       return false;
     }
     *func = [env_id, cid, num_pages, context]() {
       handle_balloon(env_id, cid, num_pages, context);
     };
-  } else if (cmd_view == "balloon-stats" && argc == 4) {
+  } else if (cmd_view == "balloon-stats" && argc == 3) {
     uint32_t env_id, cid;
-    if (!parse_number(argv[2], "environment ID", &env_id)) {
+    if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
-    } else if (!parse_number(argv[3], "context ID", &cid)) {
+    } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
     *func = [env_id, cid, context]() {
       handle_balloon_stats(env_id, cid, context);
     };
-  } else if (cmd_view == "launch" && argc >= 3) {
+  } else if (cmd_view == "launch" && argc >= 2) {
     *func = [argc, argv, loop, context]() {
-      handle_launch(argc - 2, argv + 2, loop, context);
+      handle_launch(argc - 1, argv + 1, loop, context);
     };
   } else if (cmd_view == "list") {
     *func = [context]() { handle_list(context); };
-  } else if (cmd_view == "serial" && argc == 4) {
+  } else if (cmd_view == "serial" && argc == 3) {
     uint32_t env_id, cid;
-    if (!parse_number(argv[2], "environment ID", &env_id)) {
+    if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
-    } else if (!parse_number(argv[3], "context ID", &cid)) {
+    } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
     *func = [env_id, cid, loop, context]() {
       handle_serial(env_id, cid, loop, context);
     };
-  } else if (cmd_view == "socat" && argc == 5) {
+  } else if (cmd_view == "socat" && argc == 4) {
     uint32_t env_id, cid, port;
-    if (!parse_number(argv[2], "environment ID", &env_id)) {
+    if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
-    } else if (!parse_number(argv[3], "context ID", &cid)) {
+    } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
-    } else if (!parse_number(argv[4], "port", &port)) {
+    } else if (!parse_number(argv[3], "port", &port)) {
       return false;
     }
     *func = [env_id, cid, port, loop, context]() {
       handle_socat_connect(env_id, cid, port, loop, context);
     };
-  } else if (cmd_view == "socat-listen" && argc == 4) {
+  } else if (cmd_view == "socat-listen" && argc == 3) {
     uint32_t env_id, host_port;
-    if (!parse_number(argv[2], "environment ID", &env_id)) {
+    if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
-    } else if (!parse_number(argv[3], "host port", &host_port)) {
+    } else if (!parse_number(argv[2], "host port", &host_port)) {
       return false;
     }
     *func = [env_id, host_port, loop, context]() {
       handle_socat_listen(env_id, host_port, loop, context);
+    };
+  } else if (cmd_view == "vsh" && (argc >= 1 && argc <= 4)) {
+    std::optional<uint32_t> env_id, cid, port;
+
+    bool success = true;
+    switch (argc) {
+      case 4:
+        port = -1;
+        success &= parse_number(argv[3], "port", &*port);
+      case 3:
+        cid = -1;
+        success &= parse_number(argv[2], "context ID", &*cid);
+      case 2:
+        env_id = -1;
+        success &= parse_number(argv[1], "environment ID", &*env_id);
+      case 1:
+        break;
+      default:
+        return false;
+    }
+
+    if (!success) {
+      return false;
+    }
+
+    *func = [env_id, cid, port, loop, context]() {
+      handle_vsh(env_id, cid, port, loop, context);
     };
   } else {
     return false;
@@ -115,6 +146,16 @@ int main(int argc, const char** argv) {
   fit::closure func;
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
+
+  // This program might be called via an alias representing the vsh subcommand, e.g.
+  // `guest vsh 0 3` vs `vsh 0 3`
+  // Only if called using the long form, we must adjust argv for input to |parse_args|
+  // so that argv[0] represents the subcommand name.
+  if (fxl::StringView(argv[0]) == "guest") {
+    argc--;
+    argv++;
+  }
+
   if (!parse_args(argc, argv, &loop, context.get(), &func)) {
     usage();
     return ZX_ERR_INVALID_ARGS;
