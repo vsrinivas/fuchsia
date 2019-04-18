@@ -217,7 +217,6 @@ func TestAddPackage(t *testing.T) {
 		t.Fatalf("package blob missing after package write: %s", err)
 	}
 
-	// TODO(raggi): check that the pacakge content blobs appear in the needs tree
 	manifest, err := cfg.Manifest()
 	if err != nil {
 		t.Fatal(err)
@@ -248,6 +247,29 @@ func TestAddPackage(t *testing.T) {
 		needs[i] = filepath.Base(needs[i])
 	}
 	sort.Strings(needs)
+
+	f, err = pkgfsOpen(filepath.Join("needs", "packages", merkleroot), zxio.OpenRightReadable, zxio.ModeTypeDirectory)
+
+	needs2, err := f.Readdirnames(256)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := range needs2 {
+		needs2[i] = filepath.Base(needs2[i])
+	}
+	sort.Strings(needs2)
+
+	if len(needs) != len(needs2) {
+		t.Errorf("expected needs dirs to be the same: %d != %d", len(needs), len(needs2))
+	}
+
+	for i, need := range needs {
+		if needs2[i] != need {
+			t.Errorf("needs from needs/blobs didn't match package needs at %d", i)
+		}
+	}
 
 	contents, err := ioutil.ReadFile(manifest.Paths["meta/contents"])
 	if err != nil {

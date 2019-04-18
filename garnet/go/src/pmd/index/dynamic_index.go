@@ -254,6 +254,22 @@ func (idx *DynamicIndex) HasNeed(root string) bool {
 	return found
 }
 
+func (idx *DynamicIndex) PkgHasNeed(pkg, root string) bool {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	needs, found := idx.needs[pkg]
+	if !found {
+		return found
+	}
+	for need := range needs {
+		if need == root {
+			return true
+		}
+	}
+	return false
+}
+
 func (idx *DynamicIndex) NeedsList() []string {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
@@ -264,6 +280,40 @@ func (idx *DynamicIndex) NeedsList() []string {
 	}
 
 	return names
+}
+
+func (idx *DynamicIndex) PkgNeedsList(pkgRoot string) []string {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	pkgNeeds, found := idx.waiting[pkgRoot]
+	if !found {
+		return []string{}
+	}
+	blobs := make([]string, 0, len(pkgNeeds))
+	for blob := range pkgNeeds {
+		blobs = append(blobs, blob)
+	}
+	return blobs
+}
+
+func (idx *DynamicIndex) InstallingList() []string {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	names := make([]string, 0, len(idx.installing))
+	for name := range idx.installing {
+		names = append(names, name)
+	}
+	return names
+}
+
+func (idx *DynamicIndex) IsInstalling(merkle string) bool {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	_, found := idx.installing[merkle]
+	return found
 }
 
 func (idx *DynamicIndex) Notify(roots ...string) {
