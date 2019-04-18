@@ -1103,7 +1103,7 @@ group("magma-img-rgx-mtk") {
 group("magma-qcom-adreno") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-qcom-adreno",
+    "//garnet/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
     "//garnet/packages/prod:sysmem_connector",
   ]
 }
