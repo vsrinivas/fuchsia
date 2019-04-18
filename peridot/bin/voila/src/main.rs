@@ -103,7 +103,7 @@ impl VoilaViewAssistant {
         let (server, environment_ctrl, app) =
             make_replica_env(&replica_id, Arc::clone(&self.cloud_provider_app))?;
         fasync::spawn(server.unwrap_or_else(|e| panic!("error providing services: {:?}", e)));
-        let sessionmgr = app.connect_to_service(SessionmgrMarker)?;
+        let sessionmgr = app.connect_to_service::<SessionmgrMarker>()?;
 
         // Set up the emulated account.
         let mut account = Account {

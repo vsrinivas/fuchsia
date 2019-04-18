@@ -62,7 +62,7 @@ fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Er
         .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
-        .connect_to_service(fonts::ProviderMarker)
+        .connect_to_service::<fonts::ProviderMarker>()
         .context("Failed to connect to fonts::Provider")?;
 
     Ok((app, font_provider))
@@ -134,7 +134,7 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
     .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
-        .connect_to_service(fonts::ProviderMarker)
+        .connect_to_service::<fonts::ProviderMarker>()
         .context("Failed to connect to fonts::Provider")?;
 
     Ok((app, font_provider))

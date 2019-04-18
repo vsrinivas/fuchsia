@@ -152,9 +152,9 @@ impl TestService {
             .context("Launching mediasession")?;
 
         let publisher =
-            mediasession.connect_to_service(PublisherMarker).context("Connecting to Publisher")?;
+            mediasession.connect_to_service::<PublisherMarker>().context("Connecting to Publisher")?;
         let registry =
-            mediasession.connect_to_service(RegistryMarker).context("Connecting to Registry")?;
+            mediasession.connect_to_service::<RegistryMarker>().context("Connecting to Registry")?;
         let registry_events = registry.take_event_stream();
 
         Ok(Self { app: mediasession, publisher, registry, registry_events })
@@ -270,7 +270,7 @@ impl TestService {
     async fn expect_session_list(&mut self, expected_sessions: Vec<SessionEntry>) {
         let new_client = self
             .app
-            .connect_to_service(RegistryMarker)
+            .connect_to_service::<RegistryMarker>()
             .context("Connecting to Registry")
             .expect("creating new registry client");
         let mut new_client_events = new_client.take_event_stream();

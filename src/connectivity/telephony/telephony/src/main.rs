@@ -56,7 +56,7 @@ pub async fn start_modem(ty: ModemType, chan: zx::Channel) -> Result<Radio, Erro
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, RIL_URI.to_string(), None)
         .context("Failed to launch qmi-modem service")?;
-    let ril = app.connect_to_service(RadioInterfaceLayerMarker)?;
+    let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
     match ty {
         ModemType::Qmi => match await!(ril.connect_transport(chan.into()))? {
             Ok(_) => Ok(Radio::new(app, ril)),
@@ -82,8 +82,7 @@ pub fn start_service(
                     let radios = mgr.radios.read();
                     match radios.first() {
                         Some(radio) => {
-                            let resp = radio.app.pass_to_service(
-                                RadioInterfaceLayerMarker,
+                            let resp = radio.app.pass_to_service::<RadioInterfaceLayerMarker>(
                                 ril_iface.into_channel(),
                             );
                             responder.send(resp.is_ok())

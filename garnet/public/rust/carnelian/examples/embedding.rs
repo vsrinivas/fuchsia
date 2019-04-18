@@ -79,7 +79,7 @@ impl EmbeddingViewAssistant {
     fn create_and_setup_view(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         let (view_token, view_holder_token) = new_view_token_pair()?;
 
-        let view_provider = self.app.connect_to_service(ViewProviderMarker)?;
+        let view_provider = self.app.connect_to_service::<ViewProviderMarker>()?;
         view_provider.create_view(view_token.value, None, None)?;
 
         let holder_node = EntityNode::new(context.session.clone());

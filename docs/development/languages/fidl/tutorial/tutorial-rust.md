@@ -281,7 +281,7 @@ async fn main() -> Result<(), Error> {
     let app = launcher.launch(server_url, None)
                       .context("Failed to launch echo service")?;
 
-    let echo = app.connect_to_service(EchoMarker)
+    let echo = app.connect_to_service::<EchoMarker>()
        .context("Failed to connect to echo service")?;
 
     let res = await!(echo.echo_string(Some("hello world!")))?;

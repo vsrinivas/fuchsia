@@ -206,9 +206,9 @@ pub mod client {
 
         /// Connect to a service provided by the `App`.
         #[inline]
-        pub fn connect_to_service<S: ServiceMarker>(&self, service: S) -> Result<S::Proxy, Error> {
+        pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
             let (client_channel, server_channel) = zx::Channel::create()?;
-            self.pass_to_service(service, server_channel)?;
+            self.pass_to_service::<S>(server_channel)?;
             Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
         }
 
@@ -216,7 +216,6 @@ pub mod client {
         #[inline]
         pub fn pass_to_service<S: ServiceMarker>(
             &self,
-            _: S,
             server_channel: zx::Channel,
         ) -> Result<(), Error> {
             self.pass_to_named_service(S::NAME, server_channel)

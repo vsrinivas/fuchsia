@@ -38,7 +38,7 @@ pub fn make_replica_env(
     let (server, environment_ctrl, app) = ServicesServer::new()
         .add_service((CloudProviderMarker::NAME, move |chan: fasync::Channel| {
             cloud_provider_app
-                .pass_to_service(CloudProviderMarker, chan.into_zx_channel())
+                .pass_to_service::<CloudProviderMarker>(chan.into_zx_channel())
                 .unwrap_or_else(|e| fx_log_err!("failed to pass cloud provider request {:?}", e));
         }))
         .add_proxy_service::<LogSinkMarker>()

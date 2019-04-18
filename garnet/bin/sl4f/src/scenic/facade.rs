@@ -53,13 +53,13 @@ impl ScenicFacade {
         match config {
             Some(mut config) => {
                 // v2
-                let view = app.connect_to_service(ViewMarker)?;
+                let view = app.connect_to_service::<ViewMarker>()?;
                 view.set_config(&mut config)?;
                 view.attach(view_token.value)?;
             }
             None => {
                 // v1
-                let view_provider = app.connect_to_service(ViewProviderMarker)?;
+                let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
                 view_provider.create_view(view_token.value, None, None)?;
             }
         }

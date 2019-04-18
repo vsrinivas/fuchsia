@@ -227,7 +227,7 @@ pub fn main() -> Result<(), Error> {
                 let chan = await!(qmi::connect_transport_device(&file))?;
                 app = launch(&launcher, RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
-                let ril_modem = app.connect_to_service(RadioInterfaceLayerMarker)?;
+                let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
                 let resp = await!(ril_modem.connect_transport(chan))?;
                 if resp.is_err() {
                     return Err(format_err!(

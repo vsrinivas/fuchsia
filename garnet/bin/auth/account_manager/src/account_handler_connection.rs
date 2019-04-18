@@ -68,7 +68,7 @@ impl AccountHandlerConnection {
             .account_manager_status(Status::IoError)?;
         fasync::spawn(fs_for_account_handler.collect());
         let proxy = app
-            .connect_to_service(AccountHandlerControlMarker)
+            .connect_to_service::<AccountHandlerControlMarker>()
             .context("Failed to connect to AccountHandlerControl")
             .account_manager_status(Status::IoError)?;
 

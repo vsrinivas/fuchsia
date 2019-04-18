@@ -81,7 +81,7 @@ impl AuthProviderConnection {
             .context("Failed to launch AuthProviderFactory")
             .token_manager_status(Status::AuthProviderServiceUnavailable)?;
         let factory_proxy = Arc::new(
-            app.connect_to_service(AuthProviderFactoryMarker)
+            app.connect_to_service::<AuthProviderFactoryMarker>()
                 .context("Failed to connect to AuthProviderFactory")
                 .token_manager_status(Status::AuthProviderServiceUnavailable)?,
         );

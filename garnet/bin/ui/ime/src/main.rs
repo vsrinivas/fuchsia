@@ -49,7 +49,7 @@ mod test {
         )
         .expect("Failed to launch testing service");
         let tester = app
-            .connect_to_service(txt_testing::TextFieldTestSuiteMarker)
+            .connect_to_service::<txt_testing::TextFieldTestSuiteMarker>()
             .expect("Failed to connect to testing service");
         let done = (async move || {
             let mut passed = true;
