@@ -8,6 +8,7 @@
 
 #include <arch/ops.h>
 #include <kernel/align.h>
+#include <kernel/lockdep.h>
 #include <lib/counters.h>
 #include <lib/system-topology.h>
 #include <lk/init.h>
@@ -30,6 +31,12 @@ void percpu::Init(cpu_num_t cpu_num) {
 
 #if WITH_FAIR_SCHEDULER
     fair_runqueue.this_cpu_ = cpu_num;
+#endif
+
+#if WITH_LOCK_DEP
+    // Initialize the lockdep tracking state for irq context.
+    auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&lock_state);
+    lockdep::SystemInitThreadLockState(state);
 #endif
 
     counters = CounterArena().CpuData(cpu_num);

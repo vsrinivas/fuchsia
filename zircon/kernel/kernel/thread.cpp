@@ -1054,14 +1054,6 @@ void thread_init_early(void) {
     // create a thread to cover the current running state
     thread_t* t = &percpu::Get(0).idle_thread;
     thread_construct_first(t, "bootstrap");
-
-#if WITH_LOCK_DEP
-    // Initialize the lockdep tracking state for irq context.
-    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
-        auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&percpu[cpu].lock_state);
-        lockdep::SystemInitThreadLockState(state);
-    }
-#endif
 }
 
 /**
