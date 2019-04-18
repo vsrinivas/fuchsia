@@ -16,38 +16,33 @@ mod state_machine;
 use crate::{config::Config, known_ess_store::KnownEssStore};
 
 use failure::{format_err, Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
-use fidl_fuchsia_wlan_service as legacy;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 use std::sync::Arc;
 use void::Void;
 
-fn serve_fidl(
+async fn serve_fidl(
     _client_ref: shim::ClientRef,
     ess_store: Arc<KnownEssStore>,
-) -> impl Future<Output = Result<Void, Error>> {
-    future::ready(
-        ServicesServer::new()
-            .add_service((legacy::WlanMarker::NAME, move |channel| {
-                let stream = legacy::WlanRequestStream::from_channel(channel);
-                let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
-                    .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
-                fasync::spawn(fut)
-            }))
-            .start(),
-    )
-    .and_then(|fut| fut)
-    .and_then(|()| future::ready(Err(format_err!("FIDL server future exited unexpectedly"))))
+) -> Result<Void, Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("public").add_fidl_service(move |stream| {
+        let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
+            .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
+        fasync::spawn(fut)
+    });
+    fs.take_and_serve_directory_handle()?;
+    let () = await!(fs.collect());
+    Err(format_err!("FIDL server future exited unexpectedly"))
 }
 
 fn main() -> Result<(), Error> {
     let cfg = Config::load_from_file()?;
 
     let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    let wlan_svc = fuchsia_app::client::connect_to_service::<DeviceServiceMarker>()
+    let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
     let ess_store = Arc::new(KnownEssStore::new()?);
