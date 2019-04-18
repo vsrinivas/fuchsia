@@ -13,6 +13,7 @@
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
+#include <ddktl/protocol/mipicsi.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
@@ -32,6 +33,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
                        public ddk::I2cProtocol<ComponentProxy>,
+                       public ddk::MipiCsiProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy>,
@@ -92,6 +94,9 @@ public:
     zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
     zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
     zx_status_t SysmemConnect(zx::channel allocator2_request);
+    zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
+                            const mipi_adap_info_t* adap_info);
+    zx_status_t MipiCsiDeInit();
 
     // USB Mode Switch
     zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);

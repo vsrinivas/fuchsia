@@ -14,7 +14,7 @@
 namespace component {
 
 Component::Component(zx_device_t* parent)
-        : ComponentBase(parent) {
+    : ComponentBase(parent) {
 
     // These protocols are all optional, so no error checking is necessary here.
     device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
@@ -22,6 +22,7 @@ Component::Component(zx_device_t* parent)
     device_get_protocol(parent, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
     device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
     device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
+    device_get_protocol(parent, ZX_PROTOCOL_MIPI_CSI, &mipicsi_);
     device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
     device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &sysmem_);
@@ -47,7 +48,7 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
                                  uint32_t* resp_handle_count) {
-   if (canvas_.ops == nullptr) {
+    if (canvas_.ops == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const AmlogicCanvasProxyRequest*>(req_buf);
@@ -65,7 +66,7 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
             return ZX_ERR_INTERNAL;
         }
         return amlogic_canvas_config(&canvas_, req_handles[0], req->offset, &req->info,
-                                       &resp->canvas_idx);
+                                     &resp->canvas_idx);
     case AmlogicCanvasOp::FREE:
         if (req_handle_count != 0) {
             zxlogf(ERROR, "%s received %u handles, expecting 0\n", __func__, req_handle_count);
@@ -82,7 +83,7 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
                                 uint32_t* resp_handle_count) {
-   if (clock_.ops == nullptr) {
+    if (clock_.ops == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const ClockProxyRequest*>(req_buf);
@@ -337,7 +338,7 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
     case PowerOp::WRITE_PMIC_CTRL_REG:
         return power_write_pmic_ctrl_reg(&power_, req->reg_addr, req->reg_value);
     case PowerOp::READ_PMIC_CTRL_REG:
-        return power_read_pmic_ctrl_reg(&power_,req->reg_addr, &resp->reg_value);
+        return power_read_pmic_ctrl_reg(&power_, req->reg_addr, &resp->reg_value);
     default:
         zxlogf(ERROR, "%s: unknown Power op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -396,6 +397,35 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
     }
 }
 
+zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                  uint32_t* resp_handle_count) {
+    if (mipicsi_.ops == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ddk::MipiCsiProtocolClient mipicsi(&mipicsi_);
+
+    auto* req = reinterpret_cast<const MipiCsiProxyRequest*>(req_buf);
+    if (req_size < sizeof(*req)) {
+        zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+        return ZX_ERR_INTERNAL;
+    }
+    auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
+    *out_resp_size = sizeof(*resp);
+
+    switch (req->op) {
+    case MipiCsiOp::INIT:
+        return mipicsi.Init(&req->mipi_info, &req->adap_info);
+    case MipiCsiOp::DEINIT:
+        return mipicsi.DeInit();
+    default:
+        zxlogf(ERROR, "%s: unknown MIPI_CSI op %u\n", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INTERNAL;
+    }
+}
+
 zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     zx::unowned_channel channel(raw_channel);
     if (!channel->is_valid()) {
@@ -442,7 +472,7 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
         break;
     case ZX_PROTOCOL_I2C:
         status = RpcI2c(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
-                         resp_handles, &resp_handle_count);
+                        resp_handles, &resp_handle_count);
         break;
     case ZX_PROTOCOL_PDEV:
         status = RpcPdev(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
@@ -459,6 +489,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_USB_MODE_SWITCH:
         status = RpcUms(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                         resp_handles, &resp_handle_count);
+        break;
+    case ZX_PROTOCOL_MIPI_CSI:
+        status = RpcMipiCsi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                            resp_handles, &resp_handle_count);
         break;
     default:
         zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);

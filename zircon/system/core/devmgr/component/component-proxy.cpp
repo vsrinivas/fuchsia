@@ -43,6 +43,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_I2C:
         proto->ops = &i2c_protocol_ops_;
         return ZX_OK;
+    case ZX_PROTOCOL_MIPI_CSI:
+        proto->ops = &mipi_csi_protocol_ops_;
+        return ZX_OK;
     case ZX_PROTOCOL_PDEV:
         proto->ops = &pdev_protocol_ops_;
         return ZX_OK;
@@ -117,8 +120,8 @@ fail:
 }
 
 zx_status_t ComponentProxy::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,
-                                                    const canvas_info_t* info,
-                                                    uint8_t* out_canvas_idx) {
+                                                const canvas_info_t* info,
+                                                uint8_t* out_canvas_idx) {
     AmlogicCanvasProxyRequest req = {};
     AmlogicCanvasProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS;
@@ -171,6 +174,27 @@ zx_status_t ComponentProxy::EthBoardResetPhy() {
     ProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_ETH_BOARD;
     req.op = EthBoardOp::RESET_PHY;
+
+    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::MipiCsiInit(const mipi_info_t* mipi_info,
+                                        const mipi_adap_info_t* adap_info) {
+    MipiCsiProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_MIPI_CSI;
+    req.op = MipiCsiOp::INIT;
+    req.mipi_info = *mipi_info;
+    req.adap_info = *adap_info;
+
+    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::MipiCsiDeInit() {
+    MipiCsiProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_MIPI_CSI;
+    req.op = MipiCsiOp::DEINIT;
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }
@@ -311,8 +335,8 @@ void ComponentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
     auto* rsp = reinterpret_cast<I2cProxyResponse*>(resp_buffer);
     size_t actual;
     auto status = Rpc(&req->header, static_cast<uint32_t>(req_length),
-                              &rsp->header, static_cast<uint32_t>(resp_length), nullptr, 0, nullptr,
-                              0, &actual);
+                      &rsp->header, static_cast<uint32_t>(resp_length), nullptr, 0, nullptr,
+                      0, &actual);
     if (status != ZX_OK) {
         callback(cookie, status, nullptr, 0);
         return;
