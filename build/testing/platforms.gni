@@ -21,6 +21,7 @@ all_dimension_keys = [
   "device_type",
   "cpu",
   "os",
+  "testbed",
 ]
 
 # Scopes of dimensions for every available platform.
@@ -37,7 +38,19 @@ test_platforms = [
     device_type = "Intel NUC Kit NUC7i5DNHE"
     cpu = "x64"
   },
-
+  {
+    testbed = "bt_rf_chamber_nuc_phone"
+    cpu = "x64"
+  },
+  {
+    testbed = "bt_rf_chamber_nuc_nuc"
+    cpu = "x64"
+  },
+  {
+    testbed = "wifi_rf_chamber_nuc"
+    cpu = "x64"
+  },
+  
   # The platforms below are experimental and may not yet be targeted.
   # See IN-876
   {
