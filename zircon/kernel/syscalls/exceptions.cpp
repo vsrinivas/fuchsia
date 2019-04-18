@@ -213,13 +213,17 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
                                                : Exceptionate::Type::kStandard;
     Exceptionate* exceptionate = nullptr;
     bool job_or_process = false;
-    if (auto job = DownCastDispatcher<JobDispatcher>(&task)) {
+
+    // Use DownCastDispatcher() on the raw task pointer to avoid moving the
+    // RefPtr out, we still need to retain the RefPtr to keep our extracted
+    // Exceptionate* alive.
+    if (auto job = DownCastDispatcher<JobDispatcher>(task.get())) {
         exceptionate = job->exceptionate(type);
         job_or_process = true;
-    } else if (auto process = DownCastDispatcher<ProcessDispatcher>(&task)) {
+    } else if (auto process = DownCastDispatcher<ProcessDispatcher>(task.get())) {
         exceptionate = process->exceptionate(type);
         job_or_process = true;
-    } else if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
+    } else if (auto thread = DownCastDispatcher<ThreadDispatcher>(task.get())) {
         if (type == Exceptionate::Type::kDebug)
             return ZX_ERR_INVALID_ARGS;
 
@@ -230,6 +234,8 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
     } else {
         return ZX_ERR_WRONG_TYPE;
     }
+
+    DEBUG_ASSERT(task);
 
     // For job and process handlers, we require the handle be able to enumerate
     // as proof that the caller is allowed to get to the thread handle.
