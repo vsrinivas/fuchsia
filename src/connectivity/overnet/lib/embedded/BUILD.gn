@@ -43,4 +43,27 @@ source_set("zx_socket") {
   ]
 }
 
-source_set("runtime") {}
+source_set("runtime") {
+  sources = [
+    "header.h",
+    "implementation.h",
+    "to_embedded.h",
+  ]
+  public_deps = [
+    ":channel",
+    ":zx_socket",
+  ]
+}
+
+source_set("embedded") {
+  sources = [
+    "overnet_embedded.cc",
+    "overnet_embedded.h",
+  ]
+  public_deps = [
+    ":host_reactor",
+    ":runtime",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_overnet_embedded",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
+  ]
+}

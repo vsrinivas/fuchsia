@@ -6,7 +6,7 @@ library fuchsia.overnet;
 
 using fuchsia.overnet.protocol;
 
-[Discoverable]
+[Discoverable, Transport="Channel, OvernetEmbedded"]
 protocol Overnet {
     ListPeers(uint64 last_seen_version) -> (uint64 version, vector<Peer> peers);
     // TODO(ctiller): remove this, and move to something that looks way more like an explicit registry.
@@ -15,6 +15,7 @@ protocol Overnet {
                      string service_name, handle<channel> chan);
 };
 
+[Transport="Channel, OvernetEmbedded"]
 protocol ServiceProvider {
     ConnectToService(handle<channel> chan);
 };
