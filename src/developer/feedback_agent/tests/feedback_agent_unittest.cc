@@ -163,9 +163,11 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "") {
 // Stub Scenic service to return canned responses to Scenic::TakeScreenshot().
 class StubScenic : public fuchsia::ui::scenic::Scenic {
  public:
-  // Returns a request handler for binding to this spy service.
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
-    return bindings_.GetHandler(this);
+  // Returns a request handler for binding to this stub service.
+  // We pass a dispatcher to run it on a different loop than the agent.
+  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
+      async_dispatcher_t* dispatcher) {
+    return bindings_.GetHandler(this, dispatcher);
   }
 
   // Scenic methods.
@@ -201,8 +203,8 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   }
 
  private:
-  std::vector<TakeScreenshotResponse> take_screenshot_responses_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
+  std::vector<TakeScreenshotResponse> take_screenshot_responses_;
 };
 
 // Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL
@@ -212,15 +214,42 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
 // class, without connecting through FIDL.
 class FeedbackAgentTest : public gtest::RealLoopFixture {
  public:
+  FeedbackAgentTest()
+      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
+        service_directory_provider_(
+            service_directory_provider_loop_.dispatcher()) {
+    // We run the service directory provider in a different loop so that it can
+    // serve the requests to and responses from the stub(s) that the agent may
+    // connect to (synchronously or not).
+    FXL_CHECK(service_directory_provider_loop_.StartThread(
+                  "service directory provider thread") == ZX_OK);
+  }
+
+  ~FeedbackAgentTest() { service_directory_provider_loop_.Shutdown(); }
+
   void SetUp() override {
     stub_scenic_.reset(new StubScenic());
-    ASSERT_EQ(ZX_OK, service_directory_provider_.AddService(
-                         stub_scenic_->GetHandler()));
+    FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler(
+                  service_directory_provider_loop_.dispatcher())) == ZX_OK);
+
     agent_.reset(
         new FeedbackAgent(service_directory_provider_.service_directory()));
+
+    called_back_ = false;
   }
 
  protected:
+  // Waits for the callback of the function under test to be called.
+  //
+  // Times out after a while if the callback was never called.
+  void WaitForCallback() {
+    RunLoopWithTimeoutOrUntil([this] { return called_back_; });
+  }
+
+  // Signals the test fixture that the callback of the function under test was
+  // called.
+  void CalledBack() { called_back_ = true; }
+
   void set_scenic_responses(std::vector<TakeScreenshotResponse> responses) {
     stub_scenic_->set_take_screenshot_responses(std::move(responses));
   }
@@ -231,8 +260,13 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   std::unique_ptr<FeedbackAgent> agent_;
 
  private:
-  std::unique_ptr<StubScenic> stub_scenic_;
+  async::Loop service_directory_provider_loop_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+
+  std::unique_ptr<StubScenic> stub_scenic_;
+
+  // Whether the callback for the function under test was called.
+  bool called_back_;
 };
 
 TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -245,10 +279,11 @@ TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
+        CalledBack();
       });
-  RunLoopUntilIdle();
+  WaitForCallback();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -278,10 +313,11 @@ TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
+        CalledBack();
       });
-  RunLoopUntilIdle();
+  WaitForCallback();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -297,10 +333,11 @@ TEST_F(FeedbackAgentTest,
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
+        CalledBack();
       });
-  RunLoopUntilIdle();
+  WaitForCallback();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -327,11 +364,12 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
   for (size_t i = 0; i < num_calls; i++) {
     agent_->GetScreenshot(
         ImageEncoding::PNG,
-        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
+        [&feedback_responses, this](std::unique_ptr<Screenshot> screenshot) {
           feedback_responses.push_back({std::move(screenshot)});
+          CalledBack();
         });
   }
-  RunLoopUntilIdle();
+  WaitForCallback();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -365,10 +403,12 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
 
 TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   DataProvider_GetData_Result feedback_result;
-  agent_->GetData([&feedback_result](DataProvider_GetData_Result result) {
+  agent_->GetData([&feedback_result, this](DataProvider_GetData_Result result) {
     feedback_result = std::move(result);
+    CalledBack();
   });
-  RunLoopUntilIdle();
+  WaitForCallback();
+
   ASSERT_TRUE(feedback_result.is_response());
   // There is nothing else we can assert here as no missing annotation nor
   // attachment is fatal.
