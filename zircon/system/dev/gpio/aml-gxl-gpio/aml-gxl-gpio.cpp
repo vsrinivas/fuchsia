@@ -4,11 +4,12 @@
 
 #include "aml-gxl-gpio.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
@@ -35,14 +36,14 @@ uint32_t GetUnusedIrqIndex(uint8_t status) {
     return __builtin_ctz(zero_bit_set);
 }
 
-}  // namespace
+} // namespace
 
 namespace gpio {
 
 // MMIO indices (based on vim-gpio.c gpio_mmios)
 enum {
-    MMIO_GPIO            = 0,
-    MMIO_GPIO_A0         = 1,
+    MMIO_GPIO = 0,
+    MMIO_GPIO_A0 = 1,
     MMIO_GPIO_INTERRUPTS = 2,
 };
 
@@ -167,7 +168,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 void AmlGxlGpio::Bind(const pbus_protocol_t& pbus) {
     gpio_impl_protocol_t gpio_proto = {
         .ops = &gpio_impl_protocol_ops_,
-        .ctx = this
+        .ctx = this,
     };
 
     pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto));
@@ -493,8 +494,27 @@ zx_status_t AmlGxlGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
     return ZX_OK;
 }
 
-}  // namespace gpio
-
-extern "C" zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
+zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     return gpio::AmlGxlGpio::Create(parent);
 }
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = aml_gpio_bind;
+    return ops;
+}();
+
+} // namespace gpio
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 6)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
+    // we support multiple SOC variants
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905X),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905),
+ZIRCON_DRIVER_END(aml_gpio)
+
