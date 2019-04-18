@@ -149,6 +149,15 @@ void NamespaceBuilder::AddSandbox(
     PushDirectoryFromPathAs(MigratedGlobalPersistentDataPath(), "/data");
   }
 
+  if (sandbox.HasFeature("deprecated-misc-storage")) {
+    const std::string dataDir = "/data/misc";
+    if (files::CreateDirectory(dataDir)) {
+      PushDirectoryFromPathAs(dataDir, "/misc");
+    } else {
+      FXL_LOG(ERROR) << "Failed to create deprecated-misc-storage directory";
+    }
+  }
+
   if (sandbox.HasFeature("isolated-cache-storage")) {
     PushDirectoryFromPathAs(isolated_cache_path_factory(), "/cache");
   }

@@ -6,6 +6,7 @@
         "features": [
             "config-data",
             "deprecated-global-persistent-storage",
+            "deprecated-misc-storage",
             "shell",
             "system-temp"
         ],

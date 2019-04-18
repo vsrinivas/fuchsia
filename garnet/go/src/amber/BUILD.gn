@@ -79,6 +79,7 @@ package("pkgfs") {
 
 package("amber") {
   deprecated_global_persistent_storage = "//build"
+  deprecated_misc_storage = "//build"
   extra = [ manifest_file ]
 
   deps = [

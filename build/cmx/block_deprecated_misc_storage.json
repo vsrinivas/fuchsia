@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$comment": "This schema is used to whitelist access to the 'deprecate-misc-storage' sandbox feature.",
+  "properties": {
+    "sandbox": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "not": {
+              "enum": ["deprecated-misc-storage"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
