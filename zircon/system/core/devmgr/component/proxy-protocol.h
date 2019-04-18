@@ -104,7 +104,6 @@ enum class ClockOp {
 struct ClockProxyRequest {
     ProxyRequest header;
     ClockOp op;
-    uint32_t index;
 };
 
 // ZX_PROTOCOL_POWER proxy support.

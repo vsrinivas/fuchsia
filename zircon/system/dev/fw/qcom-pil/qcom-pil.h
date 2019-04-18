@@ -163,6 +163,13 @@ public:
     void DdkRelease();
 
 private:
+    enum {
+        kCryptoAhbClk,
+        kCryptoAxiClk,
+        kCryptoClk,
+        kClockCount,
+    };
+
     void ShutDown();
     zx_status_t SmcCall(zx_smc_parameters_t* params, zx_smc_result_t* result);
     int PilThread();
@@ -171,7 +178,7 @@ private:
     ddk::PDev pdev_;
     zx::resource smc_;
     zx::bti bti_;
-    ddk::ClockProtocolClient clk_;
+    ddk::ClockProtocolClient clks_[kClockCount];
     thrd_t pil_thread_;
     fbl::Array<metadata::Firmware> fw_;
     fbl::Array<std::optional<ddk::MmioBuffer>> mmios_;

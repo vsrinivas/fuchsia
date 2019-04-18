@@ -35,6 +35,12 @@ protected:
     zx_status_t InitPost() override;
 
 private:
+    enum {
+        kClkRgAud1,
+        kClkRgAud2,
+        kClockCount,
+    };
+
     friend class SimpleAudioStream;
     friend class fbl::RefPtr<Mt8167AudioStreamIn>;
 
@@ -49,7 +55,7 @@ private:
     uint32_t us_per_notification_ = 0;
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
     ddk::PDev pdev_ TA_GUARDED(domain_->token());
-    ddk::ClockProtocolClient clk_;
+    ddk::ClockProtocolClient clks_[kClockCount];
     std::unique_ptr<Tlv320adc> codec_;
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());

@@ -28,6 +28,13 @@ public:
     uint32_t GetFrequency();
 
 private:
+    // CLK indexes.
+    enum {
+        kSysPllDiv16,
+        kSysCpuClkDiv16,
+        kClockCount,
+    };
+
     zx_status_t WaitForBusy();
     zx_status_t ConfigureSysPLL(uint32_t new_rate);
     zx_status_t ConfigureFixedPLL(uint32_t new_rate);
@@ -36,7 +43,7 @@ private:
     // Initialize platform stuff.
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
-    ddk::ClockProtocolClient clk_;
+    ddk::ClockProtocolClient clks_[kClockCount];
     // MMIOS.
     std::optional<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.

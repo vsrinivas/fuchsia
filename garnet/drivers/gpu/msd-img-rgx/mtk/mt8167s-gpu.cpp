@@ -10,7 +10,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 
 #include <ddktl/device.h>
@@ -21,6 +20,27 @@
 #include "sys_driver/magma_driver.h"
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+
+enum {
+    // Indices into clocks provided by the board file.
+    kClkSlowMfgIndex = 0,
+    kClkAxiMfgIndex = 1,
+    kClkMfgMmIndex = 2,
+    kClockCount,
+
+    // Indices into mmio buffers provided by the board file.
+    kMfgMmioIndex = 0,
+    kMfgTopMmioIndex = 1,
+    kScpsysMmioIndex = 2,
+    kXoMmioIndex = 3,
+
+    kInfraTopAxiSi1Ctl = 0x1204,
+    kInfraTopAxiProtectEn = 0x1220,
+    kInfraTopAxiProtectSta1 = 0x1228,
+
+    kPwrStatus = 0x60c,
+    kPwrStatus2nd = 0x610,
+};
 
 struct ComponentDescription {
     zx_status_t PowerOn(ddk::MmioBuffer* power_gpu_buffer);
@@ -56,8 +76,7 @@ private:
 
     void EnableMfgHwApm();
 
-    clock_protocol_t clk_proto_ = {};
-    std::optional<ddk::ClockProtocolClient> clk_;
+    ddk::ClockProtocolClient clks_[kClockCount];
     // MFG TOP MMIO - Controls mediatek's gpu-related power- and
     // clock-management hardware.
     std::optional<ddk::MmioBuffer> gpu_buffer_;
@@ -77,26 +96,6 @@ bool Mt8167sGpu::StartMagma()
 }
 
 void Mt8167sGpu::DdkRelease() { delete this; }
-
-enum {
-    // Indices into clocks provided by the board file.
-    kClkSlowMfgIndex = 0,
-    kClkAxiMfgIndex = 1,
-    kClkMfgMmIndex = 2,
-
-    // Indices into mmio buffers provided by the board file.
-    kMfgMmioIndex = 0,
-    kMfgTopMmioIndex = 1,
-    kScpsysMmioIndex = 2,
-    kXoMmioIndex = 3,
-
-    kInfraTopAxiSi1Ctl = 0x1204,
-    kInfraTopAxiProtectEn = 0x1220,
-    kInfraTopAxiProtectSta1 = 0x1228,
-
-    kPwrStatus = 0x60c,
-    kPwrStatus2nd = 0x610,
-};
 
 zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer)
 {
@@ -146,8 +145,8 @@ zx_status_t Mt8167sGpu::PowerOnMfgAsync()
     clock_gpu_buffer_->ModifyBits<uint32_t>(0, 20, 2, 0x40); // slow mfg mux to 26MHz
     // MFG AXI to mainpll_d11 (on version 2+ of chip)
     clock_gpu_buffer_->ModifyBits<uint32_t>(1, 18, 2, 0x40);
-    clk_->Enable(kClkSlowMfgIndex);
-    clk_->Enable(kClkAxiMfgIndex);
+    clks_[kClkSlowMfgIndex].Enable();
+    clks_[kClkAxiMfgIndex].Enable();
     constexpr uint32_t kAsyncPwrStatusBit = 25;
     constexpr uint32_t kAsyncPwrRegOffset = 0x2c4;
     ComponentDescription mfg_async = {kAsyncPwrRegOffset, kAsyncPwrStatusBit, 0, 0};
@@ -176,7 +175,7 @@ zx_status_t Mt8167sGpu::PowerOnMfg2d()
 // Power on the 3D engine (IMG GPU).
 zx_status_t Mt8167sGpu::PowerOnMfg()
 {
-    clk_->Enable(kClkMfgMmIndex);
+    clks_[kClkMfgMmIndex].Enable();
     static constexpr uint32_t kMfg3dPwrCon = 0x214;
     ComponentDescription mfg = {kMfg3dPwrCon, 4, 0xf << 8, 0xf << 12};
     zx_status_t status = mfg.PowerOn(&power_gpu_buffer_.value());
@@ -230,13 +229,13 @@ zx_status_t Mt8167sGpu::Bind()
 
     ddk::PDev pdev(&pdev_proto);
 
-    status = device_get_protocol(parent(), ZX_PROTOCOL_CLOCK, &clk_proto_);
-    if (status != ZX_OK) {
-        GPU_ERROR("ZX_PROTOCOL_CLOCK not available: %d", status);
-        return status;
-    }
-
-    clk_ = ddk::ClockProtocolClient(&clk_proto_);
+    for (unsigned i = 0; i < kClockCount; i++) {
+        clks_[i] = pdev.GetClk(i);
+        if (!clks_[i].is_valid()) {
+            zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
+            return status;
+        }
+     }
 
     status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
     if (status != ZX_OK) {

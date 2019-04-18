@@ -60,9 +60,6 @@ __BEGIN_CDECLS
 #define BIND_PROTOCOL 0x0001    // primary protocol of the device
 #define BIND_AUTOBIND 0x0002    // if this is an automated bind/load
 
-// global binding properties
-#define BIND_CHILD_INDEX 0x0010 // used for specifying a child by index for composite devices
-
 // pci binding variables at 0x01XX
 #define BIND_PCI_VID 0x0100
 #define BIND_PCI_DID 0x0101
@@ -134,6 +131,9 @@ __BEGIN_CDECLS
 
 // POWER binding variables at 0x0A2X
 #define BIND_POWER_DOMAIN   0x0A20
+
+// POWER binding variables at 0x0A3X
+#define BIND_CLOCK_ID       0x0A30
 
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.

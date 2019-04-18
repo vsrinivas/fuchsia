@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/pdev.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -131,7 +131,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
         parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
-        std::move(*infracfg_mmio), clk, info.clk_count, thermal_info, std::move(port),
+        std::move(*infracfg_mmio), pdev, info.clk_count, thermal_info, std::move(port),
         std::move(irq), TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
         TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
         TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
@@ -156,7 +156,15 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
 zx_status_t MtkThermal::Init() {
     for (uint32_t i = 0; i < clk_count_; i++) {
-        zx_status_t status = clk_.Enable(i);
+        clock_protocol_t clock;
+        size_t actual;
+        auto status = pdev_.GetProtocol(ZX_PROTOCOL_CLOCK, i, &clock, sizeof(clock), &actual);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: Failed to get clock %u\n", __FILE__, i);
+            return status;
+        }
+        
+        status = clock_enable(&clock);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
             return status;
@@ -166,7 +174,7 @@ zx_status_t MtkThermal::Init() {
     // Set the initial DVFS operating point. The bootloader sets it to 1.001 GHz @ 1.2 V.
     uint32_t op_idx =
         thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].count - 1;
-    zx_status_t status = SetDvfsOpp(static_cast<uint16_t>(op_idx));
+    auto status = SetDvfsOpp(static_cast<uint16_t>(op_idx));
     if (status != ZX_OK) {
         return status;
     }

@@ -14,7 +14,7 @@ driver_module("msd_img_rgx_mtk") {
   deps = [
     "//garnet/lib/magma/src/sys_driver",
     "//third_party/imgtec-pvr-rgx-km:src",
-    "//zircon/public/banjo/ddk-protocol-platform-bus",
+    "//zircon/public/banjo/ddk-protocol-clock",
     "//zircon/public/banjo/ddk-protocol-platform-device",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

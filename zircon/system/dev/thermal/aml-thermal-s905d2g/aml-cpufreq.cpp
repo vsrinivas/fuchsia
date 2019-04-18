@@ -15,10 +15,6 @@ namespace {
 #define SYS_CPU_WAIT_BUSY_RETRIES 5
 #define SYS_CPU_WAIT_BUSY_TIMEOUT_US 10000
 
-// CLK indexes.
-constexpr uint32_t kSysPllDiv16 = 0;
-constexpr uint32_t kSysCpuClkDiv16 = 1;
-
 // MMIO indexes.
 constexpr uint32_t kHiuMmio = 2;
 
@@ -41,11 +37,16 @@ zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    // Get the clock protocol
-    clk_ = ddk::ClockProtocolClient(parent);
-    if (!clk_.is_valid()) {
-        zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
-        return ZX_ERR_NO_RESOURCES;
+    // Get the clock protocols
+    for (unsigned i = 0; i < kClockCount; i++) {
+        clock_protocol_t clock;
+        size_t actual;
+        auto status = pdev_.GetProtocol(ZX_PROTOCOL_CLOCK, i, &clock, sizeof(clock), &actual);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+            return status;
+        }
+        clks_[i] = &clock;
     }
 
     // Initialized the MMIOs
@@ -81,13 +82,13 @@ zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
     // Enable the following clocks so we can measure them
     // and calculate what the actual CPU freq is set to at
     // any given point.
-    status = clk_.Enable(kSysPllDiv16);
+    status = clks_[kSysPllDiv16].Enable();
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
         return status;
     }
 
-    status = clk_.Enable(kSysCpuClkDiv16);
+    status = clks_[kSysCpuClkDiv16].Enable();
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
         return status;

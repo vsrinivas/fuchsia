@@ -76,12 +76,12 @@ private:
 
 class ProxyClock : public ddk::ClockProtocol<ProxyClock> {
 public:
-    explicit ProxyClock(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
-        : device_id_(device_id), proxy_(proxy) {}
+    explicit ProxyClock(uint32_t device_id, uint32_t index, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), index_(index), proxy_(proxy) {}
 
     // Clock protocol implementation.
-    zx_status_t ClockEnable(uint32_t index);
-    zx_status_t ClockDisable(uint32_t index);
+    zx_status_t ClockEnable();
+    zx_status_t ClockDisable();
 
     void GetProtocol(clock_protocol_t* proto) {
         proto->ops = &clock_protocol_ops_;
@@ -90,6 +90,7 @@ public:
 
 private:
     uint32_t device_id_;
+    uint32_t index_;
     fbl::RefPtr<PlatformProxy> proxy_;
 };
 
@@ -138,8 +139,8 @@ class ProxyDevice : public ProxyDeviceType,
                     public ddk::PDevProtocol<ProxyDevice, ddk::base_protocol> {
 public:
     explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
-        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy), clk_(device_id, proxy),
-          sysmem_(device_id, proxy), canvas_(device_id, proxy) {}
+        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy), sysmem_(device_id, proxy),
+          canvas_(device_id, proxy) {}
 
     // Creates a ProxyDevice to be the root platform device.
     static zx_status_t CreateRoot(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy);
@@ -202,7 +203,7 @@ private:
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyGpio> gpios_;
     fbl::Vector<ProxyI2c> i2cs_;
-    ProxyClock clk_;
+    fbl::Vector<ProxyClock> clocks_;
     ProxySysmem sysmem_;
     ProxyAmlogicCanvas canvas_;
 

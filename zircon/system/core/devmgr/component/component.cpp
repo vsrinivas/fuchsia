@@ -96,9 +96,9 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
 
     switch (req->op) {
     case ClockOp::ENABLE:
-        return clock_enable(&clock_, req->index);
+        return clock_enable(&clock_);
     case ClockOp::DISABLE:
-        return clock_disable(&clock_, req->index);
+        return clock_disable(&clock_);
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;

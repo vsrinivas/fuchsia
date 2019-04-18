@@ -67,21 +67,11 @@ static zx_status_t test_gpio(gpio_protocol_t* gpio) {
 static zx_status_t test_clock(clock_protocol_t* clock) {
     zx_status_t status;
 
-    // We should have 4 clocks, so the first 4 calls should succeed and the fifth fail.
-    if ((status = clock_enable(clock, 0)) != ZX_OK) {
+    if ((status = clock_enable(clock)) != ZX_OK) {
         return status;
     }
-    if ((status = clock_disable(clock, 1)) != ZX_OK) {
+    if ((status = clock_disable(clock)) != ZX_OK) {
         return status;
-    }
-    if ((status = clock_enable(clock, 2)) != ZX_OK) {
-        return status;
-    }
-    if ((status = clock_disable(clock, 3)) != ZX_OK) {
-        return status;
-    }
-    if ((status = clock_disable(clock, 4)) == ZX_OK) {
-        return ZX_ERR_INTERNAL;
     }
 
     return ZX_OK;

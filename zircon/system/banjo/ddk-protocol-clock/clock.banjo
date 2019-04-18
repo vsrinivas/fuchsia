@@ -8,6 +8,6 @@ using zx;
 
 [Layout = "ddk-protocol"]
 protocol Clock {
-    Enable(uint32 index) -> (zx.status s);
-    Disable(uint32 index) -> (zx.status s);
+    Enable() -> (zx.status s);
+    Disable() -> (zx.status s);
 };

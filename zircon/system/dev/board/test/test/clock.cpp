@@ -40,7 +40,7 @@ public:
     zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
 private:
-    static constexpr uint32_t MIN_CLOCK = 2;
+    static constexpr uint32_t MIN_CLOCK = 1;
     static constexpr uint32_t MAX_CLOCK = 8;
 };
 

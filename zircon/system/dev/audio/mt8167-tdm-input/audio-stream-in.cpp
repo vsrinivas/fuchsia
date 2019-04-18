@@ -64,10 +64,12 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    clk_ = pdev_.GetClk(0);
-    if (!clk_.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
-        return ZX_ERR_NO_RESOURCES;
+    for (unsigned i = 0; i < kClockCount; i++) {
+        clks_[i] = pdev_.GetClk(i);
+        if (!clks_[i].is_valid()) {
+            zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
+            return ZX_ERR_NO_RESOURCES;
+        }
     }
 
     codec_reset_ = pdev_.GetGpio(0);
@@ -124,9 +126,9 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
                          pinned_ring_buffer_.region(0).size);
 
     // Disables aud1 clk gating: 0 is the index, board_mt8167::kClkRgAud1.
-    clk_.Enable(0);
+    clks_[kClkRgAud1].Enable();
     // Disables aud2 clk gating: 1 is the index, board_mt8167::kClkRgAud2.
-    clk_.Enable(1);
+    clks_[kClkRgAud2].Enable();
     return ZX_OK;
 }
 

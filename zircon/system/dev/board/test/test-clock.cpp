@@ -15,19 +15,18 @@ namespace board_test {
 
 namespace {
 
-static const uint32_t clock_id_maps[] = {
-    2, /* map_count */
-    3, /* clock_count */
-    2, 3, 4, /* clock_ids */
-    4, /* clock_count */
-    5, 6, 7, 8, /* clock_ids */
+static const clock_id_t clock_ids[] = {
+    { 1 },
+    { 3 },
+    { 5 },
+    { 7 },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
     {
-        .type = DEVICE_METADATA_CLOCK_MAPS,
-        .data_buffer = &clock_id_maps,
-        .data_size = sizeof(clock_id_maps),
+        .type = DEVICE_METADATA_CLOCK_IDS,
+        .data_buffer = &clock_ids,
+        .data_size = sizeof(clock_ids),
     }
 };
 

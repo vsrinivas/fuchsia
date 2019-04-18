@@ -149,22 +149,20 @@ zx_status_t ComponentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
     return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockEnable(uint32_t index) {
+zx_status_t ComponentProxy::ClockEnable() {
     ClockProxyRequest req = {};
     ProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.op = ClockOp::ENABLE;
-    req.index = index;
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockDisable(uint32_t index) {
+zx_status_t ComponentProxy::ClockDisable() {
     ClockProxyRequest req = {};
     ProxyResponse resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.op = ClockOp::DISABLE;
-    req.index = index;
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }

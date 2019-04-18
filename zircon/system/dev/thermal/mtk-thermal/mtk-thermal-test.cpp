@@ -46,13 +46,13 @@ namespace thermal {
 
 class MtkThermalTest : public MtkThermal {
 public:
-    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClockProtocolClient& clk,
+    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::PDevProtocolClient& pdev,
                    uint32_t clk_count,
                    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_info, zx::port port,
                    TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
                    TempCalibration2 cal2_fuse, zx::port main_port, zx::port thread_port)
         : MtkThermal(nullptr, ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio),
-                     ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), clk, clk_count,
+                     ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), pdev, clk_count,
                      thermal_info, std::move(port), zx::interrupt(), cal0_fuse, cal1_fuse,
                      cal2_fuse),
           mock_thermal_regs_(thermal_reg_array_, sizeof(uint32_t), MT8167_THERMAL_SIZE),
@@ -93,7 +93,7 @@ public:
 
         fbl::AllocChecker ac;
         test->reset(new (&ac) MtkThermalTest(
-            dummy_mmio, ddk::ClockProtocolClient(), 0, thermal_info, std::move(port), cal0_fuse,
+            dummy_mmio, ddk::PDevProtocolClient(), 0, thermal_info, std::move(port), cal0_fuse,
             cal1_fuse, cal2_fuse, std::move(main_port), std::move(thread_port)));
         return ac.check();
     }

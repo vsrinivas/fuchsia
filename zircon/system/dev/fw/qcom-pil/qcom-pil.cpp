@@ -210,11 +210,14 @@ zx_status_t PilDevice::Bind() {
         return status;
     }
 
-    clk_ = pdev_.GetClk(0);
-    if (!clk_.is_valid()) {
-        zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
-        return status;
-    }
+    for (unsigned i = 0; i < kClockCount; i++) {
+        clks_[i] = pdev_.GetClk(i);
+        if (!clks_[i].is_valid()) {
+            zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
+            return status;
+        }
+     }
+
     size_t metadata_size = 0;
     status = device_get_metadata_size(parent_, DEVICE_METADATA_PRIVATE, &metadata_size);
     if (status != ZX_OK) {
@@ -259,9 +262,9 @@ zx_status_t PilDevice::Bind() {
     }
 #endif
 
-    clk_.Enable(0); // kCryptoAhbClk
-    clk_.Enable(1); // kCryptoAxiClk
-    clk_.Enable(2); // kCryptoClk
+    clks_[kCryptoAhbClk].Enable();
+    clks_[kCryptoAxiClk].Enable();
+    clks_[kCryptoClk].Enable();
 
     auto thunk = [](void* arg) -> int { return reinterpret_cast<PilDevice*>(arg)->PilThread(); };
     int rc = thrd_create_with_name(&pil_thread_, thunk, this, "qcom-pil");

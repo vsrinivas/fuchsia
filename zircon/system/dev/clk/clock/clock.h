@@ -8,7 +8,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/clockimpl.h>
-#include <fbl/array.h>
 
 namespace clock {
 
@@ -18,20 +17,20 @@ using ClockDeviceType = ddk::Device<ClockDevice, ddk::Unbindable>;
 class ClockDevice : public ClockDeviceType,
                     public ddk::ClockProtocol<ClockDevice, ddk::base_protocol> {
 public:
-    ClockDevice(zx_device_t* parent, clock_impl_protocol_t* clock, fbl::Array<uint32_t> map)
-        : ClockDeviceType(parent), clock_(clock), map_(std::move(map)) {}
+    ClockDevice(zx_device_t* parent, clock_impl_protocol_t* clock, uint32_t id)
+        : ClockDeviceType(parent), clock_(clock), id_(id) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     void DdkUnbind();
     void DdkRelease();
 
-    zx_status_t ClockEnable(uint32_t index);
-    zx_status_t ClockDisable(uint32_t index);
+    zx_status_t ClockEnable();
+    zx_status_t ClockDisable();
 
 private:
     const ddk::ClockImplProtocolClient clock_;
-    const fbl::Array<uint32_t> map_;
+    const uint32_t id_;
 };
 
 } // namespace clock

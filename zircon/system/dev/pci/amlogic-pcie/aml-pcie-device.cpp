@@ -27,10 +27,6 @@ const size_t kCfgMmio = 1;
 const size_t kRstMmio = 2;
 const size_t kPllMmio = 3;
 
-const size_t kClk81 = 0;
-const size_t kClkPcieA = 1;
-const size_t kClkPort = 2;
-
 zx_status_t AmlPcieDevice::InitProtocols() {
     zx_status_t st;
 
@@ -52,10 +48,14 @@ zx_status_t AmlPcieDevice::InitProtocols() {
         return st;
     }
 
-    st = device_get_protocol(parent_, ZX_PROTOCOL_CLOCK, &clk_);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "aml_pcie: failed to get clk protocol, st = %d", st);
-        return st;
+    for (unsigned i = 0; i < kClockCount; i++) {
+        size_t actual;
+        auto status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_CLOCK, i, &clks_[i], sizeof(clks_[i]),
+                                        &actual);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+            return status;
+        }
     }
 
     return st;
@@ -196,13 +196,13 @@ zx_status_t AmlPcieDevice::Init() {
 
     pcie_->ClearReset(kRstPcieApb | kRstPciePhy);
 
-    st = clock_enable(&clk_, kClk81);
+    st = clock_enable(&clks_[kClk81]);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init root clock, st = %d\n", st);
         return st;
     }
 
-    st = clock_enable(&clk_, kClkPcieA);
+    st = clock_enable(&clks_[kClkPcieA]);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init pciea clock, st = %d\n", st);
         return st;
@@ -210,7 +210,7 @@ zx_status_t AmlPcieDevice::Init() {
 
     pcie_->ClearReset(kRstPcieA);
 
-    st = clock_enable(&clk_, kClkPort);
+    st = clock_enable(&clks_[kClkPort]);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init port clock, st = %d\n", st);
         return st;

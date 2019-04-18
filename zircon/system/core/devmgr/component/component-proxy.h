@@ -61,8 +61,8 @@ public:
     zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
                                     uint8_t* out_canvas_idx);
     zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
-    zx_status_t ClockEnable(uint32_t index);
-    zx_status_t ClockDisable(uint32_t index);
+    zx_status_t ClockEnable();
+    zx_status_t ClockDisable();
     zx_status_t EthBoardResetPhy();
     zx_status_t GpioConfigIn(uint32_t flags);
     zx_status_t GpioConfigOut(uint8_t initial_value);

@@ -30,6 +30,13 @@ class AmlPcieDevice {
     zx_status_t Init();
 
   private:
+    enum {
+        kClk81,
+        kClkPcieA,
+        kClkPort,
+        kClockCount,
+    };
+
     zx_status_t InitProtocols();
     zx_status_t InitMmios();
     zx_status_t InitMetadata();
@@ -39,7 +46,7 @@ class AmlPcieDevice {
 
     // Protocols
     pdev_protocol_t pdev_;
-    clock_protocol_t clk_;
+    clock_protocol_t clks_[kClockCount];
     gpio_protocol_t gpio_;
 
     // MMIO Buffers

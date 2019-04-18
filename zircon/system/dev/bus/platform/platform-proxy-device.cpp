@@ -231,22 +231,22 @@ void ProxyI2c::I2cTransact(const i2c_op_t* ops, size_t cnt, i2c_transact_callbac
     return;
 }
 
-zx_status_t ProxyClock::ClockEnable(uint32_t index) {
+zx_status_t ProxyClock::ClockEnable() {
     rpc_clk_req_t req = {};
     platform_proxy_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_ENABLE;
-    req.index = index;
+    req.index = index_;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
-zx_status_t ProxyClock::ClockDisable(uint32_t index) {
+zx_status_t ProxyClock::ClockDisable() {
     rpc_clk_req_t req = {};
     platform_proxy_rsp_t resp = {};
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_DISABLE;
-    req.index = index;
+    req.index = index_;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
@@ -432,6 +432,15 @@ zx_status_t ProxyDevice::PDevGetProtocol(uint32_t proto_id, uint32_t index, void
         return ZX_OK;
     }
 
+    if (proto_id == ZX_PROTOCOL_CLOCK) {
+        if (index >= clocks_.size()) {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+        auto* proto = static_cast<clock_protocol_t*>(out_protocol);
+        clocks_[index].GetProtocol(proto);
+        return ZX_OK;
+    }
+
     // For other protocols, fall through to DdkGetProtocol if index is zero
     if (index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -550,6 +559,14 @@ zx_status_t ProxyDevice::InitCommon() {
     for (uint32_t i = 0; i < info.i2c_channel_count; i++) {
         ProxyI2c i2c(device_id_, i, proxy_);
         i2cs_.push_back(std::move(i2c), &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+
+    for (uint32_t i = 0; i < info.clk_count; i++) {
+        ProxyClock clock(device_id_, i, proxy_);
+        clocks_.push_back(std::move(clock), &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -675,8 +692,16 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         return ZX_OK;
     }
     case ZX_PROTOCOL_CLOCK: {
+        auto count = clocks_.size();
+        if (count == 0) {
+            return ZX_ERR_NOT_SUPPORTED;
+        } else if (count > 1) {
+            zxlogf(ERROR, "%s: device has more than one clock\n", __func__);
+            return ZX_ERR_BAD_STATE;
+        }
+        // Return zeroth clock resource.
         auto* proto = static_cast<clock_protocol_t*>(out);
-        clk_.GetProtocol(proto);
+        clocks_[0].GetProtocol(proto);
         return ZX_OK;
     }
     case ZX_PROTOCOL_SYSMEM: {

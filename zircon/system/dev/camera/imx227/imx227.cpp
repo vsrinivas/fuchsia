@@ -155,7 +155,7 @@ zx_status_t Imx227Device::IspCallbacksInit() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // Enable 24M clock for sensor.
-    clk_.Enable(0);
+    clk_.Enable();
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
     gpios_[CAM_SENSOR_RST].Write(0);

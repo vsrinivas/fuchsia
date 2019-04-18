@@ -75,8 +75,8 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: array of power_domain_t
 #define DEVICE_METADATA_POWER_DOMAINS             0x52574F50  // POWR
 
-// type: clock_id_maps_t
-#define DEVICE_METADATA_CLOCK_MAPS                0x4D4B4C43 // CLKM
+// type: clock_id_t
+#define DEVICE_METADATA_CLOCK_IDS                 0x4B4F4C43 // CLOK
 
 // type: vendor specific eMMC configuration
 #define DEVICE_METADATA_EMMC_CONFIG               0x434D4D45 // EMMC

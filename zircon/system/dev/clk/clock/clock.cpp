@@ -18,18 +18,12 @@
 
 namespace clock {
 
-zx_status_t ClockDevice::ClockEnable(uint32_t index) {
-    if (index >= map_.size()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return clock_.Enable(map_[index]);
+zx_status_t ClockDevice::ClockEnable() {
+    return clock_.Enable(id_);
 }
 
-zx_status_t ClockDevice::ClockDisable(uint32_t index) {
-    if (index >= map_.size()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return clock_.Disable(map_[index]);
+zx_status_t ClockDevice::ClockDisable() {
+    return clock_.Disable(id_);
 }
 
 void ClockDevice::DdkUnbind() {
@@ -48,19 +42,20 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
     }
 
     size_t metadata_size;
-    status = device_get_metadata_size(parent, DEVICE_METADATA_CLOCK_MAPS, &metadata_size);
+    status = device_get_metadata_size(parent, DEVICE_METADATA_CLOCK_IDS, &metadata_size);
     if (status != ZX_OK) {
         return status;
     }
+    auto clock_count = metadata_size / sizeof(clock_id_t);
 
     fbl::AllocChecker ac;
-    std::unique_ptr<uint8_t[]> metadata(new (&ac) uint8_t[metadata_size]);
+    std::unique_ptr<clock_id_t[]> clock_ids(new (&ac) clock_id_t[clock_count]);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_CLOCK_MAPS, metadata.get(), metadata_size,
+    status = device_get_metadata(parent, DEVICE_METADATA_CLOCK_IDS, clock_ids.get(), metadata_size,
                                  &actual);
     if (status != ZX_OK) {
         return status;
@@ -69,31 +64,18 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
         return ZX_ERR_INTERNAL;
     }
 
-    clock_id_maps_t* maps = reinterpret_cast<clock_id_maps_t*>(metadata.get());
-    const auto map_count = maps->map_count;
-    auto* map = maps->maps;
-
-    for (uint32_t i = 0; i < map_count; i++) {
-        // Create an array for the clock map.
-        const auto clock_count = map->clock_count;
+    for (uint32_t i = 0; i < clock_count; i++) {
+        auto clock_id = clock_ids[i].clock_id;
         fbl::AllocChecker ac;
-        fbl::Array<uint32_t> map_array;
-        map_array.reset(new (&ac) uint32_t[clock_count], clock_count);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        memcpy(map_array.begin(), map->clock_ids, clock_count * sizeof(map->clock_ids[0]));
-
-        std::unique_ptr<ClockDevice> dev(new (&ac) ClockDevice(parent, &clock_proto,
-                                         std::move(map_array)));
+        std::unique_ptr<ClockDevice> dev(new (&ac) ClockDevice(parent, &clock_proto, clock_id));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
 
         char name[20];
-        snprintf(name, sizeof(name), "clock-%u", i);
+        snprintf(name, sizeof(name), "clock-%u", clock_id);
         zx_device_prop_t props[] = {
-            { BIND_CHILD_INDEX, 0, i },
+            { BIND_CLOCK_ID, 0, clock_id },
         };
 
         status = dev->DdkAdd(name, 0, props, countof(props));
@@ -103,10 +85,6 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
 
         // dev is now owned by devmgr.
         __UNUSED auto ptr = dev.release();
-
-        // Skip to next map.
-        map = reinterpret_cast<clock_id_map_t*>(reinterpret_cast<uint8_t*>(map) +
-            sizeof(clock_id_map_t) + clock_count * sizeof(map->clock_ids[0]));
     }
 
     return ZX_OK;
