@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/modular_test_harness_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

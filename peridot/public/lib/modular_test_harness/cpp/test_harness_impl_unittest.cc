@@ -23,11 +23,15 @@ namespace testing {
 
 class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  public:
-  TestHarnessImplTest() : harness_impl_(real_env(), harness_.NewRequest()) {}
+  TestHarnessImplTest()
+      : harness_impl_(real_env(), harness_.NewRequest(),
+                      [this] { did_exit_ = true; }) {}
 
-  const fuchsia::modular::testing::TestHarnessPtr& test_harness() {
+  fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return harness_;
   };
+
+  bool did_exit() { return did_exit_; }
 
   std::vector<std::string> MakeBasemgrArgs(
       fuchsia::modular::testing::TestHarnessSpec spec) {
@@ -35,11 +39,18 @@ class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
   }
 
  private:
+  bool did_exit_ = false;
   fuchsia::modular::testing::TestHarnessPtr harness_;
   ::modular::testing::TestHarnessImpl harness_impl_;
 };
 
 namespace {
+
+TEST_F(TestHarnessImplTest, ExitCallback) {
+  test_harness().Unbind();
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return did_exit(); }, zx::sec(5)));
+}
 
 TEST_F(TestHarnessImplTest, DefaultMakeBasemgrArgs) {
   std::vector<std::string> expected = {
@@ -123,20 +134,16 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
         std::move(intercept_spec));
   }
 
-  fuchsia::modular::testing::TestHarnessPtr harness;
-  ::modular::testing::TestHarnessImpl harness_impl(real_env(),
-                                                   harness.NewRequest());
-
   // Listen for story shell interception.
   bool story_shell_intercepted = false;
-  harness.events().OnNewStoryShell =
+  test_harness().events().OnNewStoryShell =
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
               component) { story_shell_intercepted = true; };
 
   // Listen for module interception.
   bool fake_module_intercepted = false;
-  harness.events().OnNewComponent =
+  test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
               component) {
@@ -144,7 +151,7 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
           fake_module_intercepted = true;
         }
       };
-  harness->Run(std::move(spec));
+  test_harness()->Run(std::move(spec));
 
   // Create a new story -- this should auto-start the story (because of
   // test_session_shell's behaviour), and launch a new story shell.
@@ -153,7 +160,7 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
 
   fuchsia::modular::testing::TestHarnessService svc;
   svc.set_puppet_master(puppet_master.NewRequest());
-  harness->GetService(std::move(svc));
+  test_harness()->GetService(std::move(svc));
 
   puppet_master->ControlStory("my_story", story_master.NewRequest());
 

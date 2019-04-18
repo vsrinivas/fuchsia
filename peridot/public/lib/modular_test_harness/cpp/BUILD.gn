@@ -6,7 +6,7 @@ group("cpp") {
   testonly = true
 
   public_deps = [
-    ":test_harness_impl",
+    ":test_harness_fixture",
   ]
 }
 
@@ -15,6 +15,22 @@ group("unittests") {
 
   deps = [
     ":test_harness_impl_unittest",
+  ]
+}
+
+# This library has a run-time dependency on the `modular_test_harness` package.
+source_set("test_harness_fixture") {
+  testonly = true
+
+  sources = [
+    "test_harness_fixture.h",
+    "test_harness_fixture.cc"
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
   ]
 }
 
@@ -49,6 +65,8 @@ source_set("test_harness_impl_unittest") {
 
   deps = [
     ":test_harness_impl",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",

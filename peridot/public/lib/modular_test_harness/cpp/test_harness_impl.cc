@@ -96,12 +96,17 @@ class TestHarnessImpl::InterceptedSessionAgent final {
 
 TestHarnessImpl::TestHarnessImpl(
     const fuchsia::sys::EnvironmentPtr& parent_env,
-    fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request)
+    fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request,
+    fit::function<void()> on_disconnected)
     : parent_env_(parent_env),
       binding_(this, std::move(request)),
+      on_disconnected_(std::move(on_disconnected)),
       interceptor_(
           sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
-              parent_env_)) {}
+              parent_env_)) {
+  binding_.set_error_handler(
+      [this](zx_status_t status) { CloseBindingIfError(status); });
+}
 
 TestHarnessImpl::~TestHarnessImpl() = default;
 
@@ -136,6 +141,7 @@ bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
     binding_.Close(status);
     // destory |enclosing_env_| should kill all processes.
     enclosing_env_.reset();
+    on_disconnected_();
     return true;
   }
   return false;

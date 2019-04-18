@@ -26,8 +26,15 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   //
   // |test_harness_request| is implemented by this class. The TestHarness
   // FIDL interface is the way to interact with the TestHarness API.
+  //
+  // |on_exit| is called when the TestHarness interface is closed.
+  // This can happen if the TestHarness client drops their side of the
+  // connection, or this class closes it due to an error; In this case, the
+  // error is sent as an epitaph. See the |TestHarness| protocol documentation
+  // for more details.
   TestHarnessImpl(const fuchsia::sys::EnvironmentPtr& parent_env,
-                  fidl::InterfaceRequest<TestHarness> test_harness_request);
+                  fidl::InterfaceRequest<TestHarness> test_harness_request,
+                  fit::function<void()> on_disconnected);
 
   virtual ~TestHarnessImpl() override;
 
@@ -132,6 +139,8 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
 
   fidl::Binding<fuchsia::modular::testing::TestHarness> binding_;
   fuchsia::modular::testing::TestHarnessSpec spec_;
+
+  fit::function<void()> on_disconnected_;
 
   // This map manages InterceptedComponent bindings (and their implementations).
   // When a |InterceptedComponent| connection is closed, it is automatically
