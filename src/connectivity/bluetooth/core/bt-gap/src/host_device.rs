@@ -89,6 +89,10 @@ impl HostDevice {
         self.host.connect(&device_id)
     }
 
+    pub fn forget(&mut self, peer_id: String) -> impl Future<Output = Result<Status, fidl::Error>> {
+        self.host.forget(&peer_id)
+    }
+
     pub fn close(&self) -> Result<(), fidl::Error> {
         self.host.close()
     }

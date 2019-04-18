@@ -128,9 +128,9 @@ protocol Control {
     /// the system.
     -> OnAdapterRemoved(string identifier);
 
-    /// Sent when a Host Device is Updated
+    /// Sent when a peer is updated.
     -> OnDeviceUpdated(RemoteDevice device);
 
-    /// Sent when a Host Device is removed
+    /// Sent when a peer is removed.
     -> OnDeviceRemoved(string identifier);
 };

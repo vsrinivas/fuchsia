@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fidl::{self, encoding::OutOfLine, endpoints::ServerEnd},
-    fidl_fuchsia_bluetooth,
+    fidl_fuchsia_bluetooth::{Error as FIDLBTError, ErrorCode as FIDLBTErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, ControlControlHandle, DeviceClass, InputCapabilityType, OutputCapabilityType,
@@ -18,7 +18,7 @@ use {
     fuchsia_bluetooth::{
         self as bt, bt_fidl_status,
         error::Error as BTError,
-        util::{clone_host_data, clone_host_info, clone_remote_device},
+        util::{clone_bonding_data, clone_host_data, clone_host_info, clone_remote_device},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
@@ -36,7 +36,6 @@ use crate::{
     host_device::{self, HostDevice},
     services,
     store::stash::Stash,
-    util,
 };
 
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
@@ -357,13 +356,45 @@ impl HostDispatcher {
 
     pub async fn forget(
         &mut self,
-        _device_id: String,
+        peer_id: String,
     ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
-        // TODO(NET-1148): This function should perform the following:
-        // 1. Remove the device from bt-gap's in-memory list of devices, once it exists.
-        // 2. Remove bonding data from store::Stash.
-        // 3. Call Host.Forget(), once it exists.
-        Ok(bt_fidl_status!(NotSupported, "Operation not supported"))
+        // Try to delete from each adapter, even if it might not have the peer.
+        // remote_devices will be updated by the disconnection(s).
+        let adapters = await!(self.get_all_adapters());
+        if adapters.is_empty() {
+            return Ok(bt_fidl_status!(BluetoothNotAvailable, "No adapter found"));
+        }
+        let mut adapters_removed: u32 = 0;
+        for adapter in adapters {
+            let adapter_path = adapter.read().path.clone();
+            if let Some(e) = await!(adapter.write().forget(peer_id.clone()))?.error {
+                match *e {
+                    FIDLBTError { error_code: FIDLBTErrorCode::NotFound, .. } => {
+                        fx_vlog!(1, "No peer {} on adapter {:?}; ignoring", peer_id, adapter_path)
+                    }
+                    _ => {
+                        fx_log_err!(
+                            "Could not forget peer {} on adapter {:?}",
+                            peer_id,
+                            adapter_path
+                        );
+                        return Ok(fidl_fuchsia_bluetooth::Status { error: Some(e) });
+                    }
+                }
+            } else {
+                adapters_removed += 1;
+            }
+        }
+
+        match self.state.write().stash.rm_peer(&peer_id) {
+            Err(_) => return Ok(bt_fidl_status!(Failed, "Couldn't remove peer")),
+            Ok(_) => (),
+        }
+
+        if adapters_removed == 0 {
+            return Ok(bt_fidl_status!(Failed, "No adapters had peer"));
+        }
+        Ok(bt_fidl_status!())
     }
 
     pub async fn disconnect(
@@ -381,6 +412,11 @@ impl HostDispatcher {
         let adapter = await!(self.on_adapters_found())?;
         let mut wstate = adapter.state.write();
         Ok(wstate.get_active_host())
+    }
+
+    pub async fn get_all_adapters(&self) -> Vec<Arc<RwLock<HostDevice>>> {
+        let _ = await!(self.on_adapters_found());
+        self.state.read().host_devices.values().cloned().collect()
     }
 
     pub async fn get_adapters(&self) -> fidl::Result<Vec<AdapterInfo>> {
@@ -474,7 +510,7 @@ impl HostDispatcher {
     }
 
     pub fn get_remote_devices(&self) -> Vec<RemoteDevice> {
-        self.state.read().remote_devices.values().map(|d| clone_remote_device(d)).collect()
+        self.state.read().remote_devices.values().map(clone_remote_device).collect()
     }
 
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
@@ -647,9 +683,7 @@ async fn try_restore_bonds(
 ) -> Result<(), Error> {
     // Load bonding data that use this host's `address` as their "local identity address".
     if let Some(iter) = hd.state.read().stash.list_bonds(address) {
-        let res = await!(host_device
-            .read()
-            .restore_bonds(iter.map(|bd| util::clone_bonding_data(&bd)).collect()));
+        let res = await!(host_device.read().restore_bonds(iter.map(clone_bonding_data).collect()));
         match res {
             Ok(_) => Ok(()),
             Err(e) => {

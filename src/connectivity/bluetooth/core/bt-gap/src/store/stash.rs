@@ -94,6 +94,20 @@ impl Stash {
         Some(self.bonding_data.get(local_address)?.values().into_iter())
     }
 
+    /// Removes persisted bond for a peer and removes its information from any adapters that have
+    /// it. Returns an error for failures but not if the peer isn't found.
+    pub fn rm_peer(&mut self, peer_id: &str) -> Result<(), Error> {
+        fx_log_info!("rm_peer (id: {})", peer_id);
+
+        // Delete the persisted bond blob.
+        self.proxy.delete_value(&bonding_data_key(&peer_id))?;
+        self.proxy.commit()?;
+
+        // Delete peer from memory cache of all adapters.
+        self.bonding_data.values_mut().for_each(|m| m.retain(|k, _| k != peer_id));
+        Ok(())
+    }
+
     /// Returns the local host data for the given local `address`.
     pub fn get_host_data(&self, local_address: &str) -> Option<&HostData> {
         self.host_data.get(local_address)
@@ -199,7 +213,9 @@ pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
 mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_host::LocalKey;
-    use {fuchsia_component::client::connect_to_service, fuchsia_async as fasync, pin_utils::pin_mut};
+    use {
+        fuchsia_async as fasync, fuchsia_component::client::connect_to_service, pin_utils::pin_mut,
+    };
 
     // create_stash_accessor will create a new accessor to stash scoped under the given test name.
     // All preexisting data in stash under this identity is deleted before the accessor is
@@ -543,6 +559,75 @@ mod tests {
         let host_data =
             stash.get_host_data("00:00:00:00:00:02").expect("expected to find HostData");
         assert_eq!(&HostData { irk: None }, host_data);
+    }
+
+    #[test]
+    fn rm_peer() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let accessor_proxy =
+            create_stash_accessor("rm_peer").expect("failed to create StashAccessor");
+
+        // Insert values into stash that contain bonding data for several devices.
+        accessor_proxy
+            .set_value(
+                "bonding-data:id-1",
+                &mut Value::Stringval(
+                    r#"
+                    {
+                       "identifier": "id-1",
+                       "localAddress": "00:00:00:00:00:01",
+                       "name": null,
+                       "le": null,
+                       "bredr": null
+                    }"#
+                    .to_string(),
+                ),
+            )
+            .expect("failed to set value");
+        accessor_proxy
+            .set_value(
+                "bonding-data:id-2",
+                &mut Value::Stringval(
+                    r#"
+                    {
+                       "identifier": "id-2",
+                       "localAddress": "00:00:00:00:00:01",
+                       "name": null,
+                       "le": null,
+                       "bredr": null
+                    }"#
+                    .to_string(),
+                ),
+            )
+            .expect("failed to set value");
+        accessor_proxy.commit().expect("failed to initialize bonding data for testing");
+
+        let mut stash = exec
+            .run_singlethreaded(Stash::new(accessor_proxy))
+            .expect("stash failed to initialize");
+
+        // OK to remove some unknown peer...
+        assert!(stash.rm_peer("id-0").is_ok());
+
+        // ...or known peer.
+        assert!(stash.rm_peer("id-1").is_ok());
+
+        let local = stash
+            .bonding_data
+            .get("00:00:00:00:00:01")
+            .expect("could not find local address entries");
+        assert_eq!(1, local.len());
+        assert!(local.get("id-1").is_none());
+        assert_eq!(
+            &BondingData {
+                identifier: "id-2".to_string(),
+                local_address: "00:00:00:00:00:01".to_string(),
+                name: None,
+                le: None,
+                bredr: None,
+            },
+            local.get("id-2").expect("could not find device")
+        );
     }
 
     #[test]
