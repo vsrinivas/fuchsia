@@ -25,6 +25,7 @@ namespace {
 // spawned test subprocess.
 constexpr const char* const kEnvironmentWhitelist[] = {
     "TMPDIR",
+    "PATH",
     // Paths to the symbolizer for various sanitizers.
     "ASAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
