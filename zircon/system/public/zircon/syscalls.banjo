@@ -1,0 +1,1320 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library syscalls;
+
+using zx;
+
+//
+//
+// TODO(banjo): [extern] struct  is a temporary situation; eventually the
+// canonical location will be here. These are currently defined amongst various
+// handwritten Zircon .h files.
+//
+//
+
+[extern]
+struct zx_wait_item_t {};
+
+[extern]
+struct zx_handle_disposition_t {};
+
+[extern]
+struct zx_handle_info_t {};
+
+[extern]
+struct zx_channel_call_args_t {};
+
+[extern]
+struct zx_port_packet_t {};
+
+[extern]
+struct zx_profile_scheduler_t {};
+
+[extern]
+struct zx_profile_info_t {};
+
+[extern]
+struct zx_pcie_device_info_t {};
+
+[extern]
+struct zx_pci_bar_t {};
+
+[extern]
+struct zx_pci_init_arg_t {};
+
+[extern]
+struct zx_smc_parameters_t {};
+
+[extern]
+struct zx_smc_result_t {};
+
+[extern]
+struct zx_system_powerctl_arg_t {};
+
+// TODO(banjo): These are here to make the front end happy, but the abigen
+// backend special cases them to keep their original name, and make them just
+// passed "by value" as basic types.
+[extern] struct uintptr_t {};
+[extern] struct zx_futex_t {};
+
+protocol Api {
+
+    //
+    //
+    // Time
+    //
+    //
+
+    /// Acquire the current time
+    clock_get(zx.clock clock_id) -> (zx.time time);
+
+    /// Acquire the current time.
+    clock_get_new(zx.clock clock_id) -> (zx.status status, zx.time out);
+
+    /// Acquire the current monotonic time.
+    clock_get_monotonic() -> (zx.time time);
+
+    /// High resolution sleep.
+    [rights="None.",
+     blocking]
+    nanosleep(zx.time deadline) -> (zx.status status);
+
+    /// Read the number of high-precision timer ticks since boot.
+    [vdsocall]
+    ticks_get() -> (zx.ticks ticks);
+
+    /// Read the number of high-precision timer ticks in a second.
+    [vdsocall,
+     const]
+    ticks_per_second() -> (zx.ticks ticks);
+
+    /// Convert a time relative to now to an absolute deadline.
+    [vdsocall]
+    deadline_after(zx.duration nanoseconds) -> (zx.time time);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
+    clock_adjust(handle<resource> handle, zx.clock clock_id, int64 offset) -> (zx.status status);
+
+    //
+    //
+    // System information
+    //
+    //
+
+    [vdsocall,
+     const]
+    system_get_dcache_line_size() -> (uint32 size);
+
+    /// Get number of logical processors on the system.
+    [vdsocall,
+     const]
+    system_get_num_cpus() -> (uint32 count);
+
+    /// Get version string for system.
+    [vdsocall,
+     argtype="version OUT"]
+    system_get_version(string:version_size version, usize version_size) ->
+        (zx.status status);
+
+    /// Get amount of physical memory on the system.
+    [vdsocall]
+    system_get_physmem() -> (uint64 physmem);
+
+    /// Get supported hardware capabilities.
+    [vdsocall,
+     argtype="features features"]
+    system_get_features(uint32 kind) -> (zx.status status, uint32 features);
+
+    //
+    //
+    // Abstraction of machine operations
+    //
+    //
+
+    /// Flush CPU data and/or instruction caches.
+    [vdsocall,
+     argtype="addr IN"]
+    cache_flush(array<voidptr>:size addr, usize size, uint32 options) -> (zx.status status);
+
+    //
+    //
+    // Generic handle operations
+    //
+    //
+
+    /// Close a handle.
+    [rights="None.",
+     argtype="handle handle_release_always"]
+    handle_close(handle handle) -> (zx.status status);
+
+    /// Close a number of handles.
+    [rights="None.",
+     argtype="handles IN"]
+    handle_close_many(array<handle>:num_handles handles, usize num_handles) -> (zx.status status);
+
+    /// Duplicate a handle.
+    [rights="handle must have ZX_RIGHT_DUPLICATE.",
+     argtype="out handle_acquire"]
+    handle_duplicate(handle handle, zx.rights rights) -> (zx.status status, handle out);
+
+    /// Replace a handle.
+    [rights="None.",
+     argtype="handle handle_release_always",
+     argtype="out handle_acquire"]
+    handle_replace(handle handle, zx.rights rights) -> (zx.status status, handle out);
+
+    //
+    //
+    // Generic object operations
+    //
+    //
+    /// Wait for signals on an object.
+    [rights="handle must have ZX_RIGHT_WAIT.",
+     blocking,
+     argtype="observed optional"]
+    object_wait_one(handle handle, zx.signals signals, zx.time deadline) ->
+        (zx.status status, zx.signals observed);
+
+    /// Wait for signals on multiple objects.
+    [rights="Every entry of items must have a handle field with ZX_RIGHT_WAIT.",
+     blocking,
+     argtype="items INOUT"]
+    object_wait_many(array<zx_wait_item_t>:count items, usize count, zx.time deadline) ->
+        (zx.status status);
+
+    /// Subscribe for signals on an object.
+    [rights="handle must have ZX_RIGHT_WAIT.",
+     rights="port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE."]
+    object_wait_async(handle handle, handle<port> port, uint64 key,
+                      zx.signals signals, uint32 options) ->
+        (zx.status status);
+
+    /// Signal an object.
+    [rights="handle must have ZX_RIGHT_SIGNAL."]
+    object_signal(handle handle, uint32 clear_mask, uint32 set_mask) -> (zx.status status);
+
+    /// Signal an object's peer.
+    [rights="handle must have ZX_RIGHT_SIGNAL_PEER."]
+    object_signal_peer(handle handle, uint32 clear_mask, uint32 set_mask) -> (zx.status status);
+
+    /// Ask for various properties of various kernel objects.
+    [rights="handle must have ZX_RIGHT_GET_PROPERTY.",
+     rights="If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.",
+     rights="If property is ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, handle must be of type ZX_OBJ_TYPE_PROCESS.",
+     rights="If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
+     rights="If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
+     argtype="value OUT"]
+    object_get_property(handle handle, uint32 property,
+                        array<voidptr>:value_size value, usize value_size) ->
+        (zx.status status);
+
+    /// Set various properties of various kernel objects.
+    [rights="handle must have ZX_RIGHT_SET_PROPERTY.",
+     rights="If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.",
+    // TODO(ZX-2967): TODO(scottmg): Why is the above useful?
+     rights="If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
+     rights="If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.",
+     rights="If property is ZX_PROP_JOB_KILL_ON_OOM, handle must be of type ZX_OBJ_TYPE_JOB.",
+     argtype="value IN"]
+    object_set_property(handle handle, uint32 property,
+                        array<voidptr>:value_size value, usize value_size) ->
+        (zx.status status);
+
+    /// Query information about an object.
+    [rights="If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_JOB, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_PROCESS_THREADS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_ENUMERATE.",
+     rights="If topic is ZX_INFO_JOB_CHILDREN, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.",
+     rights="If topic is ZX_INFO_JOB_PROCESSES, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.",
+     rights="If topic is ZX_INFO_THREAD, handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_THREAD_EXCEPTION_REPORT, handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_THREAD_STATS, handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_TASK_STATS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_PROCESS_MAPS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_PROCESS_VMOS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_VMO, handle must be of type ZX_OBJ_TYPE_VMO.",
+    // TODO(ZX-2967),   Should this require INSPECT?
+     rights="If topic is ZX_INFO_VMAR, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_CPU_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     rights="If topic is ZX_INFO_KMEM_STATS, handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     rights="If topic is ZX_INFO_RESOURCE, handle must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_HANDLE_COUNT, handle must have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_BTI, handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_PROCESS_HANDLE_STATS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.",
+     rights="If topic is ZX_INFO_SOCKET, handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_INSPECT.",
+     argtype="buffer OUT",
+     argtype="actual optional",
+     argtype="avail optional"]
+    object_get_info(handle handle, uint32 topic,
+                    array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual, usize avail);
+
+    /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
+    [rights="handle must have ZX_RIGHT_ENUMERATE."]
+    // TODO(ZX-2399): handle rights must be the same or greater than |rights|
+    object_get_child(handle handle, uint64 koid, zx.rights rights) ->
+        (zx.status status, handle out);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.",
+     rights="profile must be of type ZX_OBJ_TYPE_PROFILE and have ZX_RIGHT_APPLY_PROFILE."]
+    object_set_profile(handle handle, handle profile, uint32 options) -> (zx.status status);
+
+    //
+    //
+    // IPC: Channels
+    //
+    //
+
+    /// Create a channel.
+    [argtype="out0 handle_acquire",
+     argtype="out1 handle_acquire"]
+    channel_create(uint32 options) -> (zx.status status, handle out0, handle out1);
+
+    /// Read a message from a channel.
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.",
+     argtype="bytes OUT",
+     argtype="handles OUT",
+     argtype="actual_bytes optional",
+     argtype="actual_handles optional"]
+    channel_read(handle handle, uint32 options,
+                 array<voidptr>:num_bytes bytes,
+                 array<handle>:num_handles handles,
+                 uint32 num_bytes,
+                 uint32 num_handles) ->
+        (zx.status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Read a message from a channel.
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.",
+     argtype="bytes OUT",
+     argtype="handles OUT",
+     argtype="actual_bytes optional",
+     argtype="actual_handles optional"]
+    channel_read_etc(handle handle, uint32 options,
+                     array<voidptr>:num_bytes bytes,
+                     array<zx_handle_info_t>:num_handles handles,
+                     uint32 num_bytes,
+                     uint32 num_handles) ->
+        (zx.status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Write a message to a channel.
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.",
+     rights="Every entry of handles must have ZX_RIGHT_TRANSFER.",
+     argtype="bytes IN",
+     argtype="handles IN"]
+    channel_write(handle handle, uint32 options,
+                  array<voidptr>:num_bytes bytes, uint32 num_bytes,
+                  array<handle>:num_handles handles, uint32 num_handles) ->
+        (zx.status status);
+
+    /// Write a message to a channel.
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.",
+     rights="Every entry of handles must have ZX_RIGHT_TRANSFER.",
+     argtype="bytes IN",
+     argtype="handles INOUT"]
+    channel_write_etc(handle handle, uint32 options,
+                      array<voidptr>:num_bytes bytes, uint32 num_bytes,
+                      array<zx_handle_disposition_t>:num_handles handles, uint32 num_handles) ->
+        (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
+     rights="All wr_handles of args must have ZX_RIGHT_TRANSFER.",
+     internal,
+     argtype="args IN"]
+    channel_call_noretry(handle handle, uint32 options, zx.time deadline,
+                         array<zx_channel_call_args_t>:1 args) ->
+        (zx.status status, uint32 actual_bytes, uint32 actual_handles);
+
+    [internal,
+     argtype="args IN"]
+    channel_call_finish(zx.time deadline, array<zx_channel_call_args_t>:1 args) ->
+        (zx.status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Send a message to a channel and await a reply.
+    [rights="handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
+     rights="All wr_handles of args must have ZX_RIGHT_TRANSFER.",
+     blocking,
+     vdsocall,
+     argtype="args IN"]
+    channel_call(handle handle, uint32 options, zx.time deadline,
+                 array<zx_channel_call_args_t>:1 args) ->
+        (zx.status status, uint32 actual_bytes, uint32 actual_handles);
+
+    //
+    //
+    // IPC: Sockets
+    //
+    //
+
+    /// Create a socket.
+    [argtype="out0 handle_acquire",
+     argtype="out1 handle_acquire"]
+    socket_create(uint32 options) -> (zx.status status, handle out0, handle out1);
+
+    /// Write data to a socket.
+    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.",
+     argtype="buffer IN",
+     argtype="actual optional"]
+    socket_write(handle<socket> handle, uint32 options,
+                 array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual);
+
+    /// Read data from a socket.
+    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.",
+     argtype="buffer OUT",
+     argtype="actual optional"]
+    socket_read(handle<socket> handle, uint32 options,
+                array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual);
+
+    /// Send another socket object via a socket.
+    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.",
+     rights="socket_to_share must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_TRANSFER."]
+    socket_share(handle<socket> handle, handle<socket> socket_to_share) -> (zx.status status);
+
+    /// Receive another socket object via a socket.
+    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.",
+     argtype="out_socket handle_acquire"]
+    socket_accept(handle<socket> handle) -> (zx.status status, handle<socket> out_socket);
+
+    /// Prevent reading or writing.
+    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE."]
+    socket_shutdown(handle<socket> handle, uint32 options) -> (zx.status status);
+
+    //
+    //
+    // Threads
+    //
+    //
+
+    /// Terminate the current running thread.
+    [noreturn]
+    thread_exit();
+
+    /// Create a thread.
+    [rights="process must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_MANAGE_THREAD.",
+     argtype="name IN",
+     argtype="out handle_acquire"]
+    thread_create(handle<process> process,
+                  string:name_size name,
+                  usize name_size,
+                  uint32 options) ->
+        (zx.status status, handle<thread> out);
+
+    /// Start execution on a thread.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD."]
+    thread_start(handle<thread> handle, zx.vaddr thread_entry, zx.vaddr stack,
+                 uintptr_t arg1, uintptr_t arg2) ->
+        (zx.status status);
+
+    /// Read one aspect of thread state.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_READ.",
+     argtype="buffer OUT"]
+    thread_read_state(handle<thread> handle, uint32 kind,
+                      array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    /// Write one aspect of thread state.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.",
+     argtype="buffer IN"]
+    thread_write_state(handle<thread> handle, uint32 kind,
+                       array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    //
+    //
+    // Processes
+    //
+    //
+
+    /// Exits the currently running process.
+    [noreturn]
+    process_exit(int64 retcode);
+
+    /// Create a new process.
+    [rights="job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
+     argtype="name IN",
+     argtype="proc_handle handle_acquire",
+     argtype="vmar_handle handle_acquire"]
+    // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
+    process_create(handle<job> job, string:name_size name, usize name_size, uint32 options) ->
+        (zx.status status, handle<process> proc_handle, handle<vmar> vmar_handle);
+
+    /// Start execution on a process.
+    [rights="handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
+     rights="thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.",
+     rights="arg1 must have ZX_RIGHT_TRANSFER.",
+     argtype="arg1 handle_release_always"]
+    process_start(handle<process> handle, handle<thread> thread,
+                  zx.vaddr entry, zx.vaddr stack,
+                  handle arg1, uintptr_t arg2) ->
+        (zx.status status);
+
+    /// Read from the given process's address space.
+    [rights="handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
+     argtype="buffer OUT"]
+    process_read_memory(handle<process> handle, zx.vaddr vaddr,
+                        array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual);
+
+    /// Write into the given process's address space.
+    [rights="handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
+     argtype="buffer IN"]
+    process_write_memory(handle<process> handle, zx.vaddr vaddr,
+                         array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual);
+
+
+    //
+    //
+    // Jobs
+    //
+    //
+
+    /// Create a new job.
+    [rights="parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.",
+     argtype="out handle_acquire"]
+    // TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
+    job_create(handle<job> parent_job, uint32 options) -> (zx.status status, handle<job> out);
+
+    /// Set job security and resource policies.
+    [rights="handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.",
+     argtype="policy IN"]
+    job_set_policy(handle<job>handle, uint32 options, uint32 topic,
+                   array<voidptr>:count policy, uint32 count) ->
+        (zx.status status);
+
+
+    //
+    //
+    // Tasks (shared between threads, processes, and jobs)
+    //
+    //
+
+    /// Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
+    [rights="port must be of type ZX_OBJ_TYPE_PORT."]
+    // TODO(ZX-2967): No rights required on either?
+    // TODO(banjo): handle<task>?
+    task_bind_exception_port(handle handle, handle<port> port, uint64 key, uint32 options) ->
+        (zx.status status);
+
+    /// Suspend the given task. Currently only thread or process handles may be suspended.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
+     argtype="token handle_acquire"]
+    // TODO(banjo): handle<task>?
+    task_suspend(handle handle) -> (zx.status status, handle token);
+
+    /// Suspend the given task. Currently only thread or process handles may be suspended.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
+     argtype="token handle_acquire"]
+    // TODO(banjo): handle<task>?
+    task_suspend_token(handle handle) -> (zx.status status, handle token);
+
+    /// Resume the given task after an exception has been reported.
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD.",
+     rights="port must be of type ZX_OBJ_TYPE_PORT."]
+    // TODO(ZX-2967): No rights required on either?
+    // TODO(banjo): handle<task>?
+    task_resume_from_exception(handle handle, handle<port> port, uint32 options) ->
+        (zx.status status);
+
+    /// Create an exception channel for a given job, process, or thread.
+    [rights="handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.",
+     rights="If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.",
+     argtype="out handle_acquire"]
+    // TODO(banjo): handle<task>?
+    // TODO(banjo): is out a real handle<channel> or just something similar?
+    task_create_exception_channel(handle handle, uint32 options) ->
+        (zx.status status, handle<channel> out);
+
+    /// Kill the provided task (job, process, or thread).
+    [rights="handle must have ZX_RIGHT_DESTROY."]
+    // TODO(banjo): handle<task>?
+    task_kill(handle handle) -> (zx.status status);
+
+    //
+    //
+    // Exceptions
+    //
+    //
+
+    /// Create a handle for the exception's thread.
+    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION.",
+     argtype="out handle_acquire"]
+    // TODO(banjo): handle as handle<exception>
+    exception_get_thread(handle handle) -> (zx.status status, handle<thread> out);
+
+    /// Create a handle for the exception's process.
+    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION.",
+     argtype="out handle_acquire"]
+    // TODO(banjo): handle as handle<exception>
+    exception_get_process(handle handle) -> (zx.status status, handle<process> out);
+
+    //
+    //
+    // Synchronization
+    //
+    //
+
+    /// Create an event.
+    [argtype="out handle_acquire"]
+    event_create(uint32 options) -> (zx.status status, handle<event> out);
+
+    /// Create an event pair.
+    [argtype="out0 handle_acquire",
+     argtype="out1 handle_acquire"]
+    eventpair_create(uint32 options) ->
+        (zx.status status, handle<eventpair> out0, handle<eventpair> out1);
+
+    /// Wait on a futex.
+    [rights="None.",
+     blocking,
+     argtype="value_ptr IN"]
+    futex_wait(array<zx_futex_t>:1 value_ptr, zx_futex_t current_value,
+               handle new_futex_owner, zx.time deadline) ->
+        (zx.status status);
+
+    /// Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+    [rights="None.",
+     argtype="value_ptr IN"]
+    futex_wake(array<zx_futex_t>:1 value_ptr, uint32 wake_count) -> (zx.status status);
+
+    /// Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+    [rights="None.",
+     argtype="value_ptr IN",
+     argtype="requeue_ptr IN"]
+    futex_requeue(array<zx_futex_t>:1 value_ptr,
+                  uint32 wake_count,
+                  zx_futex_t current_value,
+                  array<zx_futex_t>:1 requeue_ptr, uint32 requeue_count,
+                  handle new_requeue_owner) ->
+        (zx.status status);
+
+    /// Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+    [rights="None.",
+     argtype="value_ptr IN"]
+    futex_wake_single_owner(array<zx_futex_t>:1 value_ptr) -> (zx.status status);
+
+    /// Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+    [rights="None.",
+     argtype="value_ptr IN",
+     argtype="requeue_ptr IN"]
+    futex_requeue_single_owner(array<zx_futex_t>:1 value_ptr,
+                               zx_futex_t current_value,
+                               array<zx_futex_t>:1 requeue_ptr, uint32 requeue_count,
+                               handle new_requeue_owner) ->
+        (zx.status status);
+
+    /// Fetch the koid current owner of a futex, if any.
+    [rights="None.",
+     argtype="value_ptr IN",
+     argtype="koid OUT"]
+    futex_get_owner(array<zx_futex_t>:1 value_ptr, array<zx.koid>:1 koid) -> (zx.status status);
+
+
+    //
+    //
+    // Ports
+    //
+    //
+
+    /// Create an IO port.
+    [argtype="out handle_acquire"]
+    port_create(uint32 options) -> (zx.status status, handle<port> out);
+
+    /// Queue a packet to a port.
+    [rights="handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.",
+     argtype="packet IN"]
+    port_queue(handle<port> handle, array<zx_port_packet_t>:1 packet) -> (zx.status status);
+
+    /// Wait for a packet arrival in a port.
+    [rights="handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.",
+     blocking,
+     argtype="packet OUT"]
+    port_wait(handle<port> handle, zx.time deadline, array<zx_port_packet_t>:1 packet) ->
+        (zx.status status);
+
+    /// Cancels async port notifications on an object.
+    [rights="handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE."]
+    port_cancel(handle<port> handle, handle source, uint64 key) -> (zx.status status);
+
+
+    //
+    //
+    // Timers
+    //
+    //
+
+    /// Create a timer.
+    [argtype="out handle_acquire"]
+    timer_create(uint32 options, zx.clock clock_id) -> (zx.status status, handle<timer> out);
+
+    /// Start a timer.
+    [rights="handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE."]
+    timer_set(handle<timer> handle, zx.time deadline, zx.duration slack) -> (zx.status status);
+
+    /// Cancel a timer.
+    [rights="handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE."]
+    timer_cancel(handle<timer> handle) -> (zx.status status);
+
+    //
+    //
+    // Memory management
+    //
+    //
+
+    /// Create a VM object.
+    [argtype="out handle_acquire"]
+    vmo_create(uint64 size, uint32 options) -> (zx.status status, handle<vmo> out);
+
+    /// Read bytes from the VMO.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     blocking,
+     argtype="buffer OUT"]
+    vmo_read(handle<vmo> handle,
+             array<voidptr>:buffer_size buffer,
+             uint64 offset,
+             usize buffer_size) ->
+        (zx.status status);
+
+    /// Write bytes to the VMO.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
+     blocking,
+     argtype="buffer IN"]
+    vmo_write(handle<vmo> handle,
+              array<voidptr>:buffer_size buffer,
+              uint64 offset,
+              usize buffer_size)
+        -> (zx.status status);
+
+    /// Read the current size of a VMO object.
+    // TODO(ZX-2967): No rights required?
+    vmo_get_size(handle<vmo> handle) -> (zx.status status, uint64 size);
+
+    /// Resize a VMO object.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE."]
+    vmo_set_size(handle<vmo> handle, uint64 size) -> (zx.status status);
+
+    /// Perform an operation on a range of a VMO.
+    [rights="If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
+     rights="If op is ZX_VMO_OP_DECOMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
+     rights="If op is ZX_VMO_OP_CACHE_SYNC, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     rights="If op is ZX_VMO_OP_CACHE_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
+     rights="If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     rights="If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     blocking,
+     argtype="buffer INOUT"]
+    vmo_op_range(handle<vmo> handle, uint32 op, uint64 offset, uint64 size,
+                 array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    /// Create a clone of a VM Object.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.",
+     argtype="out handle_acquire"]
+    vmo_clone(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
+        (zx.status status, handle<vmo> out);
+
+    /// Set the caching policy for pages held by a VMO.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP."]
+    vmo_set_cache_policy(handle<vmo> handle, uint32 cache_policy) -> (zx.status status);
+
+    /// Add execute rights to a VMO.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO.",
+     rights="vmex must have resource kind ZX_RSRC_KIND_VMEX.",
+     argtype="handle handle_release_always",
+     argtype="out handle_acquire"]
+    // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
+    // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
+    vmo_replace_as_executable(handle<vmo> handle, handle<resource> vmex) ->
+        (zx.status status, handle<vmo> out);
+
+
+    //
+    //
+    // Address space management
+    //
+    //
+
+    /// Allocate a new subregion.
+    [rights="If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.",
+     rights="If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.",
+     rights="If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.",
+     argtype="child_vmar handle_acquire"]
+    vmar_allocate(handle<vmar> parent_vmar, zx.vm_option options, uint64 offset, uint64 size) ->
+        (zx.status status, handle<vmar> child_vmar, zx.vaddr child_addr);
+
+    /// Destroy a virtual memory address region.
+    // TODO(ZX-2967): handle No rights required?
+    vmar_destroy(handle<vmar> handle) -> (zx.status status);
+
+    /// Add a memory mapping.
+    [rights="handle must be of type ZX_OBJ_TYPE_VMAR.",
+     rights="vmo must be of type ZX_OBJ_TYPE_VMO."]
+    // TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
+    vmar_map(handle<vmar> handle, zx.vm_option options, uint64 vmar_offset,
+             handle<vmo> vmo, uint64 vmo_offset,
+             uint64 len) ->
+        (zx.status status, zx.vaddr mapped_addr);
+
+    /// Unmap virtual memory pages.
+    // TODO(ZX-2967): handle No rights required?
+    vmar_unmap(handle<vmo> handle, zx.vaddr addr, uint64 len) -> (zx.status status);
+
+    /// Set protection of virtual memory pages.
+    [rights="If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.",
+     rights="If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.",
+     rights="If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE."]
+    vmar_protect(handle<vmo> handle, zx.vm_option options, zx.vaddr addr, uint64 len) ->
+        (zx.status status);
+
+
+    //
+    //
+    // Random Number generator
+    //
+    //
+
+    [internal,
+     argtype="buffer OUT"]
+    cprng_draw_once(array<voidptr>:buffer_size buffer, usize buffer_size) -> (zx.status status);
+
+    /// Draw from the kernel's CPRNG.
+    [vdsocall,
+     argtype="buffer OUT"]
+    cprng_draw(array<voidptr>:buffer_size buffer, usize buffer_size) -> ();
+
+    /// Add entropy to the kernel CPRNG.
+    [argtype="buffer IN"]
+    cprng_add_entropy(array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+
+    //
+    //
+    // IPC: Fifos
+    //
+    //
+
+    /// Create a fifo.
+    [argtype="out0 handle_acquire",
+     argtype="out1 handle_acquire"]
+    fifo_create(usize elem_count, usize elem_size, uint32 options) ->
+        (zx.status status, handle<fifo> out0, handle<fifo> out1);
+
+    /// Read data from a fifo.
+    [rights="handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.",
+     argtype="data OUT",
+     argtype="actual_count optional",
+     arraysize="data count*elem_size"]
+    fifo_read(handle<fifo> handle, usize elem_size, array<voidptr>:N data, usize count) ->
+        (zx.status status, usize actual_count);
+
+    /// Write data to a fifo.
+    [rights="handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.",
+     argtype="data IN",
+     argtype="actual_count optional",
+     arraysize="data count*elem_size"]
+    fifo_write(handle<fifo> handle, usize elem_size, array<voidptr>:N data, usize count) ->
+        (zx.status status, usize actual_count);
+
+
+    //
+    //
+    // Profiles
+    //
+    //
+
+    [rights="root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
+     argtype="profile IN",
+     argtype="out handle_acquire"]
+    profile_create(handle<job> root_job, array<zx_profile_info_t>:1 profile) ->
+        (zx.status status, handle<profile> out);
+
+
+    //
+    //
+    // Multi-function
+    //
+    //
+
+    /// Unmap memory, close handle, exit.
+    [vdsocall,
+     argtype="close_handle handle_release"]
+    // TODO(ZX-2399): ???
+    vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
+                                        zx.vaddr addr, usize size,
+                                        handle close_handle) ->
+        (zx.status status);
+
+    /// Write to futex, wake futex, close handle, exit.
+    [vdsocall,
+     noreturn,
+     argtype="value_ptr IN",
+     argtype="close_handle handle_release"]
+    futex_wake_handle_close_thread_exit(array<zx_futex_t>:1 value_ptr,
+                                        uint32 wake_count,
+                                        int32 new_value,
+                                        handle close_handle);
+
+
+    //
+    //
+    // Logging
+    //
+    //
+
+    // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="out handle_acquire"]
+    debuglog_create(handle<resource> resource, uint32 options) ->
+        (zx.status status, handle<debuglog> out);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.",
+     argtype="buffer IN"]
+    debuglog_write(handle<debuglog> handle, uint32 options,
+                   array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.",
+     argtype="buffer OUT"]
+    debuglog_read(handle<debuglog> handle, uint32 options,
+                  array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+
+    //
+    //
+    // Tracing
+    //
+    //
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="data OUT"]
+    ktrace_read(handle<resource> handle,
+                array<voidptr>:data_size data,
+                uint32 offset,
+                usize data_size) ->
+        (zx.status status, usize actual);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="ptr INOUT"]
+    ktrace_control(handle<resource> handle, uint32 action, uint32 options,
+                   array<voidptr>:action ptr) ->
+        (zx.status status);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
+    ktrace_write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) ->
+        (zx.status status);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="ptr INOUT"]
+    mtrace_control(handle<resource> handle, uint32 kind, uint32 action, uint32 options,
+                   array<voidptr>:ptr_size ptr, usize ptr_size) ->
+        (zx.status status);
+
+
+    //
+    //
+    // Legacy LK debug syscalls
+    //
+    //
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="buffer OUT",
+     argtype="buffer_size INOUT"]
+    // TODO(banjo): size of buffer being buffer_size sems odd, but that's what
+    // that abigen says, maybe it's special cased to dereference.
+    debug_read(handle<resource> handle, string:buffer_size buffer, array<usize>:1 buffer_size) ->
+        (zx.status status);
+
+    [argtype="buffer IN"]
+    debug_write(string:buffer_size buffer, usize buffer_size) -> (zx.status status);
+
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="buffer IN"]
+    debug_send_command(handle<resource> resource, string:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+
+    //
+    //
+    // DDK Syscalls: Interrupts
+    //
+    //
+
+    /// Create an interrupt object.
+    [rights="src_obj must have resource kind ZX_RSRC_KIND_IRQ."]
+    interrupt_create(handle<resource> src_obj, uint32 src_num, uint32 options) ->
+        (zx.status status, handle<interrupt> out_handle);
+
+    /// Bind an interrupt object to a port.
+    [rights="handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.",
+     rights="port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE."]
+    interrupt_bind(handle<interrupt> handle, handle<port> port_handle,
+                   uint64 key, uint32 options) ->
+        (zx.status status);
+
+    /// Wait for an interrupt.
+    [rights="handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.",
+     blocking,
+     argtype="out_timestamp optional"]
+    interrupt_wait(handle<interrupt> handle) -> (zx.status status, zx.time out_timestamp);
+
+    /// Destroys an interrupt object.
+    // TODO(ZX-2967): No DESTROY rights here.
+    interrupt_destroy(handle<interrupt> handle) -> (zx.status status);
+
+    /// Acknowledge an interrupt and re-arm it.
+    [rights="handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WRITE."]
+    interrupt_ack(handle<interrupt> handle) -> (zx.status status);
+
+    /// Triggers a virtual interrupt object.
+    [rights="handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_SIGNAL."]
+    interrupt_trigger(handle<interrupt> handle, uint32 options, zx.time timestamp) ->
+        (zx.status status);
+
+    /// Bind an interrupt object to a VCPU.
+    [rights="handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.",
+     rights="vcpu must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE."]
+    interrupt_bind_vcpu(handle<interrupt> handle, handle<vcpu> vcpu, uint32 options) ->
+        (zx.status status);
+
+
+    //
+    //
+    // DDK Syscalls: MMIO and IoPorts
+    //
+    //
+
+    [rights="resource must have resource kind ZX_RSRC_KIND_IOPORT."]
+    ioports_request(handle<resource> resource, uint16 io_addr, uint32 len) -> (zx.status status);
+
+    [rights="bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.",
+     argtype="out handle_acquire"]
+    vmo_create_contiguous(handle<bti> bti, usize size, uint32 alignment_log2) ->
+        (zx.status status, handle<vmo> out);
+
+    /// Create a VM object referring to a specific contiguous range of physical memory.
+    [rights="resource must have resource kind ZX_RSRC_KIND_MMIO.",
+     argtype="out handle_acquire"]
+    vmo_create_physical(handle<vmo> resource, zx.paddr paddr, usize size) ->
+        (zx.status status, handle<vmo> out);
+
+
+
+    //
+    //
+    // DDK Syscalls: Device Memory Access
+    //
+    //
+
+    /// Create a new IOMMU object in the kernel.
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="desc IN",
+     argtype="out handle_acquire"]
+    iommu_create(handle<resource> resource, uint32 type,
+                 array<voidptr>:desc_size desc, usize desc_size) ->
+        (zx.status status, handle<iommu> out);
+
+    /// Create a new bus transaction initiator.
+    [rights="iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.",
+     argtype="out handle_acquire"]
+    // TODO(ZX-2967): This is unusual.
+    bti_create(handle<iommu> iommu, uint32 options, uint64 bti_id) ->
+        (zx.status status, handle<bti> out);
+
+    /// Pin pages and grant devices access to them.
+    [rights="handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.",
+     rights="vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.",
+     rights="If options & ZX_BTI_PERM_READ, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     rights="If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
+    // READ is intentional in the following EXECUTE condition.
+     rights="If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     argtype="addrs OUT",
+     argtype="pmt handle_acquire"]
+    bti_pin(handle<bti> handle, uint32 options, handle<vmo> vmo, uint64 offset, uint64 size,
+            array<zx.paddr>:addrs_count addrs, usize addrs_count) ->
+        (zx.status status, handle<pmt> pmt);
+
+    /// Releases all quarantined PMTs.
+    [rights="handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE."]
+    bti_release_quarantine(handle<bti> handle) -> (zx.status status);
+
+    /// Unpin pages and revoke device access to them.
+    [argtype="handle handle_release_always"]
+    // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
+    pmt_unpin(handle<pmt> handle) -> (zx.status status);
+
+
+    //
+    //
+    // DDK Syscalls: Misc Info
+    //
+    //
+
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT."]
+    framebuffer_get_info(handle<resource> resource) ->
+        (zx.status status, uint32 format, uint32 width, uint32 height, uint32 stride);
+
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT."]
+    // TODO(ZX-2967): vmo ZX_OBJ_TYPE_VMO; No rights required?
+    framebuffer_set_range(handle<resource> resource,
+                          handle<vmo> vmo, uint32 len, uint32 format,
+                          uint32 width, uint32 height, uint32 stride) ->
+        (zx.status status);
+
+
+    //
+    //
+    // DDK Syscalls: PCI
+    //
+    //
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="out_handle handle_acquire"]
+    // TODO(banjo): out_handle as handle<device>
+    pci_get_nth_device(handle<resource> handle, uint32 index) ->
+        (zx.status status, zx_pcie_device_info_t out_info, handle out_handle);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE."]
+    // TODO(banjo): handle as handle<device>
+    pci_enable_bus_master(handle handle, bool enable) -> (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE."]
+    // TODO(banjo): handle as handle<device>
+    pci_reset_device(handle handle) -> (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
+     argtype="out_val OUT"]
+    // TODO(banjo): handle as handle<device>
+    pci_config_read(handle handle, uint16 offset, usize width, array<uint32>:1 out_val) ->
+        (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE."]
+    // TODO(banjo): handle as handle<device>
+    pci_config_write(handle handle, uint16 offset, usize width, uint32 val) -> (zx.status status);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="val INOUT"]
+    pci_cfg_pio_rw(handle<resource> handle, uint8 bus, uint8 dev, uint8 func, uint8 offset,
+                   array<uint32>:1 val, usize width, bool write) ->
+        (zx.status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
+     argtype="out_bar OUT",
+     argtype="out_handle handle_acquire"]
+    // TODO(banjo): handle as handle<device>
+    // TODO(banjo): type of out_handle?
+    pci_get_bar(handle handle, uint32 bar_num, array<zx_pci_bar_t>:1 out_bar) ->
+        (zx.status status, handle out_handle);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.",
+     argtype="out_handle handle_acquire"]
+    // TODO(banjo): handle as handle<device>
+    pci_map_interrupt(handle handle, int32 which_irq) -> (zx.status status, handle out_handle);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ."]
+    // TODO(banjo): handle as handle<device>
+    pci_query_irq_mode(handle handle, uint32 mode) -> (zx.status status, uint32 out_max_irqs);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE."]
+    // TODO(banjo): handle as handle<device>
+    pci_set_irq_mode(handle handle, uint32 mode, uint32 requested_irq_count) -> (zx.status status);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="init_buf IN"]
+    pci_init(handle<resource> handle, array<zx_pci_init_arg_t>:len init_buf, uint32 len) ->
+        (zx.status status);
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
+    pci_add_subtract_io_range(handle<resource> handle, bool mmio,
+                              uint64 base, uint64 len, bool add) ->
+        (zx.status status);
+
+
+    //
+    //
+    // DDK Syscalls: ACPI Glue
+    //
+    //
+
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
+    pc_firmware_tables(handle<resource> handle) ->
+        (zx.status status, zx.paddr acpi_rsdp, zx.paddr smbios);
+
+
+    //
+    //
+    // DDK Syscalls: SMC Calls
+    //
+    //
+
+    /// Make Secure Monitor Call (SMC) from user space.
+    [argtype="parameters IN",
+     argtype="out_smc_result OUT"]
+    // TODO(ZX-2967): handle No rights required?
+    smc_call(handle handle, array<zx_smc_parameters_t>:1 parameters) ->
+        (zx.status status, zx_smc_result_t out_smc_result);
+
+
+    //
+    //
+    // Resources
+    //
+    //
+
+    /// Create a resource object.
+    [rights="parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.",
+     argtype="name IN",
+     argtype="resource_out handle_acquire"]
+    resource_create(handle<resource> parent_rsrc, uint32 options, uint64 base, usize size,
+                    string:name_size name, usize name_size) ->
+        (zx.status status, handle<resource> resource_out);
+
+
+    //
+    //
+    // Hypervisor
+    //
+    //
+
+    /// Create a guest.
+    [rights="resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.",
+     argtype="guest_handle handle_acquire",
+     argtype="vmar_handle handle_acquire"]
+    guest_create(handle<resource> resource, uint32 options) ->
+        (zx.status status, handle<guest> guest_handle, handle<vmar> vmar_handle);
+
+    /// Sets a trap within a guest.
+    [rights="handle must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_WRITE.",
+     rights="port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE."]
+    guest_set_trap(handle<guest> handle, uint32 kind, zx.vaddr addr, usize size,
+                   handle<port> port_handle, uint64 key) ->
+        (zx.status status);
+
+    /// Create a VCPU.
+    [rights="guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.",
+     argtype="out handle_acquire"]
+    vcpu_create(handle<guest> guest, uint32 options, zx.vaddr entry) ->
+        (zx.status status, handle<vcpu> out);
+
+    /// Resume execution of a VCPU.
+    [rights="handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.",
+     blocking,
+     argtype="packet OUT"]
+    vcpu_resume(handle<vcpu> handle) -> (zx.status status, zx_port_packet_t packet);
+
+    /// Raise an interrupt on a VCPU.
+    [rights="handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_SIGNAL."]
+    vcpu_interrupt(handle<vcpu> handle, uint32 vector) -> (zx.status status);
+
+    /// Read the state of a VCPU.
+    [rights="handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_READ.",
+     argtype="buffer OUT"]
+    // TODO(banjo): handle as vcpu
+    vcpu_read_state(handle handle, uint32 kind,
+                    array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    /// Write the state of a VCPU.
+    [rights="handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.",
+     argtype="buffer IN"]
+    // TODO(banjo): handle as vcpu
+    vcpu_write_state(handle handle, uint32 kind,
+                     array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+
+    //
+    //
+    // System Control
+    //
+    //
+
+    /// Soft reboot the system with a new kernel and bootimage.
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     rights="kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
+     rights="bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ."]
+    system_mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo) ->
+        (zx.status status);
+
+    /// Return a ZBI containing ZBI entries necessary to boot this system.
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="buffer OUT"]
+    system_mexec_payload_get(handle<resource> resource,
+                             array<voidptr>:buffer_size buffer, usize buffer_size) ->
+        (zx.status status);
+
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
+     argtype="arg IN"]
+    system_powerctl(handle<resource> resource, uint32 cmd, array<zx_system_powerctl_arg_t>:1 arg) ->
+        (zx.status status);
+
+
+    //
+    //
+    // User pager
+    //
+    //
+
+    /// Create a new pager object.
+    [rights="None.",
+     argtype="out handle_acquire"]
+    pager_create(uint32 options) -> (zx.status status, handle<pager> out);
+
+    /// Create a pager owned vmo.
+    [rights="pager must be of type ZX_OBJ_TYPE_PAGER.",
+     rights="port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.",
+     argtype="out handle_acquire"]
+    pager_create_vmo(handle<pager> pager, uint32 options,
+                     handle<port> port, uint64 key, uint64 size) ->
+        (zx.status status, handle<vmo> out);
+
+    /// Detaches a vmo from a pager.
+    [rights="pager must be of type ZX_OBJ_TYPE_PAGER.",
+     rights="vmo must be of type ZX_OBJ_TYPE_VMO."]
+    pager_detach_vmo(handle<pager> pager, handle<vmo> vmo) -> (zx.status status);
+
+    /// Supply pages into a pager owned vmo.
+    [rights="pager must be of type ZX_OBJ_TYPE_PAGER.",
+     rights="pager_vmo must be of type ZX_OBJ_TYPE_VMO.",
+     rights="aux_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE."]
+    pager_supply_pages(handle<pager> pager, handle<vmo> pager_vmo, uint64 offset, uint64 length,
+                       handle<vmo> aux_vmo, uint64 aux_offset) ->
+        (zx.status status);
+
+
+    //
+    //
+    // Test syscalls (keep at the end)
+    //
+    //
+
+    syscall_test_0() -> (zx.status status);
+
+    [test_category1]
+    syscall_test_1 (int32 a) -> (zx.status status);
+
+    [test_category1]
+    syscall_test_2 (int32 a, int32 b) -> (zx.status status);
+
+    [test_category2]
+    syscall_test_3 (int32 a, int32 b, int32 c) -> (zx.status status);
+
+    syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (zx.status status);
+
+    syscall_test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (zx.status status);
+
+    syscall_test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (zx.status status);
+
+    syscall_test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) ->
+        (zx.status status);
+
+    syscall_test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h) ->
+        (zx.status status);
+
+    syscall_test_wrapper(int32 a, int32 b, int32 c) -> (zx.status status);
+};
+
+// vim: set ft=fidl:

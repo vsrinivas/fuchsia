@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/host_tool_action.gni")
 
-# Generate syscall bindings/information from `syscalls.abigen`.
+# Generate syscall bindings/information from `syscalls.banjo`.
 #
 # Parameters
 #
@@ -20,6 +20,11 @@ import("$zx/public/gn/host_tool_action.gni")
 #         form of the files named in $outputs.
 #         Type: list(string)
 #
+# TODO(ZX-3882): This is temporarily a two-step process. First, run banjo to
+# generate a .abigen file (done by
+# $zx/kernel/syscalls:generate_syscalls.abigen), then run the existing abigen
+# tool on the generated file. This is an intermediate situation until banjo
+# directly generates all outputs.
 template("abigen") {
   host_tool_action(target_name) {
     forward_variables_from(invoker,
@@ -30,6 +35,10 @@ template("abigen") {
 
     tool = "$zx/system/host/abigen"
 
+    deps = [
+      "$zx/kernel/syscalls:generate_syscalls.abigen",
+    ]
+
     outputs = []
     args = []
     foreach(gen, invoker.gen) {
@@ -38,7 +47,7 @@ template("abigen") {
     }
 
     sources = [
-      "$zx/system/public/zircon/syscalls.abigen",
+      "$root_gen_dir/syscalls.abigen",
     ]
     args += rebase_path(sources, root_build_dir)
 

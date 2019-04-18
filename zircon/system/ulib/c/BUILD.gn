@@ -69,7 +69,7 @@ library("c") {
             "zircon/process.h",
             "zircon/processargs.h",
             "zircon/rights.h",
-            "zircon/syscalls.abigen",
+            "zircon/syscalls.banjo",
             "zircon/syscalls.h",
             "zircon/syscalls/debug.h",
             "zircon/syscalls/exception.h",

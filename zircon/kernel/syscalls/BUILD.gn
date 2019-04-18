@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/host_tool_action.gni")
 import("abigen.gni")
 
 source_set("syscalls") {
@@ -83,6 +84,24 @@ group("syscall-abi") {
 config("syscall-abi.config") {
   visibility = [ ":syscall-abi" ]
   include_dirs = [ target_gen_dir ]
+}
+
+host_tool_action("generate_syscalls.abigen") {
+  tool = "$zx/system/host/banjo:compiler"
+  sources = [
+    "$zx/system/public/zircon/syscalls.banjo",
+  ]
+  outputs = [
+    "$root_gen_dir/syscalls.abigen",
+  ]
+  args = [
+    "--backend",
+    "Abigen",
+    "--output",
+    rebase_path(outputs[0]),
+    "--files",
+    rebase_path(sources[0]),
+  ]
 }
 
 abigen("syscall-abi.generate") {
