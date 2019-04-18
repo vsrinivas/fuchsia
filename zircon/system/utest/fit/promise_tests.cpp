@@ -407,6 +407,15 @@ auto make_ok_promise(int value) {
     });
 }
 
+auto make_move_only_promise(int value) {
+    return fit::make_promise([value, count = 0]() mutable
+                             -> fit::result<std::unique_ptr<int>, char> {
+        ASSERT_CRITICAL(count == 0);
+        ++count;
+        return fit::ok(std::make_unique<int>(value));
+    });
+}
+
 auto make_error_promise(char error) {
     return fit::make_promise([error, count = 0]() mutable -> fit::result<int, char> {
         ASSERT_CRITICAL(count == 0);
@@ -980,6 +989,34 @@ bool join_combinator() {
     END_TEST;
 }
 
+bool join_combinator_move_only_result() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+
+    // Add 1 + 2 to get 3, using a join combinator with a "then" continuation
+    // to demonstrate how to optionally return an error.
+    auto p = fit::join_promises(make_move_only_promise(1), make_move_only_promise(2))
+        .then([] (fit::result<std::tuple<fit::result<std::unique_ptr<int>, char>,
+                                         fit::result<std::unique_ptr<int>, char>>>& wrapped_result)
+                  -> fit::result<std::unique_ptr<int>, char> {
+            auto results = wrapped_result.take_value();
+            if (std::get<0>(results).is_error() || std::get<1>(results).is_error()) {
+                return fit::error('e');
+            } else {
+                int value = *std::get<0>(results).value() + *std::get<1>(results).value();
+                return fit::ok(std::make_unique<int>(value));
+            }
+        });
+    EXPECT_TRUE(p);
+    fit::result<std::unique_ptr<int>, char> result = p(fake_context);
+    EXPECT_FALSE(p);
+    EXPECT_EQ(fit::result_state::ok, result.state());
+    EXPECT_EQ(3, *result.value());
+
+    END_TEST;
+}
+
 bool join_vector_combinator() {
     BEGIN_TEST;
 
@@ -1288,6 +1325,7 @@ RUN_TEST(discard_result_combinator)
 RUN_TEST(wrap_with_combinator)
 RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
+RUN_TEST(join_combinator_move_only_result)
 RUN_TEST(join_vector_combinator)
 
 // suppress -Wunneeded-internal-declaration
