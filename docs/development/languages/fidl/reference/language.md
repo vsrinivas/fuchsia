@@ -165,10 +165,10 @@ the programmer's part.
 
 There is a subtlety about the semantics and what defaults mean:
 
-* If the target language can support defaults (Dart, Rust, Go)
+* If the target language can support defaults (Dart, C++)
     * then it MUST support defaults
-* If the target language cannot support defaults (C/C++)
-    * then it MAY provide support that programmers can optoinally
+* If the target language cannot support defaults (C, Rust, Go)
+    * then it MAY provide support that programmers can optionally
       invoke (e.g., a macro in C).
 
 ### Declaration Separator
