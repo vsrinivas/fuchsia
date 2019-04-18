@@ -1,0 +1,26 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fshost;
+
+using fuchsia.io;
+using zx;
+
+/// Manages filesystems which wish to be globally exposed under the filesystem host.
+[Discoverable, Layout = "Simple"]
+protocol Registry {
+    /// Registers the output directory of a filesystem. These filesystems are
+    /// exported from the fuchsia.fshost.Filesystems service, where they are
+    /// be identified by an instance number (of the form "000", "001", etc).
+    ///
+    /// This directory is automatically de-registered from fuchsia.fshost.Filesystems
+    /// if the server end of the connection is closed.
+    RegisterFilesystem(fuchsia.io.Directory public_export) -> (zx.status s);
+};
+
+/// A collection of all registered filesystems.
+[Discoverable, Layout = "Simple"]
+protocol Filesystems {
+    compose fuchsia.io.Directory;
+};
