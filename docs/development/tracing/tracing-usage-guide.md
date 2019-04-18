@@ -11,20 +11,13 @@ configuration does not include `devtools` by default, then you can add it manual
 `fx set` like:
 
 ```{shell}
-fx set $ARCH --monolith='garnet/packages/products/devtools,$DEFAULT_PACKAGES'
+fx set PRODUCT.BOARD --with-base='//garnet/packages/products:devtools'
 ```
 
-where `ARCH` is the target architecture, and `DEFAULT_PACKAGES` is the default package list for the
-selected layer.  So if you were targeting `x64` with `topaz` selected, you would run:
+So as a full example:
 
 ```{shell}
-fx set x64 --monolith='garnet/packages/products/devtools,topaz/packages/default'
-```
-
-Note: If you need to enable flutter profiling on `--release` builds, include `flutter_profile=true`
-gn argument to `fx set`. Example:
-```{shell}
-fx set x64 --release --monolith='garnet/packages/products/devtools,topaz/packages/default' --args=flutter_profile=true
+fx set core.x64 --release --with-base=//garnet/packages/products:devtools,//peridot/packages/prod:sessionctl'
 ```
 
 ## Capturing Traces From a Development Host
