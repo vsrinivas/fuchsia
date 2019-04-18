@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/symbols/type_utils.h"
@@ -82,7 +83,7 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols,
 
   if (const Namespace* ns = symbol->AsNamespace()) {
     if (options.find_namespaces)
-      return FoundName(FoundName::kNamespace);
+      return FoundName(FoundName::kNamespace, ns->GetFullName());
     return FoundName();
   }
 
@@ -184,7 +185,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
       // We could check every possible match with this prefix and see if there's
       // one with a type name. But that seems unnecessary. Instead, assume that
       // anything with a name containing a "<" is a template type name.
-      results->emplace_back(FoundName::kTemplate);
+      results->emplace_back(FoundName::kTemplate, looking_for.GetFullName());
       if (results->size() >= options.max_results)
         return VisitResult::kDone;
     }
@@ -228,7 +229,8 @@ FoundName FindName(const FindNameContext& context,
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const Identifier& looking_for, std::vector<FoundName>* results) {
-  if (context.block && looking_for.qualification() == Identifier::kRelative) {
+  if (options.find_vars && context.block &&
+      looking_for.qualification() == Identifier::kRelative) {
     // Search for local variables and function parameters.
     FindLocalVariable(options, context.block, looking_for, results);
     if (results->size() >= options.max_results)

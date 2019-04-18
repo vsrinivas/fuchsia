@@ -152,6 +152,8 @@ source_set("test_support") {
     "mock_process.h",
     "mock_remote_api.cc",
     "mock_remote_api.h",
+    "mock_target.cc",
+    "mock_target.h",
     "remote_api_test.cc",
     "remote_api_test.h",
     "thread_impl_test_support.cc",

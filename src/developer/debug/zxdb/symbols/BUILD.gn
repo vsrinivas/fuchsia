@@ -129,6 +129,8 @@ static_library("test_support") {
   testonly = true
 
   sources = [
+    "index_test_support.cc",
+    "index_test_support.h",
     "mock_line_table.cc",
     "mock_line_table.h",
     "mock_module_symbols.cc",

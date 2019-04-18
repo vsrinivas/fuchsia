@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
@@ -27,67 +28,6 @@
 // as well as the decoding code.
 
 namespace zxdb {
-
-namespace {
-
-ModuleSymbolIndexNode::RefType RefTypeForSymbol(
-    const fxl::RefPtr<Symbol>& sym) {
-  if (sym->AsType())
-    return ModuleSymbolIndexNode::RefType::kType;
-  if (sym->AsNamespace())
-    return ModuleSymbolIndexNode::RefType::kNamespace;
-  if (sym->AsFunction())
-    return ModuleSymbolIndexNode::RefType::kFunction;
-  if (sym->AsVariable())
-    return ModuleSymbolIndexNode::RefType::kVariable;
-
-  FXL_NOTREACHED();
-  return ModuleSymbolIndexNode::RefType::kVariable;
-}
-
-// Creates a symbol in the index and the mock module symbols.
-struct TestIndexedSymbol {
-  // Index of the next DieRef to generated. This ensures the generated IDs are
-  // unique.
-  static int next_die_ref;
-
-  TestIndexedSymbol(MockModuleSymbols* mod_sym,
-                    ModuleSymbolIndexNode* index_parent,
-                    const std::string& name, fxl::RefPtr<Symbol> sym)
-      : die_ref(RefTypeForSymbol(sym), next_die_ref++),
-        index_node(index_parent->AddChild(std::string(name))),
-        symbol(std::move(sym)) {
-    index_node->AddDie(die_ref);
-    mod_sym->AddDieRef(die_ref, symbol);
-  }
-
-  // The DieRef links the index and the entry injected into the ModuleSymbols.
-  ModuleSymbolIndexNode::DieRef die_ref;
-
-  // Place where this variable is indexed.
-  ModuleSymbolIndexNode* index_node;
-
-  fxl::RefPtr<Symbol> symbol;
-};
-
-int TestIndexedSymbol::next_die_ref = 1;
-
-// Creates a global variable that's inserted into the index and the mock
-// ModuleSymbols.
-struct TestGlobalVariable : public TestIndexedSymbol {
-  TestGlobalVariable(MockModuleSymbols* mod_sym,
-                     ModuleSymbolIndexNode* index_parent,
-                     const std::string& var_name)
-      : TestIndexedSymbol(mod_sym, index_parent, var_name,
-                          MakeVariableForTest(var_name, MakeInt32Type(), 0x100,
-                                              0x200, std::vector<uint8_t>())),
-        var(symbol->AsVariable()) {}
-
-  // The variable itself.
-  fxl::RefPtr<Variable> var;
-};
-
-}  // namespace
 
 // This test declares the following structure. There are three levels of
 // variables, each one has one unique variable, and one labeled "value" for
@@ -125,7 +65,7 @@ TEST(FindName, FindLocalVariable) {
   auto ns_node = root.AddChild(kNsName);
 
   const char kNsVarName[] = "ns_value";
-  TestGlobalVariable ns_value(mod.get(), ns_node, kNsVarName);
+  TestIndexedGlobalVariable ns_value(mod.get(), ns_node, kNsVarName);
 
   constexpr uint64_t kLoadAddress = 0x1000;
   SymbolContext symbol_context(kLoadAddress);
@@ -190,6 +130,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(function_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found.variable());
+  EXPECT_EQ(var_value->GetAssignedName(), found.GetName());
 
   // Find "::value" should match nothing.
   Identifier value_global_ident(
@@ -218,6 +159,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
+  EXPECT_EQ(block_other->GetAssignedName(), found.GetName());
   found = FindName(function_context, block_local_ident);
   EXPECT_FALSE(found);
 
@@ -234,6 +176,7 @@ TEST(FindName, FindLocalVariable) {
   found = FindName(block_context, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
+  EXPECT_EQ(kNsVarName, found.GetName());
 
   // Loop up the global "ns_value" var with no global symbol context. This
   // should fail and not crash.
@@ -267,6 +210,7 @@ TEST(FindName, FindMember) {
   ASSERT_EQ(1u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
+  EXPECT_EQ("b", results[0].GetName());
 
   // Increase the limit, it should find both in order of Base1, Base2.
   results.clear();
@@ -298,8 +242,8 @@ TEST(FindName, FindIndexedName) {
   // Module 1.
   auto mod1 = std::make_unique<MockModuleSymbols>("mod1.so");
   auto& root1 = mod1->index().root();  // Root of the index for module 1.
-  TestGlobalVariable global1(mod1.get(), &root1, kGlobalName);
-  TestGlobalVariable var1(mod1.get(), &root1, kVar1Name);
+  TestIndexedGlobalVariable global1(mod1.get(), &root1, kGlobalName);
+  TestIndexedGlobalVariable var1(mod1.get(), &root1, kVar1Name);
   constexpr uint64_t kLoadAddress1 = 0x1000;
   SymbolContext symbol_context1(kLoadAddress1);
   setup.InjectModule("mod1", "1234", kLoadAddress1, std::move(mod1));
@@ -307,8 +251,8 @@ TEST(FindName, FindIndexedName) {
   // Module 2.
   auto mod2 = std::make_unique<MockModuleSymbols>("mod2.so");
   auto& root2 = mod2->index().root();  // Root of the index for module 1.
-  TestGlobalVariable global2(mod2.get(), &root2, kGlobalName);
-  TestGlobalVariable var2(mod2.get(), &root2, kVar2Name);
+  TestIndexedGlobalVariable global2(mod2.get(), &root2, kGlobalName);
+  TestIndexedGlobalVariable var2(mod2.get(), &root2, kVar2Name);
   constexpr uint64_t kLoadAddress2 = 0x2000;
   SymbolContext symbol_context2(kLoadAddress2);
   setup.InjectModule("mod2", "5678", kLoadAddress2, std::move(mod2));
@@ -361,7 +305,7 @@ TEST(FindName, FindIndexedNameInModule) {
   std::vector<FoundName> found;
 
   // Make a global variable in the toplevel namespace.
-  TestGlobalVariable global(&mod_sym, &root, kVarName);
+  TestIndexedGlobalVariable global(&mod_sym, &root, kVarName);
 
   Identifier var_ident(kVarName);
   FindIndexedNameInModule(all_opts, &mod_sym, Identifier(), var_ident, true,
@@ -380,7 +324,7 @@ TEST(FindName, FindIndexedNameInModule) {
 
   // Add a variable in the nested namespace with the same name.
   auto ns_node = root.AddChild(kNsName);
-  TestGlobalVariable ns(&mod_sym, ns_node, kVarName);
+  TestIndexedGlobalVariable ns(&mod_sym, ns_node, kVarName);
 
   // Re-search for the same name in the nested namespace, it should get the
   // nested one first.
@@ -399,6 +343,7 @@ TEST(FindName, FindIndexedNameInModule) {
                           &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
+  EXPECT_EQ(kVarName, found[0].GetName());
 }
 
 TEST(FindName, FindTypeName) {
@@ -468,6 +413,7 @@ TEST(FindName, FindTypeName) {
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(global_type.get(), found.type().get());
+  EXPECT_EQ(kGlobalTypeName, found.GetName());
 
   // Prefix search same as above.
   FindNameOptions prefix_opts(FindNameOptions::kAllKinds);
@@ -531,6 +477,7 @@ TEST(FindName, FindTemplateName) {
   auto found = FindName(context, template_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kTemplate, found.kind());
+  EXPECT_EQ("Template", found.GetName());
 
   // The string "TemplateNot" is a type, it should be found as such.
   FindNameOptions all_types(FindNameOptions::kAllKinds);

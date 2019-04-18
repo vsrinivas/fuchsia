@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
+#include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
@@ -203,8 +204,27 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   if (!command.target())
     return;
 
+  // Number of items of each category that can be added to the completions.
+  constexpr size_t kMaxFileNames = 32;
+  constexpr size_t kMaxNamespaces = 8;
+  constexpr size_t kMaxClasses = 32;
+  constexpr size_t kMaxFunctions = 32;
+
+  // Extract the current code block if possible. This will be used to find
+  // local variables and to prioritize symbols from the current module.
+  const CodeBlock* code_block = nullptr;
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  if (const Frame* frame = command.frame()) {
+    const Location& location = frame->GetLocation();
+    if (const CodeBlock* fn_block = location.symbol().Get()->AsCodeBlock()) {
+      symbol_context = location.symbol_context();
+      code_block =
+          fn_block->GetMostSpecificChild(symbol_context, location.address());
+    }
+  }
+
   // TODO(brettw) prioritize the current module when it's known (when there is
-  // a current frame with symbol information). Factor priotization code from
+  // a current frame with symbol information). Factor prioritization code from
   // find_name.cc
   for (const ModuleSymbols* mod :
        command.target()->GetSymbols()->GetModuleSymbols()) {
@@ -216,11 +236,61 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
       file.push_back(':');
 
     completions->insert(completions->end(), files.begin(), files.end());
-
-    // TODO(brettw) do a prefix search for identifier names.
   }
 
   std::sort(completions->begin(), completions->end());
+  if (completions->size() > kMaxFileNames)
+    completions->resize(kMaxFileNames);
+
+  // Now search for functions matching the given input.
+  FindNameOptions options(FindNameOptions::kNoKinds);
+  options.how = FindNameOptions::kPrefix;
+
+  auto [err, prefix_identifier] = ExprParser::ParseIdentifier(prefix);
+  if (err.has_error())
+    return;  // Can't match identifier names.
+
+  // When there's a live process there is more context to find stuff.
+  std::unique_ptr<FindNameContext> find_context;
+  if (Process* process = command.target()->GetProcess()) {
+    find_context = std::make_unique<FindNameContext>(
+        process->GetSymbols(), symbol_context, code_block);
+  } else {
+    find_context =
+        std::make_unique<FindNameContext>(command.target()->GetSymbols());
+  }
+
+  // First start with namespaces.
+  options.find_namespaces = true;
+  options.max_results = kMaxNamespaces;
+  std::vector<FoundName> found_names;
+  FindName(*find_context, options, prefix_identifier, &found_names);
+  for (const FoundName& found : found_names)
+    completions->push_back(found.GetName() + "::");
+  options.find_namespaces = false;
+
+  // Follow with types. Only do structure and class types since we're really
+  // looking for function names. In the future it might be nice to check if
+  // there are any member functions in the types before adding them.
+  options.find_types = true;
+  options.max_results = kMaxClasses;
+  found_names.clear();
+  FindName(*find_context, options, prefix_identifier, &found_names);
+  for (const FoundName& found : found_names) {
+    FXL_DCHECK(found.kind() == zxdb::FoundName::kType);
+    if (const Collection* collection = found.type()->AsCollection())
+      completions->push_back(found.GetName() + "::");
+  }
+  options.find_types = false;
+
+  // Finish with functions.
+  options.find_functions = true;
+  options.max_results = kMaxFunctions;
+  found_names.clear();
+  FindName(*find_context, options, prefix_identifier, &found_names);
+  for (const FoundName& found : found_names)
+    completions->push_back(found.function()->GetFullName());
+  options.find_functions = false;
 }
 
 }  // namespace zxdb

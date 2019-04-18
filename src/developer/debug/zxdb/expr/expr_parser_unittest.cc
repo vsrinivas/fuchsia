@@ -23,7 +23,7 @@ FoundName TestLookupName(const Identifier& ident) {
   const std::string& name = comp.name();
 
   if (StringBeginsWith(name, "Namespace"))
-    return FoundName(FoundName::kNamespace);
+    return FoundName(FoundName::kNamespace, ident.GetFullName());
   if (StringBeginsWith(name, "Type")) {
     // Make up a random class to go with the type.
     auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
@@ -39,7 +39,7 @@ FoundName TestLookupName(const Identifier& ident) {
       // Assume templates with arguments are types.
       return FoundName(fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
     }
-    return FoundName(FoundName::kTemplate);
+    return FoundName(FoundName::kTemplate, ident.GetFullName());
   }
   return FoundName();
 }

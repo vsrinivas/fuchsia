@@ -86,10 +86,13 @@ class Location {
   // static variable.
   //
   // When looking up code locations from the symbol system, this will be the
-  // most specific function covering the code in question (the innermost
+  // most specific FUNCTION covering the code in question (the innermost
   // inlined function if there is one). But Locations may be generated (e.g. by
   // the stack unwinder) for any of the other inlined functions that may cover
   // the same address.
+  //
+  // A function can have different scopes inside of it. To get the current
+  // lexical scope inside the function, use GetMostSpecificChild() on it.
   //
   // This isn't necessarily valid, even if the State == kSymbolized. It could
   // be the symbol table indicates file/line info for this address but could

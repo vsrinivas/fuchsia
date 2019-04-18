@@ -27,7 +27,7 @@ const std::string& MockProcess::GetName() const {
   return name;
 }
 
-ProcessSymbols* MockProcess::GetSymbols() { return nullptr; }
+ProcessSymbols* MockProcess::GetSymbols() { return symbols_; }
 
 void MockProcess::GetModules(
     std::function<void(const Err&, std::vector<debug_ipc::Module>)> cb) {

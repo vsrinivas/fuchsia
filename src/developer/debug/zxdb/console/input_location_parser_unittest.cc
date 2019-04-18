@@ -6,8 +6,16 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_target.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
@@ -158,6 +166,96 @@ TEST(InputLocation, ResolveInputLocation) {
 ...5 more omitted...
 )",
             err.msg());
+}
+
+// Most of the prefix searching is tested by the FindName tests. This just
+// tests the integration of that with the InputLocation completion.
+TEST(InputLocation, CompleteInputLocation) {
+  ProcessSymbolsTestSetup symbols;
+  auto owning_mod_sym = std::make_unique<MockModuleSymbols>("mod.so");
+  MockModuleSymbols* mod = owning_mod_sym.get();
+  constexpr uint64_t kLoadAddress = 0x1000;
+  symbols.InjectModule("mod", "1234", kLoadAddress, std::move(owning_mod_sym));
+  auto& root = mod->index().root();  // Root of the index.
+
+  // Global function.
+  const char kGlobalName[] = "aGlobalFunction";
+  auto global_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  global_func->set_assigned_name(kGlobalName);
+  TestIndexedSymbol indexed_global(mod, &root, kGlobalName, global_func);
+
+  // Namespace
+  const char kNsName[] = "aNamespace";
+  auto ns = fxl::MakeRefCounted<Namespace>();
+  ns->set_assigned_name(kNsName);
+  TestIndexedSymbol indexed_ns(mod, &root, kNsName, ns);
+
+  // Class inside the namespace.
+  const char kClassName[] = "Class";
+  auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  global_type->set_parent(LazySymbol(ns));
+  global_type->set_assigned_name(kClassName);
+  TestIndexedSymbol indexed_type(mod, indexed_ns.index_node, kClassName,
+                                 global_type);
+
+  // Function inside the class.
+  const char kMemberName[] = "MemberFunction";
+  auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  member_func->set_assigned_name(kMemberName);
+  member_func->set_parent(LazySymbol(global_type));
+  TestIndexedSymbol indexed_member(mod, indexed_type.index_node, kMemberName,
+                                   member_func);
+
+  // TODO(brettw) make a test setup helper for a whole session / target /
+  // process / thread / frame + symbols.
+  Session session;
+  MockTarget target(&session);
+  target.set_symbols(&symbols.target());
+  MockProcess process(&session);
+  process.set_symbols(&symbols.process());
+
+  Location loc;
+  MockFrame frame(&session, nullptr, debug_ipc::StackFrame(), loc);
+
+  target.SetRunningProcess(&process);
+
+  Command command;
+  command.set_verb(Verb::kBreak);
+  command.set_target(&target);
+  command.set_frame(&frame);
+
+  // TEST CODE -----------------------------------------------------------------
+
+  // "a" should complete to both "aNamespace" and "aGlobalFunction" (in that
+  // order).
+  std::vector<std::string> found;
+  CompleteInputLocation(command, "a", &found);
+  ASSERT_EQ(2u, found.size());
+  EXPECT_EQ("aNamespace::", found[0]);  // Namespaces get "::" appended.
+  EXPECT_EQ(kGlobalName, found[1]);
+
+  // "aNamespace::" doesn't complete to anything. It might be nice to have this
+  // complete to all functions in the namespace, but we don't implement that
+  // yet. In the meantime, at least test this does what we currently expect.
+  found.clear();
+  CompleteInputLocation(command, "aNamespace::", &found);
+  ASSERT_TRUE(found.empty());
+
+  // Completing classes.
+  found.clear();
+  CompleteInputLocation(command, "aNamespace::Cl", &found);
+  ASSERT_EQ(1u, found.size());
+  EXPECT_EQ("aNamespace::Class::", found[0]);  // Classes get "::" appended.
+
+  // Completing class member functions.
+  found.clear();
+  CompleteInputLocation(command, "aNamespace::Class::M", &found);
+  ASSERT_EQ(1u, found.size());
+  EXPECT_EQ("aNamespace::Class::MemberFunction", found[0]);
+
+  // Cleanup. Prevent reference cycles.
+  member_func->set_parent(LazySymbol());
+  global_type->set_parent(LazySymbol());
 }
 
 }  // namespace zxdb

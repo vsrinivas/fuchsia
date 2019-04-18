@@ -20,19 +20,6 @@ namespace {
 using ::zxdb::internal::MemoryAnalysis;
 using namespace debug_ipc;
 
-// Provides just enough of a Process implementation for the analyzer to run.
-// It just needs a ProcessSymbols implementation.
-class MyMockProcess : public MockProcess {
- public:
-  explicit MyMockProcess(Session* session) : MockProcess(session) {}
-
-  // Process overrides:
-  ProcessSymbols* GetSymbols() override { return &symbols_.process(); }
-
- private:
-  ProcessSymbolsTestSetup symbols_;
-};
-
 class AnalyzeMemoryTest : public testing::Test {
  public:
   AnalyzeMemoryTest() { loop_.Init(); }
@@ -62,7 +49,9 @@ class MyMockRegisterSet : public RegisterSet {
 
 TEST_F(AnalyzeMemoryTest, Basic) {
   Session session;
-  MyMockProcess process(&session);
+  ProcessSymbolsTestSetup setup;
+  MockProcess process(&session);
+  process.set_symbols(&setup.process());
 
   constexpr uint64_t kBegin = 0x1000;
   constexpr uint32_t kLen = 24;  // 3 lines of output (8 bytes each).

@@ -13,7 +13,7 @@ namespace zxdb {
 
 FoundName::FoundName() = default;
 
-FoundName::FoundName(Kind kind) : kind_(kind) {
+FoundName::FoundName(Kind kind, const std::string& name) : kind_(kind), name_(name) {
   // These are the only kinds that don't require other information.
   FXL_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
 }
@@ -39,5 +39,24 @@ FoundName::FoundName(fxl::RefPtr<Type> type)
     : kind_(kType), type_(std::move(type)) {}
 
 FoundName::~FoundName() = default;
+
+std::string FoundName::GetName() const {
+  switch (kind_) {
+    case kNone:
+      break;
+    case kVariable:
+      return variable_->GetFullName();
+    case kMemberVariable:
+      return member_.data_member()->GetFullName();
+    case kNamespace:
+    case kTemplate:
+      return name_;
+    case kType:
+      return type_->GetFullName();
+    case kFunction:
+      return function_->GetFullName();
+  }
+  return std::string();
+}
 
 }  // namespace zxdb

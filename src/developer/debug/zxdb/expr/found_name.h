@@ -34,7 +34,7 @@ class FoundName {
   FoundName();
 
   // Constructor for templates and namespaces that have no extra data.
-  explicit FoundName(Kind kind);
+  FoundName(Kind kind, const std::string& name);
 
   // Takes a reference to the object.
   explicit FoundName(const Variable* variable);
@@ -56,6 +56,9 @@ class FoundName {
   // Implicit conversion to bool to test for a found value.
   bool is_found() const { return kind_ != kNone; }
   operator bool() const { return kind_ != kNone; }
+
+  // Abstracts away the kind and returns the full name of the match.
+  std::string GetName() const;
 
   // Use when kind == kVariable and kMemberVariable. The variable may be null
   // for member pointers if the call is just looking up the
@@ -98,6 +101,10 @@ class FoundName {
 
   fxl::RefPtr<Type> type_;
   fxl::RefPtr<Function> function_;
+
+  // Valid only when there's no object to hold the intrinsic name. This is
+  // for templates and namespaces.
+  std::string name_;
 };
 
 }  // namespace zxdb

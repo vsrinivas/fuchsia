@@ -13,7 +13,9 @@ class MockProcess : public Process {
  public:
   explicit MockProcess(Session* session);
   ~MockProcess() override;
-  ;
+
+  // Sets the value returned by GetSymbols(). Does not take ownership.
+  void set_symbols(ProcessSymbols* s) { symbols_ = s; }
 
   // Process implementation:
   Target* GetTarget() const override;
@@ -41,6 +43,8 @@ class MockProcess : public Process {
                    std::function<void(const Err&)> callback) override;
 
  private:
+  ProcessSymbols* symbols_ = nullptr;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(MockProcess);
 };
 
