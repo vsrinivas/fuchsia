@@ -17,7 +17,7 @@ use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
-use crate::error::{ParseError, ParseResult};
+use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, Ipv4Addr, Ipv6Addr, Subnet,
     SubnetEither, IPV6_MIN_MTU,
@@ -160,7 +160,7 @@ pub(crate) fn parse_ethernet_frame(
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet<I: Ip>(
     mut buf: &[u8],
-) -> ParseResult<(&[u8], I::Addr, I::Addr, IpProto)> {
+) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto)> {
     let packet = (&mut buf).parse::<<I as IpExt<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
@@ -210,13 +210,14 @@ where
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     buf: &[u8],
-) -> ParseResult<(&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
+) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
     use crate::device::ethernet::EthernetIpExt;
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     if ethertype != Some(I::ETHER_TYPE) {
         debug!("unexpected ethertype: {:?}", ethertype);
-        return Err(ParseError::NotExpected);
+        return Err(ParseError::NotExpected.into());
     }
+
     let (body, src_ip, dst_ip, proto) = parse_ip_packet::<I>(body)?;
     Ok((body, src_mac, dst_mac, src_ip, dst_ip, proto))
 }
@@ -236,7 +237,7 @@ pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
 >(
     mut buf: &[u8],
     f: F,
-) -> ParseResult<(Mac, Mac, I::Addr, I::Addr, M, C)>
+) -> IpParseResult<I, (Mac, Mac, I::Addr, I::Addr, M, C)>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
@@ -247,7 +248,7 @@ where
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
     if proto != <I as IcmpIpExt<&[u8]>>::IP_PROTO {
         debug!("unexpected IP protocol: {} (wanted {})", proto, <I as IcmpIpExt<&[u8]>>::IP_PROTO);
-        return Err(ParseError::NotExpected);
+        return Err(ParseError::NotExpected.into());
     }
     let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;
     Ok((src_mac, dst_mac, src_ip, dst_ip, message, code))

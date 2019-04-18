@@ -12,8 +12,8 @@ use packet::{
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::{ParseError, ParseResult};
-use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
+use crate::error::{IpParseError, IpParseResult, ParseError};
+use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
 use crate::wire::util::checksum::Checksum;
 use crate::wire::util::records::options::Options;
 
@@ -78,15 +78,17 @@ pub(crate) struct Ipv4Packet<B> {
 }
 
 impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
-    type Error = ParseError;
+    type Error = IpParseError<Ipv4>;
 
     fn parse_metadata(&self) -> ParseMetadata {
         let header_len = self.hdr_prefix.bytes().len() + self.options.bytes().len();
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> IpParseResult<Ipv4, Self> {
         // See for details: https://en.wikipedia.org/wiki/IPv4#Header
+        // TODO(ghanan): Return `IpParseError::ParameterProblem` error when we may be required to send
+        //               to the source of a packet, an ICMP Parameter Problem response on errors.
 
         let total_len = buffer.len();
         let hdr_prefix = buffer
@@ -94,7 +96,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
         if hdr_bytes < HDR_PREFIX_LEN {
-            return debug_err!(Err(ParseError::Format), "invalid IHL: {}", hdr_prefix.ihl());
+            return debug_err!(Err(ParseError::Format.into()), "invalid IHL: {}", hdr_prefix.ihl());
         }
         let options = buffer
             .take_front(hdr_bytes - HDR_PREFIX_LEN)
@@ -103,7 +105,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             .map_err(|err| debug_err!(ParseError::Format, "malformed options: {:?}", err))?;
         if hdr_prefix.version() != 4 {
             return debug_err!(
-                Err(ParseError::Format),
+                Err(ParseError::Format.into()),
                 "unexpected IP version: {}",
                 hdr_prefix.version()
             );
@@ -117,12 +119,12 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             buffer.into_rest()
         } else {
             // we don't yet support IPv4 fragmentation
-            return debug_err!(Err(ParseError::NotSupported), "fragmentation not supported");
+            return debug_err!(Err(ParseError::NotSupported.into()), "fragmentation not supported");
         };
 
         let packet = Ipv4Packet { hdr_prefix, options, body };
         if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
-            return debug_err!(Err(ParseError::Checksum), "invalid checksum");
+            return debug_err!(Err(ParseError::Checksum.into()), "invalid checksum");
         }
         Ok(packet)
     }
@@ -615,7 +617,7 @@ mod tests {
         hdr_prefix.version_ihl = (5 << 4) | 5;
         assert_eq!(
             (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
-            ParseError::Format
+            ParseError::Format.into()
         );
 
         // Set the IHL to 4, implying a header length of 16. This is smaller
@@ -624,7 +626,7 @@ mod tests {
         hdr_prefix.version_ihl = (4 << 4) | 4;
         assert_eq!(
             (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
-            ParseError::Format
+            ParseError::Format.into()
         );
 
         // Set the IHL to 6, implying a header length of 24. This is larger than
@@ -633,7 +635,7 @@ mod tests {
         hdr_prefix.version_ihl = (4 << 4) | 6;
         assert_eq!(
             (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
-            ParseError::Format
+            ParseError::Format.into()
         );
     }
 

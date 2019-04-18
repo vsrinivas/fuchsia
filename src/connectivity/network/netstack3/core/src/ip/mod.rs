@@ -100,6 +100,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     parse_metadata: Option<ParseMetadata>,
 ) {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
+
     let res = match proto {
         IpProto::Icmp | IpProto::Icmpv6 => {
             icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
@@ -111,6 +112,9 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
         }
         IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
         IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
+        // following the last lower-level header so we stop processing here.
+        IpProto::NoNextHeader => Ok(()),
         IpProto::Other(_) => {
             // Undo the parsing of the IP packet header so that the buffer
             // contains the entire original IP packet.
@@ -206,6 +210,9 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         return;
     };
     trace!("receive_ip_packet: parsed packet: {:?}", packet);
+
+    // TODO(ghanan): For IPv4 packets, act upon options and for IPv6 packets,
+    //               act upon extension headers.
 
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of

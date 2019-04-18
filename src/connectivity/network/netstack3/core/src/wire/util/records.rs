@@ -310,16 +310,28 @@ where
 {
     /// Parse a set of records with a context.
     ///
-    /// `parse_with_context` parses `bytes` as a sequence of records. `context`
+    /// See `parse_with_mut_context` for details on `bytes`, `context`, and
+    /// return value. `parse_with_context` just calls `parse_with_mut_context`
+    /// with a mutable reference to the `context` (which is owned).
+    pub(crate) fn parse_with_context(
+        bytes: B,
+        mut context: R::Context,
+    ) -> Result<Records<B, R>, R::Error> {
+        Self::parse_with_mut_context(bytes, &mut context)
+    }
+
+    /// Parse a set of records with a mutable context.
+    ///
+    /// `parse_with_mut_context` parses `bytes` as a sequence of records. `context`
     /// may be used by implementers to maintain state and do checks.
     ///
-    /// `parse_with_context` performs a single pass over all of the records to
+    /// `parse_with_mut_context` performs a single pass over all of the records to
     /// verify that they are well-formed. Once `parse_with_context` returns
     /// successfully, the resulting `Records` can be used to construct
     /// infallible iterators.
-    pub(crate) fn parse_with_context(
+    pub(crate) fn parse_with_mut_context(
         bytes: B,
-        context: R::Context,
+        context: &mut R::Context,
     ) -> Result<Records<B, R>, R::Error> {
         // First, do a single pass over the bytes to detect any errors up front.
         // Once this is done, since we have a reference to `bytes`, these bytes
@@ -331,8 +343,46 @@ where
         // - R::parse could be non-deterministic
         let mut c = context.clone();
         let mut b = LongLivedBuff::new(bytes.deref());
-        while next::<_, R>(&mut b, &mut c)?.is_some() {}
-        Ok(Records { bytes, context })
+        while next::<_, R>(&mut b, context)?.is_some() {}
+        Ok(Records { bytes, context: c })
+    }
+
+    /// Parse a set of records with a context, using a `BufferView`.
+    ///
+    /// See `parse_bv_with_mut_context` for details on `bytes`, `context`, and
+    /// return value. `parse_bv_with_context` just calls `parse_bv_with_mut_context`
+    /// with a mutable reference to the `context` (which is owned).
+    pub(crate) fn parse_bv_with_context<BV: BufferView<B>>(
+        mut bytes: &mut BV,
+        mut context: R::Context,
+    ) -> Result<Records<B, R>, R::Error> {
+        Self::parse_bv_with_mut_context(bytes, &mut context)
+    }
+
+    /// Parse a set of records with a mutable context, using a `BufferView`.
+    ///
+    /// This function is exactly the same as `parse_with_mut_context` except instead
+    /// of operating on a `ByteSlice`, we operate on a `BufferView<B>` where `B`
+    /// is a `ByteSlice`. `parse_bv_with_mut_context` enables parsing records without
+    /// knowing the size of all records beforehand (unlike `parse_with_mut_context`
+    /// where callers need to pass in a `ByteSlice` of some predetermined sized).
+    /// Since callers will provide a mutable reference to a `BufferView`,
+    /// `parse_bv_with_mut_context` will take only the amount of bytes it needs to
+    /// parse records, leaving the rest in the `BufferView` object. That is, when
+    /// `parse_bv_with_mut_context` returns, the `BufferView` object provided will be
+    /// x bytes smaller, where x is the number of bytes required to parse the records.
+    pub(crate) fn parse_bv_with_mut_context<BV: BufferView<B>>(
+        mut bytes: &mut BV,
+        context: &mut R::Context,
+    ) -> Result<Records<B, R>, R::Error> {
+        let mut c = context.clone();
+        let mut b = LongLivedBuff::new(bytes.as_ref());
+        while next::<_, R>(&mut b, context)?.is_some() {}
+
+        // When we get here, we know that whatever is left in `b` is not needed
+        // so we only take the amount of bytes we actually need from `bytes`,
+        // leaving the rest alone for the caller to continue parsing with.
+        Ok(Records { bytes: bytes.take_front(bytes.len() - b.len()).unwrap(), context: c })
     }
 }
 
@@ -490,21 +540,6 @@ mod test {
         0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03,
         0x04,
     ];
-
-    /// Parse a set of records with a mutable context.
-    ///
-    /// This function is exactly the same as `RecordsImpl::parse_with_context`
-    /// except `context` is passed in as a mutable reference instead of as a
-    /// value; to verify the state of a context after parsing has completed.
-    fn parse_with_mut_context<B: ByteSlice, R: for<'a> RecordsImpl<'a>>(
-        bytes: B,
-        context: &mut R::Context,
-    ) -> Result<Records<B, R>, R::Error> {
-        let c = context.clone();
-        let mut b = LongLivedBuff::new(bytes.deref());
-        while next::<_, R>(&mut b, context)?.is_some() {}
-        Ok(Records { bytes, context: c })
-    }
 
     #[derive(Debug, AsBytes, FromBytes, Unaligned)]
     #[repr(C)]
@@ -732,69 +767,10 @@ mod test {
         assert_eq!(rec.b, 0x03);
     }
 
-    #[test]
-    fn all_records_parsing() {
-        let test = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]);
-        let parsed = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
-        assert_eq!(parsed.iter().count(), 4);
-        for rec in parsed.iter() {
-            check_parsed_record(rec.deref());
-        }
-    }
-
-    #[test]
-    fn limit_records_parsing() {
-        let limit = 2;
-        let parsed = LimitedRecords::<_, LimitContextRecordImpl>::parse_with_context(
-            &DUMMY_BYTES[..],
-            limit,
-        )
-        .unwrap();
-        assert_eq!(parsed.iter().count(), limit);
-        for rec in parsed.iter() {
-            check_parsed_record(rec.deref());
-        }
-    }
-
-    #[test]
-    fn exact_limit_records_parsing() {
-        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 2)
-            .expect_err("fails if all the buffer hasn't been parsed");
-        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 5)
-            .expect_err("fails if can't extract enough records");
-    }
-
-    #[test]
-    fn context_filtering_some_byte_records_parsing() {
-        // Do not disallow any bytes
-        let context = FilterContext { disallowed: [false; 256] };
-
-        let parsed =
-            Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
-                .unwrap();
-
-        assert_eq!(parsed.iter().count(), 4);
-        for rec in parsed.iter() {
-            check_parsed_record(rec.deref());
-        }
-
-        // Do not allow byte value 0x01
-        let mut context = FilterContext { disallowed: [false; 256] };
-
-        context.disallowed[1] = true;
-
-        Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
-            .expect_err("fails if the buffer has an element with value 0x01");
-    }
-
-    #[test]
-    fn stateful_context_records_parsing() {
-        let mut context = StatefulContext::new();
-
-        let parsed =
-            parse_with_mut_context::<_, StatefulContextRecordImpl>(&DUMMY_BYTES[..], &mut context)
-                .unwrap();
-
+    fn validate_parsed_stateful_context_records<B: ByteSlice>(
+        records: Records<B, StatefulContextRecordImpl>,
+        context: StatefulContext,
+    ) {
         // Should be 5 because on the last iteration, we should realize
         // that we have no more bytes left and end before parsing (also
         // explaining why `parse_counter` should only be 4.
@@ -802,7 +778,7 @@ mod test {
         assert_eq!(context.parse_counter, 4);
         assert_eq!(context.post_parse_counter, 4);
 
-        let mut iter = parsed.iter();
+        let mut iter = records.iter();
         let context = &iter.context;
         assert_eq!(context.pre_parse_counter, 0);
         assert_eq!(context.parse_counter, 0);
@@ -823,6 +799,147 @@ mod test {
         assert_eq!(context.parse_counter, 0);
         assert_eq!(context.post_parse_counter, 0);
         assert_eq!(context.iter, true);
+    }
+
+    #[test]
+    fn all_records_parsing() {
+        let test = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]);
+        let parsed = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
+        assert_eq!(parsed.iter().count(), 4);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+    }
+
+    #[test]
+    fn limit_records_parsing() {
+        // Test without mutable limit/context
+        let limit = 2;
+        let parsed = LimitedRecords::<_, LimitContextRecordImpl>::parse_with_context(
+            &DUMMY_BYTES[..],
+            limit,
+        )
+        .unwrap();
+        assert_eq!(parsed.iter().count(), limit);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+
+        // Test with mutable limit/context
+        let mut mut_limit = limit;
+        let parsed = LimitedRecords::<_, LimitContextRecordImpl>::parse_with_mut_context(
+            &DUMMY_BYTES[..],
+            &mut mut_limit,
+        )
+        .unwrap();
+        assert_eq!(mut_limit, 0);
+        assert_eq!(parsed.iter().count(), limit);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+    }
+
+    #[test]
+    fn limit_records_parsing_with_bv() {
+        // Test without mutable limit/context
+        let limit = 2;
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let parsed =
+            LimitedRecords::<_, LimitContextRecordImpl>::parse_bv_with_context(&mut bv, limit)
+                .unwrap();
+        assert_eq!(bv.len(), DUMMY_BYTES.len() - std::mem::size_of::<DummyRecord>() * limit);
+        assert_eq!(parsed.iter().count(), limit);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+
+        // Test with mutable limit context
+        let mut mut_limit = limit;
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let parsed = LimitedRecords::<_, LimitContextRecordImpl>::parse_bv_with_mut_context(
+            &mut bv,
+            &mut mut_limit,
+        )
+        .unwrap();
+        assert_eq!(mut_limit, 0);
+        assert_eq!(bv.len(), DUMMY_BYTES.len() - std::mem::size_of::<DummyRecord>() * limit);
+        assert_eq!(parsed.iter().count(), limit);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+    }
+
+    #[test]
+    fn exact_limit_records_parsing() {
+        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 2)
+            .expect_err("fails if all the buffer hasn't been parsed");
+        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 5)
+            .expect_err("fails if can't extract enough records");
+    }
+
+    #[test]
+    fn context_filtering_some_byte_records_parsing() {
+        // Do not disallow any bytes
+        let context = FilterContext { disallowed: [false; 256] };
+        let parsed =
+            Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
+                .unwrap();
+        assert_eq!(parsed.iter().count(), 4);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+
+        // Do not allow byte value 0x01
+        let mut context = FilterContext { disallowed: [false; 256] };
+        context.disallowed[1] = true;
+        Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
+            .expect_err("fails if the buffer has an element with value 0x01");
+    }
+
+    #[test]
+    fn context_filtering_some_byte_records_parsing_with_bv() {
+        // Do not disallow any bytes
+        let context = FilterContext { disallowed: [false; 256] };
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let parsed =
+            Records::<_, FilterContextRecordImpl>::parse_bv_with_context(&mut bv, context).unwrap();
+        assert_eq!(bv.len(), 0);
+        assert_eq!(parsed.iter().count(), 4);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+
+        // Do not allow byte value 0x01
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let mut context = FilterContext { disallowed: [false; 256] };
+        context.disallowed[1] = true;
+        Records::<_, FilterContextRecordImpl>::parse_bv_with_context(&mut bv, context)
+            .expect_err("fails if the buffer has an element with value 0x01");
+        assert_eq!(bv.len(), DUMMY_BYTES.len());
+    }
+
+    #[test]
+    fn stateful_context_records_parsing() {
+        let mut context = StatefulContext::new();
+        let parsed = Records::<_, StatefulContextRecordImpl>::parse_with_mut_context(
+            &DUMMY_BYTES[..],
+            &mut context,
+        )
+        .unwrap();
+        validate_parsed_stateful_context_records(parsed, context);
+    }
+
+    #[test]
+    fn stateful_context_records_parsing_with_bv() {
+        let mut context = StatefulContext::new();
+        let mut bv = &mut &DUMMY_BYTES[..];
+        let parsed = Records::<_, StatefulContextRecordImpl>::parse_bv_with_mut_context(
+            &mut bv,
+            &mut context,
+        )
+        .unwrap();
+        assert_eq!(bv.len(), 0);
+        validate_parsed_stateful_context_records(parsed, context);
     }
 }
 
@@ -885,7 +1002,11 @@ pub(crate) mod options {
         type Record = O::Option;
 
         fn record_length(record: &Self::Record) -> usize {
-            let base = 2 + O::get_option_length(record);
+            let base = if O::HEADER_INCLUDED_IN_LENGTH {
+                2 + O::get_option_length(record)
+            } else {
+                O::get_option_length(record)
+            };
             // Pad up to option_len_multiplier:
             (base + O::OPTION_LEN_MULTIPLIER - 1) / O::OPTION_LEN_MULTIPLIER
                 * O::OPTION_LEN_MULTIPLIER
@@ -952,6 +1073,10 @@ pub(crate) mod options {
 
         /// The No-op type (if one exists).
         const NOP: Option<u8> = Some(NOP);
+
+        /// Whether or not the header (option type, option len) is
+        /// part of the length value.
+        const HEADER_INCLUDED_IN_LENGTH: bool = true;
     }
 
     /// An implementation of an options parser.
@@ -1045,11 +1170,22 @@ pub(crate) mod options {
                 Some(len) => (len as usize) * O::OPTION_LEN_MULTIPLIER,
             };
 
-            if len < 2 || (len - 2) > bytes.len() {
+            let expected_len = if O::HEADER_INCLUDED_IN_LENGTH {
+                // If header is included in the length, we expect at least
+                // (`len` - 2) bytes to remain in `bytes`.
+                len.checked_sub(2)
+            } else {
+                // If header is not included in the length, we expect atleast
+                // `len` bytes to remain in `bytes.
+                Some(len)
+            };
+
+            if expected_len.is_none() || expected_len.unwrap() > bytes.len() {
                 return debug_err!(Err(OptionParseErr::Internal), "option length {} is either too short or longer than the total buffer length of {}", len, bytes.len());
             }
+
             // we can safely unwrap here since we verified the correct length above
-            let option_data = bytes.take_front(len - 2).unwrap();
+            let option_data = bytes.take_front(expected_len.unwrap()).unwrap();
             match O::parse(kind, option_data) {
                 Ok(Some(o)) => return Ok(Some(Some(o))),
                 Ok(None) => {}

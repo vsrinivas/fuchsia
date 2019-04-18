@@ -97,7 +97,7 @@ mod internal {
     use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, Unaligned};
 
     use crate::device::DeviceId;
-    use crate::error::ParseError;
+    use crate::error::IpParseError;
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
@@ -170,7 +170,7 @@ mod internal {
     /// `Ip` encapsulates the details of a version of the IP protocol. It
     /// includes the `IpVersion` enum (`VERSION`) and address type (`Addr`). It
     /// is implemented by `Ipv4` and `Ipv6`.
-    pub trait Ip: Sized + self::sealed::Sealed {
+    pub trait Ip: Sized + Debug + self::sealed::Sealed + 'static {
         /// The IP version.
         ///
         /// `V4` for IPv4 and `V6` for IPv6.
@@ -205,7 +205,7 @@ mod internal {
     /// IPv4.
     ///
     /// `Ipv4` implements `Ip` for IPv4.
-    #[derive(Debug, Default)]
+    #[derive(PartialEq, Debug, Default)]
     pub struct Ipv4;
 
     impl Ip for Ipv4 {
@@ -240,7 +240,7 @@ mod internal {
     /// IPv6.
     ///
     /// `Ipv6` implements `Ip` for IPv6.
-    #[derive(Debug, Default)]
+    #[derive(PartialEq, Debug, Default)]
     pub struct Ipv6;
 
     impl Ip for Ipv6 {
@@ -295,8 +295,17 @@ mod internal {
     /// An IPv4 or IPv6 address.
     pub trait IpAddress
     where
-        Self:
-            Sized + Eq + PartialEq + Hash + Copy + Display + Debug + self::sealed::Sealed + Default,
+        Self: Sized
+            + Eq
+            + PartialEq
+            + Hash
+            + Copy
+            + Display
+            + Debug
+            + self::sealed::Sealed
+            + Default
+            + Sync
+            + Send,
     {
         /// The number of bytes in an address of this type.
         ///
@@ -840,7 +849,27 @@ mod internal {
             Tcp, 6, "TCP";
             Udp, 17, "UDP";
             Icmpv6, 58, "ICMPv6";
+            NoNextHeader, 59, "NO NEXT HEADER";
             _, "IP protocol {}";
+        }
+    );
+
+    create_protocol_enum!(
+        /// An IPv6 Extension Header type.
+        ///
+        /// These are valid next header types for an IPv6 Header
+        /// that relate to extension headers. This enum does not
+        /// include upper layer protocol numbers even though they
+        /// may be valid Next Header values.
+        #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+        pub(crate) enum Ipv6ExtHdrType: u8 {
+            HopByHopOptions, 0, "IPv6 HOP-BY-HOP OPTIONS HEADER";
+            Routing, 43, "IPv6 ROUTING HEADER";
+            Fragment, 44, "IPv6 FRAGMENT HEADER";
+            EncapsulatingSecurityPayload, 50, "ENCAPSULATING SECURITY PAYLOAD";
+            Authentication, 51, "AUTHENTICATION HEADER";
+            DestinationOptions, 60, "IPv6 DESTINATION OPTIONS HEADER";
+            _,  "IPv6 EXTENSION HEADER {}";
         }
     );
 
@@ -875,7 +904,7 @@ mod internal {
     ///
     /// `IpPacket` is implemented by `Ipv4Packet` and `Ipv6Packet`.
     pub(crate) trait IpPacket<B: ByteSlice, I: Ip>:
-        Sized + Debug + ParsablePacket<B, (), Error = ParseError>
+        Sized + Debug + ParsablePacket<B, (), Error = IpParseError<I>>
     {
         /// A builder for this packet type.
         type Builder: IpPacketBuilder<I>;
@@ -933,7 +962,7 @@ mod internal {
             Ipv6Packet::dst_ip(self)
         }
         fn proto(&self) -> IpProto {
-            Ipv6Packet::next_header(self)
+            Ipv6Packet::proto(self)
         }
         fn ttl(&self) -> u8 {
             Ipv6Packet::hop_limit(self)
