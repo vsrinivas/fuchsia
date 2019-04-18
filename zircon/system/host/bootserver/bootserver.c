@@ -205,7 +205,6 @@ void usage(void) {
             "  --boot <file>            use the supplied file as a kernel\n"
             "  --fvm <file>             use the supplied file as a sparse FVM image (up to 4 times)\n"
             "  --bootloader <file>      use the supplied file as a BOOTLOADER image\n"
-            "  --efi <file>             use the supplied file as an EFI image\n"
             "  --zircona <file>         use the supplied file as a ZIRCON-A ZBI\n"
             "  --zirconb <file>         use the supplied file as a ZIRCON-B ZBI\n"
             "  --zirconr <file>         use the supplied file as a ZIRCON-R ZBI\n"
