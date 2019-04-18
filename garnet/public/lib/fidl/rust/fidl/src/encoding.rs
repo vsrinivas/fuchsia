@@ -1870,9 +1870,12 @@ where
                             fidl_decode!(val, decoder)?;
                             break;
                         }
-                        _ => {}
+                        Err(_) => {
+                            // Only construct an empty instance of the nested type if we have an
+                            // Err(T) value.  Now `loop` to go into the first branch.
+                            *self = Ok(<O as Decodable>::new_empty())
+                        }
                     }
-                    *self = Ok(<O as Decodable>::new_empty())
                 }
                 Ok(())
             }
@@ -1884,9 +1887,12 @@ where
                             fidl_decode!(val, decoder)?;
                             break;
                         }
-                        _ => {}
+                        Ok(_) => {
+                            // Only construct an empty instance of the nested type if we have an
+                            // Ok(T) value.  Now `loop` to go into the first branch.
+                            *self = Err(<E as Decodable>::new_empty())
+                        }
                     }
-                    *self = Err(<E as Decodable>::new_empty())
                 }
                 Ok(())
             }
