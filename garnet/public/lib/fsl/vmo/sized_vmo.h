@@ -9,7 +9,6 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 
-#include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 
 namespace fsl {
@@ -46,8 +45,6 @@ class SizedVmo {
   fuchsia::mem::Buffer ToTransport() &&;
 
   zx_status_t Duplicate(zx_rights_t rights, SizedVmo* output) const;
-
-  zx_status_t ReplaceAsExecutable(const zx::handle& vmex);
 
  private:
   zx::vmo vmo_;

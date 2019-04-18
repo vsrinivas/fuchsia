@@ -105,29 +105,12 @@ struct LoaderServiceState {
 const char* const kLibPaths[] = {"system/lib", "boot/lib"};
 
 // This is a helper specifically for the C API boundary with the implementation code.
-zx_status_t ExecVmoFromFd(fbl::unique_fd fd, const char* file_name, zx_handle_t* out) {
-    zx_handle_t vmo;
-    zx_handle_t exec_vmo;
-
-    zx_status_t status = fdio_get_vmo_clone(fd.get(), &vmo);
+zx_status_t VmoFromFd(fbl::unique_fd fd, const char* file_name, zx_handle_t* out) {
+    zx_status_t status = fdio_get_vmo_clone(fd.get(), out);
     if (status != ZX_OK) {
         return status;
     }
-
-    status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
-    if (status != ZX_OK) {
-        zx_handle_close(vmo);
-        return status;
-    }
-
-    status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, file_name, strlen(file_name));
-    if (status != ZX_OK) {
-        zx_handle_close(exec_vmo);
-        return status;
-    }
-
-    *out = exec_vmo;
-    return ZX_OK;
+    return zx_object_set_property(*out, ZX_PROP_NAME, file_name, strlen(file_name));
 }
 
 zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* out) {
@@ -139,7 +122,7 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* out) {
         }
         fbl::unique_fd fd(openat(state->root_dir_fd.get(), path, O_RDONLY));
         if (fd) {
-            return ExecVmoFromFd(std::move(fd), name, out);
+            return VmoFromFd(std::move(fd), name, out);
         }
     }
     return ZX_ERR_NOT_FOUND;
@@ -149,7 +132,7 @@ zx_status_t LoadAbspath(void* ctx, const char* path, zx_handle_t* out) {
     const auto state = static_cast<LoaderServiceState*>(ctx);
     fbl::unique_fd fd(openat(state->root_dir_fd.get(), path, O_RDONLY));
     if (fd) {
-        return ExecVmoFromFd(std::move(fd), path, out);
+        return VmoFromFd(std::move(fd), path, out);
     }
     return ZX_ERR_NOT_FOUND;
 }

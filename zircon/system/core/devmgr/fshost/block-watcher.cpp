@@ -160,25 +160,12 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
     if (fd < 0) {
         return ZX_ERR_NOT_FOUND;
     }
-
-    zx::vmo nonexec_vmo;
-    zx::vmo exec_vmo;
-    zx_status_t status = fdio_get_vmo_clone(fd, nonexec_vmo.reset_and_get_address());
+    zx_status_t status = fdio_get_vmo_clone(fd, vmo);
     close(fd);
-    if (status != ZX_OK) {
-        return status;
+    if (status == ZX_OK) {
+        zx_object_set_property(*vmo, ZX_PROP_NAME, key, strlen(key));
     }
-    status = nonexec_vmo.replace_as_executable(zx::handle(), &exec_vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = zx_object_set_property(exec_vmo.get(), ZX_PROP_NAME, key, strlen(key));
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    *vmo = exec_vmo.release();
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t pkgfs_ldsvc_load_object(void* ctx, const char* name, zx_handle_t* vmo) {

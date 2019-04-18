@@ -579,19 +579,12 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   builder.AddServices(std::move(svc));
   builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
 
-  zx_status_t status;
   fsl::SizedVmo executable;
   if (!fsl::VmoFromFilename(path, &executable))
     return;
 
-  // The VMO we get back from VmoFromFilename is not marked executable.
-  // Turn it into one that is executable.
-  status = executable.ReplaceAsExecutable(zx::handle());
-  if (status != ZX_OK)
-    return;
-
   zx::job child_job;
-  status = zx::job::create(job_, 0u, &child_job);
+  zx_status_t status = zx::job::create(job_, 0u, &child_job);
   if (status != ZX_OK)
     return;
 
@@ -770,7 +763,6 @@ void Realm::CreateComponentFromPackage(
                          "Realm::CreateComponentFromPackage:VmoFromFilenameAt",
                          "bin_path", bin_path);
     VmoFromFilenameAt(fd.get(), bin_path, &app_data);
-    app_data.ReplaceAsExecutable(zx::handle());
     TRACE_DURATION_END("appmgr",
                        "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (!app_data) {

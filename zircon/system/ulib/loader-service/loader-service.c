@@ -83,29 +83,12 @@ static int open_from_lib_paths(int root_dir_fd, const char* const* lib_paths,
 
 // Always consumes the |fd|.
 static zx_handle_t vmo_from_fd(int fd, const char* fn, zx_handle_t* out) {
-    zx_handle_t vmo;
-    zx_handle_t exec_vmo;
-    zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
+    zx_status_t status = fdio_get_vmo_clone(fd, out);
     close(fd);
-
-    if (status != ZX_OK) {
-        return status;
+    if (status == ZX_OK) {
+        zx_object_set_property(*out, ZX_PROP_NAME, fn, strlen(fn));
     }
-
-    status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
-    if (status != ZX_OK) {
-        zx_handle_close(vmo);
-        return status;
-    }
-
-    status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, fn, strlen(fn));
-    if (status != ZX_OK) {
-        zx_handle_close(exec_vmo);
-        return status;
-    }
-
-    *out = exec_vmo;
-    return ZX_OK;
+    return status;
 }
 
 static zx_status_t fd_load_object(void* ctx, const char* name, zx_handle_t* out) {
