@@ -66,12 +66,10 @@ Alternatively, you can build the Garnet SDK from source using the
 following commands:
 
 ```bash
-./scripts/build-zircon.sh
-
-gn gen --args='target_cpu="x64" fuchsia_packages=["garnet/packages/sdk/garnet"]' out/x64
+gn gen --args='target_cpu="x64" base_package_labels=["//garnet/packages/sdk:garnet"]' out/x64
 ninja -C out/x64
 
-gn gen --args='target_cpu="arm64" fuchsia_packages=["garnet/packages/sdk/garnet"]' out/arm64
+gn gen --args='target_cpu="arm64" base_package_labels=["//garnet/packages/sdk:garnet"]' out/arm64
 ninja -C out/arm64
 
 ./scripts/sdk/create_layout.py --manifest out/x64/gen/garnet/public/sdk/garnet_molecule.sdk --output ${SDK_DIR}

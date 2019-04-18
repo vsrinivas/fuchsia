@@ -19,14 +19,6 @@ declare_args() {
   # additional specified packages
   board_packages = []
 
-  # List of packages (a GN list of strings).
-  # This list of packages is currently added to the set of "monolith" packages,
-  # see `products` for more information; in the future, these packages will be
-  # added to the "preinstall".
-  # If unset, layer will be guessed using //.jiri_manifest and
-  # //{layer}/products/default.gni will be used.
-  fuchsia_packages = []
-
   # List of GN labels of extra packages to included in OTA images, base system
   # images, and the distribution repository.
   extra_package_labels = []
@@ -37,7 +29,6 @@ preinstall = []
 available = []
 
 monolith += board_packages
-monolith += fuchsia_packages
 
 # Resolve all the JSON files and their dependencies
 # into lists of GN labels:
