@@ -1,0 +1,75 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.storage.metrics;
+
+// Stats for calls. These stats track completed calls - they may or may not have
+// succeeded. Unless specified otherwise , time units are in nanoseconds and
+// data transferred is in bytes
+struct CallStatRaw {
+    // Minimum time taken by a request to be served.
+    uint64 minimum_latency;
+
+    // Maximum time taken by a request to be served.
+    uint64 maximum_latency;
+
+    // Total time spent to serve requests.
+    uint64 total_time_spent;
+
+    // Total number of calls.
+    uint64 total_calls;
+
+    // byte_transferred may mean different things in different context. For
+    // example, read and write may use it for bytes read/written, whereas
+    // create/lseek may use bytes_transferred for file name length or number
+    // of bytes lseek-ed from current position.
+    // bytes_transferred has special meaning if the succeeded or failed.
+    // On success:
+    //    Partitally succeeded calls, bytes fetched is less than bytes requested,
+    //    can be considered as successful. To keep latency and time_spent numbers
+    //    accurate, on success, bytes transferred is number bytes returned to
+    //    caller. It is NOT the number of bytes fetched from underlying subsystem
+    //    and it is NOT number of bytes requested by the caller.
+    // On failure:
+    //    On failure, bytes_transferred is the number of bytes requested by the
+    //    caller.
+    uint64 bytes_transferred;
+};
+
+struct CallStat {
+    // CallStat keeps track of the successful commands and failed commands
+    // seperately as successful commands may generate completely different stats
+    // than failed commands - a write() to read-only file handle may fail
+    // in nanoseconds and if the stats tracked together, it will skew the
+    // numbers.
+    CallStatRaw success;
+    CallStatRaw failure;
+};
+
+struct FsMetrics {
+    // Call stats for create
+    CallStat create;
+
+    // Call stats for read
+    CallStat read;
+
+    // Call stats for write
+    CallStat write;
+
+    // Call stats for truncate
+    CallStat truncate;
+
+    // Call stats for unlink
+    CallStat unlink;
+
+    // Call stats for rename
+    CallStat rename;
+
+    // Call stats for directory lookups
+    CallStat lookup;
+
+    // Call stats for open. This may or may
+    // not include directory lookup during open
+    CallStat open;
+};

@@ -173,39 +173,46 @@ bool TestMetrics() {
     fuchsia_minfs_Metrics metrics;
     ASSERT_TRUE(GetMetrics(&metrics));
 
-    ASSERT_EQ(metrics.create_calls, 0);
-    ASSERT_EQ(metrics.create_calls_success, 0);
+    ASSERT_EQ(metrics.fs_metrics.create.success.total_calls, 0);
+    ASSERT_EQ(metrics.fs_metrics.create.failure.total_calls, 0);
 
     char path[128];
     snprintf(path, sizeof(path) - 1, "%s/test-file", kMountPath);
     fbl::unique_fd fd(open(path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd);
     ASSERT_TRUE(GetMetrics(&metrics));
-    ASSERT_EQ(metrics.create_calls, 1);
-    ASSERT_EQ(metrics.create_calls_success, 1);
+    ASSERT_EQ(metrics.fs_metrics.create.success.total_calls, 1);
+    ASSERT_EQ(metrics.fs_metrics.create.failure.total_calls, 0);
+    ASSERT_NE(metrics.fs_metrics.create.success.total_time_spent, 0);
+    ASSERT_EQ(metrics.fs_metrics.create.failure.total_time_spent, 0);
 
     fd.reset(open(path, O_CREAT | O_RDWR | O_EXCL));
     ASSERT_FALSE(fd);
     ASSERT_TRUE(GetMetrics(&metrics));
-    ASSERT_EQ(metrics.create_calls, 2);
-    ASSERT_EQ(metrics.create_calls_success, 1);
+    ASSERT_EQ(metrics.fs_metrics.create.success.total_calls, 1);
+    ASSERT_EQ(metrics.fs_metrics.create.failure.total_calls, 1);
+    ASSERT_NE(metrics.fs_metrics.create.success.total_time_spent, 0);
+    ASSERT_NE(metrics.fs_metrics.create.failure.total_time_spent, 0);
 
     ASSERT_TRUE(GetMetrics(&metrics));
-    ASSERT_EQ(metrics.unlink_calls, 0);
-    ASSERT_EQ(metrics.unlink_calls_success, 0);
-    ASSERT_EQ(metrics.unlink_ticks, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.success.total_calls, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.failure.total_calls, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.success.total_time_spent, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.failure.total_time_spent, 0);
 
     ASSERT_EQ(unlink(path), 0);
     ASSERT_TRUE(GetMetrics(&metrics));
-    ASSERT_EQ(metrics.unlink_calls, 1);
-    ASSERT_EQ(metrics.unlink_calls_success, 1);
-    ASSERT_NE(metrics.unlink_ticks, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.success.total_calls, 1);
+    ASSERT_EQ(metrics.fs_metrics.unlink.failure.total_calls, 0);
+    ASSERT_NE(metrics.fs_metrics.unlink.success.total_time_spent, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.failure.total_time_spent, 0);
 
     ASSERT_NE(unlink(path), 0);
     ASSERT_TRUE(GetMetrics(&metrics));
-    ASSERT_EQ(metrics.unlink_calls, 2);
-    ASSERT_EQ(metrics.unlink_calls_success, 1);
-    ASSERT_NE(metrics.unlink_ticks, 0);
+    ASSERT_EQ(metrics.fs_metrics.unlink.success.total_calls, 1);
+    ASSERT_EQ(metrics.fs_metrics.unlink.failure.total_calls, 1);
+    ASSERT_NE(metrics.fs_metrics.unlink.success.total_time_spent, 0);
+    ASSERT_NE(metrics.fs_metrics.unlink.failure.total_time_spent, 0);
 
     ASSERT_TRUE(ToggleMetrics(false));
     ASSERT_TRUE(GetMetricsUnavailable());

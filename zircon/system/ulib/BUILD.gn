@@ -97,6 +97,7 @@ group("ulib") {
     "runtests-utils",
     "runtime",
     "smbios",
+    "storage-metrics",
     "svc",
     "sync",
     "syslog",

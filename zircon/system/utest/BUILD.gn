@@ -53,6 +53,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/paver:device-partitioner-test",
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/simplehid/test",
+      "$zx/system/ulib/storage-metrics/test",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-vthread:tests",
       "$zx/system/ulib/zbi-bootfs/test:test",

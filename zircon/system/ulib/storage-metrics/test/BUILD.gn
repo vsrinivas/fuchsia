@@ -2,19 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("storage-metrics") {
+group("test") {
+  testonly = true
+  deps = [
+    ":storage-metrics",
+  ]
+}
+
+test("storage-metrics") {
   sources = [
-    "main.cpp",
+    "storage-metrics.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/fidl/fuchsia-storage-metrics:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

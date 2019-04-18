@@ -5,35 +5,14 @@
 library fuchsia.minfs;
 
 using zx;
+using fuchsia.storage.metrics as metrics;
 
 // Describes metrics about the running Minfs instance.
 struct Metrics {
-    uint64 create_calls;
-    uint64 create_calls_success;
-    uint64 create_ticks;
-
-    uint64 read_calls;
-    uint64 read_size;
-    uint64 read_ticks;
-
-    uint64 write_calls;
-    uint64 write_size;
-    uint64 write_ticks;
-
-    uint64 truncate_calls;
-    uint64 truncate_ticks;
-
-    uint64 unlink_calls;
-    uint64 unlink_calls_success;
-    uint64 unlink_ticks;
-
-    uint64 rename_calls;
-    uint64 rename_calls_success;
-    uint64 rename_ticks;
+    metrics.FsMetrics fs_metrics;
 
     // Minfs initializes entire VMOs at once.
     // The following fields track this information.
-
     uint64 initialized_vmos;
     uint32 init_dnum_count; // Top-level direct blocks only
     uint32 init_inum_count; // Top-level indirect blocks only
@@ -43,17 +22,7 @@ struct Metrics {
 
     // Minfs looks up Vnodes by ino internally (using "VnodeGet").
     // The following fields track this information.
-
-    uint64 vnodes_opened;
     uint64 vnodes_opened_cache_hit;
-    uint64 vnode_open_ticks;
-
-    // Minfs may look up Vnodes by name (using "LookupInternal").
-    // The following fields track this information.
-
-    uint64 lookup_calls;
-    uint64 lookup_calls_success;
-    uint64 lookup_ticks;
 };
 
 // Describes a contiguous run of allocated blocks.
@@ -62,7 +31,7 @@ struct BlockRegion {
     uint64 length;
 };
 
-[Layout="Simple"]
+[Layout = "Simple"]
 protocol Minfs {
     // Acquires metrics about the currently running filesystem.
     GetMetrics() -> (zx.status status, Metrics? metrics);

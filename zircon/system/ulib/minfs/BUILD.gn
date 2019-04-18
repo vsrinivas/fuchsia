@@ -15,6 +15,7 @@ library("minfs") {
     "directory.cpp",
     "file.cpp",
     "fsck.cpp",
+    "metrics.cpp",
     "minfs.cpp",
     "superblock.cpp",
     "transaction-limits.cpp",
@@ -28,6 +29,7 @@ library("minfs") {
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/storage-metrics:headers",
 
     # <minfs/bcache.h> has #include <fvm/client.h>.
     "$zx/system/ulib/fvm:headers",
@@ -36,6 +38,7 @@ library("minfs") {
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/safemath",
   ]

@@ -2,19 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("storage-metrics") {
+library("storage-metrics") {
+  sdk = "source"
+  sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [
-    "main.cpp",
+    "storage-metrics.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/fidl/fuchsia-storage-metrics:c",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
   ]
 }

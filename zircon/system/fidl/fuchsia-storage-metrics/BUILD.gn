@@ -4,11 +4,8 @@
 
 import("$zx/public/gn/fidl.gni")
 
-fidl_library("fuchsia-minfs") {
+fidl_library("fuchsia-storage-metrics") {
   sources = [
-    "minfs.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-storage-metrics",
+    "storage-metrics.fidl",
   ]
 }

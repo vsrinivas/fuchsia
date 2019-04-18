@@ -15,7 +15,10 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
+#include <fuchsia/storage/metrics/c/fidl.h>
 #include <lib/fzl/fdio.h>
+#include <minfs/metrics.h>
+#include <storage-metrics/fs-metrics.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -23,7 +26,7 @@
 
 namespace {
 
-using MinfsMetrics = fuchsia_minfs_Metrics;
+using MinfsFidlMetrics = fuchsia_minfs_Metrics;
 
 int Usage() {
     fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");
@@ -48,57 +51,14 @@ struct StorageMetricOptions {
     BooleanFlagState enable_fs_metrics = BooleanFlagState::kUnset;
 };
 
-void PrintFsMetrics(const MinfsMetrics& metrics, const char* path) {
+void PrintFsMetrics(const MinfsFidlMetrics& metrics, const char* path) {
+    minfs::MinfsMetrics minfs_metrics(&metrics);
     printf("Filesystem Metrics for: %s\n", path);
     printf("General IO metrics\n");
-    printf("create calls:                       %lu\n", metrics.create_calls);
-    printf("successful create calls:            %lu\n", metrics.create_calls_success);
-    printf("create nanoseconds:                 %lu\n", metrics.create_ticks);
+    minfs_metrics.Dump(stdout, true);
+    minfs_metrics.Dump(stdout, false);
+    // minfs_metrics.Dump(stdout);
     printf("\n");
-
-    printf("read calls:                         %lu\n", metrics.read_calls);
-    printf("bytes read:                         %lu\n", metrics.read_size);
-    printf("read nanoseconds:                   %lu\n", metrics.read_ticks);
-    printf("\n");
-
-    printf("write calls:                        %lu\n", metrics.write_calls);
-    printf("bytes written:                      %lu\n", metrics.write_size);
-    printf("write nanoseconds:                  %lu\n", metrics.write_ticks);
-    printf("\n");
-
-    printf("truncate calls:                     %lu\n", metrics.truncate_calls);
-    printf("truncate nanoseconds:               %lu\n", metrics.truncate_ticks);
-    printf("\n");
-
-    printf("unlink calls:                       %lu\n", metrics.unlink_calls);
-    printf("successful unlink calls:            %lu\n", metrics.unlink_calls_success);
-    printf("unlink nanoseconds:                 %lu\n", metrics.unlink_ticks);
-    printf("\n");
-
-    printf("rename calls:                       %lu\n", metrics.rename_calls);
-    printf("successful rename calls:            %lu\n", metrics.rename_calls_success);
-    printf("rename nanoseconds:                 %lu\n", metrics.rename_ticks);
-    printf("\n");
-
-    printf("Vnode initialization metrics\n");
-    printf("initialized VMOs:                   %lu\n", metrics.initialized_vmos);
-    printf("initialized direct blocks:          %u\n", metrics.init_dnum_count);
-    printf("initialized indirect blocks:        %u\n", metrics.init_inum_count);
-    printf("initialized doubly indirect blocks: %u\n", metrics.init_dinum_count);
-    printf("bytes of files initialized:         %lu\n", metrics.init_user_data_size);
-    printf("ticks during initialization:        %lu\n", metrics.init_user_data_ticks);
-    printf("\n");
-
-    printf("Internal vnode open metrics\n");
-    printf("vnodes opened:                      %lu\n", metrics.vnodes_opened);
-    printf("vnodes open cache hits:             %lu\n", metrics.vnodes_opened_cache_hit);
-    printf("vnode open nanoseconds:             %lu\n", metrics.vnode_open_ticks);
-    printf("\n");
-
-    printf("Internal vnode lookup metrics\n");
-    printf("lookup calls:                       %lu\n", metrics.lookup_calls);
-    printf("successful lookup calls:            %lu\n", metrics.lookup_calls_success);
-    printf("lookup nanoseconds:                 %lu\n", metrics.lookup_ticks);
 }
 
 // Sends a FIDL call to enable or disable filesystem metrics for path
@@ -121,7 +81,7 @@ zx_status_t EnableFsMetrics(const char* path, bool enable) {
 }
 
 // Retrieves the Filesystem metrics for path. Only supports Minfs.
-zx_status_t GetFsMetrics(const char* path, MinfsMetrics* out_metrics) {
+zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
     fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
     if (!fd) {
         fprintf(stderr, "Error opening %s, errno %d (%s)\n", path, errno, strerror(errno));
@@ -245,7 +205,7 @@ void RunFsMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOpt
             return;
         }
     }
-    MinfsMetrics metrics;
+    MinfsFidlMetrics metrics;
     rc = GetFsMetrics(path.c_str(), &metrics);
     if (rc == ZX_OK) {
         PrintFsMetrics(metrics, path.c_str());

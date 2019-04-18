@@ -23,6 +23,7 @@
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
+#include <fuchsia/minfs/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/event.h>
 #endif
@@ -1387,98 +1388,6 @@ zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
 
 #endif
 
-void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count, uint32_t dinum_count,
-                              uint64_t user_data_size, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.initialized_vmos++;
-        metrics_.init_user_data_size += user_data_size;
-        metrics_.init_user_data_ticks += duration.get();
-        metrics_.init_dnum_count += dnum_count;
-        metrics_.init_inum_count += inum_count;
-        metrics_.init_dinum_count += dinum_count;
-    }
-#endif
-}
-
-void Minfs::UpdateLookupMetrics(bool success, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.lookup_calls++;
-        metrics_.lookup_calls_success += success ? 1 : 0;
-        metrics_.lookup_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateCreateMetrics(bool success, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.create_calls++;
-        metrics_.create_calls_success += success ? 1 : 0;
-        metrics_.create_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateReadMetrics(uint64_t size, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.read_calls++;
-        metrics_.read_size += size;
-        metrics_.read_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateWriteMetrics(uint64_t size, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.write_calls++;
-        metrics_.write_size += size;
-        metrics_.write_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateTruncateMetrics(const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.truncate_calls++;
-        metrics_.truncate_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateUnlinkMetrics(bool success, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.unlink_calls++;
-        metrics_.unlink_calls_success += success ? 1 : 0;
-        metrics_.unlink_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateRenameMetrics(bool success, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.rename_calls++;
-        metrics_.rename_calls_success += success ? 1 : 0;
-        metrics_.rename_ticks += duration.get();
-    }
-#endif
-}
-
-void Minfs::UpdateOpenMetrics(bool cache_hit, const fs::Duration& duration) {
-#ifdef FS_WITH_METRICS
-    if (collecting_metrics_) {
-        metrics_.vnodes_opened++;
-        metrics_.vnodes_opened_cache_hit += cache_hit ? 1 : 0;
-        metrics_.vnode_open_ticks += duration.get();
-    }
-#endif
-}
 
 #ifdef __Fuchsia__
 fbl::Vector<BlockRegion> Minfs::GetAllocatedRegions() const {

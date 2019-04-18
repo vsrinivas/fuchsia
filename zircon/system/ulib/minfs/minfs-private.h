@@ -12,6 +12,8 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
+#include "data-assigner.h"
+#include "vnode-allocation.h"
 #include <fbl/auto_lock.h>
 #include <fs/managed-vfs.h>
 #include <fs/remote.h>
@@ -21,12 +23,9 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <minfs/metrics.h>
 #include <minfs/writeback-async.h>
-
-#include "data-assigner.h"
-#include "vnode-allocation.h"
 #endif
-
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
@@ -272,8 +271,17 @@ public:
     // functions is preferred.
     zx_status_t ReadDat(blk_t bno, void* data);
 
-    void SetMetrics(bool enable) { collecting_metrics_ = enable; }
-    fs::Ticker StartTicker() { return fs::Ticker(collecting_metrics_); }
+    void SetMetrics(bool enable) {
+#ifdef __Fuchsia__
+        metrics_.SetEnable(enable);
+#endif
+    }
+    fs::Ticker StartTicker() {
+#ifdef __Fuchsia__
+        return fs::Ticker(metrics_.Enabled());
+#endif
+        return fs::Ticker(true);
+    }
 
     // Update aggregate information about VMO initialization.
     void UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
@@ -299,10 +307,12 @@ public:
 #ifdef __Fuchsia__
     // Acquire a copy of the collected metrics.
     zx_status_t GetMetrics(fuchsia_minfs_Metrics* out) const {
-        if (collecting_metrics_) {
-            memcpy(out, &metrics_, sizeof(metrics_));
+#ifdef __Fuchsia__
+        if (metrics_.Enabled()) {
+            metrics_.CopyToFidl(out);
             return ZX_OK;
         }
+#endif
         return ZX_ERR_UNAVAILABLE;
     }
 
@@ -384,10 +394,9 @@ private:
     // when the Vnode is deleted, it is immediately removed from the map.
     HashTable vnode_hash_ FS_TA_GUARDED(hash_lock_){};
 
-    bool collecting_metrics_ = false;
 #ifdef __Fuchsia__
     fbl::Closure on_unmount_{};
-    fuchsia_minfs_Metrics metrics_ = {};
+    MinfsMetrics metrics_ = {};
     fbl::unique_ptr<WritebackQueue> writeback_;
     fbl::unique_ptr<DataBlockAssigner> assigner_;
     uint64_t fs_id_ = 0;
