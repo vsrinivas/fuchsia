@@ -140,7 +140,7 @@ void Harvester::GatherCpuSamples() {
     // Kernel scheduler counters.
     AddCpuValue(&list, i, "reschedules", stats[i].reschedules);
     AddCpuValue(&list, i, "context_switches", stats[i].context_switches);
-    AddCpuValue(&list, i, "irq_preempts", stats[i].irq_preempts);
+    AddCpuValue(&list, i, "meaningful_irq_preempts", stats[i].irq_preempts);
     AddCpuValue(&list, i, "preempts", stats[i].preempts);
     AddCpuValue(&list, i, "yields", stats[i].yields);
 
@@ -149,7 +149,7 @@ void Harvester::GatherCpuSamples() {
         cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
     AddCpuValue(&list, i, "busy_time", busy_time);
     AddCpuValue(&list, i, "idle_time", stats[i].idle_time);
-    AddCpuValue(&list, i, "hardware_interrupts", stats[i].ints);
+    AddCpuValue(&list, i, "external_hardware_interrupts", stats[i].ints);
     AddCpuValue(&list, i, "timer_interrupts", stats[i].timer_ints);
     AddCpuValue(&list, i, "timer_callbacks", stats[i].timers);
     AddCpuValue(&list, i, "syscalls", stats[i].syscalls);
@@ -178,18 +178,32 @@ void Harvester::GatherMemorySamples() {
                 << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
                 << stats.ipc_bytes;
 
-  const std::string FREE_BYTES = "memory:free_bytes";
-  const std::string FREE_HEAP_BYTES = "memory:free_heap_bytes";
-  const std::string VMO_BYTES = "memory:vmo_bytes";
-  const std::string MMU_OVERHEAD_BYTES = "memory:mmu_overhead_by";
-  const std::string IPC_BYTES = "memory:ipc_bytes";
+  const std::string DEVICE_TOTAL = "memory:device_total_bytes";
+  const std::string DEVICE_FREE = "memory:device_free_bytes";
+
+  const std::string KERNEL_TOTAL = "memory:kernel_total_bytes";
+  const std::string KERNEL_FREE = "memory:kernel_free_bytes";
+  const std::string KERNEL_OTHER = "memory:kernel_other_bytes";
+
+  const std::string VMO = "memory:vmo_bytes";
+  const std::string MMU_OVERHEAD = "memory:mmu_overhead_bytes";
+  const std::string IPC = "memory:ipc_bytes";
+  const std::string OTHER = "memory:device_other_bytes";
 
   SampleList list;
-  list.push_back(std::make_pair(FREE_BYTES, stats.free_bytes));
-  list.push_back(std::make_pair(MMU_OVERHEAD_BYTES, stats.mmu_overhead_bytes));
-  list.push_back(std::make_pair(FREE_HEAP_BYTES, stats.free_heap_bytes));
-  list.push_back(std::make_pair(VMO_BYTES, stats.vmo_bytes));
-  list.push_back(std::make_pair(IPC_BYTES, stats.ipc_bytes));
+  // Memory for the entire machine.
+  list.push_back(std::make_pair(DEVICE_TOTAL, stats.total_bytes));
+  list.push_back(std::make_pair(DEVICE_FREE, stats.free_bytes));
+  // Memory in the kernel.
+  list.push_back(std::make_pair(KERNEL_TOTAL, stats.total_heap_bytes));
+  list.push_back(std::make_pair(KERNEL_FREE, stats.free_heap_bytes));
+  list.push_back(std::make_pair(KERNEL_OTHER, stats.wired_bytes));
+  // Categorized memory.
+  list.push_back(std::make_pair(MMU_OVERHEAD, stats.mmu_overhead_bytes));
+  list.push_back(std::make_pair(VMO, stats.vmo_bytes));
+  list.push_back(std::make_pair(IPC, stats.ipc_bytes));
+  list.push_back(std::make_pair(OTHER, stats.other_bytes));
+
   DockyardProxyStatus status = dockyard_proxy_->SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
