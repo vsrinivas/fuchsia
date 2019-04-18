@@ -8,10 +8,11 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/bin/appmgr/realm.h"
+#include "garnet/bin/appmgr/storage_watchdog.h"
 #include "garnet/bin/appmgr/util.h"
 #include "garnet/lib/loader/package_loader.h"
 
@@ -41,6 +42,7 @@ class Appmgr {
   fidl::VectorPtr<std::string> sysmgr_args_;
   RestartBackOff sysmgr_backoff_;
   bool sysmgr_permanently_failed_;
+  StorageWatchdog storage_watchdog_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Appmgr);
 };

@@ -37,6 +37,8 @@ source_set("lib") {
     "scheme_map.h",
     "service_provider_dir_impl.cc",
     "service_provider_dir_impl.h",
+    "storage_watchdog.cc",
+    "storage_watchdog.h",
     "system_objects_directory.cc",
     "system_objects_directory.h",
     "util.cc",
@@ -122,6 +124,7 @@ executable("tests") {
     "namespace_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
+    "storage_watchdog_unittest.cc",
     "util_unittest.cc",
   ]
 
@@ -137,6 +140,7 @@ executable("tests") {
     "//third_party/googletest:gmock",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-kernel",
+    "//zircon/public/lib/memfs",
   ]
 }
 

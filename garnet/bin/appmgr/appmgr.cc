@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/appmgr/appmgr.h"
+
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include "garnet/bin/appmgr/appmgr.h"
 #include "lib/sys/cpp/termination_reason.h"
 
 using fuchsia::sys::TerminationReason;
@@ -23,7 +24,10 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
-      sysmgr_permanently_failed_(false) {
+      sysmgr_permanently_failed_(false),
+      storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
+  // 0. Start storage watchdog for cache storage
+  storage_watchdog_.Run(dispatcher);
   // 1. Create root realm.
   RealmArgs realm_args = RealmArgs::Make(
       nullptr, kRootLabel, "/data", "/data/cache", args.environment_services,
