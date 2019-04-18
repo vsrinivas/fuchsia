@@ -42,9 +42,11 @@ done
 case "$(uname -s)" in
     Linux)
         PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        DEV_FINDER="${FUCHSIA_DIR}/buildtools/linux-x64/dev_finder"
         ;;
     Darwin)
         PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        DEV_FINDER="${FUCHSIA_DIR}/buildtools/mac-x64/dev_finder"
         ;;
 esac
 
@@ -62,4 +64,5 @@ cd "${FUCHSIA_DIR}"
   "--dart-sdk=${PREBUILT_DART}" \
   "--build-dir=${FUCHSIA_BUILD_DIR}"\
   "--target=${TARGET}" \
+  "--dev-finder=${DEV_FINDER}" \
   "${ARGS[@]}"
