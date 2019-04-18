@@ -52,6 +52,7 @@ group("all") {
     "//garnet/packages/tools:crashpad_database_util",
     "//garnet/packages/tools:cs",
     "//garnet/packages/tools:curl",
+    "//garnet/go/src/fidl",
     "//garnet/packages/tools:fidlmerge",
     "//garnet/packages/tools:gidl",
     "//garnet/packages/tools:iperf",
