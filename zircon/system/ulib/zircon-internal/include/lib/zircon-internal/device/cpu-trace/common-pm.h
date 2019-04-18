@@ -9,8 +9,6 @@
 #ifndef LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 #define LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 
-#ifdef __cplusplus
-
 namespace perfmon {
 
 // H/W properties used by common code.
@@ -61,8 +59,6 @@ constexpr uint32_t kPmuConfigFlagTimebase0 = 1 << 3;
 constexpr uint32_t kPmuConfigFlagLastBranch = 1 << 4;
 
 } // namespace perfmon
-
-#endif // __cplusplus
 
 // This is for passing buffer specs to the kernel.
 typedef struct {

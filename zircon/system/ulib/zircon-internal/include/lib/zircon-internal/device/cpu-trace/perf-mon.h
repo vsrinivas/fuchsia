@@ -7,9 +7,6 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-#ifndef __cplusplus
-#include <stdalign.h>  // for alignof
-#endif
 
 #include <zircon/types.h>
 
@@ -17,8 +14,6 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
 #endif
-
-__BEGIN_CDECLS
 
 // API version number (useful when doing incompatible upgrades)
 #define PERFMON_API_VERSION 3
@@ -430,5 +425,3 @@ IOCTL_WRAPPER(ioctl_perfmon_start, IOCTL_PERFMON_START)
 IOCTL_WRAPPER(ioctl_perfmon_stop, IOCTL_PERFMON_STOP)
 
 #endif // __Fuchsia__
-
-__END_CDECLS

@@ -7,11 +7,8 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/device/cpu-trace/common-pm.h>
-
-__BEGIN_CDECLS
 
 #define ARM64_PMU_MASK(len, shift) (((1U << (len)) - 1) << (shift))
 
@@ -268,8 +265,6 @@ __BEGIN_CDECLS
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef __cplusplus
-
 namespace perfmon {
 
 // These structs are used for communication between the device driver
@@ -312,8 +307,6 @@ struct Arm64PmuConfig {
 
 } // namespace perfmon
 
-#endif // __cplusplus
-
 ///////////////////////////////////////////////////////////////////////////////
 
 // Flags for the events in arm64 *-pm-events.inc.
@@ -325,5 +318,3 @@ struct Arm64PmuConfig {
 // Micro-architectural event, as defined by "ARM Architecture Reference Manual
 // ARMv8", chapter D6 "The Performance Monitors Extension".
 #define ARM64_PMU_REG_FLAG_MICROARCH 0x2
-
-__END_CDECLS

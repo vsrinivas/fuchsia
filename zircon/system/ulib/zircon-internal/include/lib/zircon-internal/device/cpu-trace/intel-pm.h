@@ -7,11 +7,8 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/device/cpu-trace/common-pm.h>
-
-__BEGIN_CDECLS
 
 // MSRs
 
@@ -337,8 +334,6 @@ __BEGIN_CDECLS
 // These structs are used for communication between the device driver
 // and the kernel.
 
-#ifdef __cplusplus
-
 namespace perfmon {
 
 // Properties of perf data collection on this system.
@@ -396,8 +391,6 @@ struct X86PmuConfig {
 
 } // namespace perfmon
 
-#endif // __cplusplus
-
 ///////////////////////////////////////////////////////////////////////////////
 
 // Flags for the events in Intel *-pm-events.inc.
@@ -448,5 +441,3 @@ struct X86PmuConfig {
 // The value uses a non-standard encoding.
 // Just print in hex.
 #define IPM_MISC_REG_FLAG_RAW (1u << 1)
-
-__END_CDECLS
