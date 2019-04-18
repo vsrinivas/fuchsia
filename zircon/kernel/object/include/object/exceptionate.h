@@ -9,6 +9,7 @@
 #include <kernel/mutex.h>
 #include <object/channel_dispatcher.h>
 #include <object/excp_port.h>
+#include <object/handle.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -56,8 +57,8 @@ public:
     //   ZX_ERR_INVALID_ARGS if |channel| is null.
     //   ZX_ERR_ALREADY_BOUND is there is already a valid channel.
     //   ZX_ERR_BAD_STATE if Shutdown() has already been called.
-    zx_status_t SetChannel(fbl::RefPtr<ChannelDispatcher> channel, zx_rights_t thread_rights,
-                           zx_rights_t process_rights);
+    zx_status_t SetChannel(KernelHandle<ChannelDispatcher> channel_handle,
+                           zx_rights_t thread_rights, zx_rights_t process_rights);
 
     // Removes any exception channel, which will signal PEER_CLOSED for the
     // userspace endpoint.
@@ -84,7 +85,7 @@ private:
 
     const ExceptionPort::Type port_type_;
     mutable DECLARE_MUTEX(Exceptionate) lock_;
-    fbl::RefPtr<ChannelDispatcher> channel_ TA_GUARDED(lock_);
+    KernelHandle<ChannelDispatcher> channel_handle_ TA_GUARDED(lock_);
     zx_rights_t thread_rights_ TA_GUARDED(lock_) = 0;
     zx_rights_t process_rights_ TA_GUARDED(lock_) = 0;
     bool is_shutdown_ TA_GUARDED(lock_) = false;

@@ -242,13 +242,13 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
     if (job_or_process && !(task_rights & ZX_RIGHT_ENUMERATE))
         return ZX_ERR_ACCESS_DENIED;
 
-    fbl::RefPtr<ChannelDispatcher> kernel_channel, user_channel;
+    KernelHandle<ChannelDispatcher> kernel_handle, user_handle;
     zx_rights_t rights;
-    status = ChannelDispatcher::Create(&kernel_channel, &user_channel, &rights);
+    status = ChannelDispatcher::Create(&kernel_handle, &user_handle, &rights);
     if (status != ZX_OK)
         return status;
 
-    status = exceptionate->SetChannel(ktl::move(kernel_channel), thread_rights, process_rights);
+    status = exceptionate->SetChannel(ktl::move(kernel_handle), thread_rights, process_rights);
     if (status != ZX_OK)
         return status;
 
@@ -258,7 +258,7 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
     // We don't need to remove the task channel if this fails. Exception
     // channels are built to handle the userspace peer closing so it will just
     // follow that path if we fail to copy the userspace endpoint out.
-    return out->make(ktl::move(user_channel),
+    return out->make(ktl::move(user_handle),
                      rights & (ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_READ));
 }
 

@@ -158,26 +158,28 @@ static zx_status_t make_bootstrap_channel(
     fbl::RefPtr<ProcessDispatcher> process,
     MessagePacketPtr msg,
     zx_handle_t* out) {
-    HandleOwner user_channel_handle;
-    fbl::RefPtr<ChannelDispatcher> kernel_channel;
+    HandleOwner user_handle_owner;
+    KernelHandle<ChannelDispatcher> kernel_handle;
     *out = ZX_HANDLE_INVALID;
     {
-        fbl::RefPtr<ChannelDispatcher> mpd0, mpd1;
+        KernelHandle<ChannelDispatcher> user_handle;
         zx_rights_t rights;
-        zx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
+        zx_status_t status = ChannelDispatcher::Create(&user_handle, &kernel_handle, &rights);
         if (status != ZX_OK)
             return status;
-        user_channel_handle = Handle::Make(ktl::move(mpd0), rights);
-        kernel_channel = ktl::move(mpd1);
+
+        user_handle_owner = Handle::Make(ktl::move(user_handle), rights);
+        if (!user_handle_owner)
+            return ZX_ERR_NO_MEMORY;
     }
 
     // Here it goes!
-    zx_status_t status = kernel_channel->Write(ZX_KOID_INVALID, ktl::move(msg));
+    zx_status_t status = kernel_handle.dispatcher()->Write(ZX_KOID_INVALID, ktl::move(msg));
     if (status != ZX_OK)
         return status;
 
-    zx_handle_t hv = process->MapHandleToValue(user_channel_handle);
-    process->AddHandle(ktl::move(user_channel_handle));
+    zx_handle_t hv = process->MapHandleToValue(user_handle_owner);
+    process->AddHandle(ktl::move(user_handle_owner));
 
     *out = hv;
     return ZX_OK;

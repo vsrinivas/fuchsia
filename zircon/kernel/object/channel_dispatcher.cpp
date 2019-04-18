@@ -39,8 +39,8 @@ KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
 // static
-zx_status_t ChannelDispatcher::Create(fbl::RefPtr<ChannelDispatcher>* dispatcher0,
-                                      fbl::RefPtr<ChannelDispatcher>* dispatcher1,
+zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
+                                      KernelHandle<ChannelDispatcher>* handle1,
                                       zx_rights_t* rights) {
     fbl::AllocChecker ac;
     auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<ChannelDispatcher>());
@@ -48,20 +48,21 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<ChannelDispatcher>* dispatcher
         return ZX_ERR_NO_MEMORY;
     auto holder1 = holder0;
 
-    auto ch0 = fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder0)));
+    KernelHandle new_handle0(fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder0))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto ch1 = fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder1)));
+    KernelHandle new_handle1(fbl::AdoptRef(new (&ac) ChannelDispatcher(ktl::move(holder1))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    ch0->Init(ch1);
-    ch1->Init(ch0);
+    new_handle0.dispatcher()->Init(new_handle1.dispatcher());
+    new_handle1.dispatcher()->Init(new_handle0.dispatcher());
 
     *rights = default_rights();
-    *dispatcher0 = ktl::move(ch0);
-    *dispatcher1 = ktl::move(ch1);
+    *handle0 = ktl::move(new_handle0);
+    *handle1 = ktl::move(new_handle1);
+
     return ZX_OK;
 }
 

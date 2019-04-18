@@ -21,9 +21,9 @@ Exceptionate::~Exceptionate() {
     Shutdown();
 }
 
-zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel,
+zx_status_t Exceptionate::SetChannel(KernelHandle<ChannelDispatcher> channel_handle,
                                      zx_rights_t thread_rights, zx_rights_t process_rights) {
-    if (!channel) {
+    if (!channel_handle.dispatcher()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -40,7 +40,7 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel,
     // At this point we're certain that either there is no channel or it's a
     // dead channel with no peer (since channel endpoints can't re-open) so we
     // can overwrite it.
-    channel_ = ktl::move(channel);
+    channel_handle_ = ktl::move(channel_handle);
     thread_rights_ = thread_rights;
     process_rights_ = process_rights;
 
@@ -49,10 +49,7 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel,
 
 void Exceptionate::Shutdown() {
     Guard<fbl::Mutex> guard{&lock_};
-    if (channel_) {
-        channel_->on_zero_handles();
-        channel_.reset();
-    }
+    channel_handle_.reset();
     is_shutdown_ = true;
 }
 
@@ -62,7 +59,7 @@ bool Exceptionate::HasValidChannel() const {
 }
 
 bool Exceptionate::HasValidChannelLocked() const {
-    return channel_ && !channel_->PeerHasClosed();
+    return channel_handle_.dispatcher() && !channel_handle_.dispatcher()->PeerHasClosed();
 }
 
 zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {
@@ -70,7 +67,7 @@ zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> excepti
 
     Guard<fbl::Mutex> guard{&lock_};
 
-    if (!channel_) {
+    if (!channel_handle_.dispatcher()) {
         return ZX_ERR_NEXT;
     }
 
@@ -102,14 +99,13 @@ zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> excepti
     message->mutable_handles()[0] = exception_handle.release();
     message->set_owns_handles(true);
 
-    status = channel_->Write(ZX_KOID_INVALID, ktl::move(message));
+    status = channel_handle_.dispatcher()->Write(ZX_KOID_INVALID, ktl::move(message));
 
     // ZX_ERR_PEER_CLOSED just indicates that there's no longer an endpoint
     // to receive exceptions, simplify things for callers by collapsing this
     // into the ZX_ERR_NEXT case since it means the same thing.
     if (status == ZX_ERR_PEER_CLOSED) {
-        // No need to call on_zero_handles() here, the peer is already gone.
-        channel_.reset();
+        channel_handle_.reset();
         return ZX_ERR_NEXT;
     }
 

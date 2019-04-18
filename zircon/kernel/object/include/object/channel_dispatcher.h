@@ -10,6 +10,7 @@
 
 #include <kernel/event.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <object/message_packet.h>
 
 #include <zircon/rights.h>
@@ -26,8 +27,8 @@ class ChannelDispatcher final :
 public:
     class MessageWaiter;
 
-    static zx_status_t Create(fbl::RefPtr<ChannelDispatcher>* dispatcher0,
-                              fbl::RefPtr<ChannelDispatcher>* dispatcher1, zx_rights_t* rights);
+    static zx_status_t Create(KernelHandle<ChannelDispatcher>* handle0,
+                              KernelHandle<ChannelDispatcher>* handle1, zx_rights_t* rights);
 
     ~ChannelDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }

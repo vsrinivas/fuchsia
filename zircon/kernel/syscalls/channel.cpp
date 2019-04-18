@@ -62,18 +62,18 @@ zx_status_t sys_channel_create(uint32_t options,
     if (res != ZX_OK)
         return res;
 
-    fbl::RefPtr<ChannelDispatcher> mpd0, mpd1;
+    KernelHandle<ChannelDispatcher> handle0, handle1;
     zx_rights_t rights;
-    zx_status_t result = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
+    zx_status_t result = ChannelDispatcher::Create(&handle0, &handle1, &rights);
     if (result != ZX_OK)
         return result;
 
-    uint64_t id0 = mpd0->get_koid();
-    uint64_t id1 = mpd1->get_koid();
+    uint64_t id0 = handle0.dispatcher()->get_koid();
+    uint64_t id1 = handle1.dispatcher()->get_koid();
 
-    result = out0->make(ktl::move(mpd0), rights);
+    result = out0->make(ktl::move(handle0), rights);
     if (result == ZX_OK)
-        result = out1->make(ktl::move(mpd1), rights);
+        result = out1->make(ktl::move(handle1), rights);
     if (result == ZX_OK)
         ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
     return result;
