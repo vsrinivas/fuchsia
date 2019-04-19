@@ -24,8 +24,9 @@ class Session;
 // Resource to other classes.
 struct ResourceContext {
   vk::Device vk_device;
+  vk::PhysicalDevice vk_physical_device;
+  vk::DispatchLoaderDynamic vk_loader;
   escher::VulkanDeviceQueues::Caps vk_device_queues_capabilities;
-  uint32_t imported_memory_type_index;
   escher::ResourceRecycler* escher_resource_recycler;
   escher::ImageFactory* escher_image_factory;
 };

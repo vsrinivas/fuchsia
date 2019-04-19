@@ -67,9 +67,9 @@ class Memory : public Resource {
   escher::GpuMemPtr ImportGpuMemory();
   zx::vmo DuplicateVmo();
 
-  bool is_host_;
-  fxl::RefPtr<fsl::SharedVmo> shared_vmo_;
-  uint64_t allocation_size_;
+  const bool is_host_;
+  const fxl::RefPtr<fsl::SharedVmo> shared_vmo_;
+  const uint64_t allocation_size_;
   escher::GpuMemPtr escher_gpu_mem_;
 };
 
