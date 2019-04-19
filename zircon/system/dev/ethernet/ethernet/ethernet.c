@@ -115,7 +115,7 @@ typedef struct ethdev {
     zx_handle_t pmt;
 
     // FIFO_DEPTH entries, each |tx_size| large.
-    void *all_tx_bufs;
+    void* all_tx_bufs;
     size_t tx_size;
 
     mtx_t lock;               // Protects free_tx_bufs
@@ -201,7 +201,7 @@ static ssize_t eth_rebuild_multicast_filter_locked(ethdev_t* edev) {
     uint8_t multicast[MULTICAST_LIST_LIMIT][ETH_MAC_SIZE];
     uint32_t n_multicast = 0;
     ethdev_t* edev_i;
-    list_for_every_entry(&edev0->list_active, edev_i, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev_i, ethdev_t, node) {
         for (uint32_t i = 0; i < edev_i->n_multicast; i++) {
             if (n_multicast == MULTICAST_LIST_LIMIT) {
                 return ethmac_set_param(&edev0->mac, ETHMAC_SETPARAM_MULTICAST_FILTER,
@@ -258,7 +258,7 @@ static ssize_t eth_del_multicast_address_locked(ethdev_t* edev, const uint8_t* m
 static ssize_t eth_test_clear_multicast_promisc_locked(ethdev_t* edev) {
     zx_status_t status = ZX_OK;
     ethdev_t* edev_i;
-    list_for_every_entry(&edev->edev0->list_active, edev_i, ethdev_t, node) {
+    list_for_every_entry (&edev->edev0->list_active, edev_i, ethdev_t, node) {
         if ((status = eth_set_multicast_promisc_locked(edev_i, false)) != ZX_OK) {
             return status;
         }
@@ -277,9 +277,9 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
             if (status == ZX_ERR_SHOULD_WAIT) {
                 edev->fail_rx_read += 1;
                 if (edev->fail_rx_read == 1 ||
-                        (edev->fail_rx_read % FAIL_REPORT_RATE) == 0) {
+                    (edev->fail_rx_read % FAIL_REPORT_RATE) == 0) {
                     zxlogf(WARN, "eth [%s]: warning: no rx buffers available, frame dropped "
-                            "(%u time%s)\n",
+                                 "(%u time%s)\n",
                            edev->name, edev->fail_rx_read, edev->fail_rx_read > 1 ? "s" : "");
                 }
             } else {
@@ -331,7 +331,7 @@ static void eth0_status(void* cookie, uint32_t status) {
 
     static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
     ethdev_t* edev;
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         zx_object_signal_peer(edev->rx_fifo, 0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
     }
     mtx_unlock(&edev0->lock);
@@ -362,7 +362,7 @@ static void eth0_recv(void* cookie, const void* data, size_t len, uint32_t flags
 
     ethdev_t* edev;
     mtx_lock(&edev0->lock);
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         eth_handle_rx(edev, data, len, 0);
     }
     mtx_unlock(&edev0->lock);
@@ -413,7 +413,7 @@ static ethmac_ifc_protocol_ops_t ethmac_ifc = {
 static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
     ethdev_t* edev;
     mtx_lock(&edev0->lock);
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         if (edev->state & ETHDEV_TX_LISTEN) {
             eth_handle_rx(edev, data, len, ETH_FIFO_RX_TX);
         }
@@ -433,14 +433,14 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
 
     // determine global state
     yes = false;
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         if (edev->state & ETHDEV_TX_LISTEN) {
             yes = true;
         }
     }
 
     // set everyone's echo flag based on global state
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         if (yes) {
             edev->state |= ETHDEV_TX_LOOPBACK;
         } else {
@@ -481,7 +481,7 @@ static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
             netbuf->data_buffer = edev->io_buf + e->offset;
             if (edev0->info.features & ETHMAC_FEATURE_DMA) {
                 netbuf->phys = edev->paddr_map[e->offset / PAGE_SIZE] +
-                                       (e->offset & PAGE_MASK);
+                               (e->offset & PAGE_MASK);
             }
             netbuf->data_size = e->length;
             tx_info->fifo_cookie = e->cookie;
@@ -525,8 +525,8 @@ static int eth_tx_thread(void* arg) {
                 zx_signals_t observed;
                 if ((status = zx_object_wait_one(edev->tx_fifo,
                                                  ZX_FIFO_READABLE |
-                                                 ZX_FIFO_PEER_CLOSED |
-                                                 kSignalFifoTerminate,
+                                                     ZX_FIFO_PEER_CLOSED |
+                                                     kSignalFifoTerminate,
                                                  ZX_TIME_INFINITE,
                                                  &observed)) < 0) {
                     zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
@@ -587,7 +587,7 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, zx_handle_t vmo) {
 
     if ((status = zx_vmar_map(zx_vmar_root_self(),
                               ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
-                              ZX_VM_REQUIRE_NON_RESIZABLE,
+                                  ZX_VM_REQUIRE_NON_RESIZABLE,
                               0, vmo, 0, size, (uintptr_t*)&edev->io_buf)) < 0) {
         zxlogf(ERROR, "eth [%s]: could not map io_buf: %d\n", edev->name, status);
         goto fail;
@@ -888,7 +888,6 @@ static zx_status_t eth_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     return status;
 }
 
-
 // kill tx thread, release buffers, etc
 // called from unbind and close
 static void eth_kill_locked(ethdev_t* edev) {
@@ -1015,7 +1014,7 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     list_initialize(&edev->free_tx_bufs);
     for (size_t ndx = 0; ndx < FIFO_DEPTH; ndx++) {
         ethmac_netbuf_t* netbuf =
-                (ethmac_netbuf_t*)((uintptr_t)edev->all_tx_bufs + (edev->tx_size * ndx));
+            (ethmac_netbuf_t*)((uintptr_t)edev->all_tx_bufs + (edev->tx_size * ndx));
         tx_info_t* tx_info = netbuf_to_tx_info(edev0, netbuf);
         tx_info->edev = edev;
         list_add_tail(&edev->free_tx_bufs, &tx_info->node);
@@ -1054,10 +1053,10 @@ static void eth0_unbind(void* ctx) {
     // tear down shared memory, fifos, and threads
     // to encourage any open instances to close
     ethdev_t* edev;
-    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_active, edev, ethdev_t, node) {
         eth_kill_locked(edev);
     }
-    list_for_every_entry(&edev0->list_idle, edev, ethdev_t, node) {
+    list_for_every_entry (&edev0->list_idle, edev, ethdev_t, node) {
         eth_kill_locked(edev);
     }
 
@@ -1152,7 +1151,7 @@ static zx_driver_ops_t eth_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.0", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHMAC),
 ZIRCON_DRIVER_END(ethernet)
-// clang-format on
+    // clang-format on
