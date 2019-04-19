@@ -16,6 +16,8 @@ class {{ .Name }};
 class {{ .Name }}  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
   {{- range .Members }}
   {{range .DocComments}}
   //{{ . }}
@@ -147,6 +149,13 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   }
   {{- end }}
   return *this;
+}
+
+bool {{ .Name }}::IsEmpty() const {
+  {{- range .Members }}
+  if ({{ .FieldPresenceName }}) return false;
+  {{- end }}
+  return true;
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {

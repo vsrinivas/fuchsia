@@ -364,6 +364,7 @@ var reservedWords = map[string]bool{
 	"which":           true,
 	"Unknown":         true,
 	"unknown":         true,
+	"IsEmpty":         true,
 	// TODO(ianloic) add: "Clone"
 	// There are Clone methods on a couple of interfaces that are used
 	// across layers so this will be a breaking change.

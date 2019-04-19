@@ -41,6 +41,11 @@ OlderSimpleTable& OlderSimpleTable::operator=(OlderSimpleTable&& other) {
   return *this;
 }
 
+bool OlderSimpleTable::IsEmpty() const {
+  if (has_x_) return false;
+  return true;
+}
+
 void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_x_) max_ordinal = 1;
@@ -192,6 +197,13 @@ NewerSimpleTable& NewerSimpleTable::operator=(NewerSimpleTable&& other) {
     Destruct(&z_value_.value);
   }
   return *this;
+}
+
+bool NewerSimpleTable::IsEmpty() const {
+  if (has_x_) return false;
+  if (has_y_) return false;
+  if (has_z_) return false;
+  return true;
 }
 
 void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
@@ -420,6 +432,12 @@ SimpleTable& SimpleTable::operator=(SimpleTable&& other) {
   return *this;
 }
 
+bool SimpleTable::IsEmpty() const {
+  if (has_x_) return false;
+  if (has_y_) return false;
+  return true;
+}
+
 void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_x_) max_ordinal = 1;
@@ -560,6 +578,10 @@ EmptyTable::~EmptyTable() {
 
 EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
   return *this;
+}
+
+bool EmptyTable::IsEmpty() const {
+  return true;
 }
 
 void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {

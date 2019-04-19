@@ -156,6 +156,7 @@ source_set("host_test_sources") {
     "roundtrip_test.cc",
     "string_unittest.cc",
     "vector_unittest.cc",
+    "table_unittest.cc",
   ]
 
   deps = [

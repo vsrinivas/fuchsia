@@ -16,6 +16,8 @@ class EmptyTable;
 class OlderSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
   
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
@@ -91,6 +93,8 @@ using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 class NewerSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
   
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
@@ -244,6 +248,8 @@ using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 class SimpleTable  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
   
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
@@ -358,6 +364,8 @@ using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 class EmptyTable  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
 
   EmptyTable();
   EmptyTable(EmptyTable&& other);

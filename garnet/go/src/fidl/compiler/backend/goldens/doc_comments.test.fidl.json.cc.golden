@@ -231,6 +231,11 @@ Table& Table::operator=(Table&& other) {
   return *this;
 }
 
+bool Table::IsEmpty() const {
+  if (has_Field_) return false;
+  return true;
+}
+
 void Table::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_Field_) max_ordinal = 1;

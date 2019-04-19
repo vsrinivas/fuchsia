@@ -205,6 +205,8 @@ using UnionPtr = ::std::unique_ptr<Union>;
 class Table  {
  public:
   static const fidl_type_t* FidlType;
+  // Returns if any table field is set;
+  bool IsEmpty() const;
   
   // table field comment #1
   //
