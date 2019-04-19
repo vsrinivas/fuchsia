@@ -31,7 +31,7 @@ function main {
   while [ $# -gt 0 ]; do
     case "$1" in
       # These Ninja switches take an argument.
-      -[Cfjkldtv])
+      -[Cfjkldt])
         switches+=("$1" "$2")
         shift
         ;;
