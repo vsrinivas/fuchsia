@@ -29,6 +29,8 @@ construct a single .far representation of the package
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("archive", flag.ExitOnError)
 
+	var output = fs.String("output", "", "Archive output path. `.far` will be appended.")
+
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
 		fmt.Fprintln(os.Stderr)
@@ -102,8 +104,12 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	// create new name-version.far archive in output dir
-	outputFile, err := os.Create(filepath.Join(cfg.OutputDir, fmt.Sprintf("%s-%s.far", p.Name, p.Version)))
+	// create new fuchsia archive file in the output dir
+	// named <output>.far if flag is provided, otherwise name-version.far
+	if *output == "" {
+		*output = filepath.Join(cfg.OutputDir, fmt.Sprintf("%s-%s", p.Name, p.Version))
+	}
+	outputFile, err := os.Create(*output + ".far")
 	if err != nil {
 		return err
 	}
