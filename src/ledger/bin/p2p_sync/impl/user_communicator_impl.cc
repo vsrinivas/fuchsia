@@ -5,6 +5,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 
 #include "peridot/lib/ledger_client/constants.h"
+#include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/ledger_communicator_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
@@ -48,16 +49,15 @@ std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
 
 void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
                                         fxl::StringView data) {
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(data.data()), data.size());
-  if (!VerifyMessageBuffer(verifier)) {
+  std::optional<MessageHolder<Message>> message =
+      CreateMessageHolder<Message>(data, &ParseMessage);
+  if (!message) {
     // Wrong serialization, abort.
     FXL_LOG(ERROR) << "The message received is malformed.";
     return;
   };
-  MessageHolder<Message> message(data, &GetMessage);
-  const NamespacePageId* namespace_page_id;
-  switch (message->message_type()) {
+
+  switch ((*message)->message_type()) {
     case MessageUnion_NONE:
       FXL_LOG(ERROR) << "The message received is unexpected at this point.";
       return;
@@ -65,10 +65,10 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 
     case MessageUnion_Request: {
       MessageHolder<Request> request =
-          std::move(message).TakeAndMap<Request>([](const Message* message) {
+          std::move(*message).TakeAndMap<Request>([](const Message* message) {
             return static_cast<const Request*>(message->message());
           });
-      namespace_page_id = request->namespace_page();
+      const NamespacePageId* namespace_page_id = request->namespace_page();
 
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
                                namespace_page_id->namespace_id()->end());
@@ -89,10 +89,10 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 
     case MessageUnion_Response: {
       MessageHolder<Response> response =
-          std::move(message).TakeAndMap<Response>([](const Message* message) {
+          std::move(*message).TakeAndMap<Response>([](const Message* message) {
             return static_cast<const Response*>(message->message());
           });
-      namespace_page_id = response->namespace_page();
+      const NamespacePageId* namespace_page_id = response->namespace_page();
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
                                namespace_page_id->namespace_id()->end());
       std::string page_id(namespace_page_id->page_id()->begin(),
@@ -100,10 +100,10 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 
       const auto& it = ledgers_.find(namespace_id);
       if (it == ledgers_.end()) {
-        // We are receiving a response for a ledger that no longer exists. This
-        // can happen in normal operation, and we cannot do anything with this
-        // message: we can't send it to a ledger, and we don't send responses to
-        // responses. So we just drop it here.
+        // We are receiving a response for a ledger that no longer exists.
+        // This can happen in normal operation, and we cannot do anything with
+        // this message: we can't send it to a ledger, and we don't send
+        // responses to responses. So we just drop it here.
         return;
       }
       it->second->OnNewResponse(source, page_id, std::move(response));

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [ "//src/ledger/*" ]
@@ -11,6 +12,8 @@ source_set("impl") {
     "commit_batch.cc",
     "commit_batch.h",
     "device_mesh.h",
+    "encoding.cc",
+    "encoding.h",
     "flatbuffer_message_factory.cc",
     "flatbuffer_message_factory.h",
     "ledger_communicator_impl.cc",
@@ -51,12 +54,14 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "encoding_unittest.cc",
     "page_communicator_impl_unittest.cc",
     "user_communicator_impl_unittest.cc",
   ]
 
   deps = [
     ":impl",
+    ":message",
     "//garnet/public/lib/fsl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/p2p_provider/impl",
@@ -72,4 +77,15 @@ source_set("unittests") {
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
+}
+
+fuzz_target("p2p_sync_fuzzer") {
+  sources = [
+    "user_communicator_impl_fuzztest.cc",
+  ]
+  deps = [
+    ":impl",
+    "//src/ledger/bin/p2p_provider/public",
+    "//src/ledger/bin/storage/testing",
+  ]
 }

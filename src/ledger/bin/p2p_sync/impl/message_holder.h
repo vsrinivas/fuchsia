@@ -8,9 +8,12 @@
 #include <lib/fit/function.h>
 
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 
+#include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -20,14 +23,8 @@ template <class M>
 class MessageHolder {
  public:
   // Create a new MessageHolder from the provided data and a parser.
-  MessageHolder(fxl::StringView data,
-                fit::function<const M*(const uint8_t*)> get_message)
-      : data_(data.begin(), data.end()), message_(get_message(data_.data())) {}
-
-  // Create a new MessageHolder from the provided data and a parser.
-  MessageHolder(std::vector<uint8_t> data,
-                fit::function<const M*(const uint8_t*)> get_message)
-      : data_(std::move(data)), message_(get_message(data_.data())) {}
+  MessageHolder(std::unique_ptr<std::vector<uint8_t>> data, const M* message)
+      : data_(std::move(data)), message_(message) {}
 
   // Create a new MessageHolder from the current object and a function to
   // specialize the message. The current message holder is destroyed in the
@@ -71,10 +68,27 @@ class MessageHolder {
     other.message_ = nullptr;
   }
 
-  std::vector<uint8_t> data_;
+  std::unique_ptr<std::vector<uint8_t>> data_;
   const M* message_;
 };
 
+// Creates a new MessageHolder to contained a message, or nullopt if no message
+// can be obtained.
+template <class M>
+std::optional<MessageHolder<M>> CreateMessageHolder(
+    fxl::StringView data,
+    fit::function<const M*(convert::ExtendedStringView)> get_message) {
+  std::unique_ptr<std::vector<uint8_t>> data_vec =
+      std::make_unique<std::vector<uint8_t>>(data.begin(), data.end());
+
+  const M* message = get_message(*data_vec);
+
+  if (!message) {
+    return std::nullopt;
+  }
+
+  return MessageHolder<M>(std::move(data_vec), message);
+}
 }  // namespace p2p_sync
 
 #endif  // SRC_LEDGER_BIN_P2P_SYNC_IMPL_MESSAGE_HOLDER_H_

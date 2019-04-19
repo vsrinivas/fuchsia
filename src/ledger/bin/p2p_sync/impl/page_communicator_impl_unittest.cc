@@ -22,6 +22,8 @@
 #include "gmock/gmock.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
+#include "src/ledger/bin/p2p_sync/impl/encoding.h"
+#include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
@@ -202,12 +204,15 @@ class FakeDeviceMesh : public DeviceMesh {
 void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer,
                            fxl::StringView namespace_id,
                            fxl::StringView page_id) {
+  flatbuffers::Offset<WatchStartRequest> watch_start =
+      CreateWatchStartRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
-  flatbuffers::Offset<Request> request = CreateRequest(
-      *buffer, namespace_page_id, RequestMessage_WatchStartRequest);
+  flatbuffers::Offset<Request> request =
+      CreateRequest(*buffer, namespace_page_id,
+                    RequestMessage_WatchStartRequest, watch_start.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
@@ -216,12 +221,15 @@ void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer,
 void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer,
                           fxl::StringView namespace_id,
                           fxl::StringView page_id) {
+  flatbuffers::Offset<WatchStopRequest> watch_stop =
+      CreateWatchStopRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
-  flatbuffers::Offset<Request> request = CreateRequest(
-      *buffer, namespace_page_id, RequestMessage_WatchStopRequest);
+  flatbuffers::Offset<Request> request =
+      CreateRequest(*buffer, namespace_page_id, RequestMessage_WatchStopRequest,
+                    watch_stop.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
@@ -409,8 +417,8 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
-                                            &GetMessage);
+  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(new_device_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -464,8 +472,8 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
-                                            &GetMessage);
+  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   // If storage fails to mark the page as synced to a peer, the mesh should not
   // be updated.
   storage.mark_synced_to_peer_status = storage::Status::IO_ERROR;
@@ -502,8 +510,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   BuildObjectRequestBuffer(&request_buffer, "ledger", "page",
                            {MakeObjectIdentifier("object_digest"),
                             MakeObjectIdentifier("object_digest2")});
-  MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
-                                         &GetMessage);
+  MessageHolder<Message> request_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(request_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -558,8 +566,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
   flatbuffers::FlatBufferBuilder request_buffer;
   BuildObjectRequestBuffer(&request_buffer, "ledger", "page",
                            {MakeObjectIdentifier("object_digest")});
-  MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
-                                         &GetMessage);
+  MessageHolder<Message> request_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(request_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -607,8 +615,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
-                                            &GetMessage);
+  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(new_device_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -635,8 +643,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
       &response_buffer, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", false),
        std::make_tuple(MakeObjectIdentifier("bar"), "bar_data", false)});
-  MessageHolder<Message> response_message(
-      convert::ToStringView(response_buffer), &GetMessage);
+  MessageHolder<Message> response_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
       "device2", std::move(response_message)
                      .TakeAndMap<Response>([](const Message* message) {
@@ -658,8 +666,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
-                                            &GetMessage);
+  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(new_device_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -685,8 +693,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", true)});
-  MessageHolder<Message> response_message(
-      convert::ToStringView(response_buffer), &GetMessage);
+  MessageHolder<Message> response_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
       "device2", std::move(response_message)
                      .TakeAndMap<Response>([](const Message* message) {
@@ -708,7 +716,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
@@ -734,8 +743,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
-  MessageHolder<Message> response_message(
-      convert::ToStringView(response_buffer), &GetMessage);
+  MessageHolder<Message> response_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer), &ParseMessage);
   page_communicator.OnNewResponse(
       "device2", std::move(response_message)
                      .TakeAndMap<Response>([](const Message* message) {
@@ -756,16 +765,18 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
-  message = MessageHolder<Message>(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message_copy = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device3",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
+      std::move(message_copy).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -786,8 +797,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
-  MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
-                                   &GetMessage);
+  MessageHolder<Message> message_1 = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer_1), &ParseMessage);
   page_communicator.OnNewResponse(
       "device2",
       std::move(message_1).TakeAndMap<Response>([](const Message* message) {
@@ -799,8 +810,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", false)});
-  MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
-                                   &GetMessage);
+  MessageHolder<Message> message_2 = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer_2), &ParseMessage);
   page_communicator.OnNewResponse(
       "device3",
       std::move(message_2).TakeAndMap<Response>([](const Message* message) {
@@ -823,16 +834,18 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
-  message = MessageHolder<Message>(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message_copy = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device3",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
+      std::move(message_copy).TakeAndMap<Request>([](const Message* message) {
         return static_cast<const Request*>(message->message());
       }));
 
@@ -853,8 +866,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
-  MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
-                                   &GetMessage);
+  MessageHolder<Message> message_1 = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer_1), &ParseMessage);
   page_communicator.OnNewResponse(
       "device2",
       std::move(message_1).TakeAndMap<Response>([](const Message* message) {
@@ -866,8 +879,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
       {std::make_tuple(MakeObjectIdentifier("foo"), "", false)});
-  MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
-                                   &GetMessage);
+  MessageHolder<Message> message_2 = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer_2), &ParseMessage);
   page_communicator.OnNewResponse(
       "device3",
       std::move(message_2).TakeAndMap<Response>([](const Message* message) {
@@ -888,7 +901,8 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator_1.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
@@ -924,12 +938,8 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   ASSERT_EQ(1u, mesh.messages_.size());
   EXPECT_EQ("device2", mesh.messages_[0].first);
 
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
-      mesh.messages_[0].second.size());
-  ASSERT_TRUE(VerifyMessageBuffer(verifier));
-
-  MessageHolder<Message> reply_message(mesh.messages_[0].second, &GetMessage);
+  MessageHolder<Message> reply_message =
+      *CreateMessageHolder<Message>(mesh.messages_[0].second, &ParseMessage);
   ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
   MessageHolder<Response> response =
       std::move(reply_message).TakeAndMap<Response>([](const Message* message) {
@@ -969,7 +979,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
@@ -1007,8 +1018,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
 
   flatbuffers::FlatBufferBuilder stop_buffer;
   BuildWatchStopBuffer(&stop_buffer, "ledger", "page");
-  MessageHolder<Message> watch_stop_message(convert::ToStringView(stop_buffer),
-                                            &GetMessage);
+  MessageHolder<Message> watch_stop_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(stop_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(watch_stop_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -1053,8 +1064,8 @@ TEST_F(PageCommunicatorImplTest, CommitRequest) {
   BuildCommitRequestBuffer(&request_buffer, "ledger", "page",
                            {storage::CommitId(commit_1.GetId()),
                             storage::CommitId("missing_commit")});
-  MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
-                                         &GetMessage);
+  MessageHolder<Message> request_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(request_buffer), &ParseMessage);
   page_communicator.OnNewRequest(
       "device2", std::move(request_message)
                      .TakeAndMap<Request>([](const Message* message) {
@@ -1106,7 +1117,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message(convert::ToStringView(buffer), &GetMessage);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
   page_communicator_1.OnNewRequest(
       "device2",
       std::move(message).TakeAndMap<Request>([](const Message* message) {
@@ -1133,12 +1145,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   EXPECT_EQ("device2", mesh.messages_[0].first);
 
   {
-    flatbuffers::Verifier verifier(
-        reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
-        mesh.messages_[0].second.size());
-    ASSERT_TRUE(VerifyMessageBuffer(verifier));
-
-    MessageHolder<Message> reply_message(mesh.messages_[0].second, &GetMessage);
+    MessageHolder<Message> reply_message =
+        *CreateMessageHolder<Message>(mesh.messages_[0].second, &ParseMessage);
     ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
     MessageHolder<Response> response =
         std::move(reply_message)
@@ -1170,13 +1178,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   EXPECT_EQ("device1", mesh.messages_[1].first);
 
   {
-    flatbuffers::Verifier verifier(
-        reinterpret_cast<const unsigned char*>(mesh.messages_[1].second.data()),
-        mesh.messages_[0].second.size());
-    ASSERT_TRUE(VerifyMessageBuffer(verifier));
-
-    MessageHolder<Message> request_message(mesh.messages_[1].second,
-                                           &GetMessage);
+    MessageHolder<Message> request_message =
+        *CreateMessageHolder<Message>(mesh.messages_[1].second, &ParseMessage);
     ASSERT_EQ(MessageUnion_Request, request_message->message_type());
     MessageHolder<Request> request =
         std::move(request_message)
@@ -1201,12 +1204,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   EXPECT_EQ("device2", mesh.messages_[2].first);
 
   {
-    flatbuffers::Verifier verifier(
-        reinterpret_cast<const unsigned char*>(mesh.messages_[2].second.data()),
-        mesh.messages_[0].second.size());
-    ASSERT_TRUE(VerifyMessageBuffer(verifier));
-
-    MessageHolder<Message> reply_message(mesh.messages_[2].second, &GetMessage);
+    MessageHolder<Message> reply_message =
+        *CreateMessageHolder<Message>(mesh.messages_[2].second, &ParseMessage);
     ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
     MessageHolder<Response> response =
         std::move(reply_message)

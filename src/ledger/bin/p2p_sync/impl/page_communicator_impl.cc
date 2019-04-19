@@ -11,6 +11,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -391,12 +392,15 @@ void PageCommunicatorImpl::RequestCommits(fxl::StringView device,
 
 void PageCommunicatorImpl::BuildWatchStartBuffer(
     flatbuffers::FlatBufferBuilder* buffer) {
+  flatbuffers::Offset<WatchStartRequest> watch_start =
+      CreateWatchStartRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
-  flatbuffers::Offset<Request> request = CreateRequest(
-      *buffer, namespace_page_id, RequestMessage_WatchStartRequest);
+  flatbuffers::Offset<Request> request =
+      CreateRequest(*buffer, namespace_page_id,
+                    RequestMessage_WatchStartRequest, watch_start.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
@@ -404,12 +408,15 @@ void PageCommunicatorImpl::BuildWatchStartBuffer(
 
 void PageCommunicatorImpl::BuildWatchStopBuffer(
     flatbuffers::FlatBufferBuilder* buffer) {
+  flatbuffers::Offset<WatchStopRequest> watch_stop =
+      CreateWatchStopRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
-  flatbuffers::Offset<Request> request = CreateRequest(
-      *buffer, namespace_page_id, RequestMessage_WatchStopRequest);
+  flatbuffers::Offset<Request> request =
+      CreateRequest(*buffer, namespace_page_id, RequestMessage_WatchStopRequest,
+                    watch_stop.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);

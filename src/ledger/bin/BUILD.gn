@@ -71,7 +71,10 @@ executable("ledger_unittests") {
 }
 
 fuzz_package("ledger_fuzzers") {
-  targets = [ "//src/ledger/bin/storage/impl/btree:encoding_fuzzer" ]
+  targets = [
+    "//src/ledger/bin/p2p_sync/impl:p2p_sync_fuzzer",
+    "//src/ledger/bin/storage/impl/btree:encoding_fuzzer",
+  ]
   sanitizers = [
     "asan",
     "ubsan",
