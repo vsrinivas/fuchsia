@@ -5,7 +5,7 @@
 source_set("handle-transfer") {
   testonly = true
   sources = [
-    "handle-transfer.c",
+    "handle-transfer.cpp",
   ]
   deps = [
     "$zx/system/ulib/fdio",

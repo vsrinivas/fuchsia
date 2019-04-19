@@ -91,7 +91,7 @@ static int thread(void* arg) {
     zx_status_t status = zx_channel_write(B[1], 0, NULL, 0u, &A[0], 1);
     if (status != ZX_OK) {
         UNITTEST_FAIL_TRACEF("failed to write message with handle A0 to B1: %d\n", status);
-        goto thread_exit;
+        return 0;
     }
 
     // Read from B0 into H, thus canceling any waits on A0.
@@ -102,7 +102,6 @@ static int thread(void* arg) {
         UNITTEST_FAIL_TRACEF("failed to read message handle H from B0: %d\n", status);
     }
 
-thread_exit:
     return 0;
 }
 
