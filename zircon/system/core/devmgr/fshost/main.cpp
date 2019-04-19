@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
     }
 
     if (!disable_block_watcher) {
-        BlockDeviceWatcher(std::move(fs_manager), zx::job::default_job(), netboot);
+        BlockDeviceWatcher(std::move(fs_manager), netboot);
     } else {
         // Keep the process alive so that the loader service continues to be supplied
         // to the devmgr. Otherwise the devmgr will segfault.

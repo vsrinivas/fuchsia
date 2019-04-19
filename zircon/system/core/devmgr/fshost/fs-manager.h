@@ -89,6 +89,6 @@ private:
 };
 
 // Monitors "/dev/class/block" for new devices indefinitely.
-void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot);
+void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, bool netboot);
 
 } // namespace devmgr

@@ -45,16 +45,14 @@ namespace {
 
 class BlockWatcher {
 public:
-    BlockWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot)
-        : fshost_(std::move(fshost)), job_(job), netboot_(netboot) {}
+    BlockWatcher(fbl::unique_ptr<FsManager> fshost, bool netboot)
+        : fshost_(std::move(fshost)), netboot_(netboot) {}
 
     void FuchsiaStart() const { fshost_->FuchsiaStart(); }
 
     zx_status_t InstallFs(const char* path, zx::channel h) {
         return fshost_->InstallFs(path, std::move(h));
     }
-
-    const zx::unowned_job& Job() const { return job_; }
 
     bool Netbooting() const { return netboot_; }
 
@@ -77,16 +75,11 @@ public:
 
 private:
     fbl::unique_ptr<FsManager> fshost_;
-    zx::unowned_job job_;
     bool netboot_ = false;
     bool data_mounted_ = false;
     bool install_mounted_ = false;
     bool blob_mounted_ = false;
 };
-
-// TODO(smklein): When launching filesystems can pass a cookie representing a unique
-// BlockWatcher instance, this global should be removed.
-zx::unowned_job g_job;
 
 void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_root) {
     auto deadline = zx::deadline_after(zx::sec(5));
@@ -277,7 +270,7 @@ bool pkgfs_launch(BlockWatcher* watcher) {
     const zx_handle_t raw_h1 = h1.release();
     zx::process proc;
     args.Print("fshost");
-    status = devmgr_launch_with_loader(*watcher->Job(), "pkgfs",
+    status = devmgr_launch_with_loader(*zx::job::default_job(), "pkgfs",
                                        std::move(executable), std::move(loader),
                                        argv, nullptr, -1, &raw_h1,
                                        (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc,
@@ -297,17 +290,17 @@ void LaunchBlobInit(BlockWatcher* watcher) {
 
 zx_status_t LaunchBlobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
-    return devmgr_launch(*g_job, "blobfs:/blob", argv, nullptr,
+    return devmgr_launch(*zx::job::default_job(), "blobfs:/blob", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 zx_status_t LaunchMinfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-    return devmgr_launch(*g_job, "minfs:/data", argv, nullptr,
+    return devmgr_launch(*zx::job::default_job(), "minfs:/data", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 zx_status_t LaunchFAT(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-    return devmgr_launch(*g_job, "fatfs:/volume", argv, nullptr,
+    return devmgr_launch(*zx::job::default_job(), "fatfs:/volume", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
@@ -383,7 +376,7 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
     auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
         zx::process proc;
-        zx_status_t status = devmgr_launch(*g_job, "fsck", argv,
+        zx_status_t status = devmgr_launch(*zx::job::default_job(), "fsck", argv,
                                            nullptr, -1, hnd, ids, len, &proc, FS_FOR_FSPROC);
         if (status != ZX_OK) {
             fprintf(stderr, "fshost: Couldn't launch fsck\n");
@@ -687,9 +680,8 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
 
 } // namespace
 
-void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot) {
-    g_job = job;
-    BlockWatcher watcher(std::move(fshost), std::move(job), netboot);
+void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, bool netboot) {
+    BlockWatcher watcher(std::move(fshost), netboot);
 
     fbl::unique_fd dirfd(open("/dev/class/block", O_DIRECTORY | O_RDONLY));
     if (dirfd) {
