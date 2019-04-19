@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/intl_property_manager_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

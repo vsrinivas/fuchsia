@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/intl_property_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

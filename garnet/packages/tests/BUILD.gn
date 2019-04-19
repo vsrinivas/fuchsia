@@ -242,8 +242,17 @@ group("debugserver") {
 group("examples") {
   testonly = true
   public_deps = [
+    ":intl_examples",
     "//garnet/examples/testing:component_context_provider_example",
     "//garnet/examples/testing/test_with_environment:test_with_environment_example_test",
+  ]
+}
+
+group("intl_examples") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/intl/manager:intl_property_manager_tests",
+    "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
   ]
 }
 

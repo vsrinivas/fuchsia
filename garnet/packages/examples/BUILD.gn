@@ -201,8 +201,8 @@ group("benchmark") {
 group("intl") {
   testonly = true
   public_deps = [
+    "//garnet/examples/intl/manager:intl_property_manager",
     "//garnet/examples/intl/wisdom:intl_wisdom",
-    "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
   ]
 }
 
