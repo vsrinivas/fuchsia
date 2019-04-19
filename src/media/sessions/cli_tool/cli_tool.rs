@@ -4,8 +4,8 @@
 use failure::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media_sessions::*;
-use fuchsia_app as app;
 use fuchsia_async as fasync;
+use fuchsia_component as component;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
 use futures::{
@@ -105,7 +105,7 @@ async fn control_active_session(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
-    let registry_proxy = app::client::connect_to_service::<RegistryMarker>()?;
+    let registry_proxy = component::client::connect_to_service::<RegistryMarker>()?;
     let line_receiver = stdin_lines()?;
     let mut line_feed = line_receiver
         .take_while(|line| future::ready(line.as_str() != "quit"))
