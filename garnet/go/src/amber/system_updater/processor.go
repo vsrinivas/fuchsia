@@ -219,12 +219,12 @@ func writeImg(c *exec.Cmd, path string) ([]byte, error) {
 
 // UpdateCurrentChannel persists the update channel info for a successful update
 func UpdateCurrentChannel() error {
-	targetPath := "/data/misc/ota/target_channel.json"
+	targetPath := "/misc/ota/target_channel.json"
 	contents, err := ioutil.ReadFile(targetPath)
 	if err != nil {
 		return fmt.Errorf("no target channel recorded in %v: %v", targetPath, err)
 	}
-	currentPath := "/data/misc/ota/current_channel.json"
+	currentPath := "/misc/ota/current_channel.json"
 	partPath := currentPath + ".part"
 	f, err := os.Create(partPath)
 	if err != nil {

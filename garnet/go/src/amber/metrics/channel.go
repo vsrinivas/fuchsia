@@ -122,7 +122,7 @@ type channelMetadataFile struct {
 }
 
 func readCurrentChannel() *string {
-	path := "/data/misc/ota/current_channel.json"
+	path := "/misc/ota/current_channel.json"
 	f, err := os.Open(path)
 	if err != nil {
 		log.Printf("error opening %v: %v", path, err)
@@ -144,12 +144,12 @@ func readCurrentChannel() *string {
 }
 
 func writeTargetChannel(targetChannel string) {
-	err := os.MkdirAll("/data/misc/ota/", 0700)
+	err := os.MkdirAll("/misc/ota/", 0700)
 	if err != nil {
-		log.Printf("error creating /data/misc/ota/ directory: %v", err)
+		log.Printf("error creating /misc/ota/ directory...: %v", err)
 		return
 	}
-	path := "/data/misc/ota/target_channel.json"
+	path := "/misc/ota/target_channel.json"
 	partPath := path + ".part"
 	f, err := os.Create(partPath)
 	if err != nil {
