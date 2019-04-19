@@ -7,6 +7,11 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifndef __Fuchsia__
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#endif
 
 #include <filesystem>
 
@@ -31,6 +36,50 @@ namespace zxdb {
 namespace {
 
 const char* kHistoryFilename = ".zxdb_history";
+
+#ifndef __Fuchsia__
+
+termios stdout_saved_termios;
+struct sigaction saved_abort;
+struct sigaction saved_segv;
+
+void TerminalRestoreSignalHandler(int sig, siginfo_t* info, void* ucontext) {
+  struct sigaction _ignore;
+
+  if (sig == SIGABRT) {
+    sigaction(SIGABRT, &saved_abort, &_ignore);
+  } else if (sig == SIGSEGV) {
+    sigaction(SIGSEGV, &saved_segv, &_ignore);
+  } else {
+    // Weird, but I'm not about to assert inside a signal handler.
+    return;
+  }
+
+  tcsetattr(STDOUT_FILENO, TCSAFLUSH, &stdout_saved_termios);
+  raise(sig);
+}
+
+void PreserveStdoutTermios() {
+  if (!isatty(STDOUT_FILENO))
+    return;
+
+  if (tcgetattr(STDOUT_FILENO, &stdout_saved_termios) < 0)
+    return;
+
+  struct sigaction restore_handler;
+
+  restore_handler.sa_sigaction = TerminalRestoreSignalHandler;
+  restore_handler.sa_flags = SA_SIGINFO;
+
+  sigaction(SIGABRT, &restore_handler, &saved_abort);
+  sigaction(SIGSEGV, &restore_handler, &saved_segv);
+}
+
+#else
+
+void PreserveStdoutTermios() {}
+
+#endif  // !__Fuchsia__
 
 }  // namespace
 
@@ -65,6 +114,7 @@ Console::~Console() {
 }
 
 void Console::Init() {
+  PreserveStdoutTermios();
   line_input_.BeginReadLine();
 
   stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
