@@ -5,6 +5,7 @@
 #include "src/connectivity/overnet/overnetstack/bound_channel.h"
 #include <lib/zx/socket.h>
 #include <zircon/assert.h>
+#include "src/connectivity/overnet/lib/protocol/coding.h"
 #include "src/connectivity/overnet/overnetstack/fuchsia_port.h"
 #include "src/connectivity/overnet/overnetstack/overnet_app.h"
 
@@ -114,7 +115,8 @@ void BoundChannel::StartChannelRead() {
 
 void BoundChannel::Proxy::Send_(fidl::Message message) {
   assert(message.handles().size() == 0);
-  auto send_slice = overnet::Slice::FromContainer(message.bytes());
+  auto send_slice =
+      *overnet::Encode(overnet::Slice::FromContainer(message.bytes()));
   channel_->Ref();
   overnet::RouterEndpoint::Stream::SendOp(&channel_->overnet_stream_,
                                           send_slice.length())
@@ -206,15 +208,28 @@ void BoundChannel::StartNetRead() {
         // Write the message to the channel, then start reading again.
         // Importantly: don't start reading until we've written to ensure
         // that there's push back in the system.
-        auto joined =
-            overnet::Slice::AlignedJoin((*status)->begin(), (*status)->end());
-        auto dispatch_status = overnet::Status::FromZx(stub_.Process_(
-            fidl::Message(fidl::BytePart(const_cast<uint8_t*>(joined.begin()),
-                                         joined.length(), joined.length()),
-                          fidl::HandlePart())));
-        if (dispatch_status.is_error()) {
-          Close(dispatch_status);
+        auto decode_status = overnet::Decode(
+            overnet::Slice::Join((*status)->begin(), (*status)->end()));
+        if (decode_status.is_error()) {
+          // Failed to decode: close stream
+          Close(decode_status.AsStatus());
+          Unref();
+          return;
         }
+
+        auto packet = overnet::Slice::Aligned(std::move(*decode_status));
+
+        if (auto process_status = stub_.Process_(fidl::Message(
+                fidl::BytePart(const_cast<uint8_t*>(packet.begin()),
+                               packet.length(), packet.length()),
+                fidl::HandlePart()));
+            process_status != ZX_OK) {
+          Close(overnet::Status::FromZx(process_status)
+                    .WithContext("Processing incoming channel message"));
+          Unref();
+          return;
+        }
+
         Unref();
       });
 }

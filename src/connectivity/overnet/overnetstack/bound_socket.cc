@@ -108,8 +108,6 @@ void BoundSocket::StartSocketRead() {
     std::vector<uint8_t> message(kMaxIOSize);
     size_t read;
     auto err = zx_socket_.read(0, message.data(), message.size(), &read);
-    OVERNET_TRACE(DEBUG) << "StartSocketRead read result: "
-                         << overnet::Status::FromZx(err);
     switch (err) {
       case ZX_OK: {
         message.resize(read);
@@ -121,7 +119,7 @@ void BoundSocket::StartSocketRead() {
         break;
       default:
         // If the read failed, close the stream.
-        Close(overnet::Status::FromZx(err).WithContext("Read"));
+        Close(overnet::Status::FromZx(err).WithContext("ReadData"));
         return;
     }
   }
@@ -130,6 +128,7 @@ void BoundSocket::StartSocketRead() {
     auto err = zx_socket_.accept(&new_socket);
     switch (err) {
       case ZX_ERR_WRONG_TYPE:
+      case ZX_ERR_NOT_SUPPORTED:
         sock_read_accept_ = false;
         break;
       case ZX_OK: {
@@ -159,7 +158,7 @@ void BoundSocket::StartSocketRead() {
         break;
       default:
         // If the read failed, close the stream.
-        Close(overnet::Status::FromZx(err).WithContext("Read"));
+        Close(overnet::Status::FromZx(err).WithContext("ReadAccept"));
         return;
     }
   }
@@ -168,9 +167,10 @@ void BoundSocket::StartSocketRead() {
     size_t read;
     auto err = zx_socket_.read(ZX_SOCKET_CONTROL, message.data(),
                                message.size(), &read);
-    OVERNET_TRACE(DEBUG) << "StartSocketRead read result: "
-                         << overnet::Status::FromZx(err);
     switch (err) {
+      case ZX_ERR_BAD_STATE:
+        sock_read_ctl_ = false;
+        break;
       case ZX_OK: {
         message.resize(read);
         proxy_.Control(std::move(message));
@@ -181,7 +181,7 @@ void BoundSocket::StartSocketRead() {
         break;
       default:
         // If the read failed, close the stream.
-        Close(overnet::Status::FromZx(err).WithContext("Read"));
+        Close(overnet::Status::FromZx(err).WithContext("ReadControl"));
         return;
     }
   }
