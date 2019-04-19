@@ -65,12 +65,6 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    ddk::ClockProtocolClient clk(parent);
-    if (!clk.is_valid()) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_CLOCK not available\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
     pdev_device_info_t info;
     if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __FILE__);
