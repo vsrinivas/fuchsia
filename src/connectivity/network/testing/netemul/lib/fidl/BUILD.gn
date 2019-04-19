@@ -43,6 +43,8 @@ fidl("sandbox") {
 
   deps = [
     ":environment",
+    ":network",
+    ":sync",
     "//sdk/fidl/fuchsia.sys",
   ]
 }

@@ -19,9 +19,11 @@ mod tests {
             ManagedEnvironmentProxy,
         },
         fidl_fuchsia_netemul_network::{
-            NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
+            NetworkConfig, NetworkContextMarker, NetworkContextProxy, NetworkManagerMarker,
+            NetworkProxy,
         },
         fidl_fuchsia_netemul_sandbox::{SandboxMarker, SandboxProxy},
+        fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker, SyncManagerProxy},
         fidl_fuchsia_netstack::NetstackMarker,
         fuchsia_async as fasync,
         fuchsia_component::client,
@@ -46,7 +48,7 @@ mod tests {
                     enabled: Some(true),
                     klogs_enabled: Some(false),
                     filter_options: None,
-                    syslog_output: None,
+                    syslog_output: Some(true),
                 }),
             },
         )?;
@@ -76,11 +78,42 @@ mod tests {
     ) -> Result<NetworkProxy, Error> {
         let (netctx, netctx_server_end) = fidl::endpoints::create_proxy::<NetworkContextMarker>()?;
         env.connect_to_service(NetworkContextMarker::NAME, netctx_server_end.into_channel())?;
+        await!(get_network_from_context(&netctx, name))
+    }
+
+    async fn get_network_from_context<'a>(
+        netctx: &'a NetworkContextProxy,
+        name: &'a str,
+    ) -> Result<NetworkProxy, Error> {
         let (netmgr, netmgr_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
         netctx.get_network_manager(netmgr_server_end)?;
         let network = await!(netmgr.get_network(name))?;
 
         Ok(network.ok_or_else(|| format_err!("can't create network"))?.into_proxy()?)
+    }
+
+    async fn get_on_bus_from_env<'a>(
+        env: &'a ManagedEnvironmentProxy,
+        bus_name: &'static str,
+        name: &'static str,
+    ) -> Result<BusProxy, Error> {
+        let (syncmgr, syncmgr_server_end) = fidl::endpoints::create_proxy::<SyncManagerMarker>()?;
+        env.connect_to_service(SyncManagerMarker::NAME, syncmgr_server_end.into_channel())?;
+        let (bus, bus_server_end) = fidl::endpoints::create_proxy::<BusMarker>()?;
+        let () = syncmgr.bus_subscribe(bus_name, name, bus_server_end)?;
+        // do something to ensure ordering
+        let _ = await!(bus.get_clients())?;
+        Ok(bus)
+    }
+
+    async fn get_on_bus_and_list_clients<'a>(
+        syncmgr: &'a SyncManagerProxy,
+        bus_name: &'static str,
+        name: &'static str,
+    ) -> Result<Vec<String>, Error> {
+        let (bus, bus_server_end) = fidl::endpoints::create_proxy::<BusMarker>()?;
+        let () = syncmgr.bus_subscribe(bus_name, name, bus_server_end)?;
+        Ok(await!(bus.get_clients())?)
     }
 
     #[fasync::run_singlethreaded]
@@ -105,23 +138,78 @@ mod tests {
 
     #[fasync::run_singlethreaded]
     #[test]
-    async fn environment_sandboxing() {
-        let sandbox = client::connect_to_service::<SandboxMarker>()
-            .context("Can't connect to sandbox")
-            .unwrap();
-        let sandbox2 = client::connect_to_service::<SandboxMarker>()
-            .context("Can't connect to sandbox 2")
-            .unwrap();
-        let env1 = create_env_with_netstack(&sandbox).unwrap();
-        let env2 = create_env_with_netstack(&sandbox).unwrap();
-        let env3 = create_env_with_netstack(&sandbox2).unwrap();
+    async fn environment_netctx_sandboxing() {
+        let sandbox =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 1");
 
-        let _net1 = await!(create_network(&env1, "network")).unwrap();
+        let sandbox2 =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+
+        let (netctx1, netctx_server_end) = fidl::endpoints::create_proxy::<NetworkContextMarker>()
+            .expect("can't create context proxy 1");
+        sandbox.get_network_context(netctx_server_end).expect("failed to get network context 1");
+
+        let (netctx2, netctx_server_end) = fidl::endpoints::create_proxy::<NetworkContextMarker>()
+            .expect("can't create context proxy 2");
+        sandbox2.get_network_context(netctx_server_end).expect("failed to get network context 2");
+
+        let env1 = create_env_with_netstack(&sandbox).expect("can't create env 1");
+        let env2 = create_env_with_netstack(&sandbox).expect("can't create env 2");
+        let env3 = create_env_with_netstack(&sandbox2).expect("can't create env 3");
+
+        let _net = await!(create_network(&env1, "network")).expect("failed to create network");
         let net1_retrieve = await!(get_network(&env1, "network"));
-        assert!(net1_retrieve.is_ok(), "can retrieve net1 from env1");
+        assert!(net1_retrieve.is_ok(), "can retrieve net from env1");
         let net2_retrieve = await!(get_network(&env2, "network"));
-        assert!(net2_retrieve.is_ok(), "can retrieve net1 from env2");
+        assert!(net2_retrieve.is_ok(), "can retrieve net from env2");
         let net3_retrieve = await!(get_network(&env3, "network"));
-        assert!(net3_retrieve.is_err(), "net1 should not exist in env3");
+        assert!(net3_retrieve.is_err(), "net should not exist in env3");
+
+        await!(get_network_from_context(&netctx1, "network"))
+            .expect("Should be able to retrieve net from sandbox 1");
+        await!(get_network_from_context(&netctx2, "network"))
+            .expect_err("Shouldn't be able retrieve net from sandbox 2");
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn environment_syncmgr_sandboxing() {
+        const BUS_NAME: &'static str = "bus";
+
+        let sandbox =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 1");
+
+        let sandbox2 =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+
+        let (sync1, sync_server_end) = fidl::endpoints::create_proxy::<SyncManagerMarker>()
+            .expect("can't create sync manager proxy 1");
+        sandbox.get_sync_manager(sync_server_end).expect("failed to get sync manager 1");
+
+        let (sync2, sync_server_end) = fidl::endpoints::create_proxy::<SyncManagerMarker>()
+            .expect("can't create sync manager proxy 2");
+        sandbox2.get_sync_manager(sync_server_end).expect("failed to get sync manager 2");
+
+        let env1 = create_env_with_netstack(&sandbox).expect("can't create env 1");
+        let env2 = create_env_with_netstack(&sandbox).expect("can't create env 2");
+        let env3 = create_env_with_netstack(&sandbox2).expect("can't create env 3");
+
+        let _b_e1 =
+            await!(get_on_bus_from_env(&env1, BUS_NAME, "e1")).expect("can get on bus as e1");
+        let _b_e2 =
+            await!(get_on_bus_from_env(&env2, BUS_NAME, "e2")).expect("can get on bus as e2");
+        let _b_e3 =
+            await!(get_on_bus_from_env(&env3, BUS_NAME, "e3")).expect("can get on bus as e3");
+
+        let clients_1 =
+            await!(get_on_bus_and_list_clients(&sync1, BUS_NAME, "s1")).expect("can get clients 1");
+        let clients_2 =
+            await!(get_on_bus_and_list_clients(&sync2, BUS_NAME, "s2")).expect("can get clients 2");
+
+        assert_eq!(3, clients_1.len());
+        assert_eq!(2, clients_2.len());
+        assert!(clients_1.iter().any(|c| c == "e1"));
+        assert!(clients_1.iter().any(|c| c == "e2"));
+        assert!(clients_2.iter().any(|c| c == "e3"));
     }
 }

@@ -5,10 +5,24 @@
 library fuchsia.netemul.sandbox;
 using fuchsia.netemul.environment;
 using fuchsia.netemul.network;
+using fuchsia.netemul.sync;
 using fuchsia.sys;
 
+/// Every connection to |Sandbox| represents a self-contained
+/// context where ManagedEnvironments can be created. The
+/// NetworkContext and SyncManager instances offered by it are
+/// the same that are exposed to any ManagedEnvironment created
+/// by the Sandbox.
+/// The lifetime of the created environments (and the context
+/// services) is bound to the connection to the Sandbox service.
+/// If the channel is closed, all the environments and the
+/// components created within them will be terminated.
 [Discoverable]
 protocol Sandbox {
     /// Creates a new empty environment |root_env| configured by |options|.
     CreateEnvironment(request<fuchsia.netemul.environment.ManagedEnvironment> root_env, fuchsia.netemul.environment.EnvironmentOptions options);
+    /// Gets this sandbox's NetworkContext.
+    GetNetworkContext(request<fuchsia.netemul.network.NetworkContext> network_context);
+    /// Gets this sandbox's SyncManager.
+    GetSyncManager(request<fuchsia.netemul.sync.SyncManager> sync_manager);
 };

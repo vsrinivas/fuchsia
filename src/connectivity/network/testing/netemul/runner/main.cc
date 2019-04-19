@@ -74,7 +74,6 @@ int main(int argc, const char** argv) {
     PrintUsage();
     return 1;
   } else {
-    FXL_LOG(INFO) << "Exposing fuchsia.netemul.sandbox.Sandbox service";
     SandboxService service(loop.dispatcher());
     auto context = sys::ComponentContext::Create();
     context->outgoing()->AddPublicService(service.GetHandler());

@@ -20,7 +20,6 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
         binding_(this, std::move(req), loop_->dispatcher()),
         parent_(parent) {
     binding_.set_error_handler([this](zx_status_t err) {
-      sandboxes_.clear();
       environments_.clear();
       parent_->BindingClosed(this);
     });
@@ -47,10 +46,7 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
   void CreateEnvironment(
       fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req,
       ManagedEnvironment::Options options) override {
-    if (!shared_env_) {
-      shared_env_ = std::make_shared<SandboxEnv>();
-    }
-    auto root = ManagedEnvironment::CreateRoot(parent_env_, shared_env_,
+    auto root = ManagedEnvironment::CreateRoot(parent_env_, shared_env(),
                                                std::move(options));
     root->SetRunningCallback(
         [root = root.get(), req = std::move(req)]() mutable {
@@ -60,20 +56,32 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     environments_.push_back(std::move(root));
   }
 
-  void DeleteSandbox(const ::netemul::Sandbox* sandbox) {
-    for (auto i = sandboxes_.begin(); i != sandboxes_.end(); i++) {
-      if (i->get() == sandbox) {
-        sandboxes_.erase(i);
-        return;
-      }
-    }
-  }
+  // Gets this sandbox's NetworkContext
+  void GetNetworkContext(
+      fidl::InterfaceRequest<::fuchsia::netemul::network::NetworkContext>
+          network_context) override {
+    shared_env()->network_context().GetHandler()(std::move(network_context));
+  };
+
+  // Gets this sandbox's SyncManager
+  void GetSyncManager(
+      fidl::InterfaceRequest<fuchsia::netemul::sync::SyncManager> sync_manager)
+      override {
+    shared_env()->sync_manager().GetHandler()(std::move(sync_manager));
+  };
 
  private:
+  std::shared_ptr<SandboxEnv>& shared_env() {
+    ZX_ASSERT(async_get_default_dispatcher() == loop_->dispatcher());
+    if (!shared_env_) {
+      shared_env_ = std::make_shared<SandboxEnv>();
+    }
+    return shared_env_;
+  }
+
   std::unique_ptr<async::Loop> loop_;
   std::shared_ptr<SandboxEnv> shared_env_;
   fidl::Binding<FSandbox> binding_;
-  std::vector<std::unique_ptr<::netemul::Sandbox>> sandboxes_;
   std::vector<std::unique_ptr<ManagedEnvironment>> environments_;
   fuchsia::sys::EnvironmentPtr parent_env_;
   // Pointer to parent SandboxService. Not owned.
