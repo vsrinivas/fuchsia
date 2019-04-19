@@ -56,9 +56,6 @@ group("sys") {
   testonly = true
   public_deps = [
     "//garnet/bin/sys/component_manager",
-    "//garnet/bin/sys/component_manager:component_manager_tests",
-    "//sdk/fidl/fuchsia.data",
-    "//sdk/fidl/fuchsia.sys2",
   ]
 }
 
