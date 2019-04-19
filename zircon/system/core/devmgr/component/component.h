@@ -7,17 +7,17 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/clock.h>
-#include <ddk/protocol/ethernet/board.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/power.h>
-#include <ddk/protocol/sysmem.h>
-#include <ddk/protocol/usb/modeswitch.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/mipicsi.h>
+#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/power.h>
+#include <ddktl/protocol/sysmem.h>
+#include <ddktl/protocol/usb/modeswitch.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 
@@ -28,7 +28,11 @@ using ComponentBase = ddk::Device<Component, ddk::Rxrpcable, ddk::Unbindable>;
 
 class Component : public ComponentBase {
 public:
-    explicit Component(zx_device_t* parent);
+    explicit Component(zx_device_t* parent)
+        : ComponentBase(parent), canvas_(parent), clock_(parent),
+          eth_board_(parent), gpio_(parent), i2c_(parent),
+          mipicsi_(parent), pdev_(parent), power_(parent),
+          sysmem_(parent), ums_(parent) {}
 
     static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
@@ -88,16 +92,16 @@ private:
     static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                     size_t op_count);
 
-    amlogic_canvas_protocol_t canvas_ = {};
-    clock_protocol_t clock_ = {};
-    eth_board_protocol_t eth_board_ = {};
-    gpio_protocol_t gpio_ = {};
-    i2c_protocol_t i2c_ = {};
-    mipi_csi_protocol_t mipicsi_ = {};
-    pdev_protocol_t pdev_ = {};
-    power_protocol_t power_ = {};
-    sysmem_protocol_t sysmem_ = {};
-    usb_mode_switch_protocol_t ums_ = {};
+    ddk::AmlogicCanvasProtocolClient canvas_;
+    ddk::ClockProtocolClient clock_;
+    ddk::EthBoardProtocolClient eth_board_;
+    ddk::GpioProtocolClient gpio_;
+    ddk::I2cProtocolClient i2c_;
+    ddk::MipiCsiProtocolClient mipicsi_;
+    ddk::PDevProtocolClient pdev_;
+    ddk::PowerProtocolClient power_;
+    ddk::SysmemProtocolClient sysmem_;
+    ddk::UsbModeSwitchProtocolClient ums_;
 };
 
 } // namespace component

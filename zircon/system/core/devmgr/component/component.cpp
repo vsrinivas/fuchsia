@@ -13,22 +13,6 @@
 
 namespace component {
 
-Component::Component(zx_device_t* parent)
-    : ComponentBase(parent) {
-
-    // These protocols are all optional, so no error checking is necessary here.
-    device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
-    device_get_protocol(parent, ZX_PROTOCOL_CLOCK, &clock_);
-    device_get_protocol(parent, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
-    device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
-    device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c_);
-    device_get_protocol(parent, ZX_PROTOCOL_MIPI_CSI, &mipicsi_);
-    device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-    device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
-    device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &sysmem_);
-    device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &ums_);
-}
-
 zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
     auto dev = std::make_unique<Component>(parent);
     // The thing before the comma will become the process name, if a new process
@@ -48,7 +32,7 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
                                  uint32_t* resp_handle_count) {
-    if (canvas_.ops == nullptr) {
+    if (!canvas_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const AmlogicCanvasProxyRequest*>(req_buf);
@@ -65,14 +49,13 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
             zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
             return ZX_ERR_INTERNAL;
         }
-        return amlogic_canvas_config(&canvas_, req_handles[0], req->offset, &req->info,
-                                     &resp->canvas_idx);
+        return canvas_.Config(zx::vmo(req_handles[0]), req->offset, &req->info, &resp->canvas_idx);
     case AmlogicCanvasOp::FREE:
         if (req_handle_count != 0) {
             zxlogf(ERROR, "%s received %u handles, expecting 0\n", __func__, req_handle_count);
             return ZX_ERR_INTERNAL;
         }
-        return amlogic_canvas_free(&canvas_, req->canvas_idx);
+        return canvas_.Free(req->canvas_idx);
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -83,7 +66,7 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
                                 uint32_t* resp_handle_count) {
-    if (clock_.ops == nullptr) {
+    if (!clock_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const ClockProxyRequest*>(req_buf);
@@ -96,9 +79,9 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
 
     switch (req->op) {
     case ClockOp::ENABLE:
-        return clock_enable(&clock_);
+        return clock_.Enable();
     case ClockOp::DISABLE:
-        return clock_disable(&clock_);
+        return clock_.Disable();
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -109,7 +92,7 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
                                    uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                    uint32_t req_handle_count, zx_handle_t* resp_handles,
                                    uint32_t* resp_handle_count) {
-    if (eth_board_.ops == nullptr) {
+    if (!eth_board_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const EthBoardProxyRequest*>(req_buf);
@@ -122,7 +105,7 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
 
     switch (req->op) {
     case EthBoardOp::RESET_PHY:
-        return eth_board_reset_phy(&eth_board_);
+        return eth_board_.ResetPhy();
     default:
         zxlogf(ERROR, "%s: unknown ETH_BOARD op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -133,7 +116,7 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                uint32_t req_handle_count, zx_handle_t* resp_handles,
                                uint32_t* resp_handle_count) {
-    if (gpio_.ops == nullptr) {
+    if (!gpio_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const GpioProxyRequest*>(req_buf);
@@ -146,26 +129,28 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
 
     switch (req->op) {
     case GpioOp::CONFIG_IN:
-        return gpio_config_in(&gpio_, req->flags);
+        return gpio_.ConfigIn(req->flags);
     case GpioOp::CONFIG_OUT:
-        return gpio_config_out(&gpio_, req->value);
+        return gpio_.ConfigOut(req->value);
     case GpioOp::SET_ALT_FUNCTION:
-        return gpio_set_alt_function(&gpio_, req->alt_function);
+        return gpio_.SetAltFunction(req->alt_function);
     case GpioOp::READ:
-        return gpio_read(&gpio_, &resp->value);
+        return gpio_.Read(&resp->value);
     case GpioOp::WRITE:
-        return gpio_write(&gpio_, req->value);
+        return gpio_.Write(req->value);
     case GpioOp::GET_INTERRUPT: {
-        auto status = gpio_get_interrupt(&gpio_, req->flags, &resp_handles[0]);
+        zx::interrupt irq;
+        auto status = gpio_.GetInterrupt(req->flags, &irq);
         if (status == ZX_OK) {
+            resp_handles[0] = irq.release();
             *resp_handle_count = 1;
         }
         return status;
     }
     case GpioOp::RELEASE_INTERRUPT:
-        return gpio_release_interrupt(&gpio_);
+        return gpio_.ReleaseInterrupt();
     case GpioOp::SET_POLARITY:
-        return gpio_set_polarity(&gpio_, req->polarity);
+        return gpio_.SetPolarity(req->polarity);
     default:
         zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -187,7 +172,7 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
                               uint32_t* out_resp_size, const zx_handle_t* req_handles,
                               uint32_t req_handle_count, zx_handle_t* resp_handles,
                               uint32_t* resp_handle_count) {
-    if (i2c_.ops == nullptr) {
+    if (!i2c_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const I2cProxyRequest*>(req_buf);
@@ -226,7 +211,7 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
         ctx.read_buf = &resp[1];
         ctx.read_length = read_length;
 
-        i2c_transact(&i2c_, i2c_ops, op_count, I2cTransactCallback, &ctx);
+        i2c_.Transact(i2c_ops, op_count, I2cTransactCallback, &ctx);
         auto status = sync_completion_wait(&ctx.completion, ZX_TIME_INFINITE);
         if (status == ZX_OK) {
             status = ctx.result;
@@ -237,10 +222,12 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
         return status;
     }
     case I2cOp::GET_MAX_TRANSFER_SIZE:
-        return i2c_get_max_transfer_size(&i2c_, &resp->size);
+        return i2c_.GetMaxTransferSize(&resp->size);
     case I2cOp::GET_INTERRUPT: {
-        auto status = i2c_get_interrupt(&i2c_, req->flags, &resp_handles[0]);
+        zx::interrupt irq;
+        auto status = i2c_.GetInterrupt(req->flags, &irq);
         if (status == ZX_OK) {
+            resp_handles[0] = irq.release();
             *resp_handle_count = 1;
         }
         return status;
@@ -255,7 +242,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                uint32_t req_handle_count, zx_handle_t* resp_handles,
                                uint32_t* resp_handle_count) {
-    if (pdev_.ops == nullptr) {
+    if (!pdev_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const PdevProxyRequest*>(req_buf);
@@ -269,7 +256,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
     switch (req->op) {
     case PdevOp::GET_MMIO: {
         pdev_mmio_t mmio;
-        auto status = pdev_get_mmio(&pdev_, req->index, &mmio);
+        auto status = pdev_.GetMmio(req->index, &mmio);
         if (status == ZX_OK) {
             resp->offset = mmio.offset;
             resp->size = mmio.size;
@@ -279,30 +266,36 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
         return status;
     }
     case PdevOp::GET_INTERRUPT: {
-        auto status = pdev_get_interrupt(&pdev_, req->index, req->flags, &resp_handles[0]);
+        zx::interrupt irq;
+        auto status = pdev_.GetInterrupt(req->index, req->flags, &irq);
         if (status == ZX_OK) {
+            resp_handles[0] = irq.release();
             *resp_handle_count = 1;
         }
         return status;
     }
     case PdevOp::GET_BTI: {
-        auto status = pdev_get_bti(&pdev_, req->index, &resp_handles[0]);
+        zx::bti bti;
+        auto status = pdev_.GetBti(req->index, &bti);
         if (status == ZX_OK) {
+            resp_handles[0] = bti.release();
             *resp_handle_count = 1;
         }
         return status;
     }
     case PdevOp::GET_SMC: {
-        auto status = pdev_get_smc(&pdev_, req->index, &resp_handles[0]);
+        zx::resource resource;
+        auto status = pdev_.GetSmc(req->index, &resource);
         if (status == ZX_OK) {
+            resp_handles[0] = resource.release();
             *resp_handle_count = 1;
         }
         return status;
     }
     case PdevOp::GET_DEVICE_INFO:
-        return pdev_get_device_info(&pdev_, &resp->device_info);
+        return pdev_.GetDeviceInfo(&resp->device_info);
     case PdevOp::GET_BOARD_INFO:
-        return pdev_get_board_info(&pdev_, &resp->board_info);
+        return pdev_.GetBoardInfo(&resp->board_info);
     default:
         zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -313,7 +306,7 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
                                 uint32_t* resp_handle_count) {
-    if (power_.ops == nullptr) {
+    if (!power_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const PowerProxyRequest*>(req_buf);
@@ -326,19 +319,19 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
     *out_resp_size = sizeof(*resp);
     switch (req->op) {
     case PowerOp::ENABLE:
-        return power_enable_power_domain(&power_);
+        return power_.EnablePowerDomain();
     case PowerOp::DISABLE:
-        return power_disable_power_domain(&power_);
+        return power_.DisablePowerDomain();
     case PowerOp::GET_STATUS:
-        return power_get_power_domain_status(&power_, &resp->status);
+        return power_.GetPowerDomainStatus(&resp->status);
     case PowerOp::GET_SUPPORTED_VOLTAGE_RANGE:
-        return power_get_supported_voltage_range(&power_, &resp->min_voltage, &resp->max_voltage);
+        return power_.GetSupportedVoltageRange(&resp->min_voltage, &resp->max_voltage);
     case PowerOp::REQUEST_VOLTAGE:
-        return power_request_voltage(&power_, req->set_voltage, &resp->actual_voltage);
+        return power_.RequestVoltage(req->set_voltage, &resp->actual_voltage);
     case PowerOp::WRITE_PMIC_CTRL_REG:
-        return power_write_pmic_ctrl_reg(&power_, req->reg_addr, req->reg_value);
+        return power_.WritePmicCtrlReg(req->reg_addr, req->reg_value);
     case PowerOp::READ_PMIC_CTRL_REG:
-        return power_read_pmic_ctrl_reg(&power_, req->reg_addr, &resp->reg_value);
+        return power_.ReadPmicCtrlReg(req->reg_addr, &resp->reg_value);
     default:
         zxlogf(ERROR, "%s: unknown Power op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -349,7 +342,7 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
                                  uint32_t* resp_handle_count) {
-    if (sysmem_.ops == nullptr) {
+    if (!sysmem_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const SysmemProxyRequest*>(req_buf);
@@ -364,8 +357,10 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
     *out_resp_size = sizeof(ProxyResponse);
 
     switch (req->op) {
-    case SysmemOp::CONNECT:
-        return sysmem_connect(&sysmem_, req_handles[0]);
+    case SysmemOp::CONNECT: {
+
+        return sysmem_.Connect(zx::channel(req_handles[0]));
+    }
     default:
         zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
@@ -376,7 +371,7 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
                               uint32_t* out_resp_size, const zx_handle_t* req_handles,
                               uint32_t req_handle_count, zx_handle_t* resp_handles,
                               uint32_t* resp_handle_count) {
-    if (ums_.ops == nullptr) {
+    if (!ums_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     auto* req = reinterpret_cast<const UsbModeSwitchProxyRequest*>(req_buf);
@@ -389,7 +384,7 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
     *out_resp_size = sizeof(*resp);
     switch (req->op) {
     case UsbModeSwitchOp::SET_MODE:
-        return usb_mode_switch_set_mode(&ums_, req->mode);
+        return ums_.SetMode(req->mode);
     default:
         zxlogf(ERROR, "%s: unknown USB Mode Switch op %u\n", __func__,
                static_cast<uint32_t>(req->op));
@@ -401,11 +396,9 @@ zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uin
                                   uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                   uint32_t req_handle_count, zx_handle_t* resp_handles,
                                   uint32_t* resp_handle_count) {
-    if (mipicsi_.ops == nullptr) {
+    if (!mipicsi_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-
-    ddk::MipiCsiProtocolClient mipicsi(&mipicsi_);
 
     auto* req = reinterpret_cast<const MipiCsiProxyRequest*>(req_buf);
     if (req_size < sizeof(*req)) {
@@ -417,9 +410,9 @@ zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uin
 
     switch (req->op) {
     case MipiCsiOp::INIT:
-        return mipicsi.Init(&req->mipi_info, &req->adap_info);
+        return mipicsi_.Init(&req->mipi_info, &req->adap_info);
     case MipiCsiOp::DEINIT:
-        return mipicsi.DeInit();
+        return mipicsi_.DeInit();
     default:
         zxlogf(ERROR, "%s: unknown MIPI_CSI op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
