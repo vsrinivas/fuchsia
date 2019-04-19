@@ -306,13 +306,11 @@ class result_handler_invoker final {
         typename ::fit::callable_traits<Handler>::args::template at<
             base_type::next_arg_index>;
     static_assert(
-        (std::is_same<result_arg_type, PriorResult>::value &&
-         std::is_copy_constructible<result_arg_type>::value) ||
-            std::is_same<result_arg_type, PriorResult&>::value ||
+        std::is_same<result_arg_type, PriorResult&>::value ||
             std::is_same<result_arg_type, const PriorResult&>::value,
         "The provided handler's last argument was expected to be of type "
-        "fit::result<V, E>&, const fit::result<V, E>&, or fit::result<V, E> "
-        "(if the result is copy-constructible).  "
+        "fit::result<V, E>& or const fit::result<V, E>& where V is the prior "
+        "result's value type and E is the prior result's error type.  "
         "Please refer to the combinator's documentation for a list of "
         "supported handler function signatures.");
 
@@ -340,12 +338,10 @@ class value_handler_invoker final {
         typename ::fit::callable_traits<Handler>::args::template at<
             base_type::next_arg_index>;
     static_assert(
-        (std::is_same<value_arg_type, V>::value &&
-         std::is_copy_constructible<value_arg_type>::value) ||
-            std::is_same<value_arg_type, V&>::value ||
+        std::is_same<value_arg_type, V&>::value ||
             std::is_same<value_arg_type, const V&>::value,
         "The provided handler's last argument was expected to be of type "
-        "V&, const V&, or V (if the value is copy-constructible).  "
+        "V& or const V& where V is the prior result's value type.  "
         "Please refer to the combinator's documentation for a list of "
         "supported handler function signatures.");
 
@@ -393,12 +389,10 @@ class error_handler_invoker final {
         typename ::fit::callable_traits<Handler>::args::template at<
             base_type::next_arg_index>;
     static_assert(
-        (std::is_same<error_arg_type, E>::value &&
-         std::is_copy_constructible<error_arg_type>::value) ||
-            std::is_same<error_arg_type, E&>::value ||
+        std::is_same<error_arg_type, E&>::value ||
             std::is_same<error_arg_type, const E&>::value,
         "The provided handler's last argument was expected to be of type "
-        "E&, const E&, or E (if the error is copy-constructible).  "
+        "E& or const E& where E is the prior result's error type.  "
         "Please refer to the combinator's documentation for a list of "
         "supported handler function signatures.");
 

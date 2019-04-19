@@ -360,7 +360,7 @@ fit::promise<> Sandbox::StartChildEnvironment(
 
                return fit::ok(std::move(child_env));
              })
-      .and_then([this, config](ConfiguringEnvironmentPtr child_env) {
+      .and_then([this, config](ConfiguringEnvironmentPtr& child_env) {
         return ConfigureEnvironment(std::move(child_env), config);
       });
 }
@@ -452,7 +452,7 @@ fit::promise<> Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
   }
 
   return fit::join_promise_vector(std::move(promises))
-      .and_then([](std::vector<fit::result<>> results) -> fit::result<> {
+      .and_then([](std::vector<fit::result<>>& results) -> fit::result<> {
         for (const auto& r : results) {
           if (r.is_error()) {
             return fit::error();

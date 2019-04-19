@@ -33,9 +33,9 @@ namespace fit {
 //     // sequential work with the sequencer.
 //     fit::promise<> perform_complex_task() {
 //         return fit::make_promise([] { /* do sequential work */ })
-//             .then([] (fit::result<> result) { /* this will also be wrapped */ })
+//             .then([] (fit::result<>& result) { /* this will also be wrapped */ })
 //             .wrap_with(seq)
-//             .then([] (fit::result<> result) { /* do more work */ });
+//             .then([] (fit::result<>& result) { /* do more work */ });
 //     }
 //
 class sequencer final {
@@ -56,7 +56,7 @@ public:
         return prior.promise_or(fit::ok())
             .then([promise = std::move(promise),
                    completer = std::move(bridge.completer)](
-                      fit::context& context, fit::result<>) mutable {
+                      fit::context& context, const fit::result<>&) mutable {
                 // This handler will run once the completer associated
                 // with the |prior| promise is abandoned.  Once the promise
                 // has finished, both the promise and completer will be

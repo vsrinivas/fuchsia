@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/inspect/reader.h"
-
 #include <lib/inspect-vmo/block.h>
 #include <lib/inspect-vmo/scanner.h>
 #include <lib/inspect-vmo/snapshot.h>
@@ -15,6 +13,7 @@
 #include "fuchsia/inspect/cpp/fidl.h"
 #include "lib/fit/bridge.h"
 #include "lib/inspect/hierarchy.h"
+#include "lib/inspect/reader.h"
 
 namespace inspect {
 
@@ -110,7 +109,7 @@ fit::promise<ObjectReader> ObjectReader::OpenChild(
   ObjectReader reader(child_ptr.Unbind());
   return bridge.consumer.promise_or(fit::error())
       .and_then([ret = std::move(reader)](
-                    bool success) mutable -> fit::result<ObjectReader> {
+                    const bool& success) mutable -> fit::result<ObjectReader> {
         if (success) {
           return fit::ok(ObjectReader(std::move(ret)));
         } else {

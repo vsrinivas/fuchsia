@@ -23,7 +23,7 @@ bool sequencing_tasks() {
     // This promise writes ":a" sequentially then writes ":a2" later.
     auto a = fit::make_promise([&] { str += ":a"; })
                  .wrap_with(seq)
-                 .then([&](fit::result<>) { str += ":a2"; });
+                 .then([&](const fit::result<>&) { str += ":a2"; });
 
     // This promise writes ":b" sequentially then writes ":b2" and ":b3" later.
     // Also schedules another sequential task that writes ":e".
@@ -34,7 +34,7 @@ bool sequencing_tasks() {
                          .wrap_with(seq));
              })
                  .wrap_with(seq)
-                 .then([&, count = 0](fit::context& context, fit::result<>) mutable
+                 .then([&, count = 0](fit::context& context, const fit::result<>&) mutable
                        -> fit::result<> {
                      if (++count == 5) {
                          str += ":b3";
@@ -52,7 +52,7 @@ bool sequencing_tasks() {
                  return fit::pending();
              })
                  .wrap_with(seq)
-                 .then([&](fit::result<>) { str += ":c2"; });
+                 .then([&](const fit::result<>&) { str += ":c2"; });
 
     // This promise writes ":d" sequentially.
     auto d = fit::make_promise([&] { str += ":d"; })

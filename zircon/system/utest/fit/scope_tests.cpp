@@ -65,17 +65,17 @@ bool scoping_tasks() {
 
     // Schedule some tasks which accumulate values asynchronously.
     executor.schedule_task(acc->add(2).and_then(
-        [&](uint32_t value) { sums[0] = value; }));
+        [&](const uint32_t& value) { sums[0] = value; }));
     executor.schedule_task(acc->add(1).and_then(
-        [&](uint32_t value) { sums[1] = value; }));
+        [&](const uint32_t& value) { sums[1] = value; }));
     executor.schedule_task(acc->add(5).and_then(
-        [&](uint32_t value) { sums[2] = value; }));
+        [&](const uint32_t& value) { sums[2] = value; }));
 
     // Schedule a task which accumulates and then destroys the accumulator
     // so that the scope is exited.  Any remaining promises will be aborted.
     uint32_t last_count = 0;
     executor.schedule_task(acc->add(3).and_then(
-        [&](uint32_t value) {
+        [&](const uint32_t& value) {
             sums[3] = value;
             // Schedule destruction in another task to avoid re-entrance.
             executor.schedule_task(fit::make_promise([&] {

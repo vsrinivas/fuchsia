@@ -193,10 +193,10 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
     executor_.schedule_task(
         AddEthernetDevice(kInterfacePath, std::move(config))
-            .and_then([this, addr = std::move(addr)](uint32_t nic_id) mutable {
+            .and_then([this, addr = std::move(addr)](const uint32_t& nic_id) mutable {
               return SetInterfaceAddress(nic_id, std::move(addr));
             })
-            .and_then([this](uint32_t nic_id) mutable {
+            .and_then([this](const uint32_t& nic_id) mutable {
               netstack_->SetInterfaceStatus(nic_id, true);
             })
             .or_else([]() mutable {

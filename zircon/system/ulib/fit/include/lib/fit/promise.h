@@ -63,8 +63,12 @@ namespace fit {
 //                        fit::result<> when prior promise completes
 //    |wrap_with()|: applies a wrapper to the promise
 //    |box()|: wraps the promise's continuation into a |fit::function|
-//    |fit::join_promises()|: await multiple promises, once they all complete
-//                            return a tuple of their results
+//    |fit::join_promises()|: await multiple promises in an argument list,
+//                            once they all complete return a tuple of
+//                            their results
+//    |fit::join_promise_vector()|: await multiple promises in a vector,
+//                                  once they all complete return a vector
+//                                  of their results
 //
 // You can also create your own custom combinators by crafting new
 // types of continuations.
@@ -175,20 +179,20 @@ namespace fit {
 // Do this: (chaining as a single expression performs at most one heap allocation)
 //
 //     fit::promise<> f = fit::make_promise([] { ... });
-//         .then([](fit::result<> result) { ... });
+//         .then([](fit::result<>& result) { ... });
 //         .and_then([] { ... });
 //
 // Or this: (still only performs at most one heap allocation)
 //
 //     auto f = fit::make_promise([] { ... });
-//     auto g = f.then([](fit::result<> result) { ... });
+//     auto g = f.then([](fit::result<>& result) { ... });
 //     auto h = g.and_then([] { ... });
 //     fit::promise<> boxed_h = h;
 //
 // But don't do this: (incurs up to three heap allocations due to eager boxing)
 //
 //     fit::promise<> f = fit::make_promise([] { ... });
-//     fit::promise<> g = f.then([](fit::result<> result) { ... });
+//     fit::promise<> g = f.then([](fit::result<>& result) { ... });
 //     fit::promise<> h = g.and_then([] { ... });
 //
 // SINGLE OWNERSHIP MODEL
@@ -428,10 +432,8 @@ public:
     //   fit::result<new_value_type, new_error_type>(fit::context&)
     //
     // The handler must accept one of the following argument lists:
-    // - (result_type)
     // - (result_type&)
     // - (const result_type&)
-    // - (fit::context&, result_type)
     // - (fit::context&, result_type&)
     // - (fit::context&, const result_type&)
     //
@@ -441,7 +443,7 @@ public:
     // EXAMPLE
     //
     //     auto f = fit::make_promise(...)
-    //         .then([] (fit::result<int, std::string> result)
+    //         .then([] (fit::result<int, std::string>& result)
     //                   -> fit::result<std::string, void> {
     //             if (result.is_ok()) {
     //                 printf("received value: %d\n", result.value());
@@ -491,10 +493,8 @@ public:
     //   fit::result<new_value_type, error_type>(fit::context&)
     //
     // The handler must accept one of the following argument lists:
-    // - (value_type)
     // - (value_type&)
     // - (const value_type&)
-    // - (fit::context&, value_type)
     // - (fit::context&, value_type&)
     // - (fit::context&, const value_type&)
     //
@@ -504,7 +504,7 @@ public:
     // EXAMPLE
     //
     //     auto f = fit::make_promise(...)
-    //         .and_then([] (int value) {
+    //         .and_then([] (const int& value) {
     //             printf("received value: %d\n", value);
     //             if (value % 15 == 0)
     //                 return ::fit::ok("fizzbuzz");
@@ -548,10 +548,8 @@ public:
     //   fit::result<value_type, new_error_type>(fit::context&)
     //
     // The handler must accept one of the following argument lists:
-    // - (error_type)
     // - (error_type&)
     // - (const error_type&)
-    // - (fit::context&, error_type)
     // - (fit::context&, error_type&)
     // - (fit::context&, const error_type&)
     //
@@ -561,7 +559,7 @@ public:
     // EXAMPLE
     //
     //     auto f = fit::make_promise(...)
-    //         .or_else([] (std::string error) {
+    //         .or_else([] (const std::string& error) {
     //             printf("received error: %s\n", error.c_str());
     //             return ::fit::error();
     //         })
@@ -585,10 +583,10 @@ public:
     // passing it the promise's result then delivering the result onwards
     // to the next promise once the handler returns.
     //
-    // The handler receive a copy, const reference, or non-const reference
+    // The handler receives a const reference, or non-const reference
     // depending on the signature of the handler's last argument.
     //
-    // - Copies and const references are especially useful for inspecting a
+    // - Const references are especially useful for inspecting a
     //   result mid-stream without modification, such as printing it for
     //   debugging.
     // - Non-const references are especially useful for synchronously
@@ -603,10 +601,8 @@ public:
     // - void
     //
     // The handler must accept one of the following argument lists:
-    // - (result_type)
     // - (result_type&)
     // - (const result_type&)
-    // - (fit::context&, result_type)
     // - (fit::context&, result_type&)
     // - (fit::context&, const result_type&)
     //
@@ -846,8 +842,8 @@ inline promise_impl<Continuation> make_promise_with_continuation(
 //     }
 //
 //     auto f = wait_for_good_weather(7)
-//         .and_then([] (weather_type weather) { ... })
-//         .or_else([] (std::string error) { ... });
+//         .and_then([] (const weather_type& weather) { ... })
+//         .or_else([] (const std::string& error) { ... });
 //
 template <typename PromiseHandler>
 inline promise_impl<::fit::internal::context_handler_invoker<PromiseHandler>>
@@ -875,7 +871,7 @@ make_promise(PromiseHandler handler) {
 //         auto f = get_random_number();
 //         auto g = get_random_number();
 //         return fit::join_promises(std::move(f), std::move(g))
-//             .and_then([] (std::tuple<fit::result<int>, fit::result<int>> results) {
+//             .and_then([] (std::tuple<fit::result<int>, fit::result<int>>& results) {
 //                 return fit::ok(results.get<0>.value() + results.get<1>.value());
 //             });
 //     }
@@ -902,7 +898,7 @@ join_promises(Promises... promises) {
 //         promises.push_back(get_random_number());
 //         promises.push_back(get_random_number());
 //         return fit::join_promise_vector(std::move(promises))
-//             .and_then([] (std::vector<fit::result<int>> results) {
+//             .and_then([] (std::vector<fit::result<int>>& results) {
 //                 return fit::ok(results[0].value() + results[1].value());
 //             });
 //     }

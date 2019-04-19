@@ -76,7 +76,7 @@ void IntegrationTest::RunPromise(Promise<void> promise) {
 void IntegrationTest::RunPromise(Promise<void> promise, zx::time deadline) {
     async::Executor executor(loop_.dispatcher());
 
-    auto new_promise = promise.then([&](Promise<void>::result_type result) {
+    auto new_promise = promise.then([&](Promise<void>::result_type& result) {
         if (result.is_error()) {
             ADD_FAILURE() << result.error();
         }

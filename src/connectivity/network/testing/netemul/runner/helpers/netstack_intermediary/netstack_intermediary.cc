@@ -60,7 +60,7 @@ void NetstackIntermediary::AddEthernetDevice(
                 return SetupEthClient(std::move(net));
               })
           .and_then([this, callback = std::move(callback)](
-                        zx_status_t status) mutable {
+                        const zx_status_t& status) mutable {
             // The FakeEndpoint's OnData method fires when new data is observed
             // on the netemul virtual network.
             fake_ep_.events().OnData = [this](std::vector<uint8_t> data) {

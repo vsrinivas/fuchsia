@@ -56,10 +56,10 @@ assert(result.is_ok());
 As mentioned above, the template arguments for `fit::promise<>` represent the return and error types:
 
 ```cpp
-fit::promise<ReturnType, ErrorType>
+fit::promise<ValueType, ErrorType>
 ```
 
-The error type can be omitted and it will take the default error type of `void` (e.g. `fit::promise<MyReturnType>` is equivalent to `fit::promise<MyReturnType, void>`).
+The error type can be omitted and it will take the default error type of `void` (e.g. `fit::promise<MyValueType>` is equivalent to `fit::promise<MyValueType, void>`).
 
 During execution, a promise must eventually reach one of the following states:
 
@@ -71,11 +71,11 @@ During execution, a promise must eventually reach one of the following states:
 
 Often complex tasks can be decomposed into smaller more granular tasks. Each of these tasks needs to be asynchronously executed, but if there is some dependency between the tasks, there is a need to preserve them. This can be achieved through different combinators, such as:
 
-* `fit::promise::then()` becomes useful for defining task dependency, as execute task 1 then task 2, regardless of task 1's status.
+* `fit::promise::then()` becomes useful for defining task dependency, as execute task 1 then task 2, regardless of task 1's status.  The prior task's result is received through an argument of type `fit::result<ValueType, ErrorType>&` or `const fit::result<ValueType, ErrorType>&`.
 ```cpp
-auto execute_task_1_then_task_2 = fit::make_promise([] () -> fit::result<ReturnType, ErrorType> {
-     …..;
-}).then([] (fit::result<ReturnType, ErrorType>& result) {
+auto execute_task_1_then_task_2 = fit::make_promise([] () -> fit::result<ValueType, ErrorType> {
+  ...
+}).then([] (fit::result<ValueType, ErrorType>& result) {
     if (result.is_ok()) {
       ...
     } else {  // result.is_error()
@@ -84,21 +84,21 @@ auto execute_task_1_then_task_2 = fit::make_promise([] () -> fit::result<ReturnT
 });
 ```
 
-* `fit::promise::and_then()` becomes useful for defining task dependency only in the case of task 1's success.
+* `fit::promise::and_then()` becomes useful for defining task dependency only in the case of task 1's success.  The prior task's result is received through an argument of type `ValueType&` or `ValueType&`.
 ```cpp
 auto execute_task_1_then_task_2 = fit::make_promise([] () {
   ...
-}).and_then([] (ReturnType& success_value) {
+}).and_then([] (ValueType& success_value) {
   ...
 });
 ```
 
-* `fit::promise::or_else()` becomes useful for defining task dependency only in the case of task 1's failure.
+* `fit::promise::or_else()` becomes useful for defining task dependency only in the case of task 1's failure.  The prior task's result is received through an argument of type `ErrorType&` or `const ErrorType&`.
 ```cpp
 auto execute_task_1_then_task_2 = fit::make_promise([] () {
-  ...;
+  ...
 }).or_else([] (ErrorType& failure_value) {
-  ...;
+  ...
 });
 ```
 
@@ -106,27 +106,40 @@ auto execute_task_1_then_task_2 = fit::make_promise([] () {
 
 Sometimes, multiple promises can be executed with no dependencies between them, but the aggregate result is a dependency of the next asynchronous step. In this case, `fit::join_promises()` and `fit::join_promise_vector()` are used to join on the results of multiple promises.
 
-`fit::join_promises()` is used when each promise is referenced by a variable. `fit::join_promises()` supports heterogeneous promise types.
+`fit::join_promises()` is used when each promise is referenced by a variable. `fit::join_promises()` supports heterogeneous promise types.  The prior tasks' results are received through an argument of type `std::tuple<...>&` or `const std::tuple<...>&`.
 ```cpp
 auto DoImportantThingsInParallel() {
   auto promise1 = FetchStringFromDbAsync("foo");
   auto promise2 = InitializeFrobinatorAsync();
   return fit::join_promises(std::move(promise1), std::move(promise2))
-      .and_then([] (std::tuple<fit::result<std::string>, fit::result<Frobinator>> results) {
+      .and_then([] (std::tuple<fit::result<std::string>, fit::result<Frobinator>>& results) {
         return fit::ok(std::get<0>(results).value() + std::get<1>(results).value().GetFrobinatorSummary());
       });
 }
 ```
 
-`fit::join_promise_vector()` is used when the promises are stored in `std::vector<>`. This has the added constraint that all promises must be homogeneous (be of the same type).
+`fit::join_promise_vector()` is used when the promises are stored in `std::vector<>`. This has the added constraint that all promises must be homogeneous (be of the same type).  The prior tasks' results are received through an argument of type `std::vector<fit::result<ValueType, ErrorType>>&` or `const std::vector<fit::result<ValueType, ErrorType>>&`.
+```cpp
+auto ConcatenateImportantThingsDoneInParallel() {
+  std::vector<fit::promise<std::string>> promises;
+  promises.push_back(FetchStringFromDbAsync("foo"));
+  promises.push_back(FetchStringFromDbAsync("bar"));
+  return fit::join_promise_vector(std::move(promises))
+      .and_then([] (std::vector<fit::result<std::string>>& results) {
+        return fit::ok(results[0].value() + "," + results[1].value());
+      });
+}
+```
 
 ### `return fit::make_promise()`: Chaining or branching by returning new promises
 
 It may become useful to defer the decision of which promises to chain together until runtime. This method is in contrast with chaining that is performed syntactically (through the use of consecutive `.then()`, `.and_then()` and `.or_else()` calls).
 
+Instead of returning a `fit::result<...>` (using `fit::ok` or `fit::error`), the handler function may return a new promise which will be evaluated after the handler function returns.
+
 ```cpp
 fit::make_promise(...)
-  .then([] (fit::result<> result) {
+  .then([] (fit::result<>& result) {
     if (result.is_ok()) {
       return fit::make_promise(...); // Do work in success case.
     } else {
@@ -163,7 +176,7 @@ fit::promise<> MakePromise() {
     state->i++;
   }).and_then([state = state.get()] {
     state->i--;
-  }).inspect([state = std::move(state)] {});
+  }).inspect([state = std::move(state)] (const fit::result<>&) {});
 }
 ```
 
@@ -242,11 +255,42 @@ TODO: fit::bridge is also useful to decouple one chain of continuation into two 
 
 ## Common gotchas
 
-### It is not possible to change ErrorType mid-promise
+### Sequences of `and_then` or `or_else` must have compatible types
 
-A promise's handler and all of its continuations may have different *ResultTypes*, but they must all share the same *ErrorType*.
+When building promises using `and_then`, each successive continuation may have a different *ValueType* but must have the same *ErrorType* because `and_then` forwards prior errors without consuming them.
 
-TODO: write more and how to get around this problem
+When building promises using `or_else`, each successive continuation may have a different *ErrorType* but must have the same *ValueType* because `or_else` forwards prior values without consuming them.
+
+To change types in the middle of the sequence, use `then` to consume the prior result and produce a new result of the desired type.
+
+The following example does not compile because the error type returned by the the last `and_then` handler is incompatible with the prior handler's result.
+```cpp
+auto a = fit::make_promise([] {
+  // returns fit::result<int, void>
+  return fit::ok(4);
+}).and_then([] (const int& value) {
+  // returns fit::result<float, void>
+  return fit::ok(value * 2.2f);
+}).and_then([] (const float& value) {
+  // ERROR!  Prior result had "void" error type but this handler returns const char*.
+  if (value >= 0)
+    return fit::ok(value);
+  return fit::error("bad value");
+}
+
+Use `then` to consume the result and change its type:
+```cpp
+auto a = fit::make_promise([] {
+  // returns fit::result<int, void>
+  return fit::ok(4);
+}).and_then([] (const int& value) {
+  // returns fit::result<float, void>
+  return fit::ok(value * 2.2f);
+}).then([] (const fit::result<float>& result) -> fit::result<float, const char*> {
+  if (result.is_ok() && result.value() >= 0)
+    return fit::ok(value);
+  return fit::error("bad value");
+}
 
 ### Handlers / continuation functions can return fit::result<> or a new fit::promise<>, not both
 
@@ -262,20 +306,20 @@ auto a = fit::make_promise([] {
   return fit::make_promise([] { return fit::ok(); });
 });
 ```
+
 ### Continuation signatures
 
 Have you seen an error message like this?
 
 ```
-../../zircon/system/ulib/fit/include/lib/fit/promise_internal.h:342:5: error: static_assert failed "The provided handler's last argument was expected to be of type V&, const V&, or V (if the value is copy-constructible).  Please refer to the combinator's documentation for
+../../zircon/system/ulib/fit/include/lib/fit/promise_internal.h:342:5: error: static_assert failed "The provided handler's last argument was expected to be of type V& or const V& where V is the prior result's value type and E is the prior result's error type.  Please refer to the combinator's documentation for
  a list of supported handler function signatures."
 ```
 
 or:
 
 ```
-../../zircon/system/ulib/fit/include/lib/fit/promise.h:288:5: error: static_assert failed due to requirement '::fit::internal::is_continuation<fit::internal::and_then_continuation<fit::promise_impl<fit::function_impl<16, false, fit::result<fuchsia::modular::storymodel::St
-oryModel, void> (fit::context &)> >, (lambda at ../../peridot/bin/sessionmgr/story/model/ledger_story_model_storage.cc:222:17)>, void>::value' "Continuation type is invalid.  A continuation is a callable object with this signature: fit::result<V, E>(fit::context&)."
+../../zircon/system/ulib/fit/include/lib/fit/promise.h:288:5: error: static_assert failed due to requirement '::fit::internal::is_continuation<fit::internal::and_then_continuation<fit::promise_impl<fit::function_impl<16, false, fit::result<fuchsia::modular::storymodel::StoryModel, void> (fit::context &)> >, (lambda at ../../peridot/bin/sessionmgr/story/model/ledger_story_model_storage.cc:222:17)>, void>::value' "Continuation type is invalid.  A continuation is a callable object with this signature: fit::result<V, E>(fit::context&)."
 ```
 
 This most likely means that one of the continuation functions has a signature that isn't valid. The valid signatures for different continuation functions are shown below:
@@ -285,10 +329,8 @@ For `.then()`:
 ```cpp
 .then([] (fit::result<V, E>& result) {});
 .then([] (const fit::result<V, E>& result) {});
-.then([] (fit::result<V, E> result) {});  // Only if V and E are copyable
 .then([] (fit::context& c, fit::result<V, E>& result) {});
 .then([] (fit::context& c, const fit::result<V, E>& result) {});
-.then([] (fit::context& c, fit::result<V, E> result) {});  // Only if V and E are copyable
 ```
 
 For `.and_then()`:
@@ -296,10 +338,8 @@ For `.and_then()`:
 ```cpp
 .and_then([] (V& success_value) {});
 .and_then([] (const V& success_value) {});
-.and_then([] (V success_value) {});  // Only if V is copyable
 .and_then([] (fit::context& c, V& success_value) {});
 .and_then([] (fit::context& c, const V& success_value) {});
-.and_then([] (fit::context& c, V& success_value) {});  // Only if V is copyable
 ```
 
 For `.or_else()`:
@@ -307,17 +347,17 @@ For `.or_else()`:
 ```cpp
 .or_else([] (E& error_value) {});
 .or_else([] (const E& error_value) {});
-.or_else([] (E error_value) {});  // Only if E is copyable
 .or_else([] (fit::context& c, E& error_value) {});
 .or_else([] (fit::context& c, const E& error_value) {});
-.or_else([] (fit::context& c, E& error_value) {});  // Only if E is copyable
 ```
 
 For `.inspect()`:
 
 ```cpp
-// TODO
+.inspect([] (fit::result<V, E>& result) {});
+.inspect([] (const fit::result<V, E>& result) {});
 ```
+
 ### Captures and Argument Lifecycle
 
 Promises are composed of handler and continuation functions that are usually
@@ -361,4 +401,3 @@ to use in this case.
 * fit::bridge
 * common gotchas:
 captured state lifecycle
-

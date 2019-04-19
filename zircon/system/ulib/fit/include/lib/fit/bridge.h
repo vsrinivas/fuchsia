@@ -89,7 +89,7 @@ namespace fit {
 //     uint8_t buffer[4096];
 //     void my_program(fit::executor* executor) {
 //         auto promise = promise_read(buffer, sizeof(buffer))
-//             .and_then([] (size_t bytes_read) {
+//             .and_then([] (const size_t& bytes_read) {
 //                 // consume contents of buffer
 //             })
 //             .or_else() {
@@ -122,10 +122,10 @@ namespace fit {
 //     uint8_t buffer[4096];
 //     void my_program(fit::executor* executor) {
 //         auto promise = promise_write(buffer, sizeof(buffer))
-//             .and_then([] (size_t bytes_written) {
+//             .and_then([] (const size_t& bytes_written) {
 //                 // consume contents of buffer
 //             })
-//             .or_else(int error) {
+//             .or_else(const int& error) {
 //                 // handle error case
 //             });
 //         executor->schedule_task(std::move(promise));
@@ -453,7 +453,7 @@ private:
 //         executor->schedule_task(
 //             m->perform_calculation(16)
 //                 .promise_or(fit::error())
-//                 .and_then([] (int result) { printf("done: %d\n", result); })
+//                 .and_then([] (const int& result) { printf("done: %d\n", result); })
 //                 .or_else([] { puts("failed or abandoned"); }));
 //     }
 //

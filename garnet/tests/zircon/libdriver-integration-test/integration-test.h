@@ -105,7 +105,7 @@ public:
     // the returned promise fails.
     auto JoinPromises(Promise<void> promise1, Promise<void> promise2) {
         return join_promises(std::move(promise1), std::move(promise2))
-            .then([](fit::result<std::tuple<Result<void>, Result<void>>> wrapped_results)
+            .then([](fit::result<std::tuple<Result<void>, Result<void>>>& wrapped_results)
                   -> Result<void> {
                 // join_promises() can't fail, so just extract the value
                 auto results = wrapped_results.value();

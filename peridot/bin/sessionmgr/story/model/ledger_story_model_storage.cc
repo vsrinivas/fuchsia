@@ -364,7 +364,7 @@ fit::promise<> LedgerStoryModelStorage::Execute(
            // result in an error.
            return fit::join_promises(std::move(update_device_state_promise),
                                      std::move(update_shared_state_promise))
-               .and_then([](std::tuple<fit::result<>, fit::result<>> results)
+               .and_then([](std::tuple<fit::result<>, fit::result<>>& results)
                              -> fit::result<> {
                  auto [device_result, shared_result] = results;
                  if (device_result.is_error() || shared_result.is_error()) {

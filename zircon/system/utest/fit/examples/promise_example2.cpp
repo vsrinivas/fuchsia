@@ -151,7 +151,7 @@ auto roll_for_damage(std::string player) {
 auto play_round(const std::shared_ptr<game_state>& state) {
     return fit::join_promises(roll_for_damage("Red"), roll_for_damage("Blue"))
         .and_then(
-            [state](std::tuple<fit::result<int>, fit::result<int>> damages) {
+            [state](const std::tuple<fit::result<int>, fit::result<int>>& damages) {
                 // Damage tallies are ready, apply them to the game state.
                 state->blue_hp = std::max(state->blue_hp - std::get<0>(damages).value(), 0);
                 state->red_hp = std::max(state->red_hp - std::get<1>(damages).value(), 0);

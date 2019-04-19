@@ -547,7 +547,7 @@ bool schedule_for_consumer() {
         auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise()
-                .then([&](fit::context& context, fit::result<int> result) {
+                .then([&](fit::context& context, const fit::result<int>& result) {
                     ASSERT_CRITICAL(context.executor() != &executor);
                     ASSERT_CRITICAL(result.value() == 42);
                     run_count[1]++;
@@ -576,7 +576,7 @@ bool schedule_for_consumer() {
         auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise()
-                .then([&](fit::context& context, fit::result<int> result) {
+                .then([&](fit::context& context, const fit::result<int>& result) {
                     // This should not run because the promise was abandoned.
                     run_count[1]++;
                 }));
@@ -605,7 +605,7 @@ bool schedule_for_consumer() {
         auto t = std::thread([&] { executor.run(); });
         fit::run_single_threaded(
             consumer.promise_or(fit::error())
-                .then([&](fit::context& context, fit::result<int> result) {
+                .then([&](fit::context& context, const fit::result<int>& result) {
                     ASSERT_CRITICAL(context.executor() != &executor);
                     ASSERT_CRITICAL(result.is_error());
                     run_count[1]++;
