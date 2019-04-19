@@ -168,6 +168,8 @@ class Sl4f {
         continue;
       } on TimeoutException {
         continue;
+      } on http.ClientException {
+        continue;
       }
       return true;
     }
