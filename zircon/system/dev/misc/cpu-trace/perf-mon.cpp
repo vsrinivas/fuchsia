@@ -166,11 +166,11 @@ zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
         return ZX_ERR_INVALID_ARGS;
     }
     memcpy(&alloc, cmd, sizeof(alloc));
-    if (alloc.buffer_size > kMaxPerTraceSpace) {
-        return ZX_ERR_INVALID_ARGS;
-    }
     uint32_t num_cpus = zx_system_get_num_cpus();
     if (alloc.num_buffers != num_cpus) { // TODO(dje): for now
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (alloc.buffer_size_in_pages > kMaxPerTraceSpaceInPages) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -185,10 +185,11 @@ zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    size_t buffer_size = alloc.buffer_size_in_pages * kPageSize;
     uint32_t i = 0;
     for ( ; i < num_cpus; ++i) {
         zx_status_t status =
-            io_buffer_init(&per_trace->buffers[i], bti_.get(), alloc.buffer_size, IO_BUFFER_RW);
+            io_buffer_init(&per_trace->buffers[i], bti_.get(), buffer_size, IO_BUFFER_RW);
         if (status != ZX_OK) {
             break;
         }
@@ -199,7 +200,7 @@ zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
     }
 
     per_trace->num_buffers = alloc.num_buffers;
-    per_trace->buffer_size = alloc.buffer_size;
+    per_trace->buffer_size_in_pages = alloc.buffer_size_in_pages;
     per_trace_state_ = std::move(per_trace);
     return ZX_OK;
 }
@@ -235,7 +236,7 @@ zx_status_t PerfmonDevice::PmuGetAlloc(void* reply, size_t replymax,
     }
 
     alloc.num_buffers = per_trace->num_buffers;
-    alloc.buffer_size = per_trace->buffer_size;
+    alloc.buffer_size_in_pages = per_trace->buffer_size_in_pages;
     memcpy(reply, &alloc, sizeof(alloc));
     *out_actual = sizeof(alloc);
     return ZX_OK;

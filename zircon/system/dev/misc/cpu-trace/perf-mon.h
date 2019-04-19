@@ -79,12 +79,10 @@ struct PmuPerTraceState {
     // something else later.
     uint32_t num_buffers;
 
+    // The size of each buffer in 4K pages.
     // Each buffer is the same size (at least for now, KISS).
     // There is one buffer per cpu.
-    // This is a uint32 instead of uint64 as there's no point in supporting
-    // that large of a buffer. And if there it should probably be measured in
-    // KB or MB.
-    uint32_t buffer_size;
+    uint32_t buffer_size_in_pages;
 
     std::unique_ptr<io_buffer_t[]> buffers;
 };
@@ -100,8 +98,12 @@ using DeviceType = ddk::Device<PerfmonDevice,
 
 class PerfmonDevice : public DeviceType {
   public:
-    // maximum space, in bytes, for trace buffers (per cpu)
-    static constexpr uint32_t kMaxPerTraceSpace = 256 * 1024 * 1024;
+    // The page size we use.
+    static constexpr uint32_t kLog2PageSize = 12;
+    static constexpr uint32_t kPageSize = 1 << kLog2PageSize;
+    // maximum space, in pages, for trace buffers (per cpu)
+    static constexpr uint32_t kMaxPerTraceSpaceInPages =
+        (256 * 1024 * 1024) / kPageSize;
 
     // Initialize |pmu_properties_|.
     static zx_status_t GetHwProperties();

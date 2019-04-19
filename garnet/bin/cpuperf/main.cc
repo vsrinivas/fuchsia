@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <limits>
 
 #include <src/lib/fxl/command_line.h>
 #include "src/lib/files/file.h"
@@ -206,6 +207,18 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
   return true;
 }
 
+static bool GetBufferSizeInPages(uint32_t size_in_mb,
+                                 uint32_t* out_num_pages) {
+  const uint64_t kPagesPerMb = 1024 * 1024 / perfmon::Controller::kPageSize;
+  const uint64_t kMaxSizeInMb =
+      std::numeric_limits<uint32_t>::max() / kPagesPerMb;
+  if (size_in_mb > kMaxSizeInMb) {
+    return false;
+  }
+  *out_num_pages = size_in_mb * kPagesPerMb;
+  return true;
+}
+
 int main(int argc, char* argv[]) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl))
@@ -249,8 +262,16 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  // The provided buffer size is in MB, the controller takes the buffer size
+  // in pages.
+  uint32_t buffer_size_in_pages;
+  if (!GetBufferSizeInPages(spec.buffer_size_in_mb, &buffer_size_in_pages)) {
+    FXL_LOG(ERROR) << "Buffer size too large";
+    exit(EXIT_FAILURE);
+  }
+
   std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(spec.buffer_size_in_mb,
+  if (!perfmon::Controller::Create(buffer_size_in_pages,
                                    spec.perfmon_config,
                                    &controller)) {
     return EXIT_FAILURE;

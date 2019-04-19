@@ -23,6 +23,8 @@ static_library("perfmon") {
     "writer.h",
   ]
 
+  deps = []
+
   public_deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/zircon-internal",
@@ -45,6 +47,8 @@ static_library("perfmon") {
     if (current_cpu == "x64") {
       sources += [ "intel-events.cc" ]
     }
+
+    deps += [ "//zircon/public/lib/fbl" ]
 
     public_deps += [ "//zircon/public/lib/zx" ]
   } else {

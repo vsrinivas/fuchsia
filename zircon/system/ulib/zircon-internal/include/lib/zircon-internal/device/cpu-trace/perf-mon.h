@@ -354,7 +354,7 @@ typedef struct {
     uint32_t num_buffers;
 
     // each cpu gets same buffer size
-    uint32_t buffer_size;
+    uint32_t buffer_size_in_pages;
 } ioctl_perfmon_alloc_t;
 
 // Create a trace, allocating the needed trace buffers and other resources.

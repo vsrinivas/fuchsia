@@ -25,10 +25,12 @@ class Controller {
     kTally,
   };
 
-  // The buffer size used by each cpu to record its data.
-  // The protocol restricts buffer sizes in bytes to a uint32.
-  // 2 gigabytes per cpu is plenty for now.
-  static constexpr uint32_t kMaxBufferSizeInMb = 2 * 1024;
+  // The protcol specifies buffer sizes in 4K pages.
+  static constexpr uint32_t kLog2PageSize = 12;
+  static constexpr uint32_t kPageSize = 1 << kLog2PageSize;
+  // The protocol restricts buffer sizes to 256MB.
+  static constexpr uint32_t kMaxBufferSizeInPages =
+      (256 * 1024 * 1024) / kPageSize;
 
   // Return true if perfmon is supported on this device.
   static bool IsSupported();
@@ -36,7 +38,7 @@ class Controller {
   // Fetch the properties of this device.
   static bool GetProperties(Properties* props);
 
-  static bool Create(uint32_t buffer_size_in_mb,
+  static bool Create(uint32_t buffer_size_in_pages,
                      const perfmon_config_t& config,
                      std::unique_ptr<Controller>* out_controller);
 
@@ -55,7 +57,7 @@ class Controller {
   std::unique_ptr<DeviceReader> GetReader();
 
  private:
-  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,
+  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages,
                     const perfmon_config_t& config);
   Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
              uint32_t buffer_size, const perfmon_config_t& config);
@@ -67,8 +69,8 @@ class Controller {
   const Mode mode_;
   // The number of traces we will collect (== #cpus for now).
   uint32_t num_traces_;
-  // This is the actual buffer size we use, in bytes.
-  const uint32_t buffer_size_;
+  // This is the actual buffer size we use, in pages.
+  const uint32_t buffer_size_in_pages_;
   const perfmon_config_t config_;
   bool started_ = false;
 };

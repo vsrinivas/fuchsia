@@ -31,10 +31,10 @@ class App {
 
   void PrintHelp();
 
-  // This is per-cpu, in megabytes.
+  // This is per-cpu.
   static constexpr uint32_t kDefaultBufferSizeInMb = 16;
-  // This is the max value cpu-trace will accept
-  static constexpr uint32_t kMaxBufferSizeInMb = 256;
+  static constexpr uint32_t kDefaultBufferSizeInPages =
+      kDefaultBufferSizeInMb * 1024 * 1024 / perfmon::Controller::kPageSize;
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
   trace::TraceObserver trace_observer_;
@@ -48,7 +48,7 @@ class App {
   trace_ticks_t start_time_ = 0;
   trace_ticks_t stop_time_ = 0;
 
-  uint32_t buffer_size_in_mb_ = kDefaultBufferSizeInMb;
+  uint32_t buffer_size_in_pages_ = kDefaultBufferSizeInPages;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

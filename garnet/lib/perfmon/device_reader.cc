@@ -10,14 +10,18 @@
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
 
-bool DeviceReader::Create(int fd, uint32_t buffer_size,
+bool DeviceReader::Create(int fd, uint32_t buffer_size_in_pages,
                           std::unique_ptr<DeviceReader>* out_reader) {
   zx::vmar vmar;
   uintptr_t addr;
+  // The controller records the buffer size in pages, but internally the
+  // size in bytes is what we use.
+  size_t buffer_size = buffer_size_in_pages * Controller::kPageSize;
   auto status = zx::vmar::root_self()->allocate(
       0u, buffer_size, ZX_VM_CAN_MAP_READ, &vmar, &addr);
   if (status != ZX_OK) {

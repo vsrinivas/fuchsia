@@ -19,7 +19,7 @@ namespace perfmon {
 class DeviceReader final : public Reader {
  public:
   // |fd| is borrowed.
-  static bool Create(int fd, uint32_t buffer_size,
+  static bool Create(int fd, uint32_t buffer_size_in_pages,
                      std::unique_ptr<DeviceReader>* out_reader);
 
   ~DeviceReader();
@@ -30,7 +30,7 @@ class DeviceReader final : public Reader {
 
  private:
   // |fd| is borrowed.
-  DeviceReader(int fd, uint32_t buffer_size, zx::vmar vmar);
+  DeviceReader(int fd, uint32_t buffer_size_in_pages, zx::vmar vmar);
 
   bool MapBuffer(const std::string& name, uint32_t trace_num) override;
   bool UnmapBuffer() override;

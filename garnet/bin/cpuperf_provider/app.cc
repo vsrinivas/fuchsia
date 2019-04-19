@@ -42,6 +42,17 @@ bool ParseNumber(const char* name, const fxl::StringView& arg,
   return true;
 }
 
+bool GetBufferSizeInPages(uint32_t size_in_mb, uint32_t* out_num_pages) {
+  const uint64_t kPagesPerMb = 1024 * 1024 / perfmon::Controller::kPageSize;
+  const uint64_t kMaxSizeInMb =
+      std::numeric_limits<uint32_t>::max() / kPagesPerMb;
+  if (size_in_mb > kMaxSizeInMb) {
+    return false;
+  }
+  *out_num_pages = size_in_mb * kPagesPerMb;
+  return true;
+}
+
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
@@ -60,11 +71,14 @@ App::App(const fxl::CommandLine& command_line)
       FXL_LOG(ERROR) << "Buffer size cannot be zero";
       exit(EXIT_FAILURE);
     }
-    if (buffer_size > kMaxBufferSizeInMb) {
-      FXL_LOG(ERROR) << "Buffer size too large, max " << kMaxBufferSizeInMb;
+    // The provided buffer size is in MB, the controller takes the buffer size
+    // in pages.
+    uint32_t buffer_size_in_pages;
+    if (!GetBufferSizeInPages(buffer_size, &buffer_size_in_pages)) {
+      FXL_LOG(ERROR) << "Buffer size too large";
       exit(EXIT_FAILURE);
     }
-    buffer_size_in_mb_ = static_cast<uint32_t>(buffer_size);
+    buffer_size_in_pages_ = buffer_size_in_pages;
   }
 
   // The supported models and their names are determined by lib/perfmon.
@@ -113,7 +127,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
   }
 
   std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(buffer_size_in_mb_, device_config,
+  if (!perfmon::Controller::Create(buffer_size_in_pages_, device_config,
                                    &controller)) {
     FXL_LOG(ERROR) << "Perfmon controller failed to initialize";
     return;
