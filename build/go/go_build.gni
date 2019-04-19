@@ -7,7 +7,6 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
-import("//build/testing/test_spec.gni")
 
 declare_args() {
   #   gocache_dir
@@ -45,16 +44,6 @@ declare_args() {
 #   test (optional, default: false)
 #     Whether this target defines a test.
 #
-#   with_test_spec (optional, default: true)
-#     Whether or not to generate a test_spec for a test.
-#
-#   test_environments (optional)
-#     If defining a test, what environments this should target. Only used here
-#     for linux and mac tests, with a default value of a general linux/mac
-#     environment (as a function of $current_os).
-#     See the environments parameter in //build/testing/test_spec.gni for more
-#     details.
-#
 template("go_build") {
   assert(defined(invoker.gopackage),
          "gopackage must be defined for $target_name")
@@ -66,35 +55,6 @@ template("go_build") {
     output_name = invoker.output_name
   }
   output_path = "${root_out_dir}/${output_name}"
-
-  # Test specs are used for linux and mac tests to record metadata for testing
-  # instruction; this happens within package.gni for fuchsia tests.
-  test_spec_target_name = "${target_name}_spec"
-  if (defined(invoker.test) && invoker.test &&
-      defined(invoker.with_test_spec) && invoker.with_test_spec &&
-      (is_linux || is_mac)) {
-    test_spec(test_spec_target_name) {
-      name = invoker.target_name
-      location = output_path
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.non_go_deps)) {
-        deps += invoker.non_go_deps
-      }
-      if (defined(invoker.test_environments)) {
-        environments = invoker.test_environments
-      }
-    }
-  } else {
-    not_needed([ "test_spec_target_name" ])
-    if (defined(invoker.test_environments)) {
-      assert(defined(invoker.test) && invoker.test,
-             "test_environments may only be set for a test")
-      not_needed(invoker, [ "test_environments" ])
-    }
-  }
 
   action(main_target_name) {
     deps = []
@@ -214,11 +174,6 @@ template("go_build") {
 
     if (defined(invoker.test) && invoker.test) {
       args += [ "--is-test=true" ]
-
-      if (defined(invoker.with_test_spec) && invoker.with_test_spec &&
-          (is_linux || is_mac)) {
-        deps += [ ":$test_spec_target_name" ]
-      }
     }
 
     if (defined(invoker.deps)) {

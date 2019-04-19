@@ -5,15 +5,69 @@
 # A template for an action that creates a Fuchsia Go test binary.
 
 import("//build/go/go_build.gni")
+import("//build/testing/test_spec.gni")
 
+# Parameters: same as go_build, along with
+#
+#   disabled
+#     Optional: whether the test is disabled.
+#     Type: bool
+#     Default: false
+#
+#   environments
+#     Optional: what environments this test should target. Only used here
+#     for linux and mac tests, with a default value of a general linux/mac
+#     environment (as a function of $current_os).
+#     See //build/testing/test_spec.gni for more details.
+#
 template("go_test") {
-  is_disabled = defined(invoker.disabled) && invoker.disabled
-  go_build(target_name) {
-    test = true
-    with_test_spec = !is_disabled
-    forward_variables_from(invoker, "*", [ "environments" ])
-    if (defined(invoker.environments)) {
-      test_environments = invoker.environments
+  _main_target_name = target_name
+  _test_spec_target_name = "${target_name}_spec"
+
+  _output_name = target_name
+  if (defined(invoker.output_name)) {
+    _output_name = invoker.output_name
+  }
+  _output_path = "${root_out_dir}/${_output_name}"
+
+  _is_disabled = defined(invoker.disabled) && invoker.disabled
+  # We only include test metadata for non-disabled, linux/mac tests; metadata
+  # for fuchsia tests is aggregated in the package template.
+  _include_test_metadata = !_is_disabled && (is_linux || is_mac)
+  if (_include_test_metadata) {
+    test_spec(_test_spec_target_name) {
+      name = _main_target_name
+      location = _output_path
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (defined(invoker.non_go_deps)) {
+        deps += invoker.non_go_deps
+      }
+      forward_variables_from(invoker, [ "environments" ])
     }
   }
+
+  go_build(_main_target_name) {
+    test = true
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "disabled",
+                             "environments",
+                           ])
+
+    if (_include_test_metadata) {
+      if (!defined(invoker.non_go_deps)) {
+        non_go_deps = []
+      }
+      non_go_deps += [ ":$_test_spec_target_name" ]
+    } else {
+      not_needed([ "_test_spec_target_name" ])
+    }
+  }
+
+  _outputs = get_target_outputs(":$_main_target_name")
+  assert(_outputs[0] == _output_path)
 }
