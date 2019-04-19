@@ -3,10 +3,7 @@
 ### Dart SDK
 
 A prebuilt Dart SDK is available for IDE consumption at:
-`//third_party/dart/tools/sdks/<linux|mac>/dart-sdk`. Note that this SDK is
-sometimes a few days behind the version of `//third_party/dart`. If you require
-an up-to-date SDK, one gets built with Fuchsia at:
-`//out/<build-type>/dart_host/dart-sdk`.
+`third_party/dart/tools/sdks/dart-sdk/`.
 
 ## Visual Studio Code
 
@@ -23,7 +20,7 @@ an up-to-date SDK, one gets built with Fuchsia at:
 1.  Install the following extensions:
 
     *   [Dart Code](https://marketplace.visualstudio.com/items?itemName=Dart-Code.dart-code):
-        Support for programming in Dart
+        Support for programming in Dart. It should automatically find the dart-sdk in the Fuchsia tree.
     *   [FIDL language support](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl):
         Syntax highlighting support for Fuchsia's FIDL files
     *   [GN](https://marketplace.visualstudio.com/items?itemName=npclaudiu.vscode-gn):
@@ -34,8 +31,8 @@ an up-to-date SDK, one gets built with Fuchsia at:
         *   [Git History](https://marketplace.visualstudio.com/items?itemName=donjayamanne.githistory):
             View git log, file history, etc.
 
-1.  Here are some helpful user settings for Dart, you can open your user
-    settings by typing `Ctrl+,`:
+1.  Here are some helpful user settings for Dart. Open your user
+    settings (Ctrl+,), click the '{}' icon in the top left corner and add:
 
 ```json
 {
@@ -67,12 +64,10 @@ Dart analysis is not working properly in your IDE.
 
 When this happens, try the following:
 
-### Rebuild
+### Open only the project directory you are working on
 
-Delete `//out` and rebuild. Specifically, a release build overrides a debug
-build. This means that if you have a broken release build, any release build
-overrides a debug build. With a broken release build, no amount of correct
-rebuilding on debug will solve the issue until you delete `//out/release-x64`.
+E.g. only open `/topaz/shell/ermine` instead of `/topaz`. The analyzer can have
+issues with really large source trees.
 
 ### Remove pub output
 
@@ -84,3 +79,48 @@ rebuilding on debug will solve the issue until you delete `//out/release-x64`.
 1.  Reload VSCode to restart the Dart analyzer.
     1.  Press Ctrl+Shift+P to open the VSCode Command Palette
     1.  Select "Reload Window"
+
+### Rebuild
+
+Delete `/out` from your Fuchsia directory and rebuild. Dart FIDL bindings are
+build-generated and may be absent.
+
+### Ensure you have a complete build
+
+Any Dart code from packages not included in your build will not be available to
+the analyzer, so ensure your build configuration (`fx set`) includes all
+the packages you need (the `--with` flag can be helpful.)
+
+### Reload the Dart Analyzer
+
+Manually reloading the analyzer is often needed after modifying FIDLs.
+
+#### VS Code
+
+1.  Open the Command Palette (Ctrl+Shift+P)
+1.  Enter and select "Reload Window"
+
+This also restarts the Dart analyzer.
+
+#### IntelliJ
+
+1.  Open Find Action (Ctrl+Shift+A)
+1.  Enter and select "Restart Dart Analysis Server"
+
+### Check that the correct language has been detected for the current file type
+1.  On VS Code use Ctrl+Shift+P then type "Change Language Mode" and ensure it is set to "Auto Detect".
+1.  If this doesn't fix the issue you can try to manually fix via Ctrl+Shift+P and "Configure file association for .dart"
+
+### Manually specifying the Dart sdk path
+
+#### VS Code
+Add the line
+```json
+  "dart.sdkPath": "[YOUR FUCHSIA DIR LOCATION]/third_party/dart/tools/sdks/dart-sdk",
+```
+and (Ctrl+Shift+P) "Reload Window".
+
+#### IntelliJ
+
+1.  Open Settings
+1.  Under *Languages & Frameworks* > *Dart*, enter "[YOUR FUCHSIA DIR LOCATION]/third_party/dart/tools/sdks/dart-sdk"
