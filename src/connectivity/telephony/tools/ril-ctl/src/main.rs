@@ -127,6 +127,18 @@ async fn get_power<'a>(
     }
 }
 
+async fn get_signal<'a>(
+    _args: &'a [&'a str],
+    ril_modem: &'a RadioInterfaceLayerProxy,
+) -> Result<String, Error> {
+    match await!(ril_modem.get_signal_strength())? {
+        Ok(strength) => {
+            Ok(format!("{} dBm", strength.dbm))
+        },
+        Err(_e) => Err(format_err!("error")),
+    }
+}
+
 pub struct Connections {
     pub net_conn: Option<NetworkConnectionProxy>,
     pub file_ref: Option<File>,
@@ -183,6 +195,7 @@ async fn handle_cmd<'a>(
                 }
             }
             Ok(Cmd::PowerStatus) => await!(get_power(args, &ril_modem)),
+            Ok(Cmd::SignalStrength) => await!(get_signal(args, &ril_modem)),
             Ok(Cmd::Imei) => await!(get_imei(args, &ril_modem)),
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),

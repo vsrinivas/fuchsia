@@ -1,0 +1,34 @@
+{
+  "services": [
+  {
+    "name": "NAS",
+    "type": "0x03",
+    "message_structure": "standard",
+    "result_structure": "standard",
+    "messages": [
+      {
+        "name": "GetSignalStrength",
+        "type": "0x0020",
+        "version": "1.0",
+        "request": [ ],
+        "response": [
+          {
+            "param": "signal_strength",
+            "id": "0x01",
+            "size": 2,
+            "subparams": [
+              {
+                "param": "signal_strength",
+                "size": 1
+              },
+              {
+                "param": "radio_interface",
+                "size": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }]
+}

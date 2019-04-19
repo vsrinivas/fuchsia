@@ -85,6 +85,7 @@ macro_rules! gen_commands {
 gen_commands! {
     Cmd {
         Imei = ("imei", [], "IMEI (International Mobile Equipment Identity) for the radio"),
+        SignalStrength = ("signal-strength", [], "Signal Strength in dBm (total recieved wideband power)"),
         PowerStatus = ("power-status", [], "Radio Power status"),
         Connect = ("connect", [], "Activate network connection"),
         Help = ("help", [], "This message"),

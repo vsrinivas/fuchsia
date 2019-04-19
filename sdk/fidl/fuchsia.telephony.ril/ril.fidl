@@ -64,4 +64,7 @@ protocol RadioInterfaceLayer {
 
     /// Network settings known to the modem.
     GetNetworkSettings() -> (NetworkSettings settings) error RilError;
+
+    /// Signal Strength (dBm) for LTE networks (total received wideband power).
+    GetSignalStrength() -> (float32 dbm) error RilError;
 };

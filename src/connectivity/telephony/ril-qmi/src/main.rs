@@ -161,6 +161,18 @@ impl FrilService {
                     return responder.send(&mut Ok(RadioInterfaceLayerConnectTransportResponse {}));
                 }
             }
+            RadioInterfaceLayerRequest::GetSignalStrength { responder } => {
+                let resp: NAS::GetSignalStrengthResp =
+                    qmi_query!(responder, client, NAS::GetSignalStrengthReq::new());
+                if resp.radio_interface != 0x08 {
+                    responder.send(&mut Err(RilError::UnsupportedNetworkType))?
+                } else {
+                    responder.send(&mut Ok(RadioInterfaceLayerGetSignalStrengthResponse {
+                        // TODO(bwb): This is wrong. Temporary fix for API review
+                        dbm: resp.signal_strength as f32,
+                    }))?
+                }
+            }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {
                 let packet: WDS::GetCurrentSettingsResp =
                     qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
