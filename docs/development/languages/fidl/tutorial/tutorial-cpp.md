@@ -36,7 +36,7 @@ You can build the code via the following:
 
 ```sh
 fx set-petal garnet
-fx full-build
+fx build
 ```
 
 ### Generated files

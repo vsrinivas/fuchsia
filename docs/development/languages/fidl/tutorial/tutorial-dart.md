@@ -42,7 +42,7 @@ You can build the code via the following:
 fx set-petal topaz
 # Also include garnet examples when building Topaz
 fx set x64
-fx full-build
+fx build
 ```
 
 ## `Echo` server

@@ -261,7 +261,7 @@ instrument them for fuzzing with an appropriate sanitizer.  The easiest way to a
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
 ```
 $ fx set core.x64 --fuzz-with asan --with //bundles:tests
-$ fx full-build
+$ fx build
 ```
 
 This will build all the fuzz targets in fuzz packages that support [ASan] and are referenced by the
@@ -329,7 +329,7 @@ include the correct dependencies for you Zircon fuzzer in a Fuchsia build:
 
 ```sh
 $ fx set core.x64 --fuzz-with asan --with //garnet/packages/tests:zircon
-$ fx full-build
+$ fx build
 $ fx fuzz zbi
 ```
 

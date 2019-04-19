@@ -91,7 +91,7 @@ can be used with fuchsia - *CMake* or *Compilation Database*. They are
 described below.
 
 Note these approaches are only intended to help the IDE find and parse
-the source files. Building should still be done with `fx full-build`.
+the source files. Building should still be done with `fx build`.
 
 ## CMake
 

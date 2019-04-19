@@ -12,7 +12,7 @@ The initial build and deploy workflow using `fx` is as follows:
     Configures the build to build the "core" product on a generic x64 board.
     See `fx list-products` and `fx list-boards` for lists of available products
     and boards, respectively.
-1.  `fx full-build`
+1.  `fx build`
     Builds Zircon, then the rest of Fuchsia.
 1.  `fx mkzedboot <usb_drive_device_path>`
     Builds the Zedboot media and installs to the USB drive target. See below
@@ -51,7 +51,7 @@ The workflow for re-building and re-deploying using `fx` is slightly different:
     Helps ensure that HEAD is in a good state to pull.
 1.  `jiri update`
     Fetches the latest code.
-1.  `fx full-build`
+1.  `fx build`
     Builds Zircon, then the rest of Fuchsia.
 1.  `fx setup-macos` Sets up firewall rules (Mac users ONLY)
 1.  `fx serve`
@@ -67,6 +67,6 @@ where the system handles the OTA less than gracefully.
 
 ## Troubleshooting
 
-1.  Having '.' in your PATH may cause `fx full-build` to fail.  The script will
+1.  Having '.' in your PATH may cause `fx build` to fail.  The script will
     change the working directory such that it may create conflicts between the
     commands it uses (e.g. `touch`) and the binaries in the working directory.

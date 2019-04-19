@@ -55,7 +55,7 @@ available as `scripts/fx`.
 
 ```
 fx set core.x64 --with //bundles:kitchen_sink
-fx full-build
+fx build
 ```
 
 The first command selects the build configuration you wish to build and
@@ -66,7 +66,7 @@ available for download.
 
 The second command actually executes the build, transforming the source code in
 build products. If you modify the source tree, you can do an incremental build
-by re-running the `fx full-build` command alone. `fx -i full-build` starts a watcher
+by re-running the `fx build` command alone. `fx -i build` starts a watcher
 and automatically builds whenever a file is changed.
 
 Alternatively, you can use the [underlying build system directly](development/build/README.md).

@@ -70,7 +70,7 @@ $ scripts/build-zircon.sh
 ```
 
 This is what gets run under the hood by `fx build-zircon`, which is run by `fx
-full-build`.
+build`.
 
 For a list of all options, run `build-zircon.sh -h`. See Zircon's
 [Getting started][zircon-getting-started] and

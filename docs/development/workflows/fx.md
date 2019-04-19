@@ -53,7 +53,7 @@ build Fuchsia, and then get it onto a device. `fx` has some commands to help
 with this:
 
 * `fx set` [configure a build](#configure-a-build)
-* `fx full-build` [execute a build](#execute-a-build)
+* `fx build` [execute a build](#execute-a-build)
 * `fx flash ; fx mkzedboot` [flash a target; or prepare a zedboot USB key](#flash-a-board)
 * `fx serve` [serve a build](#serve-a-build)
 * `fx update` [update a target](#update-a-target-device)
@@ -177,19 +177,19 @@ important to be familiar with:
 
 ## Execute a build
 
-For most use cases, only `fx full-build` is needed. The build is optimized
+For most use cases, only `fx build` is needed. The build is optimized
 for fast incremental rebuilds, as such, repeating this command does the
 minimal work required after code has been changed, and no work if the source
 files are unchanged.
 
-Additionally to `fx full-build`, a few other build related commands provide
+Additionally to `fx build`, a few other build related commands provide
 more granular control:
 
 * `fx build-zircon` builds only the Zircon portion of the build.
 * `fx build` builds only the Fuchsia portion (all above Zircon, but not Zircon
   itself) of the build.
 * `fx clean` clear out all build artifacts.
-* `fx clean-build` perform a clean, then a full-build.
+* `fx clean-build` perform a clean, then a build.
 * `fx gen` repeat the `gn gen` process that `fx set` performed. Users making
   fine grained build argument changes (e.g. by editing `args.gn` directly) can
   run `fx gen` to reconfigure their build.
@@ -453,11 +453,11 @@ setup as follows:
 
 ```shell
 $ fx --dir out/workstation set workstation.x64
-$ fx full-build
+$ fx build
 $ fx set-device <workstation-node-name>
 
 $ fx --dir out/core set core.arm64
-$ fx full-build
+$ fx build
 $ fx set-device <core-node-name>
 
 # Start a server for the workstation:
