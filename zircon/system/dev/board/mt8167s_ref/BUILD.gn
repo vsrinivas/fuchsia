@@ -24,6 +24,7 @@ driver("mt8167s_ref") {
     "mt8167.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-clockimpl",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
     "$zx/system/banjo/ddk-protocol-platform-bus",

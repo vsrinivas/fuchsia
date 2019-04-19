@@ -8,7 +8,7 @@ driver("mt8167-tdm-input") {
     "tlv320adc.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-platform-device",

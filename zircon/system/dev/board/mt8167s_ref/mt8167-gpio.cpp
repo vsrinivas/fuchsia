@@ -8,6 +8,7 @@
 #include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
@@ -46,6 +47,11 @@ zx_status_t Mt8167::GpioInit() {
         // For touch screen driver
         { MT8167_GPIO_TOUCH_INT },
         { MT8167_GPIO_TOUCH_RST },
+        // For mt8167s audio out
+        { MT8167_GPIO107_MSDC1_DAT1 },
+        { MT8167_GPIO108_MSDC1_DAT2 },
+        // For audio in
+        { MT8167_GPIO24_EINT24 },
     };
 
     const pbus_metadata_t cleo_gpio_metadata[] = {

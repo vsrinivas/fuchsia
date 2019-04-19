@@ -8,7 +8,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <ddktl/pdev.h>
+#include <ddktl/i2c-channel.h>
 
 #include "codec.h"
 
@@ -17,7 +17,7 @@ namespace mt8167 {
 
 class Tas5782 final : public Codec {
 public:
-    static std::unique_ptr<Tas5782> Create(ddk::PDev pdev, uint32_t i2c_index);
+    static std::unique_ptr<Tas5782> Create(ddk::I2cChannel i2c, uint32_t i2c_index);
 
     explicit Tas5782(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}

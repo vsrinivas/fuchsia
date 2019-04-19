@@ -34,13 +34,7 @@ constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
 namespace audio {
 namespace mt8167 {
 
-std::unique_ptr<Tas5805> Tas5805::Create(ddk::PDev pdev, uint32_t i2c_index) {
-    auto i2c = pdev.GetI2c(i2c_index);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
-        return nullptr;
-    }
-
+std::unique_ptr<Tas5805> Tas5805::Create(ddk::I2cChannel i2c, uint32_t i2c_index) {
     fbl::AllocChecker ac;
     auto ptr = std::unique_ptr<Tas5805>(new (&ac) Tas5805(i2c));
     if (!ac.check()) {

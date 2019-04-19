@@ -11,10 +11,18 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
 namespace audio {
 namespace mt8167 {
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_I2C,
+    COMPONENT_GPIO,
+    COMPONENT_COUNT,
+};
 
 // Expects 2 mics.
 constexpr size_t kNumberOfChannels = 2;
@@ -25,7 +33,7 @@ constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
     kMaxSampleRate * 2 * kNumberOfChannels, PAGE_SIZE);
 
 Mt8167AudioStreamIn::Mt8167AudioStreamIn(zx_device_t* parent)
-    : SimpleAudioStream(parent, true /* is input */), pdev_(parent) {
+    : SimpleAudioStream(parent, true /* is input */) {
 }
 
 zx_status_t Mt8167AudioStreamIn::Init() {
@@ -60,31 +68,40 @@ zx_status_t Mt8167AudioStreamIn::Init() {
 }
 
 zx_status_t Mt8167AudioStreamIn::InitPdev() {
+    composite_protocol_t composite;
+
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
+        return status;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, countof(components), &actual);
+    if (actual != countof(components)) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    pdev_ = components[COMPONENT_PDEV];
     if (!pdev_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    for (unsigned i = 0; i < kClockCount; i++) {
-        clks_[i] = pdev_.GetClk(i);
-        if (!clks_[i].is_valid()) {
-            zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
-            return ZX_ERR_NO_RESOURCES;
-        }
-    }
-
-    codec_reset_ = pdev_.GetGpio(0);
+    codec_reset_ = components[COMPONENT_GPIO];
     if (!codec_reset_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_ = Tlv320adc::Create(pdev_, 0); // ADC for TDM in.
+    codec_ = Tlv320adc::Create(components[COMPONENT_I2C], 0); // ADC for TDM in.
     if (!codec_) {
         zxlogf(ERROR, "%s could not get Tlv320adc\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    zx_status_t status = pdev_.GetBti(0, &bti_);
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti %d\n", __func__, status);
         return status;
@@ -125,10 +142,6 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
     mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                          pinned_ring_buffer_.region(0).size);
 
-    // Disables aud1 clk gating: 0 is the index, board_mt8167::kClkRgAud1.
-    clks_[kClkRgAud1].Enable();
-    // Disables aud2 clk gating: 1 is the index, board_mt8167::kClkRgAud2.
-    clks_[kClkRgAud2].Enable();
     return ZX_OK;
 }
 
@@ -280,7 +293,8 @@ static zx_driver_ops_t mt_audio_in_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167_audio_in, mt_audio_in_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(mt8167_audio_in, mt_audio_in_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_AUDIO_IN),

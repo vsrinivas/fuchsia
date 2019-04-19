@@ -104,6 +104,30 @@ zx_status_t Mt8167::I2cInit() {
             .pid = 0,
             .did = 0,
         },
+        // For mt8167s_ref audio out
+        {
+            .bus_id = 2,
+            .address = 0x48,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
+        // For cleo audio out
+        {
+            .bus_id = 2,
+            .address = 0x2C,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
+        // For audio in
+        {
+            .bus_id = 1,
+            .address = 0x1B,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
     };
 
     const pbus_metadata_t cleo_i2c_metadata[] = {

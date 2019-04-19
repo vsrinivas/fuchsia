@@ -17,13 +17,7 @@ namespace mt8167 {
 constexpr float Tlv320adc::kMaxGain;
 constexpr float Tlv320adc::kMinGain;
 
-std::unique_ptr<Tlv320adc> Tlv320adc::Create(ddk::PDev pdev, uint32_t i2c_index) {
-    auto i2c = pdev.GetI2c(i2c_index);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
-        return nullptr;
-    }
-
+std::unique_ptr<Tlv320adc> Tlv320adc::Create(const ddk::I2cChannel& i2c, uint32_t i2c_index) {
     fbl::AllocChecker ac;
     auto ptr = std::unique_ptr<Tlv320adc>(new (&ac) Tlv320adc(i2c));
     if (!ac.check()) {

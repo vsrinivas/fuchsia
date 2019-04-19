@@ -8,14 +8,14 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <ddktl/pdev.h>
+#include <ddktl/i2c-channel.h>
 
 namespace audio {
 namespace mt8167 {
 
 class Tlv320adc {
 public:
-    static std::unique_ptr<Tlv320adc> Create(ddk::PDev pdev, uint32_t i2c_index);
+    static std::unique_ptr<Tlv320adc> Create(const ddk::I2cChannel& i2c, uint32_t i2c_index);
 
     explicit Tlv320adc(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}
