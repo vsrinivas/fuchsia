@@ -10,11 +10,20 @@ enum RadioPowerState : uint8 {
     ON = 0x01;
 };
 
+/// Errors that the Radio Interface Layer presents to modem
+/// management interfaces
 enum RilError : uint32 {
     /// The radio on this interface is unavailable.
     NO_RADIO = 0x01;
     /// The request required a SIM card and none are unavailable.
     NO_SIM = 0x02;
+    /// The baseband reported information for a type of cellular network
+    /// that is currently unsupported.
+    UNSUPPORTED_NETWORK_TYPE = 0x03;
+    /// An unknown error.
+    UNKNOWN_ERROR = 0x04;
+    /// An unknown transport error.
+    TRANSPORT_ERROR = 0x05;
 };
 
 protocol NetworkConnection {

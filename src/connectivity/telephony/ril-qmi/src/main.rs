@@ -97,6 +97,37 @@ async fn setup_client<'a>(modem: QmiModemPtr, client_ptr: ClientPtr) {
     };
 }
 
+/// Craft a QMI Query given a handle and a client connection. Handles common error paths.
+/// For more specialized interactions with the modem, prefer to call `client.send_msg()` directly.
+macro_rules! qmi_query {
+    ($responder:expr, $client:expr, $query:expr) => {{
+        match *await!($client.lock()) {
+            Some(ref mut client) => {
+                let resp: Result<QmiResult<_>, QmuxError> = await!(client.send_msg($query));
+                match resp {
+                    Ok(qmi_result) => {
+                        match qmi_result {
+                            Ok(qmi) => qmi,
+                            Err(e) => {
+                                fx_log_err!("Unknown Error: {:?}", e);
+                                // TODO(bwb): Define conversion trait between errors and RIL errors
+                                return $responder.send(&mut Err(RilError::UnknownError));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        fx_log_err!("Transport Error: {}", e);
+                        return $responder.send(&mut Err(RilError::TransportError));
+                    }
+                }
+            }
+            None => {
+                return $responder.send(&mut Err(RilError::NoRadio));
+            }
+        }
+    }};
+}
+
 struct FrilService;
 impl FrilService {
     pub fn spawn(modem: QmiModemPtr, stream: RadioInterfaceLayerRequestStream) {
@@ -109,14 +140,14 @@ impl FrilService {
 
     async fn handle_request(
         modem: QmiModemPtr,
-        client_ptr: ClientPtr,
+        client: ClientPtr,
         request: RadioInterfaceLayerRequest,
     ) -> Result<(), fidl::Error> {
         // TODO(bwb) after component model v2, switch to on channel setup and
         // deprecated ConnectTransport method
         match request {
             RadioInterfaceLayerRequest::ConnectTransport { .. } => (), // does not need a client setup
-            _ => await!(setup_client(modem.clone(), client_ptr.clone())),
+            _ => await!(setup_client(modem.clone(), client.clone())),
         }
 
         match request {
@@ -131,100 +162,54 @@ impl FrilService {
                 }
             }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {
-                match *await!(client_ptr.lock()) {
-                    Some(ref mut client) => {
-                        // TODO find out how to structure this u32 in a readable way
-                        let resp: QmiResult<WDS::GetCurrentSettingsResp> =
-                            await!(client.send_msg(WDS::GetCurrentSettingsReq::new(58160)))
-                                .unwrap();
-                        match resp {
-                            Ok(packet) => responder.send(&mut Ok(
-                                RadioInterfaceLayerGetNetworkSettingsResponse {
-                                    settings: NetworkSettings {
-                                        ip_v4_addr: packet.ipv4_addr.unwrap(),
-                                        ip_v4_dns: packet.ipv4_dns.unwrap(),
-                                        ip_v4_subnet: packet.ipv4_subnet.unwrap(),
-                                        ip_v4_gateway: packet.ipv4_gateway.unwrap(),
-                                        mtu: packet.mtu.unwrap(),
-                                    },
-                                },
-                            ))?,
-                            Err(e) => {
-                                fx_log_err!("Error network: {:?}", e);
-                                // TODO different error
-                                responder.send(&mut Err(RilError::NoRadio))?
-                            }
-                        }
-                    }
-                    None => responder.send(&mut Err(RilError::NoRadio))?,
-                }
+                let packet: WDS::GetCurrentSettingsResp =
+                    qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
+                responder.send(&mut Ok(RadioInterfaceLayerGetNetworkSettingsResponse {
+                    settings: NetworkSettings {
+                        ip_v4_addr: packet.ipv4_addr.unwrap(),
+                        ip_v4_dns: packet.ipv4_dns.unwrap(),
+                        ip_v4_subnet: packet.ipv4_subnet.unwrap(),
+                        ip_v4_gateway: packet.ipv4_gateway.unwrap(),
+                        mtu: packet.mtu.unwrap(),
+                    },
+                }))?
             }
             RadioInterfaceLayerRequest::StartNetwork { apn, responder } => {
-                match *await!(client_ptr.lock()) {
-                    Some(ref mut client) => {
-                        let resp: QmiResult<WDS::StartNetworkInterfaceResp> =
-                            await!(client
-                                .send_msg(WDS::StartNetworkInterfaceReq::new(Some(apn), Some(4))))
-                            .unwrap();
-                        match resp {
-                            Ok(packet) => {
-                                let (server_chan, client_chan) = zx::Channel::create().unwrap();
-                                let server_end =
-                                    ServerEnd::<NetworkConnectionMarker>::new(server_chan.into());
-                                client.data_conn = Some(client::Connection {
-                                    pkt_handle: packet.packet_data_handle,
-                                    conn: server_end,
-                                });
-                                let client_end =
-                                    ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
-                                responder.send(&mut Ok(
-                                    RadioInterfaceLayerStartNetworkResponse { conn: client_end },
-                                ))?
-                            }
-                            Err(e) => {
-                                fx_log_info!("error network: {:?}", e);
-                                // TODO different error
-                                responder.send(&mut Err(RilError::NoRadio))?
-                            }
-                        }
-                    }
-                    None => responder.send(&mut Err(RilError::NoRadio))?,
+                let packet: WDS::StartNetworkInterfaceResp = qmi_query!(
+                    responder,
+                    client,
+                    WDS::StartNetworkInterfaceReq::new(Some(apn), Some(4))
+                );
+                let (server_chan, client_chan) = zx::Channel::create().unwrap();
+                let server_end = ServerEnd::<NetworkConnectionMarker>::new(server_chan.into());
+                if let Some(ref mut client) = *await!(client.lock()) {
+                    client.data_conn = Some(client::Connection {
+                        pkt_handle: packet.packet_data_handle,
+                        conn: server_end,
+                    });
                 }
+                let client_end = ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
+                responder
+                    .send(&mut Ok(RadioInterfaceLayerStartNetworkResponse { conn: client_end }))?
             }
             RadioInterfaceLayerRequest::GetDeviceIdentity { responder } => {
-                match *await!(client_ptr.lock()) {
-                    Some(ref mut client) => {
-                        let resp: QmiResult<DMS::GetDeviceSerialNumbersResp> =
-                            await!(client.send_msg(DMS::GetDeviceSerialNumbersReq::new())).unwrap();
-                        responder.send(&mut Ok(RadioInterfaceLayerGetDeviceIdentityResponse {
-                            imei: resp.unwrap().imei,
-                        }))?
-                    }
-                    None => responder.send(&mut Err(RilError::NoRadio))?,
-                }
+                let resp: DMS::GetDeviceSerialNumbersResp =
+                    qmi_query!(responder, client, DMS::GetDeviceSerialNumbersReq::new());
+                responder.send(&mut Ok(RadioInterfaceLayerGetDeviceIdentityResponse {
+                    imei: resp.imei,
+                }))?
             }
             RadioInterfaceLayerRequest::RadioPowerStatus { responder } => {
-                match *await!(client_ptr.lock()) {
-                    Some(ref mut client) => {
-                        let resp: DMS::GetOperatingModeResp =
-                            await!(client.send_msg(DMS::GetOperatingModeReq::new()))
-                                .unwrap()
-                                .unwrap();
-                        if resp.operating_mode == 0x00 {
-                            responder.send(&mut Ok(
-                                RadioInterfaceLayerRadioPowerStatusResponse {
-                                    state: RadioPowerState::On,
-                                },
-                            ))?
-                        } else {
-                            responder.send(&mut Ok(
-                                RadioInterfaceLayerRadioPowerStatusResponse {
-                                    state: RadioPowerState::Off,
-                                },
-                            ))?
-                        }
-                    }
-                    None => responder.send(&mut Err(RilError::NoRadio))?,
+                let resp: DMS::GetOperatingModeResp =
+                    qmi_query!(responder, client, DMS::GetOperatingModeReq::new());
+                if resp.operating_mode == 0x00 {
+                    responder.send(&mut Ok(RadioInterfaceLayerRadioPowerStatusResponse {
+                        state: RadioPowerState::On,
+                    }))?
+                } else {
+                    responder.send(&mut Ok(RadioInterfaceLayerRadioPowerStatusResponse {
+                        state: RadioPowerState::Off,
+                    }))?
                 }
             }
         }
