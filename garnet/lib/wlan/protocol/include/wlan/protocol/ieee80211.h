@@ -77,12 +77,12 @@ enum ieee80211_frame_subtype {
 
 static inline enum ieee80211_frame_type
 ieee80211_get_frame_type(const struct ieee80211_frame_header* fh) {
-    return fh->frame_ctrl & IEEE80211_FRAME_TYPE_MASK;
+    return (enum ieee80211_frame_type)(fh->frame_ctrl & IEEE80211_FRAME_TYPE_MASK);
 }
 
 static inline enum ieee80211_frame_subtype
 ieee80211_get_frame_subtype(const struct ieee80211_frame_header* fh) {
-    return fh->frame_ctrl & IEEE80211_FRAME_SUBTYPE_MASK;
+    return (enum ieee80211_frame_subtype)(fh->frame_ctrl & IEEE80211_FRAME_SUBTYPE_MASK);
 }
 
 static inline bool ieee80211_pkt_is_protected(const struct ieee80211_frame_header* fh) {
