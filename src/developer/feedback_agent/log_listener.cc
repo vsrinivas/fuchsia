@@ -4,9 +4,6 @@
 
 #include "src/developer/feedback_agent/log_listener.h"
 
-#include <string>
-#include <vector>
-
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -16,6 +13,9 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
+
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"

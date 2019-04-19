@@ -5,17 +5,16 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_H_
 
-#include <inttypes.h>
-
-#include <vector>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <vector>
 
 namespace fuchsia {
 namespace feedback {

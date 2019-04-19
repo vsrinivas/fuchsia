@@ -5,13 +5,13 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace fuchsia {
 namespace feedback {

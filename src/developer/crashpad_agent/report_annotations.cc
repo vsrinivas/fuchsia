@@ -5,18 +5,17 @@
 #include "src/developer/crashpad_agent/report_annotations.h"
 
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include <string>
-
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <zircon/boot/image.h>
+
+#include <string>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"

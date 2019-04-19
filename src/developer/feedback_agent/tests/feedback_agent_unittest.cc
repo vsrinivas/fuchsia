@@ -4,12 +4,6 @@
 
 #include "src/developer/feedback_agent/feedback_agent.h"
 
-#include <stdint.h>
-
-#include <memory>
-#include <ostream>
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -29,7 +23,12 @@
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <stdint.h>
 #include <zircon/errors.h>
+
+#include <memory>
+#include <ostream>
+#include <vector>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"

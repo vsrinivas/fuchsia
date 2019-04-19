@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_ANNOTATIONS_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_ANNOTATIONS_H_
 
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
+
+#include <vector>
 
 namespace fuchsia {
 namespace feedback {

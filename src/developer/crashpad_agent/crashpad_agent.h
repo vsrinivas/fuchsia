@@ -5,9 +5,6 @@
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 
-#include <string>
-#include <utility>
-
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -17,6 +14,9 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/status.h>
+
+#include <string>
+#include <utility>
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"

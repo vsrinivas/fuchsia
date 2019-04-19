@@ -5,20 +5,19 @@
 #include "src/developer/feedback_agent/annotations.h"
 
 #include <fcntl.h>
-
-#include <string>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <src/lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <string>
+
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/trim.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -103,9 +102,10 @@ std::vector<Annotation> GetAnnotations() {
   PushBackIfValuePresent("build.product",
                          ReadStringFromFile("/config/build-info/product"),
                          &annotations);
-  PushBackIfValuePresent("build.latest-commit-date",
-                         ReadStringFromFile("/config/build-info/latest-commit-date"),
-                         &annotations);
+  PushBackIfValuePresent(
+      "build.latest-commit-date",
+      ReadStringFromFile("/config/build-info/latest-commit-date"),
+      &annotations);
   PushBackIfValuePresent("build.version",
                          ReadStringFromFile("/config/build-info/version"),
                          &annotations);

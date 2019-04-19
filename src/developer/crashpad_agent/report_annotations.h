@@ -5,11 +5,11 @@
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_
 
-#include <map>
-#include <string>
-
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
+
+#include <map>
+#include <string>
 
 namespace fuchsia {
 namespace crash {

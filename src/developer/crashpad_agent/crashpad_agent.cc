@@ -4,21 +4,20 @@
 
 #include "src/developer/crashpad_agent/crashpad_agent.h"
 
-#include <stdio.h>
-#include <unistd.h>
-
-#include <map>
-#include <string>
-#include <utility>
-
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+
+#include <map>
+#include <string>
+#include <utility>
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"

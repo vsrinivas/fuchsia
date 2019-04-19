@@ -5,10 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_ATTACHMENTS_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_ATTACHMENTS_H_
 
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <vector>
 
 namespace fuchsia {
 namespace feedback {

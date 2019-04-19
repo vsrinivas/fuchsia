@@ -4,12 +4,12 @@
 
 #include "src/developer/crashpad_agent/report_attachments.h"
 
-#include <memory>
-#include <string>
-
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
+
+#include <memory>
+#include <string>
 
 #include "third_party/crashpad/minidump/minidump_file_writer.h"
 #include "third_party/crashpad/util/file/file_writer.h"

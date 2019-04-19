@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ostream>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/component/cpp/environment_services_helper.h>
 #include <lib/escher/test/gtest_vulkan.h>
 #include <zircon/errors.h>
+
+#include <ostream>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback_agent/annotations.h"
