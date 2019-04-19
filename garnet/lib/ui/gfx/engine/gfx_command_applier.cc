@@ -8,7 +8,9 @@
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <trace/event.h>
 
+#include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
+#include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
@@ -36,9 +38,6 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
-
-#include "garnet/lib/ui/gfx/engine/hit_tester.h"
-#include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain_factory.h"
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
@@ -226,6 +225,8 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kTakeSnapshotCmd:
       return ApplyTakeSnapshotCmdHACK(session,
                                       std::move(command.take_snapshot_cmd()));
+    case fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion:
+      return false;
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
