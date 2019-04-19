@@ -33,17 +33,13 @@ VmObject::VmObject(fbl::RefPtr<VmObject> parent)
     : lock_(parent ? parent->lock_ref() : local_lock_),
       parent_(ktl::move(parent)) {
     LTRACEF("%p\n", this);
-
-    // Add ourself to the global VMO list, newer VMOs at the end.
-    {
-        Guard<Mutex> guard{AllVmosLock::Get()};
-        all_vmos_.push_back(this);
-    }
 }
 
 VmObject::~VmObject() {
     canary_.Assert();
     LTRACEF("%p\n", this);
+
+    DEBUG_ASSERT(global_list_state_.InContainer() == false);
 
     // remove ourself from our parent (if present)
     if (parent_) {
@@ -53,13 +49,17 @@ VmObject::~VmObject() {
 
     DEBUG_ASSERT(mapping_list_.is_empty());
     DEBUG_ASSERT(children_list_.is_empty());
+}
 
-    // Remove ourself from the global VMO list.
-    {
-        Guard<Mutex> guard{AllVmosLock::Get()};
-        DEBUG_ASSERT(global_list_state_.InContainer() == true);
-        all_vmos_.erase(*this);
-    }
+void VmObject::AddToGlobalList() {
+    Guard<Mutex> guard{AllVmosLock::Get()};
+    all_vmos_.push_back(this);
+}
+
+void VmObject::RemoveFromGlobalList() {
+    Guard<Mutex> guard{AllVmosLock::Get()};
+    DEBUG_ASSERT(global_list_state_.InContainer() == true);
+    all_vmos_.erase(*this);
 }
 
 void VmObject::get_name(char* out_name, size_t len) const {

@@ -78,12 +78,18 @@ VmObjectPaged::VmObjectPaged(
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
     DEBUG_ASSERT(page_source_ == nullptr || parent_ == nullptr);
+
+    // Adding to the global list needs to be done at the end of the ctor, since
+    // calls can be made into this object as soon as it is in that list.
+    AddToGlobalList();
 }
 
 VmObjectPaged::~VmObjectPaged() {
     canary_.Assert();
 
     LTRACEF("%p\n", this);
+
+    RemoveFromGlobalList();
 
     page_list_.ForEveryPage(
         [this](const auto p, uint64_t off) {

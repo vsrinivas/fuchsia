@@ -27,11 +27,15 @@ VmObjectPhysical::VmObjectPhysical(paddr_t base, uint64_t size)
     LTRACEF("%p, size %#" PRIx64 "\n", this, size_);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
+
+    AddToGlobalList();
 }
 
 VmObjectPhysical::~VmObjectPhysical() {
     canary_.Assert();
     LTRACEF("%p\n", this);
+
+    RemoveFromGlobalList();
 }
 
 zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {

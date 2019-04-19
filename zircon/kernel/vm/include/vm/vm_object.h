@@ -268,6 +268,9 @@ protected:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
+    void AddToGlobalList();
+    void RemoveFromGlobalList();
+
     // inform all mappings and children that a range of this vmo's pages were added or removed.
     void RangeChangeUpdateLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
