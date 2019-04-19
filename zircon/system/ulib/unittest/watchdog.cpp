@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
@@ -40,6 +41,9 @@ constexpr int WATCHDOG_TIMEOUT_NOT_RUNNING = INT_MAX;
 static int base_timeout_seconds = DEFAULT_BASE_TIMEOUT_SECONDS;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Cond used to wait on the watchdog thread starting.
+static pthread_cond_t init_cond = PTHREAD_COND_INITIALIZER;
 
 // The name of the current test.
 // Used to report which test timed out.
@@ -121,6 +125,8 @@ static __NO_RETURN void watchdog_signal_timeout(const char* name) {
 static void* watchdog_thread_func(void* arg) {
     pthread_mutex_lock(&mutex);
 
+    pthread_cond_signal(&init_cond);
+
     for (;;) {
         // Has watchdog_terminate() been called?
         // Test this here, before calling pthread_cond_timedwait(), so that
@@ -174,7 +180,27 @@ static void* watchdog_thread_func(void* arg) {
 void watchdog_initialize() {
     if (watchdog_is_enabled()) {
         tests_running = true;
-        int res = pthread_create(&watchdog_thread, NULL, &watchdog_thread_func, NULL);
+
+        // We don't want the watchdog thread to commit additional pages after it starts as that
+        // muddies page usage stats used by tests. To prevent this, give the watchdog thread one
+        // page for its stack, as that is all it needs, and wait for it to start. Currently, the
+        // watchdog thread always uses the unsafe stacks during initialization; if that changes,
+        // then we'll need to explicitly write to it.
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        int res = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+
+        if (res == 0) {
+            pthread_mutex_lock(&mutex);
+            res = pthread_create(&watchdog_thread, &attr, &watchdog_thread_func, NULL);
+            if (res == 0) {
+                res = pthread_cond_wait(&init_cond, &mutex);
+            }
+            pthread_mutex_unlock(&mutex);
+        }
+
+        pthread_attr_destroy(&attr);
+
         if (res != 0) {
             unittest_printf_critical("ERROR STARTING WATCHDOG THREAD: %d(%s)\n", res, strerror(res));
             exit(WATCHDOG_ERRCODE);
