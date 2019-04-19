@@ -39,7 +39,8 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 
 	id1, linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
-	err := s.CreateDisabledNIC(nic1, NewEndpoint(f, id1))
+	filtered1, _ := NewFilterEndpoint(f, id1)
+	err := s.CreateDisabledNIC(nic1, filtered1)
 	if err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
 	}
@@ -48,7 +49,8 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 
 	id2, linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
-	err = s.CreateDisabledNIC(nic2, NewEndpoint(f, id2))
+	filtered2, _ := NewFilterEndpoint(f, id2)
+	err = s.CreateDisabledNIC(nic2, filtered2)
 	if err != nil {
 		t.Fatalf("CreateDisableNIC error: %s", err)
 	}

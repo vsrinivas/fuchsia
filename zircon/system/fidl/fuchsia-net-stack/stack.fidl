@@ -173,6 +173,12 @@ protocol Stack {
     /// table. If no entry for the subnet exists, an error is returned.
     DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
 
+    /// Enable the packet filter on a specific interface.
+    EnablePacketFilter(uint64 id) -> (Error? err);
+
+    /// Disable the packet filter on a specific interface.
+    DisablePacketFilter(uint64 id) -> (Error? err);
+
     /// Events
 
     /// A status change event is triggered whenever an interface's status changes.

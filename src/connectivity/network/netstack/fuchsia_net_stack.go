@@ -273,6 +273,32 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 	return &stack.Error{Type: stack.ErrorTypeNotFound}
 }
 
+func (ns *Netstack) enablePacketFilter(id uint64) *stack.Error {
+	ns.mu.Lock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
+
+	if !ok || ifs.filterEndpoint == nil {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
+
+	ifs.filterEndpoint.Enable()
+	return nil
+}
+
+func (ns *Netstack) disablePacketFilter(id uint64) *stack.Error {
+	ns.mu.Lock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
+
+	if !ok || ifs.filterEndpoint == nil {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
+
+	ifs.filterEndpoint.Enable()
+	return nil
+}
+
 func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
 	err, id := ni.ns.addInterface(topologicalPath, device)
 	return err, id, nil
@@ -317,4 +343,12 @@ func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (*stack.Err
 
 func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (*stack.Error, error) {
 	return ni.ns.delForwardingEntry(subnet), nil
+}
+
+func (ni *stackImpl) EnablePacketFilter(id uint64) (*stack.Error, error) {
+	return ni.ns.enablePacketFilter(id), nil
+}
+
+func (ni *stackImpl) DisablePacketFilter(id uint64) (*stack.Error, error) {
+	return ni.ns.disablePacketFilter(id), nil
 }

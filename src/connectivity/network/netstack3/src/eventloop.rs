@@ -379,6 +379,12 @@ impl EventLoop {
                     self.fidl_del_forwarding_entry(subnet).as_mut().map(fidl::encoding::OutOfLine),
                 );
             }
+            StackRequest::EnablePacketFilter { id, responder } => {
+                // TODO(toshik)
+            }
+            StackRequest::DisablePacketFilter { id, responder } => {
+                // TODO(toshik)
+            }
         }
     }
 

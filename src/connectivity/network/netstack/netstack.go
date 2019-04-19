@@ -106,6 +106,8 @@ type ifState struct {
 	endpoint stack.LinkEndpoint
 
 	bridgeable *bridge.BridgeableEndpoint
+
+	filterEndpoint *filter.FilterEndpoint
 }
 
 // defaultRoutes returns the IPv4 and IPv6 default routes.
@@ -656,7 +658,7 @@ func (ns *Netstack) addEndpoint(
 	}
 
 	if doFilter {
-		linkID = filter.NewEndpoint(ns.filter, linkID)
+		linkID, ifs.filterEndpoint = filter.NewFilterEndpoint(ns.filter, linkID)
 	}
 	linkID, ifs.bridgeable = bridge.NewEndpoint(linkID)
 	ifs.endpoint = ifs.bridgeable
