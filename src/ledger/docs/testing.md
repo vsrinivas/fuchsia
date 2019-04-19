@@ -12,7 +12,14 @@ execution itself happens on the target.
 
 ## TL;DR
 
+For testing on an x64 device:
 ```sh
+fx set core.x64 --with //peridot/packages/tests:ledger \
+ --variant asan/ledger_unittests --variant asan/ledger_integration_tests \
+ --variant asan/ledger_e2e_local --variant asan/ledger \
+ --variant asan/cloud_provider_firestore_unittests \
+ --variant asan/ledger_lib_unittests --variant asan/cloud_provider_in_memory \
+ --variant asan/cloud_provider_validation_tests
 fx run-test ledger_tests
 ```
 
@@ -22,6 +29,8 @@ This command will run the following tests, that are enabled by default:
 * [integration tests](#integration-tests)
 * [local end-to-end tests](#local-e2e)
 * [Firestore cloud provider] unit tests
+* [Ledger lib] unit tests
+* [Cloud provider validation tests] for the in-memory cloud provider
 
 It will not run the following tests, that need to be configured and executed
 manually:
@@ -30,6 +39,8 @@ manually:
 * [performance tests][benchmarks]
 * [fuzz tests](#fuzz-tests)
 * [Firestore cloud provider] end-to-end tests
+
+It will also enable [Address Sanitizer] for ledger tests.
 
 ## Unit tests
 
@@ -126,7 +137,11 @@ Then, put the sync credentials file whenever you like, and set the full path to
 it in the GN variable:
 
 ```sh
-fx set x64 --args ledger_sync_credentials_file=\"/full/path/to/sync_credentials.json\"
+fx set core.x64 --with //peridot/packages/tests:ledger \
+ --variant asan/ledger_e2e_sync --variant asan/ledger \
+ --variant asan/cloud_provider_firestore \
+ --args ledger_sync_credentials_file=\"/full/path/to/sync_credentials.json\"
+fx build
 ```
 
 After rebuilding, the credentials file will be automatically embedded in the
@@ -136,8 +151,7 @@ parameters (server ID and API key) as command line parameters.
 You can now run the tests from the host as follows:
 
 ```sh
-fx push-package ledger_tests
-fx shell run-test-component ledger_e2e_sync
+fx shell run-test-component fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_e2e_sync.cmx
 ```
 
 ## Performance tests
@@ -150,13 +164,14 @@ Ledger uses LibFuzzer for fuzz tests. We have a single fuzz package called
 `ledger_fuzzers`. It can be built as follows:
 
 ```sh
-fx set x64 --monolith peridot/packages/tests/ledger --fuzz-with asan
-fx full-build
+fx set core.x64 --with //peridot/packages/tests:ledger --fuzz-with asan
+fx build
 ```
 
 And then run:
 
 ```sh
+fx push-package ledger_fuzzers
 fx fuzz start ledger
 ```
 
@@ -167,6 +182,7 @@ You can refer to the full [fuzzing] instructions for details.
  - [Firestore cloud provider] has its own suite of tests, including unit tests
    and end-to-end validation tests
 
+[Address Sanitizer]: https://github.com/google/sanitizers/wiki/AddressSanitizer
 [Google Test]: https://github.com/google/googletest
 [TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/gtest/test_loop_fixture.h
 [IntegrationTest]: /src/ledger/bin/tests/integration/integration_test.h
@@ -179,3 +195,5 @@ You can refer to the full [fuzzing] instructions for details.
 [benchmarks]: /src/ledger/bin/tests/benchmark/README.md
 [Firestore cloud provider]: /src/ledger/cloud_provider_firestore/README.md#testing
 [fuzzing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/libfuzzer.md
+[Ledger lib]: /src/ledger/lib
+[Cloud provider validation tests]: /src/ledger/bin/tests/cloud_provider
