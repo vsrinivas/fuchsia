@@ -59,7 +59,8 @@ bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
     } else {
       for (const auto& entry : args->value.GetArray()) {
         if (!entry.IsString()) {
-          json_parser->ReportError("'args' in program contains an item that's not a string.");
+          json_parser->ReportError(
+              "'args' in program contains an item that's not a string.");
         } else {
           args_.push_back(entry.GetString());
         }

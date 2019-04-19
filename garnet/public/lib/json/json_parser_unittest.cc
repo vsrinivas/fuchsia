@@ -6,18 +6,18 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+
 #include <functional>
 #include <string>
 
-#include <lib/fit/function.h>
-
 #include "gtest/gtest.h"
+#include "lib/fit/function.h"
+#include "rapidjson/document.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "rapidjson/document.h"
 
 namespace json {
 namespace {

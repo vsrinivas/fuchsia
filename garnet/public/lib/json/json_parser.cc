@@ -8,17 +8,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+
 #include <functional>
 #include <string>
 
-#include <lib/fit/function.h>
-
+#include "lib/fit/function.h"
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
 
 namespace json {
 namespace {

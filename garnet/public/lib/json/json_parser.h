@@ -6,12 +6,13 @@
 #define LIB_JSON_JSON_PARSER_H_
 
 #include <stdlib.h>
+
 #include <string>
 #include <vector>
 
-#include <lib/fit/function.h>
-#include "src/lib/fxl/macros.h"
+#include "lib/fit/function.h"
 #include "rapidjson/document.h"
+#include "src/lib/fxl/macros.h"
 
 namespace json {
 
