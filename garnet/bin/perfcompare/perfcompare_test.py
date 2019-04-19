@@ -79,7 +79,8 @@ class GoldenDataOutput(object):
                 fh.write('\n\n### %s\n%s' % (name, data))
 
 
-GOLDEN_FILE = 'perfcompare_test_output.txt'
+GOLDEN_FILE = os.path.join(os.path.dirname(__file__),
+                           'perfcompare_test_output.txt')
 GOLDEN = GoldenDataInput(GOLDEN_FILE)
 
 
