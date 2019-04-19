@@ -7,10 +7,13 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
   public_deps = [
     ":magma-qcom-adreno",
   ]
-  if (have_libvulkan) {
+  if (build_libvulkan_qcom_adreno != []) {
     public_deps += [ ":magma-qcom-adreno-config" ]
   }
 }
@@ -21,8 +24,8 @@ package("magma-qcom-adreno") {
     testonly = true
   }
 
-  if (have_libvulkan) {
-    deps = build_libvulkan
+  if (build_libvulkan_qcom_adreno != []) {
+    deps = build_libvulkan_qcom_adreno
     libraries = [
       {
         name = "libvulkan_adreno.so"
@@ -31,7 +34,7 @@ package("magma-qcom-adreno") {
   }
 }
 
-if (have_libvulkan) {
+if (build_libvulkan_qcom_adreno != []) {
   # api_version must be present but is unused
   icd_data = [
     "{",

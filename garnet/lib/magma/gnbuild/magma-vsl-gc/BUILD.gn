@@ -7,10 +7,13 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
   public_deps = [
     ":magma-vsl-gc",
   ]
-  if (build_libvulkan != []) {
+  if (build_libvulkan_vsl_gc != []) {
     public_deps += [ ":magma-vsl-gc-config" ]
   }
 }
@@ -42,43 +45,37 @@ package("magma-vsl-gc") {
   resources = []
   libraries = []
 
-  if (build_libvulkan != []) {
-    foreach(entry, build_libvulkan) {
-      dir = get_label_info(entry, "dir")
-      if (dir == "//third_party/verisilicon-gc/fuchsia") {
-        icd_name = get_label_info(entry, "name")
-        deps += [ entry ]
+  if (build_libvulkan_vsl_gc != []) {
+    foreach(entry, build_libvulkan_vsl_gc) {
+      icd_name = get_label_info(entry, "name")
+      deps += [ entry ]
 
-        libraries += [
-          {
-            name = "$icd_name.so"
-          },
-        ]
-      }
+      libraries += [
+        {
+          name = "$icd_name.so"
+        },
+      ]
     }
   }
 }
 
-if (build_libvulkan != []) {
+if (build_libvulkan_vsl_gc != []) {
   config_data("magma-vsl-gc-config") {
     sources = []
-    foreach(entry, build_libvulkan) {
-      dir = get_label_info(entry, "dir")
-      if (dir == "//third_party/verisilicon-gc/fuchsia") {
-        icd_name = get_label_info(entry, "name")
-        filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-        icd_data = [
-          "{",
-          "\"file_format_version\": \"1.0.0\",",
-          "\"ICD\": {",
-          "\"library_path\": \"$icd_name.so\",",
-          "\"api_version\": \"1.0.68\"",
-          "}",
-          "}",
-        ]
-        write_file(filename, icd_data)
-        sources += [ rebase_path(file_name) ]
-      }
+    foreach(entry, build_libvulkan_vsl_gc) {
+      icd_name = get_label_info(entry, "name")
+      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+      icd_data = [
+        "{",
+        "\"file_format_version\": \"1.0.0\",",
+        "\"ICD\": {",
+        "\"library_path\": \"$icd_name.so\",",
+        "\"api_version\": \"1.0.68\"",
+        "}",
+        "}",
+      ]
+      write_file(filename, icd_data)
+      sources += [ rebase_path(file_name) ]
     }
     for_pkg = "vulkan-icd"
     outputs = [

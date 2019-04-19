@@ -30,13 +30,22 @@ declare_args() {
   # to.
   use_vulkan_loader_for_tests = true
 
-  # This is a list of targets that will be built as vulkan ICDS. If more than one
-  # target is given then use_vulkan_loader_for_tests must be set to true, as
-  # otherwise tests won't know which libvulkan to use.
-  build_libvulkan = []
+  # The following are lists of targets that will be built as vulkan ICDS. If
+  # more than one target is given then use_vulkan_loader_for_tests must be set
+  # to true, as otherwise tests won't know which libvulkan to use.
+
+  # This is a list of targets that will be built as mali vulkan ICDS.
+  build_libvulkan_arm_mali = []
+
+  # This is a list of targets that will be built as verisilicon vulkan ICDS.
+  build_libvulkan_vsl_gc = []
+
+  # This is a list of targets that will be built as verisilicon vulkan ICDS.
+  build_libvulkan_qcom_adreno = []
 }
 
 have_prebuilt_libvulkan_arm = prebuilt_libvulkan_arm_path != ""
+build_libvulkan = build_libvulkan_arm_mali + build_libvulkan_vsl_gc + build_libvulkan_qcom_adreno
 have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_arm
 
 # Target environments with an Intel GPU.

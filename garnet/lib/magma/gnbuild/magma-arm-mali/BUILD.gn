@@ -7,11 +7,17 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+# Only including packages built inside this file.
+have_libvulkan_mali = build_libvulkan_arm_mali != []|| have_prebuilt_libvulkan_arm
+
 group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
   public_deps = [
     ":magma-arm-mali",
   ]
-  if (have_libvulkan) {
+  if (have_libvulkan_mali) {
     public_deps += [ ":magma-arm-mali-config" ]
   }
 }
@@ -22,17 +28,13 @@ if (have_prebuilt_libvulkan_arm) {
 
 if (have_libvulkan) {
   icd_list = []
-  if (build_libvulkan != []) {
-    foreach(entry, build_libvulkan) {
-      dir = get_label_info(entry, "dir")
-      if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
-          dir == "//third_party/arm-mali-bifrost/fuchsia") {
-        icd_list += [
-          {
-            name = get_label_info(entry, "name")
-          },
-        ]
-      }
+  if (build_libvulkan_arm_mali != []) {
+    foreach(entry, build_libvulkan_arm_mali) {
+      icd_list += [
+        {
+          name = get_label_info(entry, "name")
+        },
+      ]
     }
   } else if (have_prebuilt_libvulkan_arm) {
     icd_list += [
@@ -70,18 +72,12 @@ package("magma-arm-mali") {
     ]
   }
 
-  if (have_libvulkan) {
+  if (have_libvulkan_mali) {
     resources = []
     libraries = []
-    if (build_libvulkan != []) {
-      foreach(entry, build_libvulkan) {
-        dir = get_label_info(entry, "dir")
-        if (dir == "//third_party/arm-mali-midgard/fuchsia" ||
-            dir == "//third_party/arm-mali-bifrost/fuchsia") {
-          deps += [ entry ]
-        }
-      }
-    } else if (have_prebuilt_libvulkan_arm) {
+    deps += build_libvulkan_arm_mali
+    if (build_libvulkan_arm_mali == []) {
+      # Building libvulkan overrides using a prebuilt.
       deps += [ ":prebuilt_libvulkan" ]
     }
 
@@ -105,7 +101,7 @@ package("magma-arm-mali") {
   }
 }
 
-if (have_libvulkan) {
+if (have_libvulkan_mali) {
   config_data("magma-arm-mali-config") {
     sources = []
     foreach(entry, icd_list) {
