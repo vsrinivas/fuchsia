@@ -46,6 +46,7 @@ func (env Environment) Name() string {
 	addToken(env.Dimensions.DeviceType)
 	addToken(env.Dimensions.OS)
 	addToken(env.Dimensions.Testbed)
+	addToken(env.Dimensions.Pool)
 	if env.ServiceAccount != "" {
 		addToken(strings.Split(env.ServiceAccount, "@")[0])
 	}
@@ -66,6 +67,9 @@ type DimensionSet struct {
 
 	// Testbed denotes a physical test device configuration to run a test on (e.g., multi-device set-ups or devices inside chambers for connectivity testing).
 	Testbed string `json:"testbed,omitempty"`
+
+	// Pool denotes the swarming pool to run a test in.
+	Pool string `json:"pool,omitempty"`
 }
 
 // ResolvesTo gives a partial ordering on DimensionSets in which one resolves to
@@ -78,6 +82,9 @@ func (dims DimensionSet) resolvesTo(other DimensionSet) bool {
 		return false
 	}
 	if dims.Testbed != "" && dims.Testbed != other.Testbed {
+		return false
+	}
+	if dims.Pool != "" && dims.Pool != other.Pool {
 		return false
 	}
 	return true
