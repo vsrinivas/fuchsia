@@ -70,13 +70,32 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_pr
     addr_t address = (addr_t)ptr;
     size_t count;
 
-    for (count = 0; count < len; count += 16) {
+    int zero_line_count = 0;
+    for (count = 0; count < len; count += 16, address += 16) {
         union {
             uint32_t buf[4];
             uint8_t cbuf[16];
         } u;
         size_t s = ROUNDUP(MIN(len - count, 16), 4);
         size_t i;
+
+        bool cur_line_zeros = true;
+        for (i = 0; i < s / 4; i++) {
+            cur_line_zeros &= (((const uint32_t*)address)[i] == 0);
+        }
+        if (cur_line_zeros) {
+            zero_line_count++;
+            if ((count + 16) >= len) {
+                // print the last line normally
+            } else if (zero_line_count >= 2) {
+                if (zero_line_count == 2) {
+                    pfn(".....\n");
+                }
+                continue;
+            }
+        } else {
+            zero_line_count = 0;
+        }
 
         pfn(((disp_addr + len) > 0xFFFFFFFF)
                 ? "0x%016llx: "
@@ -101,7 +120,6 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_pr
             }
         }
         pfn("|\n");
-        address += 16;
     }
 }
 
@@ -110,7 +128,26 @@ void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_p
     size_t count;
     size_t i;
 
-    for (count = 0; count < len; count += 16) {
+    int zero_line_count = 0;
+    for (count = 0; count < len; count += 16, address += 16) {
+        bool cur_line_zeros = true;
+        for (i = 0; i < MIN(len - count, 16); i++) {
+            cur_line_zeros &= (((const uint8_t*)address)[i] == 0);
+        }
+        if (cur_line_zeros) {
+            zero_line_count++;
+            if ((count + 16) >= len) {
+                // print the last line normally
+            } else if (zero_line_count >= 2) {
+                if (zero_line_count == 2) {
+                    pfn(".....\n");
+                }
+                continue;
+            }
+        } else {
+            zero_line_count = 0;
+        }
+
         pfn(((disp_addr + len) > 0xFFFFFFFF)
                 ? "0x%016llx: "
                 : "0x%08llx: ",
@@ -132,7 +169,6 @@ void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_p
         }
 
         pfn("\n");
-        address += 16;
     }
 }
 
