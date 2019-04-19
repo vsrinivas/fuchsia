@@ -193,11 +193,9 @@ void NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/tmp");
     } else if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/gpu");
-      PushDirectoryFromPathAs("/system/data/vulkan/icd.d",
-                              "/config/vulkan/icd.d");
       PushDirectoryFromPathAs(
         "/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
-        "/config/data/vulkan/icd.d");
+        "/config/vulkan/icd.d");
     }
   }
 
