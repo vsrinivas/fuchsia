@@ -232,6 +232,49 @@ private:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Argument);
 };
 
+// Trace Info type specific data
+class TraceInfoContent final {
+public:
+    // Magic number record data
+    struct MagicNumberInfo {
+        uint32_t magic_value;
+    };
+
+    explicit TraceInfoContent(MagicNumberInfo magic_number_info)
+        : type_(TraceInfoType::kMagicNumber), magic_number_info_(std::move(magic_number_info)) {}
+
+    const MagicNumberInfo& GetMagicNumberInfo() const {
+        ZX_DEBUG_ASSERT(type_ == TraceInfoType::kMagicNumber);
+        return magic_number_info_;
+    }
+
+    TraceInfoContent(TraceInfoContent&& other)
+        : type_(other.type_) { MoveFrom(std::move(other)); }
+
+    ~TraceInfoContent() { Destroy(); }
+
+    TraceInfoContent& operator=(TraceInfoContent&& other) {
+        Destroy();
+        MoveFrom(std::move(other));
+        return *this;
+    }
+
+    TraceInfoType type() const { return type_; }
+
+    fbl::String ToString() const;
+
+private:
+    void Destroy();
+    void MoveFrom(TraceInfoContent&& other);
+
+    TraceInfoType type_;
+    union {
+        MagicNumberInfo magic_number_info_;
+    };
+
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TraceInfoContent);
+};
+
 // Metadata type specific data.
 class MetadataContent final {
 public:
@@ -252,6 +295,12 @@ public:
         ProviderEventType event;
     };
 
+    // Trace info record data
+    struct TraceInfo {
+        TraceInfoType type() const { return content.type(); }
+        TraceInfoContent content;
+    };
+
     explicit MetadataContent(ProviderInfo provider_info)
         : type_(MetadataType::kProviderInfo), provider_info_(std::move(provider_info)) {}
 
@@ -262,6 +311,10 @@ public:
     explicit MetadataContent(ProviderEvent provider_event)
         : type_(MetadataType::kProviderEvent),
           provider_event_(std::move(provider_event)) {}
+
+    explicit MetadataContent(TraceInfo trace_info)
+        : type_(MetadataType::kTraceInfo),
+          trace_info_(std::move(trace_info)) {}
 
     const ProviderInfo& GetProviderInfo() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
@@ -302,6 +355,7 @@ private:
         ProviderInfo provider_info_;
         ProviderSection provider_section_;
         ProviderEvent provider_event_;
+        TraceInfo trace_info_;
     };
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MetadataContent);

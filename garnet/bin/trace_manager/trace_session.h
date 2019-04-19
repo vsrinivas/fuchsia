@@ -54,6 +54,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // the start request, or after |timeout| has elapsed.
   void WaitForProvidersToStart(fit::closure callback, zx::duration timeout);
 
+  // Asynchronously writes all applicable trace info records.
+  void QueueTraceInfo();
+
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
   // Stops |provider|, streaming out all of its trace records.
@@ -77,6 +80,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();
   void FinishSessionDueToTimeout();
+  TransferStatus WriteMagicNumberRecord();
 
   void TransitionToState(State state);
 

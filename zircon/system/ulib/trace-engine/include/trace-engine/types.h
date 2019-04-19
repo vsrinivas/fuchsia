@@ -370,12 +370,21 @@ enum class MetadataType {
     kProviderInfo = 1,
     kProviderSection = 2,
     kProviderEvent = 3,
+    kTraceInfo = 4,
 };
 
 // Enumerates all provider events.
 enum class ProviderEventType {
     kBufferOverflow = 0,
 };
+
+// Enumerates all known trace info types.
+enum class TraceInfoType {
+    kMagicNumber = 0,
+};
+
+// The four byte value present in a magic number record.
+constexpr uint32_t kMagicValue = 0x16547846;
 
 // Enumerates all known argument types.
 enum class ArgumentType {

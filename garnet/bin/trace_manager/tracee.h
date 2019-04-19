@@ -15,6 +15,7 @@
 #include <iosfwd>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
+#include "garnet/bin/trace_manager/util.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
 #include "src/lib/fxl/macros.h"
@@ -37,18 +38,6 @@ class Tracee {
     kStopping,
     // The provider is stopped.
     kStopped
-  };
-
-  enum class TransferStatus {
-    // The transfer is complete.
-    kComplete,
-    // An error was detected with the provider, ignore its contribution to
-    // trace output.
-    kProviderError,
-    // Writing of trace data to the receiver failed in an unrecoverable way.
-    kWriteError,
-    // The receiver of the transfer went away.
-    kReceiverDead,
   };
 
   // The size of the initialization record.
@@ -119,16 +108,12 @@ class Tracee {
                               bool by_size) const;
 
   TransferStatus WriteChunkByRecords(const zx::socket& socket,
-                                     uint64_t vmo_offset,
-                                     uint64_t size,
+                                     uint64_t vmo_offset, uint64_t size,
                                      const char* name) const;
-  TransferStatus WriteChunkBySize(const zx::socket& socket,
-                                  uint64_t vmo_offset,
-                                  uint64_t size,
-                                  const char* name) const;
-  TransferStatus WriteChunk(const zx::socket& socket,
-                            uint64_t offset, uint64_t last,
-                            uint64_t end, uint64_t buffer_size,
+  TransferStatus WriteChunkBySize(const zx::socket& socket, uint64_t vmo_offset,
+                                  uint64_t size, const char* name) const;
+  TransferStatus WriteChunk(const zx::socket& socket, uint64_t offset,
+                            uint64_t last, uint64_t end, uint64_t buffer_size,
                             const char* name) const;
 
   // Write a ProviderInfo record the first time this is called.

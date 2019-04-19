@@ -21,6 +21,8 @@ executable("bin") {
     "trace_session.h",
     "tracee.cc",
     "tracee.h",
+    "util.cc",
+    "util.h",
   ]
 
   deps = [

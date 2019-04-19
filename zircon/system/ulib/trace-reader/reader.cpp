@@ -152,6 +152,27 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
         }
         break;
     }
+    case MetadataType::kTraceInfo: {
+        auto info_type = TraceInfoMetadataRecordFields::TraceInfoType::Get<TraceInfoType>(header);
+        switch (info_type) {
+        case TraceInfoType::kMagicNumber: {
+            auto record_magic = MagicNumberRecordFields::Magic::Get<uint32_t>(header);
+            record_consumer_(Record(
+                Record::Metadata{MetadataContent(
+                    MetadataContent::TraceInfo{TraceInfoContent(
+                        TraceInfoContent::MagicNumberInfo{record_magic})})}));
+            break;
+        }
+        default: {
+            // Ignore unknown trace info types for forward compatibility.
+            ReportError(fbl::StringPrintf(
+                "Skipping trace info record of unknown type %u",
+                static_cast<unsigned>(info_type)));
+            break;
+        }
+        }
+        break;
+    }
     default: {
         // Ignore unknown metadata types for forward compatibility.
         ReportError(fbl::StringPrintf(

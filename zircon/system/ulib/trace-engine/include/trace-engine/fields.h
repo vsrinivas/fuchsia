@@ -102,6 +102,14 @@ struct ProviderEventMetadataRecordFields : MetadataRecordFields {
     using Event = Field<52, 55>;
 };
 
+struct TraceInfoMetadataRecordFields : MetadataRecordFields {
+    using TraceInfoType = Field<20, 23>;
+};
+
+struct MagicNumberRecordFields : TraceInfoMetadataRecordFields {
+    using Magic = Field<24, 55>;
+};
+
 using InitializationRecordFields = RecordFields;
 
 struct StringRecordFields : RecordFields {

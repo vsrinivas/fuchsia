@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <numeric>
+#include "garnet/bin/trace_manager/trace_session.h"
 
 #include <lib/async/default.h>
 
-#include "garnet/bin/trace_manager/trace_session.h"
+#include <numeric>
+
+#include "garnet/bin/trace_manager/util.h"
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"
+#include "trace-engine/fields.h"
 
 namespace tracing {
 
@@ -124,11 +127,9 @@ void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
     CheckAllProvidersStarted();
   } else {
     // Tracing stopped in the interim.
-    auto it =
-        std::find_if(tracees_.begin(), tracees_.end(),
-                     [bundle](const auto& tracee) {
-                       return *tracee == bundle;
-    });
+    auto it = std::find_if(
+        tracees_.begin(), tracees_.end(),
+        [bundle](const auto& tracee) { return *tracee == bundle; });
 
     if (it != tracees_.end()) {
       (*it)->Stop();
@@ -167,17 +168,17 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
   if (it != tracees_.end()) {
     if (destination_) {
       switch ((*it)->TransferRecords(destination_)) {
-        case Tracee::TransferStatus::kComplete:
+        case TransferStatus::kComplete:
           break;
-        case Tracee::TransferStatus::kProviderError:
+        case TransferStatus::kProviderError:
           FXL_LOG(ERROR) << "Problem reading provider output, skipping";
           break;
-        case Tracee::TransferStatus::kWriteError:
+        case TransferStatus::kWriteError:
           FXL_LOG(ERROR) << "Encountered unrecoverable error writing socket, "
                             "aborting trace";
           Abort();
           return;
-        case Tracee::TransferStatus::kReceiverDead:
+        case TransferStatus::kReceiverDead:
           FXL_LOG(ERROR) << "Peer is closed, aborting trace";
           Abort();
           return;
@@ -221,6 +222,31 @@ void TraceSession::FinishSessionDueToTimeout() {
     }
     done_callback_();
   }
+}
+
+void TraceSession::QueueTraceInfo() {
+  async::PostTask(async_get_default_dispatcher(), [this]() {
+    auto status = WriteMagicNumberRecord();
+    if (status != TransferStatus::kComplete) {
+      FXL_LOG(ERROR) << "Failed to write magic number record";
+    }
+  });
+}
+
+TransferStatus TraceSession::WriteMagicNumberRecord() {
+  size_t num_words = 1u;
+  std::vector<uint64_t> record(num_words);
+  record[0] = trace::MagicNumberRecordFields::Type::Make(
+                  trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+              trace::MagicNumberRecordFields::RecordSize::Make(num_words) |
+              trace::MagicNumberRecordFields::MetadataType::Make(
+                  trace::ToUnderlyingType(trace::MetadataType::kTraceInfo)) |
+              trace::MagicNumberRecordFields::TraceInfoType::Make(
+                  trace::ToUnderlyingType(trace::TraceInfoType::kMagicNumber)) |
+              trace::MagicNumberRecordFields::Magic::Make(trace::kMagicValue);
+  return WriteBufferToSocket(destination_,
+                             reinterpret_cast<uint8_t*>(record.data()),
+                             trace::WordsToBytes(num_words));
 }
 
 void TraceSession::TransitionToState(State new_state) {

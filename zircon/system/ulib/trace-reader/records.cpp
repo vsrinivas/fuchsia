@@ -200,6 +200,32 @@ fbl::String Argument::ToString() const {
     return fbl::StringPrintf("%s: %s", name_.c_str(), value_.ToString().c_str());
 }
 
+void TraceInfoContent::Destroy() {
+    switch (type_) {
+    case TraceInfoType::kMagicNumber:
+        magic_number_info_.~MagicNumberInfo();
+        break;
+    }
+}
+
+void TraceInfoContent::MoveFrom(TraceInfoContent&& other) {
+    type_ = other.type_;
+    switch (type_) {
+    case TraceInfoType::kMagicNumber:
+        new (&magic_number_info_) MagicNumberInfo(std::move(other.magic_number_info_));
+        break;
+    }
+}
+
+fbl::String TraceInfoContent::ToString() const {
+    switch (type_) {
+    case TraceInfoType::kMagicNumber:
+        return fbl::StringPrintf("MagicNumberInfo(magic_value: 0x%" PRIx32 ")",
+                                 magic_number_info_.magic_value);
+    }
+    ZX_ASSERT(false);
+}
+
 void MetadataContent::Destroy() {
     switch (type_) {
     case MetadataType::kProviderInfo:
@@ -210,6 +236,9 @@ void MetadataContent::Destroy() {
         break;
     case MetadataType::kProviderEvent:
         provider_event_.~ProviderEvent();
+        break;
+    case MetadataType::kTraceInfo:
+        trace_info_.~TraceInfo();
         break;
     }
 }
@@ -225,6 +254,9 @@ void MetadataContent::MoveFrom(MetadataContent&& other) {
         break;
     case MetadataType::kProviderEvent:
         new (&provider_event_) ProviderEvent(std::move(other.provider_event_));
+        break;
+    case MetadataType::kTraceInfo:
+        new (&trace_info_) TraceInfo(std::move(other.trace_info_));
         break;
     }
 }
@@ -251,6 +283,10 @@ fbl::String MetadataContent::ToString() const {
         }
         return fbl::StringPrintf("ProviderEvent(id: %" PRId32 ", %s)",
                                  provider_event_.id, name.c_str());
+    }
+    case MetadataType::kTraceInfo: {
+        return fbl::StringPrintf("TraceInfo(content: %s)",
+                                 trace_info_.content.ToString().c_str());
     }
     }
     ZX_ASSERT(false);

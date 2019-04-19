@@ -112,6 +112,7 @@ void TraceManager::StartTracing(
       tracelink_buffering_mode, std::move(provider_specs),
       [this]() { session_ = nullptr; });
 
+  session_->QueueTraceInfo();
   for (auto& bundle : providers_) {
     session_->AddProvider(&bundle);
   }

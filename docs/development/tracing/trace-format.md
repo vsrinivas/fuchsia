@@ -317,6 +317,48 @@ The following events are defined.
 
 - `0`: a buffer filled up, records were likely dropped
 
+#### Trace Info Metadata (metadata type = 4)
+
+This metadata provides information about the trace as a whole. This record is
+not associated with a particular provider.
+
+##### Format
+
+_header word_
+- `[0 .. 3]`: record type (0)
+- `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[16 .. 19]`: metadata type (4)
+- `[20 .. 23]`: trace info type
+- `[24 .. 63]`: varies by trace info type (must be zero if unused)
+
+#### Magic Number Record (trace info type = 0)
+
+This record serves as an indicator that the binary data is in the Fuchsia
+tracing format. Generally it should appear at the start of a trace. It carries
+no other information. The magic number 0x16547846 is the string "FxT"
+followed by a byte that was chosen at random.
+
+To allow the first eight bytes of a trace to be treated together as a magic
+number without caring about the internal record structure, this record type is
+_not_ extensible. The record must not contain any words other than the header
+word, and there are no reserved fields. As an eight byte number, the entire
+record has the value 0x0016547846040010.
+
+Note that the byte order of that value, and all other words in the trace,
+depends on the endianness of the system that wrote the trace. For a little
+endian system, the first eight bytes are 10 00 04 46 78 54 16 00. On a big
+endian system, it will be the reverse: 00 16 54 78 46 04 00 10.
+
+##### Format
+
+_header word_
+- `[0 .. 3]`: record type (0)
+- `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes (1)
+- `[16 .. 19]`: metadata type (4)
+- `[20 .. 23]`: trace info type (0)
+- `[24 .. 55]`: the magic number 0x16547846
+- `[56 .. 63]`: zero
+
 ### Initialization Record (record type = 1)
 
 Provides parameters needed to interpret the records which follow.  In absence

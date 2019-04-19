@@ -432,6 +432,7 @@ void ChromiumExporter::ExportMetadata(const trace::Record::Metadata& metadata) {
   switch (metadata.type()) {
     case trace::MetadataType::kProviderInfo:
     case trace::MetadataType::kProviderSection:
+    case trace::MetadataType::kTraceInfo:
       // These are handled elsewhere.
       break;
     case trace::MetadataType::kProviderEvent: {
