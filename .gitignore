@@ -64,6 +64,7 @@ tmp/
 /tmp/
 /topaz/
 /vendor/
+/src/experiences
 
 # All files in vendor need to be delivered as is, as they use
 # checksumming to ensure secure package delivery.
