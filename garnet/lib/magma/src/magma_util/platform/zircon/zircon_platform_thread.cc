@@ -41,4 +41,10 @@ std::string PlatformProcessHelper::GetCurrentProcessName()
     return (status == ZX_OK) ? std::string(name) : std::string();
 }
 
+uint64_t PlatformProcessHelper::GetCurrentProcessId() {
+    uint64_t koid;
+    PlatformObject::IdFromHandle(zx_process_self(), &koid);
+    return koid;
+}
+
 } // namespace magma

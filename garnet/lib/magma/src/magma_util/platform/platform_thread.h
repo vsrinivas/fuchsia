@@ -36,6 +36,7 @@ public:
 class PlatformProcessHelper {
 public:
     static std::string GetCurrentProcessName();
+    static uint64_t GetCurrentProcessId();
 };
 
 } // namespace magma
