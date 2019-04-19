@@ -44,6 +44,16 @@ template("modular_config") {
     config = invoker.config
   }
 
+  config_data("basemgr.config") {
+    for_pkg = "sysmgr"
+    sources = [
+      "//peridot/build/modular_config/basemgr.config",
+    ]
+    outputs = [
+      "basemgr.config",
+    ]
+  }
+
   config_data(invoker.target_name) {
     for_pkg = "basemgr"
     sources = [
@@ -55,6 +65,7 @@ template("modular_config") {
 
     deps = [
       ":${invoker.target_name}_validate",
+      ":basemgr.config",
     ]
   }
 }
