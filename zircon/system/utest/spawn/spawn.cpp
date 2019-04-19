@@ -589,9 +589,12 @@ static bool spawn_vmo_test(void) {
         ASSERT_EQ(ZX_OK, fdio_get_vmo_clone(fd, &vmo));
         close(fd);
 
+        zx_handle_t exec_vmo;
+        ASSERT_EQ(ZX_OK, zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo));
+
         const char* argv[] = {kSpawnChild, nullptr};
         status = fdio_spawn_vmo(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                vmo, argv, nullptr, 0, nullptr,
+                                exec_vmo, argv, nullptr, 0, nullptr,
                                 process.reset_and_get_address(), nullptr);
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(43, join(process));

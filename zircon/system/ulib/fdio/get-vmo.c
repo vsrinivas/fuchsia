@@ -136,12 +136,8 @@ zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
     if (io == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
-    zx_handle_t vmo;
-    zx_status_t status = copy_file_vmo(io, &vmo);
+    zx_status_t status = copy_file_vmo(io, out_vmo);
     fdio_release(io);
-    // TODO(mdempsky): Make callers responsible for adding executability as needed.
-    if (status == ZX_OK)
-        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }
 
@@ -151,12 +147,8 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo) {
     if (io == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
-    zx_handle_t vmo;
-    zx_status_t status = get_file_vmo(io, &vmo);
+    zx_status_t status = get_file_vmo(io, out_vmo);
     fdio_release(io);
-    // TODO(mdempsky): Make callers responsible for adding executability as needed.
-    if (status == ZX_OK)
-        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }
 
@@ -167,12 +159,8 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    zx_handle_t vmo;
     zx_status_t status = fdio_get_ops(io)->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
-                                                   fuchsia_io_VMO_FLAG_EXACT, &vmo);
+                                                   fuchsia_io_VMO_FLAG_EXACT, out_vmo);
     fdio_release(io);
-    // TODO(mdempsky): Make callers responsible for adding executability as needed.
-    if (status == ZX_OK)
-        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }

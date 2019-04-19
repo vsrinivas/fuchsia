@@ -22,13 +22,24 @@ void print_namespace(fdio_flat_namespace_t* flat) {
     }
 }
 
-zx_status_t load_file(const char* path, zx_handle_t* vmo) {
+zx_status_t load_file(const char* path, zx_handle_t* out_vmo) {
     int fd = open(path, O_RDONLY);
     if (fd < 0)
         return ZX_ERR_IO;
-    zx_status_t status = fdio_get_vmo_clone(fd, vmo);
+    zx_handle_t vmo;
+    zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
     close(fd);
-    return status;
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
+    if (status != ZX_OK) {
+        zx_handle_close(vmo);
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 int run_in_namespace(const char** argv, size_t count, const char* const* mapping) {

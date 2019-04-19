@@ -94,6 +94,9 @@ bool PackageLoader::LoadResource(const fxl::UniqueFD& dir,
     return false;
   }
 
+  if (resource.ReplaceAsExecutable(zx::handle()) != ZX_OK)
+    return false;
+
   resource.vmo().set_property(ZX_PROP_NAME, path.c_str(), path.length());
   package.data = fidl::MakeOptional(std::move(resource).ToTransport());
 
