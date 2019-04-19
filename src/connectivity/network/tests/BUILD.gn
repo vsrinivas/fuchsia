@@ -12,20 +12,16 @@ executable("netstack_integration_test") {
 
   sources = [
     "netstack_filter_test.cc",
-    "netstack_ioctl_test.cc",
     "netstack_no_network_test.cc",
   ]
 
   deps = [
     "//garnet/lib/inet",
-    "//garnet/public/lib/netstack/c",
     "//sdk/fidl/fuchsia.net.filter",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/connectivity/network/testing/netemul/lib/network:ethertap",
     "//third_party/googletest:gtest_main",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet",
-    "//zircon/public/fidl/fuchsia-net-stack",
     "//zircon/public/lib/zx",
   ]
 }
@@ -70,12 +66,13 @@ test("netstack_bsdsocket_c_api_test") {
 test("netstack_fuchsia_c_api_test") {
   sources = [
     "fdio_test.cc",
-    "nodename_test.cc",
+    "ioctl_test.cc",
     "util.cc",
     "util.h",
   ]
 
   deps = [
+    "//garnet/public/lib/netstack/c",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net_c",
     "//zircon/public/lib/fdio",

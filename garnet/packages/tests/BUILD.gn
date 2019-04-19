@@ -501,7 +501,6 @@ group("netstack") {
     "//src/connectivity/network/netstack/util:netstack_util_test($host_toolchain)",
     "//src/connectivity/network/tests:netstack_c_api_tests",
     "//src/connectivity/network/tests/test_filter_client",
-    "//src/connectivity/network/tests/test_ioctl_client",
     "//src/connectivity/network/tests/test_no_network_client",
   ]
 }
