@@ -5,8 +5,8 @@
 #![deny(warnings)]
 
 use {
-    fuchsia_async::{self as fasync, Timer},
-    fuchsia_zircon::{Duration, Status, Time},
+    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_zircon::{Duration, Signals, Status, Time},
     futures::{stream::Stream, task::Waker, Poll},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, sync::Weak},
@@ -196,14 +196,15 @@ impl StreamEndpoint {
         }
         self.state = StreamState::Closing;
         responder.send()?;
-        // TODO(jamuraa): Replace this with a select! on this and a future that completes when
-        // the channels are all closed.
-        await!(Timer::new(Time::after(Duration::from_seconds(3))));
-        if let Some(sock) = self.transport.as_ref() {
-            // Check to see if the transport is still alive.
-            match sock.as_ref().as_ref().read(&mut []) {
-                Err(Status::PEER_CLOSED) => (),
-                _ => return await!(self.abort(Some(peer))),
+        if let Some(sock) = &self.transport {
+            let timeout = Time::after(Duration::from_seconds(3));
+
+            let close_signals = Signals::SOCKET_PEER_CLOSED;
+            let close_wait = fasync::OnSignals::new(sock.as_ref(), close_signals);
+
+            match await!(close_wait.on_timeout(timeout, || { Err(Status::TIMED_OUT) })) {
+                Err(Status::TIMED_OUT) => return await!(self.abort(Some(peer))),
+                _ => (),
             };
         }
         // Closing returns this endpoint to the Idle state.
@@ -238,9 +239,10 @@ impl StreamEndpoint {
     /// be closed.
     pub async fn abort<'a>(&'a mut self, peer: Option<&'a Peer>) -> Result<()> {
         if let Some(peer) = peer {
-            let seid = self.remote_id.as_ref().unwrap();
-            let _ = await!(peer.abort(seid));
-            self.state = StreamState::Aborting;
+            if let Some(seid) = &self.remote_id {
+                let _ = await!(peer.abort(&seid));
+                self.state = StreamState::Aborting;
+            }
         }
         self.configuration.clear();
         self.remote_id = None;
@@ -541,8 +543,7 @@ mod tests {
         // Close the transport socket by dropping it.
         drop(remote_transport);
 
-        // TODO(jamuraa): We need to wait until the timer expires for now.
-        exec.wake_next_timer();
+        // After the transport is closed the release future should be complete.
         assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
     }
 
@@ -641,8 +642,7 @@ mod tests {
             // Close the transport socket by dropping it.
             drop(remote);
 
-            // TODO(jamuraa): We need to wait until the timer expires for now.
-            exec.wake_next_timer();
+            // After the socket is closed we should be done.
             assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
         }
 

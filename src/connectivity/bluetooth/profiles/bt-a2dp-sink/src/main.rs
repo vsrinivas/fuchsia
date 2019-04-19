@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::AUDIO_ENCODING_SBC,
     fuchsia_async as fasync, fuchsia_cobalt as cobalt,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
@@ -236,7 +236,11 @@ type RemotesMap = HashMap<String, RemotePeer>;
 
 impl RemotePeer {
     fn new(peer: avdtp::Peer) -> RemotePeer {
-        RemotePeer { peer: Arc::new(peer), opening: None, streams: Streams::build().unwrap() }
+        RemotePeer {
+            peer: Arc::new(peer),
+            opening: None,
+            streams: Streams::build().expect("Can't build streams"),
+        }
     }
 
     /// Provides a reference to the AVDTP peer.
@@ -275,25 +279,26 @@ impl RemotePeer {
                             let mut peer;
                             {
                                 let mut wremotes = remotes.write();
-                                peer = wremotes.remove(&device_id).unwrap();
+                                peer = wremotes.remove(&device_id).expect("Can't get peer");
                             }
                             let fut = peer.handle_request(request);
                             if let Err(e) = await!(fut) {
                                 fx_log_warn!("{} Error handling request: {:?}", device_id, e);
                             }
-                            remotes.write().insert(device_id.clone(), peer);
+                            let replaced = remotes.write().insert(device_id.clone(), peer);
+                            assert!(replaced.is_none(), "Two peers of {} connected", device_id);
                         }
                     }
                 }
-                fx_log_info!("Peer {} disconnected", device_id);
                 remotes.write().remove(&device_id);
+                fx_log_info!("Peer {} disconnected", device_id);
             },
         );
     }
 
     /// Handle a single request event from the avdtp peer.
     async fn handle_request(&mut self, r: avdtp::Request) -> avdtp::Result<()> {
-        fx_log_info!("Handling {:?} from peer..", r);
+        fx_vlog!(1, "Handling {:?} from peer..", r);
         match r {
             avdtp::Request::Discover { responder } => responder.send(&self.streams.information()),
             avdtp::Request::GetCapabilities { responder, stream_id }
