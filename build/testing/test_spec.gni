@@ -25,20 +25,6 @@ import("//build/testing/platforms.gni")
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
 #
-#   resources (optional)
-#     [list of scopes] Defines the resources that the test needs as runtime
-#     dependencies. Only valid for linux/mac tests, resources are placed
-#     relative to the test location.
-#
-#     Entries in a scope in the resources list:
-#
-#       path (required)
-#         [string] Path to the resource in source or the build directory.
-#
-#       dest (required)
-#         [string] Required: path relative to the test at which to put the
-#         resource.
-#
 #   environments (optional, default: QEMU for fuchsia; else a VM)
 #     [list of scopes] Device environments in which the test should run.
 #
@@ -186,43 +172,12 @@ template("test_spec") {
     }
   }
 
-  _deps = []
-  if (defined(invoker.resources)) {
-    if (is_linux || is_mac) {
-      test_dir = get_path_info(invoker.location, "dir")
-      foreach(resource, invoker.resources) {
-        resource_target_name =
-            "${target_name}_${resource.path}_${resource.dest}"
-        copy(resource_target_name) {
-          sources = [
-            resource.path,
-          ]
-          outputs = [
-            "$test_dir/${resource.dest}",
-          ]
-
-          metadata = {
-            test_runtime_deps = outputs
-          }
-        }
-        _deps += [ ":$resource_target_name" ]
-      }
-    } else {
-      not_needed(invoker, [ "resources" ])
-    }
-  }
-
+  target_name_deps = []
 
   # Rely on metadata reachable through deps to determine any runtime
   # dependencies of the test; record them to a file.
   runtime_deps_file = ""
-  target_name_deps = []
-
-if (defined(invoker.deps)) {
-_deps += invoker.deps
-}
-
-  if (_deps != []) {
+  if (defined(invoker.deps) && invoker.deps != []) {
     test_name = get_path_info(invoker.name, "name")
     runtime_deps_file = "$target_gen_dir/${test_name}.deps.json"
     runtime_deps_target_name = "${target_name}_deps"
@@ -232,7 +187,7 @@ _deps += invoker.deps
         runtime_deps_file,
       ]
       data_keys = [ "test_runtime_deps" ]
-      deps = _deps
+      deps = invoker.deps
       rebase = root_build_dir
       output_conversion = "json"
     }

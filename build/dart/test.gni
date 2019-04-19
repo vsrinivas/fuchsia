@@ -25,12 +25,6 @@ import("//build/testing/test_spec.gni")
 #     Optional: List of labels this package depends on that are not Dart
 #       packages.
 #
-#   resources
-#     Optional: Defines the resources that the test needs as runtime
-#     dependencies. Only used for linux and mac tests.
-#     See //build/testing/test_spec.gni for more details
-#     Type: list(scope)
-#
 #   environments
 #     Optional: What environments this test should target. Only used here for
 #       linux and mac tests, with a default value of a general linux/mac
@@ -141,7 +135,7 @@ template("dart_test") {
     }
   }
 
-  _invocation = "$target_gen_dir/$_main_target_name"
+  _invocation = "$root_out_dir/$_main_target_name"
   test_spec(_spec_target_name) {
     name = _main_target_name
     location = _invocation
@@ -150,7 +144,6 @@ template("dart_test") {
                            [
                              "deps",
                              "environments",
-                             "resources",
                            ])
     deps += [ ":$_snapshot_target_name" ]
     if (defined(invoker.non_dart_deps)) {
