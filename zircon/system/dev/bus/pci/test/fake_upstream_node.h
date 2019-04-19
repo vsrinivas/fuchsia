@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_UPSTREAM_NODE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_UPSTREAM_NODE_H_
 
 #include "../ref_counted.h"
 #include "../upstream_node.h"
@@ -36,3 +37,5 @@ private:
 };
 
 } // namespace pci
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_UPSTREAM_NODE_H_

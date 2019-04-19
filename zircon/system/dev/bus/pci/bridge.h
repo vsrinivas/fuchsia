@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BRIDGE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_BRIDGE_H_
 
 #include "allocation.h"
 #include "common.h"
@@ -60,7 +61,7 @@ public:
 protected:
     zx_status_t ConfigureBars() final TA_EXCL(dev_lock_);
     zx_status_t AllocateBridgeWindowsLocked() TA_REQ(dev_lock_);
-    void Disable() final;
+    void Disable() final TA_EXCL(dev_lock_);
 
 private:
     Bridge(zx_device_t* parent,
@@ -86,3 +87,5 @@ private:
 };
 
 } // namespace pci
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_BRIDGE_H_

@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
 
 #include <ddk/mmio-buffer.h>
 #include <ddktl/protocol/pciroot.h>
@@ -210,7 +211,7 @@ static_assert(sizeof(FakePciType1Config) == 64, "Bad size for PciType1Config");
 union FakeDeviceConfig {
     FakePciType0Config device;
     FakePciType1Config bridge;
-    uint8_t cfg_header[256];
+    uint8_t config[256];
     uint8_t ext_config[4096];
 };
 static_assert(sizeof(FakeDeviceConfig) == 4096, "Bad size for FakeDeviceConfig");
@@ -300,3 +301,5 @@ private:
     ddk::MmioBuffer mmio_;
     FakeDeviceConfig* configs_;
 };
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_

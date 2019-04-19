@@ -4,9 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_
 
 #include "allocation.h"
+#include "capabilities.h"
 #include "config.h"
 #include "ref_counted.h"
 #include <assert.h>
@@ -58,6 +60,38 @@ class Device : public PciDeviceType,
                public ddk::PciProtocol<pci::Device>,
                public fbl::DoublyLinkedListable<Device*> {
 public:
+    using NodeState = fbl::WAVLTreeNodeState<fbl::RefPtr<pci::Device>>;
+    struct BusListTraits {
+        static NodeState& node_state(Device& device) {
+            return device.bus_list_state_;
+        }
+    };
+
+    // These traits are used for the WAVL tree implementation. They allow device objects
+    // to be sorted and found in trees by composite bdf address.
+    struct KeyTraitsSortByBdf {
+        static const pci_bdf_t& GetKey(pci::Device& dev) {
+            return dev.cfg_->bdf();
+        }
+
+        static bool LessThan(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
+            return (bdf1.bus_id < bdf2.bus_id) ||
+                   ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id < bdf2.device_id)) ||
+                   ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
+                    (bdf1.function_id < bdf2.function_id));
+        }
+
+        static bool EqualTo(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
+            return (bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
+                   (bdf1.function_id == bdf2.function_id);
+        }
+    };
+
+    struct Capabilities {
+        CapabilityList list;
+        PciExpressCapability* pcie;
+    };
+
     // DDKTL PciProtocol methods
     zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res);
     zx_status_t PciEnableBusMaster(bool enable);
@@ -158,7 +192,7 @@ public:
 
     // Requests a device unplug itself from its UpstreamNode and the Bus list.
     virtual void Unplug() TA_EXCL(dev_lock_);
-    void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
+    // TODO(cja): port void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
     const fbl::RefPtr<Config>& config() const { return cfg_; }
 
     bool plugged_in() const { return plugged_in_; }
@@ -177,6 +211,7 @@ public:
     uint8_t dev_id() const { return cfg_->bdf().device_id; }
     uint8_t func_id() const { return cfg_->bdf().function_id; }
     uint32_t bar_count() const { return bar_count_; }
+    const CapabilityList& capabilities() const { return caps_.list; }
 
     // Dump some information about the device
     virtual void Dump() const;
@@ -184,33 +219,6 @@ public:
     // Devices need to exist in both the top level bus driver class, as well
     // as in a list for roots/bridges to track their downstream children. These
     // traits facilitate that for us.
-    using NodeState = fbl::WAVLTreeNodeState<fbl::RefPtr<pci::Device>>;
-    struct BusListTraits {
-        static NodeState& node_state(Device& device) {
-            return device.bus_list_state_;
-        }
-    };
-
-    // These traits are used for the WAVL tree implementation. They allow device objects
-    // to be sorted and found in trees by composite bdf address.
-    struct KeyTraitsSortByBdf {
-        static const pci_bdf_t& GetKey(pci::Device& dev) {
-            return dev.cfg_->bdf();
-        }
-
-        static bool LessThan(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
-            return (bdf1.bus_id < bdf2.bus_id) ||
-                   ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id < bdf2.device_id)) ||
-                   ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
-                    (bdf1.function_id < bdf2.function_id));
-        }
-
-        static bool EqualTo(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
-            return (bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
-                   (bdf1.function_id == bdf2.function_id);
-        }
-    };
-
 protected:
     Device(zx_device_t* parent,
            fbl::RefPtr<Config>&& config,
@@ -247,9 +255,9 @@ protected:
         return ReadCmdLocked() & PCI_COMMAND_MEM_EN;
     }
 
-    // TODO(cja): port zx_status_t ProbeCapabilitiesLocked();
-    // TODO(cja): port zx_status_t ParseStdCapabilitiesLocked();
-    // TODO(cja): port zx_status_t ParseExtCapabilitiesLocked();
+    zx_status_t ProbeCapabilities() TA_REQ(dev_lock_);
+    zx_status_t ParseCapabilities() TA_REQ(dev_lock_);
+    // TODO(cja) port zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
 
     fbl::Mutex cmd_reg_lock_;       // Protection for access to the command register.
     const bool is_bridge_;          // True if this device is also a bridge
@@ -261,7 +269,7 @@ protected:
     uint8_t prog_if_;               // The device's programming interface (from cfg)
     uint8_t rev_id_;                // The device's revision ID (from cfg)
 
-    /* State related to lifetime management */
+    // State related to lifetime management.
     bool plugged_in_ = false;
     bool disabled_ = false;
     bool quirks_done_ = false;
@@ -301,8 +309,7 @@ private:
     virtual void Disable() TA_EXCL(dev_lock_);
     void DisableLocked() TA_REQ(dev_lock_);
 
-    // Capabilities
-    // TODO(cja): Port over the capability support from kernel pci.
+    Capabilities caps_ = {};
 
     // IRQ structures
     // TODO(cja): Port over the IRQ support from kernel pci.
@@ -315,3 +322,5 @@ private:
 };
 
 } // namespace pci
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_

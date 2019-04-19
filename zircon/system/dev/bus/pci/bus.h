@@ -1,7 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
 
 #include "bridge.h"
 #include "config.h"
@@ -25,7 +26,7 @@ namespace pci {
 // as multiple bus instances with differing segment groups become a reality.
 class BusLinkInterface {
 public:
-    virtual ~BusLinkInterface(){}
+    virtual ~BusLinkInterface() {}
     virtual void LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
     virtual void UnlinkDevice(pci::Device* device) = 0;
 };
@@ -93,3 +94,5 @@ private:
 };
 
 } // namespace pci
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_

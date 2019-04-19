@@ -20,6 +20,7 @@ source_set("user_pci") {
     "allocation.cpp",
     "bridge.cpp",
     "bus.cpp",
+    "capabilities.cpp",
     "config.cpp",
     "device.cpp",
     "protocol.cpp",

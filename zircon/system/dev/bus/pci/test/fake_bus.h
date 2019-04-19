@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
 
 #include "../bus.h"
 #include <ddk/mmio-buffer.h>
@@ -30,9 +31,14 @@ public:
     pci::Device& get_device(pci_bdf_t bdf) {
         return *device_list_.find(bdf);
     }
+
+    const pci::DeviceList& device_list() { return device_list_; }
+
 private:
     mutable fbl::Mutex dev_list_lock_;
     pci::DeviceList device_list_;
 };
 
 } // namespace pci
+
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
