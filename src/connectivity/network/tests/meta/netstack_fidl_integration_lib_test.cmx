@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx"
             }
         }
     },
@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.stack.Stack"
+            "fuchsia.netemul.sandbox.Sandbox"
         ]
     }
 }

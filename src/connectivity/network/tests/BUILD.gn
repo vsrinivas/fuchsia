@@ -11,7 +11,6 @@ executable("netstack_integration_test") {
   testonly = true
 
   sources = [
-    "netstack_add_eth_test.cc",
     "netstack_filter_test.cc",
     "netstack_ioctl_test.cc",
     "netstack_no_network_test.cc",
@@ -37,9 +36,16 @@ rustc_library("netstack_fidl_integration") {
   edition = "2018"
 
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
+    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",

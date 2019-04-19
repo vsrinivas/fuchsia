@@ -248,75 +248,80 @@ fn main() -> Result<(), failure::Error> {
                         fidl_fuchsia_hardware_ethernet::DeviceMarker,
                     >::new(client)
                     .into_proxy()?;
-                    let device_info = await!(device.get_info())?;
-                    let device_info: fidl_fuchsia_hardware_ethernet_ext::EthernetInfo =
-                        device_info.into();
 
-                    if device_info.features.is_physical() {
-                        let client = device
-                            .into_channel()
-                            .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
-                                failure::err_msg("failed to convert device proxy into channel")
-                            })?
-                            .into_zx_channel();
+                    if let Ok(device_info) = await!(device.get_info()) {
+                        let device_info: fidl_fuchsia_hardware_ethernet_ext::EthernetInfo =
+                            device_info.into();
 
-                        let name = persisted_interface_config.get_stable_name(
-                            topological_path.clone(), /* TODO(tamird): we can probably do
-                                                       * better with std::borrow::Cow. */
-                            device_info.mac,
-                            device_info.features.contains(
+                        if device_info.features.is_physical() {
+                            let client = device
+                                .into_channel()
+                                .map_err(
+                                    |fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
+                                        failure::err_msg(
+                                            "failed to convert device proxy into channel",
+                                        )
+                                    },
+                                )?
+                                .into_zx_channel();
+
+                            let name = persisted_interface_config.get_stable_name(
+                                topological_path.clone(), /* TODO(tamird): we can probably do
+                                                           * better with std::borrow::Cow. */
+                                device_info.mac,
+                                device_info.features.contains(
+                                    fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN,
+                                ),
+                            )?;
+
+                            // Hardcode the interface metric. Eventually this should
+                            // be part of the config file.
+                            let metric: u32 = match device_info.features.contains(
                                 fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN,
-                            ),
-                        )?;
+                            ) {
+                                true => INTF_METRIC_WLAN,
+                                false => INTF_METRIC_ETH,
+                            };
+                            let mut derived_interface_config = matchers::config_for_device(
+                                &device_info,
+                                name.to_string(),
+                                &topological_path,
+                                metric,
+                                &default_config_rules,
+                            );
+                            let nic_id = await!(netstack.add_ethernet_device(
+                                &topological_path,
+                                &mut derived_interface_config,
+                                fidl::endpoints::ClientEnd::<
+                                    fidl_fuchsia_hardware_ethernet::DeviceMarker,
+                                >::new(client),
+                            ))
+                            .with_context(|_| {
+                                format!(
+                                    "fidl_netstack::Netstack::add_ethernet_device({})",
+                                    filename.display()
+                                )
+                            })?;
 
-                        // Hardcode the interface metric. Eventually this should
-                        // be part of the config file.
-                        let metric: u32 = match device_info
-                            .features
-                            .contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN)
-                        {
-                            true => INTF_METRIC_WLAN,
-                            false => INTF_METRIC_ETH,
-                        };
-                        let mut derived_interface_config = matchers::config_for_device(
-                            &device_info,
-                            name.to_string(),
-                            &topological_path,
-                            metric,
-                            &default_config_rules,
-                        );
-                        let nic_id = await!(netstack.add_ethernet_device(
-                            &topological_path,
-                            &mut derived_interface_config,
-                            fidl::endpoints::ClientEnd::<
-                                fidl_fuchsia_hardware_ethernet::DeviceMarker,
-                            >::new(client),
-                        ))
-                        .with_context(|_| {
-                            format!(
-                                "fidl_netstack::Netstack::add_ethernet_device({})",
-                                filename.display()
-                            )
-                        })?;
+                            await!(match derived_interface_config.ip_address_config {
+                                fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
+                                    netstack.set_dhcp_client_status(nic_id as u32, true)
+                                }
+                                fidl_fuchsia_netstack::IpAddressConfig::StaticIp(
+                                    fidl_fuchsia_net::Subnet { addr: mut address, prefix_len },
+                                ) => netstack.set_interface_address(
+                                    nic_id as u32,
+                                    &mut address,
+                                    prefix_len
+                                ),
+                            })?;
+                            let () = netstack.set_interface_status(nic_id as u32, true)?;
 
-                        await!(match derived_interface_config.ip_address_config {
-                            fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
-                                netstack.set_dhcp_client_status(nic_id as u32, true)
-                            }
-                            fidl_fuchsia_netstack::IpAddressConfig::StaticIp(
-                                fidl_fuchsia_net::Subnet { addr: mut address, prefix_len },
-                            ) => netstack.set_interface_address(
-                                nic_id as u32,
-                                &mut address,
-                                prefix_len
-                            ),
-                        })?;
-                        let () = netstack.set_interface_status(nic_id as u32, true)?;
-
-                        // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
-                        // remove casting nic_id to u64.
-                        await!(interface_ids.lock())
-                            .insert(derived_interface_config.name, nic_id as u64);
+                            // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
+                            // remove casting nic_id to u64.
+                            await!(interface_ids.lock())
+                                .insert(derived_interface_config.name, nic_id as u64);
+                        }
                     }
                 }
 
