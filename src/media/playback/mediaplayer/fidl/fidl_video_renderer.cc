@@ -665,9 +665,9 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // just enough to remove the parts we don't want to see.
   image_pipe_node_.SetShape(
       scenic::Rectangle(session(), image_width_, image_height_));
-  image_pipe_node_.SetTranslation((image_width_ - display_width_) / 2.0f,
-                                  (image_height_ - display_height_) / 2.0f,
-                                  0.0f);
+  image_pipe_node_.SetTranslation(
+      static_cast<float>(image_width_ - display_width_) / 2.0f,
+      static_cast<float>(image_height_ - display_height_) / 2.0f, 0.0f);
 
   // Scale |entity_node_| to fill the view.
   float width_scale = logical_size().x / display_width_;

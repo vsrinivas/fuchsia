@@ -10,7 +10,7 @@ namespace media_player {
 namespace {
 
 void FillBlock(SlidingBuffer::Block block) {
-  for (unsigned int i = 0; i < block.size; ++i) {
+  for (size_t i = 0; i < block.size; ++i) {
     block.buffer[i] = uint8_t((i + block.start) % 256);
   }
 }
@@ -26,7 +26,7 @@ void CheckRange(SlidingBuffer& buffer, size_t start, size_t size,
   std::vector<uint8_t> store(expected_read_size, 0);
   size_t bytes_read = buffer.Read(start, store.data(), size);
   EXPECT_EQ(bytes_read, expected_read_size);
-  for (unsigned int i = 0; i < bytes_read; ++i) {
+  for (size_t i = 0; i < bytes_read; ++i) {
     EXPECT_EQ(store[i], (i + start) % 256);
   }
 }

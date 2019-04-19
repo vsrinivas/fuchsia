@@ -158,7 +158,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::GetDecoderOwnedBuffer(
 void BufferSet::AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
 
-  for (uint32_t index = 0; index < buffers_.size(); ++index) {
+  for (size_t index = 0; index < buffers_.size(); ++index) {
     FXL_DCHECK(buffers_[index].free_);
     FXL_DCHECK(!buffers_[index].decoder_ref_);
 
@@ -175,7 +175,7 @@ void BufferSet::ReleaseAllDecoderOwnedBuffers() {
   {
     std::lock_guard<std::mutex> locker(mutex_);
 
-    for (uint32_t index = 0; index < buffers_.size(); ++index) {
+    for (size_t index = 0; index < buffers_.size(); ++index) {
       if (buffers_[index].decoder_ref_) {
         buffers_to_release_.push_back(buffers_[index].decoder_ref_);
         buffers_[index].decoder_ref_ = nullptr;
