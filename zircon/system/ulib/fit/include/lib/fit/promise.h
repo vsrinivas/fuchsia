@@ -904,25 +904,10 @@ join_promises(Promises... promises) {
 //     }
 //
 template <typename V, typename E>
-inline promise<std::vector<::fit::result<V, E>>>
-join_promise_vector(std::vector<::fit::promise<V, E>> promises) {
-    std::vector<fit::result<V, E>> results(promises.size());
-    return ::fit::make_promise(
-        [promises = std::move(promises),
-         results = std::move(results)](fit::context& context) mutable
-        -> fit::result<std::vector<fit::result<V, E>>> {
-            bool all_done{true};
-            for (size_t i = 0; i < promises.size(); ++i) {
-                if (!results[i]) {
-                    results[i] = promises[i](context);
-                    all_done &= !!results[i];
-                }
-            }
-            if (all_done) {
-                return fit::ok(std::move(results));
-            }
-            return fit::pending();
-        });
+inline promise_impl<::fit::internal::join_vector_continuation<fit::promise<V, E>>>
+join_promise_vector(std::vector<fit::promise<V, E>> promises) {
+    return make_promise_with_continuation(
+        ::fit::internal::join_vector_continuation<fit::promise<V, E>>(std::move(promises)));
 }
 
 // Describes the status of a future.

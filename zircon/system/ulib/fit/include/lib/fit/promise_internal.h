@@ -579,6 +579,35 @@ private:
     std::tuple<future_impl<Promises>...> promises_;
 };
 
+// The continuation produced by |join_promise_vector()|.
+template <typename Promise>
+class join_vector_continuation final {
+    using promise_vector = std::vector<Promise>;
+    using result_vector = std::vector<typename Promise::result_type>;
+
+public:
+    explicit join_vector_continuation(promise_vector promises)
+        : promises_(std::move(promises)), results_(promises_.size()) {}
+
+    ::fit::result<result_vector> operator()(::fit::context& context) {
+        bool all_done{true};
+        for (size_t i = 0; i < promises_.size(); ++i) {
+            if (!results_[i]) {
+                results_[i] = promises_[i](context);
+                all_done &= !results_[i].is_pending();
+            }
+        }
+        if (all_done) {
+            return fit::ok(std::move(results_));
+        }
+        return ::fit::pending();
+    }
+
+private:
+    promise_vector promises_;
+    result_vector results_;
+};
+
 } // namespace internal
 
 template <typename PromiseHandler>
