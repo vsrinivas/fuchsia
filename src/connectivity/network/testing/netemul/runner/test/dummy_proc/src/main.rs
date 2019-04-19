@@ -25,6 +25,8 @@ struct Opt {
     publish: Option<i32>,
     #[structopt(short = "e")]
     event: Option<i32>,
+    #[structopt(short = "d")]
+    look_at_data: bool,
 }
 
 const BUS_NAME: &str = "test-bus";
@@ -91,6 +93,15 @@ fn main() -> Result<(), Error> {
     if let Some(wait) = opt.wait {
         std::thread::sleep(std::time::Duration::from_millis(wait));
     }
+
+    let _file = if opt.look_at_data {
+        Some(
+            std::fs::File::open(std::path::Path::new("/vdata/.THIS_IS_A_VIRTUAL_FS"))
+                .context("failed to get vdata")?,
+        )
+    } else {
+        None
+    };
 
     if opt.publish != None || opt.event != None {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;

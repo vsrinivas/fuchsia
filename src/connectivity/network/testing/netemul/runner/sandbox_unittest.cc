@@ -127,6 +127,8 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   network::EndpointManagerPtr& endpoint_manager() { return endp_manager_; }
 
+  SandboxArgs TakeArgs() { return std::move(sandbox_args_); }
+
  private:
   void ConnectToNetwork(Sandbox* sandbox) {
     std::cout << "Connected to network" << std::endl;
@@ -720,6 +722,35 @@ TEST_F(SandboxTest, Sequencer) {
   exec.run();
 
   EXPECT_EQ(ss.str(), "ab");
+}
+
+TEST_F(SandboxTest, DestructorRunsCleanly) {
+  // This test verifies that if the sandbox is destroyed while tests are
+  // running inside it, it'll shutdown cleanly.
+  // Specifically, this test was added due to a crash in the destruction
+  // of VirtualData (inside ManagedEnvironment) while a process is currently
+  // accessing the vfs.
+  // Dummy_proc is launched with "-d" which causes it to open a file in
+  // the virtual file system and we ensure that we destroy the sandbox
+  // While it is still running.
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment" : {
+      "test" : [ { "arguments": ["-d", "-w", "90000"] } ]
+   }
+}
+)");
+  auto sandbox = std::make_unique<Sandbox>(TakeArgs());
+  sandbox->SetTerminationCallback(
+      [](int64_t exit_code, TerminationReason reason) {
+        FAIL() << "Shouldn't exit";
+      });
+  sandbox->Start(dispatcher());
+  // Give enough time for the process to actually open the file:
+  RunLoopWithTimeout(zx::msec(15));
+  // force the descrutor to run:
+  sandbox = nullptr;
 }
 
 }  // namespace testing

@@ -15,10 +15,11 @@ namespace netemul {
 class VirtualData {
  public:
   VirtualData();
+  ~VirtualData();
   zx::channel GetDirectory();
 
  private:
-  memfs::Vfs vfs_;
+  std::unique_ptr<memfs::Vfs> vfs_;
   fbl::RefPtr<memfs::VnodeDir> dir_;
 };
 

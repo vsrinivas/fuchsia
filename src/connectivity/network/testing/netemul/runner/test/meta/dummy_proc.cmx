@@ -3,6 +3,9 @@
         "binary": "bin/dummy_proc"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.netemul.sync.SyncManager"
         ]
