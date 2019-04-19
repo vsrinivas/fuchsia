@@ -21,9 +21,9 @@
 namespace runtests {
 namespace {
 
-// A whitelist of the names of environment variables names that we pass into the
+// A list of the names of environment variables names that we pass into the
 // spawned test subprocess.
-constexpr const char* const kEnvironmentWhitelist[] = {
+constexpr const char* const kAllowedEnvironmentVars[] = {
     "TMPDIR",
     "PATH",
     // Paths to the symbolizer for various sanitizers.
@@ -60,13 +60,13 @@ std::unique_ptr<Result> PosixRunTest(const char* argv[],
         }
     });
 
-    // Construct the array of whitelisted environment variable strings of the
+    // Construct the array of allowed environment variable strings of the
     // form "<name>=<value>".  The env_strings array just keeps the underlying
     // std::string objects alive so the envp pointers remain valid.
-    std::string env_strings[fbl::count_of(kEnvironmentWhitelist)];
+    std::string env_strings[fbl::count_of(kAllowedEnvironmentVars)];
     const char* envp[fbl::count_of(env_strings) + 1];  // +1 for null terminator.
     size_t i = 0;
-    for (const char* var : kEnvironmentWhitelist) {
+    for (const char* var : kAllowedEnvironmentVars) {
         const char* val = getenv(var);
         if (val) {
             env_strings[i] = std::string(var) + "=" + val;
