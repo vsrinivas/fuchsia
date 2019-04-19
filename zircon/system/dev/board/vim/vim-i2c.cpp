@@ -75,6 +75,15 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_LED2472G,
     },
+    // Ethernet
+    {
+        .bus_id = 1,
+        .address = 0x18,
+        // Binds to a composite device.
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

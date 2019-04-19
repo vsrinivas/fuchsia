@@ -24,9 +24,9 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlEthernet);
 
     explicit AmlEthernet(zx_device_t* parent)
-        : DeviceType(parent), pdev_(parent) {}
+        : DeviceType(parent) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // DDK Hooks.
     void DdkRelease();
@@ -36,6 +36,15 @@ public:
     zx_status_t EthBoardResetPhy();
 
 private:
+    // Component Indexes.
+    enum {
+        COMPONENT_PDEV,
+        COMPONENT_I2C,
+        COMPONENT_RESET_GPIO,
+        COMPONENT_INTR_GPIO,
+        COMPONENT_COUNT,
+    };
+
     // GPIO Indexes.
     enum {
         PHY_RESET,

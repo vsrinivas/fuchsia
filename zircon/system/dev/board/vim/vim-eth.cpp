@@ -15,17 +15,9 @@
 #include <limits.h>
 
 #include "vim.h"
+#include "vim-gpios.h"
+
 namespace vim {
-static const pbus_gpio_t eth_board_gpios[] = {
-    {
-        // MAC_RST
-        .gpio = S912_GPIOZ(14),
-    },
-    {
-        // MAC_INTR (need to wire up interrupt?)
-        .gpio = S912_GPIOZ(15),
-    },
-};
 
 static const pbus_irq_t eth_mac_irqs[] = {
     {
@@ -96,13 +88,6 @@ static const pbus_metadata_t eth_board_metadata[] = {
     },
 };
 
-static const pbus_i2c_channel_t vim2_mcu_i2c[] = {
-    {
-        .bus_id = 1,
-        .address = 0x18,
-    },
-};
-
 static pbus_dev_t eth_board_dev = [](){
     pbus_dev_t dev;
     dev.name = "ethernet_mac";
@@ -111,10 +96,6 @@ static pbus_dev_t eth_board_dev = [](){
     dev.did = PDEV_DID_AMLOGIC_ETH;
     dev.mmio_list = eth_board_mmios;
     dev.mmio_count = countof(eth_board_mmios);
-    dev.gpio_list = eth_board_gpios;
-    dev.gpio_count = countof(eth_board_gpios);
-    dev.i2c_channel_list = vim2_mcu_i2c;
-    dev.i2c_channel_count = countof(vim2_mcu_i2c);
     dev.metadata_list = eth_board_metadata;
     dev.metadata_count = countof(eth_board_metadata);
     return dev;
@@ -138,10 +119,43 @@ static pbus_dev_t dwmac_dev = [](){
     return dev;
 }();
 
-// Composite binding rules for ethernet driver.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+
+// Composite binding rules for ethernet board driver.
+const zx_bind_inst_t i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x18),
+};
+static const zx_bind_inst_t gpio_reset_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ETH_MAC_RST),
+};
+static const zx_bind_inst_t gpio_int_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ETH_MAC_INTR),
+};
+static const device_component_part_t i2c_component[] = {
+    { countof(root_match), root_match },
+    { countof(i2c_match), i2c_match },
+};
+static const device_component_part_t gpio_reset_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio_reset_match), gpio_reset_match },
+};
+static const device_component_part_t gpio_int_component[] = {
+    { countof(root_match), root_match },
+    { countof(gpio_int_match), gpio_int_match },
+};
+static const device_component_t eth_components[] = {
+    { countof(i2c_component), i2c_component },
+    { countof(gpio_reset_component), gpio_reset_component },
+    { countof(gpio_int_component), gpio_int_component },
+};
+
+// Composite binding rules for dwmac.
 static const zx_bind_inst_t eth_board_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ETH_BOARD),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
@@ -151,7 +165,7 @@ static const device_component_part_t eth_board_component[] = {
     { fbl::count_of(root_match), root_match },
     { fbl::count_of(eth_board_match), eth_board_match },
 };
-static const device_component_t components[] = {
+static const device_component_t dwmac_components[] = {
     { fbl::count_of(eth_board_component), eth_board_component },
 };
 
@@ -175,14 +189,17 @@ zx_status_t Vim::EthInit() {
     gpio_impl_.SetAltFunction(S912_ETH_TXD2, S912_ETH_TXD2_FN);
     gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
-    auto status = pbus_.DeviceAdd(&eth_board_dev);
+    // Add a composite device for ethernet board in a new devhost.
+    auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_components,
+                                           fbl::count_of(eth_components), UINT32_MAX);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_device_add failed: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
         return status;
     }
 
-    // Add a composite device for dwmac driver.
-    status = pbus_.CompositeDeviceAdd(&dwmac_dev, components, fbl::count_of(components), 1);
+    // Add a composite device for dwmac driver in the ethernet board driver's devhost.
+    status = pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_components, fbl::count_of(dwmac_components),
+                                      1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
         return status;

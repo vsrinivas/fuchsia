@@ -87,7 +87,10 @@ static const gpio_pin_t gpio_pins[] = {
     { GPIO_WIFI_DEBUG },
     // For thermal.
     { GPIO_THERMAL_FAN_O },
-    { GPIO_THERMAL_FAN_1 },    
+    { GPIO_THERMAL_FAN_1 },
+    // For ethernet.
+    { GPIO_ETH_MAC_RST },
+    { GPIO_ETH_MAC_INTR },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
