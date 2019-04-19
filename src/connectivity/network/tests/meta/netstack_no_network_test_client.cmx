@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/no_network_client"
+        "binary": "bin/netstack_no_network_test_client"
     },
     "sandbox": {
         "services": [

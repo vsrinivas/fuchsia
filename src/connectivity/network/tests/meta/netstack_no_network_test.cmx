@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_no_network_test_client.cmx",
+            "environment": {
+                "name": "no_network",
+                "services": {
+                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "test": [
+                    {}
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}
