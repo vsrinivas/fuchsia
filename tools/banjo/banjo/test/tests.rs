@@ -69,7 +69,7 @@ macro_rules! codegen_test {
                     backend.codegen(ast).unwrap();
                 }
                 let output = String::from_utf8(output).unwrap();
-                crate::assert_eq_trim!(output, expected)
+                $crate::assert_eq_trim!(output, expected)
             }
     }
 }
