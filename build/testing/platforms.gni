@@ -21,6 +21,7 @@ all_dimension_keys = [
   "device_type",
   "cpu",
   "os",
+  "pool",
   "testbed",
 ]
 
@@ -53,14 +54,17 @@ test_platforms = [
   {
     testbed = "bt_rf_chamber_nuc_phone"
     cpu = "x64"
+    pool = "fuchsia.tests.connectivity"
   },
   {
     testbed = "bt_rf_chamber_nuc_nuc"
     cpu = "x64"
+    pool = "fuchsia.tests.connectivity"
   },
   {
     testbed = "wifi_rf_chamber_nuc"
     cpu = "x64"
+    pool = "fuchsia.tests.connectivity"
   },
   # The platforms below are experimental and may not yet be targeted.
   # See IN-876
