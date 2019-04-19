@@ -3598,7 +3598,7 @@ static void* sdio_printer(void* foo) {
 }
 #endif // SDIO_PRINTER
 
-static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
+static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     struct brcmf_sdio_dev* sdiodev;
     uint8_t clkctl = 0;
     zx_status_t err = ZX_OK;
@@ -3635,7 +3635,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
     err = brcmf_chip_attach(sdiodev, &brcmf_sdio_buscore_ops, &bus->ci);
     if (err != ZX_OK) {
-        brcmf_err("brcmf_chip_attach failed!\n");
+        brcmf_err("brcmf_chip_attach failed: %s\n", zx_status_get_string(err));
         bus->ci = NULL;
         goto fail;
     }
@@ -3643,12 +3643,16 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     /* Pick up the SDIO core info struct from chip.c */
     bus->sdio_core = brcmf_chip_get_core(bus->ci, CHIPSET_SDIO_DEV_CORE);
     if (!bus->sdio_core) {
+	brcmf_err("call to brcmf_chip_get_core (SDIO_DEV_CORE) failed\n");
+        err = ZX_ERR_INTERNAL;
         goto fail;
     }
 
     /* Pick up the CHIPCOMMON core info struct, for bulk IO in bcmsdh.c */
     sdiodev->cc_core = brcmf_chip_get_core(bus->ci, CHIPSET_CHIPCOMMON_CORE);
     if (!sdiodev->cc_core) {
+	brcmf_err("call to brcmf_chip_get_core (CHIPCOMMON_CORE) failed\n");
+	err = ZX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -3656,6 +3660,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
         brcmf_get_module_param(&sdiodev->dev, BRCMF_BUSTYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
     if (!sdiodev->settings) {
         brcmf_err("Failed to get device parameters\n");
+	err = ZX_ERR_INTERNAL;
         goto fail;
     }
     /* platform specific configuration:
@@ -3681,8 +3686,9 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     }
 #endif
 
-    if (brcmf_sdio_kso_init(bus)) {
-        brcmf_err("error enabling KSO\n");
+    err = brcmf_sdio_kso_init(bus);
+    if (err != ZX_OK) {
+        brcmf_err("error enabling KSO: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3696,6 +3702,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     /* Set card control so an SDIO card reset does a WLAN backplane reset */
     reg_val = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, &err);
     if (err != ZX_OK) {
+	brcmf_err("func0_rb failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3703,6 +3710,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
     brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, reg_val, &err);
     if (err != ZX_OK) {
+	brcmf_err("func0_wb failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3710,6 +3718,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     reg_addr = CORE_CC_REG(brcmf_chip_get_pmu(bus->ci)->base, pmucontrol);
     reg_val = brcmf_sdiod_func1_rl(sdiodev, reg_addr, &err);
     if (err != ZX_OK) {
+	brcmf_err("func1_rl failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3717,6 +3726,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
     brcmf_sdiod_func1_wl(sdiodev, reg_addr, reg_val, &err);
     if (err != ZX_OK) {
+	brcmf_err("func1_wl failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3727,7 +3737,9 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     /* allocate header buffer */
     bus->hdrbuf = calloc(1, MAX_HDR_READ + bus->head_align);
     if (!bus->hdrbuf) {
-        return false;
+	brcmf_err("failed to allocate memory for SDIO hdrbuf\n");
+	// Don't go to 'fail' here because we've already released the host
+	return ZX_ERR_NO_MEMORY;
     }
     /* Locate an appropriately-aligned portion of hdrbuf */
     bus->rxhdr = (uint8_t*)roundup((unsigned long)&bus->hdrbuf[0], bus->head_align);
@@ -3740,12 +3752,13 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     }
 
     brcmf_dbg(TEMP, "Exit");
-    return true;
+    ZX_DEBUG_ASSERT(err == ZX_OK);
+    return err;
 
 fail:
     sdio_release_host(sdiodev->func1);
     brcmf_dbg(TEMP, "* * FAIL");
-    return false;
+    return err;
 }
 
 static void* brcmf_sdio_watchdog_thread(void* data) {
@@ -4011,8 +4024,9 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     bus->brcmf_wq = wq;
 
     /* attempt to attach to the dongle */
-    if (!(brcmf_sdio_probe_attach(bus))) {
-        brcmf_err("brcmf_sdio_probe_attach failed\n");
+    ret = brcmf_sdio_probe_attach(bus);
+    if (ret != ZX_OK) {
+        brcmf_err("brcmf_sdio_probe_attach failed: %s\n", zx_status_get_string(ret));
         goto fail;
     }
 
