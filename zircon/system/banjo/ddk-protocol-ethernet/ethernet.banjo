@@ -142,7 +142,6 @@ protocol Ethmac {
 
     /// Get the BTI handle (needed to pin DMA memory) for this device.
     /// This method is only valid on devices that advertise ETHMAC_FEATURE_DMA
-    /// The caller does *not* take ownership of the BTI handle and must never close
-    /// the handle.
+    /// The caller takes ownership of the BTI handle.
     GetBti() -> (handle<bti> bti);
 };
