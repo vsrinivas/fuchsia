@@ -71,6 +71,12 @@ static const i2c_channel_t i2c_channels[] = {
         .address = I2C_AMBIENTLIGHT_ADDR,
         // binds as composite device
     },
+    // Audio output
+    {
+        .bus_id = ASTRO_I2C_3,
+        .address = I2C_AUDIO_CODEC_ADDR,
+        // binds as composite device
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

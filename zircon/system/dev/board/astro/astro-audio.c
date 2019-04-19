@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -12,19 +13,9 @@
 
 #include <limits.h>
 #include "astro.h"
+#include "astro-gpios.h"
 
 //clang-format off
-static const pbus_gpio_t audio_gpios[] = {
-    {
-        // AUDIO_SOC_FAULT_L
-        .gpio = S905D2_GPIOA(4),
-    },
-    {
-        // SOC_AUDIO_EN
-        .gpio = S905D2_GPIOA(5),
-    },
-};
-
 
 static const pbus_mmio_t audio_mmios[] = {
     {
@@ -40,26 +31,49 @@ static const pbus_bti_t tdm_btis[] = {
     },
 };
 
-static const pbus_i2c_channel_t codec_i2c[] = {
-    {
-        .bus_id = 2,
-        .address = 0x48,
-    },
-};
-
 static pbus_dev_t aml_tdm_dev = {
     .name = "AstroAudio",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .did = PDEV_DID_AMLOGIC_TDM,
-    .gpio_list = audio_gpios,
-    .gpio_count = countof(audio_gpios),
-    .i2c_channel_list = codec_i2c,
-    .i2c_channel_count = countof(codec_i2c),
     .mmio_list = audio_mmios,
     .mmio_count = countof(audio_mmios),
     .bti_list = tdm_btis,
     .bti_count = countof(tdm_btis),
+};
+
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_3),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_AUDIO_CODEC_ADDR),
+};
+static const zx_bind_inst_t fault_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
+};
+static const zx_bind_inst_t enable_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
+};
+static const device_component_part_t i2c_component[] = {
+    { countof(root_match), root_match },
+    { countof(i2c_match), i2c_match },
+};
+static const device_component_part_t fault_gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(fault_gpio_match), fault_gpio_match },
+};
+static const device_component_part_t enable_gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(enable_gpio_match), enable_gpio_match },
+};
+static const device_component_t components[] = {
+    { countof(i2c_component), i2c_component },
+    { countof(fault_gpio_component), fault_gpio_component },
+    { countof(enable_gpio_component), enable_gpio_component },
 };
 
 //PDM input configurations
@@ -125,7 +139,8 @@ zx_status_t astro_tdm_init(aml_bus_t* bus) {
 
     gpio_impl_config_out(&bus->gpio, S905D2_GPIOA(5), 1);
 
-    status = pbus_device_add(&bus->pbus, &aml_tdm_dev);
+    status = pbus_composite_device_add(&bus->pbus, &aml_tdm_dev, components, countof(components),
+                                       UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "astro_tdm_init: pbus_device_add failed: %d\n", status);
         return status;

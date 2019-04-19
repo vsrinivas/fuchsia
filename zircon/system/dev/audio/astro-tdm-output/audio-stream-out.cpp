@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 #include "audio-stream-out.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <math.h>
 
 #include <optional>
@@ -12,27 +15,52 @@
 namespace audio {
 namespace astro {
 
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_I2C,
+    COMPONENT_FAULT_GPIO,
+    COMPONENT_ENABLE_GPIO,
+    COMPONENT_COUNT,
+};
+
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz, stereo.
 constexpr size_t RB_SIZE = fbl::round_up<size_t, size_t>(48000 * 2 * 2u, PAGE_SIZE);
 
 AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent)
-    : SimpleAudioStream(parent, false), pdev_(parent) {
+    : SimpleAudioStream(parent, false) {
 }
 
 zx_status_t AstroAudioStreamOut::InitPDev() {
+    composite_protocol_t composite;
+
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
+        return status;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT] = {};
+    size_t actual;
+    composite_get_components(&composite, components, countof(components), &actual);
+    if (actual < countof(components)) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    pdev_ = components[COMPONENT_PDEV];
     if (!pdev_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    audio_fault_ = pdev_.GetGpio(0);
-    audio_en_ = pdev_.GetGpio(1);
+    audio_fault_ = components[COMPONENT_FAULT_GPIO];
+    audio_en_ = components[COMPONENT_ENABLE_GPIO];
 
     if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    auto i2c = pdev_.GetI2c(0);
+    ddk::I2cChannel i2c = components[COMPONENT_I2C];
     if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
         return ZX_ERR_NO_RESOURCES;
@@ -43,7 +71,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    zx_status_t status = pdev_.GetBti(0, &bti_);
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
@@ -277,11 +305,7 @@ zx_status_t AstroAudioStreamOut::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
-} //astro
-} //audio
-
-extern "C" zx_status_t audio_bind(void* ctx, zx_device_t* device, void** cookie) {
-
+static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     auto stream =
         audio::SimpleAudioStream::Create<audio::astro::AstroAudioStreamOut>(device);
     if (stream == nullptr) {
@@ -292,3 +316,23 @@ extern "C" zx_status_t audio_bind(void* ctx, zx_device_t* device, void** cookie)
 
     return ZX_OK;
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = audio_bind;
+    return ops;
+}();
+
+} //astro
+} //audio
+
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_tdm, audio::astro::driver_ops, "aml-tdm-out", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_TDM),
+ZIRCON_DRIVER_END(aml_tdm)
+// clang-format on
