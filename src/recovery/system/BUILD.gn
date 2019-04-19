@@ -19,6 +19,7 @@ group("system") {
 group("tests") {
   testonly = true
   deps = [
+    ":system_recovery",
     ":system_recovery_tests",
   ]
 }

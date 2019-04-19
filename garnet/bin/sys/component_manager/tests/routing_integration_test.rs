@@ -3,12 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    fdio::fdio_sys,
+    fdio,
     fidl_fuchsia_sys::FileDescriptor,
     fuchsia_async as fasync,
     fuchsia_component::client::{self, LaunchOptions},
-    fuchsia_zircon as zx,
-    std::{fs::File, io::Read, os::unix::io::FromRawFd, str, time::{Duration, SystemTime}},
+    fuchsia_runtime::HandleType,
+    std::{
+        fs::File,
+        io::Read,
+        str,
+        time::{Duration, SystemTime},
+    },
 };
 
 fn main() {
@@ -18,7 +23,7 @@ fn main() {
 fn run_test() {
     let mut _executor = fasync::Executor::new().expect("error creating executor");
     let launcher = client::launcher().expect("failed to connect to launcher");
-    let (pipe_fd, pipe_handle) = make_pipe();
+    let (mut pipe, pipe_handle) = make_pipe();
     let mut options = LaunchOptions::new();
     options.set_out(pipe_handle);
     let _app = client::launch_with_options(
@@ -30,31 +35,23 @@ fn run_test() {
         options,
     )
     .expect("component manager failed to launch");
-    let mut pipe = unsafe { File::from_raw_fd(pipe_fd) };
     read_from_pipe(&mut pipe, "Hippos rule!\n");
 }
 
-fn make_pipe() -> (i32, FileDescriptor) {
-    const PA_FDIO_REMOTE: u32 = 0x30;
-    unsafe {
-        let mut pipe_handle = zx::sys::ZX_HANDLE_INVALID;
-        let mut pipe_fd = -1;
-        let status = fdio_sys::fdio_pipe_half2(
-            &mut pipe_fd as *mut i32,
-            &mut pipe_handle as *mut zx::sys::zx_handle_t,
-        );
-        if status != zx::sys::ZX_OK {
-            panic!("failed to create pipe");
+fn make_pipe() -> (std::fs::File, FileDescriptor) {
+    match fdio::pipe_half() {
+        Err(_) => panic!("failed to create pipe"),
+        Ok((pipe, handle)) => {
+            let pipe_handle = FileDescriptor {
+                type0: HandleType::FileDescriptor as i32,
+                type1: 0,
+                type2: 0,
+                handle0: Some(handle.into()),
+                handle1: None,
+                handle2: None,
+            };
+            (pipe, pipe_handle)
         }
-        let pipe_handle = FileDescriptor {
-            type0: PA_FDIO_REMOTE as i32,
-            type1: 0,
-            type2: 0,
-            handle0: Some(zx::Handle::from_raw(pipe_handle)),
-            handle1: None,
-            handle2: None,
-        };
-        (pipe_fd, pipe_handle)
     }
 }
 

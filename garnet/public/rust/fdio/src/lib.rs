@@ -26,7 +26,7 @@ use {
             raw,
             unix::{
                 ffi::OsStrExt,
-                io::{AsRawFd, IntoRawFd},
+                io::{AsRawFd, FromRawFd, IntoRawFd},
             },
         },
         path::Path,
@@ -134,6 +134,22 @@ pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     match topo {
         Some(topo) => Ok(topo),
         None => Err(zx::Status::BAD_STATE),
+    }
+}
+
+/// Creates a named pipe and returns one end as a zx::Socket.
+pub fn pipe_half() -> Result<(std::fs::File, zx::Socket), zx::Status> {
+    unsafe {
+        let mut fd = -1;
+        let mut handle = zx::sys::ZX_HANDLE_INVALID;
+        let status = fdio_sys::fdio_pipe_half2(
+            &mut fd as *mut i32,
+            &mut handle as *mut zx::sys::zx_handle_t,
+        );
+        if status != zx::sys::ZX_OK {
+            return Err(zx::Status::from_raw(status));
+        }
+        Ok((std::fs::File::from_raw_fd(fd), zx::Socket::from(zx::Handle::from_raw(handle))))
     }
 }
 

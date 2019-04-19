@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/recovery_integration_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

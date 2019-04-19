@@ -31,3 +31,34 @@ built recovery image:
 ```sh
 $ out/default.zircon/tools/bootserver --board_name pc --boot out/default/recovery.zbi
 ```
+
+## Testing
+
+Build the core product with recovery:
+
+```sh
+$ fx set core.x64 --with //src/recovery
+$ fx build
+```
+
+The system you've just built onto your device.
+
+### Unit
+
+Run the recovery integration test:
+
+```sh
+$ fx run-test system_recovery_tests
+```
+
+### Integration
+
+Run the recovery integration test:
+
+```sh
+$ fx run-test recovery_integration_test
+```
+
+### End-to-end
+
+TODO: Need to create end-to-end tests.
