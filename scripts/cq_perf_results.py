@@ -9,8 +9,6 @@ From a change ID (the last number in
 https://fuchsia-review.googlesource.com/c/fuchsia/+/255116), cq_perf_results.py
 retrieves the last CQ run and compares the its performance test results with
 the performance test result of its parent, as found in the CI queue.
-
-This script probably does not work with chained changes. It assumes the usual gerrit workflow where conflicting changes are rebased instead of merged, so each commit has at most one parent.
 """
 
 import argparse
@@ -109,7 +107,7 @@ def _get_ci_build(commit_id, botname):
       return build['id']
   raise KeyError("Unable to find the target builder")
 
-def _compute_output_format_string(target_build):
+def _compute_output_format_strings(target_build):
   # We want to align test names and results, so we compute the maximum size
   # needed from the test name length.
   max_test_name_length = max(len(test_name) for test_name in target_build)
@@ -117,7 +115,10 @@ def _compute_output_format_string(target_build):
     's}: {:8.4f} -> {:8.4f}  {:6.2f} % variation, {:5.3f} p-value'
   single_test_format_string = '{:' + str(max_test_name_length) + \
         's}: {:8.4f} (no corresponding test in base commit)'
-  return both_tests_format_string, single_test_format_string,
+  no_data_format_string = '{:' + str(max_test_name_length) + \
+    's}: {:8.4f} -> {:8.4f}  {:6.2f} % variation, not enough data'
+  return (both_tests_format_string, single_test_format_string,
+    no_data_format_string, )
 
 def main():
   description="""A tool to detect performance test changes on changes.
@@ -127,9 +128,9 @@ https://fuchsia-review.googlesource.com/c/fuchsia/+/CHANGE_ID), this tool
 retrieves the last CQ run and compares the its performance test results with
 the performance test result of its parent, as found in the CI queue.
 
-This script probably does not work with chained changes. It assumes the usual
-gerrit workflow where conflicting changes are rebased instead of merged, so
-each commit has at most one parent."""
+You will want to use the --base_build argument if you are doing chained
+changes. This script assumes the usual gerrit workflow where conflicting
+changes are rebased instead of merged, so each commit has at most one parent."""
   epilog = """Example:
 $> ./cq_perf_results.py --botname peridot-x64-perf-dawson_canyon 255116
   """
@@ -139,6 +140,8 @@ $> ./cq_perf_results.py --botname peridot-x64-perf-dawson_canyon 255116
     help="Change ID from Gerrit")
   argument_parser.add_argument('--botname', default=_BOTNAME,
     help="Name of the bot running the performance tests. Default: " + _BOTNAME)
+  argument_parser.add_argument('--base_build', default=None,
+    help="Base build to use (default: use the CI build of the base commit)")
   args = argument_parser.parse_args()
 
   # We first get the build ID for the base change, then get its perf test
@@ -149,21 +152,33 @@ $> ./cq_perf_results.py --botname peridot-x64-perf-dawson_canyon 255116
   target_build = _get_results_for_build(target_build_id)
 
   # Get the base build ID and get its perf test results.
-  base_build_id = _get_ci_build(parent_id, args.botname)
+  if not args.base_build:
+    base_build_id = _get_ci_build(parent_id, args.botname)
+  else:
+    base_build_id = args.base_build
   print('Base build id', base_build_id)
   base_build = _get_results_for_build(base_build_id)
 
-  both_tests_format_string, single_test_format_string = \
-      _compute_output_format_string(target_build)
+  both_tests_format_string, single_test_format_string, no_data_format_string = \
+      _compute_output_format_strings(target_build)
   for test_name, value in sorted(target_build.items(),
       key=operator.itemgetter(0)):
     if test_name not in base_build:
       print(single_test_format_string.format(
           test_name, numpy.mean(value)))
       continue
-    base_mean = numpy.mean(base_build[test_name])
-    target_mean = numpy.mean(value)
-    _, pvalue = scipy.stats.ttest_ind(base_build[test_name], value)
+    if len(value) == 1:
+      print(no_data_format_string.format(test_name,
+        base_build[test_name][0],
+        value[0],
+        (value[0]-base_build[test_name][0])*100.0/base_build[test_name][0]))
+      continue
+    base_mean = numpy.mean(base_build[test_name][1:])
+    target_mean = numpy.mean(value[1:])
+    # We use a 2-sample Kolmogorov-Smirnov statistic, for the following reasons:
+    # - It is non-parametric;
+    # - It does not assume normality of samples.
+    _, pvalue = scipy.stats.ks_2samp(base_build[test_name][1:], value[1:])
     print(both_tests_format_string.format(test_name,
       base_mean,
       target_mean,
