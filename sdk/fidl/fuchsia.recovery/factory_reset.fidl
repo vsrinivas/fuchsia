@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.recovery;
+
+using zx;
+
+/// A protocol for intitiating a factory reset which wipes mutable data from disk.
+[Discoverable]
+protocol FactoryReset {
+    // Performs the factory reset. If successful will wipe the data and reboot.
+    // If unsuccessful will return an error.
+    Reset() -> (zx.status status);
+};
