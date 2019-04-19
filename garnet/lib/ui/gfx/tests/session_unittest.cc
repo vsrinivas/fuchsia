@@ -176,7 +176,8 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
 }
 
 // TODO:
-// - test that FindResource() cannot return resources that have the wrong type.
+// - test that FindResource() cannot return resources that have the wrong
+// type.
 
 }  // namespace test
 }  // namespace gfx

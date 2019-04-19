@@ -34,7 +34,6 @@ SessionContext SessionTest::CreateBarebonesSessionContext() {
   SessionContext session_context{
       vk::Device(),
       nullptr,                 // escher::Escher*
-      0,                       // imported_memory_type_index;
       nullptr,                 // escher::ResourceRecycler
       nullptr,                 // escher::ImageFactory*
       nullptr,                 // escher::RoundedRectFactory*

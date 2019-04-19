@@ -61,13 +61,23 @@ Session::Session(SessionId id, SessionContext session_context,
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),
       session_context_(std::move(session_context)),
-      resource_context_({session_context_.vk_device,
-                         session_context_.escher != nullptr
-                             ? session_context_.escher->device()->caps()
-                             : escher::VulkanDeviceQueues::Caps(),
-                         session_context_.imported_memory_type_index,
-                         session_context_.escher_resource_recycler,
-                         session_context_.escher_image_factory}),
+      resource_context_(
+          /* Sessions can be used in integration tests, with and without Vulkan.
+             When Vulkan is unavailable, the Escher pointer is null. These
+             ternaries protect against null-pointer dispatching for these
+             non-Vulkan tests. */
+          {session_context_.vk_device,
+           session_context_.escher != nullptr
+               ? session_context_.escher->vk_physical_device()
+               : vk::PhysicalDevice(),
+           session_context_.escher != nullptr
+               ? session_context_.escher->device()->dispatch_loader()
+               : vk::DispatchLoaderDynamic(),
+           session_context_.escher != nullptr
+               ? session_context_.escher->device()->caps()
+               : escher::VulkanDeviceQueues::Caps(),
+           session_context_.escher_resource_recycler,
+           session_context_.escher_image_factory}),
       resources_(error_reporter),
       inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {

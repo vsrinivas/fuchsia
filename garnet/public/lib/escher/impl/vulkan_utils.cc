@@ -57,7 +57,7 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
   }
   FXL_CHECK(false) << "Could not find memory with properties "
                    << (VkMemoryPropertyFlags)required_properties;
-  return 0;
+  return memory_types.memoryTypeCount;
 }
 
 // Return the sample-count corresponding to the specified flag-bits.

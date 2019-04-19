@@ -105,7 +105,6 @@ class Engine : public SessionUpdater, public FrameRenderer {
   SessionContext session_context() {
     return SessionContext{vk_device(),
                           escher(),
-                          imported_memory_type_index(),
                           escher_resource_recycler(),
                           escher_image_factory(),
                           escher_rounded_rect_factory(),
@@ -174,10 +173,6 @@ class Engine : public SessionUpdater, public FrameRenderer {
   // Takes care of cleanup between frames.
   void EndCurrentFrame(uint64_t frame_number);
 
-  // Used by GpuMemory to import VMOs from clients.
-  uint32_t imported_memory_type_index() const {
-    return imported_memory_type_index_;
-  }
   EventTimestamper* event_timestamper() { return &event_timestamper_; }
   FrameScheduler* frame_scheduler() { return frame_scheduler_.get(); }
 
@@ -224,8 +219,6 @@ class Engine : public SessionUpdater, public FrameRenderer {
   SceneGraph scene_graph_;
 
   bool escher_cleanup_scheduled_ = false;
-
-  uint32_t imported_memory_type_index_ = 0;
 
   // Tracks the number of sessions returning ApplyUpdateResult::needs_render and
   // uses it for tracing.
