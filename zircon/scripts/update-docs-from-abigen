@@ -32,9 +32,9 @@ STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
 REFERENCES_COMMENT = \
         '<!-- References updated by update-docs-from-abigen, do not edit. -->'
 
-SYSCALLS_ABIGEN = os.path.normpath(
+SYSCALLS_BANJO = os.path.normpath(
     os.path.join(SCRIPT_DIR, os.pardir, 'system', 'public', 'zircon',
-                 'syscalls.abigen'))
+                 'syscalls.banjo'))
 
 
 def parse_args():
@@ -115,8 +115,8 @@ def match_sentence_form(sentence, arg_names):
             'have', 'RIGHT', '.'
         ],
         [
-            'If', 'ARG', 'is', 'of', 'type', 'TYPE1', 'or', 'TYPE2', ',',
-            'it', 'must', 'have', 'RIGHT', '.'
+            'If', 'ARG', 'is', 'of', 'type', 'TYPE1', 'or', 'TYPE2', ',', 'it',
+            'must', 'have', 'RIGHT', '.'
         ],
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
@@ -608,6 +608,7 @@ def build_if_out_of_date(abigen, json):
     """If the json file appears out-of-date relative to syscalls.abigen, then
     run a zircon build to get the definitions updated.
     """
+
     def is_up_to_date(input, output):
         """Checks if output exists and is newer-or-equal in mtime to input."""
         if not os.path.isfile(output):
@@ -629,7 +630,7 @@ def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
     outf = os.path.relpath(args.docroot)
-    build_if_out_of_date(os.path.relpath(SYSCALLS_ABIGEN), args.json)
+    build_if_out_of_date(os.path.relpath(SYSCALLS_BANJO), args.json)
     print 'using %s as input and updating %s...' % (inf, outf)
     data = json.loads(open(inf, 'rb').read())
     missing_count = 0

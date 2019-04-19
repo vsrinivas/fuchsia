@@ -67,7 +67,7 @@ protocol Api {
     //
     //
 
-    /// Acquire the current time
+    /// Acquire the current time.
     clock_get(zx.clock clock_id) -> (zx.time time);
 
     /// Acquire the current time.

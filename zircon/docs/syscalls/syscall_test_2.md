@@ -13,7 +13,7 @@ TODO(ZX-3106)
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_syscall_test_2(int a, int b);
+zx_status_t zx_syscall_test_2(int32_t a, int32_t b);
 ```
 
 ## DESCRIPTION
