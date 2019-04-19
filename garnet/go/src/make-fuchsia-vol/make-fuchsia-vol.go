@@ -30,7 +30,7 @@ import (
 
 var (
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
-	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
+	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILDROOT"), "zircon build dir")
 	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
