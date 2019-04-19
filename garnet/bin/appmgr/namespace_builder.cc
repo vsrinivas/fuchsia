@@ -32,8 +32,8 @@ namespace {
 std::string MigratedGlobalPersistentDataPath() {
   static const char* kGlobalPersistentDataDir =
       "deprecated-global-persistent-storage";
-  static const char* kDataPathsNotToMigrate[] = {".", "pkgfs_index", "ssh",
-                                                 kGlobalPersistentDataDir};
+  static const char* kDataPathsNotToMigrate[] = {
+      ".", "pkgfs_index", "ssh", "infra", kGlobalPersistentDataDir};
 
   // Only migrate if the new directory has not been created yet, so that we only
   // do it once.
