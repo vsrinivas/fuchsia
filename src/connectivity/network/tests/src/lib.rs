@@ -158,7 +158,7 @@ async fn add_ethernet_device() -> Result {
                 interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
                 0
             );
-            assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0,);
+            assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
             Ok(())
         },
     ))
@@ -213,9 +213,34 @@ async fn add_interface_address_not_found() -> Result {
         }),
         prefix_len: 0,
     };
-    let error = await!(stack.add_interface_address(max_id + 1, &mut interface_address,))
-        .context("failed to add interface address")?
-        .ok_or(failure::err_msg("failed to get add interface address response"))?;
+    let error = await!(stack.add_interface_address(max_id + 1, &mut interface_address))
+        .context("failed to call add interface address")?
+        .ok_or(failure::err_msg("failed to get add interface address error"))?;
+    assert_eq!(
+        error.as_ref(),
+        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }
+    );
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_interface_info_not_found() -> Result {
+    let name = stringify!(get_interface_info_not_found);
+
+    let sandbox = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_netemul_sandbox::SandboxMarker,
+    >()
+    .context("failed to connect to sandbox")?;
+    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+        .context("failed to create netstack environment")?;
+    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
+        .context("failed to connect to netstack")?;
+    let interfaces = await!(stack.list_interfaces()).context("failed to list interfaces")?;
+    let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
+    let (info, error) = await!(stack.get_interface_info(max_id + 1))
+        .context("failed to call get interface info")?;
+    assert_eq!(info, None);
+    let error = error.ok_or(failure::err_msg("failed to get get interface info error"))?;
     assert_eq!(
         error.as_ref(),
         &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }

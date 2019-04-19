@@ -130,13 +130,14 @@ func (ns *Netstack) delInterface(id uint64) *stack.Error {
 func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
 	ns.mu.Lock()
 	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	if !ok {
+		ns.mu.Unlock()
+		return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
 	addresses, subnets := ns.getAddressesLocked(ifs.nicid)
 	ns.mu.Unlock()
 
-	if ok {
-		return getInterfaceInfo(ifs, addresses, subnets), nil
-	}
-	return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
+	return getInterfaceInfo(ifs, addresses, subnets), nil
 }
 
 func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
