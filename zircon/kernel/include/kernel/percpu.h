@@ -14,6 +14,7 @@
 #include <kernel/timer.h>
 #include <list.h>
 #include <sys/types.h>
+#include <vm/page_state.h>
 #include <zircon/compiler.h>
 
 struct percpu;
@@ -41,7 +42,19 @@ class Percpus {
     // Unused argument is so this can be passed to LK_INIT_HOOK() directly.
     static void HeapInit(uint32_t);
 
- private:
+    // Call |Func| with the current CPU's percpu struct with preemption disabled.
+    //
+    // |Func| should accept a |percpu*| and should not block.
+    template <typename Func>
+    static void WithCurrentPreemptDisable(Func&& func);
+
+    // Call |Func| once per CPU with each CPU's percpu struct with preemption disabled.
+    //
+    // |Func| should accept a |percpu*| and should not block.
+    template <typename Func>
+    static void ForEachPreemptDisable(Func&& func);
+
+private:
     // Number of percpu entries.
     static size_t count_;
 
@@ -102,6 +115,12 @@ struct percpu {
     // each cpu has a dedicated thread for processing dpcs
     thread_t* dpc_thread;
 
+    // Page state counts are percpu because they change frequently and we don't want to pay for
+    // synchronization.
+    //
+    // When accessing, be sure to do so with preemption disabled. See |WithCurrent| and |ForEach|.
+    vm_page_counts_t vm_page_counts;
+
     // Initialize this percpu object, |cpu_num| will be used to initialize
     // embedded objects.
     void Init(cpu_num_t cpu_num);
@@ -128,3 +147,19 @@ static inline struct percpu* get_local_percpu(void) {
     return &Percpus::Get(arch_curr_cpu_num());
 }
 
+template <typename Func>
+void Percpus::WithCurrentPreemptDisable(Func&& func) {
+    thread_preempt_disable();
+    func(&Percpus::Get(arch_curr_cpu_num()));
+    thread_preempt_reenable();
+}
+
+template <typename Func>
+void Percpus::ForEachPreemptDisable(Func&& func) {
+    thread_preempt_disable();
+    const size_t count = Percpus::Count();
+    for (cpu_num_t cpu_num = 0; cpu_num < count; ++cpu_num) {
+        func(&Percpus::Get(cpu_num));
+    }
+    thread_preempt_reenable();
+}

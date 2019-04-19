@@ -326,15 +326,6 @@ uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
     return arena_cumulative_size_;
 }
 
-void PmmNode::CountTotalStates(uint64_t state_count[VM_PAGE_STATE_COUNT_]) const {
-    // TODO(MG-833): This is extremely expensive, holding a global lock
-    // and touching every page/arena. We should keep a running count instead.
-    Guard<fbl::Mutex> guard{&lock_};
-    for (auto& a : arena_list_) {
-        a.CountStates(state_count);
-    }
-}
-
 void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {
     auto megabytes_free = CountFreePages() / 256u;
     printf(" %zu free MBs\n", megabytes_free);

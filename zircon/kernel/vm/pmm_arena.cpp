@@ -54,6 +54,9 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
 
     page_array_ = (vm_page_t*)raw_page_array;
 
+    // we've just constructed |page_count| pages in the state VM_PAGE_STATE_FREE
+    vm_page::add_to_initial_count(VM_PAGE_STATE_FREE, page_count);
+
     // compute the range of the array that backs the array itself
     size_t array_start_index = (PAGE_ALIGN(range.pa) - info_.base) / PAGE_SIZE;
     size_t array_end_index = array_start_index + page_array_size / PAGE_SIZE;
@@ -73,7 +76,6 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
         if (i >= array_start_index && i < array_end_index) {
             p.set_state(VM_PAGE_STATE_WIRED);
         } else {
-            p.set_state(VM_PAGE_STATE_FREE);
             list_add_tail(&list, &p.queue_node);
         }
     }

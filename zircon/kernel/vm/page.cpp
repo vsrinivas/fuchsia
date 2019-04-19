@@ -5,13 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <vm/page.h>
+
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/percpu.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/page.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -48,7 +50,29 @@ void vm_page::set_state(vm_page_state new_state) {
     constexpr uint32_t kMask = (1 << VM_PAGE_STATE_BITS) - 1;
     DEBUG_ASSERT_MSG(new_state == (new_state & kMask), "invalid state %u\n", new_state);
 
+    const vm_page_state old_state = vm_page_state(state_priv);
     state_priv = (new_state & kMask);
+
+    Percpus::WithCurrentPreemptDisable(
+        [&old_state, &new_state](percpu* p) {
+            p->vm_page_counts.by_state[old_state] -= 1;
+            p->vm_page_counts.by_state[new_state] += 1;
+        });
+}
+
+uint64_t vm_page::get_count(vm_page_state state) {
+    int64_t result = 0;
+    Percpus::ForEachPreemptDisable([&state, &result](percpu* p) {
+        result += p->vm_page_counts.by_state[state];
+    });
+    return result >= 0 ? result : 0;
+}
+
+void vm_page::add_to_initial_count(vm_page_state state, uint64_t n) {
+    Percpus::WithCurrentPreemptDisable(
+        [&state, &n](percpu* p) {
+            p->vm_page_counts.by_state[state] += n;
+        });
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {

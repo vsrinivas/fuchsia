@@ -509,46 +509,54 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // TODO: figure out a better handle to hang this off to and push this copy code into
         // that dispatcher.
 
-        size_t state_count[VM_PAGE_STATE_COUNT_] = {};
-        pmm_count_total_states(state_count);
-
-        size_t total = 0;
+        // |get_count| returns an estimate so the sum of the counts may not equal the total.
+        uint64_t state_count[VM_PAGE_STATE_COUNT_] = {};
         for (uint32_t i = 0; i < VM_PAGE_STATE_COUNT_; i++) {
-            total += state_count[i];
+            state_count[i] = vm_page_t::get_count(vm_page_state(i));
         }
 
-        size_t unused_size = 0;
-        size_t free_heap_bytes = 0;
+        uint64_t unused_size = 0;
+        uint64_t free_heap_bytes = 0;
         heap_get_info(&unused_size, &free_heap_bytes);
 
         // Note that this intentionally uses uint64_t instead of
         // size_t in case we ever have a 32-bit userspace but more
         // than 4GB physical memory.
         zx_info_kmem_stats_t stats = {};
-        stats.total_bytes = total * PAGE_SIZE;
-        size_t other_bytes = stats.total_bytes;
+        stats.total_bytes = pmm_count_total_bytes();
+
+        // Holds the sum of bytes in the broken out states. This sum could be less than the total
+        // because we aren't counting all possible states (e.g. VM_PAGE_STATE_ALLOC). This sum could
+        // be greater than the total because per-state counts are approximate.
+        uint64_t sum_bytes = 0;
 
         stats.free_bytes = state_count[VM_PAGE_STATE_FREE] * PAGE_SIZE;
-        other_bytes -= stats.free_bytes;
+        sum_bytes += stats.free_bytes;
 
         stats.wired_bytes = state_count[VM_PAGE_STATE_WIRED] * PAGE_SIZE;
-        other_bytes -= stats.wired_bytes;
+        sum_bytes += stats.wired_bytes;
 
         stats.total_heap_bytes = state_count[VM_PAGE_STATE_HEAP] * PAGE_SIZE;
-        other_bytes -= stats.total_heap_bytes;
+        sum_bytes += stats.total_heap_bytes;
         stats.free_heap_bytes = free_heap_bytes;
 
         stats.vmo_bytes = state_count[VM_PAGE_STATE_OBJECT] * PAGE_SIZE;
-        other_bytes -= stats.vmo_bytes;
+        sum_bytes += stats.vmo_bytes;
 
         stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
-        other_bytes -= stats.mmu_overhead_bytes;
+        sum_bytes += stats.mmu_overhead_bytes;
 
         stats.ipc_bytes = state_count[VM_PAGE_STATE_IPC] * PAGE_SIZE;
-        other_bytes -= stats.ipc_bytes;
+        sum_bytes += stats.ipc_bytes;
 
-        // All other VM_PAGE_STATE_* counts get lumped into other_bytes.
-        stats.other_bytes = other_bytes;
+        // Is there unaccounted memory?
+        if (stats.total_bytes > sum_bytes) {
+            // Everything else gets counted as "other".
+            stats.other_bytes = stats.total_bytes - sum_bytes;
+        } else {
+            // One or more of our per-state counts may have been off. We'll ignore it.
+            stats.other_bytes = 0;
+        }
 
         return single_record_result(
             _buffer, buffer_size, _actual, _avail, &stats, sizeof(stats));

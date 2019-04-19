@@ -7,27 +7,11 @@
 
 #pragma once
 
-#include <fbl/algorithm.h>
 #include <list.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <vm/page_state.h>
 #include <zircon/compiler.h>
-
-enum vm_page_state : uint32_t {
-    VM_PAGE_STATE_FREE = 0,
-    VM_PAGE_STATE_ALLOC,
-    VM_PAGE_STATE_OBJECT,
-    VM_PAGE_STATE_WIRED,
-    VM_PAGE_STATE_HEAP,
-    VM_PAGE_STATE_MMU,   // allocated to serve arch-specific mmu purposes
-    VM_PAGE_STATE_IOMMU, // allocated for platform-specific iommu structures
-    VM_PAGE_STATE_IPC,
-
-    VM_PAGE_STATE_COUNT_
-};
-
-#define VM_PAGE_STATE_BITS 3
-static_assert((1u << VM_PAGE_STATE_BITS) >= VM_PAGE_STATE_COUNT_, "");
 
 // core per page structure allocated at pmm arena creation time
 typedef struct vm_page {
@@ -65,6 +49,16 @@ typedef struct vm_page {
     vm_page_state state() const { return vm_page_state(state_priv); }
 
     void set_state(vm_page_state new_state);
+
+    // Return the approximate number of pages in state |state|.
+    //
+    // When called concurrently with |set_state|, the count may be off by a small amount.
+    static uint64_t get_count(vm_page_state state);
+
+    // Add |n| to the count of pages in state |state|.
+    //
+    // Should be used when first constructing pages.
+    static void add_to_initial_count(vm_page_state state, uint64_t n);
 
 } vm_page_t;
 
