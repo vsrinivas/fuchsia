@@ -50,9 +50,11 @@ common_flags = [
     '-I', fuchsia_root,
     '-I', os.path.join(fuchsia_build, 'gen'),
     '-isystem', os.path.join(fuchsia_sysroot, 'usr', 'include'),
-    '-isystem', os.path.join(fuchsia_clang, 'include'),
     '-isystem', os.path.join(fuchsia_clang, 'include', 'c++', 'v1'),
+    '-isystem', os.path.join(fuchsia_clang, 'include'),
 ]
+
+arch_flags = []
 
 # Add the sysroot include if we found the zircon project
 if target_cpu:
@@ -74,9 +76,6 @@ def GetClangCommandFromNinjaForFilename(filename):
     (List of Strings) Command line arguments for clang.
   """
 
-  # By default we start with the common to every file flags
-  fuchsia_flags = common_flags
-
   # Header files can't be built. Instead, try to match a header file to its
   # corresponding source file.
   if filename.endswith('.h'):
@@ -89,7 +88,7 @@ def GetClangCommandFromNinjaForFilename(filename):
     else:
       # If this is a standalone .h file with no source, the best we can do is
       # try to use the default flags.
-      return fuchsia_flags
+      return common_flags
 
   # Ninja needs the path to the source file from the output build directory.
   # Cut off the common part and /. Also ensure that paths are real and don't
@@ -106,7 +105,7 @@ def GetClangCommandFromNinjaForFilename(filename):
   p = subprocess.Popen(ninja_command, stdout=subprocess.PIPE)
   stdout, stderr = p.communicate()
   if p.returncode:
-    return fuchsia_flags
+    return common_flags
   stdout = stdout.decode('utf-8')
 
   # Ninja might execute several commands to build something. We want the last
@@ -117,7 +116,10 @@ def GetClangCommandFromNinjaForFilename(filename):
       clang_line = line
       break
   else:
-    return fuchsia_flags
+    return common_flags
+
+  # By default we start with the common to every file flags
+  fuchsia_flags = []
 
   # Parse out the -I and -D flags. These seem to be the only ones that are
   # important for YCM's purposes.
@@ -137,7 +139,7 @@ def GetClangCommandFromNinjaForFilename(filename):
     else:
       print('Ignoring flag: %s' % flag)
 
-  return fuchsia_flags
+  return fuchsia_flags + common_flags
 
 
 def FlagsForFile(filename):
