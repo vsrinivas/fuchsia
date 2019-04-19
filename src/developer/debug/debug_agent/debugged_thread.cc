@@ -25,10 +25,17 @@
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
 namespace {
+
+// Used to have better context upon reading the debug logs.
+std::string ThreadPreamble(const DebuggedThread* thread) {
+  return fxl::StringPrintf("[Pr: %lu, T: %lu] ", thread->process()->koid(),
+                           thread->koid());
+}
 
 // TODO(donosoc): Move this to a more generic place (probably shared) where it
 //                can be used by other code.
@@ -83,7 +90,7 @@ void DebuggedThread::OnException(uint32_t type) {
   debug_ipc::NotifyException exception;
   exception.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
 
-  DEBUG_LOG(Thread) << "Thread " << koid_ << ": Received exception "
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Received exception "
                     << ExceptionTypeToString(type) << ", interpreted as "
                     << debug_ipc::NotifyException::TypeToString(exception.type);
 
@@ -162,11 +169,23 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
 
 void DebuggedThread::HandleSoftwareBreakpoint(
     debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
-  if (UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints) ==
-      OnStop::kIgnore)
-    return;
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint";
 
-  SendExceptionNotification(exception, regs);
+  auto on_stop = UpdateForSoftwareBreakpoint(regs, &exception->hit_breakpoints);
+  switch (on_stop) {
+    case OnStop::kIgnore:
+      return;
+    case OnStop::kNotify:
+      SendExceptionNotification(exception, regs);
+      return;
+    case OnStop::kResume: {
+      // We mark the thread as within an exception
+      ResumeForRunMode();
+      return;
+    }
+  }
+
+  FXL_NOTREACHED() << "Invalid OnStop.";
 }
 
 void DebuggedThread::HandleHardwareBreakpoint(
@@ -200,7 +219,7 @@ void DebuggedThread::SendExceptionNotification(
 }
 
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
-  DEBUG_LOG(Thread) << "Resuming thread " << koid_;
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming.";
   run_mode_ = request.how;
   step_in_range_begin_ = request.range_begin;
   step_in_range_end_ = request.range_end;
@@ -218,7 +237,7 @@ DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
   if (suspend_reason_ == SuspendReason::kOther)
     return SuspendResult::kSuspended;
 
-  DEBUG_LOG(Thread) << "Suspending thread " << koid_;
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Suspending thread.";
 
   zx_status_t status;
   status = thread_.suspend(&suspend_token_);
@@ -393,6 +412,8 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
 DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     zx_thread_state_general_regs* regs,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  // Get the correct address where the CPU is after hitting a breakpoint
+  // (this is architecture specific).
   uint64_t breakpoint_address =
       arch::ArchProvider::Get()
           .BreakpointInstructionForSoftwareExceptionAddress(
@@ -401,7 +422,19 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   ProcessBreakpoint* found_bp =
       process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
-    // Our software breakpoint.
+    FixSoftwareBreakpointAddress(found_bp, regs);
+
+    // When hitting a breakpoint, we need to check if indeed this exception
+    // should apply to this thread or not.
+    if (!found_bp->ShouldHitThread(koid())) {
+      DEBUG_LOG(Thread) << ThreadPreamble(this)
+                        << "SW Breakpoint not for me. Ignoring.";
+      // The way to go over is to step over the breakpoint as one would over
+      // a resume.
+      current_breakpoint_ = found_bp;
+      return OnStop::kResume;
+    }
+
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware,
                                   found_bp, regs, hit_breakpoints);
 
@@ -451,7 +484,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // user about the exception.
     }
   }
-  return OnStop::kSendNotification;
+  return OnStop::kNotify;
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
@@ -469,26 +502,21 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
 
     // Send a notification.
     *arch::ArchProvider::Get().IPInRegs(regs) = breakpoint_address;
-    return OnStop::kSendNotification;
+    return OnStop::kNotify;
   }
 
+  FixSoftwareBreakpointAddress(found_bp, regs);
   UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
                                 regs, hit_breakpoints);
 
   // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
   // not be derefereced below this.
   found_bp = nullptr;
-  return OnStop::kSendNotification;
+  return OnStop::kNotify;
 }
 
-void DebuggedThread::UpdateForHitProcessBreakpoint(
-    debug_ipc::BreakpointType exception_type,
-    ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
-    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-  current_breakpoint_ = process_breakpoint;
-
-  process_breakpoint->OnHit(exception_type, hit_breakpoints);
-
+void DebuggedThread::FixSoftwareBreakpointAddress(
+    ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs) {
   // When the program hits one of our breakpoints, set the IP back to
   // the exact address that triggered the breakpoint. When the thread
   // resumes, this is the address that it will resume from (after
@@ -501,6 +529,15 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
             static_cast<int>(status));
   }
+}
+
+void DebuggedThread::UpdateForHitProcessBreakpoint(
+    debug_ipc::BreakpointType exception_type,
+    ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
+    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  current_breakpoint_ = process_breakpoint;
+
+  process_breakpoint->OnHit(exception_type, hit_breakpoints);
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
   // (some one-shot, some not) referring to the current ProcessBreakpoint,
@@ -520,6 +557,7 @@ void DebuggedThread::ResumeForRunMode() {
     if (current_breakpoint_) {
       // Going over a breakpoint always requires a single-step first. Then we
       // continue according to run_mode_.
+      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over thread.";
       SetSingleStep(true);
       current_breakpoint_->BeginStepOver(koid_);
     } else {

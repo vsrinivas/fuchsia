@@ -11,78 +11,12 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
+#include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
-
-// Low-level Declarations ------------------------------------------------------
-// Implementations are at the end of the file.
-
-class ProcessBreakpoint::SoftwareBreakpoint {
- public:
-  SoftwareBreakpoint(ProcessBreakpoint*, ProcessMemoryAccessor*);
-  ~SoftwareBreakpoint();
-
-  zx_status_t Install();
-  void Uninstall();
-
-  void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
-
- private:
-  ProcessBreakpoint* process_bp_;           // Not-owning.
-  ProcessMemoryAccessor* memory_accessor_;  // Not-owning.
-
-  // Set to true when the instruction has been replaced.
-  bool installed_ = false;
-
-  // Previous memory contents before being replaced with the break instruction.
-  arch::BreakInstructionType previous_data_ = 0;
-};
-
-namespace {
-
-// A given set of breakpoints have a number of locations, which could target
-// different threads. We need to get all the threads that are targeted to
-// this particular location.
-std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb) {
-  std::set<zx_koid_t> ids;
-  bool all_threads = false;
-  for (Breakpoint* bp : pb.breakpoints()) {
-    // We only care about hardware breakpoints.
-    if (bp->settings().type != debug_ipc::BreakpointType::kHardware)
-      continue;
-
-    for (auto& location : bp->settings().locations) {
-      // We only install for locations that match this process breakpoint.
-      if (location.address != pb.address())
-        continue;
-
-      auto thread_id = location.thread_koid;
-      if (thread_id == 0) {
-        all_threads = true;
-        break;
-      } else {
-        ids.insert(thread_id);
-      }
-    }
-
-    // No need to continue searching if a breakpoint wants all threads.
-    if (all_threads)
-      break;
-  }
-
-  // If all threads are required, add them all.
-  if (all_threads) {
-    for (DebuggedThread* thread : pb.process()->GetThreads())
-      ids.insert(thread->koid());
-  }
-
-  return ids;
-}
-
-}  // namespace
 
 // ProcessBreakpoint Implementation --------------------------------------------
 
@@ -122,6 +56,15 @@ bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
 void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
   if (software_breakpoint_)
     software_breakpoint_->FixupMemoryBlock(block);
+}
+
+bool ProcessBreakpoint::ShouldHitThread(zx_koid_t thread_koid) const {
+  for (const Breakpoint* bp : breakpoints_) {
+    if (bp->AppliesToThread(process_->koid(), thread_koid))
+      return true;
+  }
+
+  return false;
 }
 
 void ProcessBreakpoint::OnHit(
@@ -169,8 +112,16 @@ bool ProcessBreakpoint::BreakpointStepHasException(
   // Now check if this exception was likely caused by successfully stepping
   // over the breakpoint, or something else (the stepped
   // instruction crashed or something).
-  // TODO(donosoc): Handle HW breakpoint case.
   return exception_type == debug_ipc::NotifyException::Type::kSingleStep;
+}
+
+bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
+  return software_breakpoint_ != nullptr;
+}
+
+bool ProcessBreakpoint::HardwareBreakpointInstalled() const {
+  return hardware_breakpoint_ != nullptr &&
+         !hardware_breakpoint_->installed_threads().empty();
 }
 
 bool ProcessBreakpoint::CurrentlySteppingOver() const {
@@ -220,107 +171,5 @@ void ProcessBreakpoint::Uninstall() {
   software_breakpoint_.reset();
   hardware_breakpoint_.reset();
 }
-
-// ProcessBreakpoint::SoftwareBreakpoint Implementation ------------------------
-
-ProcessBreakpoint::SoftwareBreakpoint::SoftwareBreakpoint(
-    ProcessBreakpoint* process_bp, ProcessMemoryAccessor* memory_accessor)
-    : process_bp_(process_bp), memory_accessor_(memory_accessor) {}
-
-ProcessBreakpoint::SoftwareBreakpoint::~SoftwareBreakpoint() { Uninstall(); }
-
-zx_status_t ProcessBreakpoint::SoftwareBreakpoint::Install() {
-  FXL_DCHECK(!installed_);
-
-  uint64_t address = process_bp_->address();
-
-  // Read previous instruction contents.
-  size_t actual = 0;
-  zx_status_t status = memory_accessor_->ReadProcessMemory(
-      address, &previous_data_, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK)
-    return status;
-  if (actual != sizeof(arch::BreakInstructionType))
-    return ZX_ERR_UNAVAILABLE;
-
-  // Replace with breakpoint instruction.
-  status = memory_accessor_->WriteProcessMemory(
-      address, &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
-      &actual);
-  if (status != ZX_OK)
-    return status;
-  if (actual != sizeof(arch::BreakInstructionType))
-    return ZX_ERR_UNAVAILABLE;
-
-  installed_ = true;
-  return ZX_OK;
-}
-
-void ProcessBreakpoint::SoftwareBreakpoint::Uninstall() {
-  if (!installed_)
-    return;  // Not installed.
-
-  uint64_t address = process_bp_->address();
-
-  // If the breakpoint was previously installed it means the memory address
-  // was valid and writable, so we generally expect to be able to do the same
-  // write to uninstall it. But it could have been unmapped during execution
-  // or even remapped with something else. So verify that it's still a
-  // breakpoint instruction before doing any writes.
-  arch::BreakInstructionType current_contents = 0;
-  size_t actual = 0;
-  zx_status_t status = memory_accessor_->ReadProcessMemory(
-      address, &current_contents, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
-    return;  // Probably unmapped, safe to ignore.
-
-  if (current_contents != arch::kBreakInstruction) {
-    fprintf(stderr,
-            "Warning: Debug break instruction unexpectedly replaced "
-            "at %" PRIX64 "\n",
-            address);
-    return;  // Replaced with something else, ignore.
-  }
-
-  status = memory_accessor_->WriteProcessMemory(
-      address, &previous_data_, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
-    fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".",
-            address);
-  }
-
-  installed_ = false;
-}
-
-void ProcessBreakpoint::SoftwareBreakpoint::FixupMemoryBlock(
-    debug_ipc::MemoryBlock* block) {
-  if (block->data.empty())
-    return;  // Nothing to do.
-  FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
-
-  size_t src_size = sizeof(arch::BreakInstructionType);
-  const uint8_t* src = reinterpret_cast<uint8_t*>(&previous_data_);
-
-  // Simple implementation to prevent boundary errors (ARM instructions are
-  // 32-bits and could be hanging partially off either end of the requested
-  // buffer).
-  for (size_t i = 0; i < src_size; i++) {
-    uint64_t dest_address = process_bp_->address() + i;
-    if (dest_address >= block->address &&
-        dest_address < block->address + block->size)
-      block->data[dest_address - block->address] = src[i];
-  }
-}
-
-bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
-  return software_breakpoint_ != nullptr;
-}
-
-bool ProcessBreakpoint::HardwareBreakpointInstalled() const {
-  return hardware_breakpoint_ != nullptr &&
-         !hardware_breakpoint_->installed_threads().empty();
-}
-
-// ProcessBreakpoint::HardwareBreakpoint Implementation ------------------------
 
 }  // namespace debug_agent

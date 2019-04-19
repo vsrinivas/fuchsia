@@ -51,6 +51,18 @@ zx_status_t Breakpoint::SetSettings(
   return result;
 }
 
+bool Breakpoint::AppliesToThread(zx_koid_t process_koid,
+                                 zx_koid_t thread_koid) const {
+  for (auto& location : settings_.locations) {
+    if (location.process_koid == process_koid) {
+      if (location.thread_koid == 0 || location.thread_koid == thread_koid)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 // In the future we will want to have breakpoints that trigger on a specific
 // hit count or other conditions and will need a "kContinue" result.
 Breakpoint::HitResult Breakpoint::OnHit() {

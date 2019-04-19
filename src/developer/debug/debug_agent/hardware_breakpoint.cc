@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 
+#include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -161,6 +162,42 @@ zx_status_t HardwareBreakpoint::Uninstall(
   }
 
   return ZX_OK;
+}
+
+std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb) {
+  std::set<zx_koid_t> ids;
+  bool all_threads = false;
+  for (Breakpoint* bp : pb.breakpoints()) {
+    // We only care about hardware breakpoints.
+    if (bp->settings().type != debug_ipc::BreakpointType::kHardware)
+      continue;
+
+    for (auto& location : bp->settings().locations) {
+      // We only install for locations that match this process breakpoint.
+      if (location.address != pb.address())
+        continue;
+
+      auto thread_id = location.thread_koid;
+      if (thread_id == 0) {
+        all_threads = true;
+        break;
+      } else {
+        ids.insert(thread_id);
+      }
+    }
+
+    // No need to continue searching if a breakpoint wants all threads.
+    if (all_threads)
+      break;
+  }
+
+  // If all threads are required, add them all.
+  if (all_threads) {
+    for (DebuggedThread* thread : pb.process()->GetThreads())
+      ids.insert(thread->koid());
+  }
+
+  return ids;
 }
 
 }  // namespace debug_agent

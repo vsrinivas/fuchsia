@@ -6,23 +6,32 @@
 #include <zircon/threads.h>
 #include <zircon/syscalls.h>
 
+#include <mutex>
 #include <string>
 
 #include "src/lib/fxl/strings/string_printf.h"
 
 // Simple application that prints from several threads.
-
 constexpr int kThreadCount = 5;
 struct ThreadContext {
   int index = 0;
   std::string name;
 };
 
-int ThreadFunction(void* in) {
+std::mutex kMutex;
+
+void __NO_INLINE PrintFunction(ThreadContext* ctx, int i) {
+  printf("%s: message %d\n", ctx->name.c_str(), i);
+  fflush(stdout);
+};
+
+int __NO_INLINE ThreadFunction(void* in) {
   ThreadContext* ctx = reinterpret_cast<ThreadContext*>(in);
   for (int i = 0; i < 50; i++) {
-    printf("%s: message %d\n", ctx->name.c_str(), i);
-    fflush(stdout);
+    {
+      std::lock_guard<std::mutex> lock(kMutex);
+      PrintFunction(ctx, i);
+    }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(500 * (ctx->index + 1))));
   }
 

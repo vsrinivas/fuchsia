@@ -60,6 +60,10 @@ class Breakpoint {
   zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
   const debug_ipc::BreakpointSettings& settings() const { return settings_; }
 
+  // A breakpoint can be set to apply to a specific set of threads. A thread
+  // hitting an exception needs to query whether it should apply to it or not.
+  bool AppliesToThread(zx_koid_t process_koid, zx_koid_t thread_koid) const;
+
   // Notification that this breakpoint was just hit.
   HitResult OnHit();
 

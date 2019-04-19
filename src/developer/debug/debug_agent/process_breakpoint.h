@@ -17,6 +17,7 @@ namespace debug_agent {
 
 class Breakpoint;
 class HardwareBreakpoint;
+class SoftwareBreakpoint;
 
 // Represents one breakpoint address in a single process. One Breakpoint object
 // can expand to many ProcessBreakpoints across multiple processes and within a
@@ -57,6 +58,11 @@ class ProcessBreakpoint {
   // replacement from this breakpoint if it appears in the given block.
   // Otherwise does nothing.
   void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
+
+  // When a thread receives a breakpoint exception installed by a process
+  // breakpoint, it must check if the breakpoint was indeed intended to apply
+  // to it (we can have thread-specific breakpoints).
+  bool ShouldHitThread(zx_koid_t thread_koid) const;
 
   // Notification that this breakpoint was just hit. All affected Breakpoints
   // will have their stats updated and placed in the *stats param. This makes
@@ -131,7 +137,6 @@ class ProcessBreakpoint {
   // will implement the same ProcessBreakpoint, which will have both
   // |software_breakpoint_| and |hardware_breakpoint_| members instanced.
   // Null means that that particular installation is not used.
-  class SoftwareBreakpoint;
   std::unique_ptr<SoftwareBreakpoint> software_breakpoint_;
   std::unique_ptr<HardwareBreakpoint> hardware_breakpoint_;
 

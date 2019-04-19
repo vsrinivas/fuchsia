@@ -35,4 +35,10 @@ class HardwareBreakpoint {
   std::set<zx_koid_t> installed_threads_;
 };
 
+
+// A given set of breakpoints have a number of locations, which could target
+// different threads. We need to get all the threads that are targeted to
+// this particular location.
+std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb);
+
 }  // namespace debug_agent

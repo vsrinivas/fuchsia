@@ -56,6 +56,7 @@ class DebuggedThread {
                  zx_koid_t thread_koid, ThreadCreationOption option);
   virtual ~DebuggedThread();
 
+  const DebuggedProcess* process() const { return process_; }
   zx::thread& thread() { return thread_; }
   const zx::thread& thread() const { return thread_; }
   zx_koid_t koid() const { return koid_; }
@@ -115,7 +116,8 @@ class DebuggedThread {
  private:
   enum class OnStop {
     kIgnore,  // Don't do anything, keep the thread stopped and don't notify.
-    kSendNotification  // Send client notification like normal.
+    kNotify,  // Send client notification like normal.
+    kResume,  // The thread should be resumed from this exception.
   };
 
   void HandleSingleStep(debug_ipc::NotifyException*,
@@ -130,9 +132,6 @@ class DebuggedThread {
   void SendExceptionNotification(debug_ipc::NotifyException*,
                                  zx_thread_state_general_regs*);
 
-  // Handles a software breakpoint exception, updating the state as necessary.
-  // If the address corresponds to a breakpoint we have set, it will call
-  // UpdateForHitProcessBreakpoint (see below).
   OnStop UpdateForSoftwareBreakpoint(
       zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
@@ -140,6 +139,11 @@ class DebuggedThread {
   OnStop UpdateForHardwareBreakpoint(
       zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
+  // When hitting a SW breakpoint, the PC needs to be correctly re-set depending
+  // on where the CPU leaves the PC after a SW exception.
+  void FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
+                                    zx_thread_state_general_regs* regs);
 
   // Handles an exception corresponding to a ProcessBreakpoint. All
   // Breakpoints affected will have their updated stats added to

@@ -41,6 +41,8 @@ static_library("lib") {
     "process_memory_accessor.h",
     "process_watchpoint.cc",
     "process_watchpoint.h",
+    "software_breakpoint.cc",
+    "software_breakpoint.h",
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
