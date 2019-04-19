@@ -5,7 +5,7 @@
     "sandbox": {
         "features": [
             "config-data",
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.auth.account.AccountManager",
