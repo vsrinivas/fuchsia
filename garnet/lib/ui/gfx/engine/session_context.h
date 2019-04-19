@@ -36,6 +36,7 @@ using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 struct SessionContext {
   vk::Device vk_device;
   escher::Escher* escher;
+  uint32_t imported_memory_type_index;
   escher::ResourceRecycler* escher_resource_recycler;
   escher::ImageFactory* escher_image_factory;
   // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.

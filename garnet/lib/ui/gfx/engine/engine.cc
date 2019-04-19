@@ -20,6 +20,7 @@
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/session.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/util/fuchsia_utils.h"
@@ -58,6 +59,8 @@ Engine::Engine(sys::ComponentContext* component_context,
           escher()->command_buffer_sequencer())),
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
+      imported_memory_type_index_(GetImportedMemoryTypeIndex(
+          escher()->vk_physical_device(), escher()->vk_device())),
       has_vulkan_(escher_ && escher_->vk_device()),
       command_context_(CreateCommandContext(/* frame number */ 0)),
       inspect_object_(std::move(inspect_object)),
@@ -84,6 +87,10 @@ Engine::Engine(
       release_fence_signaller_(std::move(release_fence_signaller)),
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
+      imported_memory_type_index_(
+          escher_ ? GetImportedMemoryTypeIndex(escher_->vk_physical_device(),
+                                               escher_->vk_device())
+                  : 0),
       has_vulkan_(escher_ && escher_->vk_device()),
       command_context_(CreateCommandContext(/* frame number */ 0)),
       weak_factory_(this) {

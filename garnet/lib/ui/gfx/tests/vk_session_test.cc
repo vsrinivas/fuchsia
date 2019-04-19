@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 
+#include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/public/lib/escher/impl/vulkan_utils.h"
 
 using namespace escher;
@@ -93,6 +94,8 @@ std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
 
   session_context.vk_device = escher_->vk_device();
   session_context.escher = escher_.get();
+  session_context.imported_memory_type_index = GetImportedMemoryTypeIndex(
+      escher_->vk_physical_device(), escher_->vk_device());
   session_context.escher_resource_recycler = escher_->resource_recycler();
   session_context.escher_image_factory = image_factory_.get();
   session_context.release_fence_signaller = release_fence_signaller_.get();

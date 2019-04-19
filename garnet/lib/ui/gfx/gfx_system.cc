@@ -14,6 +14,7 @@
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
+#include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 
 namespace scenic_impl {

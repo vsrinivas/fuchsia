@@ -197,6 +197,8 @@ source_set("gfx") {
     "util/event_timestamper.h",
     "util/time.h",
     "util/unwrap.h",
+    "util/vulkan_utils.cc",
+    "util/vulkan_utils.h",
     "util/wrap.h",
   ]
 
