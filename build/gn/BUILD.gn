@@ -11,90 +11,19 @@ import("//build/gn/packages.gni")
 # servers to enable crash reporting.  These files are uniquely important for
 # release builds and this step may take a few minutes to complete, so it is
 # not recommended that this be included in the default build.
-#
-# We also include build-ids from archives downloaded from CIPD; these
-# archives are unpacked into a single directory.
-prebuilt_build_ids = "$target_gen_dir/prebuilt_build_ids"
-action("unpack_build_id_archives") {
-  testonly = true
-  script = "unpack_build_id_archives.sh"
-
-  # We output a text list of the build-id archives, as actions
-  # require outputs, though it is not needed.
-  _build_id_manifest = "$target_gen_dir/prebuilt-build-id-archives.txt"
-  args = [
-    rebase_path("//prebuilt/build_ids/$target_cpu"),
-    rebase_path(prebuilt_build_ids),
-    rebase_path(_build_id_manifest),
-  ]
-  outputs = [
-    _build_id_manifest,
-  ]
-}
-
-prebuilt_ids_txt = "$target_gen_dir/prebuilt_ids.txt"
-action("prebuilt_ids.txt") {
-  testonly = true
-  script = "//scripts/build_id_conv.py"
-
-  args = [
-    "--output-format",
-    "ids.txt",
-    rebase_path(prebuilt_build_ids),
-    rebase_path(prebuilt_ids_txt),
-  ]
-
-  outputs = [
-    prebuilt_ids_txt,
-  ]
-
-  deps = [
-    ":unpack_build_id_archives",
-  ]
-}
-
-extended_ids_txt = "$root_build_dir/extended_ids.txt"
-action("concatenate_ids_txts") {
-  testonly = true
-  script = "/bin/sh"
-
-  sources = [
-    "$root_build_dir/ids.txt",
-    prebuilt_ids_txt,
-  ]
-
-  _sources = rebase_path(sources)
-  _extended = rebase_path(extended_ids_txt)
-
-  args = [
-    "-c",
-    "cat ${_sources[0]} ${_sources[1]} > $_extended",
-  ]
-
-  outputs = [
-    extended_ids_txt,
-  ]
-
-  deps = [
-    ":prebuilt_ids.txt",
-    "//build/images:ids.txt",
-  ]
-}
-
 action("breakpad_symbols") {
   testonly = true
   script = "//buildtools/${host_platform}/dump_breakpad_symbols"
 
   deps = [
-    ":concatenate_ids_txts",
+    "//build/images:ids.txt",
   ]
 
   inputs = [
     "//buildtools/${host_platform}/dump_syms/dump_syms",
   ]
-
   sources = [
-    extended_ids_txt,
+    "$root_out_dir/ids.txt",
   ]
 
   # This action generates a single xxx.sym file for each binary in the ids file
@@ -106,16 +35,15 @@ action("breakpad_symbols") {
   depfile = "${outputs[0]}.d"
 
   args = [
-    "-out-dir",
-    rebase_path("$root_out_dir/breakpad_symbols"),
-    "-dump-syms-path",
-    rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
-    "-depfile",
-    rebase_path(depfile, root_build_dir),
-    "-tar-file",
-    rebase_path(outputs[0], root_build_dir),
-    rebase_path(sources[0], root_build_dir),
-  ]
+           "-out-dir",
+           rebase_path("$root_out_dir/breakpad_symbols"),
+           "-dump-syms-path",
+           rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
+           "-depfile",
+           rebase_path(depfile, root_build_dir),
+           "-tar-file",
+           rebase_path(outputs[0], root_build_dir),
+         ] + rebase_path(sources, root_build_dir)
 }
 
 # Generates an archive of package metadata.
