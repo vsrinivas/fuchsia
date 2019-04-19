@@ -15,7 +15,7 @@ declare_args() {
   # Whether basemgr and dev_base_shell should use account_manager for account
   # creation. This is a temporary flag while modular transitions to use account
   # manager.
-  use_account_manager = true
+  use_account_manager = false
 }
 
 flatbuffer("users") {
@@ -25,6 +25,7 @@ flatbuffer("users") {
 }
 
 executable_package("basemgr") {
+  deprecated_global_persistent_storage = "//build"
   meta = [
     {
       path = "meta/basemgr.cmx"

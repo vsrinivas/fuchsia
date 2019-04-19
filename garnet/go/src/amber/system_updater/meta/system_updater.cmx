@@ -6,8 +6,8 @@
         "features": [
             "build-info",
             "shell",
-            "deprecated-misc-storage",
-            "isolated-persistent-storage"
+            "deprecated-global-persistent-storage",
+            "deprecated-misc-storage"
         ],
         "pkgfs": [
             "packages"
