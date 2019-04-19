@@ -5,16 +5,16 @@
 #ifndef PERIDOT_LIB_FIDL_APP_CLIENT_H_
 #define PERIDOT_LIB_FIDL_APP_CLIENT_H_
 
-#include <memory>
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/svc/cpp/services.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/time/time_delta.h>
-#include <lib/svc/cpp/services.h>
+
+#include <memory>
+#include <string>
 
 #include "peridot/lib/common/async_holder.h"
 
@@ -34,6 +34,9 @@ namespace modular {
 // |additional_services| will allow us to add custom services to an applications
 // namespace.
 //
+// |flat_namespace| allows us to add custom directories to an application's
+// namespace.
+//
 // AppClientBase are the non-template parts factored out so they don't need to
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
@@ -41,7 +44,9 @@ class AppClientBase : public AsyncHolderBase {
   AppClientBase(fuchsia::sys::Launcher* launcher,
                 fuchsia::modular::AppConfig config,
                 std::string data_origin = "",
-                fuchsia::sys::ServiceListPtr additional_services = nullptr);
+                fuchsia::sys::ServiceListPtr additional_services = nullptr,
+                fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr);
+
   ~AppClientBase() override;
 
   // Gives access to the services of the started application. Services
@@ -77,12 +82,13 @@ class AppClient : public AppClientBase {
  public:
   AppClient(fuchsia::sys::Launcher* const launcher,
             fuchsia::modular::AppConfig config, std::string data_origin = "",
-            fuchsia::sys::ServiceListPtr additional_services = nullptr)
+            fuchsia::sys::ServiceListPtr additional_services = nullptr,
+            fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)
       : AppClientBase(launcher, std::move(config), std::move(data_origin),
-                      std::move(additional_services)) {
+                      std::move(additional_services),
+                      std::move(flat_namespace)) {
     services().ConnectToService(service_.NewRequest());
   }
-
   ~AppClient() override = default;
 
   fidl::InterfacePtr<Service>& primary_service() { return service_; }

@@ -136,6 +136,7 @@ source_set("lib") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/fidl:environment",
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/modular_config",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.gfx",

@@ -26,8 +26,7 @@ template("modular_config_validate") {
 }
 
 # Packages a modular framework configuration after validating the configuration.
-# Configurations will be found in /config/data/basemgr/startup.config and
-# /config/data/sessionmgr/startup.config.
+# Configuration will be found in basemgr's /config/data/startup.config.
 #
 # Parameters
 #   config (required)
@@ -45,7 +44,7 @@ template("modular_config") {
     config = invoker.config
   }
 
-  config_data(invoker.target_name + "_basemgr") {
+  config_data(invoker.target_name) {
     for_pkg = "basemgr"
     sources = [
       rebase_path(invoker.config),
@@ -56,27 +55,6 @@ template("modular_config") {
 
     deps = [
       ":${invoker.target_name}_validate",
-    ]
-  }
-
-  config_data(invoker.target_name + "_sessionmgr") {
-    for_pkg = "sessionmgr"
-    sources = [
-      rebase_path(invoker.config),
-    ]
-    outputs = [
-      "startup.config",
-    ]
-
-    deps = [
-      ":${invoker.target_name}_validate",
-    ]
-  }
-
-  group(invoker.target_name) {
-    deps = [
-      ":${invoker.target_name}_basemgr",
-      ":${invoker.target_name}_sessionmgr",
     ]
   }
 }

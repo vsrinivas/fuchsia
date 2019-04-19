@@ -71,6 +71,11 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fuchsia::modular::AppConfig session_shell_config);
 
  private:
+  // Determines where current configurations are being read from, and forwards
+  // that directory into a flat namespace that will be added to sessionmgr's
+  // launch info.
+  fuchsia::sys::FlatNamespacePtr MakeConfigNamespace();
+
   // |fuchsia::modular::internal::SessionContext|
   void Logout() override;
 

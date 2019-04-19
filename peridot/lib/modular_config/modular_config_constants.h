@@ -7,75 +7,79 @@
 
 namespace modular_config {
 
-inline constexpr char kBasemgrConfigName[] = "basemgr";
-inline constexpr char kSessionmgrConfigName[] = "sessionmgr";
-inline constexpr char kSessionmgrUrl[] =
+constexpr char kBasemgrConfigName[] = "basemgr";
+constexpr char kSessionmgrConfigName[] = "sessionmgr";
+constexpr char kSessionmgrUrl[] =
     "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
-inline constexpr char kStartupConfigPath[] = "/config/data/startup.config";
-inline constexpr char kTrue[] = "true";
+constexpr char kStartupConfigPath[] = "/config/data/startup.config";
+constexpr char kStartupConfigDirPath[] = "/config/data";
+constexpr char kOverridenStartupConfigPath[] =
+    "/config_override/data/startup.config";
+constexpr char kOverridenConfigDirPath[] = "/config_override/data";
+constexpr char kStartupConfigFileName[] = "startup.config";
+constexpr char kTrue[] = "true";
 
 // Presentation constants
-inline constexpr char kDisplayUsage[] = "display_usage";
-inline constexpr char kHandheld[] = "handheld";
-inline constexpr char kClose[] = "close";
-inline constexpr char kNear[] = "near";
-inline constexpr char kMidrange[] = "midrange";
-inline constexpr char kFar[] = "far";
-inline constexpr char kUnknown[] = "unknown";
-inline constexpr char kScreenHeight[] = "screen_height";
-inline constexpr char kScreenWidth[] = "screen_width";
+constexpr char kDisplayUsage[] = "display_usage";
+constexpr char kHandheld[] = "handheld";
+constexpr char kClose[] = "close";
+constexpr char kNear[] = "near";
+constexpr char kMidrange[] = "midrange";
+constexpr char kFar[] = "far";
+constexpr char kUnknown[] = "unknown";
+constexpr char kScreenHeight[] = "screen_height";
+constexpr char kScreenWidth[] = "screen_width";
 
 // Cloud provider constants
-inline constexpr char kCloudProvider[] = "cloud_provider";
-inline constexpr char kLetLedgerDecide[] = "LET_LEDGER_DECIDE";
-inline constexpr char kFromEnvironment[] = "FROM_ENVIRONMENT";
-inline constexpr char kNone[] = "NONE";
+constexpr char kCloudProvider[] = "cloud_provider";
+constexpr char kLetLedgerDecide[] = "LET_LEDGER_DECIDE";
+constexpr char kFromEnvironment[] = "FROM_ENVIRONMENT";
+constexpr char kNone[] = "NONE";
 
 // Basemgr constants
-inline constexpr char kEnableCobalt[] = "enable_cobalt";
-inline constexpr char kEnablePresenter[] = "enable_presenter";
-inline constexpr char kTest[] = "test";
-inline constexpr char kUseMinfs[] = "use_minfs";
-inline constexpr char kUseSessionShellForStoryShellFactory[] =
+constexpr char kEnableCobalt[] = "enable_cobalt";
+constexpr char kEnablePresenter[] = "enable_presenter";
+constexpr char kTest[] = "test";
+constexpr char kUseMinfs[] = "use_minfs";
+constexpr char kUseSessionShellForStoryShellFactory[] =
     "use_session_shell_for_story_shell_factory";
 
 // Sessionmgr constants
-inline constexpr char kComponentArgs[] = "component_args";
-inline constexpr char kUri[] = "uri";
-inline constexpr char kArgs[] = "args";
-inline constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
-inline constexpr char kStartupAgents[] = "startup_agents";
-inline constexpr char kSessionAgents[] = "session_agents";
-inline constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
+constexpr char kComponentArgs[] = "component_args";
+constexpr char kUri[] = "uri";
+constexpr char kArgs[] = "args";
+constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
+constexpr char kStartupAgents[] = "startup_agents";
+constexpr char kSessionAgents[] = "session_agents";
+constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
 
 // Shell constants
-inline constexpr char kDefaultBaseShellUrl[] =
+constexpr char kDefaultBaseShellUrl[] =
     "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx";
-inline constexpr char kDefaultSessionShellUrl[] =
+constexpr char kDefaultSessionShellUrl[] =
     "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
     "ermine_session_shell.cmx";
-inline constexpr char kDefaultStoryShellUrl[] =
+constexpr char kDefaultStoryShellUrl[] =
     "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx";
-inline constexpr char kBaseShell[] = "base_shell";
-inline constexpr char kSessionShells[] = "session_shells";
-inline constexpr char kStoryShellUrl[] = "story_shell_url";
-inline constexpr char kUrl[] = "url";
-inline constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
+constexpr char kBaseShell[] = "base_shell";
+constexpr char kSessionShells[] = "session_shells";
+constexpr char kStoryShellUrl[] = "story_shell_url";
+constexpr char kUrl[] = "url";
+constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
 
 // Various config constants that will be deprecated in favor for the new names.
-inline constexpr char kBaseShellArgs[] = "base_shell_args";
-inline constexpr char kStoryShell[] = "story_shell";
-inline constexpr char kStoryShellArgs[] = "story_shell_args";
-inline constexpr char kSessionShell[] = "session_shell";
-inline constexpr char kSessionShellArgs[] = "session_shell_args";
-inline constexpr char kSessionmgrArgs[] = "sessionmgr_args";
-inline constexpr char kDisableStatistics[] = "disable_statistics";
-inline constexpr char kNoCloudProviderForLedger[] =
-    "no_cloud_provider_for_ledger";
-inline constexpr char kNoMinfs[] = "no_minfs";
-inline constexpr char kRunBaseShellWithTestRunner[] =
+constexpr char kBaseShellArgs[] = "base_shell_args";
+constexpr char kStoryShell[] = "story_shell";
+constexpr char kStoryShellArgs[] = "story_shell_args";
+constexpr char kSessionShell[] = "session_shell";
+constexpr char kSessionShellArgs[] = "session_shell_args";
+constexpr char kSessionmgrArgs[] = "sessionmgr_args";
+constexpr char kDisableStatistics[] = "disable_statistics";
+constexpr char kNoCloudProviderForLedger[] = "no_cloud_provider_for_ledger";
+constexpr char kNoMinfs[] = "no_minfs";
+constexpr char kRunBaseShellWithTestRunner[] =
     "run_base_shell_with_test_runner";
-inline constexpr char kUseCloudProviderFromEnvironment[] =
+constexpr char kUseCloudProviderFromEnvironment[] =
     "use_cloud_provider_from_environment";
 
 }  // namespace modular_config

@@ -28,7 +28,12 @@ class ModularConfigReader {
  private:
   // Reads startup.config into a string if the file exists. Otherwise, returns
   // a string containing two quotes, representing an empty JSON structure.
-  std::string GetConfigAsString(const std::string& config_name);
+  //
+  // |config_name| is the field in JSON to be extracted, such as "basemgr".
+  // |config_path| is the full path to the config file, such as
+  // "/config/data/startup.config".
+  std::string GetConfigAsString(const std::string& config_name,
+                                std::string config_path);
 };
 
 }  // namespace modular

@@ -4,14 +4,20 @@
 
 #include "peridot/bin/basemgr/session_context_impl.h"
 
-#include <memory>
-#include <utility>
-
+#include <fcntl.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/fsl/io/fd.h>
+
+#include <memory>
+#include <string>
+#include <utility>
 
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/modular_config/modular_config_constants.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace modular {
 
@@ -40,11 +46,17 @@ SessionContextImpl::SessionContextImpl(
 
   FXL_LOG(INFO) << "SESSIONMGR DATA ORIGIN IS " << data_origin;
 
-  // 1. Launch Sessionmgr in the current environment.
-  sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_config), data_origin);
+  // 1. Create a PseudoDir containing startup.config if basemgr is reading
+  // configurations from file. This directory will be injected into sessionmgr's
+  // namespace and sessionmgr will read its configurations from there.
+  auto flat_namespace = MakeConfigNamespace();
 
-  // 2. Initialize the Sessionmgr service.
+  // 2. Launch Sessionmgr in the current environment.
+  sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      launcher, std::move(sessionmgr_config), data_origin,
+      /* additional_services= */ nullptr, std::move(flat_namespace));
+
+  // 3. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(
       session_id, std::move(account), std::move(session_shell_config),
@@ -63,6 +75,27 @@ SessionContextImpl::SessionContextImpl(
     // directly.
     on_session_shutdown_(/* logout_users= */ false);
   });
+}
+
+fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace() {
+  // Determine where basemgr is reading configs from
+  std::string config_dir = "";
+  if (files::IsFile(modular_config::kOverridenStartupConfigPath)) {
+    config_dir = modular_config::kOverridenConfigDirPath;
+  } else if (files::IsFile(modular_config::kStartupConfigPath)) {
+    config_dir = modular_config::kStartupConfigDirPath;
+  }
+
+  // Clone basemgr's config directory if it exists
+  if (!config_dir.empty()) {
+    fxl::UniqueFD dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
+    auto flat_namespace = fuchsia::sys::FlatNamespace::New();
+    flat_namespace->paths.push_back(modular_config::kOverridenConfigDirPath);
+    flat_namespace->directories.push_back(
+        fsl::CloneChannelFromFileDescriptor(dir.get()));
+    return flat_namespace;
+  }
+  return nullptr;
 }
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base

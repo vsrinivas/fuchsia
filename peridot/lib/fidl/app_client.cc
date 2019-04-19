@@ -5,7 +5,6 @@
 #include "peridot/lib/fidl/app_client.h"
 
 #include <fcntl.h>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -13,6 +12,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fsl/io/fd.h>
 #include <zircon/processargs.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 
@@ -20,7 +20,8 @@ namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
                              fuchsia::modular::AppConfig config,
                              std::string data_origin,
-                             fuchsia::sys::ServiceListPtr additional_services)
+                             fuchsia::sys::ServiceListPtr additional_services,
+                             fuchsia::sys::FlatNamespacePtr flat_namespace)
     : AsyncHolderBase(config.url) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
@@ -56,6 +57,19 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
   if (additional_services) {
     launch_info.additional_services = std::move(additional_services);
   }
+
+  if (flat_namespace) {
+    if (!launch_info.flat_namespace) {
+      launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    }
+
+    for (size_t i = 0; i < flat_namespace->paths.size(); ++i) {
+      launch_info.flat_namespace->paths.push_back(flat_namespace->paths[i]);
+      launch_info.flat_namespace->directories.push_back(
+          std::move(flat_namespace->directories[i]));
+    }
+  }
+
   launcher->CreateComponent(std::move(launch_info), app_.NewRequest());
 }
 
