@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/gn/packages.gni")
 
 # Generates breakpad symbol data for unstripped binaries.
 #

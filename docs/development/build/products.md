@@ -51,17 +51,4 @@ convention contains:
 By convention, the `default` product for a higher layer should be additive
 from the layer below.
 
-## Inspecting Products
-
-As products reference [packages](packages.md) and packages may reference
-other packages, it is useful to be able to inspect the expanded and filtered
-set of build labels that will make up each package set in a product. The
-[preprocess products][preprocess-products-py] script is the tool that
-produces this for the build and can be run by hand:
-
-```bash
-$ python build/gn/preprocess_products.py --products '["garnet/products/default"]'
-```
-
 [products-source]: /products/
-[preprocess-products-py]: /build/gn/preprocess_products.py

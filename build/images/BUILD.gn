@@ -7,7 +7,6 @@ import("//build/config.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
-import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
@@ -104,19 +103,19 @@ group("meta_packages") {
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = monolith_package_labels + [ "//:additional_base_packages" ]
+  public_deps = [ "//:additional_base_packages" ]
 }
 
 group("preinstall_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = preinstall_package_labels + [ "//:additional_cache_packages" ]
+  public_deps = [ "//:additional_cache_packages" ]
 }
 
 group("available_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = available_package_labels + [
+  public_deps = [
                   ":monolith_packages",
                   ":preinstall_packages",
                   "//:additional_universe_packages",

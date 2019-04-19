@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon.gni")
-import("//build/gn/packages.gni")
 import("//build/testing/platforms.gni")
 
 declare_args() {
@@ -33,6 +32,12 @@ declare_args() {
   # A list of package labels to include in the 'base' package set. Used by the
   # board definition rather than the product definition.
   board_package_labels = []
+
+  # Does nothing.
+  #
+  # Will be removed after 30 April 2019.
+  allow_layer_guesswork = false
+  board_packages = []
 }
 
 # Write a file that can be sourced by `fx`.  This file is produced
@@ -65,14 +70,10 @@ group("default") {
     "//build/images:packages",
     "//sdk:core",
   ]
-  if (preinstall_package_labels != []
-      || monolith_package_labels != []
-      || base_package_labels != []
-      || cache_package_labels != []) {
+  if (base_package_labels != [] || cache_package_labels != []) {
     deps += [ "//build/images" ]
   }
-  if (available_package_labels != []
-      || universe_package_labels != []) {
+  if (universe_package_labels != []) {
     deps += [ "//build/images:updates" ]
   }
 }
