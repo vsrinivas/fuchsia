@@ -39,7 +39,6 @@ import (
 )
 
 const (
-	sniff                            = false
 	deviceSettingsManagerNodenameKey = "DeviceName"
 	defaultNodename                  = "fuchsia-unset-device-name"
 
@@ -73,6 +72,7 @@ type Netstack struct {
 		ifStates           map[tcpip.NICID]*ifState
 	}
 	nodename string
+	sniff    bool
 
 	filter *filter.Filter
 
@@ -649,7 +649,7 @@ func (ns *Netstack) addEndpoint(
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
-	if sniff {
+	if ns.sniff {
 		// A wrapper LinkEndpoint should encapsulate the underlying
 		// one, and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
@@ -669,7 +669,7 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.ifStates[ifs.nicid] = ifs
 	ns.mu.countNIC++
 
-	logger.Infof("NIC %s added", name)
+	logger.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
 
 	if err := ns.mu.stack.CreateNIC(ifs.nicid, linkID); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %v", ifs.mu.nic.Name, err)

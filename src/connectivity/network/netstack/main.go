@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"reflect"
 	"runtime"
 	"syscall/zx"
@@ -46,7 +47,7 @@ func (*logWriter) Write(data []byte) (n int, err error) {
 	// logging service also adds a trailing newline.
 	data = bytes.TrimSuffix(data, []byte("\n"))
 
-	if err := logger.VLogf(logger.TraceVerbosity, "%s", data); err != nil {
+	if err := logger.VLogf(logger.DebugVerbosity, "%s", data); err != nil {
 		return 0, err
 	}
 
@@ -54,12 +55,16 @@ func (*logWriter) Write(data []byte) (n int, err error) {
 }
 
 func Main() {
-	flag.Parse()
+	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	sniff := flags.Bool("sniff", false, "Enable the sniffer")
+	if err := flags.Parse(os.Args[1:]); err != nil {
+		panic(err)
+	}
 
 	ctx := context.CreateFromStartupInfo()
 
 	options := logger.LogInitOptions{
-		Loglevel:  logger.InfoLevel,
+		Loglevel:  logger.DebugLevel,
 		Connector: ctx.Connector(),
 		Tags:      []string{"netstack"},
 		MinSeverityForFileAndLineInfo: logger.InfoLevel,
@@ -70,7 +75,6 @@ func Main() {
 
 	log.SetOutput((*logWriter)(nil))
 	log.SetFlags(log.Lshortfile)
-	logger.Infof("started")
 
 	stk := tcpipstack.New([]string{
 		ipv4.ProtocolName,
@@ -103,6 +107,7 @@ func Main() {
 		arena:          arena,
 		dnsClient:      dns.NewClient(stk),
 		deviceSettings: ds,
+		sniff:          *sniff,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stk
