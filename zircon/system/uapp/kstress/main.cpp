@@ -138,6 +138,11 @@ int main(int argc, char** argv) {
         printf("Running stress tests continually\n");
     }
 
+
+#ifdef DISABLE_VMSTRESS
+    printf("NOTE: vmstress is disabled because enable_fair_scheduler is not set.\n");
+#endif
+
     // initialize all the tests
     for (auto& test : StressTest::tests()) {
         printf("Initializing %s test\n", test->name());

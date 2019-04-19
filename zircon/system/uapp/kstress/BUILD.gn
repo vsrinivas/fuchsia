@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/kernel/params.gni")
+
 executable("kstress") {
   sources = [
     "main.cpp",
     "stress_test.cpp",
-    "vmstress.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
@@ -16,4 +17,11 @@ executable("kstress") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
+
+  # The vmstress test has starvation issues when run without the fair scheduler.
+  if (enable_fair_scheduler) {
+    sources += ["vmstress.cpp"]
+  } else {
+    defines = [ "DISABLE_VMSTRESS" ]
+  }
 }

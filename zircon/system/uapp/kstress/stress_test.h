@@ -48,12 +48,8 @@ public:
     // get a ref to the master test list
     static fbl::Vector<StressTest*>& tests() { return tests_; }
 
-protected:
-    // global list of all the stress tests, registered at app start
-    static fbl::Vector<StressTest*> tests_;
-
     // wrapper around printf that enables/disables based on verbose flag
-    void Printf(const char *fmt, ...) {
+    void Printf(const char *fmt, ...) const {
         if (!verbose_) {
             return;
         }
@@ -66,7 +62,7 @@ protected:
         va_end(ap);
     }
 
-    void PrintfAlways(const char *fmt, ...) {
+    void PrintfAlways(const char *fmt, ...) const {
         va_list ap;
         va_start(ap, fmt);
 
@@ -74,6 +70,10 @@ protected:
 
         va_end(ap);
     }
+
+protected:
+    // global list of all the stress tests, registered at app start
+    static fbl::Vector<StressTest*> tests_;
 
     bool verbose_{false};
     zx_info_kmem_stats_t kmem_stats_{};
