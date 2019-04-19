@@ -67,19 +67,24 @@ Z_TEST_OFFSET = -2.5758293035489008
 
 
 def Mean(values):
+    if len(values) == 0:
+        raise AssertionError('Mean is not defined for an empty sample')
     return float(sum(values)) / len(values)
 
 
-# Returns the mean and standard deviation of a sample.  This does the
-# same as scipy.stats.norm.fit().  This does not apply Bessel's
-# correction to the calculation of the standard deviation.
+# Returns the mean and standard deviation of a sample.  This applies
+# Bessel's correction to the calculation of the standard deviation.
 def MeanAndStddev(values):
+    if len(values) <= 1:
+        raise AssertionError(
+            "Sample size of %d is too small to calculate standard deviation "
+            "with Bessel's correction" % len(values))
     mean_val = Mean(values)
     sum_of_squares = 0.0
     for val in values:
         diff = val - mean_val
         sum_of_squares += diff * diff
-    stddev_val = math.sqrt(sum_of_squares / len(values))
+    stddev_val = math.sqrt(sum_of_squares / (len(values) - 1))
     return mean_val, stddev_val
 
 

@@ -149,6 +149,17 @@ class PerfCompareTest(TempDirTestCase):
         perfcompare.Main(['compare_perf', before_dir, after_dir], stdout)
         return stdout.getvalue()
 
+    def test_mean_and_stddev(self):
+        values = [10, 5, 15]
+        mean_val, stddev_val = perfcompare.MeanAndStddev(values)
+        self.assertEquals(mean_val, 10.0)
+        self.assertEquals(perfcompare.Mean(values), 10.0)
+        self.assertEquals(stddev_val, 5.0)
+        # Check error cases.
+        self.assertRaises(lambda: perfcompare.Mean([]))
+        self.assertRaises(lambda: perfcompare.MeanAndStddev([]))
+        self.assertRaises(lambda: perfcompare.MeanAndStddev([100]))
+
     # Check that data written using the golden file helper reads back
     # the same.
     def test_golden_file_write_and_read(self):
