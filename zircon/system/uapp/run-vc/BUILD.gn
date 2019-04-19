@@ -7,7 +7,7 @@ executable("run-vc") {
     "main.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-virtualconsole:c",
+    "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]

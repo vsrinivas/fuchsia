@@ -9,7 +9,6 @@
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/virtualconsole/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/syscalls/object.h>
 
@@ -65,15 +64,14 @@ std::shared_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
       ".",
-      Namespace::Launcher::Name_,
       fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::kernel::DebugBroker::Name_,
+      fuchsia::sys::Environment::Name_,
+      Namespace::Launcher::Name_,
       fuchsia::process::Launcher::Name_,
       fuchsia::process::Resolver::Name_,
       fuchsia::scheduler::ProfileProvider::Name_,
-      fuchsia::sys::Environment::Name_,
-      fuchsia::virtualconsole::SessionManager::Name_,
   };
 }
 
