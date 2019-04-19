@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_MODULAR_CONFIG_MODULAR_CONFIG_H_
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 namespace modular {
@@ -16,14 +17,14 @@ class ModularConfigReader {
   ~ModularConfigReader();
 
   // Reads basemgr configs from startup.config and parses it into a fidl table
-  fuchsia::modular::internal::BasemgrConfig GetBasemgrConfig();
+  fuchsia::modular::session::BasemgrConfig GetBasemgrConfig();
 
   // Reads sessionmgr configs from startup.config and parses it into a fidl
   // table
-  fuchsia::modular::internal::SessionmgrConfig GetSessionmgrConfig();
+  fuchsia::modular::session::SessionmgrConfig GetSessionmgrConfig();
 
   // Returns a SessionmgrConfig with all default values
-  fuchsia::modular::internal::SessionmgrConfig GetDefaultSessionmgrConfig();
+  fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig();
 
  private:
   // Reads startup.config into a string if the file exists. Otherwise, returns

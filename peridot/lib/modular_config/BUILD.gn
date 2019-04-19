@@ -16,6 +16,7 @@ source_set("modular_config") {
     "//garnet/public/lib/json",
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.internal",
   ]
 }
@@ -30,6 +31,7 @@ source_set("json_xdr") {
   deps = [
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.internal",
   ]
 }
@@ -45,6 +47,7 @@ source_set("unittests") {
     ":json_xdr",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.internal",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",

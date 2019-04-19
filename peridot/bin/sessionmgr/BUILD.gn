@@ -66,6 +66,7 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.speech",
     "//sdk/fidl/fuchsia.sys",
@@ -196,6 +197,7 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]

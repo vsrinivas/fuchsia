@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
@@ -39,7 +40,7 @@ fit::deferred_action<fit::closure> SetupCobalt(
   return modular::InitializeCobalt(dispatcher, context);
 };
 
-fuchsia::modular::internal::BasemgrConfig CreateBasemgrConfigFromCommandLine(
+fuchsia::modular::session::BasemgrConfig CreateBasemgrConfigFromCommandLine(
     fxl::CommandLine command_line) {
   modular::BasemgrSettings settings(command_line);
   auto config = settings.CreateBasemgrConfig();
@@ -58,14 +59,14 @@ fuchsia::modular::internal::BasemgrConfig CreateBasemgrConfigFromCommandLine(
     }
 
     for (auto setting : session_shell_settings) {
-      fuchsia::modular::internal::SessionShellConfig session_shell_config;
+      fuchsia::modular::session::SessionShellConfig session_shell_config;
       session_shell_config.set_display_usage(setting.display_usage);
       session_shell_config.set_screen_height(setting.screen_height);
       session_shell_config.set_screen_width(setting.screen_width);
       session_shell_config.mutable_app_config()->set_url(setting.name);
       session_shell_config.mutable_app_config()->set_args({});
 
-      fuchsia::modular::internal::SessionShellMapEntry entry;
+      fuchsia::modular::session::SessionShellMapEntry entry;
       entry.set_name(setting.name);
       entry.set_config(std::move(session_shell_config));
 
@@ -77,7 +78,7 @@ fuchsia::modular::internal::BasemgrConfig CreateBasemgrConfigFromCommandLine(
 }
 
 int main(int argc, const char** argv) {
-  fuchsia::modular::internal::BasemgrConfig config;
+  fuchsia::modular::session::BasemgrConfig config;
 
   if (argc == 1) {
     // Read configurations from file if no command line arguments are passed in.
@@ -102,7 +103,7 @@ int main(int argc, const char** argv) {
   // When auto-login to guest is specified, we use dev_base_shell with user
   // specified such that a persistent guest user is created on first-time boot.
   if (kAutoLoginToGuest) {
-    fuchsia::modular::internal::AppConfig override_base_shell;
+    fuchsia::modular::session::AppConfig override_base_shell;
     override_base_shell.set_url(modular_config::kDefaultBaseShellUrl);
     override_base_shell.mutable_args()->push_back("--user=persistent_guest");
     config.mutable_base_shell()->set_app_config(std::move(override_base_shell));

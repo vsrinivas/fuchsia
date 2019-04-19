@@ -20,7 +20,7 @@ constexpr char kSwapSessionShellKeyboardBinding = ' ';
 PresentationContainer::PresentationContainer(
     fuchsia::ui::policy::Presenter* const presenter,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fuchsia::modular::internal::SessionShellConfig shell_config,
+    fuchsia::modular::session::SessionShellConfig shell_config,
     fit::function<void()> on_swap_session_shell)
     : presenter_(presenter),
       on_swap_session_shell_(std::move(on_swap_session_shell)) {

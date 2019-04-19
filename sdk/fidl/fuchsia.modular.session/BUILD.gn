@@ -4,16 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.modular.testing") {
+fidl("fuchsia.modular.session") {
   sources = [
-    "test_harness.fidl",
+    "modular_config.fidl",
   ]
-
   deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.policy",
     "//zircon/public/fidl/fuchsia-io",
-    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

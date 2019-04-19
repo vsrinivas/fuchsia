@@ -83,9 +83,9 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
 }
 
 // Temporary way to transform commandline args into FIDL table
-fuchsia::modular::internal::BasemgrConfig
+fuchsia::modular::session::BasemgrConfig
 BasemgrSettings::CreateBasemgrConfig() {
-  fuchsia::modular::internal::BasemgrConfig config;
+  fuchsia::modular::session::BasemgrConfig config;
 
   config.set_enable_cobalt(!disable_statistics);
   config.set_enable_presenter(enable_presenter);
@@ -99,7 +99,7 @@ BasemgrSettings::CreateBasemgrConfig() {
   config.mutable_base_shell()->set_keep_alive_after_login(
       keep_base_shell_alive_after_login);
 
-  fuchsia::modular::internal::SessionShellMapEntry session_shell_entry;
+  fuchsia::modular::session::SessionShellMapEntry session_shell_entry;
   session_shell_entry.set_name(session_shell.url());
   session_shell_entry.mutable_config()->set_app_config(
       std::move(session_shell));

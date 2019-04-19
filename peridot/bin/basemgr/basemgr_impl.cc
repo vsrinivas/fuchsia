@@ -22,15 +22,15 @@
 
 namespace fidl {
 template <>
-// fidl::TypeConverter specialization for fuchsia::modular::internal::AppConfig
+// fidl::TypeConverter specialization for fuchsia::modular::session::AppConfig
 // TODO(MF-277) Convert all usages of fuchsia::modular::AppConfig to
-// fuchsia::modular::internal::AppConfig and remove this converter.
+// fuchsia::modular::session::AppConfig and remove this converter.
 struct TypeConverter<fuchsia::modular::AppConfig,
-                     fuchsia::modular::internal::AppConfig> {
-  // Converts fuchsia::modular::internal::AppConfig to
+                     fuchsia::modular::session::AppConfig> {
+  // Converts fuchsia::modular::session::AppConfig to
   // fuchsia::modular::AppConfig
   static fuchsia::modular::AppConfig Convert(
-      const fuchsia::modular::internal::AppConfig& config) {
+      const fuchsia::modular::session::AppConfig& config) {
     fuchsia::modular::AppConfig app_config;
     app_config.url = config.url().c_str();
 
@@ -68,7 +68,7 @@ constexpr char kTokenManagerFactoryUrl[] =
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(
-    fuchsia::modular::internal::BasemgrConfig config,
+    fuchsia::modular::session::BasemgrConfig config,
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -383,7 +383,7 @@ void BasemgrImpl::SelectNextSessionShell(
       });
 }
 
-fuchsia::modular::internal::SessionShellConfig
+fuchsia::modular::session::SessionShellConfig
 BasemgrImpl::GetActiveSessionShellConfig() {
   return CloneStruct(config_.session_shell_map()
                          .at(active_session_shell_configs_index_)

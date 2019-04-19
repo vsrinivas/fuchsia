@@ -11,7 +11,7 @@ namespace {
 
 void XdrBaseShellConfig(
     XdrContext* const xdr,
-    fuchsia::modular::internal::BaseShellConfig* const data) {
+    fuchsia::modular::session::BaseShellConfig* const data) {
   bool has_url = false;
   if (data->has_app_config()) {
     has_url = data->app_config().has_url();
@@ -63,7 +63,7 @@ std::string GetDisplayUsageAsString(fuchsia::ui::policy::DisplayUsage usage) {
 
 void XdrSessionShellMapEntry(
     XdrContext* const xdr,
-    fuchsia::modular::internal::SessionShellMapEntry* const data) {
+    fuchsia::modular::session::SessionShellMapEntry* const data) {
   bool has_name = data->has_name();
   xdr->FieldWithDefault(modular_config::kUrl, data->mutable_name(), has_name,
                         std::string(modular_config::kDefaultSessionShellUrl));
@@ -109,7 +109,7 @@ void XdrSessionShellMapEntry(
 }
 
 void XdrComponentArgs(XdrContext* const xdr,
-                      fuchsia::modular::internal::AppConfig* const data) {
+                      fuchsia::modular::session::AppConfig* const data) {
   xdr->Field(modular_config::kUri, data->mutable_url());
 
   bool has_args = data->has_args();
@@ -118,28 +118,28 @@ void XdrComponentArgs(XdrContext* const xdr,
                         default_args);
 }
 
-std::vector<fuchsia::modular::internal::SessionShellMapEntry>
+std::vector<fuchsia::modular::session::SessionShellMapEntry>
 GetDefaultSessionShellMap() {
-  fuchsia::modular::internal::SessionShellConfig config;
+  fuchsia::modular::session::SessionShellConfig config;
   config.mutable_app_config()->set_url(modular_config::kDefaultSessionShellUrl);
   config.mutable_app_config()->set_args(std::vector<std::string>());
   config.set_display_usage(fuchsia::ui::policy::DisplayUsage::kUnknown);
   config.set_screen_height(0);
   config.set_screen_width(0);
 
-  fuchsia::modular::internal::SessionShellMapEntry map_entry;
+  fuchsia::modular::session::SessionShellMapEntry map_entry;
   map_entry.set_name(modular_config::kDefaultSessionShellUrl);
   map_entry.set_config(std::move(config));
 
-  std::vector<fuchsia::modular::internal::SessionShellMapEntry>
+  std::vector<fuchsia::modular::session::SessionShellMapEntry>
       session_shell_map(1);
   session_shell_map.at(0) = std::move(map_entry);
 
   return session_shell_map;
 }
 
-fuchsia::modular::internal::BaseShellConfig GetDefaultBaseShellConfig() {
-  fuchsia::modular::internal::BaseShellConfig base_shell_config;
+fuchsia::modular::session::BaseShellConfig GetDefaultBaseShellConfig() {
+  fuchsia::modular::session::BaseShellConfig base_shell_config;
   base_shell_config.mutable_app_config()->set_url(
       modular_config::kDefaultBaseShellUrl);
   base_shell_config.mutable_app_config()->set_args(std::vector<std::string>());
@@ -148,34 +148,33 @@ fuchsia::modular::internal::BaseShellConfig GetDefaultBaseShellConfig() {
   return base_shell_config;
 }
 
-fuchsia::modular::internal::CloudProvider GetCloudProviderFromString(
+fuchsia::modular::session::CloudProvider GetCloudProviderFromString(
     std::string provider) {
   if (provider == modular_config::kFromEnvironment) {
-    return fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT;
+    return fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT;
   } else if (provider == modular_config::kNone) {
-    return fuchsia::modular::internal::CloudProvider::NONE;
+    return fuchsia::modular::session::CloudProvider::NONE;
   }
 
-  return fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE;
+  return fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE;
 }
 
 std::string GetCloudProviderAsString(
-    fuchsia::modular::internal::CloudProvider provider) {
+    fuchsia::modular::session::CloudProvider provider) {
   switch (provider) {
-    case fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE:
+    case fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE:
       return modular_config::kLetLedgerDecide;
-    case fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT:
+    case fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT:
       return modular_config::kFromEnvironment;
-    case fuchsia::modular::internal::CloudProvider::NONE:
+    case fuchsia::modular::session::CloudProvider::NONE:
       return modular_config::kNone;
   }
 }
 
 }  // namespace
 
-void XdrBasemgrConfig_v1(
-    XdrContext* const xdr,
-    fuchsia::modular::internal::BasemgrConfig* const data) {
+void XdrBasemgrConfig_v1(XdrContext* const xdr,
+                         fuchsia::modular::session::BasemgrConfig* const data) {
   bool has_enable_cobalt = data->has_enable_cobalt();
   xdr->FieldWithDefault(modular_config::kEnableCobalt,
                         data->mutable_enable_cobalt(), has_enable_cobalt, true);
@@ -236,7 +235,7 @@ void XdrBasemgrConfig_v1(
 
 void XdrSessionmgrConfig_v1(
     XdrContext* const xdr,
-    fuchsia::modular::internal::SessionmgrConfig* const data) {
+    fuchsia::modular::session::SessionmgrConfig* const data) {
   bool has_cloud_provider = data->has_cloud_provider();
 
   std::string cloud_provider_str = modular_config::kLetLedgerDecide;
@@ -283,7 +282,7 @@ void XdrSessionmgrConfig_v1(
                         data->mutable_session_agents(), has_session_agents,
                         default_agents);
 
-  std::vector<fuchsia::modular::internal::AppConfig> default_component_args;
+  std::vector<fuchsia::modular::session::AppConfig> default_component_args;
   bool has_component_args = data->has_component_args();
   xdr->FieldWithDefault(modular_config::kComponentArgs,
                         data->mutable_component_args(), XdrComponentArgs,

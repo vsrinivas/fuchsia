@@ -14,7 +14,7 @@ namespace modular {
 ModularConfigReader::ModularConfigReader() {}
 ModularConfigReader::~ModularConfigReader() {}
 
-fuchsia::modular::internal::BasemgrConfig
+fuchsia::modular::session::BasemgrConfig
 ModularConfigReader::GetBasemgrConfig() {
   std::string config_path;
   if (files::IsFile(modular_config::kOverridenStartupConfigPath)) {
@@ -28,7 +28,7 @@ ModularConfigReader::GetBasemgrConfig() {
       GetConfigAsString(modular_config::kBasemgrConfigName, config_path);
 
   // Parse with xdr
-  fuchsia::modular::internal::BasemgrConfig basemgr_config;
+  fuchsia::modular::session::BasemgrConfig basemgr_config;
   if (!basemgr_config_str.empty() &&
       !XdrRead(basemgr_config_str, &basemgr_config, XdrBasemgrConfig)) {
     FXL_LOG(ERROR) << "Unable to parse startup.json";
@@ -37,7 +37,7 @@ ModularConfigReader::GetBasemgrConfig() {
   return basemgr_config;
 }
 
-fuchsia::modular::internal::SessionmgrConfig
+fuchsia::modular::session::SessionmgrConfig
 ModularConfigReader::GetSessionmgrConfig() {
   // Get sessionmgr config section from file
   auto sessionmgr_config_str =
@@ -45,7 +45,7 @@ ModularConfigReader::GetSessionmgrConfig() {
                         modular_config::kOverridenStartupConfigPath);
 
   // Parse with xdr
-  fuchsia::modular::internal::SessionmgrConfig sessionmgr_config;
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   if (!XdrRead(sessionmgr_config_str, &sessionmgr_config,
                XdrSessionmgrConfig)) {
     FXL_LOG(ERROR) << "Unable to parse startup.json";
@@ -54,9 +54,9 @@ ModularConfigReader::GetSessionmgrConfig() {
   return sessionmgr_config;
 }
 
-fuchsia::modular::internal::SessionmgrConfig
+fuchsia::modular::session::SessionmgrConfig
 ModularConfigReader::GetDefaultSessionmgrConfig() {
-  fuchsia::modular::internal::SessionmgrConfig sessionmgr_config;
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   XdrRead("\"\"", &sessionmgr_config, XdrSessionmgrConfig);
   return sessionmgr_config;
 }

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 #define PERIDOT_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 
-#include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -28,7 +28,7 @@ class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
   explicit PresentationContainer(
       fuchsia::ui::policy::Presenter* const presenter,
       fuchsia::ui::views::ViewHolderToken view_holder_token,
-      fuchsia::modular::internal::SessionShellConfig shell_config,
+      fuchsia::modular::session::SessionShellConfig shell_config,
       fit::function<void()> on_swap_session_shell);
 
   ~PresentationContainer() override;

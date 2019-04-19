@@ -5,6 +5,7 @@
 #include "peridot/lib/modular_config/modular_config_xdr.h"
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include <algorithm>
@@ -20,7 +21,7 @@ namespace modular {
 // contains no values.
 TEST(ModularConfigXdr, BasemgrDefaultValues) {
   std::string write_json;
-  fuchsia::modular::internal::BasemgrConfig write_config;
+  fuchsia::modular::session::BasemgrConfig write_config;
   XdrWrite(&write_json, &write_config, XdrBasemgrConfig);
 
   std::string expected_json = R"({
@@ -50,7 +51,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   EXPECT_EQ(expected_json, write_json);
 
   std::string read_json = "\"\"";
-  fuchsia::modular::internal::BasemgrConfig read_config;
+  fuchsia::modular::session::BasemgrConfig read_config;
   EXPECT_TRUE(XdrRead(read_json, &read_config, XdrBasemgrConfig));
 
   EXPECT_EQ(true, read_config.enable_cobalt());
@@ -85,7 +86,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
 // contains no values.
 TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   std::string write_json;
-  fuchsia::modular::internal::SessionmgrConfig write_config;
+  fuchsia::modular::session::SessionmgrConfig write_config;
   XdrWrite(&write_json, &write_config, XdrSessionmgrConfig);
 
   std::string expected_json = R"({
@@ -104,10 +105,10 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   EXPECT_EQ(expected_json, write_json);
 
   std::string read_json = "\"\"";
-  fuchsia::modular::internal::SessionmgrConfig read_config;
+  fuchsia::modular::session::SessionmgrConfig read_config;
   EXPECT_TRUE(XdrRead(read_json, &read_config, XdrSessionmgrConfig));
 
-  EXPECT_EQ(fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE,
+  EXPECT_EQ(fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE,
             read_config.cloud_provider());
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_TRUE(read_config.enable_story_shell_preload());

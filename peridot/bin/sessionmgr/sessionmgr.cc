@@ -31,7 +31,7 @@ fit::deferred_action<fit::closure> SetupCobalt(
 
 void OverrideConfigFromCommandLine(
     fxl::CommandLine command_line,
-    fuchsia::modular::internal::SessionmgrConfig* config) {
+    fuchsia::modular::session::SessionmgrConfig* config) {
   if (command_line.HasOption(modular_config::kEnableCobalt)) {
     config->set_enable_cobalt(
         command_line.GetOptionValueWithDefault(modular_config::kEnableCobalt,
@@ -51,11 +51,11 @@ void OverrideConfigFromCommandLine(
   }
 
   if (command_line.HasOption(modular_config::kNoCloudProviderForLedger)) {
-    config->set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
+    config->set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
   } else if (command_line.HasOption(
                  modular_config::kUseCloudProviderFromEnvironment)) {
     config->set_cloud_provider(
-        fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT);
+        fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT);
   }
 
   if (command_line.HasOption(modular_config::kStartupAgents)) {
@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
   modular::ModularConfigReader config_reader;
-  fuchsia::modular::internal::SessionmgrConfig config =
+  fuchsia::modular::session::SessionmgrConfig config =
       config_reader.GetSessionmgrConfig();
 
   if (argc > 1) {

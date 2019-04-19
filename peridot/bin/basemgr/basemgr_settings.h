@@ -9,6 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
@@ -25,12 +26,12 @@ class BasemgrSettings {
 
   // Creates a fidl table of basemgr configurations from the parsed command line
   // arguments.
-  fuchsia::modular::internal::BasemgrConfig CreateBasemgrConfig();
+  fuchsia::modular::session::BasemgrConfig CreateBasemgrConfig();
 
-  fuchsia::modular::internal::AppConfig base_shell;
-  fuchsia::modular::internal::AppConfig story_shell;
-  fuchsia::modular::internal::AppConfig sessionmgr;
-  fuchsia::modular::internal::AppConfig session_shell;
+  fuchsia::modular::session::AppConfig base_shell;
+  fuchsia::modular::session::AppConfig story_shell;
+  fuchsia::modular::session::AppConfig sessionmgr;
+  fuchsia::modular::session::AppConfig session_shell;
 
   std::string test_name;
   bool use_session_shell_for_story_shell_factory;

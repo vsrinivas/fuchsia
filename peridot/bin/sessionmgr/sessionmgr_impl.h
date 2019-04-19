@@ -11,6 +11,7 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -60,7 +61,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        EntityProviderLauncher {
  public:
   SessionmgrImpl(component::StartupContext* startup_context,
-                 fuchsia::modular::internal::SessionmgrConfig config);
+                 fuchsia::modular::session::SessionmgrConfig config);
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
@@ -195,7 +196,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::string session_id_;
 
   component::StartupContext* const startup_context_;
-  fuchsia::modular::internal::SessionmgrConfig config_;
+  fuchsia::modular::session::SessionmgrConfig config_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;

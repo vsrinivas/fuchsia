@@ -254,7 +254,7 @@ std::vector<std::string> TestHarnessImpl::MakeBasemgrArgs(
   // Empty intiialize sessionmgr config if it isn't set, so we can continue to
   // use it for default-initializing some fields below.
   if (!spec.has_sessionmgr_config()) {
-    spec.set_sessionmgr_config(fuchsia::modular::internal::SessionmgrConfig{});
+    spec.set_sessionmgr_config(fuchsia::modular::session::SessionmgrConfig{});
   }
 
   if (!spec.sessionmgr_config().has_use_memfs_for_ledger() ||
@@ -263,7 +263,7 @@ std::vector<std::string> TestHarnessImpl::MakeBasemgrArgs(
   }
   if (!spec.sessionmgr_config().has_cloud_provider() ||
       spec.sessionmgr_config().cloud_provider() ==
-          fuchsia::modular::internal::CloudProvider::NONE) {
+          fuchsia::modular::session::CloudProvider::NONE) {
     sessionmgr_args.push_back("--no_cloud_provider_for_ledger");
   }
   if (spec.sessionmgr_config().has_session_agents()) {

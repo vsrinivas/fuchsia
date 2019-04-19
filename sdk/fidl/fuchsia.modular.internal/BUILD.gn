@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.modular.internal") {
   sources = [
     "basemgr_debug.fidl",
-    "modular_config.fidl",
     "sessionmgr.fidl",
     "story_data.fidl",
   ]

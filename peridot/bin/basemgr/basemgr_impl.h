@@ -10,6 +10,7 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
@@ -56,7 +57,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
-      fuchsia::modular::internal::BasemgrConfig config,
+      fuchsia::modular::session::BasemgrConfig config,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -115,7 +116,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   // Returns the session shell config of the active session shell, or returns
   // the a default config if there is no active one.
-  fuchsia::modular::internal::SessionShellConfig GetActiveSessionShellConfig();
+  fuchsia::modular::session::SessionShellConfig GetActiveSessionShellConfig();
 
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
@@ -134,14 +135,14 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 
-  fuchsia::modular::internal::BasemgrConfig config_;
+  fuchsia::modular::session::BasemgrConfig config_;
 
   // Used to configure which session shell component to launch.
   fuchsia::modular::AppConfig session_shell_config_;
 
   // |active_session_shell_configs_index_| indicates which settings
   // in |config_.session_shell_map()| is currently active.
-  std::vector<fuchsia::modular::internal::SessionShellConfig>::size_type
+  std::vector<fuchsia::modular::session::SessionShellConfig>::size_type
       active_session_shell_configs_index_{};
 
   // Used to launch component instances, such as the base shell.

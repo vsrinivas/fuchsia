@@ -167,7 +167,7 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
 
 SessionmgrImpl::SessionmgrImpl(
     component::StartupContext* const startup_context,
-    fuchsia::modular::internal::SessionmgrConfig config)
+    fuchsia::modular::session::SessionmgrConfig config)
     : startup_context_(startup_context),
       config_(std::move(config)),
       story_provider_impl_("StoryProviderImpl"),
@@ -318,16 +318,16 @@ void SessionmgrImpl::InitializeLedger(
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   std::string ledger_user_id;
   if (account_ && (config_.cloud_provider()) !=
-                      fuchsia::modular::internal::CloudProvider::NONE) {
+                      fuchsia::modular::session::CloudProvider::NONE) {
     // If not running in Guest mode, configure the cloud provider for Ledger to
     // use for syncing.
 
     if ((config_.cloud_provider()) ==
-        fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT) {
+        fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT) {
       startup_context_->ConnectToEnvironmentService(
           cloud_provider.NewRequest());
     } else if (config_.cloud_provider() ==
-               fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE) {
+               fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE) {
       cloud_provider = LaunchCloudProvider(account_->profile_id,
                                            std::move(ledger_token_manager));
     }

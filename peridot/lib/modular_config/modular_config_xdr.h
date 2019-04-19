@@ -6,27 +6,28 @@
 #define PERIDOT_LIB_MODULAR_CONFIG_MODULAR_CONFIG_XDR_H_
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/modular/session/cpp/fidl.h>
 
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 
 // Serialization and deserialization of
-// fuchsia::modular::internal::BasemgrConfig to and from JSON
+// fuchsia::modular::session::BasemgrConfig to and from JSON
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
-                         fuchsia::modular::internal::BasemgrConfig* const data);
+                         fuchsia::modular::session::BasemgrConfig* const data);
 
 void XdrSessionmgrConfig_v1(
     XdrContext* const xdr,
-    fuchsia::modular::internal::SessionmgrConfig* const data);
+    fuchsia::modular::session::SessionmgrConfig* const data);
 
-constexpr XdrFilterType<fuchsia::modular::internal::BasemgrConfig>
+constexpr XdrFilterType<fuchsia::modular::session::BasemgrConfig>
     XdrBasemgrConfig[] = {
         XdrBasemgrConfig_v1,
         nullptr,
 };
 
-constexpr XdrFilterType<fuchsia::modular::internal::SessionmgrConfig>
+constexpr XdrFilterType<fuchsia::modular::session::SessionmgrConfig>
     XdrSessionmgrConfig[] = {
         XdrSessionmgrConfig_v1,
         nullptr,
