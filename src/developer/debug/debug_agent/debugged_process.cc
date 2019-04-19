@@ -318,7 +318,9 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
 void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
-    FXL_NOTREACHED();  // Should always be found.
+    // This can happen if there was an error setting up the breakpoint.
+    // This normally happens with hardware breakpoints, which have a common way
+    // of failing (no more HW breakpoints).
     return;
   }
 

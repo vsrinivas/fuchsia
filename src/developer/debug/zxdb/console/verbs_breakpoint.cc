@@ -326,6 +326,28 @@ Err DoBreak(ConsoleContext* context, const Command& cmd) {
   return CreateOrEditBreakpoint(context, cmd, nullptr);
 }
 
+// hardware-breakpoint ---------------------------------------------------------
+
+const char kHardwareBreakpointShortHelp[] =
+    "hardware-breakpoint / hb: Create a hardware breakpoint.";
+
+const char kHardwareBreakpointHelp[] =
+    R"(hardware-breakpoint <location>
+
+  Alias: "hb"
+
+  Creates or modifies a hardware breakpoint.
+  This is a convenience shorthand for "break --type hardware <location>".
+  See "help break" for more information.
+)";
+
+Err DoHardwareBreakpoint(ConsoleContext* context, const Command& cmd) {
+  // We hack our way the command :)
+  Command* cmd_ptr = const_cast<Command*>(&cmd);
+  cmd_ptr->SetSwitch(kTypeSwitch, "hardware");
+  return DoBreak(context, *cmd_ptr);
+}
+
 // clear -----------------------------------------------------------------------
 
 const char kClearShortHelp[] = "clear / cl: Clear a breakpoint.";
@@ -470,6 +492,11 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   edit_record.switches.push_back(enable_switch);
   edit_record.switches.push_back(stop_switch);
   (*verbs)[Verb::kEdit] = edit_record;
+
+  (*verbs)[Verb::kHardwareBreakpoint] =
+      VerbRecord(&DoHardwareBreakpoint, {"hardware-breakpoint", "hb"},
+                 kHardwareBreakpointShortHelp, kHardwareBreakpointHelp,
+                 CommandGroup::kBreakpoint);
 
   (*verbs)[Verb::kClear] =
       VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp,

@@ -5,10 +5,12 @@
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
 
 #include <inttypes.h>
+
 #include <algorithm>
 #include <map>
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location_impl.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -306,8 +308,17 @@ void BreakpointImpl::SendBackendAddOrChange(
             breakpoint->settings_.enabled = false;
             breakpoint->backend_installed_ = false;
           }
-          if (callback)
-            callback(Err(ErrType::kGeneral, "Breakpoint set error."));
+          if (callback) {
+            std::stringstream ss;
+            ss << "Error setting breakpoint: "
+               << debug_ipc::ZxStatusToString(reply.status);
+            if (reply.status == debug_ipc::kZxErrNoResources) {
+              ss << std::endl
+                 << "Is this a hardware breakpoint? Check \"sys-info\" to "
+                    "verify the amount available within the system.";
+            }
+            callback(Err(ss.str()));
+          }
         } else {
           // Success.
           if (callback)

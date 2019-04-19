@@ -159,7 +159,6 @@ SystemImpl::SystemImpl(Session* session)
   settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
-  settings_.AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
 }
 
 SystemImpl::~SystemImpl() {

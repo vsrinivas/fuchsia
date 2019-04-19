@@ -49,6 +49,7 @@ enum class Verb {
   kEdit,
   kFinish,
   kGet,
+  kHardwareBreakpoint,
   kHelp,
   kJump,
   kKill,

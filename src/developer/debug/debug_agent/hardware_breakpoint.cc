@@ -21,12 +21,16 @@ enum class WarningType {
 };
 
 void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address,
-                   zx_status_t status) {
-  const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
+          zx_status_t status) {
+  // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
+  // making the system ignore our uninstall requests.
+  if (status == ZX_ERR_NOT_FOUND)
+    return;
 
+  const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
   FXL_LOG(WARNING) << fxl::StringPrintf(
       "Could not %s HW breakpoint for thread %u at "
-      "%" PRIX64 ": %s\n",
+      "%" PRIX64 ": %s",
       verb, static_cast<uint32_t>(thread_koid), address,
       zx_status_get_string(status));
 }
