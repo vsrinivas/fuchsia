@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+using zx;
+
+table RoutingFeatures {
+    1: bool rip;
+    2: bool ospf;
+};
+
+/// Route hold a routeing table entry.
+struct Route {
+    Id element;
+    // Optional route name
+    string name;
+    fuchsia.net.Subnet subnet;
+    uint32 metric;
+    fuchsia.net.IpAddress? gateway;
+    Id? if_id;
+};

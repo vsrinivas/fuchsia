@@ -1,0 +1,42 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+using zx;
+
+enum MacFilterMode {
+    DISABLED = 0;
+    DROP = 1;
+    ALLOW = 2;
+};
+
+enum Band {
+    DISABLED = 0;
+    Band24 = 1;
+    Band5 = 2;
+};
+
+enum ChannelBw {
+     BW20 = 0;
+     BW40 = 1;
+     BW80 = 2;
+};
+
+struct MacFilter {
+    string name;
+    fuchsia.net.MacAddress mac;
+};
+
+table Wireless {
+    1: Band band;
+    2: string ssid;
+    3: bool hide_ssid;
+    4: ChannelBw bandwidth;
+    5: uint32 channel;
+    //AuthenticationMethod authenticationMethod;
+    6: MacFilterMode mode;
+    7: vector<MacFilter> mac_list;
+};

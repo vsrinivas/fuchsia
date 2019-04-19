@@ -1,0 +1,52 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+
+/// LanProperties holds the configuration associated with a LAN interface.
+table LanProperties {
+    1: CidrAddress address_v4;
+    2: bool enable_dhcp_server;
+    3: DhcpServerConfig dhcp_config;
+    4: CidrAddress address_v6;
+    5: bool enable_dns_forwarder;
+    6: bool enable;
+};
+
+/// Range of addresses in the interface subnet available for DHCP assignment.
+struct AddressPool {
+    Id element;
+    fuchsia.net.Ipv4Address from;
+    fuchsia.net.Ipv4Address to;
+};
+
+table DhcpServerOptions {
+    1: Id element;
+    // Lease time in seconds.
+    2: uint32 lease_time_sec;
+    // Default gateway to advertise.
+    3: fuchsia.net.Ipv4Address default_gateway;
+    // DNS configuration to advertise.
+    // If not set and dns_forwarder is enabled on an interface, it will advertise
+    // the interface's IP address as the DNS resolver.
+    4: DnsSearch dns_server;
+    // Enable/disable DHCP server
+    5: bool enable;
+};
+
+/// DhcpReservation hold a mac to address DHCP association.
+struct DhcpReservation {
+    Id element;
+    string name;
+    fuchsia.net.Ipv4Address address;
+    fuchsia.net.MacAddress mac;
+};
+
+struct DhcpServerConfig {
+    DhcpServerOptions options;
+    AddressPool pool;
+    vector<DhcpReservation> reservations;
+};

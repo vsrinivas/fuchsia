@@ -1,0 +1,143 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+using zx;
+
+using port = uint16;
+
+/// Security features define the features enabled or disabled on the router.
+/// For example, NAT, firewall, passthough for common protocols that need it.
+table SecurityFeatures {
+    1: bool PPTP_PASSTHRU;
+    2: bool L2TP_PASSTHRU;
+    3: bool IPSEC_PASSTHRU;
+    4: bool RTSP_PASSTHRU;
+    5: bool H323_PASSTHRU;
+    6: bool SIP_PASSTHRU;
+    7: bool ALLOW_MULTICAST;
+    8: bool NAT;
+    9: bool FIREWALL;
+    10: bool V6_FIREWALL;
+    11: bool UPNP;
+    12: bool DROP_ICMP_ECHO;
+};
+
+struct PortRange {
+    port from;
+    port to;
+};
+
+enum Protocol {
+    BOTH = 0;
+    TCP = 1;
+    UDP = 2;
+};
+
+enum FilterAction {
+    DROP = 0;
+    ALLOW = 1;
+};
+
+/// FlowSelector is the set of packet selectors defining a traffic flow.
+/// a not specified selector represents a match all.
+table FlowSelector {
+    1: CidrAddress src_address;
+    2: vector<PortRange> src_ports;
+    3: CidrAddress dst_address;
+    4: vector<PortRange> dst_ports;
+    5: Protocol protocol;
+};
+
+/// Filter rule is applied on the LAN side; it allows blocking traffic from LAN to WAN.
+/// Normally, all traffic from LAN to WAN is allowed. By applying filter rules, it is possible to
+/// selectively block traffic from LAN devices to services on the WAN side.
+struct FilterRule {
+    Id element;
+    FilterAction action;
+    FlowSelector selector;
+};
+
+/// Port Forwarding allows remote (WAN) devices to connect to a service hosted on a LAN device.
+/// It forwards all WAN packets (or only those from the optional source_address), destined to any of
+/// the incoming ports, to the target address and port. Target address must be on one of the LANs.
+struct PortForwardingRule {
+    Id element;
+    string? name;
+    bool enabled;
+    // WAN device(s) whose traffic will be forwarded. If not present, all WAN devices will be
+    // forwarded.
+    CidrAddress source_address;
+    // Traffic received on any of the WAN side ports will be forwarded.
+    vector<PortRange> destination_ports;
+    // LAN address where forwarded packets will be sent.
+    fuchsia.net.IpAddress target_address;
+    // Port on the LAN target address where forwarded packets will be sent.
+    port target_port;
+    Protocol protocol;
+};
+
+/// Port Triggering provides similar functionality to Port Forwarding. The difference is that it is
+/// the target device that enables the port forwarding functionality.
+/// The target device is not known in advance, and port forwarding is disabled. The first local
+/// device to send traffic to the trigger port becomes the target device, and enables port
+/// forwarding. WAN traffic comming to any of the incoming ports will be forwarded to the trigger
+/// port on the target device.
+struct PortTriggerRule {
+    Id element;
+    string? name;
+    bool enabled;
+    vector<PortRange> incoming_ports;
+    Protocol protocol;
+    port trigger_port;
+};
+
+/// IPv6 firewall pinholes create a hole in the IPv6 firewall.
+/// It will allow traffic from source_address, destined to the indicated ports to pass
+/// from WAN to LAN.
+struct Ipv6PinHoleRule {
+    Id element;
+    string nickname;
+    bool enabled;
+    fuchsia.net.Ipv6Address source_address;
+    vector<PortRange> ports;
+    Protocol protocol;
+};
+
+/// DmzHost is a LAN host that receives all incoming tcp/udp packets that do not match any other rule.
+struct DmzHost {
+    Id element;
+    bool enabled;
+    fuchsia.net.Ipv4Address wan_addr;
+    fuchsia.net.Ipv4Address lan_addr;
+};
+
+
+enum AclAction {
+    /// Allows traffic to pass.
+    PERMIT = 1;
+    /// Blocks traffic, dropping the packets.
+    DENY = 2;
+    /// Redirects packets to the destination port.
+    REDIRECT = 3;
+};
+
+enum AclType {
+    /// Ingress ACL is applied on the ingress port, before packet enters the forwarding path.
+    INGRESS = 1;
+    /// Egress ACL is applied on the egress port, after packet has passed the forwarding path.
+    EGRESS = 2;
+};
+
+/// SystemAcl describes an ACL installed at startup.
+table SystemAcl {
+    1: Id element;
+    2: FlowSelector selector;
+    3: port ingress_port;
+    4: port egress_port;
+    5: AclType acl_type;
+    6: AclAction acl_action;
+};

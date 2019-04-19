@@ -1,0 +1,105 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+using zx;
+
+/// Device is comprised of a device topology and the device features.
+/// The device topology defines the WAN and LAN interfaces provisioned, indicating
+/// which physical ports are part of an interface, as well as the parameters of the interface.
+/// The device features define the device configuration, and the security and routing features
+/// configured.
+table Device {
+    1: uint64 version;
+    2: Topology topology;
+    3: DeviceConfig config;
+};
+
+struct Id {
+    // each config element has unique id
+    array<uint8>:16 uuid;
+    // global config DB version # (increments w/ each change)
+    uint64 version;
+};
+
+/// Topology allows indicating which ports are part of a LAN interface and which ports are part of a WAN interface.
+/// All ports part of a given LAN or WAN are bridged among themselves and an Switch Virtual Interface (SVI)
+/// is created for cpu to get packets (our current bridge).
+/// Typical consumer routers have two LIFs, a WAN and a LAN. These are L3 LIFs, with one port
+/// associated to the WAN side and 1 or more ports (including the WIFI one) associated to the LAN.
+/// The LAN ports are bridged together.
+// TODO(dpradilla): Add support for multiple WAN interfaces, providing a mechanism for
+// active-standby or active-active operation.
+table Topology {
+    1: Id element;
+    2: vector<Lif> lifs;
+};
+
+/// A logical interface (LIF) is an abstraction that represents an L3 interface
+/// (hence, you can assign an IP address to it, for example).
+/// The relationship between logical interfaces and ports are as follows:
+///   * A LIF can be associated with either a single physical port,
+///     multiple ports (bridge (SVI) or Link aggregation),
+///     or with no port at all (GRE interface, e.g.).
+///   * A single port can be associated with multiple LIFs (802.1q tagged port).
+///   * A LIF can change associations from one port to another
+///     (in the case of a port failure, e.g.)
+table Lif {
+    1: Id element;
+    2: LifType type;
+    3: string name;
+    4: vector<uint32> port_ids;
+    5: uint16 vlan;
+    6: LifProperties properties;
+};
+
+enum LifType {
+    INVALID = 0;
+    /// WAN interfaces, by default, will not be allowed to start a DHCP server.
+    /// The default is interface up, DHCP client enabled. IPv6 SLAAC.
+    WAN = 1;
+    /// LAN interface by default is up with the ports are up and bridged together, until an IP is statically
+    /// configured. A DHCP server can be started or not.
+    LAN = 2;
+    /// LAG interface is a Link aggregation interface.
+    LAG = 3;
+};
+
+union LifProperties {
+    WanProperties wan;
+    LanProperties lan;
+    //TODO(dpradilla): LAGProperties lag;
+};
+
+//TODO(dpradilla): Add a mechanism for indication if a port is a routed port, an access port,
+//tagged or untagged, native VLAN, etc.
+struct Port {
+    Id element;
+    uint32 id;
+    string path;
+};
+
+table SystemConfig {
+    1: Id element;
+    2: string timezone;
+    3: bool daylight_savings_time_enabled;
+    4: bool leds_enabled;
+    5: string hostname;
+};
+
+table DeviceConfig {
+    1: SystemConfig system;
+    2: DnsResolverConfig dns_resolver;
+    3: DnsForwarder dns_forwarder;
+    4: RoutingFeatures routing_features;
+    5: vector<Route> routes;
+    6: SecurityFeatures security_features;
+    7: DmzHost dmz_host;
+    8: vector<PortTriggerRule> port_trigger_rulesr;
+    9: vector<PortForwardingRule> port_forwarding_rules;
+    10: vector<FilterRule> filtering_rules;
+    11: vector<Ipv6PinHoleRule> pin_hole_rules;
+};

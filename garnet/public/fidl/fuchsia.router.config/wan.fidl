@@ -1,0 +1,85 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+
+enum WanConnection {
+    DIRECT = 1; // Default
+    PPPoE = 2;
+    PPTP = 3;
+    L2TP = 4;
+};
+
+enum WanAddressMethod {
+    AUTOMATIC = 1; // Default
+    MANUAL = 2;
+};
+
+enum WanIpV6ConnectionMode {
+    // Use a static IPv6 address.
+    STATIC = 1;
+    // NDP proxy is done.
+    // WAN interface and LAN devices obtain an IPv6 address from the upstream router.
+    PASSTHROUGH = 2;
+    // An IPv6 prefix is requested from the upstream router. It is used for LAN addresses.
+    DELEGATION = 3;
+};
+
+table CidrAddress {
+    1: fuchsia.net.IpAddress address;
+    2: uint8 prefix_length;
+};
+
+
+table Credentials {
+   1: string user;
+   2: string password;
+};
+
+table Pppoe {
+    1: Credentials credentials;
+};
+
+table Pptp {
+    1: Credentials credentials;
+    2: fuchsia.net.IpAddress server;
+};
+
+table L2tp {
+    1: Credentials credentials;
+    2: fuchsia.net.IpAddress server;
+};
+
+xunion ConnectionParameters {
+    Pppoe pppoe;
+    Pptp pptp;
+    L2tp l2tp;
+};
+
+/// WanProperties holds the configuration associated to a WAN interface.
+/// It holds the type of upstream connection and authentication credentials for that connection,
+/// the mechanism to use to obtain an IP address and control of the interface state.
+table WanProperties {
+    1: WanConnection connection_type;
+    2: ConnectionParameters connection_parameters;
+    3: WanAddressMethod address_method;
+    4: CidrAddress address_v4;
+    5: fuchsia.net.IpAddress gateway_v4;
+    6: WanIpV6ConnectionMode connection_v6_mode;
+    7: CidrAddress address_v6;
+    8: fuchsia.net.IpAddress gateway_v6;
+    // This is the hostname that will be reported on the
+    // DHCP request (option 12) on the associated WAN interface.
+    // If not set, the device hostname will be used.
+    9: string hostname;
+    10: fuchsia.net.MacAddress clone_mac;
+    // mtu 0 == auto, note that IPv6 requires at least 1280 bytes (or link layer fragmentation).
+    11: uint32 mtu;
+    // enable/disable the interface.
+    12: bool enable;
+    // interface preference metric. Lower is preferred.
+    13: uint32 metric;
+};

@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+
+/// Event defines the events the Router Manager will generate based on configuration state changes.
+/// The event contains only the object that has changed; for example, if a new forwarding rule
+/// is added the event only contains that route, not the full routing table.
+xunion Event {
+    Id deleted_element;    // Set when an element (i.e. route, firewall rule, etc) is deleted.
+    Lif lif;
+    Port port;
+    Route route;
+    SecurityFeatures security_features;
+    PortForwardingRule forwarding_rule;
+    PortTriggerRule trigger_rule;
+    FilterRule filter_rule;
+    Ipv6PinHoleRule ipv6_pin_hole;
+    DmzHost dhz_host;
+    DhcpServerOptions dhcp_options;
+    DhcpReservation dhcp_reservation;
+    DnsResolverConfig dns_resolver;
+    DnsForwarder dns_forwarder;
+    SystemConfig system_config;
+};
+
+// TODO(dpradilla): Need to add  events reflecting network state changes, such as link state
+// changes, learned routes, dhcp assignments, etc.
+// TODO(dpradilla): Need to add a mechanism for telemetry collection and possibly (TBD), set alarms based.
+// on a given metric.

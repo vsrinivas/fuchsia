@@ -1,0 +1,135 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.router.config;
+
+using fuchsia.net;
+using zx;
+
+enum ErrorCode {
+    INTERNAL = 1;
+    NOT_FOUND = 2;
+    NOT_SUPPORTED = 3;
+    INVALID_ARGS = 4;
+    ALREADY_EXISTS = 5;
+};
+
+struct Error {
+    ErrorCode code;
+    string? description;
+};
+
+/// RouterAdmin provides APIs for administering the router.
+[Discoverable]
+protocol RouterAdmin {
+    CreateWan(string name, uint16 vlan, vector<uint32> ports) -> (Id? id, Error? error);
+    CreateLan(string name, uint16 vlan, vector<uint32> ports) -> (Id? id, Error? error);
+
+    RemoveWan(Id wan_id) -> (Error? error);
+    RemoveLan(Id lan_id) -> (Error? error);
+
+    // WAN parameters, such as connection type, ip address aquisition method.
+    SetWanProperties(Id wan_id, WanProperties properties) -> (Error? error);
+
+    // LAN parameters, such as ip address, DHCP enable.
+    SetLanProperties(Id lan_id, LanProperties properties) -> (Error? error);
+
+    // DHCP server configuration: range to assign, DNS to advertise, per LAN setting.
+    SetDhcpAddressPool(Id lan_id, AddressPool pool) -> (Error? error);
+    SetDhcpServerOptions(Id lan_id, DhcpServerOptions options) -> (Error? error);
+    SetDhcpReservation(Id lan_id, DhcpReservation reservation) -> (Id? reservation_id, Error? error);
+    DeleteDhcpReservation(Id reservation_id) -> (Error? error);
+
+    // Device system configuration.
+    SetSystemConfig(SystemConfig config) -> (Id? id, Error? error);
+
+    // DNS resolver configuration.
+    SetDnsResolver(DnsResolverConfig config) -> (Id? id, Error? error);
+    // DNS forwarder configuration.
+    SetDnsForwarder(DnsForwarderConfig config)  -> (Error? error);
+    // Local names to be served by the DNS forwarder.
+    AddDnsEntry(DnsForwarderEntry entry)  -> (Id? entry_id, Error? error);
+    DeleteDnsEntry(Id entry_id)  -> (Error? error);
+
+    // Static routes.
+    SetRoute(Route route) -> (Id? id, Error? error);
+    DeleteRoute(Id route_id) -> (Error? error);
+    UpdateRouteMetric(Id route_id, uint32 metric) -> (Error? error);
+
+    // Firewall rules.
+    SetSecurityFeatures(SecurityFeatures features) -> (Error? error);
+
+    SetPortForward(PortForwardingRule rule) -> (Id? rule_id, Error? error);
+    DeletePortForward(Id rule_id) -> (Error? error);
+
+    SetPortTrigger(PortTriggerRule rule) -> (Id? rule_id, Error? error);
+    DeletePortTrigger(Id rule_id) -> (Error? error);
+
+    SetFilter(FilterRule rule) -> (Id? rule_id, Error? error);
+    DeleteFilter(Id rule_id) -> (Error? error);
+
+    SetIpv6PinHole(Ipv6PinHoleRule rule) -> (Id? rule_id, Error? error);
+    DeleteIpv6PinHole(Id rule_id) -> (Error? error);
+
+    SetDmzHost(DmzHost rule) -> (Id? rule_id, Error? error);
+    DeleteDmzHost(Id rule_id) -> (Error? error);
+};
+
+/// RouterSystem provides APIs for managing features that are considered crytical for the system.
+/// For example, setting filter rules that com into effect on startup.
+[Discoverable]
+protocol RoutercwSystemAdmin {
+    SetAcl(SystemAcl rule) -> (Id? acl_id, Error? error);
+    DeleteAcl(Id acl_id) -> (Error? error);
+    GetAcl(Id acl_id) -> (SystemAcl acl, Error? error);
+    GetAcls() -> (Error? error);
+};
+
+/// RouterState provide APIs for querying the router state.
+[Discoverable]
+protocol RouterState {
+    GetWan(Id wan_id) -> (Lif wan_lif, Error? error);
+    GetWans() -> (vector<Lif> wans);
+    GetWanPorts(Id wan_id) -> (vector<uint32> port_ids, Error? error);
+    GetLan(Id lan_id) -> (Lif lan_lif, Error? error);
+    GetLans() -> (vector<Lif> lans);
+    GetLanPorts(Id lan_id) -> (vector<uint32> port_ids, Error? error);
+    GetPort(uint32 port_id) -> (Port? port, Error? error);
+    GetPorts() -> (vector<Port> ports);
+
+    // WAN parameters, such as connection type, ip address aquisition method.
+    GetWanProperties(Id wan_id) -> (WanProperties properties, Error? error);
+
+    // LAN parameters, such as ip address, DHCP enable.
+    GetLanProperties(Id lan_id) -> (LanProperties properties, Error? error);
+
+    // DHCP services configuration: range to assign, DNS to advertise, per LAN setting
+    GetDhcpConfig(Id lan_id) -> (DhcpServerConfig? dhcp_config, Error? error);
+
+    // DNS configuration.
+    GetDnsResolver() -> (DnsResolverConfig dns_resolver);
+    GetDnsForwarder() -> (DnsForwarder dns_forwarder);
+
+    // Static routes:
+    GetRoutes() -> (vector<Route> routes);
+    GetRoute(Id route_id) -> (Route? route, Error? error);
+
+    // Firewall rules
+    GetSecurityFeatures() -> (SecurityFeatures features);
+    GetPortForward(Id rule_id) -> (PortForwardingRule? rule, Error? error);
+    GetPortTrigger(Id rule_id) -> (PortTriggerRule? rule, Error? error);
+    GetFilter(Id rule_id) -> (FilterRule? rule, Error? error);
+    GetIpv6PinHole(Id rule_id) -> (Ipv6PinHoleRule? rule, Error? error);
+    GetDmzHost(Id rule_id) -> (DmzHost? rule, Error? error);
+    GetPortForwards() -> (vector<PortForwardingRule> port_forward_rules);
+    GetPortTriggers() -> (vector<PortTriggerRule> port_trigger_rules);
+    GetFilters() -> (vector<FilterRule> port_filter_rules);
+    GetIpv6PinHoles() -> (vector<Ipv6PinHoleRule> pinhole_rules);
+
+    // Device information.
+    GetDevice() -> (Device device);
+    GetSystemConfig() -> (SystemConfig config);
+
+    -> OnChange(vector<Event> events);
+};
