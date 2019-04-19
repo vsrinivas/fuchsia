@@ -28,7 +28,7 @@ incrementally rebuild Thinfs alone.
 
 ```shell
 cd $FUCHSIA_ROOT
-./buildtools/gn gen out/x64 --args='fuchsia_packages="garnet/packages/thinfs"'
+./buildtools/gn gen out/x64 --args='base_package_labels="garnet/packages/thinfs"'
 ./buildtools/ninja -C out/x64
 ```
 
