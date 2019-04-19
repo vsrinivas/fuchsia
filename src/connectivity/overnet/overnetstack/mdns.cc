@@ -19,7 +19,8 @@ static fuchsia::mdns::ControllerPtr Connect(
     sys::ComponentContext* component_context, const char* why) {
   auto svc = component_context->svc()->Connect<fuchsia::mdns::Controller>();
   svc.set_error_handler([why](zx_status_t status) {
-    FXL_LOG(DFATAL) << why << " mdns failure: " << zx_status_get_string(status);
+    OVERNET_TRACE(ERROR) << why
+                         << " mdns failure: " << zx_status_get_string(status);
   });
   return svc;
 }
@@ -118,8 +119,8 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
       overnet::NodeId node_id,
       const std::vector<fuchsia::netstack::SocketAddress>& addresses) {
     for (const auto& addr : addresses) {
-      auto status =
-          ToUdpAddr(addr).Then([node_id, nub = nub_](const UdpAddr& addr) {
+      auto status = ToUdpAddr(addr).Then(
+          [node_id, nub = nub_](const overnet::IpAddr& addr) {
             std::cerr << "Initiating connection to: " << node_id << " at "
                       << addr << "\n";
             nub->Initiate(addr, node_id);
@@ -131,10 +132,10 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
     }
   }
 
-  static overnet::StatusOr<UdpAddr> ToUdpAddr(
+  static overnet::StatusOr<overnet::IpAddr> ToUdpAddr(
       const fuchsia::netstack::SocketAddress& sock_addr) {
     const fuchsia::net::IpAddress& net_addr = sock_addr.addr;
-    UdpAddr udp_addr;
+    overnet::IpAddr udp_addr;
     memset(&udp_addr, 0, sizeof(udp_addr));
     switch (net_addr.Which()) {
       case fuchsia::net::IpAddress::Tag::Invalid:

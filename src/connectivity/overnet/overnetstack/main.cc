@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <src/lib/fxl/log_settings.h>
+#include <src/lib/fxl/logging.h>
+
 #include "src/connectivity/overnet/overnetstack/fuchsia_port.h"
 #include "src/connectivity/overnet/overnetstack/mdns.h"
 #include "src/connectivity/overnet/overnetstack/overnet_app.h"

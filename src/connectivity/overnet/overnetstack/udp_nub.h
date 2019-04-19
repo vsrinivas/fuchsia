@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_UDP_NUB_H_
 #define SRC_CONNECTIVITY_OVERNET_OVERNETSTACK_UDP_NUB_H_
 
-#include <arpa/inet.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/tasks/fd_waiter.h>
@@ -14,76 +13,16 @@
 #include <sys/socket.h>
 
 #include "src/connectivity/overnet/lib/links/packet_nub.h"
+#include "src/connectivity/overnet/lib/vocabulary/ip_addr.h"
+#include "src/connectivity/overnet/lib/vocabulary/socket.h"
 #include "src/connectivity/overnet/overnetstack/overnet_app.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace overnetstack {
 
-union UdpAddr {
-  sockaddr_in ipv4;
-  sockaddr_in6 ipv6;
-  sockaddr addr;
-};
+static constexpr uint32_t kAssumedUDPPacketSize = 1500;
 
-inline std::ostream& operator<<(std::ostream& out, UdpAddr addr) {
-  char dst[512];
-  switch (addr.addr.sa_family) {
-    case AF_INET:
-      inet_ntop(AF_INET, &addr.ipv4.sin_addr, dst, sizeof(dst));
-      return out << dst << ":" << ntohs(addr.ipv4.sin_port);
-    case AF_INET6:
-      inet_ntop(AF_INET6, &addr.ipv6.sin6_addr, dst, sizeof(dst));
-      return out << dst << ":" << ntohs(addr.ipv6.sin6_port);
-    default:
-      return out << "<<unknown address family " << addr.addr.sa_family << ">>";
-  }
-}
-
-class HashUdpAddr {
- public:
-  size_t operator()(const UdpAddr& addr) const {
-    size_t out = 0;
-    auto add_value = [&out](auto x) {
-      const char* p = reinterpret_cast<const char*>(&x);
-      const char* end = reinterpret_cast<const char*>(1 + &x);
-      while (p != end) {
-        out = 257 * out + *p++;
-      }
-    };
-    switch (addr.addr.sa_family) {
-      case AF_INET:
-        add_value(addr.ipv4.sin_addr);
-        add_value(addr.ipv4.sin_port);
-        break;
-      case AF_INET6:
-        add_value(addr.ipv6.sin6_addr);
-        add_value(addr.ipv6.sin6_port);
-        break;
-    }
-    return out;
-  }
-};
-
-class EqUdpAddr {
- public:
-  bool operator()(const UdpAddr& a, const UdpAddr& b) const {
-    if (a.addr.sa_family == b.addr.sa_family) {
-      switch (a.addr.sa_family) {
-        case AF_INET:
-          return a.ipv4.sin_port == b.ipv4.sin_port &&
-                 0 == memcmp(&a.ipv4.sin_addr, &b.ipv4.sin_addr,
-                             sizeof(a.ipv4.sin_addr));
-        case AF_INET6:
-          return a.ipv6.sin6_port == b.ipv6.sin6_port &&
-                 0 == memcmp(&a.ipv6.sin6_addr, &b.ipv6.sin6_addr,
-                             sizeof(a.ipv6.sin6_addr));
-      }
-    }
-    return false;
-  }
-};
-
-using UdpNubBase = overnet::PacketNub<UdpAddr, 1500, HashUdpAddr, EqUdpAddr>;
+using UdpNubBase = overnet::PacketNub<overnet::IpAddr, kAssumedUDPPacketSize,
+                                      overnet::HashIpAddr, overnet::EqIpAddr>;
 
 class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
  public:
@@ -107,29 +46,12 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
 
   overnet::NodeId node_id() { return endpoint_->node_id(); }
 
-  void SendTo(UdpAddr addr, overnet::Slice slice) override {
-    if (addr.addr.sa_family == AF_INET) {
-      // Convert ipv4 to ipv6 address.
-      UdpAddr addr6;
-      memset(&addr6, 0, sizeof(addr6));
-      addr6.ipv6.sin6_family = AF_INET6;
-      addr6.ipv6.sin6_port = addr.ipv4.sin_port;
-      uint8_t* addr6_addr_bytes =
-          reinterpret_cast<uint8_t*>(&addr6.ipv6.sin6_addr);
-      addr6_addr_bytes[10] = 0xff;
-      addr6_addr_bytes[11] = 0xff;
-      memcpy(addr6_addr_bytes + 12, &addr.ipv4.sin_addr, 4);
-      addr = addr6;
-    }
+  void SendTo(overnet::IpAddr addr, overnet::Slice slice) override {
     OVERNET_TRACE(TRACE) << "sending packet " << slice << " to " << addr;
-    int r = sendto(socket_fd_.get(), slice.begin(), slice.length(), 0,
-                   &addr.addr, sizeof(addr));
-    if (r == -1) {
-      auto got_errno = errno;
-      OVERNET_TRACE(WARNING) << "sendto sets errno " << got_errno;
-      return;
+    if (auto status = socket_.SendTo(std::move(slice), 0, *addr.AsIpv6());
+        status.is_error()) {
+      OVERNET_TRACE(WARNING) << "sendto fails: " << status;
     }
-    assert(static_cast<size_t>(r) == slice.length());
   }
 
   overnet::Router* GetRouter() override { return endpoint_; }
@@ -141,18 +63,20 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     endpoint_->RegisterLink(std::move(link));
   }
 
+  overnet::Socket* socket() { return &socket_; }
+
  private:
   overnet::RouterEndpoint* const endpoint_;
   overnet::Timer* const timer_;
-  fxl::UniqueFD socket_fd_;
+  overnet::Socket socket_;
   uint16_t port_ = -1;
   fsl::FDWaiter fd_waiter_;
 
   void WaitForInbound() {
-    assert(socket_fd_.is_valid());
-    UdpAddr whoami;
+    assert(socket_.IsValid());
+    overnet::IpAddr whoami;
     socklen_t whoami_len = sizeof(whoami.addr);
-    if (getsockname(socket_fd_.get(), &whoami.addr, &whoami_len) < 0) {
+    if (getsockname(socket_.get(), &whoami.addr, &whoami_len) < 0) {
       OVERNET_TRACE(DEBUG) << StatusFromErrno("getsockname") << "\n";
     }
     OVERNET_TRACE(DEBUG) << "WaitForInbound on " << whoami << "\n";
@@ -160,7 +84,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
             [this](zx_status_t status, uint32_t events) {
               InboundReady(status, events);
             },
-            socket_fd_.get(), POLLIN)) {
+            socket_.get(), POLLIN)) {
       OVERNET_TRACE(DEBUG) << "fd_waiter_.Wait() failed\n";
     }
   }
@@ -168,14 +92,9 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
   void InboundReady(zx_status_t status, uint32_t events) {
     auto now = timer_->Now();
 
-    UdpAddr source_address;
-    socklen_t source_address_length = sizeof(source_address);
-    auto inbound = NewInboundSlice(1500);
-    ssize_t result = recvfrom(
-        socket_fd_.get(), const_cast<uint8_t*>(inbound.begin()),
-        inbound.length(), 0, &source_address.addr, &source_address_length);
-    if (result < 0) {
-      OVERNET_TRACE(ERROR) << "Failed to recvfrom, errno " << errno;
+    auto data_and_addr = socket_.RecvFrom(kAssumedUDPPacketSize, 0);
+    if (data_and_addr.is_error()) {
+      OVERNET_TRACE(ERROR) << data_and_addr.AsStatus();
       // Wait a bit before trying again to avoid spamming the log.
       async::PostDelayedTask(
           async_get_default_dispatcher(), [this]() { WaitForInbound(); },
@@ -183,28 +102,24 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
       return;
     }
 
-    inbound.TrimEnd(inbound.length() - result);
-    assert(inbound.length() == (size_t)result);
     overnet::ScopedOp scoped_op(
         overnet::Op::New(overnet::OpType::INCOMING_PACKET));
-    OVERNET_TRACE(TRACE) << "Got packet " << inbound << " from "
-                         << source_address;
-    Process(now, source_address, std::move(inbound));
+    OVERNET_TRACE(TRACE) << "Got packet " << data_and_addr->data << " from "
+                         << data_and_addr->addr;
+    Process(now, data_and_addr->addr, std::move(data_and_addr->data));
 
     WaitForInbound();
   }
 
   overnet::Status CreateFD() {
-    socket_fd_ = fxl::UniqueFD(socket(AF_INET6, SOCK_DGRAM, 0));
-    if (!socket_fd_.is_valid()) {
+    socket_ = overnet::Socket(::socket(AF_INET6, SOCK_DGRAM, 0));
+    if (!socket_.IsValid()) {
       return StatusFromErrno("Failed to create socket");
     }
     return overnet::Status::Ok();
   }
 
-  overnet::Status SetOptionSharePort() {
-    return SetSockOpt(SOL_SOCKET, SO_REUSEADDR, 1, "SO_REUSEADDR");
-  }
+  overnet::Status SetOptionSharePort() { return socket_.SetOptReusePort(true); }
 
   overnet::Status SetOptionReceiveAnything() {
     return overnet::Status::Ok();
@@ -217,30 +132,20 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     addr.sin6_family = AF_INET6;
     addr.sin6_addr = in6addr_any;
 
-    int result = bind(socket_fd_.get(), reinterpret_cast<sockaddr*>(&addr),
-                      sizeof(addr));
+    int result =
+        bind(socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
     if (result < 0) {
       return StatusFromErrno("Failed to bind() to in6addr_any");
     }
 
     socklen_t len = sizeof(addr);
     result =
-        getsockname(socket_fd_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
+        getsockname(socket_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
     if (result < 0) {
       return StatusFromErrno("Failed to getsockname() for new socket");
     }
     port_ = ntohs(addr.sin6_port);
 
-    return overnet::Status::Ok();
-  }
-
-  overnet::Status SetSockOpt(int family, int opt, int param, const char* name) {
-    int result =
-        setsockopt(socket_fd_.get(), family, opt, &param, sizeof(param));
-    if (result < 0) {
-      return StatusFromErrno(std::string("Failed to set socket option ") +
-                             name);
-    }
     return overnet::Status::Ok();
   }
 
@@ -250,10 +155,6 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     msg << why << ", errno=" << err;
     // TODO(ctiller): Choose an appropriate status code based upon errno?
     return overnet::Status(overnet::StatusCode::UNKNOWN, msg.str());
-  }
-
-  overnet::Slice NewInboundSlice(size_t size) {
-    return overnet::Slice::WithInitializer(size, [](uint8_t*) {});
   }
 };
 
