@@ -329,6 +329,9 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
             fwrite(buf, 1, bytes_read, output_file);
             fwrite(buf, 1, bytes_read, stdout);
         }
+        fflush(stdout);
+        fflush(stderr);
+        fflush(output_file);
         if (fclose(output_file)) {
             fprintf(stderr, "FAILURE:  Could not close %s: %s", output_filename,
                     strerror(errno));
