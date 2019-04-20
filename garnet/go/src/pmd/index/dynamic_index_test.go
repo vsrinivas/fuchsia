@@ -15,40 +15,7 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pmd/amberer"
 )
-
-type packageFailure struct {
-	merkles    []string
-	status     zx.Status
-	blobMerkle string
-}
-
-type fakeAmberClient struct {
-	activated []string
-	failed    []packageFailure
-}
-
-func (am *fakeAmberClient) PackagesActivated(merkles []string) {
-	for _, m := range merkles {
-		am.activated = append(am.activated, m)
-	}
-}
-
-func (am *fakeAmberClient) PackagesFailed(merkles []string, status zx.Status, blobMerkle string) {
-	am.failed = append(am.failed, packageFailure{merkles, status, blobMerkle})
-}
-
-func (am *fakeAmberClient) GetBlob(merkle string) {}
-
-func newFakeAmberClient() *fakeAmberClient {
-	return &fakeAmberClient{
-		activated: make([]string, 0),
-		failed:    make([]packageFailure, 0),
-	}
-}
-
-var _ amberer.AmberClient = &fakeAmberClient{}
 
 func TestList(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
@@ -66,7 +33,7 @@ func TestList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx := NewDynamic(d, NewStatic(), newFakeAmberClient())
+	idx := NewDynamic(d, NewStatic())
 	pkgs, err := idx.List()
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +89,7 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx := NewDynamic(d, NewStatic(), newFakeAmberClient())
+	idx := NewDynamic(d, NewStatic())
 
 	err = idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
 	if err != nil {
@@ -165,8 +132,7 @@ func TestFulfill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	am := newFakeAmberClient()
-	idx := NewDynamic(d, NewStatic(), am)
+	idx := NewDynamic(d, NewStatic())
 
 	// New package, no blobs pre-installed.
 	{
@@ -214,11 +180,6 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("got %q, want %q", idx.needs, wantNeeds)
 		}
 
-		wantActivated := []string{}
-		if !reflect.DeepEqual(am.activated, wantActivated) {
-			t.Errorf("got %q, want %q", am.activated, wantActivated)
-		}
-
 		// Fulfill other blob. Package is done and appears in index.
 		idx.Fulfill("blob2")
 		if _, ok := idx.waiting["root1"]; ok {
@@ -232,10 +193,6 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("root1 was not deleted from installing")
 		}
 
-		wantActivated = []string{"root1"}
-		if !reflect.DeepEqual(am.activated, wantActivated) {
-			t.Errorf("got %q, want %q", am.activated, wantActivated)
-		}
 		paths, err := filepath.Glob(filepath.Join(d, "packages/*/*"))
 		if err != nil {
 			t.Fatal(err)
@@ -280,17 +237,6 @@ func TestFulfill(t *testing.T) {
 		// Fail blob with error. Causes package failure to be signaled.
 		idx.InstallingFailedForBlob("blob4", zx.ErrNoSpace)
 
-		wantFailed := []packageFailure{
-			{
-				merkles:    []string{"root2"},
-				status:     zx.ErrNoSpace,
-				blobMerkle: "blob4",
-			},
-		}
-		if !reflect.DeepEqual(am.failed, wantFailed) {
-			t.Errorf("got %v, want %v", am.failed, wantFailed)
-		}
-
 		// Fulfill blob. Now the package should be marked finished.
 		idx.Fulfill("blob4")
 
@@ -305,10 +251,6 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("root2 was not deleted from installing")
 		}
 
-		wantActivated := []string{"root1", "root2"}
-		if !reflect.DeepEqual(am.activated, wantActivated) {
-			t.Errorf("got %q, want %q", am.activated, wantActivated)
-		}
 		paths, err := filepath.Glob(filepath.Join(d, "packages/*/*"))
 		if err != nil {
 			t.Fatal(err)

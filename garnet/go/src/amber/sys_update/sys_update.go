@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"amber/atonce"
@@ -114,14 +113,7 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 			return err
 		}
 
-		var w sync.WaitGroup
-		w.Add(1)
-		upMon.d.AddWatch(root, func(root string, e error) {
-			err = e
-			w.Done()
-		})
-		upMon.d.GetPkg(root, length)
-		w.Wait()
+		err = upMon.d.GetPkg(root, length)
 		if err != nil {
 			log.Printf("sys_upd_mon: unable to fetch package update: %s", err)
 			return err

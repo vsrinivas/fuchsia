@@ -75,13 +75,17 @@ func (c *ControlServer) ListSrcs() ([]amber.SourceConfig, error) {
 func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Channel, error) {
 	r, ch, e := zx.NewChannel(0)
 	if e != nil {
-		log.Printf("Could not create channel")
+		log.Printf("getupdatecomplete: could not create channel")
 		// TODO(raggi): the client is just going to get peer closed, and no indication of why
-		return zx.Channel(zx.HandleInvalid), e
+		return zx.Channel(zx.HandleInvalid), nil
 	}
 
 	if len(name) == 0 {
-		return zx.Channel(zx.HandleInvalid), fmt.Errorf("No package name provided")
+		log.Printf("getupdatecomplete: invalid arguments: empty name")
+		ch.Handle().SignalPeer(0, zx.SignalUser0)
+		ch.Write([]byte(zx.ErrInvalidArgs.String()), []zx.Handle{}, 0)
+		ch.Close()
+		return r, nil
 	}
 
 	var (
@@ -97,6 +101,7 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 	}
 
 	go func() {
+		defer ch.Close()
 		c.daemon.UpdateIfStale()
 
 		root, length, err := c.daemon.MerkleFor(name, version, merkle)
@@ -104,56 +109,38 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 			log.Printf("control_server: could not get update for %s: %s", filepath.Join(name, version, merkle), err)
 			ch.Handle().SignalPeer(0, zx.SignalUser0)
 			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
-			ch.Close()
 			return
 		}
 
 		if _, err := os.Stat(filepath.Join("/pkgfs/versions", root)); err == nil {
 			ch.Write([]byte(root), []zx.Handle{}, 0)
-			ch.Close()
 			return
 		}
 
 		log.Printf("control_server: get update: %s", filepath.Join(name, version, merkle))
 
-		c.daemon.AddWatch(root, func(root string, err error) {
-			if os.IsExist(err) {
-				log.Printf("control_server: %s already installed", filepath.Join(name, version, root))
-				// signal success to the client
-				err = nil
-			}
-			if err != nil {
-				log.Printf("control_server: error downloading package: %s", err)
-				ch.Handle().SignalPeer(0, zx.SignalUser0)
-				ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
-				ch.Close()
-				return
-			}
+		err = c.daemon.GetPkg(root, length)
+		if os.IsExist(err) {
+			log.Printf("control_server: %s already installed", filepath.Join(name, version, root))
+			// signal success to the client
+			err = nil
+		}
+		if err != nil {
+			log.Printf("control_server: error downloading package: %s", err)
+			ch.Handle().SignalPeer(0, zx.SignalUser0)
+			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
+		} else {
 			ch.Write([]byte(root), []zx.Handle{}, 0)
-			ch.Close()
-			return
-		})
-
-		// errors are handled by the watcher callback
-		c.daemon.GetPkg(root, length)
+		}
 	}()
-
 	return r, nil
 }
 
 func (c *ControlServer) PackagesActivated(merkle []string) error {
-	log.Printf("control_server: packages activated %s", merkle)
-	for _, m := range merkle {
-		c.daemon.Activated(m)
-	}
 	return nil
 }
 
 func (c *ControlServer) PackagesFailed(merkle []string, status int32, blobMerkle string) error {
-	log.Printf("control_server: packages failed %s due to blob %s, status: %d", merkle, blobMerkle, status)
-	for _, m := range merkle {
-		c.daemon.Failed(m, zx.Status(status))
-	}
 	return nil
 }
 
@@ -174,13 +161,6 @@ func (c *ControlServer) SetSrcEnabled(id string, enabled bool) (amber.Status, er
 }
 
 func (c *ControlServer) GetBlob(merkle string) error {
-	log.Printf("control_server: blob requested: %q", merkle)
-	if !merklePat.MatchString(merkle) {
-		return fmt.Errorf("%q is not a valid merkle root", merkle)
-	}
-
-	go c.daemon.GetBlob(merkle)
-
 	return nil
 }
 

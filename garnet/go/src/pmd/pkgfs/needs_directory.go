@@ -60,7 +60,7 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 }
 
 func (d *needsRoot) Read() ([]fs.Dirent, error) {
-	return []fs.Dirent{dirDirEnt("blobs")}, nil
+	return []fs.Dirent{dirDirEnt("blobs"), dirDirEnt("packages")}, nil
 }
 
 func (d *needsRoot) Stat() (int64, time.Time, time.Time, error) {

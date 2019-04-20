@@ -25,6 +25,7 @@ import (
 const (
 	DefaultPkgInstallDir  = "/pkgfs/install/pkg"
 	DefaultBlobInstallDir = "/pkgfs/install/blob"
+	DefaultPkgNeedsDir    = "/pkgfs/needs/packages"
 	PackageGarbageDir     = "/pkgfs/garbage"
 )
 
@@ -32,27 +33,31 @@ type Daemon struct {
 	store          string
 	pkgInstallDir  string
 	blobInstallDir string
+	pkgNeedsDir    string
 
 	muSrcs sync.Mutex
 	srcs   map[string]*source.Source
 
 	events *amber.EventsService
-	aw     activationWatcher
 }
 
 // NewDaemon creates a Daemon
-func NewDaemon(store, pkgInstallDir, blobInstallDir string, events *amber.EventsService) (*Daemon, error) {
+func NewDaemon(store, pkgInstallDir, blobInstallDir, pkgNeedsDir string, events *amber.EventsService) (*Daemon, error) {
 	if pkgInstallDir == "" {
 		pkgInstallDir = DefaultPkgInstallDir
 	}
 	if blobInstallDir == "" {
 		blobInstallDir = DefaultBlobInstallDir
 	}
+	if pkgNeedsDir == "" {
+		pkgNeedsDir = DefaultPkgNeedsDir
+	}
 
 	d := &Daemon{
 		store:          store,
 		pkgInstallDir:  pkgInstallDir,
 		blobInstallDir: blobInstallDir,
+		pkgNeedsDir:    pkgNeedsDir,
 		srcs:           make(map[string]*source.Source),
 		events:         events,
 	}
@@ -394,28 +399,38 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 
 	err := d.fetchInto(merkle, length, d.pkgInstallDir)
 	if os.IsExist(err) {
-		// Packages that already exist are simply "successful"
-		d.aw.update(merkle, nil)
 		return nil
 	}
 
 	if err != nil {
-		// errors fetching the package meta.far are terminal
-		d.aw.update(merkle, err)
 		log.Printf("error fetching pkg %q: %s", merkle, err)
+		return err
 	}
 
-	// In the non-error case, waiters are updated by activation.
-	// XXX(raggi): note this is a potentially unbounded wait.
-	return err
-}
+	needsDir, err := os.Open(filepath.Join(d.pkgNeedsDir, merkle))
+	if os.IsNotExist(err) {
+		// Package is fully installed already
+		return nil
+	}
+	defer needsDir.Close()
 
-// GetBlob is a blocking call which downloads the requested blob
-func (d *Daemon) GetBlob(merkle string) error {
-	err := d.fetchInto(merkle, -1, d.blobInstallDir)
-	d.aw.update(merkle, err)
-	if err != nil && !os.IsExist(err) {
-		log.Printf("error fetching blob %q: %s", merkle, err)
+	neededBlobs, err := needsDir.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for len(neededBlobs) > 0 {
+		for _, blob := range neededBlobs {
+			// TODO(raggi): switch to using the needs paths for install
+			err := d.fetchInto(blob, -1, d.blobInstallDir)
+			if err != nil {
+				return err
+			}
+		}
+
+		neededBlobs, err = needsDir.Readdirnames(-1)
+		if err != nil {
+			return err
+		}
 	}
 	return err
 }
@@ -442,18 +457,6 @@ func (d *Daemon) fetchInto(merkle string, length int64, outputDir string) error 
 		}
 		return fmt.Errorf("not found in %d active sources. last error: %s", len(d.GetActiveSources()), err)
 	})
-}
-
-func (d *Daemon) AddWatch(merkle string, f func(string, error)) {
-	d.aw.addWatch(merkle, f)
-}
-
-func (d *Daemon) Activated(merkle string) {
-	d.aw.update(merkle, nil)
-}
-
-func (d *Daemon) Failed(merkle string, status zx.Status) {
-	d.aw.update(merkle, &zx.Error{Status: status})
 }
 
 func (d *Daemon) GC() error {

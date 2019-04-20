@@ -67,7 +67,7 @@ func Main() {
 
 	var ctlSvc amber.ControlService
 	var evtSvc amber.EventsService
-	d, err := daemon.NewDaemon(*store, "", "", &evtSvc)
+	d, err := daemon.NewDaemon(*store, "", "", "", &evtSvc)
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
 	}

@@ -11,7 +11,6 @@ import (
 
 	"app/context"
 
-	"fuchsia.googlesource.com/pmd/amberer"
 	"fuchsia.googlesource.com/pmd/pkgfs"
 )
 
@@ -29,7 +28,7 @@ func Main() {
 	sysPkg := flag.Arg(0)
 
 	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
-	fs, err := pkgfs.New(*index, *blob, amberer.NewAmberClient())
+	fs, err := pkgfs.New(*index, *blob)
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}

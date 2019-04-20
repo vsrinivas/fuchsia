@@ -25,7 +25,6 @@ import (
 
 	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pmd/amberer"
 )
 
 // Adding a file to /in writes the file to blobfs
@@ -123,7 +122,7 @@ func tmain(m *testing.M) int {
 	}
 	defer os.RemoveAll(d)
 
-	pkgfs, err := New(indexPath, blobfsPath, amberer.NewAmberClient())
+	pkgfs, err := New(indexPath, blobfsPath)
 	if err != nil {
 		panic(err)
 	}

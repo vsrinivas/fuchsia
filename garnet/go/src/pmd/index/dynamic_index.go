@@ -16,7 +16,6 @@ import (
 	"syscall/zx"
 
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pmd/amberer"
 )
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata
@@ -24,9 +23,6 @@ type DynamicIndex struct {
 	root string
 
 	static *StaticIndex
-
-	// client to connect to amber
-	amberClient amberer.AmberClient
 
 	// mu protects all following fields
 	mu sync.Mutex
@@ -45,17 +41,16 @@ type DynamicIndex struct {
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
-func NewDynamic(root string, static *StaticIndex, am amberer.AmberClient) *DynamicIndex {
+func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
 	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
 	_ = os.MkdirAll(root, os.ModePerm)
 	return &DynamicIndex{
-		root:        root,
-		static:      static,
-		roots:       make(map[string]pkg.Package),
-		installing:  make(map[string]pkg.Package),
-		needs:       make(map[string]map[string]struct{}),
-		waiting:     make(map[string]map[string]struct{}),
-		amberClient: am,
+		root:       root,
+		static:     static,
+		roots:      make(map[string]pkg.Package),
+		installing: make(map[string]pkg.Package),
+		needs:      make(map[string]map[string]struct{}),
+		waiting:    make(map[string]map[string]struct{}),
 	}
 }
 
@@ -160,8 +155,6 @@ func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, status zx.Stat
 	for p := range ps {
 		pkgRoots = append(pkgRoots, p)
 	}
-
-	idx.amberClient.PackagesFailed(pkgRoots, status, blobRoot)
 }
 
 // InstallingFailedForPackage removes an entry from the package installation index,
@@ -198,19 +191,6 @@ func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error 
 	// We wait on all of the "needs", that is, all blobs that were not found on the
 	// system at the time of import.
 	idx.waiting[root] = needs
-
-	// create a copy of the needs so we're concurrency safe
-	cn := make([]string, 0, len(needs))
-	for root := range needs {
-		cn = append(cn, root)
-	}
-
-	log.Printf("asking amber to fetch %d needed blobs", len(cn))
-	go func() {
-		for _, root := range cn {
-			idx.amberClient.GetBlob(root)
-		}
-	}()
 	return nil
 }
 
@@ -317,11 +297,6 @@ func (idx *DynamicIndex) IsInstalling(merkle string) bool {
 }
 
 func (idx *DynamicIndex) Notify(roots ...string) {
-	if len(roots) == 0 {
-		return
-	}
-
-	idx.amberClient.PackagesActivated(roots)
 }
 
 // GetRoot looks for a package by merkleroot, returning the matching package and
