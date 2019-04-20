@@ -1,0 +1,108 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# TODO(jsankey): Complete soft transition to migrate users away from
+# the conflicting target in Topaz then remove the _2.
+package("google_auth_provider_2") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "google_auth_provider_2"
+
+  meta = [
+    {
+      path = rebase_path("meta/google_auth_provider_2.cmx")
+      dest = "google_auth_provider_2.cmx"
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "google_auth_provider_2"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/network_wrapper",
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+executable("google_auth_provider_unittests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  output_name = "google_auth_provider_unittests"
+
+  sources = [
+    "factory_impl_unittest.cc",
+    "google_auth_provider_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest:gtest",
+    "//garnet/public/lib/network_wrapper:fake",
+    "//peridot/lib/rapidjson",
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl:printers",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "constants.h",
+    "factory_impl.cc",
+    "factory_impl.h",
+    "google_auth_provider_impl.cc",
+    "google_auth_provider_impl.h",
+    "settings.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/rapidjson_utils",
+    "//peridot/lib/rapidjson",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/identity/lib/oauth:lib",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/network_wrapper",
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.auth.testing",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+  ]
+}

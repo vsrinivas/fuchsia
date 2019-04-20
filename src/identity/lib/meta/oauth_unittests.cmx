@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/oauth_unittests"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

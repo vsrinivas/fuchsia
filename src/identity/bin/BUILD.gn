@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("bin") {
+  testonly = true
+  deps = [
+    ":identity_bin_unittests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  data_deps = [
+    ":identity_bin_unittests",
+  ]
+}
+
+test_package("identity_bin_unittests") {
+  deps = [
+    "google_auth_provider:google_auth_provider_unittests",
+  ]
+
+  tests = [
+    {
+      name = "google_auth_provider_unittests"
+      environments = basic_envs
+    },
+  ]
+}

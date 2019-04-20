@@ -6,6 +6,7 @@ group("identity") {
   testonly = true
   deps = [
     ":tests",
+    "bin",
     "lib",
   ]
 }
@@ -14,6 +15,7 @@ group("tests") {
   testonly = true
 
   data_deps = [
+    "bin:tests",
     "lib:tests",
   ]
 }

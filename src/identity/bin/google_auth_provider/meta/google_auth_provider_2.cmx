@@ -1,0 +1,22 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.media.Audio",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.web.ContextProvider"
+        ]
+    }
+}
