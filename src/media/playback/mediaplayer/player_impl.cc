@@ -505,13 +505,17 @@ void PlayerImpl::Seek(int64_t position) {
   Update();
 }
 
-void PlayerImpl::CreateView2(zx::eventpair view_token) {
+void PlayerImpl::CreateView(fuchsia::ui::views::ViewToken view_token) {
   MaybeCreateRenderer(StreamType::Medium::kVideo);
   if (!video_renderer_) {
     return;
   }
 
-  video_renderer_->CreateView(scenic::ToViewToken(std::move(view_token)));
+  video_renderer_->CreateView(std::move(view_token));
+}
+
+void PlayerImpl::CreateView2(zx::eventpair view_token) {
+  CreateView(scenic::ToViewToken(std::move(view_token)));
 }
 
 void PlayerImpl::BindGainControl(

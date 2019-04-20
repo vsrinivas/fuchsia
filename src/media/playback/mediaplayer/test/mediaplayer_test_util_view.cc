@@ -6,13 +6,12 @@
 
 #include <fcntl.h>
 #include <hid/usages.h>
-#include <lib/zx/eventpair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/media/timeline/type_converters.h"
-#include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
@@ -88,7 +87,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   // Create the video view.
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
-  player_->CreateView2(std::move(view_token.value));
+  player_->CreateView(std::move(view_token));
 
   video_host_node_.reset(new scenic::EntityNode(session()));
   video_view_holder_.reset(new scenic::ViewHolder(

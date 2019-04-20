@@ -6,9 +6,9 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PLAYER_IMPL_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <lib/zx/eventpair.h>
 
 #include <unordered_map>
 
@@ -52,6 +52,8 @@ class PlayerImpl : public fuchsia::media::playback::Player {
   void Pause() override;
 
   void Seek(int64_t position) override;
+
+  void CreateView(fuchsia::ui::views::ViewToken view_token) override;
 
   void CreateView2(zx::eventpair view_token) override;
 

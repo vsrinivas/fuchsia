@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.media.playback/player.fidl": "9a383f31d8a2a10d82cedfb43f6fce90",
+  "fidl/fuchsia.media.playback/player.fidl": "260c51d9309d239c78362907736b6095",
   "fidl/fuchsia.media.playback/problem.fidl": "87a4097616967869a35d9b62dec59677",
   "fidl/fuchsia.media.playback/seeking_reader.fidl": "4d6a1e04aa6f66ccafaeac1985fb7acc",
   "fidl/fuchsia.media.playback/source_manager.fidl": "316c942a32f6559bb1f0482af6b6e022"
