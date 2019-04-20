@@ -233,5 +233,6 @@ int main(int argc, const char** argv) {
   };
 
   loop.Run();
-  return 0;
+  fprintf(stderr, "run-test-component: premature loop exit\n");
+  return 1;
 }
