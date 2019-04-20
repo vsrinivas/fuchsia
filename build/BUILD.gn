@@ -21,13 +21,7 @@ group("deprecated_global_persistent_storage_allowlist") {
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
     "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
 
-    "//garnet/bin/auth:account_handler",
-    "//garnet/bin/auth:account_manager",
     "//garnet/bin/auth:token_manager_factory",
-    "//garnet/bin/device_settings:device_settings_manager",
-    "//garnet/bin/timezone:timezone",
-    "//garnet/go/src/amber:amber",
-    "//peridot/bin/basemgr:basemgr",
   ]
 }
 
