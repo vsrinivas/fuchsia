@@ -5,10 +5,6 @@
 #ifndef LIB_SYS_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
 #define LIB_SYS_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
@@ -19,6 +15,10 @@
 #include <lib/sys/cpp/testing/launcher_impl.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace sys {
 namespace testing {
@@ -37,6 +37,9 @@ class EnclosingEnvironment;
 // created.
 class EnvironmentServices {
  public:
+  using ServiceTerminatedCallback = fit::function<void(
+      const std::string&, int64_t, fuchsia::sys::TerminationReason)>;
+
   struct ParentOverrides final {
     ParentOverrides();
 
@@ -128,18 +131,26 @@ class EnvironmentServices {
   // Will cause exception if serving fails.
   fidl::InterfaceHandle<fuchsia::io::Directory> ServeServiceDir(
       uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
-                           fuchsia::io::OPEN_RIGHT_WRITABLE);
+                       fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
   zx_status_t ServeServiceDir(
       fidl::InterfaceRequest<fuchsia::io::Directory> request,
       uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
-                           fuchsia::io::OPEN_RIGHT_WRITABLE);
+                       fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
   zx_status_t ServeServiceDir(
-      zx::channel request, uint32_t flags =
-          fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
+      zx::channel request, uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                            fuchsia::io::OPEN_RIGHT_WRITABLE);
+
+  // Sets a callback to be triggered whenever a singleton service launched
+  // by |AddServiceWithLaunchInfo| terminates. The callback provides the
+  // singleton identifier (typically fuchsia-pkg URL) and the termination
+  // information.
+  void SetServiceTerminatedCallback(ServiceTerminatedCallback callback) {
+    service_terminated_callback_ = std::move(callback);
+  }
 
  private:
   friend class EnclosingEnvironment;
@@ -155,6 +166,7 @@ class EnvironmentServices {
   // Pointer to containing environment. Not owned.
   EnclosingEnvironment* enclosing_env_ = nullptr;
   async_dispatcher_t* dispatcher_;
+  ServiceTerminatedCallback service_terminated_callback_;
 
   // Keep track of all singleton services, indexed by url.
   std::unordered_map<std::string, std::shared_ptr<sys::ServiceDirectory>>

@@ -113,6 +113,14 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
                 singleton_services_.erase(singleton_id);
               });
 
+          controller.events().OnTerminated =
+              [this, singleton_id](int64_t exit_code,
+                                   fuchsia::sys::TerminationReason reason) {
+                if (service_terminated_callback_) {
+                  service_terminated_callback_(singleton_id, exit_code, reason);
+                }
+              };
+
           std::tie(it, std::ignore) =
               singleton_services_.emplace(singleton_id, std::move(services));
         }
