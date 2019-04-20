@@ -694,9 +694,24 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 	}
 	defer dst.Close()
 
-	resp, err := f.requestBlob(blob)
-	if err != nil {
-		return err
+	var resp *http.Response
+
+	for i := 0; i < 2; i++ {
+		resp, err = f.requestBlob(blob)
+		// If we get an error that is temporary and is a timeout (most typically this
+		// is a header timeout due to a tcp connection that was improperly torn down),
+		// then we'll attempt the make a fresh request.
+		if e, ok := err.(interface {
+			Temporary() bool
+			Timeout() bool
+		}); ok && e.Temporary() && e.Timeout() {
+			f.closeIdleConnections()
+			continue
+		}
+		// Otherwise the error is of a permanent kind, so it's time to bail
+		if err != nil {
+			return err
+		}
 	}
 	defer resp.Body.Close()
 
