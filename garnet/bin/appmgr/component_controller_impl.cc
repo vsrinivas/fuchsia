@@ -21,6 +21,7 @@
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/logging.h"
 
 namespace component {
 
@@ -215,6 +216,8 @@ ComponentControllerImpl::~ComponentControllerImpl() {
     // Our owner destroyed this object before we could obtain a termination
     // reason.
     if (termination_callback_) {
+      FXL_VLOG(1)
+          << "~ComponentControllerImpl(): calling termination_callback_";
       termination_callback_(-1, TerminationReason::UNKNOWN, &binding_.events());
       termination_callback_ = nullptr;
     }
@@ -222,6 +225,7 @@ ComponentControllerImpl::~ComponentControllerImpl() {
 }
 
 void ComponentControllerImpl::Kill() {
+  FXL_VLOG(1) << "ComponentControllerImpl::Kill() called";
   TRACE_DURATION("appmgr", "ComponentController::Kill");
   if (job_) {
     job_.kill();
@@ -238,6 +242,8 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
 
   if (process_info.exited) {
     if (termination_callback_) {
+      FXL_VLOG(1)
+          << "SendReturnCodeIfTerminated(): calling termination_callback_";
       termination_callback_(process_info.return_code, TerminationReason::EXITED,
                             &binding_.events());
       termination_callback_ = nullptr;
@@ -264,6 +270,7 @@ void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher,
                                       const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
   FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
+  FXL_VLOG(1) << "ComponentControllerImpl::Handler() called";
   bool terminated = SendReturnCodeIfTerminated();
   FXL_DCHECK(terminated);
 

@@ -18,6 +18,8 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace component {
@@ -362,12 +364,17 @@ TEST_F(ComponentControllerTest, ControllerScope) {
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
+  auto log_settings = fxl::GetLogSettings();
+  log_settings.min_log_level = -2;
+  fxl::SetLogSettings(log_settings);
   bool wait = false;
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = CreateComponent(component_ptr);
     component_ptr.events().OnTerminated =
         [&](int64_t return_code, TerminationReason termination_reason) {
+          FXL_LOG(ERROR) << "OnTerminated called: " << return_code
+                         << ", : " << static_cast<uint32_t>(termination_reason);
           wait = true;
         };
     realm_.AddComponent(std::move(component));
@@ -378,12 +385,16 @@ TEST_F(ComponentControllerTest, DetachController) {
     // component did not die.
     component_ptr->Detach();
     RunLoopUntilIdle();
+    EXPECT_FALSE(wait)
+        << "Please please please report logs from this failure to FLK-168.";
   }
 
   // make sure all messages are processed if Kill was called.
   RunLoopUntilIdle();
-  ASSERT_FALSE(wait);
-  EXPECT_EQ(realm_.ComponentCount(), 1u);
+  EXPECT_FALSE(wait)
+      << "Please please please report logs from this failure to FLK-168.";
+  EXPECT_EQ(realm_.ComponentCount(), 1u)
+      << "Please please please report logs from this failure to FLK-168.";
 }
 
 TEST_F(ComponentControllerTest, Hub) {
