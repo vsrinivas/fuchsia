@@ -26,7 +26,7 @@
           assertion; \
       }(); \
       if (testing::Test::HasFatalFailure()) { \
-          return fit::make_promise([]() { return fit::error(std::string("Assertion failure")); }); \
+          return fit::make_error_promise(std::string("Assertion failure")); \
       } \
     } while (0)
 

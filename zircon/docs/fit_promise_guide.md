@@ -303,7 +303,7 @@ auto a = fit::make_promise([] {
   if (condition) {
     return MakeComplexPromise();
   }
-  return fit::make_promise([] { return fit::ok(); });
+  return fit::make_ok_promise(42);
 });
 ```
 

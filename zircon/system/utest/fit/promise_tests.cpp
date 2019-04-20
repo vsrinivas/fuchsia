@@ -399,7 +399,137 @@ bool make_promise_with_continuation() {
     END_TEST;
 }
 
-auto make_ok_promise(int value) {
+bool make_result_promise() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+
+    // Argument type: fit::result<int, char>
+    {
+        auto p = fit::make_result_promise(fit::result<int, char>(fit::ok(42)));
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<int, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::ok, result.state());
+        EXPECT_EQ(42, result.value());
+    }
+
+    // Argument type: fit::ok_result<int> with inferred types
+    {
+        auto p = fit::make_result_promise(fit::ok(42));
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+        fit::result<int, void> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::ok, result.state());
+        EXPECT_EQ(42, result.value());
+    }
+
+    // Argument type: fit::ok_result<int> with explicit types
+    {
+        auto p = fit::make_result_promise<int, char>(fit::ok(42));
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<int, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::ok, result.state());
+        EXPECT_EQ(42, result.value());
+    }
+
+    // Argument type: fit::error_result<char> with inferred types
+    {
+        auto p = fit::make_result_promise(fit::error('x'));
+        static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<void, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::error, result.state());
+        EXPECT_EQ('x', result.error());
+    }
+
+    // Argument type: fit::error_result<char> with explicit types
+    {
+        auto p = fit::make_result_promise<int, char>(fit::error('x'));
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<int, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::error, result.state());
+        EXPECT_EQ('x', result.error());
+    }
+
+    // Argument type: fit::pending_result with inferred types
+    {
+        auto p = fit::make_result_promise(fit::pending());
+        static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+        fit::result<void, void> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::pending, result.state());
+    }
+
+    // Argument type: fit::pending_result with explicit types
+    {
+        auto p = fit::make_result_promise<int, char>(fit::pending());
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<int, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::pending, result.state());
+    }
+
+    END_TEST;
+}
+
+bool make_ok_promise() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+
+    // Argument type: int
+    {
+        auto p = fit::make_ok_promise(42);
+        static_assert(std::is_same<int, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+        fit::result<int, void> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::ok, result.state());
+        EXPECT_EQ(42, result.value());
+    }
+
+    // Argument type: none (void)
+    {
+        auto p = fit::make_ok_promise();
+        static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+        fit::result<void, void> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::ok, result.state());
+    }
+
+    END_TEST;
+}
+
+bool make_error_promise() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+
+    // Argument type: int
+    {
+        auto p = fit::make_error_promise('x');
+        static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<char, decltype(p)::error_type>::value, "");
+        fit::result<void, char> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::error, result.state());
+        EXPECT_EQ('x', result.error());
+    }
+
+    // Argument type: none (void)
+    {
+        auto p = fit::make_error_promise();
+        static_assert(std::is_same<void, decltype(p)::value_type>::value, "");
+        static_assert(std::is_same<void, decltype(p)::error_type>::value, "");
+        fit::result<void, void> result = p(fake_context);
+        EXPECT_EQ(fit::result_state::error, result.state());
+    }
+
+    END_TEST;
+}
+
+auto make_checked_ok_promise(int value) {
     return fit::make_promise([value, count = 0]() mutable -> fit::result<int, char> {
         ASSERT_CRITICAL(count == 0);
         ++count;
@@ -416,7 +546,7 @@ auto make_move_only_promise(int value) {
     });
 }
 
-auto make_error_promise(char error) {
+auto make_checked_error_promise(char error) {
     return fit::make_promise([error, count = 0]() mutable -> fit::result<int, char> {
         ASSERT_CRITICAL(count == 0);
         ++count;
@@ -512,7 +642,7 @@ bool then_combinator() {
     {
         uint64_t run_count = 0;
         auto p =
-            make_ok_promise(42)
+            make_checked_ok_promise(42)
                 .then([&](fit::result<int, char>& result)
                           -> fit::result<int, char> {
                     run_count++;
@@ -608,7 +738,7 @@ bool and_then_combinator() {
     {
         uint64_t run_count = 0;
         auto p =
-            make_ok_promise(42)
+            make_checked_ok_promise(42)
                 .and_then([&](int& value)
                               -> fit::result<int, char> {
                     run_count++;
@@ -704,7 +834,7 @@ bool or_else_combinator() {
     {
         uint64_t run_count = 0;
         auto p =
-            make_error_promise('a')
+            make_checked_error_promise('a')
                 .or_else([&](char& error)
                              -> fit::result<int, char> {
                     run_count++;
@@ -793,7 +923,7 @@ bool inspect_combinator() {
     {
         uint64_t run_count = 0;
         auto p =
-            make_ok_promise(42)
+            make_checked_ok_promise(42)
                 .inspect([&](fit::result<int, char>& result) {
                     ASSERT_CRITICAL(result.value() == 42);
                     run_count++;
@@ -922,8 +1052,8 @@ bool join_combinator() {
     fake_context fake_context;
 
     auto p = fit::join_promises(
-        make_ok_promise(42),
-        make_error_promise('x').or_else([](const char& error) {
+        make_checked_ok_promise(42),
+        make_checked_error_promise('x').or_else([](const char& error) {
             return fit::error('y');
         }),
         make_delayed_ok_promise(55));
@@ -981,8 +1111,8 @@ bool join_vector_combinator() {
     fake_context fake_context;
 
     std::vector<fit::promise<int, char>> promises;
-    promises.push_back(make_ok_promise(42));
-    promises.push_back(make_error_promise('x').or_else([](const char& error) {
+    promises.push_back(make_checked_ok_promise(42));
+    promises.push_back(make_checked_error_promise('x').or_else([](const char& error) {
         return fit::error('y');
     }));
     promises.push_back(make_delayed_ok_promise(55));
@@ -1254,6 +1384,9 @@ RUN_TEST(assignment_and_swap)
 RUN_TEST(comparison_with_nullptr)
 RUN_TEST(make_promise)
 RUN_TEST(make_promise_with_continuation)
+RUN_TEST(make_result_promise)
+RUN_TEST(make_ok_promise)
+RUN_TEST(make_error_promise)
 RUN_TEST(then_combinator)
 RUN_TEST(and_then_combinator)
 RUN_TEST(or_else_combinator)

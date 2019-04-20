@@ -545,6 +545,21 @@ private:
 template <typename PromiseHandler>
 using promise_continuation = context_handler_invoker<PromiseHandler>;
 
+// The continuation produced by |make_result_promise()|.
+template <typename V, typename E>
+class result_continuation final {
+public:
+    explicit result_continuation(::fit::result<V, E> result)
+        : result_(std::move(result)) {}
+
+    ::fit::result<V, E> operator()(::fit::context& context) {
+        return std::move(result_);
+    }
+
+private:
+    ::fit::result<V, E> result_;
+};
+
 // Returns true if all arguments are true or if there are none.
 inline bool all_true() {
     return true;

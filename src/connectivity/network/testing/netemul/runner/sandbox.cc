@@ -369,7 +369,7 @@ fit::promise<> Sandbox::StartEnvironmentSetup(
     const config::Environment* config,
     ConfiguringEnvironmentLauncher launcher) {
   return fit::make_promise([this, config, launcher = std::move(launcher)] {
-    auto prom = fit::make_promise([] { return fit::ok(); }).box();
+    auto prom = fit::make_ok_promise().box();
     for (const auto& setup : config->setup()) {
       prom = prom.and_then([this, setup = &setup, launcher]() {
                    return LaunchSetup(

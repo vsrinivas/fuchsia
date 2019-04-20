@@ -318,8 +318,7 @@ fit::promise<ObjectSource> MakeObjectPromiseFromLocation(
     if (status != ZX_OK || !file_ptr.is_bound()) {
       FXL_LOG(WARNING) << "Failed to fdio_open and bind "
                        << location.AbsoluteFilePath() << " " << status;
-      return fit::make_promise(
-          []() -> fit::result<ObjectSource> { return fit::error(); });
+      return fit::make_result_promise<ObjectSource>(fit::error());
     }
     return ObjectSource::Make(std::move(location), std::move(file_ptr), depth);
   } else {
@@ -328,8 +327,7 @@ fit::promise<ObjectSource> MakeObjectPromiseFromLocation(
   }
 
   FXL_LOG(ERROR) << "Failed to open " << location.AbsoluteFilePath();
-  return fit::make_promise(
-      []() -> fit::result<ObjectSource> { return fit::error(); });
+  return fit::make_result_promise<ObjectSource>(fit::error());
 }
 
 // Consult the file system to find out how to open an inspect endpoint at the

@@ -263,7 +263,7 @@ fit::promise<> UpdateSharedState(fuchsia::ledger::Page* page,
                                  fuchsia::ledger::PageSnapshot* snapshot,
                                  std::vector<StoryModelMutation> commands) {
   // There is no shared state yet.
-  return fit::make_promise([] { return fit::ok(); });
+  return fit::make_ok_promise();
 }
 }  // namespace
 
@@ -313,7 +313,7 @@ fit::promise<> LedgerStoryModelStorage::Flush() {
   // The returned promise will block until all pending mutation opertaions have
   // resolved. These pending operations are also wrapped with |sequencer_| (in
   // Execute()), which applies this sequential behavior to promises it wraps.
-  return fit::make_promise([] { return fit::ok(); }).wrap_with(sequencer_);
+  return fit::make_ok_promise().wrap_with(sequencer_);
 }
 
 fit::promise<> LedgerStoryModelStorage::Execute(

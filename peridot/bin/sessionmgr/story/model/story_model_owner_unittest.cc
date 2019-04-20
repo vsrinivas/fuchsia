@@ -30,13 +30,9 @@ class TestModelStorage : public StoryModelStorage {
   };
   std::vector<ExecuteCall> calls;
 
-  fit::promise<> Load() override {
-    return fit::make_promise([] { return fit::ok(); });
-  }
+  fit::promise<> Load() override { return fit::make_ok_promise(); }
 
-  fit::promise<> Flush() override {
-    return fit::make_promise([] { return fit::ok(); });
-  }
+  fit::promise<> Flush() override { return fit::make_ok_promise(); }
 
   fit::promise<> Execute(std::vector<StoryModelMutation> commands) override {
     fit::bridge<> bridge;

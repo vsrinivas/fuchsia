@@ -11,13 +11,9 @@ namespace modular {
 NoopStoryModelStorage::NoopStoryModelStorage() = default;
 NoopStoryModelStorage::~NoopStoryModelStorage() = default;
 
-fit::promise<> NoopStoryModelStorage::Load() {
-  return fit::make_promise([] { return fit::ok(); });
-}
+fit::promise<> NoopStoryModelStorage::Load() { return fit::make_ok_promise(); }
 
-fit::promise<> NoopStoryModelStorage::Flush() {
-  return fit::make_promise([] { return fit::ok(); });
-}
+fit::promise<> NoopStoryModelStorage::Flush() { return fit::make_ok_promise(); }
 
 fit::promise<> NoopStoryModelStorage::Execute(
     std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) {

@@ -26,6 +26,9 @@ namespace fit {
 // a variety of combinators such as |then()|.
 //
 // Use |fit::make_promise()| to create a promise.
+// Use |fit::make_ok_promise()| to create a promise that immediately returns a value.
+// Use |fit::make_error_promise()| to create a promise that immediately returns an error.
+// Use |fit::make_result_promise()| to create a promise that immediately returns a result.
 // Use |fit::future| to more conveniently hold a promise or its result.
 // Use |fit::pending_task| to wrap a promise as a pending task for execution.
 // Use |fit::executor| to execute a pending task.
@@ -855,6 +858,79 @@ make_promise(PromiseHandler handler) {
     return make_promise_with_continuation(
         ::fit::internal::promise_continuation<PromiseHandler>(
             std::move(handler)));
+}
+
+// Returns an unboxed promise that immediately returns the specified result when invoked.
+//
+// This function is especially useful for returning promises from functions
+// that have multiple branches some of which complete synchronously.
+//
+// |result| is the result for the promise to return.
+//
+// See documentation of |fit::promise| for more information.
+template <typename V = void, typename E = void>
+inline promise_impl<::fit::internal::result_continuation<V, E>>
+make_result_promise(fit::result<V, E> result) {
+    return make_promise_with_continuation(
+        ::fit::internal::result_continuation<V, E>(std::move(result)));
+}
+template <typename V = void, typename E = void>
+inline promise_impl<::fit::internal::result_continuation<V, E>>
+make_result_promise(fit::ok_result<V> result) {
+    return make_promise_with_continuation(
+        ::fit::internal::result_continuation<V, E>(std::move(result)));
+}
+template <typename V = void, typename E = void>
+inline promise_impl<::fit::internal::result_continuation<V, E>>
+make_result_promise(fit::error_result<E> result) {
+    return make_promise_with_continuation(
+        ::fit::internal::result_continuation<V, E>(std::move(result)));
+}
+template <typename V = void, typename E = void>
+inline promise_impl<::fit::internal::result_continuation<V, E>>
+make_result_promise(fit::pending_result result) {
+    return make_promise_with_continuation(
+        ::fit::internal::result_continuation<V, E>(std::move(result)));
+}
+
+// Returns an unboxed promise that immediately returns the specified value when invoked.
+//
+// This function is especially useful for returning promises from functions
+// that have multiple branches some of which complete synchronously.
+//
+// |value| is the value for the promise to return.
+//
+// See documentation of |fit::promise| for more information.
+template <typename V>
+inline promise_impl<::fit::internal::result_continuation<V, void>>
+make_ok_promise(V value) {
+    return make_result_promise(fit::ok(std::move(value)));
+}
+
+// Overload of |make_ok_promise()| used when the value type is void.
+inline promise_impl<::fit::internal::result_continuation<void, void>>
+make_ok_promise() {
+    return make_result_promise(fit::ok());
+}
+
+// Returns an unboxed promise that immediately returns the specified error when invoked.
+//
+// This function is especially useful for returning promises from functions
+// that have multiple branches some of which complete synchronously.
+//
+// |error| is the error for the promise to return.
+//
+// See documentation of |fit::promise| for more information.
+template <typename E>
+inline promise_impl<::fit::internal::result_continuation<void, E>>
+make_error_promise(E error) {
+    return make_result_promise(fit::error(std::move(error)));
+}
+
+// Overload of |make_error_promise()| used when the error type is void.
+inline promise_impl<::fit::internal::result_continuation<void, void>>
+make_error_promise() {
+    return make_result_promise(fit::error());
 }
 
 // Jointly evaluates zero or more promises.
