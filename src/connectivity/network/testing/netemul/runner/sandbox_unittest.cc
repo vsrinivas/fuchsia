@@ -753,5 +753,24 @@ TEST_F(SandboxTest, DestructorRunsCleanly) {
   sandbox = nullptr;
 }
 
+TEST_F(SandboxTest, EnvironmentsWithSameNameFail) {
+  SetCmx(R"(
+{
+   "environment" : {
+      "children" : [
+       {
+          "name" : "my-env",
+          "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+       },
+       {
+          "name" : "my-env",
+          "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+       }
+      ]
+   }
+})");
+  RunSandboxInternalError();
+}
+
 }  // namespace testing
 }  // namespace netemul

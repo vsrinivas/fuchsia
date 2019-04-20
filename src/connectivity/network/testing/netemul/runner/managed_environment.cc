@@ -30,7 +30,8 @@ ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
 }
 
 ManagedEnvironment::ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env)
-    : sandbox_env_(sandbox_env) {}
+    : sandbox_env_(sandbox_env), ready_(false) {}
+
 sys::testing::EnclosingEnvironment& ManagedEnvironment::environment() {
   return *env_;
 }
@@ -154,10 +155,23 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
                                       std::move(services), sub_options);
 
   env_->SetRunningChangedCallback([this](bool running) {
-    if (running && running_callback_) {
-      running_callback_();
-    } else if (!running) {
+    ready_ = true;
+    if (running) {
+      for (auto& r : pending_requests_) {
+        Bind(std::move(r));
+      }
+      pending_requests_.clear();
+      if (running_callback_) {
+        running_callback_();
+      }
+    } else {
       FXL_LOG(ERROR) << "Underlying enclosed Environment stopped running";
+      running_callback_ = nullptr;
+      children_.clear();
+      pending_requests_.clear();
+      env_ = nullptr;
+      launcher_ = nullptr;
+      bindings_.CloseAll();
     }
   });
 
@@ -181,7 +195,13 @@ zx::channel ManagedEnvironment::OpenVdataDirectory() {
 
 void ManagedEnvironment::Bind(
     fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
-  bindings_.AddBinding(this, std::move(req));
+  if (ready_) {
+    bindings_.AddBinding(this, std::move(req));
+  } else if (env_) {
+    pending_requests_.push_back(std::move(req));
+  } else {
+    req.Close(ZX_ERR_INTERNAL);
+  }
 }
 
 ManagedLoggerCollection& ManagedEnvironment::loggers() {

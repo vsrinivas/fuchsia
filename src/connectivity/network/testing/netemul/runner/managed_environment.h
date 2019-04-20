@@ -76,6 +76,8 @@ class ManagedEnvironment
   std::vector<LaunchService> service_config_;
   VirtualDevices virtual_devices_;
   std::unique_ptr<VirtualData> virtual_data_;
+  std::vector<fidl::InterfaceRequest<FManagedEnvironment>> pending_requests_;
+  bool ready_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ManagedEnvironment);
 };

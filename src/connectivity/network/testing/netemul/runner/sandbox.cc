@@ -474,12 +474,16 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
   linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
                           arguments.end());
 
-  auto& proc = procs_.emplace_back();
   auto ticket = procs_.size();
+  auto& proc = procs_.emplace_back();
 
   if (is_test) {
     RegisterTest(ticket);
   }
+
+  proc.set_error_handler([this](zx_status_t status) {
+    PostTerminate(TerminationReason::INTERNAL_ERROR);
+  });
 
   // we observe test processes return code
   proc.events().OnTerminated = [url, this, is_test, ticket](
@@ -487,6 +491,8 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
     FXL_LOG(INFO) << T::msg << " " << url << " terminated with (" << code
                   << ") reason: "
                   << sys::HumanReadableTerminationReason(reason);
+    // remove the error handler:
+    procs_[ticket].set_error_handler(nullptr);
     if (is_test) {
       if (code != 0 || reason != TerminationReason::EXITED) {
         // test failed, early bail
@@ -519,6 +525,7 @@ fit::promise<> Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
   linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
                           arguments.end());
 
+  auto ticket = procs_.size();
   auto& proc = procs_.emplace_back();
 
   if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) !=
@@ -526,13 +533,19 @@ fit::promise<> Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
     FXL_LOG(ERROR) << "couldn't launch setup: " << url;
     bridge.completer.complete_error();
   } else {
+    proc.set_error_handler([this](zx_status_t status) {
+      PostTerminate(TerminationReason::INTERNAL_ERROR);
+    });
+
     // we observe test processes return code
     proc.events().OnTerminated =
-        [url, this, completer = std::move(bridge.completer)](
+        [url, this, ticket, completer = std::move(bridge.completer)](
             int64_t code, TerminationReason reason) mutable {
           FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
                         << ") reason: "
                         << sys::HumanReadableTerminationReason(reason);
+          // remove the error handler:
+          procs_[ticket].set_error_handler(nullptr);
           if (code == 0 && reason == TerminationReason::EXITED) {
             completer.complete_ok();
           } else {

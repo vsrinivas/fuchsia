@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-
 #include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -12,8 +10,10 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <zircon/assert.h>
+
 #include <memory>
 
 namespace sys {
@@ -238,11 +238,9 @@ EnclosingEnvironment::CreateComponentFromUrl(std::string component_url) {
 }
 
 void EnclosingEnvironment::SetRunning(bool running) {
-  if (running_ != running) {
-    running_ = running;
-    if (running_changed_callback_) {
-      running_changed_callback_(running_);
-    }
+  running_ = running;
+  if (running_changed_callback_) {
+    running_changed_callback_(running_);
   }
 }
 

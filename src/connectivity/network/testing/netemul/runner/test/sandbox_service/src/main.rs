@@ -30,7 +30,10 @@ mod tests {
         fuchsia_zircon as zx,
     };
 
-    fn create_env_with_netstack(sandbox: &SandboxProxy) -> Result<ManagedEnvironmentProxy, Error> {
+    fn create_named_env_with_netstack(
+        sandbox: &SandboxProxy,
+        name: Option<String>,
+    ) -> Result<ManagedEnvironmentProxy, Error> {
         let (env, env_server_end) = fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
         let services = vec![LaunchService {
             name: String::from("fuchsia.netstack.Netstack"),
@@ -40,7 +43,7 @@ mod tests {
         sandbox.create_environment(
             env_server_end,
             EnvironmentOptions {
-                name: None, // don't care about the name, let it be created by itself
+                name: name, // don't care about the name, let it be created by itself
                 services: Some(services),
                 devices: None,
                 inherit_parent_launch_services: Some(false),
@@ -54,6 +57,10 @@ mod tests {
         )?;
 
         Ok(env)
+    }
+
+    fn create_env_with_netstack(sandbox: &SandboxProxy) -> Result<ManagedEnvironmentProxy, Error> {
+        create_named_env_with_netstack(sandbox, None)
     }
 
     async fn create_network<'a>(
@@ -211,5 +218,43 @@ mod tests {
         assert!(clients_1.iter().any(|c| c == "e1"));
         assert!(clients_1.iter().any(|c| c == "e2"));
         assert!(clients_2.iter().any(|c| c == "e3"));
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn same_environment_name_fails() {
+        let sandbox =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+        let env_name = Some("env_a".to_string());
+
+        // environment creation should work for both, but doing anything on
+        // env2 should fail:
+        let env1 =
+            create_named_env_with_netstack(&sandbox, env_name.clone()).expect("can't create env 1");
+        let env2 = create_named_env_with_netstack(&sandbox, env_name).expect("can't create env 2");
+
+        let _net1 =
+            await!(create_network(&env1, "network")).expect("failed to create network on env 1");
+        let _net2 = await!(create_network(&env2, "network2"))
+            .expect_err("should've failed to create network on env 2");
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn same_environment_name_succeeds_in_different_sandboxes() {
+        let sandbox =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+        let sandbox2 =
+            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+        let env_name = Some("env_a".to_string());
+
+        let env1 =
+            create_named_env_with_netstack(&sandbox, env_name.clone()).expect("can't create env 1");
+        let env2 = create_named_env_with_netstack(&sandbox2, env_name).expect("can't create env 2");
+
+        let _net1 =
+            await!(create_network(&env1, "network")).expect("failed to create network on env 1");
+        let _net2 =
+            await!(create_network(&env2, "network2")).expect("failed to create network on env 2");
     }
 }

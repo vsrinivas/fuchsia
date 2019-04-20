@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_SERVICE_H_
 
 #include <fuchsia/netemul/sandbox/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "sandbox.h"
 
@@ -26,7 +27,10 @@ class SandboxService {
 
  private:
   async_dispatcher_t* dispatcher_;
+  fuchsia::sys::EnvironmentPtr parent_env_;
   std::vector<std::unique_ptr<SandboxBinding>> bindings_;
+  uint32_t counter_;
+  uint32_t random_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SandboxService);
 };
