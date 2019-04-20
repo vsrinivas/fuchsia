@@ -101,10 +101,6 @@ constexpr uint8_t kTzServiceShift = 8;
 constexpr uint8_t kCallMask = 0xFF;
 constexpr uint8_t kCallShift = 0;
 
-constexpr uint64_t kSmcInterrupted = 1;
-constexpr uint64_t kSmcOk = 0;
-constexpr uint64_t kSmcBusy = -13;
-
 static constexpr uint32_t CreateFunctionId(CallType call_type,
                                            CallConvention call_conv,
                                            Service service,
@@ -171,7 +167,6 @@ private:
     };
 
     void ShutDown();
-    zx_status_t SmcCall(zx_smc_parameters_t* params, zx_smc_result_t* result);
     int PilThread();
     zx_status_t LoadAuthFirmware(size_t fw_n);
 

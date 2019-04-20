@@ -13,6 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
+#include <qcom/smc.h>
 
 #include "qcom-pil.h"
 
@@ -65,8 +66,8 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
                                 CreateSmcArgs(2, SmcArgType::kValue, SmcArgType::kBufferReadWrite),
                                 fw_[fw_n].id,  // kValue.
                                 fw_[fw_n].pa); // kBufferReadWrite.
-    status = SmcCall(&params, &result);
-    if (status != ZX_OK || result.arg0 != kSmcOk) {
+    status = qcom::SmcCall(smc_.get(), &params, &result);
+    if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
         zxlogf(ERROR, "%s metadata init failed %d/%d\n", __func__, status,
                static_cast<int>(result.arg0));
         return status;
@@ -110,8 +111,8 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
         fw_[fw_n].id, // kValue.
         fw_[fw_n].pa, // kValue, not clear why not a kBuffer...
         total_size);  // kValue.
-    status = SmcCall(&params, &result);
-    if (status != ZX_OK || result.arg0 != kSmcOk) {
+    status = qcom::SmcCall(smc_.get(), &params, &result);
+    if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
         zxlogf(ERROR, "%s memory setup failed %d/%d\n", __func__, status,
                static_cast<int>(result.arg0));
         return status;
@@ -151,8 +152,8 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     // Authenticates the whole image via SMC call.
     params = CreatePilSmcParams(PilCmd::AuthAndReset, CreateSmcArgs(1, SmcArgType::kValue),
                                 fw_[fw_n].id);
-    status = SmcCall(&params, &result);
-    if (status != ZX_OK || result.arg0 != kSmcOk) {
+    status = qcom::SmcCall(smc_.get(), &params, &result);
+    if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
         zxlogf(ERROR, "%s authentication failed %d/%d\n", __func__, status,
                static_cast<int>(result.arg0));
         return status;
@@ -166,36 +167,6 @@ int PilDevice::PilThread() {
         LoadAuthFirmware(i);
     }
     return 0;
-}
-
-zx_status_t PilDevice::SmcCall(zx_smc_parameters_t* params, zx_smc_result_t* result) {
-    zxlogf(TRACE, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX\n", params->func_id,
-           params->arg1, params->arg2, params->arg3, params->arg4, params->arg5);
-    auto status = zx_smc_call(smc_.get(), params, result);
-    zxlogf(TRACE, "SMC results %ld 0x%lX 0x%lX 0x%lX\n", result->arg0, result->arg1, result->arg2,
-           result->arg3);
-
-    constexpr int total_retry_msecs = 2000;
-    constexpr int busy_retry_msecs = 30;
-    constexpr int busy_retries = total_retry_msecs / busy_retry_msecs;
-    int busy_retry = busy_retries;
-    while (status == ZX_OK && // Wait forever for smc_interrupted, limited for smc_busy replies.
-           (result->arg0 == kSmcInterrupted || (result->arg0 == kSmcBusy && busy_retry--))) {
-        if (result->arg0 == kSmcBusy) {
-            zx_nanosleep(zx_deadline_after(ZX_MSEC(busy_retry_msecs)));
-        }
-        params->arg6 = result->arg6; // Pass optional session_id received via x6 back in any retry.
-
-        zxlogf(TRACE, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX\n", params->func_id,
-               params->arg1, params->arg2, params->arg3, params->arg4, params->arg5);
-        status = zx_smc_call(smc_.get(), params, result);
-        zxlogf(TRACE, "SMC busy_retry %d results %ld 0x%lX 0x%lX 0x%lX\n",
-               busy_retries - busy_retry, result->arg0, result->arg1, result->arg2, result->arg3);
-    }
-    if (result->arg0 != 0) {
-        zxlogf(ERROR, "%s error %d\n", __func__, static_cast<int>(result->arg0));
-    }
-    return status;
 }
 
 zx_status_t PilDevice::Bind() {
@@ -255,7 +226,7 @@ zx_status_t PilDevice::Bind() {
         auto params = CreatePilSmcParams(PilCmd::QuerySupport,
                                          CreateSmcArgs(1, SmcArgType::kValue), i);
         zx_smc_result_t result = {};
-        status = SmcCall(&params, &result);
+        status = qcom::SmcCall(smc_.get(), &params, &result);
         if (status == ZX_OK && result.arg0 == kSmcOk && result.arg1 == 1) {
             zxlogf(INFO, "%s pas_id %d supported\n", __func__, i);
         }
