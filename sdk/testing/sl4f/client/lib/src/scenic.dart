@@ -18,9 +18,9 @@ class Scenic {
   ///
   /// It can optionally take an [Sl4f] object, if not passed, one will be
   /// created using the environment variables to connect to the device.
-  Scenic([Sl4f sl4f, Dump dump]) :
-      _sl4f = sl4f ?? Sl4f.fromEnvironment(),
-      _dump = dump ?? Dump();
+  Scenic([Sl4f sl4f, Dump dump])
+      : _sl4f = sl4f ?? Sl4f.fromEnvironment(),
+        _dump = dump ?? Dump();
 
   /// Closes the underlying HTTP client. This need not be called if the
   /// Sl4f client is closed instead.

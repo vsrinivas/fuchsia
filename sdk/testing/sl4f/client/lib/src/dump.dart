@@ -33,20 +33,22 @@ class Dump {
   ///
   /// To easily supply a path relative to the current working directory
   /// on the command line, use $(pwd).
-  Dump([String dumpDirectory]) : _dumpDirectory =
-      _notEmptyString(dumpDirectory) ? dumpDirectory :
-      Platform.environment[_dumpDirectoryEnvVar] {
-        if (_hasDumpDirectory) {
-          // See explanation above. Relative path would be ambiguous.
-          if (!_dumpDirectory.startsWith('/')) {
-            throw ArgumentError.value(_dumpDirectory, 'Must be absolute path');
-          }
+  Dump([String dumpDirectory])
+      : _dumpDirectory = _notEmptyString(dumpDirectory)
+            ? dumpDirectory
+            : Platform.environment[_dumpDirectoryEnvVar] {
+    if (_hasDumpDirectory) {
+      // See explanation above. Relative path would be ambiguous.
+      if (!_dumpDirectory.startsWith('/')) {
+        throw ArgumentError.value(_dumpDirectory, 'Must be absolute path');
+      }
 
-          // Has to be sync because this is a constructor.
-          if (!Directory(_dumpDirectory).existsSync()) {
-            throw FileSystemException('Not found or not a directory', _dumpDirectory);
-          }
-        }
+      // Has to be sync because this is a constructor.
+      if (!Directory(_dumpDirectory).existsSync()) {
+        throw FileSystemException(
+            'Not found or not a directory', _dumpDirectory);
+      }
+    }
   }
 
   /// Writes the bytes to the dump directory under a timestamp, the
@@ -63,5 +65,6 @@ class Dump {
 
   bool get _hasDumpDirectory => _notEmptyString(_dumpDirectory);
 
-  static bool _notEmptyString(final String value) => value != null && value.isNotEmpty;
+  static bool _notEmptyString(final String value) =>
+      value != null && value.isNotEmpty;
 }

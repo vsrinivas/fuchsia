@@ -28,7 +28,7 @@ ROOT_PUBSPECS = [
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
 PROJECT_DEPENDENCIES = [
-    'src/testing/sl4f/client',
+    'sdk/testing/sl4f/client',
     'topaz/public/dart/widgets',
     'topaz/public/lib',
     'topaz/tools',
