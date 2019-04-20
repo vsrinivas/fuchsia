@@ -940,6 +940,36 @@ images += [
   },
 ]
 
+# fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
+# partition produced by blob.blk.
+generate_fvm("fvm.blob.sparse.blk") {
+  testonly = true
+  output_name = "$target_out_dir/$target_name"
+  deps = [
+    ":blob.blk",
+  ]
+  args = fvm_sparse_args
+  partitions = [
+    {
+      type = "blob"
+      dep = ":blob.blk"
+      minimum_inodes = blobfs_minimum_inodes
+      minimum_data_bytes = blobfs_minimum_data_bytes
+      maximum_bytes = blobfs_maximum_bytes
+    },
+  ]
+}
+images += [
+  {
+    deps = [
+      ":fvm.blob.sparse.blk",
+    ]
+    public = [
+      "IMAGE_FVM_BLOB_SPARSE",
+    ]
+  },
+]
+
 # This rolls the primary ZBI together with a compressed RAMDISK image of
 # fvm.blk into a fat ZBI that boots the full system without using any real
 # storage.  The system decompresses the fvm.blk image into memory and then
