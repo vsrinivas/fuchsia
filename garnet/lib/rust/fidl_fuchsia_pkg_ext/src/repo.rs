@@ -206,7 +206,7 @@ impl RepositoryConfigBuilder {
 }
 
 /// Wraper for serializing repository configs to the on-disk JSON format.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
 pub enum RepositoryConfigs {
     #[serde(rename = "1")]

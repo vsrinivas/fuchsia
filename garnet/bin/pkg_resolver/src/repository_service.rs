@@ -137,10 +137,10 @@ impl RepositoryService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::create_dir;
+    use crate::repository_manager::RepositoryManagerBuilder;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_pkg::RepositoryIteratorMarker;
-    use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs};
+    use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder};
     use fuchsia_uri::pkg_uri::RepoUri;
     use std::convert::TryInto;
 
@@ -165,8 +165,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_empty() {
-        let mgr = Arc::new(RwLock::new(RepositoryManager::new()));
-        let service = RepositoryService::new(mgr);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+        let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         let results = await!(list(&service));
         assert_eq!(results, vec![]);
@@ -182,10 +184,12 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let dir = create_dir(vec![("configs", RepositoryConfigs::Version1(configs.clone()))]);
-
-        let (mgr, errors) = RepositoryManager::load_dir(dir);
-        assert_eq!(errors.len(), 0);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .static_configs(configs.clone())
+            .build();
 
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
@@ -196,11 +200,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_insert_list_remove() {
-        let mgr = Arc::new(RwLock::new(RepositoryManager::new()));
-        let mut service = RepositoryService::new(mgr);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+        let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         // First, create a bunch of repo configs we're going to use for testing.
-        let configs = (0..1000)
+        // FIXME: the current implementation ends up writing O(n^2) bytes when serializing the
+        // repositories. Raise this number to be greater than LIST_CHUNK_SIZE once serialization
+        // is cheaper.
+        let configs = (0..20)
             .map(|i| {
                 let uri = RepoUri::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
                 RepositoryConfigBuilder::new(uri).build()

@@ -26,14 +26,17 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
-use repository_manager::RepositoryManager;
+use repository_manager::{RepositoryManager, RepositoryManagerBuilder};
 use repository_service::RepositoryService;
 
 use rewrite_manager::RewriteManager;
 use rewrite_service::RewriteService;
 
 const SERVER_THREADS: usize = 2;
+
 const STATIC_REPO_DIR: &str = "/config/data/pkg_resolver/repositories";
+const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
+
 const DYNAMIC_RULES_PATH: &str = "/data/rewrite_rules.json";
 
 fn main() -> Result<(), Error> {
@@ -100,21 +103,21 @@ fn main() -> Result<(), Error> {
 }
 
 fn load_repo_manager() -> RepositoryManager {
-    let static_repo_dir = Path::new(STATIC_REPO_DIR);
-
-    if static_repo_dir.exists() {
-        return RepositoryManager::new();
-    }
-
-    let (repo_manager, errors) = RepositoryManager::load_dir(static_repo_dir);
-
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
-    for err in errors {
-        fx_log_err!("error loading static repo config: {}", err);
-    }
-
-    repo_manager
+    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH)
+        .unwrap_or_else(|(builder, err)| {
+            fx_log_err!("error loading dynamic repo config: {}", err);
+            builder
+        })
+        .load_static_configs_dir(STATIC_REPO_DIR)
+        .unwrap_or_else(|(builder, errs)| {
+            for err in errs {
+                fx_log_err!("error loading static repo config: {}", err);
+            }
+            builder
+        })
+        .build()
 }
 
 fn load_rewrite_manager() -> RewriteManager {

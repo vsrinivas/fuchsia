@@ -5,6 +5,7 @@
 use {
     failure::Fail,
     fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigs},
+    fuchsia_syslog::fx_log_err,
     fuchsia_uri::pkg_uri::RepoUri,
     std::collections::btree_set,
     std::collections::hash_map::Entry,
@@ -18,25 +19,12 @@ use {
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
 #[derive(Debug, PartialEq, Eq)]
 pub struct RepositoryManager {
+    dynamic_configs_path: PathBuf,
     static_configs: HashMap<RepoUri, RepositoryConfig>,
     dynamic_configs: HashMap<RepoUri, RepositoryConfig>,
 }
 
 impl RepositoryManager {
-    /// Construct a new [RepositoryManager].
-    pub fn new() -> Self {
-        RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
-    }
-
-    /// Load a directory of [RepositoryConfigs] files into a [RepositoryManager], or error out if we
-    /// encounter io errors during the load. It returns a [RepositoryManager], as well as all the
-    /// individual [LoadError] errors encountered during the load.
-    pub fn load_dir<T: AsRef<Path>>(static_config_dir: T) -> (Self, Vec<LoadError>) {
-        let (static_configs, errors) = load_configs_dir(static_config_dir);
-        let mgr = RepositoryManager { static_configs, dynamic_configs: HashMap::new() };
-        (mgr, errors)
-    }
-
     /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_url`,
     /// or `None` if it does not exist.
     pub fn get(&self, repo_url: &RepoUri) -> Option<&RepositoryConfig> {
@@ -52,7 +40,9 @@ impl RepositoryManager {
     /// and the old [RepositoryConfig] is returned. If this repository is a static config, the
     /// static config is shadowed by the dynamic config until it is removed.
     pub fn insert(&mut self, config: RepositoryConfig) -> Option<RepositoryConfig> {
-        self.dynamic_configs.insert(config.repo_url().clone(), config)
+        let result = self.dynamic_configs.insert(config.repo_url().clone(), config);
+        self.save();
+        result
     }
 
     /// Removes a [RepositoryConfig] identified by the config `repo_url`.
@@ -61,6 +51,7 @@ impl RepositoryManager {
         repo_url: &RepoUri,
     ) -> Result<Option<RepositoryConfig>, CannotRemoveStaticRepositories> {
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
+            self.save();
             return Ok(Some(config));
         }
 
@@ -81,6 +72,119 @@ impl RepositoryManager {
             .collect::<BTreeSet<_>>();
 
         List { keys: keys.into_iter(), repo_mgr: self }
+    }
+
+    /// If persistent dynamic configs are enabled, save the current configs to disk. Log, and
+    /// ultimately ignore, any errors that occur to make sure forward progress can always be made.
+    fn save(&self) {
+        let configs = self.dynamic_configs.iter().map(|(_, c)| c.clone()).collect::<Vec<_>>();
+
+        let result = (|| {
+            let mut temp_path = self.dynamic_configs_path.clone().into_os_string();
+            temp_path.push(".new");
+            let temp_path = PathBuf::from(temp_path);
+            {
+                let f = fs::File::create(&temp_path)?;
+                serde_json::to_writer(f, &RepositoryConfigs::Version1(configs))?;
+            }
+            fs::rename(temp_path, &self.dynamic_configs_path)
+        })();
+
+        match result {
+            Ok(()) => {}
+            Err(err) => {
+                fx_log_err!("error while saving repositories: {}", err);
+            }
+        }
+    }
+}
+
+/// [RepositoryManagerBuilder] constructs a [RepositoryManager], optionally initializing it
+/// with [RepositoryConfig]s passed in directly or loaded out of the filesystem.
+#[derive(Clone, Debug)]
+pub struct RepositoryManagerBuilder {
+    dynamic_configs_path: PathBuf,
+    static_configs: HashMap<RepoUri, RepositoryConfig>,
+    dynamic_configs: HashMap<RepoUri, RepositoryConfig>,
+}
+
+impl RepositoryManagerBuilder {
+    /// Create a new builder and initialize it with the dynamic
+    /// [RepositoryConfigs](RepositoryConfig) from this path if it exists, and add it to the
+    /// [RepositoryManager], or error out if we encounter errors during the load. The
+    /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
+    pub fn new<T>(dynamic_configs_path: T) -> Result<Self, (Self, LoadError)>
+    where
+        T: Into<PathBuf>,
+    {
+        let dynamic_configs_path = dynamic_configs_path.into();
+
+        let (dynamic_configs, err) = if dynamic_configs_path.exists() {
+            match load_configs_file(&dynamic_configs_path) {
+                Ok(dynamic_configs) => (dynamic_configs, None),
+                Err(err) => (vec![], Some(err)),
+            }
+        } else {
+            (vec![], None)
+        };
+
+        let builder = RepositoryManagerBuilder {
+            dynamic_configs_path: dynamic_configs_path.into(),
+            static_configs: HashMap::new(),
+            dynamic_configs: dynamic_configs
+                .into_iter()
+                .map(|config| (config.repo_url().clone(), config))
+                .collect(),
+        };
+
+        if let Some(err) = err {
+            Err((builder, err))
+        } else {
+            Ok(builder)
+        }
+    }
+
+    /// Adds these static [RepoConfigs](RepoConfig) to the [RepositoryManager].
+    #[cfg(test)]
+    pub fn static_configs<T>(mut self, iter: T) -> Self
+    where
+        T: IntoIterator<Item = RepositoryConfig>,
+    {
+        for config in iter.into_iter() {
+            self.static_configs.insert(config.repo_url().clone(), config);
+        }
+
+        self
+    }
+
+    /// Load a directory of [RepositoryConfigs](RepositoryConfig) files into the
+    /// [RepositoryManager], or error out if we encounter errors during the load. The
+    /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
+    pub fn load_static_configs_dir<T>(
+        mut self,
+        static_configs_dir: T,
+    ) -> Result<Self, (Self, Vec<LoadError>)>
+    where
+        T: AsRef<Path>,
+    {
+        let static_configs_dir = static_configs_dir.as_ref();
+
+        let (static_configs, errs) = load_configs_dir(static_configs_dir);
+        self.static_configs = static_configs;
+        if errs.is_empty() {
+            Ok(self)
+        } else {
+            Err((self, errs))
+        }
+    }
+
+    /// Build the [RepositoryManager].
+    pub fn build(self) -> RepositoryManager {
+        RepositoryManager {
+            dynamic_configs_path: self.dynamic_configs_path,
+            static_configs: self.static_configs,
+            dynamic_configs: self.dynamic_configs,
+        }
     }
 }
 
@@ -251,16 +355,57 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
 
+    fn assert_does_not_exist_error(err: &LoadError, missing_path: &Path) {
+        match &err {
+            LoadError::Io { path, error } => {
+                assert_eq!(path, missing_path);
+                assert_eq!(error.kind(), std::io::ErrorKind::NotFound, "{}", error);
+            }
+            err => {
+                panic!("unexpected error: {}", err);
+            }
+        }
+    }
+
+    fn assert_parse_error(err: &LoadError, invalid_path: &Path) {
+        match err {
+            LoadError::Parse { path, .. } => {
+                assert_eq!(path, invalid_path);
+            }
+            err => {
+                panic!("unexpected error: {}", err);
+            }
+        }
+    }
+
+    fn assert_overridden_error(err: &LoadError, config: &RepositoryConfig) {
+        match err {
+            LoadError::Overridden { replaced_config } => {
+                assert_eq!(replaced_config, config);
+            }
+            err => {
+                panic!("unexpected error: {}", err);
+            }
+        }
+    }
+
     #[test]
     fn test_insert_get_remove() {
-        let mut repos = RepositoryManager::new();
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let mut repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+
         assert_eq!(
-            repos,
-            RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
+            repomgr,
+            RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path.clone(),
+                static_configs: HashMap::new(),
+                dynamic_configs: HashMap::new(),
+            }
         );
 
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        assert_eq!(repos.get(&fuchsia_uri), None);
+        assert_eq!(repomgr.get(&fuchsia_uri), None);
 
         let config1 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -269,10 +414,11 @@ mod tests {
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
 
-        assert_eq!(repos.insert(config1.clone()), None);
+        assert_eq!(repomgr.insert(config1.clone()), None);
         assert_eq!(
-            repos,
+            repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path.clone(),
                 static_configs: HashMap::new(),
                 dynamic_configs: hashmap! {
                     fuchsia_uri.clone() => config1.clone(),
@@ -280,10 +426,11 @@ mod tests {
             }
         );
 
-        assert_eq!(repos.insert(config2.clone()), Some(config1.clone()));
+        assert_eq!(repomgr.insert(config2.clone()), Some(config1.clone()));
         assert_eq!(
-            repos,
+            repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path.clone(),
                 static_configs: HashMap::new(),
                 dynamic_configs: hashmap! {
                     fuchsia_uri.clone() => config2.clone(),
@@ -291,13 +438,17 @@ mod tests {
             }
         );
 
-        assert_eq!(repos.get(&fuchsia_uri), Some(&config2));
-        assert_eq!(repos.remove(&fuchsia_uri), Ok(Some(config2.clone())));
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&config2));
+        assert_eq!(repomgr.remove(&fuchsia_uri), Ok(Some(config2.clone())));
         assert_eq!(
-            repos,
-            RepositoryManager { static_configs: HashMap::new(), dynamic_configs: HashMap::new() }
+            repomgr,
+            RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path.clone(),
+                static_configs: HashMap::new(),
+                dynamic_configs: HashMap::new()
+            }
         );
-        assert_eq!(repos.remove(&fuchsia_uri), Ok(None));
+        assert_eq!(repomgr.remove(&fuchsia_uri), Ok(None));
     }
 
     #[test]
@@ -312,13 +463,17 @@ mod tests {
             .add_root_key(RepositoryKey::Ed25519(vec![2]))
             .build();
 
-        let dir = create_dir(vec![(
+        let static_dir = create_dir(vec![(
             "fuchsia.com.json",
             RepositoryConfigs::Version1(vec![fuchsia_config1.clone()]),
         )]);
 
-        let (mut repomgr, errors) = RepositoryManager::load_dir(dir.path());
-        assert!(errors.is_empty(), "errors: {:?}", errors);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let mut repomgr = RepositoryManagerBuilder::new(dynamic_dir.path().join("config"))
+            .unwrap()
+            .load_static_configs_dir(static_dir.path())
+            .unwrap()
+            .build();
 
         assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
         assert_eq!(repomgr.insert(fuchsia_config2.clone()), None);
@@ -335,13 +490,19 @@ mod tests {
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
 
-        let dir = create_dir(vec![(
+        let static_dir = create_dir(vec![(
             "fuchsia.com.json",
             RepositoryConfigs::Version1(vec![fuchsia_config1.clone()]),
         )]);
 
-        let (mut repomgr, errors) = RepositoryManager::load_dir(dir.path());
-        assert!(errors.is_empty(), "errors: {:?}", errors);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let mut repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(static_dir.path())
+            .unwrap()
+            .build();
 
         assert_eq!(repomgr.get(&fuchsia_uri), Some(&fuchsia_config1));
         assert_eq!(repomgr.remove(&fuchsia_uri), Err(CannotRemoveStaticRepositories));
@@ -349,26 +510,23 @@ mod tests {
     }
 
     #[test]
-    fn test_load_dir_not_exists() {
-        let dir = tempfile::tempdir().unwrap();
+    fn test_builder_static_configs_dir_not_exists() {
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
 
-        let does_not_exist_dir = dir.path().join("not-exists");
-        let (_, errors) = RepositoryManager::load_dir(&does_not_exist_dir);
+        let static_dir = tempfile::tempdir().unwrap();
+        let does_not_exist_dir = static_dir.path().join("not-exists");
+
+        let (_, errors) = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(&does_not_exist_dir)
+            .unwrap_err();
         assert_eq!(errors.len(), 1, "{:?}", errors);
-
-        match &errors[0] {
-            LoadError::Io { path, error } => {
-                assert_eq!(path, &does_not_exist_dir);
-                assert_eq!(error.kind(), std::io::ErrorKind::NotFound, "{}", error);
-            }
-            err => {
-                panic!("unexpected error: {}", err);
-            }
-        }
+        assert_does_not_exist_error(&errors[0], &does_not_exist_dir);
     }
 
     #[test]
-    fn test_load_dir_invalid() {
+    fn test_builder_static_configs_dir_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
         let invalid_path = dir.path().join("invalid");
 
@@ -395,21 +553,21 @@ mod tests {
                 .unwrap();
         }
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
-        assert_eq!(errors.len(), 1, "{:?}", errors);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
 
-        match &errors[0] {
-            LoadError::Parse { path, .. } => {
-                assert_eq!(path, &invalid_path);
-            }
-            err => {
-                panic!("unexpected error: {}", err);
-            }
-        }
+        let (builder, errors) = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(dir.path())
+            .unwrap_err();
+        assert_eq!(errors.len(), 1, "{:?}", errors);
+        assert_parse_error(&errors[0], &invalid_path);
+        let repomgr = builder.build();
 
         assert_eq!(
             repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
                     example_uri => example_config,
                     fuchsia_uri => fuchsia_config,
@@ -420,7 +578,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_dir() {
+    fn test_builder_static_configs_dir() {
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri.clone()).build();
 
@@ -432,12 +590,19 @@ mod tests {
             ("fuchsia.com.json", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
-        assert!(errors.is_empty(), "errors: {:?}", errors);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(dir.path())
+            .unwrap()
+            .build();
 
         assert_eq!(
             repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
                     example_uri => example_config,
                     fuchsia_uri => fuchsia_config,
@@ -448,7 +613,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_dir_overlapping_filename_wins() {
+    fn test_builder_static_configs_dir_overlapping_filename_wins() {
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
@@ -486,26 +651,25 @@ mod tests {
             ),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let (builder, errors) = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(dir.path())
+            .unwrap_err();
 
-        let overridden_configs =
-            vec![fuchsia_config, fuchsia_com_config, example_config, oem_config];
-        assert_eq!(errors.len(), overridden_configs.len(), "errors: {:?}", errors);
+        assert_eq!(errors.len(), 4);
+        assert_overridden_error(&errors[0], &fuchsia_config);
+        assert_overridden_error(&errors[1], &fuchsia_com_config);
+        assert_overridden_error(&errors[2], &example_config);
+        assert_overridden_error(&errors[3], &oem_config);
 
-        for (err, config) in errors.into_iter().zip(overridden_configs) {
-            match err {
-                LoadError::Overridden { replaced_config } => {
-                    assert_eq!(replaced_config, config);
-                }
-                _ => {
-                    panic!("unexpected error: {}", err);
-                }
-            }
-        }
+        let repomgr = builder.build();
 
         assert_eq!(
             repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
                     fuchsia_uri => fuchsia_com_json_config,
                 },
@@ -515,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_dir_overlapping_first_wins() {
+    fn test_builder_static_configs_dir_overlapping_first_wins() {
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_uri.clone())
@@ -533,21 +697,22 @@ mod tests {
             ("2", RepositoryConfigs::Version1(vec![fuchsia_config2.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let (builder, errors) = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(dir.path())
+            .unwrap_err();
 
         assert_eq!(errors.len(), 1);
-        match &errors[0] {
-            LoadError::Overridden { replaced_config } => {
-                assert_eq!(replaced_config, &fuchsia_config2);
-            }
-            err => {
-                panic!("unexpected error: {}", err);
-            }
-        }
+        assert_overridden_error(&errors[0], &fuchsia_config2);
+
+        let repomgr = builder.build();
 
         assert_eq!(
             repomgr,
             RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
                     fuchsia_uri => fuchsia_config1,
                 },
@@ -557,8 +722,127 @@ mod tests {
     }
 
     #[test]
+    fn test_builder_dynamic_configs_path_ignores_if_not_exists() {
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+
+        assert_eq!(
+            repomgr,
+            RepositoryManager {
+                dynamic_configs_path: dynamic_configs_path,
+                static_configs: HashMap::new(),
+                dynamic_configs: HashMap::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_builder_dynamic_configs_path_invalid_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let invalid_path = dir.path().join("invalid");
+
+        {
+            let mut f = File::create(&invalid_path).unwrap();
+            f.write(b"hello world").unwrap();
+        }
+
+        let (builder, err) = RepositoryManagerBuilder::new(&invalid_path).unwrap_err();
+        assert_parse_error(&err, &invalid_path);
+        let repomgr = builder.build();
+
+        assert_eq!(
+            repomgr,
+            RepositoryManager {
+                dynamic_configs_path: invalid_path,
+                static_configs: HashMap::new(),
+                dynamic_configs: HashMap::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_builder_dynamic_configs_path() {
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+
+        let config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![0]))
+            .build();
+
+        let dynamic_dir =
+            create_dir(vec![("config", RepositoryConfigs::Version1(vec![config.clone()]))]);
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+
+        assert_eq!(
+            repomgr,
+            RepositoryManager {
+                dynamic_configs_path,
+                static_configs: HashMap::new(),
+                dynamic_configs: hashmap! {
+                    fuchsia_uri => config,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn test_persistence() {
+        let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+
+        let static_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![1]))
+            .build();
+        let static_configs = RepositoryConfigs::Version1(vec![static_config.clone()]);
+        let static_dir = create_dir(vec![("config", static_configs.clone())]);
+
+        let old_dynamic_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![2]))
+            .build();
+        let old_dynamic_configs = RepositoryConfigs::Version1(vec![old_dynamic_config.clone()]);
+        let dynamic_dir = create_dir(vec![("config", old_dynamic_configs.clone())]);
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let mut repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(&static_dir)
+            .unwrap()
+            .build();
+
+        // make sure the dynamic config file didn't change just from opening it.
+        let f = File::open(&dynamic_configs_path).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        assert_eq!(actual, old_dynamic_configs);
+
+        let new_dynamic_config = RepositoryConfigBuilder::new(fuchsia_uri.clone())
+            .add_root_key(RepositoryKey::Ed25519(vec![3]))
+            .build();
+        let new_dynamic_configs = RepositoryConfigs::Version1(vec![new_dynamic_config.clone()]);
+
+        // Inserting a new repo should update the config file.
+        assert_eq!(repomgr.insert(new_dynamic_config.clone()), Some(old_dynamic_config));
+        let f = File::open(&dynamic_configs_path).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        assert_eq!(actual, new_dynamic_configs);
+
+        // Removing the repo should empty out the file.
+        assert_eq!(repomgr.remove(&fuchsia_uri), Ok(Some(new_dynamic_config)));
+        let f = File::open(&dynamic_configs_path).unwrap();
+        let actual: RepositoryConfigs = serde_json::from_reader(f).unwrap();
+        assert_eq!(actual, RepositoryConfigs::Version1(vec![]));
+
+        // We should now be back to the static config.
+        assert_eq!(repomgr.get(&fuchsia_uri), Some(&static_config));
+        assert_eq!(repomgr.remove(&fuchsia_uri), Err(CannotRemoveStaticRepositories));
+    }
+
+    #[test]
     fn test_list_empty() {
-        let repomgr = RepositoryManager::new();
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
         assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
@@ -570,13 +854,19 @@ mod tests {
         let fuchsia_uri = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_uri).build();
 
-        let dir = create_dir(vec![
+        let static_dir = create_dir(vec![
             ("example.com", RepositoryConfigs::Version1(vec![example_config.clone()])),
             ("fuchsia.com", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
         ]);
 
-        let (repomgr, errors) = RepositoryManager::load_dir(dir.path());
-        assert_eq!(errors.len(), 0);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let repomgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+            .unwrap()
+            .load_static_configs_dir(static_dir.path())
+            .unwrap()
+            .build();
 
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![&example_config, &fuchsia_config,]);
     }
