@@ -76,7 +76,11 @@ func (r *Repo) Init() error {
 	}
 
 	// Fuchsia repositories always use consistent snapshots.
-	return r.Repo.Init(true)
+	if err := r.Repo.Init(true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GenKeys will generate a full suite of the necessary keys for signing a

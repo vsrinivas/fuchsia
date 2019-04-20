@@ -31,11 +31,13 @@ func platformDataDir() string {
 
 // Config contains a common runtime configuration for repository manipulations.
 type Config struct {
-	RepoDir string
+	RepoDir       string
+	TimeVersioned bool
 }
 
 func (c *Config) Vars(fs *flag.FlagSet) {
 	fs.StringVar(&c.RepoDir, "repo", "", "path to repostory directory")
+	fs.BoolVar(&c.TimeVersioned, "vt", false, "Set repo versioning based on time rather than a monotonic increment")
 }
 
 func (c *Config) ApplyDefaults() {

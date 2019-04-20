@@ -6,6 +6,7 @@
 package newrepo
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -46,5 +47,17 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	return r.GenKeys()
+	if err := r.GenKeys(); err != nil {
+		return err
+	}
+
+	if err := r.Repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		return err
+	}
+
+	if err := r.CommitUpdates(config.TimeVersioned); err != nil {
+		return err
+	}
+
+	return nil
 }

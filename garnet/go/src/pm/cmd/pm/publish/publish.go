@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	usage = `Usage: %s publish (-a|-bs|-ps) -C -f file [-r <repo_path>]
+	usage = `Usage: %s publish (-a|-bs|-ps) -C -f file [-repo <repository directory>]
 		Pass any one of the mode flags (-a|-bs|-ps), and at least one file to pubish.
 `
 	serverBase = "amber-files"
@@ -53,12 +53,10 @@ func Run(cfg *build.Config, args []string) error {
 	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
 	modeFlags := []*bool{archiveMode, packageSetMode, blobSetMode}
 
-	// TODO(raggi): cleanup args...
 	config := &repo.Config{}
-	//config.Vars(fs)
-	fs.StringVar(&config.RepoDir, "r", "", "Path to the TUF repository directory.")
+	config.Vars(fs)
+	fs.StringVar(&config.RepoDir, "r", "", "(deprecated, alias for -repo).")
 	verbose := fs.Bool("v", false, "Print out more informational messages.")
-	verTime := fs.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
 
 	filePaths := RepeatedArg{}
 	fs.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
@@ -199,7 +197,7 @@ func Run(cfg *build.Config, args []string) error {
 				return err
 			}
 		}
-		if err := repo.CommitUpdates(*verTime); err != nil {
+		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
 		}
 
@@ -222,7 +220,7 @@ func Run(cfg *build.Config, args []string) error {
 			return err
 		}
 
-		if err := repo.CommitUpdates(*verTime); err != nil {
+		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
 		}
 
