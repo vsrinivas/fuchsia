@@ -1368,7 +1368,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
 }
 
 void Coordinator::Suspend(uint32_t flags) {
-    if (!(flags & DEVICE_SUSPEND_FLAG_SUSPEND_RAM)) {
+    if ((flags & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
         vfs_exit(fshost_event());
     }
 

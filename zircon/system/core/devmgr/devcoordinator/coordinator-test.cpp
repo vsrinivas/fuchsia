@@ -9,12 +9,14 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/coding.h>
+#include <threads.h>
 #include <zircon/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "coordinator.h"
 #include "devfs.h"
 #include "devhost.h"
+#include "../shared/fdio.h"
 
 namespace devmgr {
 zx::channel fs_clone(const char* path) {
@@ -32,6 +34,7 @@ devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher) {
     config.dispatcher = dispatcher;
     config.require_system = false;
     config.asan_drivers = false;
+    zx::event::create(0, &config.fshost_event);
     return config;
 }
 
@@ -504,8 +507,33 @@ bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
     return DeviceHasPendingMessages(devices_[device_index].remote);
 }
 
+class SuspendTestCase : public MultipleDeviceTestCase {
+public:
+    void SuspendTest(uint32_t flags);
+};
+
+TEST_F(SuspendTestCase, Poweroff) {
+    ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
+}
+
+TEST_F(SuspendTestCase, Reboot) {
+    ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT));
+}
+
+TEST_F(SuspendTestCase, RebootWithFlags) {
+    ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER));
+}
+
+TEST_F(SuspendTestCase, Mexec) {
+    ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_MEXEC));
+}
+
+TEST_F(SuspendTestCase, SuspendToRam) {
+    ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_SUSPEND_RAM));
+}
+
 // Verify the suspend order is correct
-TEST_F(MultipleDeviceTestCase, Suspend) {
+void SuspendTestCase::SuspendTest(uint32_t flags) {
     struct DeviceDesc {
         // Index into the device desc array below.  UINT32_MAX = platform_bus()
         const size_t parent_desc_index;
@@ -534,8 +562,42 @@ TEST_F(MultipleDeviceTestCase, Suspend) {
                                            &desc.index));
     }
 
-    coordinator()->Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
-    loop()->RunUntilIdle();
+    const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
+    if (vfs_exit_expected) {
+        zx::unowned_event event(coordinator()->fshost_event());
+        auto thrd_func = [](void* ctx) -> int {
+            zx::unowned_event event(*static_cast<zx::unowned_event*>(ctx));
+            if (event->wait_one(FSHOST_SIGNAL_EXIT, zx::time::infinite(), nullptr) != ZX_OK) {
+                return false;
+            }
+            if (event->signal(0, FSHOST_SIGNAL_EXIT_DONE) != ZX_OK) {
+                return false;
+            }
+            return true;
+        };
+        thrd_t fshost_thrd;
+        ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
+
+        coordinator()->Suspend(flags);
+        loop()->RunUntilIdle();
+
+        int thread_status;
+        ASSERT_EQ(thrd_join(fshost_thrd, &thread_status), thrd_success);
+        ASSERT_TRUE(thread_status);
+
+        // Make sure that vfs_exit() happened.
+        ASSERT_OK(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0),
+                                                         nullptr));
+    } else {
+        coordinator()->Suspend(flags);
+        loop()->RunUntilIdle();
+
+        // Make sure that vfs_exit() didn't happen.
+        ASSERT_EQ(
+                coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT | FSHOST_SIGNAL_EXIT_DONE,
+                                                       zx::time(0), nullptr),
+                ZX_ERR_TIMED_OUT);
+    }
 
     size_t num_to_suspend = fbl::count_of(devices);
     while (num_to_suspend > 0) {
@@ -557,7 +619,7 @@ TEST_F(MultipleDeviceTestCase, Suspend) {
             }
 
             ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(
-                    device(desc.index)->remote, DEVICE_SUSPEND_FLAG_POWEROFF, ZX_OK));
+                    device(desc.index)->remote, flags, ZX_OK));
 
             // Make sure all descendants of this device are already suspended.
             // We just need to check immediate children since this will
@@ -577,8 +639,8 @@ TEST_F(MultipleDeviceTestCase, Suspend) {
         ASSERT_TRUE(made_progress);
         loop()->RunUntilIdle();
     }
-    ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(
-            platform_bus_remote(), DEVICE_SUSPEND_FLAG_POWEROFF, ZX_OK));
+
+    ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
 }
 
 class CompositeTestCase : public MultipleDeviceTestCase {
