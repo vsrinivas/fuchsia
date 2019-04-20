@@ -4,6 +4,7 @@ require (
 	cloud.google.com/go v0.34.0
 	github.com/golang/mock v1.2.0
 	github.com/golang/protobuf v1.2.0
+	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/google/subcommands v0.0.0-20181012225330-46f0354f6315
 	github.com/google/uuid v1.1.0

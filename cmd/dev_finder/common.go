@@ -8,8 +8,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +48,17 @@ func (m *mDNSResponse) getReceiveIP() (net.IP, error) {
 
 type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice, chan<- error)
 
+type mdnsInterface interface {
+	AddHandler(f func(net.Interface, net.Addr, mdns.Packet))
+	AddWarningHandler(f func(net.Addr, error))
+	AddErrorHandler(f func(error))
+	SendTo(packet mdns.Packet, dst *net.UDPAddr) error
+	Send(packet mdns.Packet) error
+	Start(ctx context.Context, port int) error
+}
+
+type newMDNSFunc func() mdnsInterface
+
 // Contains common command information for embedding in other dev_finder commands.
 type devFinderCmd struct {
 	// Outputs in JSON format if true.
@@ -64,6 +77,10 @@ type devFinderCmd struct {
 	deviceLimit int
 
 	mdnsHandler mDNSHandler
+
+	// Only for testing.
+	newMDNSFunc newMDNSFunc
+	output      io.Writer
 }
 
 type fuchsiaDevice struct {
@@ -79,6 +96,13 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 }
 
+func (cmd *devFinderCmd) Output() io.Writer {
+	if cmd.output == nil {
+		return os.Stdout
+	}
+	return cmd.output
+}
+
 // Extracts the IP from its argument, returning an error if the type is unsupported.
 func addrToIP(addr net.Addr) (net.IP, error) {
 	switch v := addr.(type) {
@@ -90,6 +114,13 @@ func addrToIP(addr net.Addr) (net.IP, error) {
 		return v.IP, nil
 	}
 	return nil, errors.New("unsupported address type")
+}
+
+func (cmd *devFinderCmd) newMDNS() mdnsInterface {
+	if cmd.newMDNSFunc != nil {
+		return cmd.newMDNSFunc()
+	}
+	return &mdns.MDNS{}
 }
 
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet) ([]*fuchsiaDevice, error) {
@@ -105,7 +136,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 	errChan := make(chan error)
 	devChan := make(chan *fuchsiaDevice)
 	for _, p := range strings.Split(cmd.mdnsPorts, ",") {
-		var m mdns.MDNS
+		m := cmd.newMDNS()
 		m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
 			response := mDNSResponse{recv, addr, rxPacket}
 			cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)

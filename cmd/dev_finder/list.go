@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/google/subcommands"
@@ -78,7 +77,7 @@ func listMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchs
 	}
 }
 
-func (cmd *listCmd) execute(ctx context.Context) error {
+func (cmd *listCmd) findDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 	listPacket := mdns.Packet{
 		Header: mdns.Header{QDCount: 1},
 		Questions: []mdns.Question{
@@ -92,16 +91,24 @@ func (cmd *listCmd) execute(ctx context.Context) error {
 	}
 	devices, err := cmd.sendMDNSPacket(ctx, listPacket)
 	if err != nil {
-		return fmt.Errorf("sending/receiving mdns packets: %v", err)
+		return nil, fmt.Errorf("sending/receiving mdns packets: %v", err)
 	}
-	filteredDevices := make([]*fuchsiaDevice, 0)
+	var filteredDevices []*fuchsiaDevice
 	for _, device := range devices {
 		if strings.Contains(device.domain, cmd.domainFilter) {
 			filteredDevices = append(filteredDevices, device)
 		}
 	}
 	if len(filteredDevices) == 0 {
-		return fmt.Errorf("no devices with domain matching '%v'", cmd.domainFilter)
+		return nil, fmt.Errorf("no devices with domain matching '%v'", cmd.domainFilter)
+	}
+	return filteredDevices, nil
+}
+
+func (cmd *listCmd) execute(ctx context.Context) error {
+	filteredDevices, err := cmd.findDevices(ctx)
+	if err != nil {
+		return err
 	}
 
 	if cmd.json {
@@ -113,9 +120,9 @@ func (cmd *listCmd) execute(ctx context.Context) error {
 func (cmd *listCmd) outputNormal(filteredDevices []*fuchsiaDevice) error {
 	for _, device := range filteredDevices {
 		if cmd.fullInfo {
-			fmt.Printf("%v %v\n", device.addr, device.domain)
+			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addr, device.domain)
 		} else {
-			fmt.Printf("%v\n", device.addr)
+			fmt.Fprintf(cmd.Output(), "%v\n", device.addr)
 		}
 	}
 	return nil
@@ -132,7 +139,7 @@ func (cmd *listCmd) outputJSON(filteredDevices []*fuchsiaDevice) error {
 		jsonOut.Devices = append(jsonOut.Devices, dev)
 	}
 
-	e := json.NewEncoder(os.Stdout)
+	e := json.NewEncoder(cmd.Output())
 	e.SetIndent("", "  ")
 	return e.Encode(jsonOut)
 }
