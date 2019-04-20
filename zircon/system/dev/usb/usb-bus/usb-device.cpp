@@ -102,6 +102,8 @@ UsbDevice::Endpoint* UsbDevice::GetEndpoint(uint8_t ep_address) {
 }
 
 bool UsbDevice::UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req) {
+    fbl::AutoLock lock(&ep->lock);
+
     auto unowned = UnownedRequest(completed_req, parent_req_size_, /* allow_destruct */ false);
 
     std::optional<size_t> completed_req_idx = ep->pending_reqs.find(&unowned);
@@ -169,8 +171,6 @@ void UsbDevice::RequestComplete(usb_request_t* req) {
         return;
     }
 
-    fbl::AutoLock lock(&ep->lock);
-
     bool do_callback = UpdateEndpoint(ep, req);
     if (do_callback) {
         QueueCallback(req);
@@ -178,10 +178,12 @@ void UsbDevice::RequestComplete(usb_request_t* req) {
 }
 
 void UsbDevice::QueueCallback(usb_request_t* req) {
-    fbl::AutoLock lock(&callback_lock_);
+    {
+        fbl::AutoLock lock(&callback_lock_);
 
-    // move original request to completed_reqs list so it can be completed on the callback_thread
-    completed_reqs_.push(UnownedRequest(req, parent_req_size_));
+        // move original request to completed_reqs list so it can be completed on the callback_thread
+        completed_reqs_.push(UnownedRequest(req, parent_req_size_));
+    }
     sync_completion_signal(&callback_thread_completion_);
 }
 

@@ -130,7 +130,7 @@ private:
     // get a callback. If that prior request has also already completed,
     // |out_additional_callback| will be populated.
     // Returns true if a callback is required.
-    bool UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req) __TA_REQUIRES(ep->lock);
+    bool UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req);
 
     void RequestComplete(usb_request_t* req);
     void QueueCallback(usb_request_t* req);
