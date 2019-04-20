@@ -16,7 +16,7 @@ mod inspect;
 type ComponentsResult = Result<Vec<Component>, Error>;
 type RealmsResult = Result<Vec<Realm>, Error>;
 type TraversalResult = Result<(), Error>;
-type DirEntryResult = Result<fs::DirEntry, Error>;
+type DirEntryResult = Result<Vec<fs::DirEntry>, Error>;
 
 struct Realm {
     job_id: u32,
@@ -108,17 +108,20 @@ fn visit_child_realms(realm_path: &Path) -> RealmsResult {
     for entry in entries {
         let entry = entry?;
         // visit <realm id>/r/<child realm name>/<child realm id>/
-        let child_realm_id_dir_entry = find_id_directory(&entry.path())?;
-        let path = child_realm_id_dir_entry.path();
-        child_realms.push(Realm::create(&path)?);
+        let child_realm_id_dir_entries = find_id_directories(&entry.path())?;
+        for child_realm_id_dir_entry in child_realm_id_dir_entries {
+            let path = child_realm_id_dir_entry.path();
+            child_realms.push(Realm::create(&path)?);
+        }
     }
     Ok(child_realms)
 }
 
 /// Used as a helper function to traverse <realm id>/r/, <realm id>/c/,
 /// <component instance id>/c/, following through into their id subdirectories.
-fn find_id_directory(dir: &Path) -> DirEntryResult {
+fn find_id_directories(dir: &Path) -> DirEntryResult {
     let entries = fs::read_dir(dir)?;
+    let mut vec = vec![];
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -127,12 +130,15 @@ fn find_id_directory(dir: &Path) -> DirEntryResult {
             name.to_string_lossy()
         };
 
-        // Find the first numeric directory name and return its directory entry.
+        // check for numeric directory name.
         if id.chars().all(char::is_numeric) {
-            return Ok(entry);
+            vec.push(entry)
         }
     }
-    return Err(err_msg("Directory not found"));
+    match !vec.is_empty() {
+        true => Ok(vec),
+        false => Err(err_msg("Directory not found")),
+    }
 }
 
 fn visit_system_objects(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
@@ -189,9 +195,11 @@ fn visit_child_components(parent_path: &Path) -> ComponentsResult {
     for entry in entries {
         let entry = entry?;
         // Visits */c/<component name>/<component instance id>.
-        let component_instance_id_dir_entry = find_id_directory(&entry.path())?;
-        let path = component_instance_id_dir_entry.path();
-        child_components.push(Component::create(&path)?);
+        let component_instance_id_dir_entries = find_id_directories(&entry.path())?;
+        for component_instance_id_dir_entry in component_instance_id_dir_entries {
+            let path = component_instance_id_dir_entry.path();
+            child_components.push(Component::create(&path)?);
+        }
     }
     Ok(child_components)
 }
