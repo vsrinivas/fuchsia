@@ -20,9 +20,12 @@ import (
 )
 
 type ControlServer struct {
+	*amber.ControlTransitionalBase
 	daemon    *daemon.Daemon
 	sysUpdate *sys_update.SystemUpdateMonitor
 }
+
+var _ = amber.Control((*ControlServer)(nil))
 
 type EventsImpl struct{}
 

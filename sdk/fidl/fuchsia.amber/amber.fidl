@@ -4,6 +4,7 @@
 
 library fuchsia.amber;
 
+using fuchsia.pkg;
 using zx;
 
 struct OAuth2Config {
@@ -185,6 +186,16 @@ protocol Control {
     // Sent when a blob fails to write, causing one or more package installs to
     // permanently fail.
     PackagesFailed(vector<string> merkle, zx.status error, string blob_merkle);
+
+    // Opens a TUF repository specified by the provided RepositoryConfig.
+    // The repository will stay open for the life of the OpenedRepository
+    // channel.
+    //
+    // Packages in the opened repository can be accessed via
+    // OpenedRepository.GetUpdateComplete, but will not appear in calls to
+    // the global GetUpdateComplete, above.
+    [Transitional = "PKG-661"]
+    OpenRepository(fuchsia.pkg.RepositoryConfig config, request<OpenedRepository> repo) -> (zx.status result);
 };
 
 [Discoverable]
@@ -192,4 +203,21 @@ protocol Events {
     // Event that is triggered when an update failed because blobfs is out of
     // storage.
     -> OnOutOfSpace();
+};
+
+protocol OpenedRepository {
+    // Get an update for the package identified by 'name' which has the
+    // provided variant. The package data is sent to PackageFS which then
+    // stores the package in BlobFS. This method provides a FetchResult that
+    // will send the ultimate results.
+    GetUpdateComplete(string name, string? variant, string? merkle, request<FetchResult> result);
+};
+
+// A protocol providing results for a OpenedRepository.GetUpdateComplete call.
+// Only one event will be sent before the channel is closed.
+protocol FetchResult {
+    // Sent when the package is successfully installed and available for use.
+    -> OnSuccess(string merkle);
+    // Sent when the package fails to install for some reason.
+    -> OnError(zx.status result, string message);
 };

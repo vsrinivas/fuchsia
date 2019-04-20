@@ -8,4 +8,7 @@ fidl("fuchsia.amber") {
   sources = [
     "amber.fidl",
   ]
+  deps = [
+    "//sdk/fidl/fuchsia.pkg",
+  ]
 }
