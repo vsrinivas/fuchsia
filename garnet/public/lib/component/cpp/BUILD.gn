@@ -44,7 +44,6 @@ source_set("cpp") {
     "//garnet/bin/media/*",
     "//garnet/bin/ui/set_renderer_params_HACK:*",
     "//garnet/bin/ui/present_view:*",
-    "//garnet/bin/ui/set_root_view:*",
     "//garnet/bin/ui/sketchy:*",
     "//garnet/bin/ui/screencap:*",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:*",

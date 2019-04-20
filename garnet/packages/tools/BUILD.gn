@@ -14,7 +14,6 @@ group("scenic") {
     "//garnet/bin/ui:print_input",
     "//garnet/bin/ui:screencap",
     "//garnet/bin/ui:set_renderer_params",
-    "//garnet/bin/ui:set_root_view",
     "//garnet/bin/ui:snapshot",
   ]
 }

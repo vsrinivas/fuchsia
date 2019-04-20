@@ -33,7 +33,6 @@ killall scenic* || true
 killall basemgr* || true
 killall view_manager* || true
 killall flutter* || true
-killall set_root_view* || true
 killall present_view* || true
 
 echo "== $BENCHMARK_LABEL: Starting app..."
