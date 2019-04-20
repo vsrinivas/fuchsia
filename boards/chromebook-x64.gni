@@ -6,11 +6,13 @@ target_cpu = "x64"
 
 board_name = "chromebook-x64"
 
+board_packages = []
+
 update_kernels = [ "zbi.signed" ]
 
 use_vboot = true
 
-board_packages = [
+board_package_labels = [
   # Include all drivers for now.
-  "garnet/packages/prod/drivers",
+  "//garnet/packages/prod:drivers",
 ]

@@ -4,8 +4,10 @@
 
 target_cpu = "arm64"
 
-board_packages = [
+board_packages = []
+
+board_package_labels = [
   # Include all drivers for now.
-  "garnet/packages/prod/drivers",
-  "garnet/packages/prod/sysmem-assistant",
+  "//garnet/packages/prod:drivers",
+  "//garnet/packages/prod:sysmem-assistant",
 ]
