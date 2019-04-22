@@ -317,7 +317,12 @@ int main(int argc, const char* argv[]) {
     fbl::Vector<fbl::Vector<uint64_t>> display_layers;
     fbl::Vector<fbl::unique_ptr<VirtualLayer>> layers;
     int32_t num_frames = 120; // default to 120 frames
-    bool isMediaTek = false;
+    enum Platform {
+        INTEL,
+        ARM_MEDIATEK,
+        ARM_AMLOGIC,
+    };
+    Platform platform = INTEL; // default to Intel
 
     if (!bind_display(&displays)) {
         return -1;
@@ -372,7 +377,11 @@ int main(int argc, const char* argv[]) {
             argv += 2;
             argc -= 2;
         } else if (strcmp(argv[0], "--mediatek") == 0) {
-            isMediaTek = true;
+            platform = ARM_MEDIATEK;
+            argv += 1;
+            argc -= 1;
+        } else if (strcmp(argv[0], "--amlogic") == 0) {
+            platform = ARM_AMLOGIC;
             argv += 1;
             argc -= 1;
         } else {
@@ -382,7 +391,7 @@ int main(int argc, const char* argv[]) {
     }
 
     fbl::AllocChecker ac;
-    if (!isMediaTek) {
+    if (platform == INTEL) {
         // Color layer which covers all displays
         fbl::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
         if (!ac.check()) {
@@ -442,7 +451,7 @@ int main(int argc, const char* argv[]) {
         CursorLayer* layer4 = new CursorLayer(displays);
         layers.push_back(std::move(layer4));
 #endif
-    } else {
+    } else if (platform == ARM_MEDIATEK) {
         // Mediatek display test
         uint32_t width = displays[0].mode().horizontal_resolution;
         uint32_t height = displays[0].mode().vertical_resolution;
@@ -487,6 +496,15 @@ int main(int argc, const char* argv[]) {
         }
         layer4->SetAlpha(true, (float)0.3);
         layers.push_back(std::move(layer4));
+    } else if (platform == ARM_AMLOGIC) {
+        // Mediatek display test
+        fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac,
+                                                                                      displays);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        layers.push_back(std::move(layer1));
     }
 
     printf("Initializing layers\n");

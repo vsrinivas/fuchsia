@@ -384,10 +384,31 @@ uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
 
     fbl::AutoLock lock(&display_lock_);
 
-    bool success;
-    if (display_configs[0]->layer_count != 1) {
-        success = display_configs[0]->layer_count == 0;
-    } else {
+    bool success = true;
+
+    if (display_configs[0]->layer_count > 1) {
+        // We only support 1 layer
+        success = false;
+    }
+
+    if (success && display_configs[0]->cc_flags) {
+        // Make sure cc values are correct
+        if (display_configs[0]->cc_flags & COLOR_CONVERSION_PREOFFSET) {
+            for (int i = 0; i < 3; i++) {
+                success = success && display_configs[0]->cc_preoffsets[i] > -1;
+                success = success && display_configs[0]->cc_preoffsets[i] < 1;
+            }
+        }
+        if (success && display_configs[0]->cc_flags & COLOR_CONVERSION_POSTOFFSET) {
+            for (int i = 0; i < 3; i++) {
+                success = success && display_configs[0]->cc_postoffsets[i] > -1;
+                success = success && display_configs[0]->cc_postoffsets[i] < 1;
+            }
+        }
+    }
+
+    if (success) {
+        // Make sure ther layer configuration is supported
         const primary_layer_t& layer = display_configs[0]->layer_list[0]->cfg.primary;
         frame_t frame = {
             .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
@@ -398,7 +419,6 @@ uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
                 && layer.image.height == height_
                 && memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0
                 && memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0
-                && display_configs[0]->cc_flags == 0
                 && layer.alpha_mode == ALPHA_DISABLE;
     }
     if (!success) {
@@ -406,7 +426,6 @@ uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
         for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
             layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
         }
-        layer_cfg_result_count[0] = display_configs[0]->layer_count;
     }
     return CONFIG_DISPLAY_OK;
 }
@@ -433,7 +452,7 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
         addr = (uint8_t) (uint64_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
         current_image_valid_= true;
         current_image_ = addr;
-        osd_->FlipOnVsync(addr);
+        osd_->FlipOnVsync(display_configs[0]);
     } else {
         current_image_valid_= false;
         if (full_init_done_) {

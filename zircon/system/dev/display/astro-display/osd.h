@@ -7,6 +7,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddktl/protocol/display/controller.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/bti.h>
@@ -25,6 +26,16 @@ struct RdmaTable {
 enum {
     IDX_CFG_W0,
     IDX_CTRL_STAT,
+    IDX_MATRIX_COEF00_01,
+    IDX_MATRIX_COEF02_10,
+    IDX_MATRIX_COEF11_12,
+    IDX_MATRIX_COEF20_21,
+    IDX_MATRIX_COEF22,
+    IDX_MATRIX_OFFSET0_1,
+    IDX_MATRIX_OFFSET2,
+    IDX_MATRIX_PRE_OFFSET0_1,
+    IDX_MATRIX_PRE_OFFSET2,
+    IDX_MATRIX_EN_CTRL,
     IDX_MAX,
 };
 
@@ -53,7 +64,7 @@ public:
     zx_status_t Configure();
     void Disable();
     // This function will apply configuration when VSYNC interrupt occurs using RDMA
-    void FlipOnVsync(uint8_t idx);
+    void FlipOnVsync(const display_config_t* config);
     void Dump();
     void Release();
 
@@ -69,7 +80,9 @@ private:
     void FlushRdmaTable(uint32_t channel);
     int GetNextAvailableRdmaChannel();
     int RdmaThread();
-
+    // This function converts a float into Fixed Point 3.10 format
+    uint32_t FloatToFixed3_10(float f);
+    uint32_t FloatToOffset(float f);
     std::optional<ddk::MmioBuffer>      vpu_mmio_;
     pdev_protocol_t                     pdev_ = {nullptr, nullptr};
     zx::bti                             bti_;
