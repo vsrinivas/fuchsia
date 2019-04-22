@@ -53,7 +53,7 @@ func init() {
 	flag.Usage = func() {
 		fmt.Fprint(os.Stderr, usage)
 		flag.PrintDefaults()
-		os.Exit(0)
+		os.Exit(1)
 	}
 	authDefaults := chromeinfra.DefaultAuthOptions()
 	authDefaults.Scopes = append(authDefaults.Scopes, storage.ScopeReadWrite)
