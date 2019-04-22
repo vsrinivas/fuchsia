@@ -48,10 +48,12 @@ class Download {
       : build_id_(build_id), result_cb_(std::move(result_cb)) {}
 
   ~Download() {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
-                    path = std::move(path_)]() { result_cb(err, path); });
+    Finish();
   }
+
+  // Notify this download object that we have gotten the symbols if we're going
+  // to get them.
+  void Finish();
 
   // Notify this Download object that one of the servers has the symbols
   // available.
@@ -76,8 +78,22 @@ class Download {
   bool trying_ = false;
 };
 
+void Download::Finish() {
+  if (!result_cb_)
+    return;
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
+                  path = std::move(path_)]() { result_cb(err, path); });
+
+  result_cb_ = nullptr;
+}
+
 void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
   FXL_DCHECK(self.get() == this);
+
+  if (!result_cb_)
+    return;
 
   server->CheckFetch(
       build_id_,
@@ -94,6 +110,9 @@ void Download::Found(std::shared_ptr<Download> self,
                      std::function<void(SymbolServer::FetchCallback)> cb) {
   FXL_DCHECK(self.get() == this);
 
+  if (!result_cb_)
+    return;
+
   if (trying_) {
     server_cbs_.push_back(std::move(cb));
     return;
@@ -104,6 +123,9 @@ void Download::Found(std::shared_ptr<Download> self,
 
 void Download::Error(std::shared_ptr<Download> self, const Err& err) {
   FXL_DCHECK(self.get() == this);
+
+  if (!result_cb_)
+    return;
 
   if (!err_.has_error()) {
     err_ = err;
@@ -130,6 +152,7 @@ void Download::RunCB(std::shared_ptr<Download> self,
     } else {
       self->err_ = err;
       self->path_ = path;
+      self->Finish();
     }
   });
 }
