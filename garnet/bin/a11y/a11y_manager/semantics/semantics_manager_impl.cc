@@ -42,16 +42,6 @@ void SemanticsManagerImpl::RegisterView(
                                      std::move(semantic_tree_request));
 }
 
-fuchsia::accessibility::semantics::NodePtr
-SemanticsManagerImpl::GetHitAccessibilityNode(
-    const fuchsia::ui::views::ViewRef& view_ref,
-    const fuchsia::math::PointF point) {
-  for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameView(view_ref))
-      return binding->impl()->GetHitAccessibilityNode(point);
-  }
-  return nullptr;
-}
 
 fuchsia::accessibility::semantics::NodePtr
 SemanticsManagerImpl::GetAccessibilityNode(

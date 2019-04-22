@@ -8,7 +8,7 @@ fidl("fuchsia.accessibility.semantics") {
   sdk_category = "experimental"
 
   sources = [
-    "data.fidl",
+    "node.fidl",
     "semantics_manager.fidl",
   ]
 

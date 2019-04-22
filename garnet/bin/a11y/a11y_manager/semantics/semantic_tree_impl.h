@@ -47,12 +47,6 @@ class SemanticTreeImpl
 
   ~SemanticTreeImpl() override = default;
 
-  // Provides a way to perform hit-testing for a front-end node with local view
-  // hit coordinates from Scenic. Returns the deepest node that the input
-  // touches. Currently, this only supports 2D hit-tests using bounding boxes.
-  fuchsia::accessibility::semantics::NodePtr GetHitAccessibilityNode(
-      fuchsia::math::PointF point);
-
   // Provides a way to query a node with node id. This method returns
   // a copy of the queried node. It may return a nullptr if no node is found.
   fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
@@ -111,16 +105,6 @@ class SemanticTreeImpl
 
   // Helper function to delete pointer from parent node to given node.
   void DeletePointerFromParent(uint32_t node_id);
-
-  // Internal recursive hit-test function using the cached tree. Returns a
-  // null pointer if no hit nodes were found. Returns a copy of the node
-  // (but not the subtree), to prevent tree modification.
-  // NOTE: This is a 2D hit test and only operates on bounding boxes of
-  // semantics nodes.
-  const fuchsia::accessibility::semantics::NodePtr HitTest(
-      const std::unordered_map<uint32_t,
-                               fuchsia::accessibility::semantics::Node>& nodes,
-      uint32_t starting_node_id, escher::vec4 coordinates) const;
 
   // Internal helper function to check if a point is within a bounding box.
   bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,

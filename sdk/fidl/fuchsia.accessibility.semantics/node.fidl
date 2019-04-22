@@ -1,0 +1,75 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.semantics;
+
+using fuchsia.ui.gfx;
+
+/// Represents actions that can be applied to Nodes. In progress.
+enum Action {
+    // The default action associated with the role of an element.
+    DEFAULT = 1;
+};
+
+/// Represents a role of an element on an UI. In progress.
+enum Role {
+    // Role used to represent elements which role is not currently supported.
+    unknown = 1;
+};
+
+/// An attribute is an essential property to describe an element. Unlike states,
+/// attributes define the nature of an element, and a change in one of them
+/// changes the nature of the element itself.
+/// Example: a button with a label attribute 'ok', could have its label changed
+/// to 'cancel', which would alter drastically this element.  In progress.
+table  Attributes {
+    // The label for an element.
+    1: string label;
+};
+
+///  A state is a dynamic property of an element that may change in response to
+/// user action or automated processes. Thus, they are different from attributes
+/// in an important point, which is frequency of change.
+/// Example: a checkbox can be checked / unchecked, and this state can be
+/// altered via user input. In progress.
+table States {
+    // Whether the element is checked.
+    1: bool checked;
+};
+
+/// Node: data structure to represent semantic information about an UI element.
+///
+/// The Node represents a semantic element on an interface. This may
+/// be a button, a text field, a checkbox or any element that has a relevant
+/// semantic meaning so that assistive technology can understand the current UI.
+table Node {
+    // Unique ID that represents the node in a particular UI.
+    // Zero is assumed to be the root node and the only entry point to the tree.
+    // No forest is allowed.
+    1: uint32 node_id;
+
+    // Role of this element, e.g. button, checkbox, etc.
+    2: Role role;
+
+    // A list of states of this object, e.g. checked, editable, etc.
+    3: States states;
+
+    // A list of attributes of this node.
+    4: Attributes attributes;
+
+    // List of actions that can be performed on this node.
+    5: vector<Action> actions;
+
+    // The ordered list of children IDs  of this node.
+    // It is assumed that runtimes supplying semantic tree information will not
+    // create cycles inside the tree.
+    // It is also assumed that each node can have only one parent.
+    6: vector<uint32> child_ids;
+
+    // Local bounding box of this element.
+    7: fuchsia.ui.gfx.BoundingBox location;
+
+    // Transform from parent coordinate space to local space.
+    8: fuchsia.ui.gfx.mat4 transform;
+};

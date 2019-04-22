@@ -30,39 +30,6 @@ bool SemanticTreeImpl::BoxContainsPoint(
          box.max.y >= point.y;
 }
 
-const fuchsia::accessibility::semantics::NodePtr SemanticTreeImpl::HitTest(
-    const std::unordered_map<uint32_t, fuchsia::accessibility::semantics::Node>&
-        nodes,
-    uint32_t starting_node_id, escher::vec4 coordinates) const {
-  auto it = nodes.find(starting_node_id);
-  if (it == nodes.end()) {
-    return nullptr;
-  }
-  escher::mat4 transform =
-      scenic_impl::gfx::Unwrap(it->second.data().transform());
-  escher::vec4 local_coordinates = transform * coordinates;
-  escher::vec2 point(local_coordinates[0], local_coordinates[1]);
-
-  if (!BoxContainsPoint(it->second.data().location(), point)) {
-    return nullptr;
-  }
-  for (const auto& child : it->second.children_hit_test_order()) {
-    auto node = HitTest(nodes, child, local_coordinates);
-    if (node != nullptr) {
-      return node;
-    }
-  }
-  auto node_ptr = fuchsia::accessibility::semantics::Node::New();
-  it->second.Clone(node_ptr.get());
-  return node_ptr;
-}
-
-fuchsia::accessibility::semantics::NodePtr
-SemanticTreeImpl::GetHitAccessibilityNode(fuchsia::math::PointF point) {
-  escher::vec4 coordinate(point.x, point.y, 0, 1);
-  return HitTest(nodes_, kRootNode, coordinate);
-}
-
 fuchsia::accessibility::semantics::NodePtr
 SemanticTreeImpl::GetAccessibilityNode(uint32_t node_id) {
   auto node_it = nodes_.find(node_id);
@@ -147,14 +114,17 @@ void SemanticTreeImpl::LogSemanticTreeHelper(
   tree_log->append(kIndentSize * current_level, ' ');
 
   // Add logs for the current node.
-  absl::StrAppend(tree_log, "Node_id: ", std::to_string(root_node->node_id()),
-                  ", Label:", root_node->data().label(), kNewLine);
+  absl::StrAppend(
+      tree_log, "Node_id: ", std::to_string(root_node->node_id()), ", Label:",
+      root_node->attributes().has_label() ? root_node->attributes().label()
+                                          : "_empty",
+      kNewLine);
 
   // Iterate through all the children of the current node.
-  if (!root_node->has_children_traversal_order()) {
+  if (!root_node->has_child_ids()) {
     return;
   }
-  for (const auto& child : root_node->children_traversal_order()) {
+  for (const auto& child : root_node->child_ids()) {
     fuchsia::accessibility::semantics::NodePtr node_ptr =
         GetAccessibilityNode(child);
     LogSemanticTreeHelper(std::move(node_ptr), current_level + 1, tree_log);
@@ -189,10 +159,10 @@ bool SemanticTreeImpl::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
   }
   visited->insert(node->node_id());
 
-  if (!node->has_children_traversal_order()) {
+  if (!node->has_child_ids()) {
     return false;
   }
-  for (const auto& child : node->children_traversal_order()) {
+  for (const auto& child : node->child_ids()) {
     fuchsia::accessibility::semantics::NodePtr child_ptr =
         GetAccessibilityNode(child);
     if (!child_ptr) {
@@ -215,8 +185,8 @@ void SemanticTreeImpl::DeleteSubtree(uint32_t node_id) {
     return;
   }
 
-  if (node->has_children_traversal_order()) {
-    for (const auto& child : node->children_traversal_order()) {
+  if (node->has_child_ids()) {
+    for (const auto& child : node->child_ids()) {
       DeleteSubtree(child);
     }
   }
@@ -229,15 +199,14 @@ void SemanticTreeImpl::DeletePointerFromParent(uint32_t node_id) {
   // Loop through all the nodes in the tree, since there can be trees not rooted
   // at 0(root-node).
   for (auto it = nodes_.begin(); it != nodes_.end(); ++it) {
-    if (it->second.has_children_traversal_order()) {
+    if (it->second.has_child_ids()) {
       // Loop through all the children of the node.
-      for (auto child_it = it->second.children_traversal_order().begin();
-           child_it != it->second.children_traversal_order().end();
-           ++child_it) {
+      for (auto child_it = it->second.child_ids().begin();
+           child_it != it->second.child_ids().end(); ++child_it) {
         // If a child node is same as node_id, then delete child node from the
         // list.
         if (*child_it == node_id) {
-          it->second.mutable_children_traversal_order()->erase(child_it);
+          it->second.mutable_child_ids()->erase(child_it);
           return;
         }
       }
