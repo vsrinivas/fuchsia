@@ -52,6 +52,11 @@ golib("github.com/golang/snappy") {
 }
 golib("github.com/google/btree") {
 }
+golib("github.com/fsnotify/fsnotify") {
+  deps = [
+    ":golang.org/x/sys",
+  ]
+}
 golib("github.com/google/go-cmp") {
 }
 golib("github.com/google/netstack") {
