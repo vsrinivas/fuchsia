@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_io::{self, DirectoryMarker, DirectoryProxy};
-use fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream};
-use fidl_fuchsia_pkg_ext::{BlobId, BlobInfo};
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use fuchsia_zircon::Status;
-use futures::prelude::*;
+use {
+    failure::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{self, DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream},
+    fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_zircon::Status,
+    futures::prelude::*,
+};
 
 pub async fn serve(
     pkgfs: DirectoryProxy,

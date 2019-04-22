@@ -5,13 +5,15 @@
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_io::DirectoryProxy;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{self, fx_log_err, fx_log_info};
-use futures::{StreamExt, TryFutureExt};
-use std::fs::File;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_io::DirectoryProxy,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    futures::{StreamExt, TryFutureExt},
+    std::fs::File,
+};
 
 mod cache_service;
 
