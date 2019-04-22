@@ -465,8 +465,8 @@ bool vmo_no_resize_clone_test() {
     zx_handle_t clone = ZX_HANDLE_INVALID;
 
     zx_vmo_create(len, 0, &vmo);
-    zx_vmo_clone(vmo,
-        ZX_VMO_CLONE_COPY_ON_WRITE | ZX_VMO_CLONE_NON_RESIZEABLE,
+    zx_vmo_create_child(vmo,
+        ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NON_RESIZEABLE,
         0, len, &clone);
     return vmo_no_resize_helper(clone, len);
 }
@@ -531,7 +531,8 @@ bool vmo_clone_size_align_test() {
     // create clones with different sizes, make sure the created size is a multiple of a page size
     for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
         zx_handle_t clone_vmo;
-        EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, s, &clone_vmo), "vm_clone");
+        EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                             0, s, &clone_vmo), "vm_clone");
 
         // should be the size rounded up to the nearest page boundary
         uint64_t size = 0x99999999;
@@ -921,7 +922,7 @@ bool vmo_clone_test_1() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
     char name[ZX_MAX_NAME_LEN];
     EXPECT_EQ(ZX_OK, zx_object_get_property(clone_vmo[0], ZX_PROP_NAME, name, ZX_MAX_NAME_LEN), "zx_object_get_property");
@@ -929,12 +930,12 @@ bool vmo_clone_test_1() {
 
     // clone it a second time
     clone_vmo[1] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[1], "vm_clone_handle");
 
     // clone the clone
     clone_vmo[2] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(clone_vmo[1], ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(clone_vmo[1], ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[2], "vm_clone_handle");
 
     // close the original handle
@@ -965,7 +966,7 @@ bool vmo_clone_test_2() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
     // verify that the clone reads back as the same
@@ -1051,7 +1052,7 @@ bool vmo_clone_test_3() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]),"vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]),"vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
     // Attempt a non-resizable map fails.
@@ -1130,7 +1131,7 @@ bool vmo_clone_decommit_test() {
 
     // clone it and map that
     clone_vmo = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, clone_vmo, 0, size, &clone_ptr),
@@ -1197,7 +1198,7 @@ bool vmo_clone_commit_test() {
 
     // clone it and map that
     clone_vmo = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, clone_vmo, 0, size,  &clone_ptr),
@@ -1273,21 +1274,21 @@ bool vmo_cache_test() {
 
     // clone the vmo, make sure policy doesn't set
     zx_handle_t clone;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
     EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
     EXPECT_EQ(ZX_OK, zx_handle_close(clone));
     EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
 
     // clone the vmo, try to set policy on the clone
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
     EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(clone, ZX_CACHE_POLICY_CACHED));
     EXPECT_EQ(ZX_OK, zx_handle_close(clone));
 
     // set the policy, make sure future clones do not go through
     EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
     EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
     EXPECT_EQ(ZX_OK, zx_handle_close(clone));
 
     // set the policy, make sure vmo read/write do not work
@@ -1480,11 +1481,11 @@ bool vmo_clone_test_4() {
 
     // make sure that non page aligned clones do not work
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 1, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 1, size, &clone_vmo[0]), "vm_clone");
 
     // create a clone that extends beyond the parent by one page
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
 
     // map the clone
     EXPECT_EQ(ZX_OK,
@@ -1576,8 +1577,8 @@ bool vmo_clone_rights_test() {
     EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights);
 
     zx_handle_t clone;
-    ASSERT_EQ(zx_vmo_clone(reduced_rights_vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
-                           0, PAGE_SIZE, &clone),
+    ASSERT_EQ(zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                  0, PAGE_SIZE, &clone),
               ZX_OK);
 
     EXPECT_EQ(zx_handle_close(reduced_rights_vmo), ZX_OK);
@@ -1641,8 +1642,8 @@ bool vmo_clone_resize_clone_hazard() {
     ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
 
     zx_handle_t clone_vmo;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(
-        vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(
+        vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK, zx_vmar_map(
@@ -1672,8 +1673,8 @@ bool vmo_clone_resize_parent_ok() {
     ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
 
     zx_handle_t clone_vmo;
-    EXPECT_EQ(ZX_OK, zx_vmo_clone(
-        vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(
+        vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK, zx_vmar_map(

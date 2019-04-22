@@ -27,6 +27,7 @@ class VmObjectPhysical final : public VmObject {
 public:
     static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
+    ChildType child_type() const override { return ChildType::kNotChild; }
     bool is_contiguous() const override { return true; }
 
     uint64_t size() const override { return size_; }

@@ -165,9 +165,9 @@ zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_
         fbl::AutoLock lock(&mutex_);
         zx_status_t status;
         if (!shared_clone_) {
-            status = zx_vmo_clone(vmo_handle_, ZX_VMO_CLONE_COPY_ON_WRITE,
-                                  clone_offset, clone_length,
-                                  shared_clone_.reset_and_get_address());
+            status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                         clone_offset, clone_length,
+                                         shared_clone_.reset_and_get_address());
             if (status != ZX_OK)
                 return status;
         }
@@ -178,9 +178,9 @@ zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_
     } else {
         // Use separate clone for each client with writable COW access.
         zx::vmo private_clone;
-        zx_status_t status = zx_vmo_clone(vmo_handle_, ZX_VMO_CLONE_COPY_ON_WRITE,
-                                          clone_offset, clone_length,
-                                          private_clone.reset_and_get_address());
+        zx_status_t status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                                 clone_offset, clone_length,
+                                                 private_clone.reset_and_get_address());
         if (status != ZX_OK)
             return status;
 

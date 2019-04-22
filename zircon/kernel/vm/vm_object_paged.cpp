@@ -283,8 +283,8 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t size,
-                                    bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
+zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint64_t size,
+                                          bool copy_name, fbl::RefPtr<VmObject>* child_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
@@ -335,7 +335,7 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
         NotifyOneChild();
     }
 
-    *clone_vmo = ktl::move(vmo);
+    *child_vmo = ktl::move(vmo);
 
     return ZX_OK;
 }
@@ -640,7 +640,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
     fbl::RefPtr<PageSource> root_source = GetRootPageSourceLocked();
 
     // If this vmo has a direct page source, then the source will provide the backing memory. For
-    // clones that eventually depend on a page source, we skip preallocating memory to avoid
+    // children that eventually depend on a page source, we skip preallocating memory to avoid
     // potentially overallocating pages if something else touches the vmo while we're blocked on the
     // request. Otherwise we optimize things by preallocating all the pages.
     list_node page_list;
@@ -1373,8 +1373,8 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
     // conditions for allowing the cache policy to be set:
     // 1) vmo has no pages committed currently
     // 2) vmo has no mappings
-    // 3) vmo has no clones
-    // 4) vmo is not a clone
+    // 3) vmo has no children
+    // 4) vmo is not a child
     if (!page_list_.IsEmpty()) {
         return ZX_ERR_BAD_STATE;
     }

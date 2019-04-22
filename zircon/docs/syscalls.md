@@ -85,13 +85,12 @@
 + [vmo_create](syscalls/vmo_create.md) - create a new vmo
 + [vmo_read](syscalls/vmo_read.md) - read from a vmo
 + [vmo_write](syscalls/vmo_write.md) - write to a vmo
-+ [vmo_clone](syscalls/vmo_clone.md) - clone a vmo
++ [vmo_create_child](syscalls/vmo_create_child.md) - creates a child of a vmo
 + [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
 + [vmo_replace_as_executable](syscalls/vmo_replace_as_executable.md) - add execute rights to a vmo
 + [vmo_create_physical](syscalls/vmo_create_physical.md) - create a VM object referring to a specific contiguous range of physical memory
-+ [vmo_clone](syscalls/vmo_clone.md) - clone a vmo
 + [vmo_set_cache_policy](syscalls/vmo_set_cache_policy.md) - set the caching policy for pages held by a VMO.
 
 ## Virtual Memory Address Regions (VMARs)

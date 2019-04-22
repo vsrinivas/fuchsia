@@ -107,13 +107,17 @@ impl Vmo {
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
-    /// [zx_vmo_clone](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/vmo_clone.md)
+    /// [zx_vmo_create_child](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/vmo_create_child.md)
     /// syscall.
-    pub fn clone(&self, offset: u64, size: u64) -> Result<Vmo, Status> {
+    pub fn create_child(
+        &self,
+        opts: VmoChildOptions,
+        offset: u64,
+        size: u64,
+    ) -> Result<Vmo, Status> {
         let mut out = 0;
-        let opts = sys::ZX_VMO_CLONE_COPY_ON_WRITE;
         let status = unsafe {
-            sys::zx_vmo_clone(self.raw_handle(), opts, offset, size, &mut out)
+            sys::zx_vmo_create_child(self.raw_handle(), opts.bits(), offset, size, &mut out)
         };
         ok(status)?;
         unsafe { Ok(Vmo::from(Handle::from_raw(out))) }
@@ -125,6 +129,15 @@ bitflags! {
     #[repr(transparent)]
     pub struct VmoOptions: u32 {
         const NON_RESIZABLE = sys::ZX_VMO_NON_RESIZABLE;
+    }
+}
+
+bitflags! {
+    /// Options that may be used when creating a `Vmo` child.
+    #[repr(transparent)]
+    pub struct VmoChildOptions: u32 {
+        const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
+        const NON_RESIZABLE = sys::ZX_VMO_CHILD_NON_RESIZEABLE;
     }
 }
 
@@ -223,12 +236,12 @@ mod tests {
     }
 
     #[test]
-    fn vmo_clone() {
+    fn vmo_create_child() {
         let original = Vmo::create(16).unwrap();
         assert!(original.write(b"one", 0).is_ok());
 
         // Clone the VMO, and make sure it contains what we expect.
-        let clone = original.clone(0, 16).unwrap();
+        let clone = original.create_child(VmoChildOptions::COPY_ON_WRITE, 0, 16).unwrap();
         let mut read_buffer = vec![0; 16];
         assert!(clone.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..3], b"one");

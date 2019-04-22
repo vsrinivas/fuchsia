@@ -87,8 +87,8 @@ zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
     // TODO(mcgrathr): Create a plain read-only clone when the feature
     // is implemented in the VM.
     zx_handle_t vmo;
-    zx_status_t status = zx_vmo_clone(fs->vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
-                                      e->data_off, e->data_len, &vmo);
+    zx_status_t status = zx_vmo_create_child(fs->vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                             e->data_off, e->data_len, &vmo);
     if (status != ZX_OK)
         fail(log, "zx_vmo_clone failed: %d", status);
 

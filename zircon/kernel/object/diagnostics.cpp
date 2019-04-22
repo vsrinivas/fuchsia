@@ -363,13 +363,13 @@ static void DumpVmObject(
         strlcpy(alloc_str, "phys", sizeof(alloc_str));
     }
 
-    char clone_str[21];
-    if (vmo.is_cow_clone()) {
-        snprintf(clone_str, sizeof(clone_str),
+    char child_str[21];
+    if (vmo.child_type() != VmObject::kNotChild) {
+        snprintf(child_str, sizeof(child_str),
                  "%" PRIu64, vmo.parent_user_id());
     } else {
-        clone_str[0] = '-';
-        clone_str[1] = '\0';
+        child_str[0] = '-';
+        child_str[1] = '\0';
     }
 
     char name[ZX_MAX_NAME_LEN];
@@ -383,7 +383,7 @@ static void DumpVmObject(
            "%6s " // rights
            "%5" PRIu64 " " // koid
            "%p " // vm_object
-           "%6s " // clone parent koid
+           "%6s " // child parent koid
            "%5" PRIu32 " " // number of children
            "%4" PRIu32 " " // map count
            "%4" PRIu32 " " // share count
@@ -394,7 +394,7 @@ static void DumpVmObject(
            rights_str,
            koid,
            &vmo,
-           clone_str,
+           child_str,
            vmo.num_children(),
            vmo.num_mappings(),
            vmo.share_count(),

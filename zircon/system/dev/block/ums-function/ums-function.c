@@ -707,7 +707,8 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
         if (status != ZX_OK) {
             goto fail;
         }
-        status = zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &ums->storage_handle);
+        status = zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                     0, size, &ums->storage_handle);
         if (status != ZX_OK) {
             goto fail;
         }

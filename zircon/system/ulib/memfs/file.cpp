@@ -114,8 +114,8 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size)
     rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
     zx::vmo result;
     if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
-        if ((status = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_,
-                                 &result)) != ZX_OK) {
+        if ((status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length_,
+                                        &result)) != ZX_OK) {
             return status;
         }
 

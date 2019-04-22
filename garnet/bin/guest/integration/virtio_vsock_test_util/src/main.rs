@@ -48,8 +48,16 @@ async fn test_read_write<'a>(
 
     // Send two back to back vmos
     let vmo = zx::Vmo::create(TEST_DATA_LEN)?;
-    let complete1 = con.send_vmo(vmo.clone(0, TEST_DATA_LEN)?, 0, TEST_DATA_LEN);
-    let complete2 = con.send_vmo(vmo.clone(0, TEST_DATA_LEN)?, 0, TEST_DATA_LEN);
+    let complete1 = con.send_vmo(
+        vmo.create_child(zx::VmoChildOptions::COPY_ON_WRITE, 0, TEST_DATA_LEN)?,
+        0,
+        TEST_DATA_LEN,
+    );
+    let complete2 = con.send_vmo(
+        vmo.create_child(zx::VmoChildOptions::COPY_ON_WRITE, 0, TEST_DATA_LEN)?,
+        0,
+        TEST_DATA_LEN,
+    );
     await!(complete1)?;
     await!(complete2)?;
 

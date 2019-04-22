@@ -709,10 +709,17 @@ protocol Api {
                  array<voidptr>:buffer_size buffer, usize buffer_size) ->
         (zx.status status);
 
-    /// Create a clone of a VM Object.
+    /// Shim for vmo_create_child
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.",
+     argtype="out handle_acquire",
+     vdsocall]
+    vmo_clone(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
+        (zx.status status, handle<vmo> out);
+
+    /// Create a child of a VM Object.
     [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.",
      argtype="out handle_acquire"]
-    vmo_clone(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
+    vmo_create_child(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
         (zx.status status, handle<vmo> out);
 
     /// Set the caching policy for pages held by a VMO.

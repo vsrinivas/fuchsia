@@ -120,7 +120,6 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
     entry.share_count = vmo->share_count();
     entry.flags =
         (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
-        (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0) |
         (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0);
     entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
     entry.cache_policy = vmo->GetMappingCachePolicy();
@@ -129,6 +128,13 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
         entry.handle_rights = handle_rights;
     } else {
         entry.flags |= ZX_INFO_VMO_VIA_MAPPING;
+    }
+    switch (vmo->child_type()) {
+        case VmObject::ChildType::kCowClone:
+            entry.flags |= ZX_INFO_VMO_IS_COW_CLONE;
+            break;
+        case VmObject::ChildType::kNotChild:
+            break;
     }
     return entry;
 }
@@ -201,27 +207,27 @@ zx_status_t VmObjectDispatcher::SetMappingCachePolicy(uint32_t cache_policy) {
     return vmo_->SetMappingCachePolicy(cache_policy);
 }
 
-zx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_t size,
-        bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
+zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, uint64_t size,
+        bool copy_name, fbl::RefPtr<VmObject>* child_vmo) {
     canary_.Assert();
 
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
     bool resizable = true;
-    if (options & ZX_VMO_CLONE_COPY_ON_WRITE) {
-        options &= ~ZX_VMO_CLONE_COPY_ON_WRITE;
+    if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
+        options &= ~ZX_VMO_CHILD_COPY_ON_WRITE;
     } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (options & ZX_VMO_CLONE_NON_RESIZEABLE) {
+    if (options & ZX_VMO_CHILD_NON_RESIZEABLE) {
         resizable = false;
-        options &= ~ZX_VMO_CLONE_NON_RESIZEABLE;
+        options &= ~ZX_VMO_CHILD_NON_RESIZEABLE;
     }
 
     if (options)
         return ZX_ERR_INVALID_ARGS;
 
-    return vmo_->CloneCOW(resizable, offset, size, copy_name, clone_vmo);
+    return vmo_->CreateCowClone(resizable, offset, size, copy_name, child_vmo);
 }

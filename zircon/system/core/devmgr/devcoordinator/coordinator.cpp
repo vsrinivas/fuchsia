@@ -1111,8 +1111,8 @@ zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_boot
         return st;
     }
 
-    st = original_bootdata.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, original_size + PAGE_SIZE * 4,
-                                 &bootdata);
+    st = original_bootdata.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0,
+                                        original_size + PAGE_SIZE * 4, &bootdata);
     if (st != ZX_OK) {
         log(ERROR, "dm_mexec: failed to clone bootdata st = %d\n", st);
         return st;

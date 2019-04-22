@@ -26,9 +26,9 @@ zx_status_t zx_pager_supply_pages(zx_handle_t pager,
 Moves the pages of *aux_vmo* in the range [*aux_offset*, *aux_offset* + *length*) to *pager_vmo* in
 the range [*offset*, *offset* + *length*). Any pages in *pager_vmo* in the specified range will not
 be replaced; instead the corresponding pages from *aux_vmo* will be freed. *aux_vmo* must have been
-created by [`zx_vmo_create()`], must have no clones or mappings, and must be fully committed with no
-pinned pages in the specified range. After this operation, the specified region of *aux_vmo* will be
-fully decommitted.
+created by [`zx_vmo_create()`], must have no children or mappings, and must be fully committed with
+no pinned pages in the specified range. After this operation, the specified region of *aux_vmo* will
+be fully decommitted.
 
 ## RIGHTS
 

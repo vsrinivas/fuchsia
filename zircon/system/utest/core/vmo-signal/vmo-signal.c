@@ -65,14 +65,14 @@ static bool vmo_child_signal_clone_test(void) {
     for (int ix = 0; ix != 10; ++ix) {
         ASSERT_EQ(vmo_has_no_children(vmo), ZX_OK, "");
 
-        ASSERT_EQ(zx_vmo_clone(
-            vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0u, 4096u, &clone), ZX_OK, "");
+        ASSERT_EQ(zx_vmo_create_child(
+            vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone), ZX_OK, "");
 
         ASSERT_EQ(vmo_has_no_children(clone), ZX_OK, "");
         ASSERT_EQ(vmo_has_children(vmo), ZX_OK, "");
 
-        ASSERT_EQ(zx_vmo_clone(
-            clone, ZX_VMO_CLONE_COPY_ON_WRITE, 0u, 4096u, &clone2), ZX_OK, "");
+        ASSERT_EQ(zx_vmo_create_child(
+            clone, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone2), ZX_OK, "");
 
         ASSERT_EQ(vmo_has_no_children(clone2), ZX_OK, "");
         ASSERT_EQ(vmo_has_children(clone), ZX_OK, "");
@@ -104,8 +104,8 @@ static bool vmo_child_signal_map_test(void) {
     for (int ix = 0; ix != 10; ++ix) {
         ASSERT_EQ(vmo_has_no_children(vmo), ZX_OK, "");
 
-        ASSERT_EQ(zx_vmo_clone(
-            vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0u, 4096u, &clone), ZX_OK, "");
+        ASSERT_EQ(zx_vmo_create_child(
+            vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone), ZX_OK, "");
 
         uintptr_t addr = 0;
         ASSERT_EQ(zx_vmar_map(

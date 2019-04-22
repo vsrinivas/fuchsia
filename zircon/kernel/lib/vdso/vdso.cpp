@@ -290,8 +290,8 @@ void VDso::CreateVariant(Variant variant) {
     DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
 
     fbl::RefPtr<VmObject> new_vmo;
-    zx_status_t status = vmo()->Clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
-                                      false, &new_vmo);
+    zx_status_t status = vmo()->CreateChild(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size(),
+                                            false, &new_vmo);
     ASSERT(status == ZX_OK);
 
     VDsoDynSymWindow dynsym_window(new_vmo);

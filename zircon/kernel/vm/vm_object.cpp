@@ -100,12 +100,6 @@ uint64_t VmObject::parent_user_id() const {
     return parent->user_id();
 }
 
-bool VmObject::is_cow_clone() const {
-    canary_.Assert();
-    Guard<fbl::Mutex> guard{&lock_};
-    return parent_ != nullptr;
-}
-
 void VmObject::AddMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.lock().IsHeld());

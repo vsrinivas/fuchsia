@@ -48,8 +48,8 @@ The following rights will be set on the handle by default:
 [object_set_property](object_set_property.md).
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
-inactive whenever a clone of the VMO is created and becomes active again when
-all clones have been destroyed and no mappings of those clones into address
+inactive whenever a child of the VMO is created and becomes active again when
+all children have been destroyed and no mappings of those children into address
 spaces exist.
 
 ## NOTES

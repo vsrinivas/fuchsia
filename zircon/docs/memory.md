@@ -149,7 +149,7 @@ vmos <pid>
 This will also show unmapped VMOs, which neither `ps` nor `vmaps` currently
 account for.
 
-It also shows whether a given VMO is a clone, along with its parent's koid.
+It also shows whether a given VMO is a child, along with its parent's koid.
 
 ```
 $ vmos 1118
@@ -180,8 +180,8 @@ Columns:
     -   **NOTE**: Non-handle entries will have a single '-' in this column.
 -   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO without a
     koid was created by the kernel, and has never had a userspace handle.
--   `parent`: The koid of the VMO's parent, if it's a clone.
--   `#chld`: The number of active clones (children) of the VMO.
+-   `parent`: The koid of the VMO's parent, if it's a child.
+-   `#chld`: The number of active children of the VMO.
 -   `#map`: The number of times the VMO is currently mapped into VMARs.
 -   `#shr`: The number of processes that map (share) the VMO.
 -   `size`: The VMO's current size, in bytes.

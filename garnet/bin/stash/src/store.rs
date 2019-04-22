@@ -40,7 +40,7 @@ pub fn clone_value(v: &Value) -> Result<Value, Error> {
 pub fn clone_buffer(b: &fidl_fuchsia_mem::Buffer) -> Result<fidl_fuchsia_mem::Buffer, Error> {
     let new_vmo = b
         .vmo
-        .clone(0, b.size)
+        .create_child(zx::VmoChildOptions::COPY_ON_WRITE, 0, b.size)
         .map_err(|s| err_msg(format!("error cloning buffer, zx status: {}", s)))?;
     Ok(fidl_fuchsia_mem::Buffer { vmo: new_vmo, size: b.size })
 }

@@ -235,8 +235,8 @@ static zx_status_t load_segment(zx_handle_t vmar, size_t vmar_offset,
 
     // For a writable segment, we need a writable VMO.
     zx_handle_t writable_vmo;
-    zx_status_t status = zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
-                                      file_start, data_size, &writable_vmo);
+    zx_status_t status = zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                             file_start, data_size, &writable_vmo);
     if (status == ZX_OK) {
         char name[ZX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
         memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1],
