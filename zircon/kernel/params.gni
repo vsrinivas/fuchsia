@@ -31,8 +31,9 @@ declare_args() {
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 
-  # Enable fair scheduler by default on all architectures.
-  enable_fair_scheduler = true
+  # Disable fair scheduler by default on all architectures.
+  # ZX-3959: Disable by default until E2E tests stabilize.
+  enable_fair_scheduler = false
 
   # Enable detailed scheduler traces.
   detailed_scheduler_tracing = false
