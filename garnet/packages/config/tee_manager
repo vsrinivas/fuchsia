@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/tee_manager:tee_manager_config"
-    ]
-}

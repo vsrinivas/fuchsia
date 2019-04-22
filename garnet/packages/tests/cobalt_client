@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/cobalt_client"
-    ],
-    "packages": [
-        "//src/cobalt/bin:cobalt_tests",
-        "//src/lib/cobalt:cobalt_lib_tests"
-    ]
-}
