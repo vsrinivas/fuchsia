@@ -50,6 +50,19 @@ struct SimpleUnion {
   SimpleUnion();
   ~SimpleUnion();
 
+  SimpleUnion(SimpleUnion&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  SimpleUnion& operator=(SimpleUnion&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_field_a() const { return tag_ == Tag::kFieldA; }
@@ -62,8 +75,16 @@ struct SimpleUnion {
     return field_a_;
   }
 
-  void set_field_a(int32_t const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_field_a(const T& v) {
     mutable_field_a() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_field_a(T&& v) {
+    mutable_field_a() = std::move(v);
   }
 
   int32_t const & field_a() const { return field_a_; }
@@ -78,8 +99,16 @@ struct SimpleUnion {
     return field_b_;
   }
 
-  void set_field_b(int32_t const & v) {
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_field_b(const T& v) {
     mutable_field_b() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_field_b(T&& v) {
+    mutable_field_b() = std::move(v);
   }
 
   int32_t const & field_b() const { return field_b_; }
@@ -94,6 +123,7 @@ struct SimpleUnion {
 
  private:
   void Destroy();
+  void MoveImpl_(SimpleUnion&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {

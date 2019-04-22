@@ -24,6 +24,20 @@ void ::fidl::test::llcpp::basictypes::SimpleUnion::Destroy() {
   }
 }
 
+void ::fidl::test::llcpp::basictypes::SimpleUnion::MoveImpl_(SimpleUnion&& other) {
+  switch (other.which()) {
+  case Tag::kFieldA:
+    mutable_field_a() = std::move(other.mutable_field_a());
+    break;
+  case Tag::kFieldB:
+    mutable_field_b() = std::move(other.mutable_field_b());
+    break;
+  default:
+    break;
+  }
+  other.tag_ = Tag::Invalid;
+}
+
 void ::fidl::test::llcpp::basictypes::SimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleUnion, field_a_) == 4);
   static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleUnion, field_b_) == 4);

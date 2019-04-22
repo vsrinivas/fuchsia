@@ -368,7 +368,7 @@ bool SyncCallUnionTest() {
     simple_union.mutable_field_b() = 456;
 
     // perform call
-    zx_status_t status = test.ConsumeSimpleUnion(simple_union, &out_index, &out_field);
+    zx_status_t status = test.ConsumeSimpleUnion(std::move(simple_union), &out_index, &out_field);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(out_index, 1);
     ASSERT_EQ(out_field, 456);
@@ -399,7 +399,7 @@ bool SyncCallerAllocateCallUnionTest() {
     FIDL_ALIGNDECL uint8_t request_buf[512] = {};
     FIDL_ALIGNDECL uint8_t response_buf[512] = {};
     zx_status_t status = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
-                                                 simple_union,
+                                                 std::move(simple_union),
                                                  fidl::BytePart(response_buf, sizeof(response_buf)),
                                                  &out_index, &out_field);
     ASSERT_EQ(status, ZX_OK);
