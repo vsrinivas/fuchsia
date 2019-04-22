@@ -200,6 +200,25 @@ protocol Child {
     END_TEST;
 }
 
+bool invalid_cannot_compose_missing_protocol() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+protocol Child {
+    compose MissingParent;
+};
+
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "unknown type MissingParent");
+
+    END_TEST;
+}
+
 bool invalid_cannot_use_ordinals_in_protocol_declaration() {
     BEGIN_TEST;
 
@@ -368,6 +387,7 @@ RUN_TEST(invalid_colon_syntax_is_not_supported)
 RUN_TEST(invalid_cannot_attach_attributes_to_compose)
 RUN_TEST(invalid_cannot_compose_yourself)
 RUN_TEST(invalid_cannot_compose_twice_the_same_protocol)
+RUN_TEST(invalid_cannot_compose_missing_protocol)
 RUN_TEST(invalid_cannot_use_ordinals_in_protocol_declaration)
 RUN_TEST(invalid_no_other_pragma_than_compose)
 RUN_TEST(invalid_composed_protocols_have_clashing_names)

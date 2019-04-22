@@ -2357,9 +2357,8 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const Interface*>(decl);
         for (const auto& superinterface : interface_decl->superinterfaces) {
-            auto type_decl = LookupDeclByName(superinterface);
-            assert(type_decl);
-            edges.insert(type_decl);
+            if (auto type_decl = LookupDeclByName(superinterface); type_decl)
+                edges.insert(type_decl);
         }
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
@@ -2825,8 +2824,14 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     auto CheckScopes = [this, &interface_declaration, &method_scope](const Interface* interface, auto Visitor) -> bool {
         for (const auto& name : interface->superinterfaces) {
             auto decl = LookupDeclByName(name);
-            if (decl == nullptr)
-                return Fail(name, "There is no declaration with this name");
+            // TODO(FIDL-603): Special handling here should not be required, we
+            // should first rely on creating the types representing composed
+            // protocols.
+            if (!decl) {
+                std::string message("unknown type ");
+                message.append(name.name_part());
+                return Fail(name, message);
+            }
             if (decl->kind != Decl::Kind::kInterface)
                 return Fail(name, "This superinterface declaration is not an interface");
             if (!decl->HasAttribute("FragileBase")) {
