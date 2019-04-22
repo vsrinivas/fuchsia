@@ -10,6 +10,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type Watcher fsnotify.Watcher
+type Watcher = fsnotify.Watcher
 
 var NewWatcher = fsnotify.NewWatcher

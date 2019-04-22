@@ -5,9 +5,12 @@
 package serve
 
 import (
+	"bufio"
 	"compress/gzip"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,6 +23,9 @@ import (
 	"fuchsia.googlesource.com/pm/repo"
 )
 
+// server is a default http server only parameterized for tests.
+var server http.Server
+
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	repoDir := fs.String("d", "", "(deprecated, use -repo) path to the repository")
@@ -31,6 +37,7 @@ func Run(cfg *build.Config, args []string) error {
 	auto := fs.Bool("a", true, "Host auto endpoint for realtime client updates")
 	quiet := fs.Bool("q", false, "Don't print out information about requests")
 	encryptionKey := fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
+	publishList := fs.String("p", "", "path to a package list file to be auto-published")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s serve", filepath.Base(os.Args[0]))
@@ -44,16 +51,20 @@ func Run(cfg *build.Config, args []string) error {
 	config.ApplyDefaults()
 
 	if *repoDir == "" {
-		*repoDir = filepath.Join(config.RepoDir, "repository")
+		*repoDir = config.RepoDir
 	}
+	repoPubDir := filepath.Join(*repoDir, "repository")
 
-	fi, err := os.Stat(*repoDir)
+	repo, err := repo.New(*repoDir)
 	if err != nil {
-		return fmt.Errorf("repository path %q is not valid: %s", *repoDir, err)
+		return err
+	}
+	if *encryptionKey != "" {
+		repo.EncryptWith(*encryptionKey)
 	}
 
-	if !fi.IsDir() {
-		return fmt.Errorf("repository path %q is not a directory", *repoDir)
+	if err := repo.Init(); err != nil && err != os.ErrExist {
+		return fmt.Errorf("repository at %q is not valid or could not be initialized: %s", *repoDir, err)
 	}
 
 	if *auto {
@@ -63,25 +74,71 @@ func Run(cfg *build.Config, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to initialize fsnotify: %s", err)
 		}
-		timestampPath := filepath.Join(*repoDir, "timestamp.json")
-		err = w.Add(timestampPath)
-		if err != nil {
+
+		publishAll := func() {
+			if *publishList != "" {
+				f, err := os.Open(*publishList)
+				if err != nil {
+					log.Printf("reading package list %q: %s", *publishList, err)
+					return
+				}
+				defer f.Close()
+
+				s := bufio.NewScanner(f)
+				for s.Scan() {
+					m := s.Text()
+					if _, err := os.Stat(m); err == nil {
+						repo.PublishManifest(m)
+						if err := w.Add(m); err != nil {
+							log.Printf("unable to watch %q", m)
+						}
+					} else {
+						log.Printf("unable to publish %q", m)
+					}
+				}
+				if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+					log.Printf("committing repo: %s", err)
+				}
+			}
+		}
+
+		timestampPath := filepath.Join(repoPubDir, "timestamp.json")
+		if err = w.Add(timestampPath); err != nil {
 			return fmt.Errorf("failed to watch %s: %s", timestampPath, err)
 		}
+		if *publishList != "" {
+			if err := w.Add(*publishList); err != nil {
+				return fmt.Errorf("failed to watch %s: %s", *publishList, err)
+			}
+		}
 		go func() {
-			for range w.Events {
-				fi, err := os.Stat(timestampPath)
-				if err != nil {
-					continue
+			for event := range w.Events {
+				switch event.Name {
+				case timestampPath:
+					fi, err := os.Stat(timestampPath)
+					if err != nil {
+						continue
+					}
+					as.Broadcast("timestamp.json", fi.ModTime().Format(http.TimeFormat))
+				case *publishList:
+					publishAll()
+				default:
+					if err := repo.PublishManifest(event.Name); err != nil {
+						log.Printf("publishing %q: %s", event.Name, err)
+						continue
+					}
+					if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+						log.Printf("committing repo update %q: %s", event.Name, err)
+					}
 				}
-				as.Broadcast("timestamp.json", fi.ModTime().Format(http.TimeFormat))
 			}
 		}()
 
 		http.Handle("/auto", as)
+		publishAll()
 	}
 
-	dirServer := http.FileServer(http.Dir(*repoDir))
+	dirServer := http.FileServer(http.Dir(repoPubDir))
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -93,7 +150,13 @@ func Run(cfg *build.Config, args []string) error {
 		}
 	}))
 
-	cs := pmhttp.NewConfigServer(*repoDir, *encryptionKey)
+	cs := pmhttp.NewConfigServer(func() []byte {
+		b, err := ioutil.ReadFile(filepath.Join(repoPubDir, "root.json"))
+		if err != nil {
+			log.Printf("%s", err)
+		}
+		return b
+	}, *encryptionKey)
 	http.Handle("/config.json", cs)
 
 	if !*quiet {
@@ -101,7 +164,8 @@ func Run(cfg *build.Config, args []string) error {
 			time.Now().Format("2006-01-02 15:04:05"), *repoDir, *listen)
 	}
 
-	return http.ListenAndServe(*listen, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server.Addr = *listen
+	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.RequestURI, "/blobs") && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gw := &pmhttp.GZIPWriter{
 				w,
@@ -117,5 +181,7 @@ func Run(cfg *build.Config, args []string) error {
 			fmt.Printf("%s [pm serve] %d %s\n",
 				time.Now().Format("2006-01-02 15:04:05"), lw.Status, r.RequestURI)
 		}
-	}))
+	})
+
+	return server.ListenAndServe()
 }

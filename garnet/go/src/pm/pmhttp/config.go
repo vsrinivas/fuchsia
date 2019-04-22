@@ -10,17 +10,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 type ConfigServer struct {
-	repoDir       string
-	encryptionKey string
+	rootKeyFetcher func() []byte
+	encryptionKey  string
 }
 
-func NewConfigServer(repoDir, encryptionKey string) *ConfigServer {
-	return &ConfigServer{repoDir: repoDir, encryptionKey: encryptionKey}
+func NewConfigServer(rootKeyFetcher func() []byte, encryptionKey string) *ConfigServer {
+	return &ConfigServer{rootKeyFetcher: rootKeyFetcher, encryptionKey: encryptionKey}
 }
 
 func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -30,35 +28,6 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repoUrl := fmt.Sprintf("%s%s", scheme, r.Host)
-
-	var signedKeys struct {
-		Signed struct {
-			Keys map[string]struct {
-				Keytype string
-				Keyval  struct {
-					Public string
-				}
-			}
-			Roles struct {
-				Root struct {
-					Keyids []string
-				}
-				Threshold int
-			}
-		}
-	}
-	f, err := os.Open(filepath.Join(c.repoDir, "root.json"))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("root.json missing or unreadable: %s", err)
-		return
-	}
-	defer f.Close()
-	if err := json.NewDecoder(f).Decode(&signedKeys); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("root.json parsing error: %s", err)
-		return
-	}
 
 	cfg := struct {
 		ID          string
@@ -101,12 +70,36 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		copy(cfg.BlobKey.Data[:], keyBytes)
 	}
 
-	for _, id := range signedKeys.Signed.Roles.Root.Keyids {
-		k := signedKeys.Signed.Keys[id]
+	var keys signedKeys
+	if err := json.Unmarshal(c.rootKeyFetcher(), &keys); err != nil {
+		log.Printf("root.json parsing error: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for _, id := range keys.Signed.Roles.Root.Keyids {
+		k := keys.Signed.Keys[id]
 		cfg.RootKeys = append(cfg.RootKeys, struct{ Type, Value string }{
 			Type:  k.Keytype,
 			Value: k.Keyval.Public,
 		})
 	}
 	json.NewEncoder(w).Encode(cfg)
+}
+
+type signedKeys struct {
+	Signed struct {
+		Keys map[string]struct {
+			Keytype string
+			Keyval  struct {
+				Public string
+			}
+		}
+		Roles struct {
+			Root struct {
+				Keyids []string
+			}
+			Threshold int
+		}
+	}
 }
