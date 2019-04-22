@@ -11,17 +11,17 @@
 namespace fidl {
 namespace {
 
-TEST(ThreadSafeBindingSet, Trivial) {
-  ThreadSafeBindingSet<fidl::test::frobinator::Frobinator> binding_set;
+TEST(DeprecatedBrokenBindingSet, Trivial) {
+  DeprecatedBrokenBindingSet<fidl::test::frobinator::Frobinator> binding_set;
 }
 
-TEST(ThreadSafeBindingSet, Control) {
+TEST(DeprecatedBrokenBindingSet, Control) {
   constexpr size_t kCount = 10;
 
   fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  ThreadSafeBindingSet<fidl::test::frobinator::Frobinator> binding_set;
+  DeprecatedBrokenBindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   fidl::test::AsyncLoopForTest loop;
 

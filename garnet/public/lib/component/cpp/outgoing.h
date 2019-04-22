@@ -108,7 +108,7 @@ class Outgoing {
   fbl::RefPtr<fs::PseudoDir> debug_dir_;
   fbl::RefPtr<fs::PseudoDir> ctrl_dir_;
 
-  fidl::ThreadSafeBindingSet<fuchsia::inspect::Inspect, std::shared_ptr<Object>>
+  fidl::DeprecatedBrokenBindingSet<fuchsia::inspect::Inspect, std::shared_ptr<Object>>
       inspect_bindings_;
   std::unique_ptr<ObjectDir> object_dir_;
 

@@ -57,7 +57,7 @@ template <typename I> class Dispatcher {
     }
 
    private:
-    fidl::ThreadSafeBindingSet<I> bindings_;
+    fidl::DeprecatedBrokenBindingSet<I> bindings_;
     async_dispatcher_t* dispatcher_;
     std::mutex lock_;
     bool shutdown_initiated_ __TA_GUARDED(lock_){false};

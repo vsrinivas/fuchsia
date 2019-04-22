@@ -32,15 +32,15 @@ namespace fidl {
 //    functionality.
 //  * |InterfacePtrSet|, which is the client analog of |BindingSet|.
 template <typename Interface, typename ImplPtr = Interface*>
-class ThreadSafeBindingSet final {
+class DeprecatedBrokenBindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;
 
-  ThreadSafeBindingSet() = default;
+  DeprecatedBrokenBindingSet() = default;
 
-  ThreadSafeBindingSet(const ThreadSafeBindingSet&) = delete;
-  ThreadSafeBindingSet& operator=(const ThreadSafeBindingSet&) = delete;
+  DeprecatedBrokenBindingSet(const DeprecatedBrokenBindingSet&) = delete;
+  DeprecatedBrokenBindingSet& operator=(const DeprecatedBrokenBindingSet&) = delete;
 
   // Adds a binding to the set.
   //
