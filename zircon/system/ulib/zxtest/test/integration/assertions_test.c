@@ -633,3 +633,14 @@ TEST(ZxTestCAssertionTest, PrintfLikeDescs) {
                  a, a, a, a, a, a, a);
     TEST_CHECKPOINT();
 }
+
+static int HasExpects(void) {
+    EXPECT_EQ(1, 2);
+    return 0;
+}
+
+TEST(ZxTestCAssertionTest, NonVoidHelperTestNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to propagate assertion error.");
+    ASSERT_NO_FATAL_FAILURES(HasExpects());
+    TEST_CHECKPOINT();
+}

@@ -78,10 +78,18 @@
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
 
-#define _RETURN_IF_FATAL(fatal)                                                                    \
-    if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
-        return;                                                                                    \
-    }
+#define _RETURN_IF_FATAL_true                                                                      \
+    do {                                                                                           \
+        if (_ZXTEST_ABORT_IF_ERROR) {                                                              \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
+#define _RETURN_IF_FATAL_false                                                                     \
+    do {                                                                                           \
+    } while (0)
+
+#define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
 namespace zxtest {
 namespace internal {
 

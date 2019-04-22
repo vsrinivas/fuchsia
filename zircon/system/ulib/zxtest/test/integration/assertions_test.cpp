@@ -798,4 +798,15 @@ TEST(ZxTestAssertionTest, PrintfLikeDescs) {
     TEST_CHECKPOINT();
 }
 
+int HasExpects() {
+    EXPECT_EQ(1, 2);
+    return 0;
+}
+
+TEST(ZxTestAssertionTest, NonVoidHelperTestNonFatalFailures) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to propagate assertion error.");
+    ASSERT_NO_FATAL_FAILURES(HasExpects());
+    TEST_CHECKPOINT();
+}
+
 } // namespace

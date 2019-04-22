@@ -183,10 +183,18 @@ static void zxtest_clean_buffer(char** buffer) {
         snprintf(out_desc + strlen(desc) + 1, req_size, " "__VA_ARGS__);                           \
     } while (0)
 
-#define _RETURN_IF_FATAL(fatal)                                                                    \
-    if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
-        return;                                                                                    \
-    }
+#define _RETURN_IF_FATAL_1                                                                         \
+    do {                                                                                           \
+        if (_ZXTEST_ABORT_IF_ERROR) {                                                              \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
+#define _RETURN_IF_FATAL_0                                                                         \
+    do {                                                                                           \
+    } while (0)
+
+#define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
 
 #define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)                \
     do {                                                                                           \
