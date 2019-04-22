@@ -16,7 +16,7 @@ class VmObject;
 
 class GuestDispatcher final : public SoloDispatcher<GuestDispatcher, ZX_DEFAULT_GUEST_RIGHTS> {
 public:
-    static zx_status_t Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
+    static zx_status_t Create(KernelHandle<GuestDispatcher>* guest_handle,
                               zx_rights_t* guest_rights,
                               KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                               zx_rights_t* vmar_rights);

@@ -16,7 +16,7 @@ KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create")
 KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")
 
 // static
-zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
+zx_status_t GuestDispatcher::Create(KernelHandle<GuestDispatcher>* guest_handle,
                                     zx_rights_t* guest_rights,
                                     KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                                     zx_rights_t* vmar_rights) {
@@ -27,19 +27,20 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
     }
 
     fbl::AllocChecker ac;
-    auto disp = fbl::AdoptRef(new (&ac) GuestDispatcher(ktl::move(guest)));
+    KernelHandle new_guest_handle(fbl::AdoptRef(new (&ac) GuestDispatcher(ktl::move(guest))));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = VmAddressRegionDispatcher::Create(disp->guest()->AddressSpace()->RootVmar(), 0,
-                                               vmar_handle, vmar_rights);
+    status = VmAddressRegionDispatcher::Create(
+        new_guest_handle.dispatcher()->guest()->AddressSpace()->RootVmar(), 0, vmar_handle,
+        vmar_rights);
     if (status != ZX_OK) {
         return status;
     }
 
     *guest_rights = default_rights();
-    *guest_dispatcher = ktl::move(disp);
+    *guest_handle = ktl::move(new_guest_handle);
     return ZX_OK;
 }
 

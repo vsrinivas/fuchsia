@@ -29,15 +29,15 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<Dispatcher> guest_dispatcher;
+    KernelHandle<GuestDispatcher> new_guest_handle;
     KernelHandle<VmAddressRegionDispatcher> new_vmar_handle;
     zx_rights_t guest_rights, vmar_rights;
     status =
-        GuestDispatcher::Create(&guest_dispatcher, &guest_rights, &new_vmar_handle, &vmar_rights);
+        GuestDispatcher::Create(&new_guest_handle, &guest_rights, &new_vmar_handle, &vmar_rights);
     if (status != ZX_OK)
         return status;
 
-    status = guest_handle->make(ktl::move(guest_dispatcher), guest_rights);
+    status = guest_handle->make(ktl::move(new_guest_handle), guest_rights);
     if (status != ZX_OK)
         return status;
     return vmar_handle->make(ktl::move(new_vmar_handle), vmar_rights);
