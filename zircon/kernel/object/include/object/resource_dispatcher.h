@@ -33,10 +33,10 @@ public:
     using ResourceList = fbl::DoublyLinkedList<ResourceDispatcher*>;
     using RefPtr = fbl::RefPtr<ResourceDispatcher>;
 
-    // Creates ResourceDispatcher object representing access rights ta
+    // Creates ResourceDispatcher object representing access rights to a
     // given region of address space from a particular address space allocator, or a root resource
     // granted full access permissions. Only one instance of the root resource is created at boot.
-    static zx_status_t Create(ResourceDispatcher::RefPtr* dispatcher,
+    static zx_status_t Create(KernelHandle<ResourceDispatcher>* handle,
                               zx_rights_t* rights,
                               uint32_t kind,
                               uint64_t base,

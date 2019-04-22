@@ -36,7 +36,7 @@ ResourceDispatcher::ResourceList ResourceDispatcher::static_resource_list_;
 RegionAllocator::RegionPool::RefPtr ResourceDispatcher::region_pool_;
 const char* kLogTag = "Resources:";
 
-zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatcher,
+zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
                                        zx_rights_t* rights,
                                        uint32_t kind,
                                        uint64_t base,
@@ -113,19 +113,19 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
     // itself. The constructor will handle adding itself to the shared list if
     // necessary.
     fbl::AllocChecker ac;
-    auto disp = fbl::AdoptRef(new (&ac) ResourceDispatcher(kind, base, size, flags,
-                                                           ktl::move(region_uptr),
-                                                           rallocs, resource_list));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) ResourceDispatcher(kind, base, size, flags,
+                                                                       ktl::move(region_uptr),
+                                                                       rallocs, resource_list)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     if (name != nullptr) {
-        disp->set_name(name, ZX_MAX_NAME_LEN);
+        new_handle.dispatcher()->set_name(name, ZX_MAX_NAME_LEN);
     }
 
     *rights = default_rights();
-    *dispatcher = ktl::move(disp);
+    *handle = ktl::move(new_handle);
 
     LTRACEF("%s [%u, %#lx, %zu] resource created.\n", kLogTag, kind, base, size);
     return ZX_OK;

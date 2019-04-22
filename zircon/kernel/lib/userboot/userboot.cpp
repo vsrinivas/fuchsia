@@ -147,12 +147,16 @@ static zx_status_t get_job_handle(Handle** ptr) {
 
 static zx_status_t get_resource_handle(Handle** ptr) {
     zx_rights_t rights;
-    fbl::RefPtr<ResourceDispatcher> root;
+    KernelHandle<ResourceDispatcher> root;
     zx_status_t result = ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0, 0,
                                                     "root");
-    if (result == ZX_OK)
-        *ptr = Handle::Make(fbl::RefPtr<Dispatcher>(root.get()),
-                            rights).release();
+    if (result != ZX_OK)
+        return result;
+
+    HandleOwner handle_owner = Handle::Make(ktl::move(root), rights);
+    if (!handle_owner)
+        return ZX_ERR_NO_MEMORY;
+    *ptr = handle_owner.release();
     return result;
 }
 

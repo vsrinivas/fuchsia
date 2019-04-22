@@ -22,6 +22,7 @@
 #include <vm/vm.h>
 #include <zircon/types.h>
 #include <zircon/boot/e820.h>
+#include <object/handle.h>
 #include <object/resource_dispatcher.h>
 
 #include "platform_p.h"
@@ -46,7 +47,7 @@ constexpr uint8_t kMaxReservedMmioEntries = 64;
 typedef struct reserved_mmio_space {
     uint64_t base;
     size_t len;
-    ResourceDispatcher::RefPtr dispatcher;
+    KernelHandle<ResourceDispatcher> handle;
 } reserved_mmio_space_t;
 reserved_mmio_space_t reserved_mmio_entries[kMaxReservedMmioEntries];
 static uint8_t reserved_mmio_count = 0;
@@ -451,7 +452,8 @@ static void x86_resource_init_hook(unsigned int rl) {
     for (uint8_t i = 0; i < reserved_mmio_count; i++) {
         zx_rights_t rights;
         auto& entry = reserved_mmio_entries[i];
-        zx_status_t st = ResourceDispatcher::Create(&entry.dispatcher, &rights, ZX_RSRC_KIND_MMIO,
+
+        zx_status_t st = ResourceDispatcher::Create(&entry.handle, &rights, ZX_RSRC_KIND_MMIO,
                                                     entry.base, entry.len, ZX_RSRC_FLAG_EXCLUSIVE,
                                                     "platform_memory");
         if (st == ZX_OK) {

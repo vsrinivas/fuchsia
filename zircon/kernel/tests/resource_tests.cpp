@@ -8,6 +8,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <ktl/unique_ptr.h>
+#include <object/handle.h>
 #include <object/resource_dispatcher.h>
 #include <lib/unittest/unittest.h>
 
@@ -17,12 +18,11 @@ static bool unconfigured() {
     ResourceDispatcher::ResourceList test_resource_list;
     zx_rights_t rights;
 
-    ResourceDispatcher::RefPtr disp1, disp2;
-    EXPECT_EQ(ResourceDispatcher::Create(&disp1, &rights, ZX_RSRC_KIND_MMIO,  0, PAGE_SIZE, 0,
+    KernelHandle<ResourceDispatcher> handle1, handle2;
+    EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO,  0, PAGE_SIZE, 0,
                 NULL, test_rallocs, &test_resource_list),
             ZX_ERR_BAD_STATE, "MMIO GetRegion should return ERR_BAD_STATE");
-    ResourceDispatcher::RefPtr disp;
-    EXPECT_EQ(ResourceDispatcher::Create(&disp2, &rights, ZX_RSRC_KIND_IRQ, 0, PAGE_SIZE, 0,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle2, &rights, ZX_RSRC_KIND_IRQ, 0, PAGE_SIZE, 0,
                 NULL, test_rallocs, &test_resource_list),
             ZX_ERR_BAD_STATE, "IRQ GetRegion should return ERR_BAD_STATE");
     // Nothing should be in the lists.
@@ -56,7 +56,7 @@ static bool exclusive_then_shared() {
     ResourceDispatcher::ResourceList test_resource_list;
     RegionAllocator test_rallocs[ZX_RSRC_KIND_COUNT];
 
-    ResourceDispatcher::RefPtr disp1, disp2;
+    KernelHandle<ResourceDispatcher> handle1, handle2;
     zx_rights_t rights;
     uint64_t base = 0;
     uint64_t size = PAGE_SIZE;
@@ -65,14 +65,14 @@ static bool exclusive_then_shared() {
                 test_rallocs),
             ZX_OK, "");
     // Creating the exclusive resource will succeed.
-    EXPECT_EQ(ResourceDispatcher::Create(&disp1, &rights, ZX_RSRC_KIND_MMIO, base, size,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO, base, size,
                 flags, "ets-disp1", test_rallocs, &test_resource_list),
             ZX_OK, "Creating the exclusive resource failed.");
 
     EXPECT_EQ(test_resource_list.size_slow(), 1u, "");
     // Creating the shared resource should fail
     flags = 0;
-    EXPECT_EQ(ResourceDispatcher::Create(&disp2, &rights, ZX_RSRC_KIND_MMIO, base, size,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle2, &rights, ZX_RSRC_KIND_MMIO, base, size,
                 flags, "ets-disp2", test_rallocs, &test_resource_list),
             ZX_ERR_NOT_FOUND, "Creating the shared resource succeeded.");
 
@@ -87,7 +87,7 @@ static bool shared_then_exclusive() {
     ResourceDispatcher::ResourceList test_resource_list;
     RegionAllocator test_rallocs[ZX_RSRC_KIND_COUNT];
 
-    ResourceDispatcher::RefPtr disp1, disp2;
+    KernelHandle<ResourceDispatcher> handle1, handle2;
     zx_rights_t rights;
     uint64_t base = 0;
     uint64_t size = PAGE_SIZE;
@@ -96,14 +96,14 @@ static bool shared_then_exclusive() {
                 test_rallocs),
             ZX_OK, "");
     // Creating the shared resource will succeed.
-    EXPECT_EQ(ResourceDispatcher::Create(&disp1, &rights, ZX_RSRC_KIND_MMIO, base, size,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO, base, size,
                 flags, "ets-disp1", test_rallocs, &test_resource_list),
             ZX_OK, "Creating the exclusive resource failed.");
 
     EXPECT_EQ(test_resource_list.size_slow(), 1u, "");
     // Creating the exclusive resource should fail
     flags = ZX_RSRC_FLAG_EXCLUSIVE;
-    EXPECT_EQ(ResourceDispatcher::Create(&disp2, &rights, ZX_RSRC_KIND_MMIO, base, size,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle2, &rights, ZX_RSRC_KIND_MMIO, base, size,
                 flags, "ets-disp2", test_rallocs, &test_resource_list),
             ZX_ERR_NOT_FOUND, "Creating the shared resource succeeded.");
 
@@ -117,19 +117,19 @@ static bool out_of_allocator_range() {
 
     ResourceDispatcher::ResourceList test_resource_list;
     RegionAllocator test_rallocs[ZX_RSRC_KIND_COUNT];
-    ResourceDispatcher::RefPtr disp1;
+    KernelHandle<ResourceDispatcher> handle1;
     zx_rights_t rights;
     uint64_t size = 0xFFFF;
 
     ASSERT_EQ(ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_MMIO, 0, size, test_rallocs),
               ZX_OK, "");
     // Overlap near the end
-    EXPECT_EQ(ResourceDispatcher::Create(&disp1, &rights, ZX_RSRC_KIND_MMIO, size - 0xFF, 0xFFF,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO, size - 0xFF, 0xFFF,
                                          0, "ooar-disp1", test_rallocs, &test_resource_list),
               ZX_ERR_NOT_FOUND, "");
 
     // Pick a chunk outside the range entirely
-    EXPECT_EQ(ResourceDispatcher::Create(&disp1, &rights, ZX_RSRC_KIND_MMIO, size + size, size,
+    EXPECT_EQ(ResourceDispatcher::Create(&handle1, &rights, ZX_RSRC_KIND_MMIO, size + size, size,
                                          0, "ooar-disp1", test_rallocs, &test_resource_list),
               ZX_ERR_NOT_FOUND, "");
 

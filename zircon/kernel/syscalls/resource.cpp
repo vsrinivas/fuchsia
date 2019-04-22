@@ -68,12 +68,12 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
 
     // Create a new Resource
     zx_rights_t rights;
-    fbl::RefPtr<ResourceDispatcher> child;
-    status = ResourceDispatcher::Create(&child, &rights, kind, base, size, flags, name);
+    KernelHandle<ResourceDispatcher> handle;
+    status = ResourceDispatcher::Create(&handle, &rights, kind, base, size, flags, name);
     if (status != ZX_OK) {
         return status;
     }
 
     // Create a handle for the child
-    return resource_out->make(ktl::move(child), rights);
+    return resource_out->make(ktl::move(handle), rights);
 }
