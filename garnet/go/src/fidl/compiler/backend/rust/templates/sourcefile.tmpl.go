@@ -38,6 +38,9 @@ use fidl::{
 {{ range $enum := .Enums -}}
 {{ template "EnumDeclaration" $enum }}
 {{ end -}}
+{{ range $result := .Results -}}
+{{ template "ResultDeclaration" $result}}
+{{ end -}}
 {{ range $union := .Unions -}}
 {{ template "UnionDeclaration" $union }}
 {{ end -}}

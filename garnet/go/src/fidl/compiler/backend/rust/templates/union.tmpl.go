@@ -6,15 +6,12 @@ package templates
 
 const Union = `
 {{- define "UnionDeclaration" }}
-{{- if .HasAttribute "Result" }}
-type {{ .Name }} = std::result::Result< {{(index .Members 0).Type }} , {{ (index .Members 1).Type }} >;
-{{ else }}
 fidl_union! {
   name: {{ .Name }},
   members: [
   {{- range .Members }}
     {{ .Name }} {
-      ty: {{ .Type }},
+      ty: {{ .Type.Decl }},
       offset: {{ .Offset }},
     },
   {{- end }}
@@ -22,6 +19,5 @@ fidl_union! {
   size: {{ .Size }},
   align: {{ .Alignment }},
 }
-{{- end }}
 {{- end }}
 `

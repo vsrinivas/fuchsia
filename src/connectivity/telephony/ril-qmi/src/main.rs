@@ -156,10 +156,9 @@ impl FrilService {
                 let status = lock.connect_transport(channel);
                 fx_log_info!("Connecting the service to the transport driver: {}", status);
                 if status {
-                    return responder.send(&mut Ok(RadioInterfaceLayerConnectTransportResponse {}));
-                } else {
-                    return responder.send(&mut Ok(RadioInterfaceLayerConnectTransportResponse {}));
+                    return responder.send(&mut Ok(()));
                 }
+                responder.send(&mut Err(RilError::TransportError))?
             }
             RadioInterfaceLayerRequest::GetSignalStrength { responder } => {
                 let resp: NAS::GetSignalStrengthResp =
@@ -167,24 +166,19 @@ impl FrilService {
                 if resp.radio_interface != 0x08 {
                     responder.send(&mut Err(RilError::UnsupportedNetworkType))?
                 } else {
-                    responder.send(&mut Ok(RadioInterfaceLayerGetSignalStrengthResponse {
-                        // TODO(bwb): This is wrong. Temporary fix for API review
-                        dbm: resp.signal_strength as f32,
-                    }))?
+                    responder.send(&mut Ok(resp.signal_strength as f32))?
                 }
             }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {
                 let packet: WDS::GetCurrentSettingsResp =
                     qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
-                responder.send(&mut Ok(RadioInterfaceLayerGetNetworkSettingsResponse {
-                    settings: NetworkSettings {
+                responder.send(&mut Ok(NetworkSettings {
                         ip_v4_addr: packet.ipv4_addr.unwrap(),
                         ip_v4_dns: packet.ipv4_dns.unwrap(),
                         ip_v4_subnet: packet.ipv4_subnet.unwrap(),
                         ip_v4_gateway: packet.ipv4_gateway.unwrap(),
                         mtu: packet.mtu.unwrap(),
-                    },
-                }))?
+                    }))?
             }
             RadioInterfaceLayerRequest::StartNetwork { apn, responder } => {
                 let packet: WDS::StartNetworkInterfaceResp = qmi_query!(
@@ -201,27 +195,20 @@ impl FrilService {
                     });
                 }
                 let client_end = ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
-                responder
-                    .send(&mut Ok(RadioInterfaceLayerStartNetworkResponse { conn: client_end }))?
+                responder.send(&mut Ok(client_end))?
             }
             RadioInterfaceLayerRequest::GetDeviceIdentity { responder } => {
                 let resp: DMS::GetDeviceSerialNumbersResp =
                     qmi_query!(responder, client, DMS::GetDeviceSerialNumbersReq::new());
-                responder.send(&mut Ok(RadioInterfaceLayerGetDeviceIdentityResponse {
-                    imei: resp.imei,
-                }))?
+                responder.send(&mut Ok(resp.imei))?
             }
             RadioInterfaceLayerRequest::RadioPowerStatus { responder } => {
                 let resp: DMS::GetOperatingModeResp =
                     qmi_query!(responder, client, DMS::GetOperatingModeReq::new());
                 if resp.operating_mode == 0x00 {
-                    responder.send(&mut Ok(RadioInterfaceLayerRadioPowerStatusResponse {
-                        state: RadioPowerState::On,
-                    }))?
+                    responder.send(&mut Ok(RadioPowerState::On))?
                 } else {
-                    responder.send(&mut Ok(RadioInterfaceLayerRadioPowerStatusResponse {
-                        state: RadioPowerState::Off,
-                    }))?
+                    responder.send(&mut Ok(RadioPowerState::Off))?
                 }
             }
         }

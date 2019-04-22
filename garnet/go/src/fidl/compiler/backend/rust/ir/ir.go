@@ -67,6 +67,15 @@ type XUnionMember struct {
 	Ordinal int
 }
 
+type Result struct {
+	types.Attributes
+	Name      string
+	Ok        []string
+	Err       UnionMember
+	Size      int
+	Alignment int
+}
+
 type Union struct {
 	types.Attributes
 	Name      string
@@ -77,7 +86,7 @@ type Union struct {
 
 type UnionMember struct {
 	types.Attributes
-	Type   string
+	Type   Type
 	Name   string
 	Offset int
 }
@@ -149,6 +158,7 @@ type Root struct {
 	Structs      []Struct
 	XUnions      []XUnion
 	Unions       []Union
+	Results      []Result
 	Tables       []Table
 	Interfaces   []Interface
 }
@@ -700,10 +710,35 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		Attributes: val.Attributes,
-		Type:       c.compileType(val.Type, false).Decl,
+		Type:       c.compileType(val.Type, false),
 		Name:       compileCamelIdentifier(val.Name),
 		Offset:     val.Offset,
 	}
+}
+
+func (c *compiler) compileResult(val types.Union, root Root) Result {
+	r := Result{
+		Attributes: val.Attributes,
+		Name:       c.compileCamelCompoundIdentifier(val.Name),
+		Ok:         []string{},
+		Err:        c.compileUnionMember(val.Members[1]),
+		Size:       val.Size,
+		Alignment:  val.Alignment,
+	}
+
+	OkArm := val.Members[0]
+	ci := c.compileCamelCompoundIdentifier(OkArm.Type.Identifier)
+
+	// always a struct on the Ok arms in Results
+	for _, v := range root.Structs {
+		if v.Name == ci {
+			for _, m := range v.Members {
+				r.Ok = append(r.Ok, m.Type)
+			}
+		}
+	}
+
+	return r
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
@@ -772,7 +807,12 @@ func Compile(r types.Root) Root {
 	}
 
 	for _, v := range r.Unions {
-		root.Unions = append(root.Unions, c.compileUnion(v))
+		// Results are a specialized type of Union
+		if v.Attributes.HasAttribute("Result") {
+			root.Results = append(root.Results, c.compileResult(v, root))
+		} else {
+			root.Unions = append(root.Unions, c.compileUnion(v))
+		}
 	}
 
 	for _, v := range r.Tables {

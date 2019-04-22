@@ -93,7 +93,7 @@ async fn get_imei<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.get_device_identity())? {
-        Ok(imei) => Ok(imei.imei),
+        Ok(imei) => Ok(imei),
         Err(_state) => Err(format_err!("error")),
     }
 }
@@ -106,7 +106,7 @@ async fn connect<'a>(
         Ok(iface) => {
             let settings = await!(ril_modem.get_network_settings())?;
             if let Ok(settings) = settings {
-                return Ok((settings.settings, iface.conn.into_proxy()?));
+                return Ok((settings, iface.into_proxy()?));
             }
             Err(format_err!("error"))
         }
@@ -119,7 +119,7 @@ async fn get_power<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.radio_power_status())? {
-        Ok(state) => match state.state {
+        Ok(state) => match state {
             RadioPowerState::On => Ok(String::from("radio on")),
             RadioPowerState::Off => Ok(String::from("radio off")),
         },
@@ -133,7 +133,7 @@ async fn get_signal<'a>(
 ) -> Result<String, Error> {
     match await!(ril_modem.get_signal_strength())? {
         Ok(strength) => {
-            Ok(format!("{} dBm", strength.dbm))
+            Ok(format!("{} dBm", strength))
         },
         Err(_e) => Err(format_err!("error")),
     }

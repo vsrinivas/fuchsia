@@ -30,11 +30,11 @@ fidl_enum! {
 }
 
 
-type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< WithErrorSyntaxErrorAsPrimitiveResponse , u32 >;
+type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< (
+), u32 >;
 
-
-type WithErrorSyntaxErrorAsEnumResult = std::result::Result< WithErrorSyntaxErrorAsEnumResponse , ErrorEnun >;
-
+type WithErrorSyntaxErrorAsEnumResult = std::result::Result< (
+), ErrorEnun >;
 
 
 fidl_empty_struct!(
