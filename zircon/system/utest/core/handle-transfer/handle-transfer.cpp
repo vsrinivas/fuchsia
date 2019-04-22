@@ -6,140 +6,115 @@
 #include <threads.h>
 #include <time.h>
 
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
+#include <lib/zx/channel.h>
+#include <zxtest/zxtest.h>
+
 
 // This example tests transferring channel handles through channels. To do so, it:
-//   Creates two channels, A and B, with handles A0-A1 and B0-B1, respectively
-//   Sends message "1" into A0
-//   Sends A1 to B0
-//   Sends message "2" into A0
-//   Reads H from B1 (should receive A1 again, possibly with a new value)
-//   Sends "3" into A0
-//   Reads from H until empty. Should read "1", "2", "3" in that order.
-bool handle_transfer_test(void) {
-    BEGIN_TEST;
-    zx_handle_t A[2];
-    zx_status_t status = zx_channel_create(0, A, A + 1);
-    char msg[512];
-    snprintf(msg, sizeof(msg), "failed to create channel A: %d\n", status);
-    EXPECT_EQ(status, 0, msg);
+//   Creates two channels, a and b.
+//   Sends message 0 into a_client
+//   Sends a_remote into b_client
+//   Sends message 1 into a_client
+//   Reads a_remote from b_remote (should receive
+//   a_remote, possibly with a new value)
+//   Sends 2 into a_client
+//   Reads from a_remote. Should read 0, 1, 2 in that order.
+TEST(HandleTransferTest, OverChannelThenRead) {
+    zx::channel a_client, a_remote;
+    zx::channel b_client, b_remote;
 
-    zx_handle_t B[2];
-    status = zx_channel_create(0, B, B + 1);
-    snprintf(msg, sizeof(msg), "failed to create channel B: %d\n", status);
-    EXPECT_EQ(status, 0, msg);
+    ASSERT_OK(zx::channel::create(0, &a_client, &a_remote));
+    ASSERT_OK(zx::channel::create(0, &b_client, &b_remote));
 
-    status = zx_channel_write(A[0], 0u, "1", 1u, NULL, 0u);
-    snprintf(msg, sizeof(msg), "failed to write message \"1\" into A0: %u\n", status);
-    EXPECT_EQ(status, ZX_OK, msg);
+    constexpr char kMessage[] = {0, 1, 2};
+    ASSERT_OK(a_client.write(0u, &kMessage[0], 1u, nullptr, 0u));
+    zx_handle_t a_remote_raw = a_remote.release();
+    ASSERT_OK(b_client.write(0u, nullptr, 0u, &a_remote_raw, 1u));
 
-    status = zx_channel_write(B[0], 0u, NULL, 0u, &A[1], 1u);
-    snprintf(msg, sizeof(msg), "failed to write message with handle A[1]: %u\n", status);
-    EXPECT_EQ(status, ZX_OK, msg);
+    ASSERT_OK(a_client.write(0u, &kMessage[1], 1u, nullptr, 0u));
 
-    A[1] = ZX_HANDLE_INVALID;
-    status = zx_channel_write(A[0], 0u, "2", 1u, NULL, 0u);
-    snprintf(msg, sizeof(msg), "failed to write message \"2\" into A0: %u\n", status);
-    EXPECT_EQ(status, ZX_OK, msg);
-
-    zx_handle_t H;
+    a_remote_raw = ZX_HANDLE_INVALID;
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 1u;
-    status = zx_channel_read(B[1], 0u, NULL, &H, 0, num_handles, &num_bytes, &num_handles);
-    snprintf(msg, sizeof(msg), "failed to read message from B1: %u\n", status);
-    EXPECT_EQ(status, ZX_OK, msg);
+    ASSERT_OK(b_remote.rea2(0u, nullptr, &a_remote_raw,
+              num_bytes, num_handles, &num_bytes, &num_handles));
+    ASSERT_EQ(num_handles, 1);
+    a_remote.reset(a_remote_raw);
+    ASSERT_TRUE(a_remote.is_valid());
 
-    snprintf(msg, sizeof(msg), "failed to read actual handle value from B1\n");
-    EXPECT_FALSE((num_handles != 1u || H == ZX_HANDLE_INVALID), msg);
+    ASSERT_OK(a_client.write(0u, &kMessage[2], 1u, nullptr, 0u));
 
-    status = zx_channel_write(A[0], 0u, "3", 1u, NULL, 0u);
-    snprintf(msg, sizeof(msg), "failed to write message \"3\" into A0: %u\n", status);
-    EXPECT_EQ(status, ZX_OK, msg);
-
-    for (int i = 0; i < 3; ++i) {
-        char buf[1];
+    for (size_t i = 0; i < fbl::count_of(kMessage); ++i) {
+        char incoming_byte;
         num_bytes = 1u;
         num_handles = 0u;
-        status = zx_channel_read(H, 0u, buf, NULL, num_bytes, 0, &num_bytes, &num_handles);
-        snprintf(msg, sizeof(msg), "failed to read message from H: %u\n", status);
-        EXPECT_EQ(status, ZX_OK, msg);
-        unittest_printf("read message: %c\n", buf[0]);
+        ASSERT_OK(a_remote.rea2(0u, &incoming_byte, nullptr, num_bytes,
+                  num_handles, nullptr, &num_handles));
+        ASSERT_EQ(num_handles, 0);
+        ASSERT_EQ(kMessage[i], incoming_byte);
     }
-
-    zx_handle_close(A[0]);
-    zx_handle_close(B[0]);
-    zx_handle_close(B[1]);
-    zx_handle_close(H);
-    END_TEST;
 }
 
-static int thread(void* arg) {
+struct ThreadArgs {
+    zx::channel a_client;
+    zx::channel a_remote;
+    zx::channel b_client;
+    zx::channel b_remote;
+    std::atomic<zx_status_t> fail_outgoing_a_0_on_b_1;
+    std::atomic<zx_status_t> fail_incoming_a_0_from_b_0;
+    std::atomic<uint64_t> num_handles;
+};
+
+int DoWork(void* arg) {
     // sleep for 10ms
     // this is race-prone, but until there's a way to wait for a thread to be
     // blocked, there's no better way to determine that the other thread has
     // entered handle_wait_one.
-    struct timespec t = (struct timespec){
+    struct timespec t = {
         .tv_sec = 0,
         .tv_nsec = 10 * 1000 * 1000,
     };
-    nanosleep(&t, NULL);
+    nanosleep(&t, nullptr);
 
-    // Send A0 through B1 to B0.
-    zx_handle_t* A = (zx_handle_t*)arg;
-    zx_handle_t* B = A + 2;
-    zx_status_t status = zx_channel_write(B[1], 0, NULL, 0u, &A[0], 1);
-    if (status != ZX_OK) {
-        UNITTEST_FAIL_TRACEF("failed to write message with handle A0 to B1: %d\n", status);
-        return 0;
-    }
+    ThreadArgs *test = reinterpret_cast<ThreadArgs*>(arg);
 
-    // Read from B0 into H, thus canceling any waits on A0.
-    zx_handle_t H;
+    // Send a_0 through b_1 to b_0.
+    zx_handle_t a_client_raw = test->a_client.release();
+    test->fail_outgoing_a_0_on_b_1 = test->b_remote.write(0, nullptr, 0u, &a_client_raw, 1);
+
+    // Read from b_0 into handle_a_0_incoming, thus canceling any waits on a_0.
     uint32_t num_handles = 1;
-    status = zx_channel_read(B[0], 0, NULL, &H, 0, num_handles, NULL, &num_handles);
-    if (status != ZX_OK || num_handles < 1) {
-        UNITTEST_FAIL_TRACEF("failed to read message handle H from B0: %d\n", status);
-    }
+    test->fail_incoming_a_0_from_b_0 = test->b_client.rea2(0,
+        nullptr, &a_client_raw, 0, num_handles, nullptr, &num_handles);
+    test->num_handles = num_handles;
 
     return 0;
 }
 
 // This tests canceling a wait when a handle is transferred.
-//   There are two channels: A0-A1 and B0-B1.
-//   A thread is created that sends A0 from B1 to B0.
-//   main() waits on A0.
-//   The thread then reads from B0, which should cancel the wait in main().
+//   There are two channels:
+//       channel a with endpoints a_client and a_remote
+//   and
+//       channel b with endpoints b_client and b_remote
+//   A thread is created that sends a_client from b_remote to b_client.
+//   main() waits on a_client.
+//   The thread then reads from b_client which should cancel the wait in main().
 // See [ZX-103].
-bool handle_transfer_cancel_wait_test(void) {
-    BEGIN_TEST;
-    zx_handle_t A[4];
-    zx_handle_t* B = &A[2];
-    zx_status_t status = zx_channel_create(0, A, A + 1);
-    char msg[512];
-    snprintf(msg, sizeof(msg), "failed to create channel A[0,1]: %d\n", status);
-    EXPECT_EQ(status, 0, msg);
-    status = zx_channel_create(0, B, B + 1);
-    snprintf(msg, sizeof(msg), "failed to create channel B[0,1]: %d\n", status);
-    EXPECT_EQ(status, 0, msg);
+TEST(HandleTransferTest, CancelsWait) {
+    ThreadArgs args;
+    ASSERT_OK(zx::channel::create(0, &args.a_client, &args.a_remote));
+    ASSERT_OK(zx::channel::create(0, &args.b_client, &args.b_remote));
 
     thrd_t thr;
-    int ret = thrd_create_with_name(&thr, thread, A, "write thread");
-    EXPECT_EQ(ret, thrd_success, "failed to create write thread");
+    int ret = thrd_create_with_name(&thr, DoWork, &args, "write thread");
+    ASSERT_EQ(ret, thrd_success, "failed to create write thread");
 
     zx_signals_t signals = ZX_CHANNEL_PEER_CLOSED;
-    status = zx_object_wait_one(A[0], signals, zx_deadline_after(ZX_SEC(1)), NULL);
-    EXPECT_NE(ZX_ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
+    EXPECT_NE(args.a_client.wait_one(signals, zx::deadline_after(zx::sec(1)),
+              nullptr), ZX_ERR_TIMED_OUT);
+    EXPECT_OK(args.fail_outgoing_a_0_on_b_1.load());
+    EXPECT_OK(args.fail_incoming_a_0_from_b_0.load());
+    EXPECT_EQ(1u, args.num_handles.load());
 
-    thrd_join(thr, NULL);
-    zx_handle_close(B[1]);
-    zx_handle_close(B[0]);
-    zx_handle_close(A[1]);
-    zx_handle_close(A[0]);
-    END_TEST;
+    thrd_join(thr, nullptr);
 }
-
-BEGIN_TEST_CASE(handle_transfer_tests)
-RUN_TEST(handle_transfer_test)
-RUN_TEST(handle_transfer_cancel_wait_test)
-END_TEST_CASE(handle_transfer_tests)
