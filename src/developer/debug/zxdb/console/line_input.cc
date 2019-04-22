@@ -43,7 +43,7 @@ size_t GetTerminalMaxCols(int fileno) {
   }
 #else
   struct winsize ws;
-  if (ioctl(fileno, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+  if (ioctl(fileno, TIOCGWINSZ, &ws) != -1)
     return ws.ws_col;
 #endif
   return 0;  // 0 means disable scrolling.
