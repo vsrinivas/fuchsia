@@ -88,7 +88,7 @@ func execute(ctx context.Context, paths []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch GCS bucket information: %v", err)
 	}
-	bkt, err := prepareGCSBucket(ctx, gcsBucket, opts)
+	bkt, err := newGCSBucket(ctx, gcsBucket, opts)
 	if err != nil {
 		return err
 	}

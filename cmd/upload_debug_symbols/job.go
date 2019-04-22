@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"fuchsia.googlesource.com/tools/elflib"
@@ -33,11 +32,6 @@ func (j *job) execute(ctx context.Context, bkt *GCSBucket) error {
 		return fmt.Errorf("validation failed for %q: %v", j.bfr.Filepath, err)
 	}
 	object := j.bfr.BuildID + elflib.DebugFileSuffix
-	bucket := j.dstBucket
-	if bkt.previouslyContained(object) {
-		log.Printf("skipping %q which already exists in %q", object, bucket)
-		return nil
-	}
 	filepath := j.bfr.Filepath
 	reader, err := os.Open(filepath)
 	if err != nil {

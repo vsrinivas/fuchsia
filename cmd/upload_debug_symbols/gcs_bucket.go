@@ -13,23 +13,11 @@ import (
 	"cloud.google.com/go/storage"
 	"fuchsia.googlesource.com/tools/gcs"
 	"go.chromium.org/luci/auth"
-	"google.golang.org/api/iterator"
 )
 
-// GCSBucket provides access to a cloud storage bucket. GCSBucket only captures the items
-// that were in GCS at the time the GCSBucket was created. It also tracks any items that
-// are uploaded via upload().
+// GCSBucket provides access to a cloud storage bucket.
 type GCSBucket struct {
-	objects map[string]bool
-	bkt     *storage.BucketHandle
-}
-
-// previouslyContained returns true iff the given object is known to already exist in this
-// bucket. GCSBucket only captures initial state; The object may already exist in the
-// bucket when this method is invoked if some other process uploaded the object after this
-// GCSBucket was created.
-func (bkt *GCSBucket) previouslyContained(object string) bool {
-	return bkt.objects[object]
+	bkt *storage.BucketHandle
 }
 
 func (bkt *GCSBucket) upload(ctx context.Context, object string, r io.Reader) error {
@@ -45,35 +33,17 @@ func (bkt *GCSBucket) upload(ctx context.Context, object string, r io.Reader) er
 			return fmt.Errorf("failed in close: %v", err)
 		}
 	}
-	bkt.objects[object] = true
 	return nil
 }
 
-// prepareGCSBucket captures the current state of the GCS bucket with the given name.
-func prepareGCSBucket(ctx context.Context, name string, opts auth.Options) (*GCSBucket, error) {
+// newGCSBucket returns a new GCSBucket object for the given bucket name.
+func newGCSBucket(ctx context.Context, name string, opts auth.Options) (*GCSBucket, error) {
 	client, err := gcs.NewClient(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %v", err)
 	}
 	bkt := client.Bucket(gcsBucket)
-	if _, err = bkt.Attrs(ctx); err != nil {
-		return nil, fmt.Errorf("failed to fetch bucket attributes: %v", err)
-	}
-	existingObjects := make(map[string]bool)
-	it := bkt.Objects(ctx, nil)
-	for {
-		objAttrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		existingObjects[objAttrs.Name] = true
-	}
-
 	return &GCSBucket{
-		objects: existingObjects,
-		bkt:     bkt,
+		bkt: bkt,
 	}, nil
 }
