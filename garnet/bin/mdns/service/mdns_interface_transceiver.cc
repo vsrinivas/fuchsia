@@ -10,8 +10,10 @@
 #include <lib/async/default.h>
 #include <poll.h>
 #include <sys/socket.h>
+
 #include <algorithm>
 #include <iostream>
+
 #include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/dns_reading.h"
 #include "garnet/bin/mdns/service/dns_writing.h"
@@ -19,9 +21,9 @@
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v6.h"
 #include "lib/fostr/hex_dump.h"
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/time/time_delta.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace mdns {
 
@@ -46,12 +48,15 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address,
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
+bool MdnsInterfaceTransceiver::Start(inet::IpPort mdns_port,
+                                     InboundMessageCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
+  mdns_port_ = mdns_port;
+
   std::cerr << "Starting mDNS on interface " << name_ << " " << address_
-            << "\n";
+            << " using port " << mdns_port_ << "\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -93,7 +98,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   FXL_DCHECK(message);
   FXL_DCHECK(address.is_valid());
   FXL_DCHECK(address.family() == address_.family() ||
-             address == MdnsAddresses::kV4Multicast);
+             address == MdnsAddresses::V4Multicast(mdns_port_));
 
   FixUpAddresses(&message->answers_);
   FixUpAddresses(&message->authorities_);
@@ -120,7 +125,7 @@ void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   DnsMessage message;
   message.answers_.push_back(GetAddressResource(host_full_name));
 
-  SendMessage(&message, MdnsAddresses::kV4Multicast);
+  SendMessage(&message, MdnsAddresses::V4Multicast(mdns_port_));
 }
 
 void MdnsInterfaceTransceiver::SendAddressGoodbye(
@@ -130,7 +135,7 @@ void MdnsInterfaceTransceiver::SendAddressGoodbye(
   message.answers_.push_back(MakeAddressResource(host_full_name, address_));
   message.answers_.back()->time_to_live_ = 0;
 
-  SendMessage(&message, MdnsAddresses::kV4Multicast);
+  SendMessage(&message, MdnsAddresses::V4Multicast(mdns_port_));
 }
 
 void MdnsInterfaceTransceiver::LogTraffic() {

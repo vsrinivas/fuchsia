@@ -17,6 +17,11 @@ const char kSchema[] = R"({
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
     "perform_host_name_probe": {
       "type": "boolean"
     },
@@ -88,6 +93,13 @@ void Config::ReadConfigFiles(const std::string& host_name,
 void Config::IntegrateDocument(const rapidjson::Document& document,
                                const std::string& host_name) {
   FXL_DCHECK(document.IsObject());
+
+  if (document.HasMember(kPortKey)) {
+    FXL_DCHECK(document[kPortKey].IsUint());
+    FXL_DCHECK(document[kPortKey].GetUint() >= 1);
+    FXL_DCHECK(document[kPortKey].GetUint() <= 65535);
+    mdns_port_ = inet::IpPort::From_uint16_t(document[kPortKey].GetUint());
+  }
 
   if (document.HasMember(kPerformHostNameProbeKey)) {
     FXL_DCHECK(document[kPerformHostNameProbeKey].IsBool());

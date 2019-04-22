@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_PROBER_H_
 #define GARNET_BIN_MDNS_SERVICE_PROBER_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <string>
-
-#include <lib/fit/function.h>
 
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "src/lib/fxl/time/time_delta.h"
@@ -42,7 +42,7 @@ class Prober : public MdnsAgent {
   ~Prober() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name) final;
+  void Start(const std::string& host_full_name, inet::IpPort mdns_port) final;
 
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) final;

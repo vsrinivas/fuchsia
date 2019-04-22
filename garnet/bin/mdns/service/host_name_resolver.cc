@@ -24,9 +24,12 @@ HostNameResolver::HostNameResolver(MdnsAgent::Host* host,
 
 HostNameResolver::~HostNameResolver() {}
 
-void HostNameResolver::Start(const std::string& host_full_name) {
+void HostNameResolver::Start(const std::string& host_full_name,
+                             inet::IpPort mdns_port) {
   // Note that |host_full_name_| is the name we're trying to resolve, not the
   // name of the local host, which is the (ignored) parameter to this method.
+
+  MdnsAgent::Start(host_full_name, mdns_port);
 
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));

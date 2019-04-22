@@ -28,7 +28,8 @@ class InstanceResponder : public MdnsAgent {
   ~InstanceResponder() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name) override;
+  void Start(const std::string& host_full_name,
+             inet::IpPort mdns_port) override;
 
   void ReceiveQuestion(const DnsQuestion& question,
                        const ReplyAddress& reply_address) override;
@@ -60,21 +61,17 @@ class InstanceResponder : public MdnsAgent {
 
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(bool query, const std::string& subtype = "",
-                             const ReplyAddress& reply_address =
-                                 MdnsAddresses::kV4MulticastReply) const;
+  void GetAndSendPublication(bool query, const std::string& subtype,
+                             const ReplyAddress& reply_address) const;
 
   // Sends a publication. An empty |subtype| indicates no subtype.
   void SendPublication(const Mdns::Publication& publication,
-                       const std::string& subtype = "",
-                       const ReplyAddress& reply_address =
-                           MdnsAddresses::kV4MulticastReply) const;
+                       const std::string& subtype,
+                       const ReplyAddress& reply_address) const;
 
   // Sends a subtype PTR record for this instance.
-  void SendSubtypePtrRecord(const std::string& subtype,
-                            uint32_t ttl = DnsResource::kShortTimeToLive,
-                            const ReplyAddress& reply_address =
-                                MdnsAddresses::kV4MulticastReply) const;
+  void SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
+                            const ReplyAddress& reply_address) const;
 
   // Sends a publication with zero ttls, indicating the service instance is
   // no longer published.

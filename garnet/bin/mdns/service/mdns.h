@@ -144,7 +144,8 @@ class Mdns : public MdnsAgent::Host {
   // calls to |ResolveHostName|, |SubscribeToService| and
   // |PublishServiceInstance|.
   void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name,
-             bool perform_address_probe, fit::closure ready_callback);
+             inet::IpPort mdns_port, bool perform_address_probe,
+             fit::closure ready_callback);
 
   // Stops the transceiver.
   void Stop();
@@ -278,6 +279,7 @@ class Mdns : public MdnsAgent::Host {
   async_dispatcher_t* dispatcher_;
   MdnsTransceiver transceiver_;
   std::string original_host_name_;
+  inet::IpPort mdns_port_;
   fit::closure ready_callback_;
   uint32_t next_host_name_deduplicator_ = 2;
   std::string host_name_;

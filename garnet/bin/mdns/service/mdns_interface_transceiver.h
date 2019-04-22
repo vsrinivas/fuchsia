@@ -5,18 +5,18 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/reply_address.h"
 #include "garnet/lib/inet/ip_address.h"
 #include "garnet/lib/inet/socket_address.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/macros.h"
 
 namespace mdns {
 
@@ -44,7 +44,7 @@ class MdnsInterfaceTransceiver {
   uint32_t index() const { return index_; }
 
   // Starts the interface transceiver.
-  bool Start(InboundMessageCallback callback);
+  bool Start(inet::IpPort mdns_port, InboundMessageCallback callback);
 
   // Stops the interface transceiver.
   void Stop();
@@ -53,8 +53,8 @@ class MdnsInterfaceTransceiver {
   void SetAlternateAddress(const inet::IpAddress& alternate_address);
 
   // Sends a message to the specified address. A V6 interface will send to
-  // |MdnsAddresses::kV6Multicast| if |reply_address| is
-  // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
+  // |MdnsAddresses::V6Multicast| if |reply_address| is
+  // |MdnsAddresses::V4Multicast|. This method expects there to be at most two
   // address records per record vector and, if there are two, that they are
   // adjacent. The same constraints will apply when this method returns.
   void SendMessage(DnsMessage* message, const inet::SocketAddress& address);
@@ -77,6 +77,7 @@ class MdnsInterfaceTransceiver {
                            uint32_t index);
 
   const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
+  inet::IpPort mdns_port() const { return mdns_port_; }
 
   virtual int SetOptionDisableMulticastLoop() = 0;
   virtual int SetOptionJoinMulticastGroup() = 0;
@@ -123,6 +124,7 @@ class MdnsInterfaceTransceiver {
   fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
+  inet::IpPort mdns_port_;
   InboundMessageCallback inbound_message_callback_;
   std::shared_ptr<DnsResource> address_resource_;
   std::shared_ptr<DnsResource> alternate_address_resource_;

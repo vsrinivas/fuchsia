@@ -25,8 +25,11 @@ InstanceResponder::InstanceResponder(MdnsAgent::Host* host,
 
 InstanceResponder::~InstanceResponder() {}
 
-void InstanceResponder::Start(const std::string& host_full_name) {
+void InstanceResponder::Start(const std::string& host_full_name,
+                              inet::IpPort mdns_port) {
   FXL_DCHECK(!host_full_name.empty());
+
+  MdnsAgent::Start(host_full_name, mdns_port);
 
   host_full_name_ = host_full_name;
 
@@ -82,7 +85,8 @@ void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
   for (const std::string& subtype : subtypes_) {
     if (std::find(subtypes.begin(), subtypes.end(), subtype) ==
         subtypes.end()) {
-      SendSubtypePtrRecord(subtype, 0);
+      SendSubtypePtrRecord(subtype, 0,
+                           MdnsAddresses::V4MulticastReply(mdns_port()));
     }
   }
 
@@ -99,10 +103,12 @@ void InstanceResponder::Reannounce() {
 }
 
 void InstanceResponder::SendAnnouncement() {
-  GetAndSendPublication(false);
+  GetAndSendPublication(false, "",
+                        MdnsAddresses::V4MulticastReply(mdns_port()));
 
   for (const std::string& subtype : subtypes_) {
-    SendSubtypePtrRecord(subtype);
+    SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive,
+                         MdnsAddresses::V4MulticastReply(mdns_port()));
   }
 
   if (announcement_interval_ > kMaxAnnouncementInterval) {
@@ -189,7 +195,8 @@ void InstanceResponder::SendGoodbye() const {
   publication.srv_ttl_seconds_ = 0;
   publication.txt_ttl_seconds_ = 0;
 
-  SendPublication(publication);
+  SendPublication(publication, "",
+                  MdnsAddresses::V4MulticastReply(mdns_port()));
 }
 
 }  // namespace mdns

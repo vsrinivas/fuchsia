@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/socket.h>
+
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "src/lib/files/unique_fd.h"
@@ -19,6 +20,7 @@ MdnsTransceiver::MdnsTransceiver() {}
 MdnsTransceiver::~MdnsTransceiver() {}
 
 void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack,
+                            inet::IpPort mdns_port,
                             fit::closure link_change_callback,
                             InboundMessageCallback inbound_message_callback) {
   FXL_DCHECK(netstack);
@@ -26,6 +28,7 @@ void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack,
   FXL_DCHECK(inbound_message_callback);
 
   netstack_ = std::move(netstack);
+  mdns_port_ = mdns_port;
   link_change_callback_ = std::move(link_change_callback);
   inbound_message_callback_ = std::move(inbound_message_callback);
 
@@ -54,7 +57,8 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
                                   const ReplyAddress& reply_address) {
   FXL_DCHECK(message);
 
-  if (reply_address.socket_address() == MdnsAddresses::kV4Multicast) {
+  if (reply_address.socket_address() ==
+      MdnsAddresses::V4Multicast(mdns_port_)) {
     for (auto& [address, interface] : interface_transceivers_by_address_) {
       FXL_DCHECK(interface);
       interface->SendMessage(message, reply_address.socket_address());
@@ -179,7 +183,8 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
   auto interface_transceiver =
       MdnsInterfaceTransceiver::Create(address, name, id);
 
-  if (!interface_transceiver->Start(inbound_message_callback_.share())) {
+  if (!interface_transceiver->Start(mdns_port_,
+                                    inbound_message_callback_.share())) {
     // Couldn't start the transceiver.
     return result_on_fail;
   }

@@ -68,7 +68,7 @@ void MdnsServiceImpl::Start() {
   }
 
   mdns_.Start(component_context_->svc()->Connect<fuchsia::netstack::Netstack>(),
-              host_name, config_.perform_host_name_probe(),
+              host_name, config_.mdns_port(), config_.perform_host_name_probe(),
               fit::bind_member(this, &MdnsServiceImpl::OnReady));
 }
 

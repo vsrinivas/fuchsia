@@ -45,6 +45,7 @@ TEST(ConfigTest, Empty) {
   under_test.ReadConfigFiles(kHostName, kTestDir);
   EXPECT_TRUE(under_test.valid());
   EXPECT_EQ("", under_test.error());
+  EXPECT_EQ(inet::IpPort::From_uint16_t(5353), under_test.mdns_port());
   EXPECT_TRUE(under_test.perform_host_name_probe());
   EXPECT_TRUE(under_test.publications().empty());
 
@@ -55,6 +56,7 @@ TEST(ConfigTest, Empty) {
 TEST(ConfigTest, OneValidFile) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("valid", R"({
+    "port": 5454,
     "perform_host_name_probe": false,
     "publications" : [
       {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false,
@@ -66,6 +68,7 @@ TEST(ConfigTest, OneValidFile) {
   under_test.ReadConfigFiles(kHostName, kTestDir);
   EXPECT_TRUE(under_test.valid());
   EXPECT_EQ("", under_test.error());
+  EXPECT_EQ(inet::IpPort::From_uint16_t(5454), under_test.mdns_port());
   EXPECT_FALSE(under_test.perform_host_name_probe());
   EXPECT_EQ(1u, under_test.publications().size());
   EXPECT_TRUE(
@@ -135,6 +138,7 @@ TEST(ConfigTest, TwoValidFiles) {
   under_test.ReadConfigFiles(kHostName, kTestDir);
   EXPECT_TRUE(under_test.valid());
   EXPECT_EQ("", under_test.error());
+  EXPECT_EQ(inet::IpPort::From_uint16_t(5353), under_test.mdns_port());
   EXPECT_FALSE(under_test.perform_host_name_probe());
   EXPECT_EQ(2u, under_test.publications().size());
 

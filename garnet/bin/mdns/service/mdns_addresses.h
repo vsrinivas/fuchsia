@@ -14,15 +14,14 @@
 namespace mdns {
 
 struct MdnsAddresses {
-  static const inet::IpPort kMdnsPort;
+  static const inet::IpPort kDefaultMdnsPort;
 
-  static const inet::SocketAddress kV4Multicast;
-  static const inet::SocketAddress kV6Multicast;
-  static const inet::SocketAddress kV4Bind;
-  static const inet::SocketAddress kV6Bind;
+  static inet::SocketAddress V4Multicast(inet::IpPort port);
+  static inet::SocketAddress V6Multicast(inet::IpPort port);
+  static inet::SocketAddress V4Bind(inet::IpPort port);
+  static inet::SocketAddress V6Bind(inet::IpPort port);
 
-  static const ReplyAddress kV4MulticastReply;
-  static const ReplyAddress kV6MulticastReply;
+  static ReplyAddress V4MulticastReply(inet::IpPort port);
 };
 
 }  // namespace mdns

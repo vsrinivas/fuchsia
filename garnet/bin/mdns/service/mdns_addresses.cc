@@ -7,26 +7,32 @@
 namespace mdns {
 
 // static
-const inet::IpPort MdnsAddresses::kMdnsPort = inet::IpPort::From_uint16_t(5353);
+const inet::IpPort MdnsAddresses::kDefaultMdnsPort =
+    inet::IpPort::From_uint16_t(5353);
 
 // static
-const inet::SocketAddress MdnsAddresses::kV4Multicast(224, 0, 0, 251,
-                                                      kMdnsPort);
+inet::SocketAddress MdnsAddresses::V4Multicast(inet::IpPort port) {
+  return inet::SocketAddress(224, 0, 0, 251, port);
+}
 
 // static
-const inet::SocketAddress MdnsAddresses::kV6Multicast(0xff02, 0xfb, kMdnsPort);
+inet::SocketAddress MdnsAddresses::V6Multicast(inet::IpPort port) {
+  return inet::SocketAddress(0xff02, 0xfb, port);
+}
 
 // static
-const inet::SocketAddress MdnsAddresses::kV4Bind(INADDR_ANY, kMdnsPort);
+inet::SocketAddress MdnsAddresses::V4Bind(inet::IpPort port) {
+  return inet::SocketAddress(INADDR_ANY, port);
+}
 
 // static
-const inet::SocketAddress MdnsAddresses::kV6Bind(in6addr_any, kMdnsPort);
+inet::SocketAddress MdnsAddresses::V6Bind(inet::IpPort port) {
+  return inet::SocketAddress(in6addr_any, port);
+}
 
 // static
-const ReplyAddress MdnsAddresses::kV4MulticastReply(MdnsAddresses::kV4Multicast,
-                                                    inet::IpAddress());
+ReplyAddress MdnsAddresses::V4MulticastReply(inet::IpPort port) {
+  return ReplyAddress(V4Multicast(port), inet::IpAddress());
+}
 
-// static
-const ReplyAddress MdnsAddresses::kV6MulticastReply(MdnsAddresses::kV6Multicast,
-                                                    inet::IpAddress());
 }  // namespace mdns

@@ -8,9 +8,11 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <netinet/in.h>
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
 #include "src/lib/fxl/macros.h"
 
@@ -27,7 +29,7 @@ class MdnsTransceiver {
   ~MdnsTransceiver();
 
   // Starts the transceiver.
-  void Start(fuchsia::netstack::NetstackPtr netstack,
+  void Start(fuchsia::netstack::NetstackPtr netstack, inet::IpPort mdns_port,
              fit::closure link_change_callback,
              InboundMessageCallback inbound_message_callback);
 
@@ -38,8 +40,8 @@ class MdnsTransceiver {
   bool has_interfaces() { return !interface_transceivers_by_address_.empty(); }
 
   // Sends a message to the specified address. A V6 interface will send to
-  // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
-  // |MdnsAddresses::kV4Multicast|.
+  // |MdnsAddresses::V6Multicast| if |reply_address.socket_address()| is
+  // |MdnsAddresses::V4Multicast|.
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
 
   // Writes log messages describing lifetime traffic.
@@ -64,6 +66,7 @@ class MdnsTransceiver {
                          std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
   fuchsia::netstack::NetstackPtr netstack_;
+  inet::IpPort mdns_port_;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;

@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_AGENT_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_AGENT_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_addresses.h"
@@ -63,7 +63,11 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
   // Starts the agent. This method is never called before a shared pointer to
   // the agent is created, so |shared_from_this| is safe to call.
-  virtual void Start(const std::string& host_full_name) {}
+  // Specializations should call this method first.
+  virtual void Start(const std::string& host_full_name,
+                     inet::IpPort mdns_port) {
+    mdns_port_ = mdns_port;
+  }
 
   // Presents a received question. This agent must not call |RemoveSelf| during
   // a call to this method.
@@ -86,6 +90,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  protected:
   MdnsAgent(Host* host) : host_(host) { FXL_DCHECK(host_); }
 
+  inet::IpPort mdns_port() const { return mdns_port_; }
+
   // Posts a task to be executed at the specified time. Scheduled tasks posted
   // by agents that have since been removed are not executed.
   void PostTaskForTime(fit::closure task, fxl::TimePoint target_time) {
@@ -97,22 +103,16 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     host_->SendQuestion(question);
   }
 
-  // Sends a resource to the specified address. The default |reply_address|
-  // |kV4MulticastReply| sends the resource to the V4 or V6
-  // multicast address.
+  // Sends a resource to the specified address.
   void SendResource(std::shared_ptr<DnsResource> resource,
                     MdnsResourceSection section,
-                    const ReplyAddress& reply_address =
-                        MdnsAddresses::kV4MulticastReply) const {
+                    const ReplyAddress& reply_address) const {
     host_->SendResource(resource, section, reply_address);
   }
 
-  // Sends address resources to the specified address. The default
-  // |reply_address| |kV4MulticastReply| sends the addresses to the V4 or V6
-  // multicast address.
+  // Sends address resources to the specified address.
   void SendAddresses(MdnsResourceSection section,
-                     const ReplyAddress& reply_address =
-                         MdnsAddresses::kV4MulticastReply) const {
+                     const ReplyAddress& reply_address) const {
     host_->SendAddresses(section, reply_address);
   }
 
@@ -137,6 +137,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
  private:
   Host* host_;
+  inet::IpPort mdns_port_;
 };
 
 }  // namespace mdns

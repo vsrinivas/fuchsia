@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "garnet/bin/mdns/service/mdns.h"
+#include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
@@ -39,6 +40,9 @@ class Config {
   // an empty string.
   std::string error() { return parser_.error_str(); }
 
+  // Returns the port to use for mDNS multicast communication (normally 5353).
+  inet::IpPort mdns_port() { return mdns_port_; }
+
   // Indicates whether a probe should be performed for the hostname.
   bool perform_host_name_probe() {
     return perform_host_name_probe_.has_value()
@@ -66,6 +70,7 @@ class Config {
   void SetPerformHostNameProbe(bool perform_host_name_probe);
 
   json::JSONParser parser_;
+  inet::IpPort mdns_port_ = MdnsAddresses::kDefaultMdnsPort;
   std::optional<bool> perform_host_name_probe_;
   std::vector<Publication> publications_;
 };

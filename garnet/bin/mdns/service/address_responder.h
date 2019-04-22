@@ -23,7 +23,8 @@ class AddressResponder : public MdnsAgent {
   ~AddressResponder() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name) override;
+  void Start(const std::string& host_full_name,
+             inet::IpPort mdns_port) override;
 
   void ReceiveQuestion(const DnsQuestion& question,
                        const ReplyAddress& reply_address) override;

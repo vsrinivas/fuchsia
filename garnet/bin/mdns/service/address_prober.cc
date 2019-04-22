@@ -16,7 +16,7 @@ AddressProber::~AddressProber() {}
 const std::string& AddressProber::ResourceName() { return host_full_name(); }
 
 void AddressProber::SendProposedResources(MdnsResourceSection section) {
-  SendAddresses(section);
+  SendAddresses(section, MdnsAddresses::V4MulticastReply(mdns_port()));
 }
 
 }  // namespace mdns
