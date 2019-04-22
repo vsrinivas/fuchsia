@@ -54,7 +54,6 @@ const char kCompress[] = "compress";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
-const char kLaunchpad[] = "launchpad";  // deprecated
 const char kSpawn[] = "spawn";
 const char kReturnChildResult[] = "return-child-result";
 const char kBufferSize[] = "buffer-size";
@@ -193,7 +192,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       kSpecFile,             kCategories,         kAppendArgs,
       kOutputFile,           kBinary,             kCompress,
       kDuration,             kDetach,             kDecouple,
-      kLaunchpad,            kSpawn,              kReturnChildResult,
+      kSpawn,                kReturnChildResult,
       kBufferSize,           kProviderBufferSize, kBufferingMode,
       kBenchmarkResultsFile, kTestSuite};
 
@@ -328,33 +327,16 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --spawn
-  // --launchpad is a deprecated spelling
   {
-    bool spawn_value = false, launchpad_value = false;
+    bool spawn_value = false;
     OptionStatus spawn_status =
         ParseBooleanOption(command_line, kSpawn, &spawn_value);
     if (spawn_status == OptionStatus::ERROR) {
       return false;
     }
-    OptionStatus launchpad_status =
-        ParseBooleanOption(command_line, kLaunchpad, &launchpad_value);
-    if (launchpad_status == OptionStatus::ERROR) {
-      return false;
-    }
     bool have_spawn = spawn_status == OptionStatus::PRESENT;
-    bool have_launchpad = launchpad_status == OptionStatus::PRESENT;
-    if (have_spawn && have_launchpad) {
-      FXL_LOG(ERROR) << "Specify only one of " << kSpawn << ", " << kLaunchpad;
-      return false;
-    }
     if (have_spawn) {
       spawn = spawn_value;
-      CheckCommandLineOverride("spawn", spec.spawn);
-    }
-    if (have_launchpad) {
-      FXL_LOG(WARNING) << "Option " << kLaunchpad << " is deprecated"
-                       << ", use " << kSpawn << " instead";
-      spawn = launchpad_value;
       CheckCommandLineOverride("spawn", spec.spawn);
     }
   }
@@ -478,7 +460,7 @@ Command::Info Record::Describe() {
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"spawn=[false]",
         "Use fdio_spawn to run a legacy app. Detach will have no effect when "
-        "using this option. May also be spelled --launchpad (deprecated)."},
+        "using this option."},
        {"return-child-result=[true]",
         "Return with the same return code as the child. "
         "Only valid when a child program is passed."},
