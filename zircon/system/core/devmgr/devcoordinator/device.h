@@ -56,7 +56,7 @@ class SuspendContext;
 // clang-format on
 
 struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHandler<Device> {
-    Device(Coordinator* coord, fbl::RefPtr<Device> parent);
+    Device(Coordinator* coord, fbl::RefPtr<Device> parent, uint32_t protocol_id);
     ~Device();
 
     // Create a new device with the given parameters.  This sets up its
@@ -208,9 +208,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     fbl::RefPtr<const Device> parent() const { return parent_; }
 
     uint32_t protocol_id() const { return protocol_id_; }
-    // TODO: Remove set_protocol_id once this class is further encapsulated.  It
-    // should be unnecessary.
-    void set_protocol_id(uint32_t protocol_id) { protocol_id_ = protocol_id; }
 
     bool is_bindable() const {
         return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE));
@@ -259,7 +256,7 @@ private:
     zx_status_t HandleRead();
 
     fbl::RefPtr<Device> parent_;
-    uint32_t protocol_id_ = 0;
+    const uint32_t protocol_id_;
 
     fbl::Array<const zx_device_prop_t> props_;
     // If the device has a topological property in |props|, this points to it.

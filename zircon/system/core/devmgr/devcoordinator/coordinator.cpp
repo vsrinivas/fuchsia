@@ -113,15 +113,14 @@ bool Coordinator::InSuspend() const {
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
-    root_device_ = fbl::MakeRefCounted<Device>(this, nullptr);
-    misc_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
-    sys_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
-    test_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
+    root_device_ = fbl::MakeRefCounted<Device>(this, nullptr, ZX_PROTOCOL_ROOT);
+    misc_device_ = fbl::MakeRefCounted<Device>(this, root_device_, ZX_PROTOCOL_MISC_PARENT);
+    sys_device_ = fbl::MakeRefCounted<Device>(this, root_device_, 0);
+    test_device_ = fbl::MakeRefCounted<Device>(this, root_device_, ZX_PROTOCOL_TEST_PARENT);
 
     fbl::AllocChecker ac;
     {
         root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        root_device_->set_protocol_id(ZX_PROTOCOL_ROOT);
         root_device_->name = fbl::String("root", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -134,7 +133,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
 
     {
         misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        misc_device_->set_protocol_id(ZX_PROTOCOL_MISC_PARENT);
         misc_device_->name = fbl::String("misc", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -163,7 +161,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
 
     {
         test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        test_device_->set_protocol_id(ZX_PROTOCOL_TEST_PARENT);
         test_device_->name = fbl::String("test", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;

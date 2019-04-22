@@ -14,8 +14,8 @@
 
 namespace devmgr {
 
-Device::Device(Coordinator* coord, fbl::RefPtr<Device> parent)
-    : coordinator(coord), parent_(std::move(parent)),
+Device::Device(Coordinator* coord, fbl::RefPtr<Device> parent, uint32_t protocol_id)
+    : coordinator(coord), parent_(std::move(parent)), protocol_id_(protocol_id),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }) {}
 
 Device::~Device() {
@@ -60,7 +60,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         real_parent = parent;
     }
 
-    auto dev = fbl::MakeRefCounted<Device>(coordinator, real_parent);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, real_parent, protocol_id);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -73,7 +73,6 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     dev->libname = std::move(driver_path);
     dev->args = std::move(args);
     dev->set_channel(std::move(rpc));
-    dev->set_protocol_id(protocol_id);
     dev->client_remote = std::move(client_remote);
 
     // If we have bus device args we are, by definition, a bus device.
@@ -117,7 +116,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
                                        composite_props.size());
     memcpy(props.get(), composite_props.get(), props.size() * sizeof(props[0]));
 
-    auto dev = fbl::MakeRefCounted<Device>(coordinator, nullptr);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, nullptr, ZX_PROTOCOL_COMPOSITE);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -129,7 +128,6 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
 
     dev->name = composite.name();
     dev->set_channel(std::move(rpc));
-    dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
     // We exist within our parent's device host
     dev->set_host(devhost);
 
@@ -157,7 +155,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
 zx_status_t Device::CreateProxy() {
     ZX_ASSERT(this->proxy == nullptr);
 
-    auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::WrapRefPtr(this));
+    auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::WrapRefPtr(this), protocol_id_);
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -177,7 +175,6 @@ zx_status_t Device::CreateProxy() {
     }
 
     dev->flags = DEV_CTX_PROXY;
-    dev->set_protocol_id(protocol_id_);
     this->proxy = std::move(dev);
     log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, this->name.data());
     return ZX_OK;
