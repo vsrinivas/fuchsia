@@ -11,7 +11,10 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::lock::Mutex,
+    futures::{
+        future::{join_all, FutureObj},
+        lock::Mutex,
+    },
     std::sync::Arc,
 };
 
@@ -68,11 +71,11 @@ impl Model {
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let realm: Arc<Mutex<Realm>> = await!(self.look_up_realm(&abs_moniker))?;
-        let mut eager_children = {
+        let eager_children = {
             let mut realm = await!(realm.lock());
             await!(self.bind_instance(&mut realm))?
         };
-        await!(self.bind_eager_children_recursive(&mut eager_children))?;
+        await!(self.bind_eager_children_recursive(eager_children))?;
         Ok(())
     }
 
@@ -86,7 +89,7 @@ impl Model {
         path: CapabilityPath,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
-        let mut eager_children = {
+        let eager_children = {
             let mut realm = await!(realm.lock());
             let eager_children = await!(self.bind_instance(&mut realm))?;
 
@@ -102,10 +105,9 @@ impl Model {
                 .outgoing_dir;
             let path = io_util::canonicalize_path(&path.to_string());
             out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
-
             eager_children
         };
-        await!(self.bind_eager_children_recursive(&mut eager_children))?;
+        await!(self.bind_eager_children_recursive(eager_children))?;
         Ok(())
     }
 
@@ -195,11 +197,28 @@ impl Model {
     /// Binds to a list of instances, and any eager children they may return.
     async fn bind_eager_children_recursive<'a>(
         &'a self,
-        instances_to_bind: &'a mut Vec<Arc<Mutex<Realm>>>,
+        mut instances_to_bind: Vec<Arc<Mutex<Realm>>>,
     ) -> Result<(), ModelError> {
-        while let Some(realm) = instances_to_bind.pop() {
-            let mut child_realm = await!(realm.lock());
-            instances_to_bind.append(&mut await!(self.bind_instance(&mut child_realm))?);
+        loop {
+            if instances_to_bind.is_empty() {
+                break;
+            }
+            let futures: Vec<_> = instances_to_bind
+                .iter()
+                .map(|realm| {
+                    FutureObj::new(
+                        Box::new(async move {
+                            let mut child_realm = await!(realm.lock());
+                            await!(self.bind_instance(&mut child_realm))
+                        }),
+                    )
+                })
+                .collect();
+            let res = await!(join_all(futures));
+            instances_to_bind.clear();
+            for e in res {
+                instances_to_bind.append(&mut e?);
+            }
         }
         Ok(())
     }

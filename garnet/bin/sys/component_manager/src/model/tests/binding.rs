@@ -170,9 +170,19 @@ async fn bind_instance_child_non_existent() {
     assert_eq!(*actual_uris, expected_uris);
 }
 
+/// Create a hierarchy of children:
+///
+///   a
+///  / \
+/// b   c
+///      \
+///       d
+///        \
+///         e
+///
+/// `b`, `c`, and `d` are started eagerly. `a` and `e` are lazy.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn bind_instance_eager_child() {
-    // Create a hierarchy of children. The two components in the middle enable eager binding.
+async fn bind_instance_eager_children() {
     let mut resolver = ResolverRegistry::new();
     let runner = MockRunner::new();
     let uris_run = runner.uris_run.clone();
@@ -191,37 +201,45 @@ async fn bind_instance_eager_child() {
     mock_resolver.add_component(
         "a",
         ComponentDecl {
-            children: vec![ChildDecl {
-                name: "b".to_string(),
-                uri: "test:///b".to_string(),
-                startup: fsys::StartupMode::Eager,
-            }],
+            children: vec![
+                ChildDecl {
+                    name: "b".to_string(),
+                    uri: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Eager,
+                },
+                ChildDecl {
+                    name: "c".to_string(),
+                    uri: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Eager,
+                },
+            ],
             ..default_component_decl()
         },
     );
-    mock_resolver.add_component(
-        "b",
-        ComponentDecl {
-            children: vec![ChildDecl {
-                name: "c".to_string(),
-                uri: "test:///c".to_string(),
-                startup: fsys::StartupMode::Eager,
-            }],
-            ..default_component_decl()
-        },
-    );
+    mock_resolver.add_component("b", default_component_decl());
     mock_resolver.add_component(
         "c",
         ComponentDecl {
             children: vec![ChildDecl {
                 name: "d".to_string(),
                 uri: "test:///d".to_string(),
+                startup: fsys::StartupMode::Eager,
+            }],
+            ..default_component_decl()
+        },
+    );
+    mock_resolver.add_component(
+        "d",
+        ComponentDecl {
+            children: vec![ChildDecl {
+                name: "e".to_string(),
+                uri: "test:///e".to_string(),
                 startup: fsys::StartupMode::Lazy,
             }],
             ..default_component_decl()
         },
     );
-    mock_resolver.add_component("d", default_component_decl());
+    mock_resolver.add_component("e", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
@@ -238,12 +256,24 @@ async fn bind_instance_eager_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris = vec![
+        // Execution order of `b` and `c` is non-deterministic.
+        let expected_uris1 = vec![
             "test:///a_resolved".to_string(),
             "test:///b_resolved".to_string(),
             "test:///c_resolved".to_string(),
+            "test:///d_resolved".to_string(),
         ];
-        assert_eq!(*actual_uris, expected_uris);
+        let expected_uris2 = vec![
+            "test:///a_resolved".to_string(),
+            "test:///c_resolved".to_string(),
+            "test:///b_resolved".to_string(),
+            "test:///d_resolved".to_string(),
+        ];
+        assert!(
+            *actual_uris == expected_uris1 || *actual_uris == expected_uris2,
+            "uris_run failed to match: {:?}",
+            *actual_uris
+        );
     }
 }
 
