@@ -61,8 +61,12 @@ TEST(DecoderTest, AacDecoder) {
   startup_context->ConnectToEnvironmentService(
       codec_factory.NewRequest(main_loop.dispatcher()));
 
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
+      sysmem.NewRequest());
+
   uint8_t md[SHA256_DIGEST_LENGTH];
-  use_aac_decoder(&main_loop, std::move(codec_factory), kInputFilePath, "", md);
+  use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), kInputFilePath, "", md);
 
   char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
   char* actual_sha256_ptr = actual_sha256;
