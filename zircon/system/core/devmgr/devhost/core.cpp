@@ -568,49 +568,24 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
     return dev->CloseOp(flags);
 }
 
-static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& dev,
-                                                 uint32_t flags) REQ_DM_LOCK {
-    // first suspend children (so we suspend from leaf up)
-    zx_status_t st;
-    for (auto& child : dev->children) {
-        if (!(child.flags & DEV_FLAG_DEAD)) {
-            // Try to get a reference to the child.   This will fail if the last
-            // reference to it went away and fbl_recycle() is going to blocked
-            // waiting for the DM lock
-            auto child_ref =
-                fbl::MakeRefPtrUpgradeFromRaw(&child, &::devmgr::internal::devhost_api_lock);
-            if (child_ref) {
-                st = devhost_device_suspend(std::move(child_ref), flags);
-                if (st != ZX_OK) {
-                    return st;
-                }
-            }
-        }
-    }
-
-
-    // then invoke our suspend hook
-    if (dev->ops->suspend) {
-        ApiAutoRelock relock;
-        st = dev->ops->suspend(dev->ctx, flags);
-    } else {
-        st = ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // default_suspend() returns ZX_ERR_NOT_SUPPORTED
-    if ((st != ZX_OK) && (st != ZX_ERR_NOT_SUPPORTED)) {
-        return st;
-    } else {
-        return ZX_OK;
-    }
-}
-
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
     // TODO this should eventually be two-pass using SUSPENDING/SUSPENDED flags
     enum_lock_acquire();
-    zx_status_t r = devhost_device_suspend_locked(dev, flags);
+
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    // then invoke our suspend hook
+    if (dev->ops->suspend) {
+        ApiAutoRelock relock;
+        status = dev->ops->suspend(dev->ctx, flags);
+    }
+
     enum_lock_release();
-    return r;
+
+    // default_suspend() returns ZX_ERR_NOT_SUPPORTED
+    if ((status != ZX_OK) && (status != ZX_ERR_NOT_SUPPORTED)) {
+        return status;
+    }
+    return ZX_OK;
 }
 
 } // namespace devmgr

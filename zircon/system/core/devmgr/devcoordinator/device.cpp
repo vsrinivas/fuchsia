@@ -190,6 +190,31 @@ zx_status_t Device::SignalReadyForBind(zx::duration delay) {
     return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }
 
+zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
+    if (suspend_completion_) {
+        // We already have a pending suspend
+        return ZX_ERR_UNAVAILABLE;
+    }
+    log(DEVLC, "devcoordinator: suspend dev %p name='%s'\n", this, this->name.data());
+    zx_status_t status = dh_send_suspend(this, flags);
+    if (status != ZX_OK) {
+        return status;
+    }
+    suspend_completion_ = std::move(completion);
+    return ZX_OK;
+}
+
+void Device::CompleteSuspend(zx_status_t status) {
+    if (status == ZX_OK) {
+        state_ = Device::State::kSuspended;
+    }
+
+    SuspendCompletion completion(std::move(suspend_completion_));
+    if (completion) {
+        completion(status);
+    }
+}
+
 // Handle inbound messages from devhost to devices
 void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
                        async::WaitBase* wait, zx_status_t status,
@@ -357,8 +382,14 @@ zx_status_t Device::HandleRead() {
             log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", this->name.data(),
                 resp->status);
         }
-        coordinator->suspend_context().set_status(resp->status);
-        coordinator->suspend_context().ContinueSuspend(coordinator->root_resource());
+
+        if (!suspend_completion_) {
+            log(ERROR, "devcoordinator: rpc: unexpected suspend reply for '%s' status %d\n",
+                this->name.data(), resp->status);
+            return ZX_ERR_IO;
+        }
+        log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, this->name.data());
+        CompleteSuspend(resp->status);
     } else {
         log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %08x\n",
             this->name.data(), hdr->ordinal);

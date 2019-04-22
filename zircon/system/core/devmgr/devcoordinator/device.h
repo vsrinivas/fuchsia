@@ -82,6 +82,16 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     // or after it becomes visible.
     zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
 
+    using SuspendCompletion = fit::function<void(zx_status_t)>;
+    // Issue a Suspend request to this device.  When the response comes in, the
+    // given completion will be invoked.
+    zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
+
+    // Run the completion for the outstanding suspend, if any.  This method is
+    // only exposed currently because RemoveDevice is on Coordinator instead of
+    // Device.
+    void CompleteSuspend(zx_status_t status);
+
     Coordinator* coordinator;
     uint32_t flags = 0;
 
@@ -181,6 +191,15 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     Devhost* host() const { return host_; }
     uint64_t local_id() const { return local_id_; }
 
+    // TODO(teisenbe): We probably want more states.  For example, the DEAD flag
+    // should probably move in to here.
+    enum class State {
+        kActive,
+        kSuspended,
+    };
+
+    State state() { return state_; }
+
 private:
     zx_status_t HandleRead();
 
@@ -208,6 +227,13 @@ private:
     // The id of this device from the perspective of the devhost.  This can be
     // used to communicate with the devhost about this device.
     uint64_t local_id_ = 0;
+
+    // The current state of the device
+    State state_ = State::kActive;
+
+    // If a suspend is in-progress, this completion will be invoked when it is
+    // completed.
+    SuspendCompletion suspend_completion_;
 };
 
 } // namespace devmgr

@@ -83,9 +83,7 @@ protocol DeviceController {
     /// this interface channel will close instead of returning a result.
     RemoveDevice();
 
-    /// Ask devhost to suspend all of its devices, using the target state indicated by |flags|.
-    /// This should logically be in DevhostController, but currently this is instead sent to the
-    /// first device in the devhost
+    /// Ask devhost to suspend this device, using the target state indicated by |flags|.
     Suspend(uint32 flags) -> (zx.status status);
 };
 

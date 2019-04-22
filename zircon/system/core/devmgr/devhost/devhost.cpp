@@ -603,19 +603,12 @@ static zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {
 
 static zx_status_t fidl_Suspend(void* raw_ctx, uint32_t flags, fidl_txn_t* txn) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
-    // call suspend on the device this devhost is rooted on
-    fbl::RefPtr<zx_device_t> device = ctx->conn->dev;
-    while (device->parent != nullptr) {
-        device = device->parent;
-    }
     zx_status_t r;
     {
         ApiAutoLock lock;
-        r = devhost_device_suspend(device, flags);
+        r = devhost_device_suspend(ctx->conn->dev, flags);
     }
-    // TODO(teisenbe): We should probably check this return...
-    fuchsia_device_manager_DeviceControllerSuspend_reply(txn, r);
-    return ZX_OK;
+    return fuchsia_device_manager_DeviceControllerSuspend_reply(txn, r);
 }
 
 static zx_status_t fidl_RemoveDevice(void* raw_ctx) {

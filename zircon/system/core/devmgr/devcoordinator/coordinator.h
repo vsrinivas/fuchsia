@@ -28,6 +28,7 @@
 #include "device.h"
 #include "driver.h"
 #include "metadata.h"
+#include "suspend-task.h"
 #include "vmo-writer.h"
 
 namespace devmgr {
@@ -43,32 +44,21 @@ public:
 
     SuspendContext() = default;
 
-    SuspendContext(Coordinator* coordinator, Flags flags, uint32_t sflags, zx::socket socket,
+    SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
                    zx::vmo kernel = zx::vmo(), zx::vmo bootdata = zx::vmo())
-        : coordinator_(coordinator), flags_(flags), sflags_(sflags), socket_(std::move(socket)),
+        : flags_(flags), sflags_(sflags), socket_(std::move(socket)),
           kernel_(std::move(kernel)), bootdata_(std::move(bootdata)) {}
 
-    ~SuspendContext() { devhosts_.clear(); }
+    ~SuspendContext() {}
 
     SuspendContext(SuspendContext&&) = default;
     SuspendContext& operator=(SuspendContext&&) = default;
 
-    void ContinueSuspend(const zx::resource& root_resource);
+    void set_task(fbl::RefPtr<SuspendTask> task) { task_ = std::move(task); }
 
-    Coordinator* coordinator() { return coordinator_; }
-
-    zx_status_t status() const { return status_; }
-    void set_status(zx_status_t status) { status_ = status; }
     Flags flags() const { return flags_; }
     void set_flags(Flags flags) { flags_ = flags; }
     uint32_t sflags() const { return sflags_; }
-
-    Devhost* dh() const { return dh_; }
-    void set_dh(Devhost* dh) { dh_ = dh; }
-
-    using DevhostList = fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode>;
-    DevhostList& devhosts() { return devhosts_; }
-    const DevhostList& devhosts() const { return devhosts_; }
 
     const zx::vmo& kernel() const { return kernel_; }
     const zx::vmo& bootdata() const { return bootdata_; }
@@ -76,29 +66,13 @@ public:
     // Close the socket whose ownership was handed to this SuspendContext.
     void CloseSocket() { socket_.reset(); }
 
-    // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const { ++count_; }
-
-    // Returns true when the last message reference has been released.
-    bool Release() const {
-        const int32_t rc = count_;
-        --count_;
-        return rc == 1;
-    }
-
 private:
-    Coordinator* coordinator_ = nullptr;
+    fbl::RefPtr<SuspendTask> task_;
 
-    zx_status_t status_ = ZX_OK;
     Flags flags_ = Flags::kRunning;
 
     // suspend flags
     uint32_t sflags_ = 0u;
-    // outstanding msgs
-    mutable uint32_t count_ = 0u;
-    // next devhost to process
-    Devhost* dh_ = nullptr;
-    fbl::DoublyLinkedList<Devhost*, Devhost::SuspendNode> devhosts_;
 
     // socket to notify on for 'dm reboot' and 'dm poweroff'
     zx::socket socket_;

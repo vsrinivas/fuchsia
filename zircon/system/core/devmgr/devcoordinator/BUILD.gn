@@ -52,6 +52,7 @@ source_set("common") {
     "driver.cpp",
     "driver.h",
     "fidl.cpp",
+    "suspend-task.cpp",
     "task.cpp",
     "vmo-writer.cpp",
     "vmo-writer.h",

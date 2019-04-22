@@ -78,56 +78,6 @@ void vfs_exit(const zx::event& fshost_event) {
     printf("devcoordinator: Successfully waited for VFS exit completion\n");
 }
 
-zx_status_t suspend_devhost(devmgr::Devhost* dh, devmgr::SuspendContext* ctx) {
-    if (dh->devices().is_empty()) {
-        return ZX_OK;
-    }
-    devmgr::Device* dev = &dh->devices().front();
-
-    if (!(dev->flags & DEV_CTX_PROXY)) {
-        log(INFO, "devcoordinator: devhost root '%s' (%p) is not a proxy\n", dev->name.data(), dev);
-        return ZX_ERR_BAD_STATE;
-    }
-    log(DEVLC, "devcoordinator: suspend devhost %p device '%s' (%p)\n", dh, dev->name.data(), dev);
-
-    zx_status_t status = dh_send_suspend(dev, ctx->sflags());
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    dh->flags() |= devmgr::Devhost::Flags::kSuspend;
-    // TODO(teisenbe/kulakowski) Make SuspendContext automatically refcounted.
-    ctx->AddRef();
-    return ZX_OK;
-}
-
-void process_suspend_list(devmgr::SuspendContext* ctx) {
-    auto dh = ctx->devhosts().make_iterator(*ctx->dh());
-    devmgr::Devhost* parent = nullptr;
-    do {
-        if (!parent || (dh->parent() == parent)) {
-            // send Message::Op::kSuspend each set of children of a devhost at a time,
-            // since they can run in parallel
-            suspend_devhost(dh.CopyPointer(), &ctx->coordinator()->suspend_context());
-            parent = dh->parent();
-        } else {
-            // if the parent is different than the previous devhost's
-            // parent, either this devhost is the parent, a child of
-            // its parent's sibling, or the parent's sibling, so stop
-            // processing until all the outstanding suspends are done
-            parent = nullptr;
-            break;
-        }
-    } while (++dh != ctx->devhosts().end());
-    // next devhost to process once all the outstanding suspends are done
-    if (dh.IsValid()) {
-        ctx->set_dh(dh.CopyPointer());
-    } else {
-        ctx->set_dh(nullptr);
-        ctx->devhosts().clear();
-    }
-}
-
 void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
     log(INFO, "devcoordinator: suspend fallback with flags 0x%08x\n", flags);
     if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
@@ -749,6 +699,11 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // remove from devfs, preventing further OPEN attempts
     devfs_unpublish(dev.get());
 
+    // Mark any suspend that's in-flight as completed, since if the device is
+    // removed it should be in its lowest state.
+    // TODO(teisenbe): Should we mark it as failed if this is a forced removal?
+    dev->CompleteSuspend(ZX_OK);
+
     if (dev->proxy) {
         zx_status_t r = dh_send_remove_device(dev->proxy.get());
         if (r != ZX_OK) {
@@ -1334,42 +1289,12 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
     BindDevice(dev, fbl::StringPiece("") /* autobind */, true /* new device */);
 }
 
-static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
-    // suspend order is children first
-    for (auto& child : dh->children()) {
-        ctx->devhosts().push_front(&child);
-    }
-    for (auto& child : dh->children()) {
-        append_suspend_list(ctx, &child);
-    }
-}
-
-// Returns the devhost at the front of the queue.
-void Coordinator::BuildSuspendList() {
-    auto& devhosts = suspend_context().devhosts();
-
-    // sys_device must suspend last as on x86 it invokes
-    // ACPI S-state transition
-    devhosts.push_front(sys_device_->proxy->host());
-    append_suspend_list(&suspend_context(), sys_device_->proxy->host());
-
-    devhosts.push_front(root_device_->proxy->host());
-    append_suspend_list(&suspend_context(), root_device_->proxy->host());
-
-    devhosts.push_front(misc_device_->proxy->host());
-    append_suspend_list(&suspend_context(), misc_device_->proxy->host());
-
-    // test devices do not (yet) participate in suspend
-
-    suspend_context().set_dh(&devhosts.front());
-}
-
 static int suspend_timeout_thread(void* arg) {
     // 10 seconds
     zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
 
-    auto ctx = static_cast<SuspendContext*>(arg);
-    auto coordinator = ctx->coordinator();
+    auto coordinator = static_cast<Coordinator*>(arg);
+    auto ctx = &coordinator->suspend_context();
     if (coordinator->suspend_debug()) {
         if (ctx->flags() == SuspendContext::Flags::kRunning) {
             return 0; // success
@@ -1384,10 +1309,9 @@ static int suspend_timeout_thread(void* arg) {
 }
 
 void Coordinator::Suspend(SuspendContext ctx) {
-    // these top level devices should all have proxies. if not,
-    // the system hasn't fully initialized yet and cannot go to
-    // suspend.
-    if (!sys_device_->proxy || !root_device_->proxy || !misc_device_->proxy) {
+    // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
+    // cannot go to suspend.
+    if (!sys_device_->proxy) {
         return;
     }
     if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
@@ -1395,11 +1319,45 @@ void Coordinator::Suspend(SuspendContext ctx) {
     }
     // Move the socket in to prevent the rpc handler from closing the handle.
     suspend_context() = std::move(ctx);
-    BuildSuspendList();
+
+    auto completion = [this](zx_status_t status) {
+        auto& ctx = suspend_context();
+        if (status != ZX_OK) {
+            // TODO: unroll suspend
+            // do not continue to suspend as this indicates a driver suspend
+            // problem and should show as a bug
+            log(ERROR, "devcoordinator: failed to suspend: %s\n", zx_status_get_string(status));
+            // notify dmctl
+            ctx.CloseSocket();
+            if (ctx.sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
+                ctx.kernel().signal(0, ZX_USER_SIGNAL_0);
+            }
+            ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
+            return;
+        }
+
+        if (ctx.sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
+            zx_system_mexec(root_resource().get(), ctx.kernel().get(), ctx.bootdata().get());
+        } else {
+            // should never get here on x86
+            // on arm, if the platform driver does not implement
+            // suspend go to the kernel fallback
+            ::suspend_fallback(root_resource(), ctx.sflags());
+            // this handle is leaked on the shutdown path for x86
+            ctx.CloseSocket();
+            // if we get here the system did not suspend successfully
+            ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
+        }
+    };
+
+    // We don't need to suspend anything except sys_device and it's children,
+    // since we do not run suspend hooks for children of test or misc
+    auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
+    suspend_context().set_task(std::move(task));
 
     if (suspend_fallback() || suspend_debug()) {
         thrd_t t;
-        int ret = thrd_create_with_name(&t, suspend_timeout_thread, &suspend_context(),
+        int ret = thrd_create_with_name(&t, suspend_timeout_thread, this,
                                         "devcoord-suspend-timeout");
         if (ret != thrd_success) {
             log(ERROR, "devcoordinator: failed to create suspend timeout thread\n");
@@ -1407,8 +1365,6 @@ void Coordinator::Suspend(SuspendContext ctx) {
             thrd_detach(t);
         }
     }
-
-    process_suspend_list(&suspend_context());
 }
 
 void Coordinator::Suspend(uint32_t flags) {
@@ -1416,11 +1372,11 @@ void Coordinator::Suspend(uint32_t flags) {
         vfs_exit(fshost_event());
     }
 
-    Suspend(SuspendContext(this, SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_)));
+    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_)));
 }
 
 void Coordinator::DmMexec(zx::vmo kernel, zx::vmo bootdata) {
-    Suspend(SuspendContext(this, SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
+    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
                            zx::socket(), std::move(kernel), std::move(bootdata)));
 }
 
@@ -1756,39 +1712,6 @@ void Coordinator::InitOutgoingServices() {
 
 zx_status_t Coordinator::BindOutgoingServices(zx::channel listen_on) {
     return outgoing_services_.Serve(std::move(listen_on));
-}
-
-void SuspendContext::ContinueSuspend(const zx::resource& root_resource) {
-    if (status() != ZX_OK) {
-        // TODO: unroll suspend
-        // do not continue to suspend as this indicates a driver suspend
-        // problem and should show as a bug
-        log(ERROR, "devcoordinator: failed to suspend\n");
-        // notify dmctl
-        CloseSocket();
-        if (sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
-            kernel().signal(0, ZX_USER_SIGNAL_0);
-        }
-        set_flags(Flags::kRunning);
-        return;
-    }
-
-    if (Release()) {
-        if (dh() != nullptr) {
-            process_suspend_list(this);
-        } else if (sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_system_mexec(root_resource.get(), kernel().get(), bootdata().get());
-        } else {
-            // should never get here on x86
-            // on arm, if the platform driver does not implement
-            // suspend go to the kernel fallback
-            suspend_fallback(root_resource, sflags());
-            // this handle is leaked on the shutdown path for x86
-            CloseSocket();
-            // if we get here the system did not suspend successfully
-            set_flags(Flags::kRunning);
-        }
-    }
 }
 
 } // namespace devmgr

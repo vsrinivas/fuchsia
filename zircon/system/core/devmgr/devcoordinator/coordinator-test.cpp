@@ -257,6 +257,43 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
                     "");
 }
 
+// Reads a Suspend request from remote, checks that it is for the expected
+// flags, and then sends the given response.
+void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
+                          zx_status_t return_status) {
+    // Read the Suspend request.
+    FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    zx_status_t status = remote.rea2(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                     &actual_bytes, &actual_handles);
+    ASSERT_OK(status);
+    ASSERT_LT(0, actual_bytes);
+    ASSERT_EQ(0, actual_handles);
+
+    // Validate the Suspend request.
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+    ASSERT_EQ(fuchsia_device_manager_DeviceControllerSuspendOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_DeviceControllerSuspendRequestTable, bytes,
+                         actual_bytes, handles, actual_handles, nullptr);
+    ASSERT_OK(status);
+    auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendRequest*>(bytes);
+    ASSERT_EQ(req->flags, expected_flags);
+
+    // Write the Suspend response.
+    memset(bytes, 0, sizeof(bytes));
+    auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(bytes);
+    resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
+    resp->status = return_status;
+    status = fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
+                         sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+    ASSERT_OK(status);
+    ASSERT_EQ(0, actual_handles);
+    status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
+    ASSERT_OK(status);
+}
+
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
 void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
@@ -342,9 +379,9 @@ struct DeviceState {
     zx::channel remote;
 };
 
-class CompositeTestCase : public zxtest::Test {
+class MultipleDeviceTestCase : public zxtest::Test {
 public:
-    ~CompositeTestCase() override = default;
+    ~MultipleDeviceTestCase() override = default;
 
     async::Loop* loop() { return &loop_; }
     devmgr::Coordinator* coordinator() { return &coordinator_; }
@@ -353,15 +390,18 @@ public:
     const zx::channel& devhost_remote() { return devhost_remote_; }
 
     const fbl::RefPtr<devmgr::Device>& platform_bus() const { return platform_bus_.device; }
+    const zx::channel& platform_bus_remote() const { return platform_bus_.remote; }
     DeviceState* device(size_t index) const { return &devices_[index]; }
 
     void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
                    uint32_t protocol_id, fbl::String driver, size_t* device_index);
     void RemoveDevice(size_t device_index);
+
+    bool DeviceHasPendingMessages(size_t device_index);
+    bool DeviceHasPendingMessages(const zx::channel& remote);
 protected:
     void SetUp() override {
         ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
-        ASSERT_NOT_NULL(coordinator_.component_driver());
 
         // refcount starts at zero, so bump it up to keep us from being cleaned up
         devhost_.AddRef();
@@ -379,8 +419,7 @@ protected:
                                                            &sys_proxy_remote_));
         loop_.RunUntilIdle();
 
-        // Create a child of the sys_device, since only directly children of it can
-        // issue AddComposite
+        // Create a child of the sys_device (an equivalent of the platform bus)
         {
             zx::channel local;
             zx_status_t status = zx::channel::create(0, &local, &platform_bus_.remote);
@@ -408,7 +447,7 @@ protected:
 
         devhost_.devices().clear();
     }
-private:
+
     async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
     devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher())};
 
@@ -431,8 +470,8 @@ private:
     fbl::Vector<DeviceState> devices_;
 };
 
-void CompositeTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
-                                     uint32_t protocol_id, fbl::String driver, size_t* index) {
+void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
+                                       uint32_t protocol_id, fbl::String driver, size_t* index) {
     DeviceState state;
 
     zx::channel local;
@@ -450,13 +489,107 @@ void CompositeTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, con
     *index = devices_.size() - 1;
 }
 
-void CompositeTestCase::RemoveDevice(size_t device_index) {
+void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
     auto& state = devices_[device_index];
     ASSERT_OK(coordinator_.RemoveDevice(state.device, false));
     state.device.reset();
     state.remote.reset();
     loop_.RunUntilIdle();
 }
+
+bool MultipleDeviceTestCase::DeviceHasPendingMessages(const zx::channel& remote) {
+    return remote.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr) == ZX_OK;
+}
+bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
+    return DeviceHasPendingMessages(devices_[device_index].remote);
+}
+
+// Verify the suspend order is correct
+TEST_F(MultipleDeviceTestCase, Suspend) {
+    struct DeviceDesc {
+        // Index into the device desc array below.  UINT32_MAX = platform_bus()
+        const size_t parent_desc_index;
+        const char* const name;
+        // index for use with device()
+        size_t index = 0;
+        bool suspended = false;
+    };
+    DeviceDesc devices[] = {
+        { UINT32_MAX, "root_child1" },
+        { UINT32_MAX, "root_child2" },
+        { 0, "root_child1_1" },
+        { 0, "root_child1_2" },
+        { 2, "root_child1_1_1" },
+        { 1, "root_child2_1" },
+    };
+    for (auto& desc : devices) {
+        fbl::RefPtr<devmgr::Device> parent;
+        if (desc.parent_desc_index == UINT32_MAX) {
+            parent = platform_bus();
+        } else {
+            size_t index = devices[desc.parent_desc_index].index;
+            parent = device(index)->device;
+        }
+        ASSERT_NO_FATAL_FAILURES(AddDevice(parent, desc.name, 0 /* protocol id */, "",
+                                           &desc.index));
+    }
+
+    coordinator()->Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
+    loop()->RunUntilIdle();
+
+    size_t num_to_suspend = fbl::count_of(devices);
+    while (num_to_suspend > 0) {
+        // Check that platform bus is not suspended yet.
+        ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
+
+        bool made_progress = false;
+        // Since the table of devices above is topologically sorted (i.e.
+        // any child is below its parent), this loop should always be able
+        // to catch a parent receiving a suspend message before its child.
+        for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+            auto& desc = devices[i];
+            if (desc.suspended) {
+                continue;
+            }
+
+            if (!DeviceHasPendingMessages(desc.index)) {
+                continue;
+            }
+
+            ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(
+                    device(desc.index)->remote, DEVICE_SUSPEND_FLAG_POWEROFF, ZX_OK));
+
+            // Make sure all descendants of this device are already suspended.
+            // We just need to check immediate children since this will
+            // recursively enforce that property.
+            for (auto& other_desc : devices) {
+                if (other_desc.parent_desc_index == i) {
+                    ASSERT_TRUE(other_desc.suspended);
+                }
+            }
+
+            desc.suspended = true;
+            --num_to_suspend;
+            made_progress = true;
+        }
+
+        // Make sure we're not stuck waiting
+        ASSERT_TRUE(made_progress);
+        loop()->RunUntilIdle();
+    }
+    ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(
+            platform_bus_remote(), DEVICE_SUSPEND_FLAG_POWEROFF, ZX_OK));
+}
+
+class CompositeTestCase : public MultipleDeviceTestCase {
+public:
+    ~CompositeTestCase() override = default;
+protected:
+    void SetUp() override {
+        MultipleDeviceTestCase::SetUp();
+        ASSERT_NOT_NULL(coordinator_.component_driver());
+    }
+};
 
 class CompositeAddOrderTestCase : public CompositeTestCase {
 public:
