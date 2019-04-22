@@ -9,16 +9,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <memory>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
+#include <fs/handler.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
+#include <fuchsia/virtualconsole/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
@@ -156,7 +160,7 @@ fail:
     return ZX_ERR_STOP;
 }
 
-static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
+static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool make_active, bool special) {
     // The ptmx device can start later than these threads
     int retry = 30;
     int raw_fd;
@@ -173,14 +177,9 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
         return ZX_ERR_INTERNAL;
     }
 
-    zx::channel device_channel, client_channel;
-    zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
-    if (status != ZX_OK) {
-        return status;
-    }
-
+    zx_status_t status;
     zx_status_t fidl_status = fuchsia_hardware_pty_DeviceOpenClient(
-        fdio_unsafe_borrow_channel(io), 0, device_channel.release(), &status);
+        fdio_unsafe_borrow_channel(io), 0, session.release(), &status);
     fdio_unsafe_release(io);
     if (fidl_status != ZX_OK) {
         return fidl_status;
@@ -188,13 +187,6 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
     if (status != ZX_OK) {
         return status;
     }
-
-    int raw_client_fd;
-    status = fdio_fd_create(client_channel.release(), &raw_client_fd);
-    if (status != ZX_OK) {
-        return status;
-    }
-    fbl::unique_fd client_fd(raw_client_fd);
 
     vc_t* vc;
     if (vc_create(&vc, special)) {
@@ -225,13 +217,35 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
     vc->fh.func = session_io_cb;
 
     *out = vc;
+    return ZX_OK;
+}
+
+static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
+    zx::channel device_channel, client_channel;
+    zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = remote_session_create(out, std::move(device_channel), make_active, special);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    int raw_client_fd;
+    status = fdio_fd_create(client_channel.release(), &raw_client_fd);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fbl::unique_fd client_fd(raw_client_fd);
+
     *out_fd = client_fd.release();
     return ZX_OK;
 }
 
 static void start_shell(bool make_active, const char* cmd) {
-    vc_t* vc;
-    int fd;
+    vc_t* vc = nullptr;
+    int fd = 0;
 
     if (session_create(&vc, &fd, make_active, cmd != NULL) < 0) {
         return;
@@ -246,36 +260,82 @@ static void start_shell(bool make_active, const char* cmd) {
     }
 }
 
-static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    zx::channel h;
-    uint32_t dcount, hcount;
-    if (zx_channel_read(ph->handle, 0, NULL, h.reset_and_get_address(), 0, 1, &dcount, &hcount) < 0) {
-        return ZX_OK;
-    }
-    if (hcount != 1) {
-        return ZX_OK;
-    }
+static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
+    zx::channel session_channel(session);
 
-    vc_t* vc;
-    int fd;
-    if (session_create(&vc, &fd, true, false) < 0) {
-        return ZX_OK;
-    }
-
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    uint32_t type = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
-    zx_status_t status = fdio_fd_transfer(fd, &handle);
-    if (status != ZX_OK) {
-        session_destroy(vc);
-        return ZX_OK;
-    }
-    status = h.write(0, &type, static_cast<uint32_t>(sizeof(type)), &handle, 1);
-    if (status != ZX_OK) {
-        session_destroy(vc);
+    vc_t* vc = nullptr;
+    if (remote_session_create(&vc, std::move(session_channel), true, false) < 0) {
         return ZX_OK;
     }
 
     port_wait(&port, &vc->fh.ph);
+
+    return fuchsia_virtualconsole_SessionManagerCreateSession_reply(txn, ZX_OK);
+}
+
+static zx_status_t fidl_message_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    if ((signals & ZX_CHANNEL_PEER_CLOSED) &&
+        !(signals & ZX_CHANNEL_READABLE)) {
+        zx_handle_close(ph->handle);
+        delete ph;
+        return ZX_ERR_STOP;
+    }
+
+    auto status = fs::ReadMessage(ph->handle, [](fidl_msg_t* message, fs::FidlConnection* txn) {
+        static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps {
+            .CreateSession = new_vc_cb,
+        };
+
+        return fuchsia_virtualconsole_SessionManager_dispatch(nullptr,
+                                                              reinterpret_cast<fidl_txn_t*>(txn),
+                                                              message,
+                                                              &kOps);
+    });
+
+    if (status != ZX_OK) {
+        printf("Failed to dispatch fidl message from client: %s\n", zx_status_get_string(status));
+        zx_handle_close(ph->handle);
+        delete ph;
+        return ZX_ERR_STOP;
+    }
+
+    return ZX_OK;
+}
+
+static zx_status_t fidl_connection_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    constexpr size_t kBufferSize = 256;
+    char buffer[kBufferSize];
+
+    uint32_t bytes_read, handles_read;
+    zx_handle_t client_raw;
+    auto status = zx_channel_read(ph->handle, 0,
+                                  buffer, &client_raw,
+                                  kBufferSize, 1,
+                                  &bytes_read, &handles_read);
+    if (status != ZX_OK) {
+        printf("Failed to read from channel: %s\n", zx_status_get_string(status));
+        return ZX_OK;
+    }
+
+    if (handles_read < 1) {
+        printf("Fidl connection with no channel.\n");
+        return ZX_OK;
+    }
+    zx::channel client(client_raw);
+
+    if (fbl::StringPiece(fuchsia_virtualconsole_SessionManager_Name) ==
+        fbl::StringPiece(buffer, bytes_read)) {
+        auto handler = std::unique_ptr<port_handler_t>(new port_handler_t {
+            .handle = client.release(),
+            .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+            .func = fidl_message_cb,
+        });
+
+        port_wait(&port, handler.release());
+    } else {
+        printf("Unsupported fidl interface: %.*s\n", bytes_read, buffer);
+    }
+
     return ZX_OK;
 }
 
@@ -442,7 +502,7 @@ int main(int argc, char** argv) {
     log_ph.waitfor = ZX_LOG_READABLE;
 
     if ((new_vc_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
-        new_vc_ph.func = new_vc_cb;
+        new_vc_ph.func = fidl_connection_cb;
         new_vc_ph.waitfor = ZX_CHANNEL_READABLE;
         port_wait(&port, &new_vc_ph);
     }

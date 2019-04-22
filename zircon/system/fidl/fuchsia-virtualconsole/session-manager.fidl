@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualconsole;
+
+using zx;
+using fuchsia.hardware.pty;
+
+/// Manages virtual console sessions.
+[Discoverable, Layout = "Simple"]
+protocol SessionManager {
+    /// Create a new virtual console session.
+    // TODO(ZX-3407): Remove response status and debug why this doesn't work async when we switch
+    // to new pty impl.
+    CreateSession(request<fuchsia.hardware.pty.Device> session) -> (zx.status status);
+};

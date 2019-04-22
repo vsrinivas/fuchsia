@@ -9,6 +9,7 @@
 #include <fs/remote-dir.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <fuchsia/virtualconsole/c/fidl.h>
 #include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
@@ -200,7 +201,7 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir,
     }
 }
 
-void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
+void publish_remote_service(const fbl::RefPtr<fs::PseudoDir>& dir,
                            const char* name, zx::unowned_channel forwarding_channel) {
     fbl::String path = fbl::StringPrintf("public/%s", name);
     dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
@@ -208,6 +209,18 @@ void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
                 return fdio_service_connect_at(forwarding_channel->get(), path.c_str(), request.release());
             }));
 }
+
+//TODO(edcoyne): remove this and make virtcon talk virtual filesystems too.
+void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
+                           const char* name, zx::unowned_channel forwarding_channel) {
+    dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
+            [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
+                const auto request_handle = request.release();
+                return forwarding_channel->write(0, name, static_cast<uint32_t>(strlen(name)),
+                                                 &request_handle, 1);
+            }));
+}
+
 
 int main(int argc, char** argv) {
     bool require_system = false;
@@ -223,6 +236,7 @@ int main(int argc, char** argv) {
     root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
     zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
     zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
+    zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -279,12 +293,18 @@ int main(int argc, char** argv) {
     publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
     publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
 
-    publish_proxy_service(outgoing.public_dir(),
+    publish_remote_service(outgoing.public_dir(),
                           fuchsia_device_manager_DebugDumper_Name,
                           zx::unowned_channel(devmgr_proxy_channel));
-    publish_proxy_service(outgoing.public_dir(),
+    publish_remote_service(outgoing.public_dir(),
                           fuchsia_device_manager_Administrator_Name,
                           zx::unowned_channel(devmgr_proxy_channel));
+
+    if (virtcon_proxy_channel.is_valid()) {
+        publish_proxy_service(outgoing.public_dir(),
+                              fuchsia_virtualconsole_SessionManager_Name,
+                              zx::unowned_channel(virtcon_proxy_channel));
+    }
 
     start_crashsvc(zx::job(root_job),
         require_system? appmgr_svc : ZX_HANDLE_INVALID);

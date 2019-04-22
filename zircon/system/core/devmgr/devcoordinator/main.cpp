@@ -74,6 +74,10 @@ struct {
     zx::channel svchost_outgoing;
 
     zx::channel fs_root;
+
+    // Used to bind the svchost to the virtual-console binary to provide fidl
+    // services.
+    zx::channel virtcon_fidl;
 } g_handles;
 
 // Wait for the requested file.  Its parent directory must exist.
@@ -461,6 +465,13 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
         }
     }
 
+    zx::channel virtcon_client;
+    status = zx::channel::create(0, &virtcon_client, &g_handles.virtcon_fidl);
+    if (status != ZX_OK) {
+        printf("Unable to create virtcon channel.\n");
+        return status;
+    }
+
     // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
     // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
     zx::resource root_resource_copy;
@@ -501,6 +512,11 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
 
     // Add a handle to allow svchost to proxy services to fshost.
     launchpad_add_handle(lp, fshost_client.release(), PA_HND(PA_USER0, 4));
+    if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
+        // Add handle to channel to allow svchost to proxy fidl services to
+        // virtcon.
+        launchpad_add_handle(lp, virtcon_client.release(), PA_HND(PA_USER0, 5));
+    }
 
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -698,18 +714,13 @@ int service_starter(void* arg) {
         zx_handle_t handles[2];
         uint32_t types[2];
 
-        zx::channel virtcon_client, virtcon_server;
-        zx_status_t status = zx::channel::create(0, &virtcon_client, &virtcon_server);
-        if (status == ZX_OK) {
-            coordinator->set_virtcon_channel(std::move(virtcon_client));
-            handles[handle_count] = virtcon_server.release();
-            types[handle_count] = PA_HND(PA_USER0, 0);
-            ++handle_count;
-        }
+        handles[handle_count] = g_handles.virtcon_fidl.release();
+        types[handle_count] = PA_HND(PA_USER0, 0);
+        ++handle_count;
 
         zx::debuglog debuglog;
-        status = zx::debuglog::create(coordinator->root_resource(),
-                                      ZX_LOG_FLAG_READABLE, &debuglog);
+        zx_status_t status = zx::debuglog::create(coordinator->root_resource(),
+                                                  ZX_LOG_FLAG_READABLE, &debuglog);
         if (status == ZX_OK) {
             handles[handle_count] = debuglog.release();
             types[handle_count] = PA_HND(PA_USER0, 1);

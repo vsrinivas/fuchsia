@@ -8,6 +8,7 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/virtualconsole/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -89,6 +90,14 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::device::manager::Administrator>(
+                std::move(channel)));
+        return ZX_OK;
+      })));
+  services_->AddService(
+      fuchsia::virtualconsole::SessionManager::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        realm_->environment_services()->Connect(
+            fidl::InterfaceRequest<fuchsia::virtualconsole::SessionManager>(
                 std::move(channel)));
         return ZX_OK;
       })));

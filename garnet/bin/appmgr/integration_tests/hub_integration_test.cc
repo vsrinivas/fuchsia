@@ -95,7 +95,8 @@ TEST_F(HubTest, Services) {
         "fuchsia.scheduler.ProfileProvider",
         "fuchsia.sys.Environment",
         "fuchsia.sys.Launcher",
-        "fuchsia.sys.Loader"};
+        "fuchsia.sys.Loader",
+        "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
     ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));
     // The following path is deprecated, and because config-data is component
