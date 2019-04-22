@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys.index;
+
+/// ComponentIndex provides search and indexing interfaces for components.
+[Discoverable]
+protocol ComponentIndex {
+    /// Returns a list of fuchsia-pkg URL components that matches the input
+    /// string based on fuzzy matching.
+    ///
+    /// The input string must be a single alphanumeric word with optional ‘_’
+    /// and ‘-’ characters -- the allowed character set of a component name.
+    /// Additionally, the forward slash ‘/’ is also allowed, to match URI path
+    /// segments. There is no support for globbing.
+    ///
+    /// Returns an empty list if there are no matches, or if needle is empty.
+    FuzzySearch(string needle) -> (vector<string> uris);
+};
