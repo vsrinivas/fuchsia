@@ -163,7 +163,6 @@ group("media") {
     "//garnet/examples/media:simple_sine_sync",
     "//garnet/examples/media:tones",
     "//garnet/examples/media:tts",
-    "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/examples/media:use_media_decoder",
   ]
 }
