@@ -22,8 +22,25 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-config-read
 
 function run-ninja {
+  local continue_on_error=false
+  for (( i=1; i<=$#; i++)); do
+    j=$((i+1))
+    if [ "${!i}" = "-k" ] && [ "${!j}" = "0" ]; then
+      continue_on_error=true
+    fi
+  done
   # Use a subshell because fx-cmd-locked locks until exit, not function return.
-  (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@") || exit
+  if [ "$continue_on_error" = false ]; then
+    (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@") || exit
+  else
+    local status
+    (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@")
+    status=$?
+    if [ "${status}" -ne 0 ]; then
+      fx-warn "Build outputs may be inconsistent and may remain so; a clean build is recommended."
+    fi
+    return "${status}"
+  fi
 }
 
 function main {
@@ -58,14 +75,22 @@ function main {
   if [ ${#fuchsia_targets[@]} -ne 0 ]; then
     zircon_targets+=(default)
   fi
+  local status
   run-ninja -C "${ZIRCON_BUILDROOT}" "${switches[@]}" "${zircon_targets[@]}"
+  status=$?
 
   # If there were explicit Zircon targets and no other explicit targets,
   # the Zircon run was enough by itself.  Otherwise Zircon default is
   # a prerequisite for any Fuchsia target (including implicit default).
   if [ ${#fuchsia_targets[@]} -ne 0 -o ${#zircon_targets[@]} -eq 0 ]; then
     run-ninja -C "${FUCHSIA_BUILD_DIR}" "${switches[@]}" "${fuchsia_targets[@]}"
+    fuchsia_status=$?
+    if [ "${status}" -eq 0 ]; then
+      status="${fuchsia_status}"
+    fi
   fi
+
+  return "${status}"
 }
 
 main "$@"
