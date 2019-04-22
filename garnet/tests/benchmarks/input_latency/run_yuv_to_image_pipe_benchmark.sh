@@ -39,21 +39,22 @@ echo "== $BENCHMARK_LABEL: Starting app..."
 /bin/present_view fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx \
   --NV12 --input_driven &
 
+# Wait for yuv_to_image_pipe to start.
 sleep 3
+
+(
+  sleep 1
+
+  # Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps
+  # vsync interval. 100 taps span the entire vsync interval 1 time at 100
+  # equidistant points.
+  /bin/input --tap_event_count=100 --duration=3350 tap 500 500
+) &
 
 # Start tracing.
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE
-trace record --categories=input,gfx,magma --duration=4 --buffer-size=36 --output-file=$TRACE_FILE &
-
-sleep 1
-
-# Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps vsync
-# interval. 100 taps span the entire vsync interval 1 time at 100 equidistant
-# points.
-/bin/input --tap_event_count=100 --duration=3350 tap 500 500
-
-sleep 15
+trace record --categories=input,gfx,magma --duration=5 --buffer-size=36 --output-file=$TRACE_FILE
 
 echo "== $BENCHMARK_LABEL: Processing trace..."
 /pkgfs/packages/garnet_input_latency_benchmarks/0/bin/process_input_latency_trace  \
