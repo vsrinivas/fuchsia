@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use text_common::text_field_state::TextFieldState;
 use failure::{bail, err_msg, Error, ResultExt};
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use std::collections::HashSet;
+use std::convert::TryInto;
 
 pub struct TextFieldWrapper {
     proxy: txt::TextFieldProxy,
-    last_state: txt::TextFieldState,
+    last_state: TextFieldState,
     defunct_point_ids: HashSet<u64>,
     current_point_ids: HashSet<u64>,
 }
@@ -37,38 +39,15 @@ impl TextFieldWrapper {
     /// of the editing methods on the TextFieldWrapper, or if making calls on the proxy directly,
     /// call `await!(text_field_wrapper.wait_for_update())` after you expect a new state update from
     /// the TextField.
-    pub fn state(&self) -> txt::TextFieldState {
-        fn clone_range(range: &txt::Range) -> txt::Range {
-            txt::Range {
-                start: txt::Position { id: range.start.id },
-                end: txt::Position { id: range.end.id },
-            }
-        }
-        txt::TextFieldState {
-            document: clone_range(&self.last_state.document),
-            selection: txt::Selection {
-                range: clone_range(&self.last_state.selection.range),
-                anchor: self.last_state.selection.anchor,
-                affinity: self.last_state.selection.affinity,
-            },
-            composition: self.last_state.composition.as_ref().map(|v| Box::new(clone_range(v))),
-            composition_highlight: self
-                .last_state
-                .composition_highlight
-                .as_ref()
-                .map(|v| Box::new(clone_range(v))),
-            dead_key_highlight: self
-                .last_state
-                .dead_key_highlight
-                .as_ref()
-                .map(|v| Box::new(clone_range(v))),
-            revision: self.last_state.revision,
-        }
+    pub fn state(&self) -> TextFieldState {
+        self.last_state.clone()
     }
 
     /// Waits for an on_update event from the TextFieldProxy, and updates the last state tracked
     /// by TextFieldWrapper. Edit functions on TextFieldWrapper itself already call this; only
-    /// use it if you're doing something with the TextFieldProxy directly.
+    /// use it if you're doing something with the TextFieldProxy directly. This also validates
+    /// that document, selection, and revision are all set on last_state, so these fields can be
+    /// unwrapped in other parts of the code.
     pub async fn wait_for_update(&mut self) -> Result<(), Error> {
         self.defunct_point_ids =
             &self.defunct_point_ids | &all_point_ids_for_state(&self.last_state);
@@ -229,7 +208,7 @@ impl TextFieldWrapper {
     }
 }
 
-async fn get_update(text_field: &txt::TextFieldProxy) -> Result<txt::TextFieldState, Error> {
+async fn get_update(text_field: &txt::TextFieldProxy) -> Result<TextFieldState, Error> {
     let mut stream = text_field.take_event_stream();
     let msg_future = stream
         .try_next()
@@ -237,11 +216,11 @@ async fn get_update(text_field: &txt::TextFieldProxy) -> Result<txt::TextFieldSt
         .on_timeout(*crate::TEST_TIMEOUT, || Err(err_msg("Waiting for on_update event timed out")));
     let msg = await!(msg_future)?.ok_or(err_msg("TextMgr event stream unexpectedly closed"))?;
     match msg {
-        txt::TextFieldEvent::OnUpdate { state, .. } => Ok(state),
+        txt::TextFieldEvent::OnUpdate { state, .. } => Ok(state.try_into()?),
     }
 }
 
-fn all_point_ids_for_state(state: &txt::TextFieldState) -> HashSet<u64> {
+fn all_point_ids_for_state(state: &TextFieldState) -> HashSet<u64> {
     let mut point_ids = HashSet::new();
     let mut point_ids_for_range = |range: &txt::Range| {
         point_ids.insert(range.start.id);
@@ -261,8 +240,8 @@ mod test {
     fn default_range(n: u64) -> txt::Range {
         txt::Range { start: txt::Position { id: n }, end: txt::Position { id: n + 1 } }
     }
-    fn default_state(n: u64) -> txt::TextFieldState {
-        txt::TextFieldState {
+    fn default_state(n: u64) -> TextFieldState {
+        TextFieldState {
             document: default_range(n),
             selection: txt::Selection {
                 range: default_range(n + 2),
@@ -284,7 +263,7 @@ mod test {
         let (mut stream, control_handle) = server_end
             .into_stream_and_control_handle()
             .expect("Should have created stream and control handle");
-        control_handle.send_on_update(&mut default_state(0)).expect("Should have sent update");
+        control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
         fuchsia_async::spawn(
             async {
                 let mut wrapper = await!(TextFieldWrapper::new(proxy))
@@ -327,20 +306,20 @@ mod test {
         let (_stream, control_handle) = server_end
             .into_stream_and_control_handle()
             .expect("Should have created stream and control handle");
-        control_handle.send_on_update(&mut default_state(0)).expect("Should have sent update");
+        control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
         let mut wrapper =
             await!(TextFieldWrapper::new(proxy)).expect("Should have created text field wrapper");
 
         // send a valid update and make sure it works as expected
         let mut state = default_state(10);
-        control_handle.send_on_update(&mut state).expect("Should have sent update");
+        control_handle.send_on_update(state.clone().into()).expect("Should have sent update");
         let res = await!(wrapper.wait_for_update());
         assert!(res.is_ok());
         assert_eq!(wrapper.state().document.start.id, 10);
 
         // send an update with the same points but an incremented revision
         state.revision += 1;
-        control_handle.send_on_update(&mut state).expect("Should have sent update");
+        control_handle.send_on_update(state.into()).expect("Should have sent update");
         let res = await!(wrapper.wait_for_update());
         assert!(res.is_err()); // should fail since some points were reused
     }

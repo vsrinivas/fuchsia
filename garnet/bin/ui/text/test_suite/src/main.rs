@@ -46,8 +46,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating fuchsia_async executor for text tests failed")?;
     let mut fs = ServiceFs::new();
-    fs.dir("public")
-        .add_fidl_service(bind_text_tester);
+    fs.dir("public").add_fidl_service(bind_text_tester);
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());
     Ok(())

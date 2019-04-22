@@ -7,23 +7,23 @@ library fuchsia.ui.text;
 /// Lists the Positions for selection and other related ranges, at a particular
 /// revision number. Any time the revision number is incremented, all these Positions
 /// become invalid, and a new TextFieldState is sent through OnUpdate.
-struct TextFieldState {
-  /// The start and end of the entire text field.
-  Range document;
+table TextFieldState {
+  /// (required) The start and end of the entire text field.
+  1: Range document;
 
-  /// The currently selected range of text.
-  Selection selection;
+  /// (required) The currently selected range of text.
+  2: Selection selection;
 
   /// The range that indicates the text that is being composed, or currently
   /// receiving suggestions from the keyboard. It should be displayed in some
   /// distinct way, such as underlined.
-  Range? composition;
+  3: Range composition;
 
   /// Some keyboards, notably Japanese, give the user buttons to highlight just a
   /// subset of the composition string for suggestions. It must be equal to or a subset
   /// of the composition range. If the composition range changes, the TextField may
   /// discard this and require the keyboard to create a new one.
-  Range? composition_highlight;
+  4: Range composition_highlight;
 
   /// A dead key is a key combination you press before another key to add diacritical
   /// marks, accents, or other changes to the second key. After the first key, a
@@ -31,11 +31,11 @@ struct TextFieldState {
   /// range is that highlighted character. If the selection moves away from this
   /// highlight range, or if the contents of the highlight range change, the TextField
   /// may discard this and require the keyboard to create a new one.
-  Range? dead_key_highlight;
+  5: Range dead_key_highlight;
 
-  /// This number is increased any time content in the text field is changed, if the
-  /// selection is changed, or if anything else about the state is changed.
-  uint64 revision;
+  /// (required) This number is increased any time content in the text field is changed,
+  /// if the selection is changed, or if anything else about the state is changed.
+  6: uint64 revision;
 };
 
 /// Indicates errors that can occur with various TextField methods. Until FIDL supports

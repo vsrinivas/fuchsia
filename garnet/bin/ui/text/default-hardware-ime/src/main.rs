@@ -14,8 +14,10 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use serde_json::{self as json, Map, Value};
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::fs;
 use std::sync::Arc;
+use text_common::text_field_state::TextFieldState;
 
 const DEFAULT_LAYOUT_PATH: &'static str = "/pkg/data/us.json";
 
@@ -68,7 +70,7 @@ impl DefaultHardwareIme {
                 while let Some(evt) = await!(evt_stream.next()) {
                     match evt {
                         Ok(txt::TextFieldEvent::OnUpdate { state }) => {
-                            await!(this.0.lock()).on_update(state);
+                            await!(this.0.lock()).on_update(state.try_into().unwrap());
                         }
                         Err(e) => {
                             fx_log_err!(
@@ -84,7 +86,7 @@ impl DefaultHardwareIme {
 }
 
 impl DefaultHardwareImeState {
-    fn on_update(&mut self, state: txt::TextFieldState) {
+    fn on_update(&mut self, state: TextFieldState) {
         self.last_selection = Some(state.selection);
         self.last_revision = Some(state.revision);
     }

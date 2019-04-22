@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use text_common::text_field_state::TextFieldState;
 use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
 use crate::index_convert as idx;
@@ -129,9 +130,9 @@ impl ImeState {
     ) {
         self.revision += 1;
         self.text_points = HashMap::new();
-        let mut state = self.as_text_field_state();
+        let state = self.as_text_field_state();
         if let Some(input_method) = &self.input_method {
-            if let Err(e) = input_method.send_on_update(&mut state) {
+            if let Err(e) = input_method.send_on_update(state.into()) {
                 fx_log_err!("error when sending update to TextField listener: {}", e);
             }
         }
@@ -156,8 +157,8 @@ impl ImeState {
     }
 
     /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
-    /// into the v2 representation txt::TextFieldState.
-    pub fn as_text_field_state(&mut self) -> txt::TextFieldState {
+    /// into the v2 representation TextFieldState.
+    pub fn as_text_field_state(&mut self) -> TextFieldState {
         let anchor_first = self.text_state.selection.base < self.text_state.selection.extent;
         let composition = if self.text_state.composing.start < 0
             || self.text_state.composing.end < 0
@@ -171,7 +172,7 @@ impl ImeState {
             } else {
                 txt::Range { start: end, end: start }
             };
-            Some(Box::new(text_range))
+            Some(text_range)
         };
         let selection = txt::Selection {
             range: txt::Range {
@@ -193,7 +194,7 @@ impl ImeState {
             },
             affinity: txt::Affinity::Upstream,
         };
-        txt::TextFieldState {
+        TextFieldState {
             document: txt::Range {
                 start: self.new_point(0),
                 end: self.new_point(self.text_state.text.len()),

@@ -2,14 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
-rustc_binary("bin") {
-  name = "default-hardware-ime"
+rustc_library("text_common") {
+  with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/lib/ui/text/common:text_common",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -17,31 +16,13 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
+    "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:unicode-segmentation",
   ]
-}
-
-package("default-hardware-ime") {
-  meta = [
-    {
-      path = rebase_path("meta/default-hardware-ime.cmx")
-      dest = "default-hardware-ime.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("assets/us.json")
-      dest = "us.json"
-    },
-  ]
-
-  deps = [
-    ":bin",
-  ]
-
-  binary = "default_hardware_ime"
 }

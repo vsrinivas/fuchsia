@@ -10,6 +10,7 @@ rustc_binary("ime") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/ui/text/common:text_common",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",

@@ -64,7 +64,7 @@ impl Ime {
                 let control_handle = stream.control_handle();
                 {
                     let mut state = await!(self_clone.0.lock());
-                    let res = control_handle.send_on_update(&mut state.as_text_field_state());
+                    let res = control_handle.send_on_update(state.as_text_field_state().into());
                     if let Err(e) = res {
                         fx_log_err!("{}", e);
                     } else {
