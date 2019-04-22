@@ -18,7 +18,6 @@ group("buildbot") {
   testonly = true
   public_deps = [
     "//garnet/bin/catapult_converter",
-    "//garnet/testing/runbenchmarks",
   ]
 }
 

@@ -16,7 +16,8 @@ namespace benchmarking {
 // specific wrapper binary creating a |BenchmarksRunner| from command line
 // arguments supplied by a buildbot recipe, adding all desired benchmarks via
 // the |BenchmarksRunner::Add*| methods, and then calling
-// |BenchmarksRunner::Finish|.
+// |BenchmarksRunner::Finish|.  See the //garnet/tests/benchmarks package for
+// example usage.
 class BenchmarksRunner {
  public:
   // Create a new |BenchmarksRunner| using arguments supplied via buildbot.
