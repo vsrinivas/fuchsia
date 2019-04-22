@@ -17,7 +17,6 @@ group("auth") {
 }
 
 package("token_manager_factory") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     "//garnet/bin/auth/token_manager_factory:token_manager_factory",
   ]

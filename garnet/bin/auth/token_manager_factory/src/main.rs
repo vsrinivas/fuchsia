@@ -28,12 +28,15 @@ use futures::StreamExt;
 use log::info;
 use std::sync::Arc;
 
+// Default data directory for the TokenManagerFactory.
+const DATA_DIR: &str = "/data";
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
 
     // Create a single token manager factory instance that we use to back all incoming requests.
     info!("Starting token manager factory");
-    let token_manager_factory = Arc::new(TokenManagerFactory::new());
+    let token_manager_factory = Arc::new(TokenManagerFactory::new(DATA_DIR.into()));
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new();

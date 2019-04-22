@@ -12,12 +12,10 @@ use futures::prelude::*;
 use log::{info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use token_manager::{TokenManagerContext, TokenManagerError};
 
-// The directory to use for token manager databases
-const DB_DIR: &str = "/data/auth";
 // The file suffix to use for token manager databases. This string is appended to the user id.
 const DB_SUFFIX: &str = "_token_store.json";
 
@@ -46,15 +44,19 @@ pub struct TokenManagerFactory {
     /// AuthProviderFactory interface. This is populated on the first call that provides auth
     /// provider configuration.
     auth_provider_supplier: Mutex<Option<AuthProviderSupplier>>,
+
+    /// The directory to use for token manager databases.
+    db_dir: PathBuf,
 }
 
 impl TokenManagerFactory {
     /// Creates a new TokenManagerFactory.
-    pub fn new() -> TokenManagerFactory {
+    pub fn new(db_dir: PathBuf) -> TokenManagerFactory {
         TokenManagerFactory {
             user_to_token_manager: Mutex::new(HashMap::new()),
             auth_provider_configs: Mutex::new(Vec::new()),
             auth_provider_supplier: Mutex::new(None),
+            db_dir,
         }
     }
 
@@ -159,7 +161,7 @@ impl TokenManagerFactory {
         };
 
         info!("Creating token manager for user {}", user_id);
-        let db_path = Path::new(DB_DIR).join(user_id.clone() + DB_SUFFIX);
+        let db_path = self.db_dir.join(user_id.clone() + DB_SUFFIX);
         let token_manager = Arc::new(TokenManager::new(
             &db_path,
             self.get_auth_provider_supplier(auth_provider_configs)?,
@@ -178,3 +180,5 @@ fn clone_auth_provider_config(other: &AuthProviderConfig) -> AuthProviderConfig 
         params: other.params.clone(),
     }
 }
+
+// TODO(dnordstrom): Add unit tests

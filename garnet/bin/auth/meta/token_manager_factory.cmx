@@ -3,11 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "deprecated-global-persistent-storage" ],
+        "features": [ "isolated-persistent-storage" ],
         "services": [
-            "fuchsia.logger.LogSink",
-	       "fuchsia.sys.Launcher",
-	       "fuchsia.tracelink.Registry"
-	   ]
+           "fuchsia.logger.LogSink",
+           "fuchsia.sys.Launcher",
+           "fuchsia.tracelink.Registry"
+       ]
     }
 }
