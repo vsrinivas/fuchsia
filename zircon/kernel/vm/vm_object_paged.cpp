@@ -357,9 +357,10 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("vmo %p/k%" PRIu64 " size %#" PRIx64
-           " pages %zu ref %d parent k%" PRIu64 "\n",
-           this, user_id_, size_, count, ref_count_debug(), parent_id);
+    printf("vmo %p/k%" PRIu64 " size %#" PRIx64 " offset %#" PRIx64
+           " pages %zu ref %d parent %p/k%" PRIu64 "\n",
+           this, user_id_, size_, parent_offset_, count,
+           ref_count_debug(), parent_.get(), parent_id);
 
     if (verbose) {
         auto f = [depth](const auto p, uint64_t offset) {

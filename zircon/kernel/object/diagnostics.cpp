@@ -327,7 +327,7 @@ static const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
 // If |handles| is true, the dumped objects are expected to have handle info.
 static void PrintVmoDumpHeader(bool handles) {
     printf(
-        "%s koid parent #chld #map #shr    size   alloc name\n",
+        "%s koid obj                parent #chld #map #shr    size   alloc name\n",
         handles ? "      handle rights " : "           -      - ");
 }
 
@@ -382,6 +382,7 @@ static void DumpVmObject(
     printf("  %10s " // handle
            "%6s " // rights
            "%5" PRIu64 " " // koid
+           "%p " // vm_object
            "%6s " // clone parent koid
            "%5" PRIu32 " " // number of children
            "%4" PRIu32 " " // map count
@@ -392,6 +393,7 @@ static void DumpVmObject(
            handle_str,
            rights_str,
            koid,
+           &vmo,
            clone_str,
            vmo.num_children(),
            vmo.num_mappings(),
