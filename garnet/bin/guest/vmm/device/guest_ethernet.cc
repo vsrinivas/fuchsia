@@ -181,7 +181,7 @@ void GuestEthernet::GetStatus(GetStatusCallback callback) {
 
 void GuestEthernet::SetPromiscuousMode(bool enabled,
                                        SetPromiscuousModeCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED);
+  callback(ZX_OK);
 }
 
 void GuestEthernet::ConfigMulticastAddMac(
@@ -198,7 +198,7 @@ void GuestEthernet::ConfigMulticastDeleteMac(
 
 void GuestEthernet::ConfigMulticastSetPromiscuousMode(
     bool enabled, ConfigMulticastSetPromiscuousModeCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED);
+  callback(ZX_OK);
 }
 
 void GuestEthernet::ConfigMulticastTestFilter(
