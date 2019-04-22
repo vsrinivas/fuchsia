@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/omaha_client_ctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

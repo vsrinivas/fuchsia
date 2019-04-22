@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("omaha_client_ctl_bin") {
+  name = "omaha_client_ctl_bin"
+  edition = "2018"
+  deps = [
+    "//garnet/bin/omaha_client:fuchsia.omaha.client-rustc",
+    "//garnet/bin/omaha_client:fuchsia.update-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+package("omaha_client_ctl") {
+  deps = [
+    ":omaha_client_ctl_bin",
+  ]
+  binaries = [
+    {
+      name = "rust_crates/omaha_client_ctl_bin"
+      dest = "omaha_client_ctl"
+      shell = true
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/omaha_client_ctl.cmx")
+      dest = "omaha_client_ctl.cmx"
+    },
+  ]
+}

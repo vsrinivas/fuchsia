@@ -1118,6 +1118,7 @@ group("omaha_client") {
   testonly = true
   public_deps = [
     "//garnet/bin/omaha_client",
+    "//garnet/bin/omaha_client_ctl",
   ]
 }
 
