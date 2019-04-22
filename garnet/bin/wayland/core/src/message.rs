@@ -212,11 +212,7 @@ impl Message {
             ArgKind::NewId => self.byte_buf.read_u32::<NativeEndian>().map(Arg::NewId),
             ArgKind::String => self
                 .read_slice(true)
-                .and_then(|vec| {
-                    String::from_utf8(vec).map_err(|_| {
-                        io::Error::new(io::ErrorKind::InvalidData, "Unable to decode string")
-                    })
-                })
+                .map(|vec| String::from_utf8_lossy(vec.as_slice()).to_string())
                 .map(Arg::String),
             ArgKind::Array => self.read_slice(false).map(|v| Arg::Array(v.into())),
             ArgKind::Handle => {
