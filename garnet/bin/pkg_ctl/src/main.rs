@@ -5,23 +5,26 @@
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 
-use failure::{Error, Fail, ResultExt};
-use fidl_fuchsia_pkg::{
-    PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
+use {
+    failure::{Error, Fail, ResultExt},
+    fidl_fuchsia_pkg::{
+        PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
+    },
+    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig},
+    fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
+    files_async, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_uri_rewrite::{Rule as RewriteRule, RuleConfig},
+    fuchsia_zircon as zx,
+    futures::Future,
+    serde_json,
+    std::{
+        convert::{TryFrom, TryInto},
+        fs::File,
+        path::PathBuf,
+    },
+    structopt::StructOpt,
 };
-use fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig};
-use fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy};
-use files_async;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
-use fuchsia_uri_rewrite::{Rule as RewriteRule, RuleConfig};
-use fuchsia_zircon as zx;
-use futures::Future;
-use serde_json;
-use std::convert::{TryFrom, TryInto};
-use std::fs::File;
-use std::path::PathBuf;
-use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "pkgctl")]
