@@ -27,13 +27,7 @@ constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // clang-format on
 
 // static
-fbl::unique_ptr<Tas5760> Tas5760::Create(ddk::PDev pdev, uint32_t index) {
-    auto i2c = pdev.GetI2c(index);
-    if (!i2c.is_valid()) {
-        zxlogf(ERROR, "%s pdev_get_protocol failed\n", __func__);
-        return nullptr;
-    }
-
+fbl::unique_ptr<Tas5760> Tas5760::Create(ddk::I2cChannel i2c) {
     fbl::AllocChecker ac;
     auto ptr = fbl::make_unique_checked<Tas5760>(&ac, i2c);
     if (!ac.check()) {

@@ -14,7 +14,7 @@ namespace audio {
 
 class Tas5720 final : public Codec {
 public:
-    static fbl::unique_ptr<Tas5720> Create(ddk::PDev pdev, uint32_t index);
+    static fbl::unique_ptr<Tas5720> Create(ddk::I2cChannel i2c);
 
     explicit Tas5720(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}

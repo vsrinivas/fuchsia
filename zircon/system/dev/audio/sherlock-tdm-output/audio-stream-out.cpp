@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddktl/pdev.h>
 #include <soc/aml-t931/t931-gpio.h>
 
@@ -10,6 +13,16 @@
 
 namespace audio {
 namespace sherlock {
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_FAULT_GPIO,
+    COMPONENT_ENABLE_GPIO,
+    COMPONENT_I2C_0,
+    COMPONENT_I2C_1,
+    COMPONENT_I2C_2, // Optional
+    COMPONENT_COUNT,
+};
 
 // Expects L+R for tweeters + L+R for the 1 Woofer (mixed in HW).
 // The user must perform crossover filtering on these channels.
@@ -23,12 +36,28 @@ SherlockAudioStreamOut::SherlockAudioStreamOut(zx_device_t* parent)
 }
 
 zx_status_t SherlockAudioStreamOut::InitPdev() {
+    composite_protocol_t composite;
+
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Could not get composite protocol\n");
+        return status;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT] = {};
+    size_t actual;
+    composite_get_components(&composite, components, countof(components), &actual);
+    if (actual < countof(components) - 1) {
+        zxlogf(ERROR, "could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    pdev_ = components[COMPONENT_PDEV];
     if (!pdev_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    size_t actual = 0;
-    zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codecs_types_,
+    status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codecs_types_,
                                              sizeof(metadata::Codec), &actual);
     if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
         zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
@@ -42,12 +71,12 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        codecs_[0] = Tas5760::Create(pdev_, 0);
+        codecs_[0] = Tas5760::Create(components[COMPONENT_I2C_0]);
         if (!codecs_[0]) {
             zxlogf(ERROR, "%s could not get tas5760\n", __func__);
             return ZX_ERR_NO_RESOURCES;
         }
-        codecs_[1] = Tas5720::Create(pdev_, 1);
+        codecs_[1] = Tas5720::Create(components[COMPONENT_I2C_1]);
         if (!codecs_[1]) {
             zxlogf(ERROR, "%s could not get tas5720\n", __func__);
             return ZX_ERR_NO_RESOURCES;
@@ -60,7 +89,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
             return ZX_ERR_NO_MEMORY;
         }
         for (uint32_t i = 0; i < 3; ++i) {
-            codecs_[i] = Tas5720::Create(pdev_, i);
+            codecs_[i] = Tas5720::Create(components[COMPONENT_I2C_0 + i]);
             if (!codecs_[i]) {
                 zxlogf(ERROR, "%s could not get tas5720\n", __func__);
                 return ZX_ERR_NO_RESOURCES;
@@ -71,8 +100,8 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    audio_fault_ = pdev_.GetGpio(0);
-    audio_en_ = pdev_.GetGpio(1);
+    audio_fault_ = components[COMPONENT_FAULT_GPIO];
+    audio_en_ = components[COMPONENT_ENABLE_GPIO];
 
     if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
@@ -363,11 +392,7 @@ zx_status_t SherlockAudioStreamOut::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
-} // sherlock
-} // audio
-
-extern "C" zx_status_t audio_bind(void* ctx, zx_device_t* device, void** cookie) {
-
+static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     auto stream =
         audio::SimpleAudioStream::Create<audio::sherlock::SherlockAudioStreamOut>(device);
     if (stream == nullptr) {
@@ -376,3 +401,23 @@ extern "C" zx_status_t audio_bind(void* ctx, zx_device_t* device, void** cookie)
 
     return ZX_OK;
 }
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = audio_bind;
+    return ops;
+}();
+
+} // sherlock
+} // audio
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_sherlock_tdm, audio::sherlock::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_TDM),
+ZIRCON_DRIVER_END(aml_sherlock_tdm)
+// clang-format on
+

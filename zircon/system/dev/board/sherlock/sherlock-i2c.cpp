@@ -64,6 +64,30 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    // Tweeter left
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x6c,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Tweeter right
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x6d,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Woofer
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x6f,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

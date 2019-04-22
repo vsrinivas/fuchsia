@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sherlock.h"
-
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -13,21 +12,12 @@
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
+#include "sherlock.h"
+#include "sherlock-gpios.h"
+
 namespace sherlock {
 
 zx_status_t Sherlock::AudioInit() {
-
-    static constexpr pbus_gpio_t audio_gpios[] = {
-        {
-            // AUDIO_SOC_FAULT_L
-            .gpio = T931_GPIOZ(8),
-        },
-        {
-            // SOC_AUDIO_EN
-            .gpio = T931_GPIOH(7),
-        },
-    };
-
     static constexpr pbus_mmio_t audio_mmios[] = {
         {
             .base = T931_EE_AUDIO_BASE,
@@ -50,32 +40,6 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
-    static constexpr pbus_i2c_channel_t p2_codecs_i2cs[] = {
-        {
-            .bus_id = SHERLOCK_I2C_A0_0,
-            .address = 0x6c, // Tweeters.
-        },
-        {
-            .bus_id = SHERLOCK_I2C_A0_0,
-            .address = 0x6f, // Woofer.
-        },
-    };
-
-    static constexpr pbus_i2c_channel_t evt_codecs_i2cs[] = {
-        {
-            .bus_id = SHERLOCK_I2C_A0_0,
-            .address = 0x6c, // Tweeter left.
-        },
-        {
-            .bus_id = SHERLOCK_I2C_A0_0,
-            .address = 0x6d, // Tweeter right.
-        },
-        {
-            .bus_id = SHERLOCK_I2C_A0_0,
-            .address = 0x6f, // Woofer.
-        },
-    };
-
     pdev_board_info_t board_info = {};
     zx_status_t status = pbus_.GetBoardInfo(&board_info);
     if (status != ZX_OK) {
@@ -85,10 +49,8 @@ zx_status_t Sherlock::AudioInit() {
 
     // We treat EVT and higher the same (having 3 TAS5720s).
     metadata::Codec out_codec = metadata::Codec::Tas5720x3;
-    if (board_info.board_revision < BOARD_REV_P2) {
-        return ZX_ERR_NOT_SUPPORTED; // For audio we don't support boards revision lower than P2.
-    } else if (board_info.board_revision < BOARD_REV_EVT1) {
-        out_codec = metadata::Codec::Tas5760_Tas5720; // We treat all P2 variants the same.
+    if (board_info.board_revision < BOARD_REV_EVT1) {
+        return ZX_ERR_NOT_SUPPORTED; // For audio we don't support boards revision lower than EVT.
     }
 
     pbus_metadata_t out_metadata[] = {
@@ -99,27 +61,71 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
+    constexpr zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+    constexpr zx_bind_inst_t fault_gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
+    };
+    constexpr zx_bind_inst_t enable_gpio_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
+    };
+    constexpr zx_bind_inst_t tweeter_left_i2c_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
+        BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6c),
+    };
+    constexpr zx_bind_inst_t tweeter_right_i2c_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
+        BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6d),
+    };
+    constexpr zx_bind_inst_t woofer_i2c_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
+        BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6f),
+    };
+    const device_component_part_t fault_gpio_component[] = {
+        { countof(root_match), root_match },
+        { countof(fault_gpio_match), fault_gpio_match },
+    };
+    const device_component_part_t enable_gpio_component[] = {
+        { countof(root_match), root_match },
+        { countof(enable_gpio_match), enable_gpio_match },
+    };
+    const device_component_part_t tweeter_left_i2c_component[] = {
+        { countof(root_match), root_match },
+        { countof(tweeter_left_i2c_match), tweeter_left_i2c_match },
+    };
+    const device_component_part_t tweeter_right_i2c_component[] = {
+        { countof(root_match), root_match },
+        { countof(tweeter_right_i2c_match), tweeter_right_i2c_match },
+    };
+    const device_component_part_t woofer_i2c_component[] = {
+        { countof(root_match), root_match },
+        { countof(woofer_i2c_match), woofer_i2c_match },
+    };
+    const device_component_t components[] = {
+        { countof(fault_gpio_component), fault_gpio_component },
+        { countof(enable_gpio_component), enable_gpio_component },
+        { countof(tweeter_left_i2c_component), tweeter_left_i2c_component },
+        { countof(tweeter_right_i2c_component), tweeter_right_i2c_component },
+        { countof(woofer_i2c_component), woofer_i2c_component },
+    };
+
     pbus_dev_t tdm_dev = {};
     tdm_dev.name = "SherlockAudio";
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-    tdm_dev.gpio_list = audio_gpios;
-    tdm_dev.gpio_count = countof(audio_gpios);
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = tdm_btis;
     tdm_dev.bti_count = countof(tdm_btis);
     tdm_dev.metadata_list = out_metadata;
     tdm_dev.metadata_count = countof(out_metadata);
-
-    if (board_info.board_revision < BOARD_REV_EVT1) {
-        tdm_dev.i2c_channel_list = p2_codecs_i2cs;
-        tdm_dev.i2c_channel_count = countof(p2_codecs_i2cs);
-    } else {
-        tdm_dev.i2c_channel_list = evt_codecs_i2cs;
-        tdm_dev.i2c_channel_count = countof(evt_codecs_i2cs);
-    }
 
     static constexpr pbus_mmio_t pdm_mmios[] = {
         {
@@ -148,7 +154,6 @@ zx_status_t Sherlock::AudioInit() {
     pdm_dev.mmio_count = countof(pdm_mmios);
     pdm_dev.bti_list = pdm_btis;
     pdm_dev.bti_count = countof(pdm_btis);
-
 
     aml_hiu_dev_t hiu;
     status = s905d2_hiu_init(&hiu);
@@ -180,7 +185,7 @@ zx_status_t Sherlock::AudioInit() {
 
     gpio_impl_.ConfigOut(T931_GPIOH(7), 1); // SOC_AUDIO_EN.
 
-    status = pbus_.DeviceAdd(&tdm_dev);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, components, countof(components), UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;

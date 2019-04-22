@@ -77,6 +77,9 @@ static const gpio_pin_t gpio_pins[] = {
     // For touch screen.
     { GPIO_TOUCH_INTERRUPT },
     { GPIO_TOUCH_RESET },
+    // For audio out.
+    { GPIO_AUDIO_SOC_FAULT_L },
+    { GPIO_SOC_AUDIO_EN },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
