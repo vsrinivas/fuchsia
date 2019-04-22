@@ -7,6 +7,8 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async_promise/executor.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -19,7 +21,8 @@ namespace feedback {
 // Provides data useful to attach in feedback reports (crash or user feedback).
 class FeedbackAgent : public DataProvider {
  public:
-  FeedbackAgent(std::shared_ptr<::sys::ServiceDirectory> services);
+  FeedbackAgent(async_dispatcher_t* dispatcher,
+                std::shared_ptr<::sys::ServiceDirectory> services);
 
   // Returns all the feedback data except the screenshot, which is provided
   // separately.
@@ -38,6 +41,7 @@ class FeedbackAgent : public DataProvider {
   // most likely the loss of the connection with Scenic.
   void TerminateAllGetScreenshotCallbacks();
 
+  async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;

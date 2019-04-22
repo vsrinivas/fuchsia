@@ -6,6 +6,7 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <inttypes.h>
+#include <lib/fit/promise.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
@@ -25,21 +26,16 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-Attachment BuildAttachment(const std::string& key, fuchsia::mem::Buffer value) {
-  Attachment attachment;
-  attachment.key = key;
-  attachment.value = std::move(value);
-  return attachment;
-}
-
-std::optional<fuchsia::mem::Buffer> GetKernelLog() {
+// This is actually synchronous, but we return a fit::promise to match other
+// attachment providers that are asynchronous.
+fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
   zx::debuglog log;
   const zx_status_t create_status =
       zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log);
   if (create_status != ZX_OK) {
     FX_LOGS(ERROR) << "zx::debuglog::create failed: " << create_status << " ("
                    << zx_status_get_string(create_status) << ")";
-    return std::nullopt;
+    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
   std::string kernel_log;
@@ -61,41 +57,48 @@ std::optional<fuchsia::mem::Buffer> GetKernelLog() {
   fsl::SizedVmo vmo;
   if (!fsl::VmoFromString(kernel_log, &vmo)) {
     FX_LOGS(ERROR) << "Failed to convert kernel log string to vmo";
-    return std::nullopt;
+    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
-  return std::move(vmo).ToTransport();
+  return fit::make_ok_promise(std::move(vmo).ToTransport());
 }
 
-std::optional<fuchsia::mem::Buffer> VmoFromFilename(
+// This is actually synchronous, but we return a fit::promise to match other
+// attachment providers that are asynchronous.
+fit::promise<fuchsia::mem::Buffer> VmoFromFilename(
     const std::string& filename) {
   fsl::SizedVmo vmo;
-  if (fsl::VmoFromFilename(filename, &vmo)) {
-    return std::move(vmo).ToTransport();
+  if (!fsl::VmoFromFilename(filename, &vmo)) {
+    FX_LOGS(ERROR) << "Failed to read VMO from file " << filename;
+    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
-  return std::nullopt;
+  return fit::make_ok_promise(std::move(vmo).ToTransport());
 }
 
-void PushBackIfValuePresent(const std::string& key,
-                            std::optional<fuchsia::mem::Buffer> value,
-                            std::vector<Attachment>* attachments) {
-  if (value.has_value()) {
-    attachments->push_back(BuildAttachment(key, std::move(value.value())));
-  } else {
-    FX_LOGS(WARNING) << "missing attachment " << key;
-  }
+fit::promise<Attachment> BuildAttachment(
+    const std::string& key, fit::promise<fuchsia::mem::Buffer> value) {
+  return value
+      .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
+        Attachment attachment;
+        attachment.key = key;
+        attachment.value = std::move(vmo);
+        return fit::ok(std::move(attachment));
+      })
+      .or_else([key]() {
+        FX_LOGS(WARNING) << "missing attachment " << key;
+        return fit::error();
+      });
 }
 
 }  // namespace
 
-std::vector<Attachment> GetAttachments(
+std::vector<fit::promise<Attachment>> GetAttachments(
     std::shared_ptr<::sys::ServiceDirectory> services) {
-  std::vector<Attachment> attachments;
-  PushBackIfValuePresent("build.snapshot",
-                         VmoFromFilename("/config/build-info/snapshot"),
-                         &attachments);
-  PushBackIfValuePresent("log.kernel", GetKernelLog(), &attachments);
-  PushBackIfValuePresent("log.system", CollectSystemLog(services),
-                         &attachments);
+  std::vector<fit::promise<Attachment>> attachments;
+  attachments.push_back(BuildAttachment(
+      "build.snapshot", VmoFromFilename("/config/build-info/snapshot")));
+  attachments.push_back(BuildAttachment("log.kernel", GetKernelLog()));
+  attachments.push_back(
+      BuildAttachment("log.system", CollectSystemLog(services)));
   return attachments;
 }
 

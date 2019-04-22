@@ -211,10 +211,8 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
 class StubScenic : public fuchsia::ui::scenic::Scenic {
  public:
   // Returns a request handler for binding to this stub service.
-  // We pass a dispatcher to run it on a different loop than the agent.
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
-      async_dispatcher_t* dispatcher) {
-    return bindings_.GetHandler(this, dispatcher);
+  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
+    return bindings_.GetHandler(this);
   }
 
   // Scenic methods.
@@ -258,10 +256,8 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
 class StubLogger : public fuchsia::logger::Log {
  public:
   // Returns a request handler for binding to this stub service.
-  // We pass a dispatcher to run it on a different loop than the agent.
-  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(
-      async_dispatcher_t* dispatcher) {
-    return bindings_.GetHandler(this, dispatcher);
+  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
+    return bindings_.GetHandler(this);
   }
 
   // fuchsia::logger::Log methods.
@@ -296,45 +292,19 @@ class StubLogger : public fuchsia::logger::Log {
 // class, without connecting through FIDL.
 class FeedbackAgentTest : public gtest::RealLoopFixture {
  public:
-  FeedbackAgentTest()
-      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
-        service_directory_provider_(
-            service_directory_provider_loop_.dispatcher()) {
-    // We run the service directory provider in a different loop so that it can
-    // serve the requests to and responses from the stub(s) that the agent may
-    // connect to (synchronously or not).
-    FXL_CHECK(service_directory_provider_loop_.StartThread(
-                  "service directory provider thread") == ZX_OK);
-  }
-
-  ~FeedbackAgentTest() { service_directory_provider_loop_.Shutdown(); }
-
   void SetUp() override {
     stub_scenic_.reset(new StubScenic());
-    FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler(
-                  service_directory_provider_loop_.dispatcher())) == ZX_OK);
+    FXL_CHECK(service_directory_provider_.AddService(
+                  stub_scenic_->GetHandler()) == ZX_OK);
     stub_logger_.reset(new StubLogger());
-    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(
-                  service_directory_provider_loop_.dispatcher())) == ZX_OK);
+    FXL_CHECK(service_directory_provider_.AddService(
+                  stub_logger_->GetHandler()) == ZX_OK);
 
-    agent_.reset(
-        new FeedbackAgent(service_directory_provider_.service_directory()));
-
-    called_back_ = false;
+    agent_.reset(new FeedbackAgent(
+        dispatcher(), service_directory_provider_.service_directory()));
   }
 
  protected:
-  // Waits for the callback of the function under test to be called.
-  //
-  // Times out after a while if the callback was never called.
-  void WaitForCallback() {
-    RunLoopWithTimeoutOrUntil([this] { return called_back_; });
-  }
-
-  // Signals the test fixture that the callback of the function under test was
-  // called.
-  void CalledBack() { called_back_ = true; }
-
   void set_scenic_responses(std::vector<TakeScreenshotResponse> responses) {
     stub_scenic_->set_take_screenshot_responses(std::move(responses));
   }
@@ -350,14 +320,10 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   std::unique_ptr<FeedbackAgent> agent_;
 
  private:
-  async::Loop service_directory_provider_loop_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
-
-  // Whether the callback for the function under test was called.
-  bool called_back_;
 };
 
 TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -370,11 +336,10 @@ TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
-        CalledBack();
       });
-  WaitForCallback();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -404,11 +369,10 @@ TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
-        CalledBack();
       });
-  WaitForCallback();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -424,11 +388,10 @@ TEST_F(FeedbackAgentTest,
   GetScreenshotResponse feedback_response;
   agent_->GetScreenshot(
       ImageEncoding::PNG,
-      [&feedback_response, this](std::unique_ptr<Screenshot> screenshot) {
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
         feedback_response.screenshot = std::move(screenshot);
-        CalledBack();
       });
-  WaitForCallback();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -455,12 +418,11 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
   for (size_t i = 0; i < num_calls; i++) {
     agent_->GetScreenshot(
         ImageEncoding::PNG,
-        [&feedback_responses, this](std::unique_ptr<Screenshot> screenshot) {
+        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
           feedback_responses.push_back({std::move(screenshot)});
-          CalledBack();
         });
   }
-  WaitForCallback();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -521,11 +483,10 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   });
 
   DataProvider_GetData_Result feedback_result;
-  agent_->GetData([&feedback_result, this](DataProvider_GetData_Result result) {
+  agent_->GetData([&feedback_result](DataProvider_GetData_Result result) {
     feedback_result = std::move(result);
-    CalledBack();
   });
-  WaitForCallback();
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(feedback_result.is_response());
   // As we control the system log attachment, we can expect it to be present and

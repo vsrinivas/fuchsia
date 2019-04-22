@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_AGENT_ATTACHMENTS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <vector>
@@ -15,7 +16,7 @@ namespace feedback {
 
 // Returns attachments useful to attach in feedback reports (crash or user
 // feedback).
-std::vector<Attachment> GetAttachments(
+std::vector<fit::promise<Attachment>> GetAttachments(
     std::shared_ptr<::sys::ServiceDirectory> services);
 
 }  // namespace feedback

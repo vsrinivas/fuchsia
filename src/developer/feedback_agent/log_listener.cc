@@ -5,9 +5,11 @@
 #include "src/developer/feedback_agent/log_listener.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
+#include <inttypes.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
@@ -28,60 +30,69 @@ const zx::duration kSystemLogCollectionTimeout = zx::sec(10);
 
 }  // namespace
 
-std::optional<fuchsia::mem::Buffer> CollectSystemLog(
+fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
     std::shared_ptr<::sys::ServiceDirectory> services) {
-  std::unique_ptr<LogListener> log_listener;
+  std::unique_ptr<LogListener> log_listener =
+      std::make_unique<LogListener>(services);
 
-  // We spawn a second loop to be able to wait on LogListener::Done().
-  // We need the second loop because CollectSystemLog() presents a sync
-  // interface, but LogListener is an inherently async interface.
-  // We use the second loop to wait on the async API without blocking the thread
-  // as LogListener runs on the same thread.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  async::PostTask(loop.dispatcher(), [&loop, &log_listener, &services] {
-    fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
-    logger.set_error_handler([&loop](zx_status_t status) {
-      FX_LOGS(ERROR) << "Lost connection to Log service: " << status << " ("
-                     << zx_status_get_string(status) << ")";
-      loop.Quit();
-    });
+  return log_listener->CollectLogs().then(
+      [log_listener = std::move(log_listener)](const fit::result<void>& result)
+          -> fit::result<fuchsia::mem::Buffer> {
+        if (!result.is_ok()) {
+          FX_LOGS(WARNING) << "System log collection was interrupted - "
+                              "logs may be partial or missing";
+        }
 
-    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
-    log_listener = std::make_unique<LogListener>(log_listener_h.NewRequest(),
-                                                 loop.dispatcher(),
-                                                 [&loop] { loop.Quit(); });
-    logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
-  });
-  if (loop.Run(zx::deadline_after(kSystemLogCollectionTimeout)) ==
-      ZX_ERR_TIMED_OUT) {
-    FX_LOGS(WARNING) << "System log collection timed out - logs may be partial";
-  }
+        const std::string logs = log_listener->CurrentLogs();
+        if (logs.empty()) {
+          FX_LOGS(WARNING) << "Empty system log";
+          return fit::error();
+        }
 
-  const std::string logs = log_listener->CurrentLogs();
-  log_listener.reset();
-  loop.Shutdown();
-
-  if (logs.empty()) {
-    FX_LOGS(WARNING) << "Empty system log";
-    return std::nullopt;
-  }
-
-  fsl::SizedVmo vmo;
-  if (!fsl::VmoFromString(logs, &vmo)) {
-    FX_LOGS(ERROR) << "Failed to convert system log string to vmo";
-    return std::nullopt;
-  }
-  return std::move(vmo).ToTransport();
+        fsl::SizedVmo vmo;
+        if (!fsl::VmoFromString(logs, &vmo)) {
+          FX_LOGS(ERROR) << "Failed to convert system log string to vmo";
+          return fit::error();
+        }
+        return fit::ok(std::move(vmo).ToTransport());
+      });
 }
 
-LogListener::LogListener(
-    fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-    async_dispatcher_t* dispatcher, fit::function<void()> done)
-    : binding_(this, std::move(request), dispatcher), done_(std::move(done)) {
-  binding_.set_error_handler([](zx_status_t status) {
+LogListener::LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
+    : services_(services), binding_(this) {}
+
+fit::promise<void> LogListener::CollectLogs() {
+  fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
+  binding_.Bind(log_listener_h.NewRequest());
+  binding_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "LogListener error: " << status << " ("
                    << zx_status_get_string(status) << ")";
+    done_.completer.complete_error();
   });
+
+  fuchsia::logger::LogPtr logger = services_->Connect<fuchsia::logger::Log>();
+  logger.set_error_handler([this](zx_status_t status) {
+    FX_LOGS(ERROR) << "Lost connection to Log service: " << status << " ("
+                   << zx_status_get_string(status) << ")";
+    done_.completer.complete_error();
+  });
+  logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
+
+  // fit::promise does not have the notion of a timeout. So we post a delayed
+  // task that will call the completer after the timeout and return an error.
+  async::PostDelayedTask(
+      async_get_default_dispatcher(),
+      [this] {
+        // Check that the fit::bridge was not already completed by Done() or
+        // another error.
+        if (done_.completer) {
+          FX_LOGS(ERROR) << "System log collection timed out";
+          done_.completer.complete_error();
+        }
+      },
+      kSystemLogCollectionTimeout);
+
+  return done_.consumer.promise_or(fit::error());
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
@@ -118,7 +129,7 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
       SeverityToString(message.severity).c_str(), message.msg.c_str());
 }
 
-void LogListener::Done() { done_(); }
+void LogListener::Done() { done_.completer.complete_ok(); }
 
 }  // namespace feedback
 }  // namespace fuchsia

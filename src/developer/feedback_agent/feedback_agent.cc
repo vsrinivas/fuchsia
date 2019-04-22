@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fit/promise.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -17,16 +18,40 @@
 namespace fuchsia {
 namespace feedback {
 
-FeedbackAgent::FeedbackAgent(std::shared_ptr<::sys::ServiceDirectory> services)
-    : services_(services) {}
+FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
+                             std::shared_ptr<::sys::ServiceDirectory> services)
+    : executor_(dispatcher), services_(services) {}
 
 void FeedbackAgent::GetData(GetDataCallback callback) {
-  DataProvider_GetData_Response response;
-  response.data.set_annotations(GetAnnotations());
-  response.data.set_attachments(GetAttachments(services_));
-  DataProvider_GetData_Result result;
-  result.set_response(std::move(response));
-  callback(std::move(result));
+  // Today attachments are fetched asynchronously, but annotations are not.
+  // In the future, we can use fit::join_promises() if annotations need to be
+  // fetched asynchronously as well.
+  auto promise =
+      fit::join_promise_vector(GetAttachments(services_))
+          .then([callback = std::move(callback)](
+                    fit::result<std::vector<fit::result<Attachment>>>&
+                        attachments) {
+            DataProvider_GetData_Response response;
+            response.data.set_annotations(GetAnnotations());
+
+            if (attachments.is_ok()) {
+              std::vector<Attachment> ok_attachments;
+              for (auto& attachment : attachments.take_value()) {
+                if (attachment.is_ok()) {
+                  ok_attachments.emplace_back(attachment.take_value());
+                }
+              }
+              response.data.set_attachments(std::move(ok_attachments));
+            } else {
+              FX_LOGS(WARNING) << "failed to retrieve any attachments";
+            }
+
+            DataProvider_GetData_Result result;
+            result.set_response(std::move(response));
+            callback(std::move(result));
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
 void FeedbackAgent::GetScreenshot(ImageEncoding encoding,

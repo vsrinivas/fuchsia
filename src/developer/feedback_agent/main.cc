@@ -16,7 +16,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  fuchsia::feedback::FeedbackAgent feedback_agent(context->svc());
+  fuchsia::feedback::FeedbackAgent feedback_agent(loop.dispatcher(),
+                                                  context->svc());
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings;
   context->outgoing()->AddPublicService(bindings.GetHandler(&feedback_agent));
 
