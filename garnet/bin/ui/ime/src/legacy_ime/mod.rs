@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod handler;
+mod position;
 mod state;
 #[cfg(test)]
 mod tests;
