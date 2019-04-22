@@ -137,48 +137,26 @@ public:
     // @param clr_bits The mask of bits to be cleared.
     // @param clr_bits The mask of bits to be set.
     // @return A zx_status_t indicating success or failure of the operation.
-    zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits)
-        TA_EXCL(dev_lock_);
+    zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits) TA_EXCL(dev_lock_);
 
     // Enable or disable bus mastering in a device's configuration.
     //
     // @param enable If true, allow the device to access main system memory as a bus
     // master.
     // @return A zx_status_t indicating success or failure of the operation.
-    inline zx_status_t EnableBusMaster(bool enabled) {
-        if (enabled && disabled_) {
-            return ZX_ERR_BAD_STATE;
-        }
-
-        return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
-                         enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
-    }
+    zx_status_t EnableBusMaster(bool enabled) TA_EXCL(dev_lock_);
 
     // Enable or disable PIO access in a device's configuration.
     //
     // @param enable If true, allow the device to access its PIO mapped registers.
     // @return A zx_status_t indicating success or failure of the operation.
-    inline zx_status_t EnablePio(bool enabled) {
-        if (enabled && disabled_) {
-            return ZX_ERR_BAD_STATE;
-        }
-
-        return ModifyCmd(enabled ? 0 : PCI_COMMAND_IO_EN,
-                         enabled ? PCI_COMMAND_IO_EN : 0);
-    }
+    zx_status_t EnablePio(bool enabled) TA_EXCL(dev_lock_);
 
     // Enable or disable MMIO access in a device's configuration.
     //
     // @param enable If true, allow the device to access its MMIO mapped registers.
     // @return A zx_status_t indicating success or failure of the operation.
-    inline zx_status_t EnableMmio(bool enabled) {
-        if (enabled && disabled_) {
-            return ZX_ERR_BAD_STATE;
-        }
-
-        return ModifyCmd(enabled ? 0 : PCI_COMMAND_MEM_EN,
-                         enabled ? PCI_COMMAND_MEM_EN : 0);
-    }
+    zx_status_t EnableMmio(bool enabled) TA_EXCL(dev_lock_);
 
     // Return information about the requested base address register, if it has been
     // allocated.
@@ -198,7 +176,6 @@ public:
     bool plugged_in() const { return plugged_in_; }
     bool disabled() const { return disabled_; }
     bool quirks_done() const { return quirks_done_; }
-
     bool is_bridge() const { return is_bridge_; }
     uint16_t vendor_id() const { return vendor_id_; }
     uint16_t device_id() const { return device_id_; }
@@ -206,7 +183,6 @@ public:
     uint8_t subclass() const { return subclass_; }
     uint8_t prog_if() const { return prog_if_; }
     uint8_t rev_id() const { return rev_id_; }
-
     uint8_t bus_id() const { return cfg_->bdf().bus_id; }
     uint8_t dev_id() const { return cfg_->bdf().device_id; }
     uint8_t func_id() const { return cfg_->bdf().function_id; }

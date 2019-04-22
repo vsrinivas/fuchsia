@@ -169,6 +169,33 @@ void Device::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
         static_cast<uint16_t>((cfg_->Read(Config::kCommand) & ~clr_bits) | set_bits));
 }
 
+zx_status_t Device::EnableBusMaster(bool enabled) {
+    if (enabled && disabled_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
+                     enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+}
+
+zx_status_t Device::EnablePio(bool enabled) {
+    if (enabled && disabled_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ModifyCmd(enabled ? 0 : PCI_COMMAND_IO_EN,
+                     enabled ? PCI_COMMAND_IO_EN : 0);
+}
+
+zx_status_t Device::EnableMmio(bool enabled) {
+    if (enabled && disabled_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ModifyCmd(enabled ? 0 : PCI_COMMAND_MEM_EN,
+                     enabled ? PCI_COMMAND_MEM_EN : 0);
+}
+
 void Device::Disable() {
     fbl::AutoLock dev_lock(&dev_lock_);
     DisableLocked();
