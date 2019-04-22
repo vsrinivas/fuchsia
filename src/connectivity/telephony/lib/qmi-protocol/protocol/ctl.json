@@ -13,14 +13,14 @@
           {
             "param": "host_driver",
             "id": "0x01",
-            "size": 1
+            "type": "uint8"
           }
         ],
         "response": [
           {
             "param": "link_id",
             "id": "0x01",
-            "size": 2
+            "type": "uint16"
           }
         ]
       },
@@ -32,21 +32,21 @@
           {
             "param": "svc_type",
             "id": "0x01",
-            "size": 1
+            "type": "uint8"
           }
         ],
         "response": [
           {
             "param": "client_id",
             "id": "0x01",
-            "size": 2,
+            "type": "uint16",
             "subparams": [
               {
-                "size": 1,
+                "type": "uint8",
                 "param": "svc_type"
               },
               {
-                "size": 1,
+                "type": "uint8",
                 "param": "client_id"
               }
             ]

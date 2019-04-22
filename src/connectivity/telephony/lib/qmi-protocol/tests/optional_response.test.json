@@ -20,7 +20,7 @@
             {
               "param": "blah",
               "id": "0x01",
-              "size": 2,
+              "type": "uint16",
               "optional": true
             }
           ]

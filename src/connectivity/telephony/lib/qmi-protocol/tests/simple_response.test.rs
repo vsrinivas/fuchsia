@@ -13,7 +13,8 @@ pub mod TEST {
     }
     #[derive(Debug)]
     pub struct TestResp {
-        pub blah: u16,
+        pub uint_blah: u16,
+        pub int_blah: i16,
     }
     impl Encodable for TestReq {
         fn transaction_id_len(&self) -> u8 {
@@ -47,7 +48,8 @@ pub mod TEST {
             } else {
                 assert_eq!(0x00, buf.get_u16_le()); // this must be zero if no error from above check
             }
-            let mut blah = Default::default();
+            let mut uint_blah = Default::default();
+            let mut int_blah = Default::default();
             while total_len > 0 {
                 let msg_id = buf.get_u8();
                 total_len -= 1;
@@ -55,7 +57,11 @@ pub mod TEST {
                 total_len -= 2;
                 match msg_id {
                     1 => {
-                        blah = buf.get_u16_le();
+                        uint_blah = buf.get_u16_le();
+                        total_len -= 2;
+                    }
+                    3 => {
+                        int_blah = buf.get_i16_le();
                         total_len -= 2;
                     }
                     0 => { eprintln!("Found a type of 0, modem gave a bad TLV, trying to recover"); break; }
@@ -66,7 +72,8 @@ pub mod TEST {
                 }
             }
             Ok(TestResp {
-                blah,
+                uint_blah,
+                int_blah,
             })
         }
     }

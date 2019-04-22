@@ -12,7 +12,53 @@ use std::collections::HashMap;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SubParam {
     pub param: String,
-    pub size: u16,
+    #[serde(rename = "type")]
+    pub ty: QmiType,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum QmiType {
+    #[serde(rename = "int8")]
+    Int8,
+    #[serde(rename = "uint8")]
+    Uint8,
+    #[serde(rename = "int16")]
+    Int16,
+    #[serde(rename = "uint16")]
+    Uint16,
+    #[serde(rename = "int32")]
+    Int32,
+    #[serde(rename = "uint32")]
+    Uint32,
+    #[serde(rename = "string")]
+    Str,
+}
+
+impl QmiType {
+    pub fn to_size(&self) -> Option<u16> {
+        match self {
+            QmiType::Int8 => Some(1),
+            QmiType::Uint8 => Some(1),
+            QmiType::Int16 => Some(2),
+            QmiType::Uint16 => Some(2),
+            QmiType::Int32 => Some(4),
+            QmiType::Uint32 => Some(4),
+            QmiType::Str => None,
+        }
+    }
+
+    pub fn to_rust_str(&self) -> String {
+        match self {
+            QmiType::Int8 => "i8",
+            QmiType::Uint8 => "u8",
+            QmiType::Int16 => "i16",
+            QmiType::Uint16 => "u16",
+            QmiType::Int32 => "i32",
+            QmiType::Uint32 => "u32",
+            QmiType::Str => "String",
+        }
+        .to_string()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +66,8 @@ pub struct TLV {
     pub param: String,
     #[serde(deserialize_with = "from_hex_str")]
     pub id: u16,
-    pub size: Option<u16>,
+    #[serde(rename = "type")]
+    pub ty: QmiType,
     #[serde(default)]
     pub optional: bool,
     #[serde(default, rename = "subparams")]

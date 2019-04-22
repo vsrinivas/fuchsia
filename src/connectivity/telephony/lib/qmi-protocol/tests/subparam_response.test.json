@@ -20,14 +20,14 @@
             {
               "param": "blah",
               "id": "0x01",
-              "size": 2,
+              "type": "uint16",
               "subparams": [
                 {
-                    "size": 1,
+                    "type": "uint8",
                     "param": "part_a"
                 },
                 {
-                    "size": 1,
+                    "type": "uint8",
                     "param": "part_b"
                 }
               ]

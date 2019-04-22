@@ -13,13 +13,13 @@
           {
             "param": "qos_format",
             "id": "0x10",
-            "size": 1,
+            "type": "uint8",
             "optional": true
           },
           {
             "param": "link_layer_prot",
             "id": "0x11",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           }
         ],
@@ -27,13 +27,13 @@
           {
             "param": "qos_format",
             "id": "0x10",
-            "size": 1,
+            "type": "uint8",
             "optional": true
           },
           {
             "param": "link_layer_prot",
             "id": "0x11",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           }
         ]

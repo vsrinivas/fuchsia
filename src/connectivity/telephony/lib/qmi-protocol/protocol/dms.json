@@ -14,7 +14,8 @@
         "response": [
           {
             "param": "device_manufacturer",
-            "id": "0x01"
+            "id": "0x01",
+            "type": "string"
           }
         ]
       },
@@ -26,18 +27,22 @@
         "response": [
           {
             "param": "esn",
-            "id": "0x10"
+            "id": "0x10",
+            "type": "string"
           },
           {
             "param": "imei",
-            "id": "0x11"
+            "id": "0x11",
+            "type": "string"
           },
           {
             "param": "meid",
+            "type": "string",
             "id": "0x12"
           },
           {
             "param": "imeisv_svn",
+            "type": "string",
             "id": "0x13"
           }
         ]
@@ -51,14 +56,14 @@
           {
             "param": "power",
             "id": "0x01",
-            "size": 2,
+            "type": "uint16",
             "subparams": [
               {
-                "size": 1,
+                "type": "uint8",
                 "param": "power_status"
               },
               {
-                "size": 1,
+                "type": "uint8",
                 "param": "battery_lvl"
               }
             ]
@@ -74,19 +79,19 @@
           {
             "param": "operating_mode",
             "id": "0x01",
-            "size": 1
+            "type": "uint8"
           },
           {
             "param": "offline_reason",
             "id": "0x10",
             "optional": true,
-            "size": 2
+            "type": "uint16"
           },
           {
             "param": "hardware_controlled_mode",
             "id": "0x11",
             "optional": true,
-            "size": 1
+            "type": "uint8"
           }
         ]
       }

@@ -18,9 +18,14 @@
           "request": [],
           "response": [
             {
-              "param": "blah",
+              "param": "uint_blah",
               "id": "0x01",
-              "size": 2
+              "type": "uint16"
+            },
+            {
+              "param": "int_blah",
+              "id": "0x03",
+              "type": "int16"
             }
           ]
         }

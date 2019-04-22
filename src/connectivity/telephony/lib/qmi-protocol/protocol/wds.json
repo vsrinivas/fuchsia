@@ -14,12 +14,13 @@
           {
             "param": "apn",
             "id": "0x14",
+            "type": "string",
             "optional": true
           },
           {
             "param": "ip_family_preference",
             "id": "0x19",
-            "size": 1,
+            "type": "uint8",
             "optional": true
           }
         ],
@@ -27,7 +28,7 @@
           {
             "param": "packet_data_handle",
             "id": "0x01",
-            "size": 4
+            "type": "uint32"
           }
         ]
       },
@@ -39,38 +40,38 @@
           {
             "param": "requested_settings",
             "id": "0x10",
-            "size": 4
+            "type": "uint32"
           }
         ],
         "response": [
           {
             "param": "ipv4_addr",
             "id": "0x1E",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           },
           {
             "param": "ipv4_subnet",
             "id": "0x21",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           },
           {
             "param": "ipv4_gateway",
             "id": "0x20",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           },
           {
             "param": "ipv4_dns",
             "id": "0x15",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           },
           {
             "param": "mtu",
             "id": "0x29",
-            "size": 4,
+            "type": "uint32",
             "optional": true
           }
         ]

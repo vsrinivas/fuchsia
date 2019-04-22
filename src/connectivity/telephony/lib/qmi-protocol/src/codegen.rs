@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ast::{Message, Service, ServiceSet, Structure, SubParam, TLV};
-use failure::Error;
+use crate::ast::{Message, QmiType, Service, ServiceSet, Structure, SubParam, TLV};
+use failure::{format_err, Error};
 use std::io;
 
 pub struct Codegen<'a, W: io::Write> {
@@ -11,17 +11,8 @@ pub struct Codegen<'a, W: io::Write> {
     depth: usize,
 }
 
-fn type_fmt(ty: Option<u16>, optional: bool) -> String {
-    let ty = match ty {
-        Some(size) => match size {
-            1 => "u8",
-            2 => "u16",
-            4 => "u32",
-            _ => panic!("Invalid size to type conversion: {}", size),
-        },
-        None => "String",
-    }
-    .to_string();
+fn type_fmt(ty: QmiType, optional: bool) -> String {
+    let ty = ty.to_rust_str();
 
     if optional {
         format!("Option<{}>", ty)
@@ -60,11 +51,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         Codegen { w, depth: 0 }
     }
 
-    pub fn codegen_svc_tlv_encode(
-        &mut self,
-        field: &TLV,
-        _structure: &Structure,
-    ) -> Result<(), Error> {
+    fn codegen_svc_tlv_encode(&mut self, field: &TLV, _structure: &Structure) -> Result<(), Error> {
         if field.optional {
             writeln_indent!(self, "if let Some(ref {}) = self.{} {{", field.param, field.param);
             indent!(self);
@@ -82,44 +69,62 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         // service msg type
         writeln_indent!(self, "buf.put_u8({});", field.id);
 
-        match field.size {
-            None => {
+        match field.ty {
+            QmiType::Str => {
                 // service msg length (variable)
                 writeln_indent!(self, "buf.put_u16_le({}.as_bytes().len() as u16);", field.param);
                 // service msg value
                 writeln_indent!(self, "buf.put_slice({}.as_bytes());", field.param);
             }
-            Some(size) => {
+            sized_type => {
                 // service msg length (fixed size)
-                writeln_indent!(self, "buf.put_u16_le({});", size);
+                writeln_indent!(self, "buf.put_u16_le({});", sized_type.to_size().unwrap());
                 // service msg value
                 if field.has_sub_params() {
                     for param in field.sub_params.iter() {
-                        match param.size {
-                            1 => {
-                                writeln_indent!(self, "buf.put_u8(*{});", param.param);
+                        match param.ty {
+                            QmiType::Str => {
+                                return Err(format_err!(
+                                    "No way to handle an unsized type in a subparam"
+                                ))
                             }
-                            2 => {
-                                writeln_indent!(self, "buf.put_u16_le(*{});", param.param);
+                            QmiType::Uint8 | QmiType::Int8 => {
+                                writeln_indent!(
+                                    self,
+                                    "buf.put_{}(*{});",
+                                    param.ty.to_rust_str(),
+                                    param.param
+                                );
                             }
-                            4 => {
-                                writeln_indent!(self, "buf.put_u32_le(*{});", param.param);
+                            _ => {
+                                writeln_indent!(
+                                    self,
+                                    "buf.put_{}_le(*{});",
+                                    param.ty.to_rust_str(),
+                                    param.param
+                                );
                             }
-                            _ => panic!("invalid field size: {}", size),
                         }
                     }
                 } else {
-                    match size {
-                        1 => {
-                            writeln_indent!(self, "buf.put_u8(*{});", field.param);
+                    match sized_type {
+                        QmiType::Uint8 | QmiType::Int8 => {
+                            writeln_indent!(
+                                self,
+                                "buf.put_{}(*{});",
+                                sized_type.to_rust_str(),
+                                field.param
+                            );
                         }
-                        2 => {
-                            writeln_indent!(self, "buf.put_u16_le(*{});", field.param);
+                        QmiType::Str => unreachable!("handled above"),
+                        _ => {
+                            writeln_indent!(
+                                self,
+                                "buf.put_{}_le(*{});",
+                                sized_type.to_rust_str(),
+                                field.param
+                            );
                         }
-                        4 => {
-                            writeln_indent!(self, "buf.put_u32_le(*{});", field.param);
-                        }
-                        _ => panic!("invalid field size: {}", size),
                     }
                 }
             }
@@ -133,25 +138,23 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         Ok(())
     }
 
-    pub fn codegen_svc_decode_subfield(&mut self, field: &SubParam) -> Result<(), Error> {
-        match field.size {
-            1 => {
-                writeln_indent!(self, "{} = buf.get_u8();", field.param);
+    // This function should not decrement the total size
+    fn codegen_svc_decode_subfield(&mut self, field: &SubParam) -> Result<(), Error> {
+        match field.ty {
+            QmiType::Str => return Err(format_err!("Cannot have unsized types in subparams")),
+            QmiType::Uint8 | QmiType::Int8 => {
+                writeln_indent!(self, "{} = buf.get_{}();", field.param, field.ty.to_rust_str());
+            },
+            _ => {
+                writeln_indent!(self, "{} = buf.get_{}_le();", field.param, field.ty.to_rust_str());
             }
-            2 => {
-                writeln_indent!(self, "{} = buf.get_u16_le();", field.param);
-            }
-            4 => {
-                writeln_indent!(self, "{} = buf.get_u32_le();", field.param);
-            }
-            _ => panic!("invalid field size: {}", field.size),
         }
         Ok(())
     }
 
-    pub fn codegen_svc_decode_field(&mut self, field: &TLV) -> Result<(), Error> {
-        match field.size {
-            None => {
+    fn codegen_svc_decode_field(&mut self, field: &TLV) -> Result<(), Error> {
+        match field.ty {
+            QmiType::Str => {
                 writeln_indent!(self, "let dst = buf.by_ref().take(tlv_len as usize).collect();");
                 writeln_indent!(self, "total_len -= tlv_len;");
                 if field.optional {
@@ -164,48 +167,51 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                     writeln_indent!(self, "{} = String::from_utf8(dst).unwrap();", field.param);
                 }
             }
-            Some(size) => {
-                match size {
-                    1 => {
-                        if field.optional {
-                            writeln_indent!(self, "{} = Some(buf.get_u8());", field.param);
-                        } else {
-                            writeln_indent!(self, "{} = buf.get_u8();", field.param);
-                        }
-                        writeln_indent!(self, "total_len -= 1;");
+            sized_type => {
+                if field.has_sub_params() {
+                    // TODO check the subparam size is equal to the whole type
+                    for param in field.sub_params.iter() {
+                        self.codegen_svc_decode_subfield(param)?;
                     }
-                    2 => {
-                        if field.has_sub_params() {
-                            // TODO check the subparam size is equal to the whole type
-                            for param in field.sub_params.iter() {
-                                self.codegen_svc_decode_subfield(param)?;
-                            }
-                        } else {
+                } else {
+                    match sized_type {
+                        QmiType::Uint8 | QmiType::Int8 => {
                             if field.optional {
-                                writeln_indent!(self, "{} = Some(buf.get_u16_le());", field.param);
+                                writeln_indent!(
+                                    self,
+                                    "{} = Some(buf.get_{}());",
+                                    field.param,
+                                    field.ty.to_rust_str()
+                                );
                             } else {
-                                writeln_indent!(self, "{} = buf.get_u16_le();", field.param);
+                                writeln_indent!(
+                                    self,
+                                    "{} = buf.get_{}();",
+                                    field.param,
+                                    field.ty.to_rust_str()
+                                );
                             }
                         }
-                        writeln_indent!(self, "total_len -= 2;");
-                    }
-                    4 => {
-                        if field.has_sub_params() {
-                            // TODO check the subparam size is equal to the whole type
-                            for param in field.sub_params.iter() {
-                                self.codegen_svc_decode_subfield(param)?;
-                            }
-                        } else {
+                        _ => {
                             if field.optional {
-                                writeln_indent!(self, "{} = Some(buf.get_u32_le());", field.param);
+                                writeln_indent!(
+                                    self,
+                                    "{} = Some(buf.get_{}_le());",
+                                    field.param,
+                                    field.ty.to_rust_str()
+                                );
                             } else {
-                                writeln_indent!(self, "{} = buf.get_u32_le();", field.param);
+                                writeln_indent!(
+                                    self,
+                                    "{} = buf.get_{}_le();",
+                                    field.param,
+                                    field.ty.to_rust_str()
+                                );
                             }
-                            writeln_indent!(self, "total_len -= 4;");
                         }
                     }
-                    _ => panic!("invalid field size: {}", size),
                 }
+                writeln_indent!(self, "total_len -= {};", sized_type.to_size().unwrap());
             }
         }
         Ok(())
@@ -346,7 +352,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         writeln_indent!(self, "// svc length calculation");
         writeln_indent!(self, "let mut {}_len = 0u16;", msg.name);
         for field in msg.get_request_fields() {
-            let field_name = match field.size {
+            let field_name = match field.ty.to_size() {
                 Some(_) => format!("_{}", field.param),
                 None => field.param.clone(),
             };
@@ -360,7 +366,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                 writeln_indent!(self, "{}_len += 2; // tlv length length;", msg.name);
                 writeln_indent!(self, "let {} = &self.{};", field_name, field.param);
             }
-            if let Some(size) = field.size {
+            if let Some(size) = field.ty.to_size() {
                 writeln_indent!(self, "{}_len += {};", msg.name, size);
             } else {
                 writeln_indent!(
@@ -397,7 +403,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         Ok(())
     }
 
-    pub fn codegen_svc_msg(&mut self, msg: &Message) -> Result<(), Error> {
+    fn codegen_svc_msg(&mut self, msg: &Message) -> Result<(), Error> {
         // define the request struct
         writeln_indent!(self, "pub struct {}Req {{", msg.name);
         indent!(self);
@@ -408,7 +414,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                         self,
                         "pub {param}: {ty},",
                         param = param.param,
-                        ty = type_fmt(Some(param.size), field.optional)
+                        ty = type_fmt(param.ty, field.optional)
                     );
                 }
             } else {
@@ -416,7 +422,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                     self,
                     "pub {param}: {ty},",
                     param = field.param,
-                    ty = type_fmt(field.size, field.optional)
+                    ty = type_fmt(field.ty, field.optional)
                 );
             }
         }
@@ -430,15 +436,10 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         for field in msg.get_request_fields() {
             if field.has_sub_params() {
                 for param in field.sub_params.iter() {
-                    write!(
-                        self.w,
-                        "{}: {},",
-                        param.param,
-                        type_fmt(Some(param.size), field.optional)
-                    )?;
+                    write!(self.w, "{}: {},", param.param, type_fmt(param.ty, field.optional))?;
                 }
             } else {
-                write!(self.w, "{}: {},", field.param, type_fmt(field.size, field.optional))?;
+                write!(self.w, "{}: {},", field.param, type_fmt(field.ty, field.optional))?;
             }
         }
         writeln!(self.w, ") -> Self {{")?;
@@ -476,7 +477,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                         self,
                         "pub {param}: {ty},",
                         param = param.param,
-                        ty = type_fmt(Some(param.size), false)
+                        ty = type_fmt(param.ty, false)
                     );
                 }
             } else {
@@ -484,7 +485,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                     self,
                     "pub {param}: {ty},",
                     param = field.param,
-                    ty = type_fmt(field.size, field.optional)
+                    ty = type_fmt(field.ty, field.optional)
                 );
             }
         }
@@ -494,7 +495,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         Ok(())
     }
 
-    pub fn codegen_service(&mut self, svc: &Service, structure: &Structure) -> Result<(), Error> {
+    fn codegen_service(&mut self, svc: &Service, structure: &Structure) -> Result<(), Error> {
         writeln!(self.w, "pub mod {} {{", svc.name)?;
         indent!(self);
         writeln_indent!(self, "use crate::{{Decodable, Encodable}};");

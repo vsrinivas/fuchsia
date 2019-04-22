@@ -15,15 +15,15 @@
           {
             "param": "signal_strength",
             "id": "0x01",
-            "size": 2,
+            "type": "uint16",
             "subparams": [
               {
                 "param": "signal_strength",
-                "size": 1
+                "type": "int8"
               },
               {
                 "param": "radio_interface",
-                "size": 1
+                "type": "uint8"
               }
             ]
           }

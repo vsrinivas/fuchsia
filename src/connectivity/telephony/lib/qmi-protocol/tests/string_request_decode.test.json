@@ -19,7 +19,8 @@
           "response": [
             {
               "param": "blah",
-              "id": "0x01"
+              "id": "0x01",
+              "type": "string"
             }
           ]
         }
