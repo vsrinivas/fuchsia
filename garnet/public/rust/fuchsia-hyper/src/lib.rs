@@ -91,7 +91,6 @@ pub fn new_https_client_dangerous(
 pub fn new_https_client() -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
     let mut tls = rustls::ClientConfig::new();
     tls.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
-    tls.ct_logs = Some(&ct_logs::LOGS);
     new_https_client_dangerous(tls)
 }
 

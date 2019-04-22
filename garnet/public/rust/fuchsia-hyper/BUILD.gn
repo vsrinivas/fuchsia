@@ -14,7 +14,6 @@ rustc_library("fuchsia-hyper") {
   deps = [
     "//garnet/lib/rust/webpki-roots-fuchsia",
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust_crates:ct-logs",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
