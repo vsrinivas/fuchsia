@@ -705,6 +705,7 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 			Temporary() bool
 			Timeout() bool
 		}); ok && e.Temporary() && e.Timeout() {
+			log.Printf("timed out fetching %s", blob)
 			f.closeIdleConnections()
 			continue
 		}
@@ -712,6 +713,7 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 		if err != nil {
 			return err
 		}
+		break
 	}
 	defer resp.Body.Close()
 
