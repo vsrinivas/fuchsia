@@ -85,8 +85,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
 impl CmInto<fsys::UseDecl> for cm::Use {
     fn cm_into(self) -> Result<fsys::UseDecl, Error> {
         Ok(fsys::UseDecl {
-            type_: Some(capability_from_str(&self.r#type)?),
-            source_path: Some(self.source_path),
+            capability: Some(self.capability.cm_into()?),
             target_path: Some(self.target_path),
         })
     }
@@ -95,8 +94,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
 impl CmInto<fsys::ExposeDecl> for cm::Expose {
     fn cm_into(self) -> Result<fsys::ExposeDecl, Error> {
         Ok(fsys::ExposeDecl {
-            type_: Some(capability_from_str(&self.r#type)?),
-            source_path: Some(self.source_path),
+            capability: Some(self.capability.cm_into()?),
             source: Some(self.source.cm_into()?),
             target_path: Some(self.target_path),
         })
@@ -106,8 +104,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(fsys::OfferDecl {
-            type_: Some(capability_from_str(&self.r#type)?),
-            source_path: Some(self.source_path),
+            capability: Some(self.capability.cm_into()?),
             source: Some(self.source.cm_into()?),
             targets: Some(self.targets.cm_into()?),
         })
@@ -124,38 +121,46 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
     }
 }
 
+impl CmInto<fsys::Capability> for cm::Capability {
+    fn cm_into(self) -> Result<fsys::Capability, Error> {
+        Ok(match self {
+            cm::Capability::Service(s) => fsys::Capability::Service(s.cm_into()?),
+            cm::Capability::Directory(d) => fsys::Capability::Directory(d.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::ServiceCapability> for cm::Service {
+    fn cm_into(self) -> Result<fsys::ServiceCapability, Error> {
+        Ok(fsys::ServiceCapability { path: Some(self.path) })
+    }
+}
+
+impl CmInto<fsys::DirectoryCapability> for cm::Directory {
+    fn cm_into(self) -> Result<fsys::DirectoryCapability, Error> {
+        Ok(fsys::DirectoryCapability { path: Some(self.path) })
+    }
+}
+
 impl CmInto<fsys::RelativeId> for cm::Source {
     fn cm_into(self) -> Result<fsys::RelativeId, Error> {
-        let num_set = self.realm.is_some() as i32
-            + self.myself.is_some() as i32
-            + self.child.is_some() as i32;
-        if num_set > 1 {
-            return Err(Error::parse(format!(
-                "More than one RelativeId variant is set: {:?}",
-                &self
-            )));
-        }
-        if let Some(realm) = self.realm {
-            Ok(fsys::RelativeId::Realm(realm.cm_into()?))
-        } else if let Some(myself) = self.myself {
-            Ok(fsys::RelativeId::Myself(myself.cm_into()?))
-        } else if let Some(child) = self.child {
-            Ok(fsys::RelativeId::Child(child.cm_into()?))
-        } else {
-            Err(Error::parse(format!("No RelativeId variant is set: {:?}", &self)))
-        }
+        Ok(match self {
+            cm::Source::Realm(r) => fsys::RelativeId::Realm(r.cm_into()?),
+            cm::Source::Myself(s) => fsys::RelativeId::Myself(s.cm_into()?),
+            cm::Source::Child(c) => fsys::RelativeId::Child(c.cm_into()?),
+        })
     }
 }
 
 impl CmInto<fsys::RealmId> for cm::RealmId {
     fn cm_into(self) -> Result<fsys::RealmId, Error> {
-        Ok(fsys::RealmId { dummy: None })
+        Ok(fsys::RealmId {})
     }
 }
 
 impl CmInto<fsys::SelfId> for cm::SelfId {
     fn cm_into(self) -> Result<fsys::SelfId, Error> {
-        Ok(fsys::SelfId { dummy: None })
+        Ok(fsys::SelfId {})
     }
 }
 
@@ -227,14 +232,6 @@ fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
     })
 }
 
-fn capability_from_str(value: &str) -> Result<fsys::CapabilityType, Error> {
-    match value {
-        cm::SERVICE => Ok(fsys::CapabilityType::Service),
-        cm::DIRECTORY => Ok(fsys::CapabilityType::Directory),
-        _ => Err(Error::parse(format!("Unknown capability type: {}", value))),
-    }
-}
-
 fn startup_from_str(value: &str) -> Result<fsys::StartupMode, Error> {
     match value {
         cm::LAZY => Ok(fsys::StartupMode::Lazy),
@@ -288,8 +285,7 @@ mod tests {
         let input = json!({
             "exposes": [
                 {
-                    "type": "nothing",
-                    "source_path": "/svc/fuchsia.logger.Log",
+                    "capability": {},
                     "source": {
                         "myself": {}
                     },
@@ -300,7 +296,7 @@ mod tests {
 
         let expected_res: Result<fsys::ComponentDecl, Error> = Err(Error::validate_schema(
             CM_SCHEMA,
-            "Pattern condition is not met at /exposes/0/type",
+            "OneOf conditions are not met at /exposes/0/capability",
         ));
         let res = translate(&format!("{}", input));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -413,13 +409,19 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "type": "service",
-                        "source_path": "/fonts/CoolFonts",
+                        "capability": {
+                            "service": {
+                                "path": "/fonts/CoolFonts"
+                            }
+                        },
                         "target_path": "/svc/fuchsia.fonts.Provider"
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/data/assets",
+                        "capability": {
+                            "directory": {
+                                "path": "/data/assets"
+                            }
+                        },
                         "target_path": "/data/assets"
                     }
                 ]
@@ -427,13 +429,15 @@ mod tests {
             output = {
                 let uses = vec![
                     fsys::UseDecl{
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
+                            path: Some("/fonts/CoolFonts".to_string()),
+                        })),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     },
                     fsys::UseDecl{
-                        type_: Some(fsys::CapabilityType::Directory),
-                        source_path: Some("/data/assets".to_string()),
+                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
+                            path: Some("/data/assets".to_string()),
+                        })),
                         target_path: Some("/data/assets".to_string()),
                     },
                 ];
@@ -446,8 +450,11 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "type": "service",
-                        "source_path": "/loggers/fuchsia.logger.Log",
+                        "capability": {
+                            "service": {
+                                "path": "/loggers/fuchsia.logger.Log"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "logger"
@@ -456,8 +463,11 @@ mod tests {
                         "target_path": "/svc/fuchsia.logger.Log"
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/volumes/blobfs",
+                        "capability": {
+                            "directory": {
+                                "path": "/volumes/blobfs"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -475,17 +485,19 @@ mod tests {
             output = {
                 let exposes = vec![
                     fsys::ExposeDecl{
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
+                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        })),
                         source: Some(fsys::RelativeId::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                     fsys::ExposeDecl{
-                        type_: Some(fsys::CapabilityType::Directory),
-                        source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
+                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
+                            path: Some("/volumes/blobfs".to_string()),
+                        })),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
@@ -506,8 +518,11 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "type": "directory",
-                        "source_path": "/data/assets",
+                        "capability": {
+                            "directory": {
+                                "path": "/data/assets"
+                            }
+                        },
                         "source": {
                             "realm": {}
                         },
@@ -523,8 +538,11 @@ mod tests {
                         ]
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/data/config",
+                        "capability": {
+                            "directory": {
+                                "path": "/data/config"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -536,8 +554,11 @@ mod tests {
                         ]
                     },
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.logger.Log",
+                        "capability": {
+                            "service": {
+                                "path": "/svc/fuchsia.logger.Log"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "logger"
@@ -567,9 +588,10 @@ mod tests {
             output = {
                 let offers = vec![
                     fsys::OfferDecl{
-                        type_: Some(fsys::CapabilityType::Directory),
-                        source_path: Some("/data/assets".to_string()),
-                        source: Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
+                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
+                            path: Some("/data/assets".to_string()),
+                        })),
+                        source: Some(fsys::RelativeId::Realm(fsys::RealmId{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
@@ -582,9 +604,10 @@ mod tests {
                         ]),
                     },
                     fsys::OfferDecl{
-                        type_: Some(fsys::CapabilityType::Directory),
-                        source_path: Some("/data/config".to_string()),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
+                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
+                            path: Some("/data/config".to_string()),
+                        })),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
@@ -593,8 +616,9 @@ mod tests {
                         ]),
                     },
                     fsys::OfferDecl{
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
+                            path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        })),
                         source: Some(fsys::RelativeId::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
@@ -699,15 +723,21 @@ mod tests {
                 },
                 "uses": [
                     {
-                        "type": "service",
-                        "source_path": "/fonts/CoolFonts",
+                        "capability": {
+                            "service": {
+                                "path": "/fonts/CoolFonts"
+                            }
+                        },
                         "target_path": "/svc/fuchsia.fonts.Provider"
                     }
                 ],
                 "exposes": [
                     {
-                        "type": "directory",
-                        "source_path": "/volumes/blobfs",
+                        "capability": {
+                            "directory": {
+                                "path": "/volumes/blobfs"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -716,8 +746,11 @@ mod tests {
                 ],
                 "offers": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.logger.Log",
+                        "capability": {
+                            "service": {
+                                "path": "/svc/fuchsia.logger.Log"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "logger"
@@ -757,23 +790,26 @@ mod tests {
                 ]};
                 let uses = vec![
                     fsys::UseDecl{
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
+                            path: Some("/fonts/CoolFonts".to_string()),
+                        })),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     },
                 ];
                 let exposes = vec![
                     fsys::ExposeDecl{
-                        type_: Some(fsys::CapabilityType::Directory),
-                        source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
+                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
+                            path: Some("/volumes/blobfs".to_string()),
+                        })),
+                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
                 let offers = vec![
                     fsys::OfferDecl{
-                        type_: Some(fsys::CapabilityType::Service),
-                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
+                            path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        })),
                         source: Some(fsys::RelativeId::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),

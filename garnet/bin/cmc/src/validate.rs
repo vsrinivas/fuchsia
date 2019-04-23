@@ -168,7 +168,8 @@ impl<'a> ValidationContext<'a> {
             if let Some(from_child) = &from_child {
                 if from_child == &to.dest {
                     return Err(Error::validate(format!(
-                        "Offer target \"{}\" is same as source", &to.dest,
+                        "Offer target \"{}\" is same as source",
+                        &to.dest,
                     )));
                 }
             }
@@ -386,13 +387,19 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.boot.Log",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.boot.Log"
+                            }
+                        },
                         "target_path": "/svc/fuchsia.logger.Log",
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/data/assets",
+                        "capability": {
+                            "directory": {
+                               "path": "/data/assets"
+                            }
+                        },
                         "target_path": "/data/kitten_assets",
                     }
                 ]
@@ -403,19 +410,22 @@ mod tests {
             input = json!({
                 "uses": [ {} ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /uses/0/source_path, This property is required at /uses/0/target_path, This property is required at /uses/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /uses/0/capability, This property is required at /uses/0/target_path")),
         },
         test_cm_uses_bad_type => {
             input = json!({
                 "uses": [
                     {
-                        "type": "bad",
-                        "source_path": "/svc/fuchsia.logger.Log",
+                        "capability": {
+                            "bad": {
+                               "path": "/svc/fuchsia.logger.Log"
+                            }
+                        },
                         "target_path": "/svc/fuchsia.logger.Log",
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /uses/0/capability")),
         },
 
         // exposes
@@ -423,16 +433,22 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
                         "target_path": "/svc/fuchsia.ui.Scenic"
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/data/assets",
+                        "capability": {
+                            "directory": {
+                               "path": "/data/assets"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "cat_viewer"
@@ -448,14 +464,17 @@ mod tests {
             input = json!({
                 "exposes": [ {} ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /exposes/0/source, This property is required at /exposes/0/source_path, This property is required at /exposes/0/target_path, This property is required at /exposes/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /exposes/0/capability, This property is required at /exposes/0/source, This property is required at /exposes/0/target_path")),
         },
         test_cm_exposes_bad_type => {
             input = json!({
                 "exposes": [
                     {
-                        "type": "bad",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "bad": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -463,7 +482,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/capability")),
         },
 
         // offers
@@ -471,8 +490,11 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.logger.LogSink",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.logger.LogSink"
+                            }
+                        },
                         "source": {
                             "realm": {}
                         },
@@ -484,8 +506,11 @@ mod tests {
                         ]
                     },
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -501,8 +526,11 @@ mod tests {
                         ]
                     },
                     {
-                        "type": "directory",
-                        "source_path": "/data/assets",
+                        "capability": {
+                            "directory": {
+                               "path": "/data/assets"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "cat_provider"
@@ -523,8 +551,11 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.logger.LogSink",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.logger.LogSink"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
@@ -545,14 +576,17 @@ mod tests {
             input = json!({
                 "offers": [ {} ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/source, This property is required at /offers/0/source_path, This property is required at /offers/0/targets, This property is required at /offers/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/capability, This property is required at /offers/0/source, This property is required at /offers/0/targets")),
         },
         test_cm_offers_bad_type => {
             input = json!({
                 "offers": [
                     {
-                        "type": "bad",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "bad": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -565,14 +599,17 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/capability")),
         },
         test_cm_offers_target_missing_props => {
             input = json!({
                 "offers": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "cat_viewer"
@@ -588,8 +625,11 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "myself": {}
                         },
@@ -667,8 +707,11 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": "/foo/?!@#$%/Bar",
+                        "capability": {
+                            "directory": {
+                               "path": "/foo/?!@#$%/Bar"
+                            }
+                        },
                         "target_path": "/bar/&*()/Baz"
                     }
                 ]
@@ -679,61 +722,76 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": "",
+                        "capability": {
+                            "directory": {
+                                "path": ""
+                            }
+                        },
                         "target_path": "/bar"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "MinLength condition is not met at /uses/0/source_path, Pattern condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MinLength condition is not met at /uses/0/capability/directory/path, Pattern condition is not met at /uses/0/capability/directory/path")),
         },
         test_cm_path_invalid_root => {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": "/",
+                        "capability": {
+                            "directory": {
+                               "path": "/"
+                            }
+                        },
                         "target_path": "/bar"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/capability/directory/path")),
         },
         test_cm_path_invalid_relative => {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": "foo/bar",
+                        "capability": {
+                            "directory": {
+                               "path": "foo/bar"
+                            }
+                        },
                         "target_path": "/bar"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/capability/directory/path")),
         },
         test_cm_path_invalid_trailing => {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": "/foo/bar/",
+                        "capability": {
+                            "directory": {
+                               "path": "/foo/bar/"
+                            }
+                        },
                         "target_path": "/bar"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/capability/directory/path")),
         },
         test_cm_path_too_long => {
             input = json!({
                 "uses": [
                     {
-                        "type": "directory",
-                        "source_path": format!("/{}", "a".repeat(1024)),
+                        "capability": {
+                            "directory": {
+                                "path": format!("/{}", "a".repeat(1024))
+                            }
+                        },
                         "target_path": "/bar"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /uses/0/capability/directory/path")),
         },
         test_cm_name => {
             input = json!({
@@ -811,8 +869,11 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {},
                         "target_path": "/svc/fuchsia.ui.Scenic"
                     }
@@ -824,8 +885,11 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "realm": {},
                             "myself": {}
@@ -840,8 +904,11 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
                         "source": {
                             "child": {
                                 "name": "bad^"

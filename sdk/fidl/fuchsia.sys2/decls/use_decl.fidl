@@ -7,17 +7,12 @@ library fuchsia.sys2;
 /// Declares a capability used by a component, which was offered to the
 /// component’s environment.
 table UseDecl {
-    /// The type of capability used.
-    1: CapabilityType type;
-
-    /// The path of a capability offered to the component.
-    ///
-    /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH source_path;
+    /// The capability being used.
+    1: Capability capability;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:MAX_PATH_LENGTH target_path;
+    2: string:MAX_PATH_LENGTH target_path;
 };

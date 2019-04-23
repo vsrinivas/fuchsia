@@ -4,7 +4,7 @@
 
 use {
     crate::{directory_broker, io_util, model::tests::mocks::*, model::*},
-    cm_rust::{ComponentDecl, RelativeId, UseDecl},
+    cm_rust::{Capability, CapabilityPath, ComponentDecl, RelativeId, UseDecl},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
@@ -22,6 +22,7 @@ use {
     futures::TryStreamExt,
     std::{
         collections::{HashMap, HashSet},
+        convert::TryFrom,
         ffi::CString,
         iter,
         path::PathBuf,
@@ -152,16 +153,18 @@ fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
     );
 }
 
-/// Looks up `resolved_uri` in the namespace, and attempts to read /data/hippo/hippo. The file
+/// Looks up `resolved_uri` in the namespace, and attempts to read ${dir_path}/hippo. The file
 /// should contain the string "hippo".
-pub async fn read_data_hippo_hippo(
+pub async fn read_data(
+    path: CapabilityPath,
     resolved_uri: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
     should_succeed: bool,
 ) {
-    let dir_proxy = await!(get_dir("/data/hippo", resolved_uri, namespaces));
-    let path = PathBuf::from("hippo");
-    let file_proxy = io_util::open_file(&dir_proxy, &path).expect("failed to open file");
+    let path = path.to_string();
+    let dir_proxy = await!(get_dir(&path, resolved_uri, namespaces));
+    let file = PathBuf::from("hippo");
+    let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
     let res = await!(io_util::read_file(&file_proxy));
 
     match should_succeed {
@@ -173,17 +176,18 @@ pub async fn read_data_hippo_hippo(
     }
 }
 
-/// Looks up `resolved_uri` in the namespace, and attempts to use /svc/hippo. Expects the service
+/// Looks up `resolved_uri` in the namespace, and attempts to use `path`. Expects the service
 /// to be fidl.examples.echo.Echo.
-async fn call_svc_hippo(
+async fn call_svc(
+    path: CapabilityPath,
     resolved_uri: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
     should_succeed: bool,
 ) {
-    let dir_proxy = await!(get_dir("/svc", resolved_uri, namespaces));
-    let path = PathBuf::from("hippo");
-    let node_proxy = io_util::open_node(&dir_proxy, &path, MODE_TYPE_SERVICE)
-        .expect("failed to open echo service");
+    let dir_proxy = await!(get_dir(&path.dirname, resolved_uri, namespaces));
+    let node_proxy =
+        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+            .expect("failed to open echo service");
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = await!(echo_proxy.echo_string(Some("hippos")));
 
@@ -237,9 +241,9 @@ async fn check_namespace(
     let expected_paths_hs: HashSet<String> = decl
         .uses
         .into_iter()
-        .map(|UseDecl { type_, target_path, .. }| match type_ {
-            fsys::CapabilityType::Directory => target_path.to_string(),
-            fsys::CapabilityType::Service => target_path.dirname,
+        .map(|UseDecl { capability, target_path }| match capability {
+            Capability::Directory(_) => target_path.to_string(),
+            Capability::Service(_) => target_path.dirname,
         })
         .collect();
     let mut expected_paths = vec![];
@@ -263,12 +267,21 @@ async fn check_namespace(
 pub struct TestInputs<'a> {
     /// The name of the root component.
     pub root_component: &'a str,
-    /// The use decls on a component which should be checked. Service capabilities are assumed to
-    /// be installed at `/svc/hippo` and directory capabilities are assumed to be installed at
-    /// `/data/hippo`. The bool marks if this usage is expected to succeed or not.
-    pub users_to_check: Vec<(AbsoluteMoniker, fsys::CapabilityType, bool)>,
+    /// The use decls on a component which should be checked. The bool marks if this usage is
+    /// expected to succeed or not.
+    pub users_to_check: Vec<(AbsoluteMoniker, Capability, bool)>,
     /// The component declarations that comprise the component tree
     pub components: Vec<(&'a str, ComponentDecl)>,
+}
+
+/// Construct a capability for the hippo service.
+pub fn new_service_capability() -> Capability {
+    Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
+}
+
+/// Construct a capability for the hippo directory.
+pub fn new_directory_capability() -> Capability {
+    Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
 }
 
 /// construct the given component topology, host `/svc/foo` and `/data/foo` from the outgoing
@@ -285,16 +298,14 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         let source_iter = decl
             .offers
             .iter()
-            .map(|o| (o.type_.clone(), o.source.clone()))
-            .chain(decl.exposes.iter().map(|e| (e.type_.clone(), e.source.clone())));
+            .map(|o| (o.capability.clone(), o.source.clone()))
+            .chain(decl.exposes.iter().map(|e| (e.capability.clone(), e.source.clone())));
         let mut out_dir = None;
-        for (type_, source) in source_iter {
+        for (capability, source) in source_iter {
             if source == RelativeId::Myself {
-                match type_ {
-                    fsys::CapabilityType::Service => {
-                        out_dir.get_or_insert(OutDir::new()).add_service()
-                    }
-                    fsys::CapabilityType::Directory => {
+                match capability {
+                    Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
+                    Capability::Directory(_) => {
                         out_dir.get_or_insert(OutDir::new()).add_directory()
                     }
                 }
@@ -312,21 +323,19 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    for (moniker, type_, should_succeed) in test.users_to_check {
+    for (moniker, capability, should_succeed) in test.users_to_check {
         assert!(await!(model.look_up_and_bind_instance(moniker.clone())).is_ok());
         let component_name =
             moniker.path().last().expect("didn't expect a root component").name().to_string();
         let component_resolved_url = format!("test:///{}_resolved", &component_name);
         await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
-        match type_ {
-            fsys::CapabilityType::Service => {
-                await!(call_svc_hippo(component_resolved_url, namespaces.clone(), should_succeed))
+        match capability {
+            Capability::Service(path) => {
+                await!(call_svc(path, component_resolved_url, namespaces.clone(), should_succeed))
             }
-            fsys::CapabilityType::Directory => await!(read_data_hippo_hippo(
-                component_resolved_url,
-                namespaces.clone(),
-                should_succeed
-            )),
+            Capability::Directory(path) => {
+                await!(read_data(path, component_resolved_url, namespaces.clone(), should_succeed))
+            }
         };
     }
 }

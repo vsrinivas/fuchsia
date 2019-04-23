@@ -4,8 +4,32 @@
 
 library fuchsia.sys2;
 
-/// Specifies a type of capability that can be offered between components.
-enum CapabilityType {
-  SERVICE = 0;
-  DIRECTORY = 1;
+/// A capability that can be exchanged between components.
+xunion Capability {
+    ServiceCapability service;
+    DirectoryCapability directory;
+};
+
+/// Represents a capability for a service.
+table ServiceCapability {
+    /// Path identifying the service.
+    ///
+    /// If the capability is exposed or offered from |source| == |SELF|, this
+    /// is a path in the component’s namespace. Otherwise, it is the path by
+    /// which the capability was presented to the component.
+    ///
+    /// Must be an absolute path starting with /.
+    1: string:MAX_PATH_LENGTH path;
+};
+
+/// Represents a capability for a directory.
+table DirectoryCapability {
+    /// Path identifying the directory.
+    ///
+    /// If the capability is exposed or offered from |source| == |SELF|, this
+    /// is a path in the component’s namespace. Otherwise, it is the path by
+    /// which the capability was presented to the component.
+    ///
+    /// Must be an absolute path starting with /.
+    1: string:MAX_PATH_LENGTH path;
 };

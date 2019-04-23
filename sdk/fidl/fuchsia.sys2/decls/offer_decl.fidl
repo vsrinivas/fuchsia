@@ -8,25 +8,16 @@ library fuchsia.sys2;
 /// a service offered by the component's containing realm, the component itself,
 /// or one of its children.
 table OfferDecl {
-    /// The type of capability offered.
-    1: CapabilityType type;
-
-    /// The incoming path to the capability.
-    ///
-    /// If |source| == |SELF|, this is a path in the component’s namespace.
-    /// Otherwise, it is the path by which the capability was presented to the
-    /// component.
-    ///
-    /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH source_path;
+    /// The capability being offered.
+    1: Capability capability;
 
     /// The provider of the capability relative to the component itself.
     ///
-    /// Valid relations: realm, self, child.
-    3: RelativeId source;
+    /// Valid relations: realm, myself, child.
+    2: RelativeId source;
 
     /// The list of children to which the capability should be offered.
-    4: vector<OfferTarget> targets;
+    3: vector<OfferTarget> targets;
 };
 
 /// Describes a target for a capability offering.

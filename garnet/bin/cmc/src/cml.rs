@@ -7,8 +7,6 @@ use regex::Regex;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 
-pub const DIRECTORY: &str = "directory";
-pub const SERVICE: &str = "service";
 lazy_static! {
     pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
     pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();

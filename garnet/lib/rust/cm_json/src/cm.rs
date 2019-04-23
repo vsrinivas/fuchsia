@@ -24,23 +24,20 @@ pub struct Document {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Use {
-    pub r#type: String,
-    pub source_path: String,
+    pub capability: Capability,
     pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Expose {
-    pub r#type: String,
-    pub source_path: String,
+    pub capability: Capability,
     pub source: Source,
     pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Offer {
-    pub r#type: String,
-    pub source_path: String,
+    pub capability: Capability,
     pub source: Source,
     pub targets: Vec<Target>,
 }
@@ -53,19 +50,37 @@ pub struct Child {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Source {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub realm: Option<RealmId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub myself: Option<SelfId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub child: Option<ChildId>,
+pub enum Capability {
+    #[serde(rename = "service")]
+    Service(Service),
+    #[serde(rename = "directory")]
+    Directory(Directory),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Source {
+    #[serde(rename = "realm")]
+    Realm(RealmId),
+    #[serde(rename = "myself")]
+    Myself(SelfId),
+    #[serde(rename = "child")]
+    Child(ChildId),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Target {
     pub target_path: String,
     pub child_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Service {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Directory {
+    pub path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -12,16 +12,10 @@ xunion RelativeId {
 };
 
 /// Represents a component’s containing realm, i.e. the parent component.
-table RealmId {
-    // TODO(FIDL-592): Remove once no longer required
-    1: bool dummy;
-};
+table RealmId {};
 
 /// Represents the component itself.
-table SelfId {
-    // TODO(FIDL-592): Remove once no longer required
-    1: bool dummy;
-};
+table SelfId {};
 
 /// Represents one of the component's children.
 table ChildId {

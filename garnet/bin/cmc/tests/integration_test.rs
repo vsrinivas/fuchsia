@@ -2,8 +2,8 @@ use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
-    CapabilityType, ChildDecl, ChildId, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget,
-    RelativeId, SelfId, StartupMode, UseDecl,
+    Capability, ChildDecl, ChildId, ComponentDecl, DirectoryCapability, ExposeDecl, OfferDecl,
+    OfferTarget, RelativeId, SelfId, ServiceCapability, StartupMode, UseDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -23,19 +23,22 @@ fn main() {
             }],
         };
         let uses = vec![UseDecl {
-            type_: Some(CapabilityType::Service),
-            source_path: Some("/fonts/CoolFonts".to_string()),
+            capability: Some(Capability::Service(ServiceCapability {
+                path: Some("/fonts/CoolFonts".to_string()),
+            })),
             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
         }];
         let exposes = vec![ExposeDecl {
-            type_: Some(CapabilityType::Directory),
-            source_path: Some("/volumes/blobfs".to_string()),
-            source: Some(RelativeId::Myself(SelfId { dummy: None })),
+            capability: Some(Capability::Directory(DirectoryCapability {
+                path: Some("/volumes/blobfs".to_string()),
+            })),
+            source: Some(RelativeId::Myself(SelfId {})),
             target_path: Some("/volumes/blobfs".to_string()),
         }];
         let offers = vec![OfferDecl {
-            type_: Some(CapabilityType::Service),
-            source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+            capability: Some(Capability::Service(ServiceCapability {
+                path: Some("/svc/fuchsia.logger.Log".to_string()),
+            })),
             source: Some(RelativeId::Child(ChildId { name: Some("logger".to_string()) })),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),

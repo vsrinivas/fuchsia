@@ -4,15 +4,21 @@
     },
     "uses": [
         {
-            "type": "service",
-            "source_path": "/fonts/CoolFonts",
+            "capability": {
+                "service": {
+                    "path": "/fonts/CoolFonts"
+                }
+            },
             "target_path": "/svc/fuchsia.fonts.Provider"
         }
     ],
     "exposes": [
         {
-            "type": "directory",
-            "source_path": "/volumes/blobfs",
+            "capability": {
+                "directory": {
+                    "path": "/volumes/blobfs"
+                }
+            },
             "source": {
                 "myself": {}
             },
@@ -21,8 +27,11 @@
     ],
     "offers": [
         {
-            "type": "service",
-            "source_path": "/svc/fuchsia.logger.Log",
+            "capability": {
+                "service": {
+                    "path": "/svc/fuchsia.logger.Log"
+                }
+            },
             "source": {
                 "child": {
                     "name": "logger"

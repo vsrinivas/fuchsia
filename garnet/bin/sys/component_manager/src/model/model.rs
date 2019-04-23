@@ -81,12 +81,12 @@ impl Model {
 
     /// Given a realm and path, lazily bind to the instance in the realm, open, then bind its eager
     /// children.
-    pub async fn bind_instance_and_open(
-        &self,
+    pub async fn bind_instance_and_open<'a>(
+        &'a self,
         realm: Arc<Mutex<Realm>>,
         flags: u32,
         open_mode: u32,
-        path: CapabilityPath,
+        path: &'a CapabilityPath,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let eager_children = {

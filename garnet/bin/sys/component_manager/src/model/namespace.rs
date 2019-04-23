@@ -75,8 +75,8 @@ impl IncomingNamespace {
         let mut directory_waiters = Vec::new();
 
         for use_ in &decl.uses {
-            match use_.type_ {
-                fsys::CapabilityType::Directory => {
+            match use_.capability {
+                cm_rust::Capability::Directory(_) => {
                     Self::add_directory_use(
                         &mut ns,
                         &mut directory_waiters,
@@ -85,7 +85,7 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
-                fsys::CapabilityType::Service => {
+                cm_rust::Capability::Service(_) => {
                     Self::add_service_use(
                         &mut svc_dirs,
                         &use_,
@@ -120,9 +120,9 @@ impl IncomingNamespace {
         Ok(())
     }
 
-    /// add_directory_use will install one end of a channel pair in the namespace under the
-    /// target_path, and will add a future to waiters that will wait on the other end of a channel
-    /// for a signal. Once the channel is readable, the future calls `route_directory` and
+    /// Adds a directory waiter to `waiters` and updates `ns` to contain a handle for the
+    /// directory described by `use_`. Once the channel is readable, the future calls
+    /// `route_directory` to forward the channel to the source component's outgoing directory and
     /// terminates.
     fn add_directory_use(
         ns: &mut fsys::ComponentNamespace,
@@ -133,7 +133,7 @@ impl IncomingNamespace {
     ) -> Result<(), ModelError> {
         let (client_end, server_end) =
             create_endpoints().expect("could not create directory proxy endpoints");
-        let source_path = use_.source_path.clone();
+        let capability = use_.capability.clone();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end_chan = fasync::Channel::from_channel(server_end.into_channel())
@@ -144,7 +144,7 @@ impl IncomingNamespace {
             // Route this capability to the right component
             let res = await!(route_directory(
                 &model,
-                source_path.clone(),
+                &capability,
                 abs_moniker,
                 server_end_chan.into_zx_channel()
             ));
@@ -183,25 +183,24 @@ impl IncomingNamespace {
         Ok(())
     }
 
-    /// add_service_use will open the parent directory of source_path in componentmgr's namespace,
-    /// create a DirectoryBroker to proxy requests from target_path, and add the broker under a
-    /// pseudo directory in svc_dirs, creating a new pseudo directory if necessary.
+    /// Adds a service broker in `svc_dirs` for service described by `use_`. The service will be
+    /// proxied to the outgoing directory of the source component.
     fn add_service_use(
         svc_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
         use_: &UseDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let source_path = use_.source_path.clone();
+        let capability = use_.capability.clone();
         let route_service_fn = Box::new(move |server_end: ServerEnd<NodeMarker>| {
-            let source_path = source_path.clone();
+            let capability = capability.clone();
             let model = model.clone();
             let abs_moniker = abs_moniker.clone();
             fasync::spawn(
                 async move {
                     let res = await!(route_service(
                         &model,
-                        source_path,
+                        &capability,
                         abs_moniker,
                         server_end.into_channel()
                     ));

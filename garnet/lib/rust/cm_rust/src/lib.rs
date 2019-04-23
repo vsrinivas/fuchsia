@@ -158,32 +158,40 @@ impl Clone for ComponentDecl {
 }
 
 impl ComponentDecl {
-    /// Returns the ExposeDecl that exposes a capability under `target_path` with `type`, if it
-    /// exists.
+    /// Returns the ExposeDecl that exposes `capability`, if it exists.
     pub fn find_expose_source<'a>(
         &'a self,
-        target_path: &CapabilityPath,
-        type_: &fsys::CapabilityType,
+        capability: &Capability,
     ) -> Option<&'a ExposeDecl> {
-        self.exposes.iter().find(|&e| e.target_path == *target_path && e.type_ == *type_)
+        self.exposes.iter().find(|&e| {
+            e.target_path == *capability.path()
+                && match (capability, &e.capability) {
+                    (Capability::Service(_), Capability::Service(_)) => true,
+                    (Capability::Directory(_), Capability::Directory(_)) => true,
+                    _ => false,
+                }
+        })
     }
 
     /// Returns the OfferDecl that offers a capability under `target_path` to `child_name` with
     /// the given `type_`, if it exists.
     pub fn find_offer_source<'a>(
         &'a self,
-        target_path: &CapabilityPath,
-        type_: &fsys::CapabilityType,
+        capability: &Capability,
         child_name: &str,
     ) -> Option<&'a OfferDecl> {
         for offer in self.offers.iter() {
-            if offer.type_ != *type_ {
-                continue;
+            match (capability, &offer.capability) {
+                (Capability::Service(_), Capability::Service(_)) => {}
+                (Capability::Directory(_), Capability::Directory(_)) => {}
+                _ => {
+                    continue;
+                }
             }
             if let Some(_) = offer
                 .targets
                 .iter()
-                .find(|&e| e.target_path == *target_path && e.child_name == *child_name)
+                .find(|&e| e.target_path == *capability.path() && e.child_name == *child_name)
             {
                 return Some(offer);
             }
@@ -194,21 +202,18 @@ impl ComponentDecl {
 
 fidl_into_vec!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                {
-                   type_: fsys::CapabilityType,
-                   source_path: CapabilityPath,
+                   capability: Capability,
                    target_path: CapabilityPath,
                });
 fidl_into_vec!(ExposeDecl, ExposeDecl, fsys::ExposeDecl, fsys::ExposeDecl,
                {
-                   type_: fsys::CapabilityType,
-                   source_path: CapabilityPath,
+                   capability: Capability,
                    source: RelativeId,
                    target_path: CapabilityPath,
                });
 fidl_into_vec!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
                {
-                   type_: fsys::CapabilityType,
-                   source_path: CapabilityPath,
+                   capability: Capability,
                    source: RelativeId,
                    targets: Vec<OfferTarget>,
                });
@@ -224,7 +229,6 @@ fidl_into_vec!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
                    child_name: String,
                });
 fidl_translations_opt_type!(String);
-fidl_translations_opt_type!(fsys::CapabilityType);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_identical!(Option<fdata::Dictionary>);
@@ -336,6 +340,57 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Capability {
+    Service(CapabilityPath),
+    Directory(CapabilityPath),
+}
+
+impl Capability {
+    pub fn path(&self) -> &CapabilityPath {
+        match self {
+            Capability::Service(s) => s,
+            Capability::Directory(d) => d,
+        }
+    }
+}
+
+impl fmt::Display for Capability {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Capability::Service(s) => {
+                write!(f, "service at {}", s)
+            }
+            Capability::Directory(d) => {
+                write!(f, "directory at {}", d)
+            }
+        }
+    }
+}
+
+impl FidlIntoNative<Capability> for Option<fsys::Capability> {
+    fn fidl_into_native(self) -> Capability {
+        match self.unwrap() {
+            fsys::Capability::Service(s) => Capability::Service(s.path.fidl_into_native()),
+            fsys::Capability::Directory(d) => Capability::Directory(d.path.fidl_into_native()),
+            fsys::Capability::__UnknownVariant { .. } => panic!("unknown Capability variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Capability>> for Capability {
+    fn native_into_fidl(self) -> Option<fsys::Capability> {
+        Some(match self {
+            Capability::Service(p) => {
+                fsys::Capability::Service(fsys::ServiceCapability { path: p.native_into_fidl() })
+            }
+            Capability::Directory(p) => fsys::Capability::Directory(fsys::DirectoryCapability {
+                path: p.native_into_fidl(),
+            }),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum RelativeId {
     Realm,
     Myself,
@@ -348,7 +403,7 @@ impl FidlIntoNative<RelativeId> for Option<fsys::RelativeId> {
             fsys::RelativeId::Realm(_) => RelativeId::Realm,
             fsys::RelativeId::Myself(_) => RelativeId::Myself,
             fsys::RelativeId::Child(c) => RelativeId::Child(c.name.unwrap()),
-            fsys::RelativeId::__UnknownVariant{..} => { panic!("unknown RelativeId variant") },
+            fsys::RelativeId::__UnknownVariant { .. } => panic!("unknown RelativeId variant"),
         }
     }
 }
@@ -356,8 +411,8 @@ impl FidlIntoNative<RelativeId> for Option<fsys::RelativeId> {
 impl NativeIntoFidl<Option<fsys::RelativeId>> for RelativeId {
     fn native_into_fidl(self) -> Option<fsys::RelativeId> {
         Some(match self {
-            RelativeId::Realm => fsys::RelativeId::Realm(fsys::RealmId { dummy: None }),
-            RelativeId::Myself => fsys::RelativeId::Myself(fsys::SelfId { dummy: None }),
+            RelativeId::Realm => fsys::RelativeId::Realm(fsys::RealmId {}),
+            RelativeId::Myself => fsys::RelativeId::Myself(fsys::SelfId {}),
             RelativeId::Child(child_name) => {
                 fsys::RelativeId::Child(fsys::ChildId { name: Some(child_name) })
             }
@@ -540,15 +595,17 @@ mod tests {
                ]}),
                uses: Some(vec![
                    fsys::UseDecl{
-                       type_: Some(fsys::CapabilityType::Directory),
-                       source_path: Some("/data/dir".to_string()),
+                       capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability {
+                           path: Some("/data/dir".to_string()),
+                       })),
                        target_path: Some("/data".to_string()),
                    },
                ]),
                exposes: Some(vec![
                    fsys::ExposeDecl {
-                       type_: Some(fsys::CapabilityType::Service),
-                       source_path: Some("/svc/mynetstack".to_string()),
+                       capability: Some(fsys::Capability::Service(fsys::ServiceCapability {
+                           path: Some("/svc/mynetstack".to_string()),
+                       })),
                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
                            name: Some("netstack".to_string()),
                        })),
@@ -557,9 +614,10 @@ mod tests {
                ]),
                offers: Some(vec![
                    fsys::OfferDecl {
-                       type_: Some(fsys::CapabilityType::Service),
-                       source_path: Some("/svc/sys_logger".to_string()),
-                       source: Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
+                       capability: Some(fsys::Capability::Service(fsys::ServiceCapability {
+                           path: Some("/svc/sys_logger".to_string()),
+                       })),
+                       source: Some(fsys::RelativeId::Realm(fsys::RealmId {})),
                        targets: Some(vec![
                            fsys::OfferTarget{
                                target_path: Some("/svc/logger".to_string()),
@@ -599,26 +657,23 @@ mod tests {
                     ]}),
                     uses: vec![
                         UseDecl {
-                            type_: fsys::CapabilityType::Directory,
-                            source_path: "/data/dir".try_into().unwrap(),
+                            capability: Capability::Directory("/data/dir".try_into().unwrap()),
                             target_path: "/data".try_into().unwrap(),
                         },
                     ],
                     exposes: vec![
                         ExposeDecl {
-                            type_: fsys::CapabilityType::Service,
-                            source_path: "/svc/mynetstack".try_into().unwrap(),
+                            capability: Capability::Service("/svc/mynetstack".try_into().unwrap()),
                             source: RelativeId::Child("netstack".to_string()),
                             target_path: "/svc/netstack".try_into().unwrap(),
                         },
                     ],
                     offers: vec![
                         OfferDecl {
-                            type_: fsys::CapabilityType::Service,
-                            source_path: "/svc/sys_logger".try_into().unwrap(),
+                            capability: Capability::Service("/svc/sys_logger".try_into().unwrap()),
                             source: RelativeId::Realm,
                             targets: vec![
-                                OfferTarget{
+                                OfferTarget {
                                     target_path: "/svc/logger".try_into().unwrap(),
                                     child_name: "echo".to_string(),
                                 },
@@ -688,11 +743,11 @@ mod tests {
 
     test_fidl_into_and_from! {
         fidl_into_relative_id_realm => {
-            input = Some(fsys::RelativeId::Realm(fsys::RealmId{dummy: None})),
+            input = Some(fsys::RelativeId::Realm(fsys::RealmId {})),
             result = RelativeId::Realm,
         },
         fidl_into_relative_id_myself => {
-            input = Some(fsys::RelativeId::Myself(fsys::SelfId{dummy: None})),
+            input = Some(fsys::RelativeId::Myself(fsys::SelfId {})),
             result = RelativeId::Myself,
         },
         fidl_into_relative_id_child => {

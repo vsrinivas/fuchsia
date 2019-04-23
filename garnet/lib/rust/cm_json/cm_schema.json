@@ -53,10 +53,48 @@
         "child": {
           "type": "object",
           "title": "Component's child",
+          "required": [ "name" ],
           "properties": {
             "name": {
               "title": "Child name",
               "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        }
+      }
+    },
+    "capability-clause": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [ "service" ]
+        },
+        {
+          "required": [ "directory" ]
+        }
+      ],
+      "properties": {
+        "service": {
+          "type": "object",
+          "title": "Service capability",
+          "required": [ "path" ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "title": "Capability path",
+              "allOf": [{ "$ref": "#/definitions/path-clause" }]
+            }
+          }
+        },
+        "directory": {
+          "type": "object",
+          "title": "Directory capability",
+          "required": [ "path" ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "title": "Capability path",
+              "allOf": [{ "$ref": "#/definitions/path-clause" }]
             }
           }
         }
@@ -75,18 +113,13 @@
       "items": {
         "type": "object",
         "required": [
-          "type",
-          "source_path",
+          "capability",
           "target_path"
         ],
         "properties": {
-          "type": {
-            "title": "Used capability type",
-            "$ref": "#/definitions/capability-clause"
-          },
-          "source_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Used capability source path"
+          "capability": {
+            "title": "Used capability",
+            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
           },
           "target_path": {
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -102,19 +135,14 @@
       "items": {
         "type": "object",
         "required": [
-          "type",
-          "source_path",
+          "capability",
           "source",
           "target_path"
         ],
         "properties": {
-          "type": {
-            "title": "Exposed capability type",
-            "$ref": "#/definitions/capability-clause"
-          },
-          "source_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Exposed capability source path"
+          "capability": {
+            "title": "Exposed capability",
+            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
           },
           "source": {
             "title": "Exposed capability source component",
@@ -134,24 +162,14 @@
       "items": {
         "type": "object",
         "required": [
-          "type",
-          "source_path",
+          "capability",
           "source",
           "targets"
         ],
         "properties": {
-          "type": {
-            "title": "Offered capability type",
-            "$ref": "#/definitions/capability-clause"
-          },
-          "source_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Offered capability source path"
-          },
-          "source": {
-            "type": "object",
-            "title": "Offered capability source component",
-            "allOf": [ { "$ref": "#/definitions/relative-id-clause" } ]
+          "capability": {
+            "title": "Offered capability",
+            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
           },
           "targets": {
             "type": "array",

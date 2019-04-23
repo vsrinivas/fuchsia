@@ -136,11 +136,7 @@ impl<'a> ValidationContext<'a> {
         // Validate "uses".
         if let Some(uses) = self.decl.uses.as_ref() {
             for use_ in uses.iter() {
-                if use_.type_.is_none() {
-                    self.errors.push(Error::missing_field("UseDecl", "type"));
-                }
-                PATH.check(use_.source_path.as_ref(), "UseDecl", "source_path", &mut self.errors);
-                PATH.check(use_.target_path.as_ref(), "UseDecl", "target_path", &mut self.errors);
+                self.validate_use_decl(&use_);
             }
         }
 
@@ -164,6 +160,30 @@ impl<'a> ValidationContext<'a> {
             Ok(())
         } else {
             Err(self.errors)
+        }
+    }
+
+    fn validate_use_decl(&mut self, use_: &fsys::UseDecl) {
+        self.validate_capability(use_.capability.as_ref(), "UseDecl");
+        PATH.check(use_.target_path.as_ref(), "UseDecl", "target_path", &mut self.errors);
+    }
+
+    fn validate_capability(&mut self, capability: Option<&fsys::Capability>, decl_type: &str) {
+        match capability.as_ref() {
+            Some(c) => match c {
+                fsys::Capability::Service(s) => {
+                    PATH.check(s.path.as_ref(), decl_type, "capability.path", &mut self.errors);
+                }
+                fsys::Capability::Directory(s) => {
+                    PATH.check(s.path.as_ref(), decl_type, "capability.path", &mut self.errors);
+                }
+                fsys::Capability::__UnknownVariant { .. } => {
+                    self.errors.push(Error::invalid_field(decl_type, "capability"));
+                }
+            },
+            None => {
+                self.errors.push(Error::missing_field(decl_type, "capability"));
+            }
         }
     }
 
@@ -201,10 +221,7 @@ impl<'a> ValidationContext<'a> {
         expose: &'a fsys::ExposeDecl,
         prev_target_paths: &mut HashSet<&'a str>,
     ) {
-        if expose.type_.is_none() {
-            self.errors.push(Error::missing_field("ExposeDecl", "type"));
-        }
-        PATH.check(expose.source_path.as_ref(), "ExposeDecl", "source_path", &mut self.errors);
+        self.validate_capability(expose.capability.as_ref(), "ExposeDecl");
         match expose.source.as_ref() {
             Some(r) => match r {
                 fsys::RelativeId::Myself(_) => {}
@@ -233,10 +250,7 @@ impl<'a> ValidationContext<'a> {
         offer: &'a fsys::OfferDecl,
         prev_target_paths: &mut PathMap<'a>,
     ) {
-        if offer.type_.is_none() {
-            self.errors.push(Error::missing_field("OfferDecl", "type"));
-        }
-        PATH.check(offer.source_path.as_ref(), "OfferDecl", "source_path", &mut self.errors);
+        self.validate_capability(offer.capability.as_ref(), "OfferDecl");
         match offer.source.as_ref() {
             Some(r) => match r {
                 fsys::RelativeId::Realm(_) => {}
@@ -355,8 +369,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_sys2::{
-            CapabilityType, ChildDecl, ChildId, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget,
-            RealmId, RelativeId, SelfId, StartupMode, UseDecl,
+            Capability, ChildDecl, ChildId, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget,
+            RealmId, RelativeId, SelfId, ServiceCapability, StartupMode, UseDecl,
         },
     };
 
@@ -519,15 +533,13 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![UseDecl{
-                    type_: None,
-                    source_path: None,
+                    capability: None,
                     target_path: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("UseDecl", "type"),
-                Error::missing_field("UseDecl", "source_path"),
+                Error::missing_field("UseDecl", "capability"),
                 Error::missing_field("UseDecl", "target_path"),
             ])),
         },
@@ -535,14 +547,15 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![UseDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("foo/".to_string()),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("foo/".to_string()),
+                    })),
                     target_path: Some("/".to_string()),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("UseDecl", "source_path"),
+                Error::invalid_field("UseDecl", "capability.path"),
                 Error::invalid_field("UseDecl", "target_path"),
             ])),
         },
@@ -550,14 +563,15 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![UseDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some(format!("/{}", "a".repeat(1024))),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some(format!("/{}", "a".repeat(1024))),
+                    })),
                     target_path: Some(format!("/{}", "b".repeat(1024))),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("UseDecl", "source_path"),
+                Error::field_too_long("UseDecl", "capability.path"),
                 Error::field_too_long("UseDecl", "target_path"),
             ])),
         },
@@ -567,16 +581,14 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![ExposeDecl{
-                    type_: None,
-                    source_path: None,
+                    capability: None,
                     source: None,
                     target_path: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ExposeDecl", "type"),
-                Error::missing_field("ExposeDecl", "source_path"),
+                Error::missing_field("ExposeDecl", "capability"),
                 Error::missing_field("ExposeDecl", "source"),
                 Error::missing_field("ExposeDecl", "target_path"),
             ])),
@@ -585,15 +597,16 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![ExposeDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("foo/".to_string()),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("foo/".to_string()),
+                    })),
                     source: Some(RelativeId::Child(ChildId{name: Some("^bad".to_string())})),
                     target_path: Some("/".to_string()),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("ExposeDecl", "source_path"),
+                Error::invalid_field("ExposeDecl", "capability.path"),
                 Error::invalid_field("ExposeDecl", "source.child.name"),
                 Error::invalid_field("ExposeDecl", "target_path"),
             ])),
@@ -602,15 +615,16 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![ExposeDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some(format!("/{}", "a".repeat(1024))),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some(format!("/{}", "a".repeat(1024))),
+                    })),
                     source: Some(RelativeId::Child(ChildId{name: Some("b".repeat(101))})),
                     target_path: Some(format!("/{}", "b".repeat(1024))),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("ExposeDecl", "source_path"),
+                Error::field_too_long("ExposeDecl", "capability.path"),
                 Error::field_too_long("ExposeDecl", "source.child.name"),
                 Error::field_too_long("ExposeDecl", "target_path"),
             ])),
@@ -620,9 +634,10 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        source: Some(RelativeId::Realm(RealmId{dummy: None})),
+                        capability: Some(Capability::Service(ServiceCapability{
+                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        })),
+                        source: Some(RelativeId::Realm(RealmId{})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                 ]);
@@ -637,8 +652,9 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        capability: Some(Capability::Service(ServiceCapability{
+                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        })),
                         source: Some(RelativeId::Child(ChildId {
                             name: Some("netstack".to_string()),
                         })),
@@ -656,15 +672,17 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/svc/logger".to_string()),
-                        source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                        capability: Some(Capability::Service(ServiceCapability{
+                            path: Some("/svc/logger".to_string()),
+                        })),
+                        source: Some(RelativeId::Myself(SelfId{})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                     ExposeDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/svc/logger2".to_string()),
-                        source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                        capability: Some(Capability::Service(ServiceCapability{
+                            path: Some("/svc/logger2".to_string()),
+                        })),
+                        source: Some(RelativeId::Myself(SelfId{})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                 ]);
@@ -680,16 +698,14 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: None,
-                    source_path: None,
+                    capability: None,
                     source: None,
                     targets: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("OfferDecl", "type"),
-                Error::missing_field("OfferDecl", "source_path"),
+                Error::missing_field("OfferDecl", "capability"),
                 Error::missing_field("OfferDecl", "source"),
                 Error::missing_field("OfferDecl", "targets"),
             ])),
@@ -698,8 +714,9 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some(format!("/{}", "a".repeat(1024))),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some(format!("/{}", "a".repeat(1024))),
+                    })),
                     source: Some(RelativeId::Child(ChildId{name: Some("a".repeat(101))})),
                     targets: Some(vec![
                         OfferTarget{
@@ -711,7 +728,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("OfferDecl", "source_path"),
+                Error::field_too_long("OfferDecl", "capability.path"),
                 Error::field_too_long("OfferDecl", "source.child.name"),
                 Error::field_too_long("OfferTarget", "target_path"),
                 Error::field_too_long("OfferTarget", "child_name"),
@@ -722,8 +739,9 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        capability: Some(Capability::Service(ServiceCapability{
+                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        })),
                         source: Some(RelativeId::Child(ChildId{name: Some("logger".to_string())})),
                         targets: Some(vec![
                             OfferTarget{
@@ -750,9 +768,10 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("/svc/logger".to_string()),
-                    source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("/svc/logger".to_string()),
+                    })),
+                    source: Some(RelativeId::Myself(SelfId{})),
                     targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
                 }]);
                 decl
@@ -766,9 +785,10 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("/svc/logger".to_string()),
-                    source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("/svc/logger".to_string()),
+                    })),
+                    source: Some(RelativeId::Myself(SelfId{})),
                     targets: Some(vec![]),
                 }]);
                 decl
@@ -781,8 +801,9 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("/svc/logger".to_string()),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("/svc/logger".to_string()),
+                    })),
                     source: Some(RelativeId::Child(ChildId{name: Some("logger".to_string())})),
                     targets: Some(vec![OfferTarget{
                         target_path: Some("/svc/logger".to_string()),
@@ -804,9 +825,10 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("/svc/logger".to_string()),
-                    source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("/svc/logger".to_string()),
+                    })),
+                    source: Some(RelativeId::Myself(SelfId{})),
                     targets: Some(vec![
                         OfferTarget{
                             target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -835,9 +857,10 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
-                    type_: Some(CapabilityType::Service),
-                    source_path: Some("/svc/logger".to_string()),
-                    source: Some(RelativeId::Myself(SelfId{dummy: None})),
+                    capability: Some(Capability::Service(ServiceCapability{
+                        path: Some("/svc/logger".to_string()),
+                    })),
+                    source: Some(RelativeId::Myself(SelfId{})),
                     targets: Some(vec![
                         OfferTarget{
                             target_path: Some("/svc/fuchsia.logger.Log".to_string()),
