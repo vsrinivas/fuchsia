@@ -267,19 +267,6 @@ fit::function<void(Status, IterationStatus, A...)> AdaptCallback(
   };
 }
 
-Status ToStatus(fuchsia::ledger::Error error) {
-  switch (error) {
-    case fuchsia::ledger::Error::KEY_NOT_FOUND:
-      return Status::KEY_NOT_FOUND;
-    case fuchsia::ledger::Error::NEEDS_FETCH:
-      return Status::NEEDS_FETCH;
-    case fuchsia::ledger::Error::NETWORK_ERROR:
-      return Status::NETWORK_ERROR;
-  }
-  FXL_DCHECK(false);
-  return Status::OK;
-}
-
 template <typename Result>
 Result ToErrorResult(fuchsia::ledger::Error error) {
   Result result;
@@ -299,119 +286,6 @@ PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, std::vector<Entry>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetEntriesNew(std::move(key_start), std::move(token),
-                AdaptCallback(std::move(callback)));
-}
-
-void PageSnapshotImpl::GetEntriesInline(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, std::vector<InlinedEntry>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetEntriesInlineNew(std::move(key_start), std::move(token),
-                      AdaptCallback(std::move(callback)));
-}
-
-void PageSnapshotImpl::GetKeys(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, std::vector<std::vector<uint8_t>>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetKeysNew(std::move(key_start), std::move(token),
-             AdaptCallback(std::move(callback)));
-}
-
-void PageSnapshotImpl::Get(
-    std::vector<uint8_t> key,
-    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
-        callback) {
-  GetNew(
-      std::move(key),
-      [callback = std::move(callback)](
-          Status status, fuchsia::ledger::PageSnapshot_GetNew_Result result) {
-        if (status != Status::OK) {
-          callback(status, status, nullptr);
-          return;
-        }
-        if (result.is_err()) {
-          callback(Status::OK, ToStatus(result.err()), nullptr);
-          return;
-        }
-        callback(Status::OK, Status::OK,
-                 fidl::MakeOptional(std::move(result.response().buffer)));
-      });
-}
-
-void PageSnapshotImpl::GetInline(
-    std::vector<uint8_t> key,
-    fit::function<void(Status, Status, std::unique_ptr<InlinedValue>)>
-        callback) {
-  GetInlineNew(std::move(key),
-               [callback = std::move(callback)](
-                   Status status,
-                   fuchsia::ledger::PageSnapshot_GetInlineNew_Result result) {
-                 if (status != Status::OK) {
-                   callback(status, status, nullptr);
-                   return;
-                 }
-                 if (result.is_err()) {
-                   callback(Status::OK, ToStatus(result.err()), nullptr);
-                   return;
-                 }
-                 callback(
-                     Status::OK, Status::OK,
-                     fidl::MakeOptional(std::move(result.response().value)));
-               });
-}
-
-void PageSnapshotImpl::Fetch(
-    std::vector<uint8_t> key,
-    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
-        callback) {
-  FetchNew(
-      std::move(key),
-      [callback = std::move(callback)](
-          Status status, fuchsia::ledger::PageSnapshot_FetchNew_Result result) {
-        if (status != Status::OK) {
-          callback(status, status, nullptr);
-          return;
-        }
-        if (result.is_err()) {
-          callback(Status::OK, ToStatus(result.err()), nullptr);
-          return;
-        }
-        callback(Status::OK, Status::OK,
-                 fidl::MakeOptional(std::move(result.response().buffer)));
-      });
-}
-
-void PageSnapshotImpl::FetchPartial(
-    std::vector<uint8_t> key, int64_t offset, int64_t max_size,
-    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
-        callback) {
-  FetchPartialNew(
-      std::move(key), offset, max_size,
-      [callback = std::move(callback)](
-          Status status,
-          fuchsia::ledger::PageSnapshot_FetchPartialNew_Result result) {
-        if (status != Status::OK) {
-          callback(status, status, nullptr);
-          return;
-        }
-        if (result.is_err()) {
-          callback(Status::OK, ToStatus(result.err()), nullptr);
-          return;
-        }
-        callback(Status::OK, Status::OK,
-                 fidl::MakeOptional(std::move(result.response().buffer)));
-      });
-}
-
-void PageSnapshotImpl::GetEntriesNew(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus, std::vector<Entry>,
                        std::unique_ptr<Token>)>
         callback) {
@@ -420,7 +294,7 @@ void PageSnapshotImpl::GetEntriesNew(
                      std::move(callback));
 }
 
-void PageSnapshotImpl::GetEntriesInlineNew(
+void PageSnapshotImpl::GetEntriesInline(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
                        std::unique_ptr<Token>)>
@@ -430,7 +304,7 @@ void PageSnapshotImpl::GetEntriesInlineNew(
                             std::move(callback));
 }
 
-void PageSnapshotImpl::GetKeysNew(
+void PageSnapshotImpl::GetKeys(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus,
                        std::vector<std::vector<uint8_t>>,
@@ -492,6 +366,204 @@ void PageSnapshotImpl::GetKeysNew(
         *commit_, std::max(convert::ToString(key_start), key_prefix_),
         std::move(on_next), std::move(on_done));
   }
+}
+
+void PageSnapshotImpl::Get(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, fuchsia::ledger::PageSnapshot_Get_Result)>
+        callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get");
+
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
+        if (status == storage::Status::KEY_NOT_FOUND) {
+          callback(Status::OK,
+                   ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
+                       fuchsia::ledger::Error::KEY_NOT_FOUND));
+          return;
+        }
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status),
+                   fuchsia::ledger::PageSnapshot_Get_Result());
+          return;
+        }
+        PageUtils::ResolveObjectIdentifierAsBuffer(
+            page_storage_, entry.object_identifier, 0u,
+            std::numeric_limits<int64_t>::max(),
+            storage::PageStorage::Location::LOCAL,
+            [callback = std::move(callback)](storage::Status status,
+                                             fsl::SizedVmo data) {
+              if (status == storage::Status::INTERNAL_NOT_FOUND) {
+                callback(
+                    Status::OK,
+                    ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
+                        fuchsia::ledger::Error::NEEDS_FETCH));
+                return;
+              }
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status),
+                         fuchsia::ledger::PageSnapshot_Get_Result());
+                return;
+              }
+              fuchsia::ledger::PageSnapshot_Get_Result result;
+              result.response().buffer = std::move(data).ToTransport();
+              callback(Status::OK, std::move(result));
+            });
+      });
+}
+
+void PageSnapshotImpl::GetInline(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, fuchsia::ledger::PageSnapshot_GetInline_Result)>
+        callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
+
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
+        if (status == storage::Status::KEY_NOT_FOUND) {
+          callback(
+              Status::OK,
+              ToErrorResult<fuchsia::ledger::PageSnapshot_GetInline_Result>(
+                  fuchsia::ledger::Error::KEY_NOT_FOUND));
+          return;
+        }
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status),
+                   fuchsia::ledger::PageSnapshot_GetInline_Result());
+          return;
+        }
+        PageUtils::ResolveObjectIdentifierAsStringView(
+            page_storage_, entry.object_identifier,
+            storage::PageStorage::Location::LOCAL,
+            [callback = std::move(callback)](storage::Status status,
+                                             fxl::StringView data_view) {
+              if (status == storage::Status::INTERNAL_NOT_FOUND) {
+                callback(Status::OK,
+                         ToErrorResult<
+                             fuchsia::ledger::PageSnapshot_GetInline_Result>(
+                             fuchsia::ledger::Error::NEEDS_FETCH));
+                return;
+              }
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status),
+                         fuchsia::ledger::PageSnapshot_GetInline_Result());
+                return;
+              }
+              if (fidl_serialization::GetByteVectorSize(data_view.size()) +
+                      fidl_serialization::kStatusEnumSize >
+                  fidl_serialization::kMaxInlineDataSize) {
+                callback(Status::VALUE_TOO_LARGE,
+                         fuchsia::ledger::PageSnapshot_GetInline_Result());
+                return;
+              }
+              fuchsia::ledger::PageSnapshot_GetInline_Result result;
+              result.response().value.value = convert::ToArray(data_view);
+              callback(Status::OK, std::move(result));
+            });
+      });
+}
+
+void PageSnapshotImpl::Fetch(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, fuchsia::ledger::PageSnapshot_Fetch_Result)>
+        callback) {
+  FetchPartial(
+      std::move(key), 0, -1,
+      [callback = std::move(callback)](
+          Status status,
+          fuchsia::ledger::PageSnapshot_FetchPartial_Result result) {
+        if (status != Status::OK) {
+          callback(status, fuchsia::ledger::PageSnapshot_Fetch_Result());
+          return;
+        }
+        fuchsia::ledger::PageSnapshot_Fetch_Result new_result;
+        if (result.is_err()) {
+          new_result.set_err(result.err());
+        } else {
+          new_result.response().buffer = std::move(result.response().buffer);
+        }
+        callback(Status::OK, std::move(new_result));
+      });
+}
+
+void PageSnapshotImpl::FetchPartial(
+    std::vector<uint8_t> key, int64_t offset, int64_t max_size,
+    fit::function<void(Status,
+                       fuchsia::ledger::PageSnapshot_FetchPartial_Result)>
+        callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch_partial");
+
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, offset, max_size, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
+        if (status == storage::Status::KEY_NOT_FOUND) {
+          callback(
+              Status::OK,
+              ToErrorResult<fuchsia::ledger::PageSnapshot_FetchPartial_Result>(
+                  fuchsia::ledger::Error::KEY_NOT_FOUND));
+          return;
+        }
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status),
+                   fuchsia::ledger::PageSnapshot_FetchPartial_Result());
+          return;
+        }
+
+        PageUtils::ResolveObjectIdentifierAsBuffer(
+            page_storage_, entry.object_identifier, offset, max_size,
+            storage::PageStorage::Location::NETWORK,
+            [callback = std::move(callback)](storage::Status status,
+                                             fsl::SizedVmo data) {
+              if (status == storage::Status::NETWORK_ERROR) {
+                callback(Status::OK,
+                         ToErrorResult<
+                             fuchsia::ledger::PageSnapshot_FetchPartial_Result>(
+                             fuchsia::ledger::Error::NETWORK_ERROR));
+                return;
+              }
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status),
+                         fuchsia::ledger::PageSnapshot_FetchPartial_Result());
+                return;
+              }
+              fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
+              result.response().buffer = std::move(data).ToTransport();
+              callback(Status::OK, std::move(result));
+            });
+      });
+}
+
+void PageSnapshotImpl::GetEntriesNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, std::vector<Entry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetEntries(std::move(key_start), std::move(token), std::move(callback));
+}
+
+void PageSnapshotImpl::GetEntriesInlineNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetEntriesInline(std::move(key_start), std::move(token), std::move(callback));
+}
+
+void PageSnapshotImpl::GetKeysNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus,
+                       std::vector<std::vector<uint8_t>>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetKeys(std::move(key_start), std::move(token), std::move(callback));
 }
 
 void PageSnapshotImpl::GetNew(

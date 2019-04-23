@@ -303,14 +303,14 @@ protocol PageSnapshot {
     /// Missing |LAZY| values can be retrieved over the network using Fetch().
     /// The returned |entries| are sorted by |key|.
     GetEntries(Key key_start, Token? token)
-        -> (Status status, vector<Entry> entries, Token? next_token);
+        -> (IterationStatus status, vector<Entry> entries, Token? next_token);
     GetEntriesNew(Key key_start, Token? token)
         -> (IterationStatus status, vector<Entry> entries, Token? next_token);
 
     /// Same as |GetEntries()|. The connection will be closed if a value does
     /// not fit in a FIDL message.
     GetEntriesInline(Key key_start, Token? token)
-        -> (Status status, vector<InlinedEntry> entries,
+        -> (IterationStatus status, vector<InlinedEntry> entries,
             Token? next_token);
     GetEntriesInlineNew(Key key_start, Token? token)
         -> (IterationStatus status, vector<InlinedEntry> entries,
@@ -327,7 +327,7 @@ protocol PageSnapshot {
     /// The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
     /// as there are more results and |OK| once finished.
     GetKeys(Key key_start, Token? token)
-        -> (Status status, vector<Key> keys,
+        -> (IterationStatus status, vector<Key> keys,
             Token? next_token);
     GetKeysNew(Key key_start, Token? token)
         -> (IterationStatus status, vector<Key> keys,
@@ -337,19 +337,19 @@ protocol PageSnapshot {
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
     /// |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
     /// be retrieved over the network using a Fetch() call.
-    Get(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Get(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
     GetNew(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Returns the value of a given key if it fits in a FIDL message.
     /// The connection will be closed if the value does not fit in a FIDL message.
     /// See |Get()| for additional information.
-    GetInline(Key key) -> (Status status, InlinedValue? value);
+    GetInline(Key key) -> (InlinedValue value) error Error;
     GetInlineNew(Key key) -> (InlinedValue value) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
     /// is not available).
-    Fetch(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Fetch(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
     FetchNew(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
@@ -359,7 +359,7 @@ protocol PageSnapshot {
     /// Returns at most |max_size| bytes. If |max_size| is less than 0, returns
     /// everything.
     FetchPartial(Key key, int64 offset, int64 max_size)
-        -> (Status status, fuchsia.mem.Buffer? buffer);
+        -> (fuchsia.mem.Buffer buffer) error Error;
     FetchPartialNew(Key key, int64 offset, int64 max_size)
         -> (fuchsia.mem.Buffer buffer) error Error;
 };
