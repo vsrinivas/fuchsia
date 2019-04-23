@@ -234,6 +234,11 @@ private:
     zx_time_t value_ = 0;
 };
 
+template <zx_clock_t kClockId>
+constexpr basic_time<kClockId> operator+(duration delta, basic_time<kClockId> time) {
+    return time + delta;
+}
+
 using time = basic_time<ZX_CLOCK_MONOTONIC>;
 using time_utc = basic_time<ZX_CLOCK_UTC>;
 using time_thread = basic_time<ZX_CLOCK_THREAD>;
