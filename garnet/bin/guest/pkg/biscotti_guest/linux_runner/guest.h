@@ -13,7 +13,6 @@
 #include <lib/fit/promise.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
 #include <trace/event.h>
 #include <zircon/types.h>
 
@@ -49,11 +48,10 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(sys::ComponentContext* context,
-                                    fxl::CommandLine cl,
                                     std::unique_ptr<Guest>* guest);
 
   Guest(sys::ComponentContext* context,
-        fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl);
+        fuchsia::guest::EnvironmentControllerPtr env);
 
   void Launch(AppLaunchRequest request);
 
@@ -149,7 +147,6 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;
   LogCollector log_collector_;
-  fxl::CommandLine cl_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;
   // Requests queued up waiting for the guest to fully boot.
   std::deque<AppLaunchRequest> pending_requests_;

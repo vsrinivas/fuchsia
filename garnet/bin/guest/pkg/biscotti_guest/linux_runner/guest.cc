@@ -144,7 +144,6 @@ static int convert_socket_to_fd(zx::socket socket) {
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
-                                  fxl::CommandLine cl,
                                   std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
   FXL_LOG(INFO) << "Creating Guest Environment...";
@@ -154,16 +153,15 @@ zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
   *guest =
-      std::make_unique<Guest>(context, std::move(guest_env), std::move(cl));
+      std::make_unique<Guest>(context, std::move(guest_env));
   return ZX_OK;
 }
 
 Guest::Guest(sys::ComponentContext* context,
-             fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
+             fuchsia::guest::EnvironmentControllerPtr env)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       guest_env_(std::move(env)),
-      cl_(std::move(cl)),
       wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
@@ -328,33 +326,23 @@ void Guest::ConfigureNetwork() {
   TRACE_DURATION("linux_runner", "Guest::ConfigureNetwork");
   FXL_CHECK(maitred_)
       << "Called ConfigureNetwork without a maitre'd connection";
-  std::string arg;
   struct in_addr addr;
 
   uint32_t ip_addr = 0;
-  if (!cl_.GetOptionValue("ip", &arg)) {
-    arg = LINUX_RUNNER_IP_DEFAULT;
-  }
-  FXL_LOG(INFO) << "Using ip: " << arg;
-  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+  FXL_LOG(INFO) << "Using ip: " << LINUX_RUNNER_IP_DEFAULT;
+  FXL_CHECK(inet_aton(LINUX_RUNNER_IP_DEFAULT, &addr) != 0)
       << "Failed to parse address string";
   ip_addr = addr.s_addr;
 
   uint32_t netmask = 0;
-  if (!cl_.GetOptionValue("netmask", &arg)) {
-    arg = LINUX_RUNNER_NETMASK_DEFAULT;
-  }
-  FXL_LOG(INFO) << "Using netmask: " << arg;
-  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+  FXL_LOG(INFO) << "Using netmask: " << LINUX_RUNNER_NETMASK_DEFAULT;
+  FXL_CHECK(inet_aton(LINUX_RUNNER_NETMASK_DEFAULT, &addr) != 0)
       << "Failed to parse address string";
   netmask = addr.s_addr;
 
   uint32_t gateway = 0;
-  if (!cl_.GetOptionValue("gateway", &arg)) {
-    arg = LINUX_RUNNER_GATEWAY_DEFAULT;
-  }
-  FXL_LOG(INFO) << "Using gateway: " << arg;
-  FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
+  FXL_LOG(INFO) << "Using gateway: " << LINUX_RUNNER_GATEWAY_DEFAULT;
+  FXL_CHECK(inet_aton(LINUX_RUNNER_GATEWAY_DEFAULT, &addr) != 0)
       << "Failed to parse address string";
   gateway = addr.s_addr;
   FXL_LOG(INFO) << "Configuring Guest Network...";
@@ -653,16 +641,12 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
               this->maitred_ = std::move(result.value());
               // If we're not booting to a container; we'll drop the VM inside a
               // root shell.
-              const bool vm_only = cl_.HasOption("vm");
-              if (!kBootToContainer || vm_only) {
+              if (!kBootToContainer) {
                 LaunchVmShell();
               }
-              if (!vm_only) {
-                MountExtrasPartition();
-                ConfigureNetwork();
-                StartTermina();
-              }
-
+              MountExtrasPartition();
+              ConfigureNetwork();
+              StartTermina();
             } else {
               FXL_CHECK(false) << "Failed to connect to Maitre'd";
             }

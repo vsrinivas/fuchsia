@@ -10,7 +10,6 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/guest.h"
-#include "src/lib/fxl/command_line.h"
 
 namespace linux_runner {
 
@@ -18,7 +17,7 @@ class LinuxRunner : public fuchsia::sys::Runner {
  public:
   LinuxRunner();
 
-  zx_status_t Init(fxl::CommandLine cl);
+  zx_status_t Init();
 
   LinuxRunner(const LinuxRunner&) = delete;
   LinuxRunner& operator=(const LinuxRunner&) = delete;

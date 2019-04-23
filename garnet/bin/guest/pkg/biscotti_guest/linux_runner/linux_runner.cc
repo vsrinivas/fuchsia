@@ -14,9 +14,9 @@ LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::Create()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-zx_status_t LinuxRunner::Init(fxl::CommandLine cl) {
+zx_status_t LinuxRunner::Init() {
   TRACE_DURATION("linux_runner", "LinuxRunner::Init");
-  return Guest::CreateAndStart(context_.get(), std::move(cl), &guest_);
+  return Guest::CreateAndStart(context_.get(), &guest_);
 }
 
 void LinuxRunner::StartComponent(
