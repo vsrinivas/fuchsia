@@ -30,36 +30,16 @@ def main():
     parser = argparse.ArgumentParser(
             description=('Checks that FIDL libraries in a given repo are '
                          'properly namespaced'))
-    parser.add_argument('--repo',
-                        help='The repo to analyze')
-    layer_group = parser.add_mutually_exclusive_group()
-    layer_group.add_argument('--layer',
-                             help='Name of the layer to analyze',
-                             choices=['zircon', 'garnet', 'peridot', 'topaz'])
-    layer_group.add_argument('--vendor-layer',
-                             help='Name of the vendor layer to analyze')
-    parser.add_argument('--namespaces',
-                        help='The list of allowed namespaces, defaults to '
-                             '[%s]' % ', '.join(DEFAULT_NAMESPACES),
-                        nargs='*',
-                        default=DEFAULT_NAMESPACES)
+    parser.add_argument('--repo', help='The repo to analyze', required=True)
     args = parser.parse_args()
 
-    if args.repo:
-        repo = os.path.abspath(args.repo)
-        vendor_match = re.search(VENDOR_REGEX, repo)
-        if vendor_match:
-          vendor = vendor_match.group(1)
-          namespaces = [vendor]
-        else:
-          namespaces = DEFAULT_NAMESPACES
-
+    repo = os.path.abspath(args.repo)
+    vendor_match = re.search(VENDOR_REGEX, repo)
+    if vendor_match:
+        vendor = vendor_match.group(1)
+        namespaces = [vendor]
     else:
-        namespaces = args.namespaces
-        if args.layer:
-            repo = os.path.join(FUCHSIA_ROOT, args.layer)
-        else:
-            repo = os.path.join(FUCHSIA_ROOT, 'vendor', args.vendor_layer)
+        namespaces = DEFAULT_NAMESPACES
 
     files = subprocess.check_output(['git', '-C', repo, 'ls-files', '*.fidl'])
 
