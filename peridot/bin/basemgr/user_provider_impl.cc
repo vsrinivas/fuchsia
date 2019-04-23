@@ -4,18 +4,18 @@
 
 #include "peridot/bin/basemgr/user_provider_impl.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/status.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
+
+#include <utility>
 
 #include "peridot/bin/basemgr/users_generated.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 namespace modular {
 
@@ -35,8 +35,8 @@ constexpr char kDevAuthProviderUrl[] =
 // Google auth provider configuration
 constexpr char kGoogleAuthProviderType[] = "google";
 constexpr char kGoogleAuthProviderUrl[] =
-    "fuchsia-pkg://fuchsia.com/google_auth_provider#meta/"
-    "google_auth_provider.cmx";
+    "fuchsia-pkg://fuchsia.com/google_auth_provider_2#meta/"
+    "google_auth_provider_2.cmx";
 
 fuchsia::modular::auth::AccountPtr Convert(
     const fuchsia::modular::UserStorage* const user) {
