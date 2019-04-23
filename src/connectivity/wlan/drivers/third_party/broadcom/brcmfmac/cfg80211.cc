@@ -189,7 +189,7 @@ uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
  * matches tag
  */
 static const struct brcmf_tlv* brcmf_parse_tlvs(const void* buf, int buflen, uint key) {
-    const struct brcmf_tlv* elt = buf;
+    const struct brcmf_tlv* elt = static_cast<decltype(elt)>(buf);
     int totlen = buflen;
 
     /* find tagged parameter */
@@ -696,7 +696,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
         params_size += sizeof(struct brcmf_ssid_le) * request->num_ssids;
     }
 
-    params = calloc(1, params_size);
+    params = static_cast<decltype(params)>(calloc(1, params_size));
     if (!params) {
         err = ZX_ERR_NO_MEMORY;
         goto exit;
@@ -991,11 +991,11 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct brcmf_ext_join_params_le join_params;
     uint16_t chanspec;
-    size_t join_params_size;
+    size_t join_params_size = 0;
     const void* ie;
     uint32_t ie_len;
     zx_status_t err = ZX_OK;
-    uint32_t ssid_len;
+    uint32_t ssid_len = 0;
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
@@ -1121,7 +1121,7 @@ static void brcmf_disconnect_timeout_worker(struct work_struct* work) {
 static void brcmf_disconnect_timeout(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
 
-    struct brcmf_cfg80211_info* cfg = data;
+    struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
     brcmf_dbg(TRACE, "Enter\n");
     workqueue_schedule_default(&cfg->disconnect_timeout_work);
 
@@ -1543,7 +1543,7 @@ static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
 
 static void brcmf_escan_timeout(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
-    struct brcmf_cfg80211_info* cfg = data;
+    struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
 
     if (cfg->int_escan_map || cfg->scan_request) {
         brcmf_err("timer expired\n");
@@ -1597,8 +1597,8 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     uint32_t escan_buflen;
     struct brcmf_bss_info_le* bss_info_le;
     struct brcmf_bss_info_le* bss = NULL;
-    uint32_t bi_length;
-    struct brcmf_scan_results* list;
+    uint32_t bi_length = 0;
+    struct brcmf_scan_results* list = NULL;
     uint32_t i;
     bool aborted;
 
@@ -1695,7 +1695,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
 }
 
 static wlanif_scan_req_t* brcmf_alloc_internal_escan_request(void) {
-    return calloc(1, sizeof(wlanif_scan_req_t));
+    return static_cast<wlanif_scan_req_t*>(calloc(1, sizeof(wlanif_scan_req_t)));
 }
 
 static zx_status_t brcmf_internal_escan_add_info(wlanif_scan_req_t* req, uint8_t* ssid,
@@ -1826,7 +1826,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
     }
 
     netinfo_start = brcmf_get_netinfo_array(pfn_result);
-    datalen = e->datalen - ((void*)netinfo_start - (void*)pfn_result);
+    datalen = e->datalen - ((char*)netinfo_start - (char*)pfn_result);
     if (datalen < result_count * sizeof(*netinfo)) {
         brcmf_err("insufficient event data\n");
         // TODO(cphoenix): err isn't set here. Should it be?
@@ -2239,7 +2239,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     saved_ie = &vif->saved_ie;
 
     brcmf_dbg(TRACE, "bsscfgidx %d, pktflag : 0x%02X\n", ifp->bsscfgidx, pktflag);
-    iovar_ie_buf = calloc(1, WL_EXTRA_BUF_MAX);
+    iovar_ie_buf = static_cast<decltype(iovar_ie_buf)>(calloc(1, WL_EXTRA_BUF_MAX));
     if (!iovar_ie_buf) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -2392,6 +2392,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
     }
 
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+    wlan_channel_t channel = {};
+    uint16_t chanspec = 0;
     zx_status_t status;
 
     struct brcmf_ssid_le ssid_le;
@@ -2448,8 +2450,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
         goto fail;
     }
 
-    wlan_channel_t channel = {.primary = req->channel, .cbw = CBW20, .secondary80 = 0};
-    uint16_t chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
+    channel = {.primary = req->channel, .cbw = CBW20, .secondary80 = 0};
+    chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
     status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
     if (status != ZX_OK) {
         brcmf_err("Set Channel failed: chspec=%d, status=%s\n", chanspec,
@@ -2595,7 +2597,7 @@ static zx_status_t brcmf_cfg80211_set_rekey_data(struct wiphy* wiphy, struct net
 }
 #endif
 
-static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
+static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = cfg_to_if(cfg);
     struct brcmf_fil_country_le ccreq;
@@ -2628,10 +2630,10 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
 }
 
 static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
     brcmf_dbg(TRACE, "Enter");
-    ndev->if_callbacks = malloc(sizeof(*ifc));
+    ndev->if_callbacks = static_cast<decltype(ndev->if_callbacks)>(malloc(sizeof(*ifc)));
     memcpy(ndev->if_callbacks, ifc, sizeof(*ifc));
     ndev->if_callback_cookie = cookie;
     brcmf_netdev_open(ndev);
@@ -2641,7 +2643,7 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cooki
 }
 
 static void brcmf_if_stop(void* ctx) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
     brcmf_dbg(TRACE, "Enter");
     free(ndev->if_callbacks);
@@ -2649,7 +2651,7 @@ static void brcmf_if_stop(void* ctx) {
 }
 
 void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     zx_status_t result;
 
     brcmf_dbg(TRACE, "Enter");
@@ -2674,7 +2676,7 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 // bss information, but otherwise wait until an ASSOCIATE.request is received to join so that we
 // have the negotiated RSNE.
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -2690,7 +2692,7 @@ void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
 }
 
 void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
     wlanif_auth_confirm_t response;
 
@@ -2720,7 +2722,7 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
 // In AP mode, receive a response from wlanif confirming that a client was successfully
 // authenticated.
 void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter");
@@ -2760,7 +2762,7 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
 // reported.
 void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     if (brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code, true) != ZX_OK) {
         // Request to disconnect failed, so respond immediately
         brcmf_notify_deauth(ndev, req->peer_sta_address);
@@ -2771,7 +2773,7 @@ void brcmf_hook_deauth_req(void* ctx, wlanif_deauth_req_t* req) {
 }
 
 void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter");
@@ -2793,7 +2795,7 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
 }
 
 void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter");
@@ -2833,7 +2835,7 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
 
 void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     zx_status_t status = brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code,
                                                    false);
     if (status != ZX_OK) {
@@ -2849,7 +2851,7 @@ void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
 /* Start AP mode */
 void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
     wlanif_start_confirm_t result = {.result_code = result_code};
     ndev->if_callbacks->start_conf(ndev->if_callback_cookie, &result);
@@ -2858,7 +2860,7 @@ void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
 /* Stop AP mode */
 void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
     uint8_t result_code = brcmf_cfg80211_stop_ap(ndev, req);
 
@@ -2868,7 +2870,7 @@ void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
 
 void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct wiphy* wiphy = ndev_to_wiphy(ndev);
     zx_status_t result;
 
@@ -2887,13 +2889,13 @@ void brcmf_hook_del_keys_req(void* ctx, wlanif_del_keys_req_t* req) {
 
 void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     wlanif_eapol_confirm_t confirm;
     int packet_length;
 
     // Ethernet header length + EAPOL PDU length
     packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_len;
-    uint8_t* packet = malloc(packet_length);
+    uint8_t* packet = static_cast<decltype(packet)>(malloc(packet_length));
     if (packet == NULL) {
         confirm.result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
     } else {
@@ -2956,7 +2958,7 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
     }
 }
 
-static uint16_t brcmf_get_mcs_map(uint32_t nchain, enum ieee80211_vht_mcs_support supp) {
+static uint16_t brcmf_get_mcs_map(uint32_t nchain, uint16_t supp) {
     uint16_t mcs_map = 0xffff;
     for (uint32_t i = 0; i < nchain; i++) {
         mcs_map = (mcs_map << 2) | supp;
@@ -3190,11 +3192,19 @@ static void brcmf_dump_query_info(wlanif_query_info_t* info) {
 }
 
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
+
+    struct brcmf_chanspec_list *list = NULL;
+    uint32_t nmode = 0;
+    uint32_t vhtmode = 0;
+    uint32_t rxchain = 0, nchain = 0;
+    uint32_t bw_cap[2] = {WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT};
+    uint32_t ldpc_cap = 0;
+    uint32_t max_ampdu_len_exp = 0;
     zx_status_t status;
 
     brcmf_dbg(TRACE, "Enter");
@@ -3245,7 +3255,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     }
 
     // channels
-    uint8_t* pbuf = calloc(BRCMF_DCMD_MEDLEN, 1);
+    uint8_t* pbuf = static_cast<decltype(pbuf)>(calloc(BRCMF_DCMD_MEDLEN, 1));
     if (pbuf == NULL) {
         brcmf_err("unable to allocate memory for channel information\n");
         return;
@@ -3256,9 +3266,8 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
         brcmf_err("get chanspecs error (%s)\n", zx_status_get_string(status));
         goto fail_pbuf;
     }
-    struct brcmf_chanspec_list *list = (struct brcmf_chanspec_list*)pbuf;
-    uint32_t total = list->count;
-    for (uint32_t i = 0; i < total; i++) {
+    list = (struct brcmf_chanspec_list*)pbuf;
+    for (uint32_t i = 0; i < list->count; i++) {
         struct brcmu_chan ch;
         ch.chspec = list->element[i];
         cfg->d11inf.decchspec(&ch);
@@ -3298,10 +3307,10 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     }
 
     // Parse HT/VHT information
-    uint32_t nmode = 0;
-    uint32_t vhtmode = 0;
-    uint32_t rxchain, nchain;
-    uint32_t bw_cap[2] = { WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT };
+    nmode = 0;
+    vhtmode = 0;
+    rxchain = 0;
+    nchain = 0;
     (void) brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
     status = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
     if (status != ZX_OK) {
@@ -3316,11 +3325,11 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
               bw_cap[WLAN_BAND_5GHZ]);
 
     // LDPC support, applies to both HT and VHT
-    uint32_t ldpc_cap = 0;
+    ldpc_cap = 0;
     (void)brcmf_fil_iovar_int_get(ifp, "ldpc_cap", &ldpc_cap);
 
     // Max AMPDU length
-    uint32_t max_ampdu_len_exp = 0;
+    max_ampdu_len_exp = 0;
     status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp);
     if (status != ZX_OK) {
         brcmf_err("Unable to retrieve value for AMPDU maximum Rx length, using 8191 bytes\n");
@@ -3371,7 +3380,7 @@ fail_pbuf:
 }
 
 void brcmf_hook_stats_query_req(void* ctx) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
 
     brcmf_dbg(TRACE, "Enter");
@@ -3405,7 +3414,7 @@ void brcmf_hook_stats_query_req(void* ctx) {
 }
 
 zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
-    struct net_device* ndev = ctx;
+    struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     //brcmf_dbg(TEMP, "Enter. Options %d 0x%x, len %d", options, options, netbuf->len);
     brcmf_netdev_start_xmit(ndev, netbuf);
     return ZX_OK;
@@ -3460,7 +3469,7 @@ static zx_protocol_device_t if_impl_device_ops = {
 
 zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
                                    uint16_t* out_iface_id) {
-    struct brcmf_if* ifp = ctx;
+    struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
     struct net_device* ndev = ifp->ndev;
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
     zx_status_t result;
@@ -3494,7 +3503,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
 
     /* set the mac address & netns */
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
-    ndev->priv_destructor = brcmf_free_net_device_vif;
+    ndev->priv_destructor = &brcmf_free_net_device_vif;
     brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
 
     return ZX_OK;
@@ -3507,7 +3516,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
     bool mbss;
 
     brcmf_dbg(TRACE, "allocating virtual interface (size=%zu)\n", sizeof(*vif));
-    vif = calloc(1, sizeof(*vif));
+    vif = static_cast<decltype(vif)>(calloc(1, sizeof(*vif)));
     if (!vif) {
         if (vif_out) {
             *vif_out = NULL;
@@ -3656,7 +3665,8 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
             return err;
         }
         conn_info->req_ie_len = req_len;
-        conn_info->req_ie = brcmu_alloc_and_copy(cfg->extra_buf, conn_info->req_ie_len);
+        conn_info->req_ie = static_cast<decltype(conn_info->req_ie)>(
+            brcmu_alloc_and_copy(cfg->extra_buf, conn_info->req_ie_len));
     } else {
         conn_info->req_ie_len = 0;
         conn_info->req_ie = NULL;
@@ -3668,7 +3678,9 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
             return err;
         }
         conn_info->resp_ie_len = resp_len;
-        conn_info->resp_ie = brcmu_alloc_and_copy(cfg->extra_buf, conn_info->resp_ie_len);
+        conn_info->resp_ie =
+            static_cast<decltype(conn_info->resp_ie)>(
+                brcmu_alloc_and_copy(cfg->extra_buf, conn_info->resp_ie_len));
     } else {
         conn_info->resp_ie_len = 0;
         conn_info->resp_ie = NULL;
@@ -3707,7 +3719,8 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     uint32_t reason = e->reason;
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
-    brcmf_dbg(CONN, "event %s (%u), reason %d\n", brcmf_fweh_event_name(event), event, reason);
+    brcmf_dbg(CONN, "event %s (%u), reason %d\n",
+              brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason);
     if (event == BRCMF_E_LINK && reason == BRCMF_E_REASON_LINK_BSSCFG_DIS &&
             ndev != cfg_to_ndev(cfg)) {
         brcmf_dbg(CONN, "AP mode link down\n");
@@ -3961,24 +3974,27 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
 }
 
 static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
-    cfg->conf = calloc(1, sizeof(*cfg->conf));
+    cfg->conf = static_cast<decltype(cfg->conf)>(calloc(1, sizeof(*cfg->conf)));
     if (!cfg->conf) {
         goto init_priv_mem_out;
     }
-    cfg->extra_buf = calloc(1, WL_EXTRA_BUF_MAX);
+    cfg->extra_buf = static_cast<decltype(cfg->extra_buf)>(calloc(1, WL_EXTRA_BUF_MAX));
     if (!cfg->extra_buf) {
         goto init_priv_mem_out;
     }
-    cfg->wowl.nd = calloc(1, sizeof(*cfg->wowl.nd) + sizeof(uint32_t));
+    cfg->wowl.nd =
+        static_cast<decltype(cfg->wowl.nd)>(calloc(1, sizeof(*cfg->wowl.nd) + sizeof(uint32_t)));
     if (!cfg->wowl.nd) {
         goto init_priv_mem_out;
     }
     cfg->wowl.nd_info =
-        calloc(1, sizeof(*cfg->wowl.nd_info) + sizeof(struct cfg80211_wowlan_nd_match*));
+        static_cast<decltype(cfg->wowl.nd_info)>(
+            calloc(1, sizeof(*cfg->wowl.nd_info) + sizeof(struct cfg80211_wowlan_nd_match*)));
     if (!cfg->wowl.nd_info) {
         goto init_priv_mem_out;
     }
-    cfg->escan_info.escan_buf = calloc(1, BRCMF_ESCAN_BUF_SIZE);
+    cfg->escan_info.escan_buf =
+        static_cast<decltype(cfg->escan_info.escan_buf)>(calloc(1, BRCMF_ESCAN_BUF_SIZE));
     if (!cfg->escan_info.escan_buf) {
         goto init_priv_mem_out;
     }
@@ -4006,7 +4022,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
     brcmf_init_escan(cfg);
     brcmf_init_conf(cfg->conf);
     workqueue_init_work(&cfg->disconnect_timeout_work, brcmf_disconnect_timeout_worker);
-    cfg->vif_disabled = SYNC_COMPLETION_INIT;
+    cfg->vif_disabled = {};
     return err;
 }
 
@@ -4017,7 +4033,7 @@ static void wl_deinit_priv(struct brcmf_cfg80211_info* cfg) {
 }
 
 static void init_vif_event(struct brcmf_cfg80211_vif_event* event) {
-    event->vif_event_wait = SYNC_COMPLETION_INIT;
+    event->vif_event_wait = {};
     mtx_init(&event->vif_event_lock, mtx_plain);
 }
 
@@ -4354,12 +4370,13 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     }
 
     ifp = ndev_to_if(ndev);
-    wiphy = calloc(1, sizeof(struct wiphy));
+    wiphy = static_cast<decltype(wiphy)>(calloc(1, sizeof(struct wiphy)));
     if (!wiphy) {
         brcmf_err("Could not allocate wiphy device\n");
         return NULL;
     }
-    wiphy->cfg80211_info = calloc(1, sizeof(struct brcmf_cfg80211_info));
+    wiphy->cfg80211_info =
+        static_cast<decltype(wiphy->cfg80211_info)>(calloc(1, sizeof(struct brcmf_cfg80211_info)));
     if (wiphy->cfg80211_info == NULL) {
         goto wiphy_out;
     }

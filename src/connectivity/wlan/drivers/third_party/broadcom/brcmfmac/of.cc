@@ -26,7 +26,7 @@
 void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
                     struct brcmf_mp_device* settings) {
     struct brcmfmac_sdio_pd* sdio = &settings->bus.sdio;
-    struct device_node* np = dev->of_node;
+    struct device_node* np = static_cast<decltype(np)>(dev->of_node);
     int irq;
     uint32_t irqf;
     uint32_t val;

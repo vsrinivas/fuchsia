@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <lib/sync/completion.h>
+#include <stdatomic.h>
 #include <threads.h>
 #include <wlan/protocol/if-impl.h>
 #include <zircon/listnode.h>
@@ -197,7 +198,7 @@ struct net_device {
     } stats;
     uint32_t features;
     uint32_t needed_headroom;
-    void* priv_destructor;
+    void (*priv_destructor)(net_device*);
     int reg_state;
     int needs_free_net_device;
 };

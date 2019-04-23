@@ -58,7 +58,7 @@ struct brcmf_fweh_event_name {
 };
 
 #ifdef DEBUG
-#define BRCMF_ENUM_DEF(id, val) {val, #id},
+#define BRCMF_ENUM_DEF(id, val) {BRCMF_E_##id, #id},
 
 /* array for mapping code to event name */
 static struct brcmf_fweh_event_name fweh_event_names[] = {BRCMF_FWEH_EVENT_ENUM_DEFLIST};
@@ -130,7 +130,7 @@ static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
  */
 static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg,
                                        void* data) {
-    struct brcmf_if_event* ifevent = data;
+    struct brcmf_if_event* ifevent = static_cast<decltype(ifevent)>(data);
     struct brcmf_if* ifp;
     bool is_p2pdev;
     zx_status_t err = ZX_OK;
@@ -177,7 +177,8 @@ static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_even
         brcmf_proto_reset_if(drvr, ifp);
     }
 
-    err = brcmf_fweh_call_event_handler(ifp, emsg->event_code, emsg, data);
+    err = brcmf_fweh_call_event_handler(ifp, static_cast<brcmf_fweh_event_code>(emsg->event_code),
+                                        emsg, data);
 
     if (ifp && ifevent->action == BRCMF_E_IF_DEL) {
         bool armed = brcmf_cfg80211_vif_event_armed(drvr->config);
@@ -356,7 +357,8 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     memset(eventmask, 0, sizeof(eventmask));
     for (i = 0; i < BRCMF_E_LAST; i++) {
         if (ifp->drvr->fweh.evt_handler[i]) {
-            brcmf_dbg(EVENT, "enable event %s\n", brcmf_fweh_event_name(i));
+            brcmf_dbg(EVENT, "enable event %s\n",
+                      brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(i)));
             setbit(eventmask, i);
         }
     }
@@ -392,7 +394,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
 
     //brcmf_dbg(TEMP, "Enter");
     /* get event info */
-    code = be32toh(event_packet->msg.event_type);
+    code = static_cast<brcmf_fweh_event_code>(be32toh(event_packet->msg.event_type));
     datalen = be32toh(event_packet->msg.datalen);
     data = &event_packet[1];
 
@@ -411,7 +413,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
         return;
     }
 
-    event = calloc(1, sizeof(*event) + datalen);
+    event = static_cast<decltype(event)>(calloc(1, sizeof(*event) + datalen));
     if (!event) {
         return;
     }

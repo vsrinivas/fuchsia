@@ -207,7 +207,7 @@ static zx_status_t brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8
     }
     /* Alloc for extra 0 byte + roundup by 4 + length field */
     size += 1 + 3 + sizeof(uint32_t);
-    nvp->nvram = calloc(1, size);
+    nvp->nvram = static_cast<decltype(nvp->nvram)>(calloc(1, size));
     if (!nvp->nvram) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -234,7 +234,7 @@ static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, uint16_t domain_nr
     uint8_t* nvram;
     uint8_t id;
 
-    nvram = calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t));
+    nvram = static_cast<decltype(nvram)>(calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t)));
     if (!nvram) {
         goto fail;
     }
@@ -317,7 +317,7 @@ static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, uint16_t domain_nr
     uint32_t i, j;
     uint8_t* nvram;
 
-    nvram = calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t));
+    nvram = static_cast<decltype(nvram)>(calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t)));
     if (!nvram) {
         goto fail;
     }
@@ -440,7 +440,7 @@ struct brcmf_fw {
 };
 
 static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, void* ctx) {
-    struct brcmf_fw* fwctx = ctx;
+    struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
     uint32_t nvram_length = 0;
     void* nvram = NULL;
     uint8_t* data = NULL;
@@ -453,7 +453,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
         data_len = fw->size;
         raw_nvram = false;
     } else {
-        data = bcm47xx_nvram_get_contents(&data_len);
+        data = static_cast<decltype(data)>(bcm47xx_nvram_get_contents(&data_len));
         if (!data && !(fwctx->flags & BRCMF_FW_REQ_NV_OPTIONAL)) {
             goto fail;
         }
@@ -499,7 +499,7 @@ zx_status_t request_firmware_nowait(bool b, const char* name, struct brcmf_devic
         zx_handle_close(fw_vmo);
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    char* fw_buf = malloc(fw.size);
+    char* fw_buf = static_cast<decltype(fw_buf)>(malloc(fw.size));
     if (fw_buf == NULL) {
         zx_handle_close(fw_vmo);
         return ZX_ERR_NO_MEMORY;
@@ -516,7 +516,7 @@ zx_status_t request_firmware_nowait(bool b, const char* name, struct brcmf_devic
 }
 
 static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, void* ctx) {
-    struct brcmf_fw* fwctx = ctx;
+    struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
     zx_status_t result = ZX_OK;
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
@@ -564,7 +564,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fwctx = calloc(1, sizeof(*fwctx));
+    fwctx = static_cast<decltype(fwctx)>(calloc(1, sizeof(*fwctx)));
     if (!fwctx) {
         return ZX_ERR_NO_MEMORY;
     }

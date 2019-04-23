@@ -384,7 +384,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
  * Returns 0 or error code.
  */
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              uint8_t* data, uint size);
+                              void* data, uint size);
 // TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */

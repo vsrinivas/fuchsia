@@ -209,7 +209,7 @@ void workqueue_schedule(struct workqueue_struct* workqueue, struct work_struct* 
 
 static void start_workqueue(struct workqueue_struct* workqueue, const char* name) {
     strlcpy(workqueue->name, name, WORKQUEUE_NAME_MAXLEN);
-    workqueue->work_ready = SYNC_COMPLETION_INIT;
+    workqueue->work_ready = {};
     list_initialize(&workqueue->list);
     workqueue->current = NULL;
     pthread_create(&workqueue->thread, NULL, workqueue_runner, workqueue);
@@ -230,7 +230,7 @@ void workqueue_schedule_default(struct work_struct* work) {
 struct workqueue_struct* workqueue_create(const char* name) {
     struct workqueue_struct* workqueue;
 
-    workqueue = calloc(1, sizeof(*workqueue));
+    workqueue = static_cast<decltype(workqueue)>(calloc(1, sizeof(*workqueue)));
     if (workqueue == NULL) {
         return NULL;
     }

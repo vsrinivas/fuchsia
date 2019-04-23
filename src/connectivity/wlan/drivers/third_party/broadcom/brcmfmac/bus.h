@@ -49,7 +49,7 @@ enum brcmf_bus_protocol_type { BRCMF_PROTO_BCDC, BRCMF_PROTO_MSGBUF };
 struct brcmf_mp_device;
 
 struct brcmf_bus_dcmd {
-    char* name;
+    const char* name;
     char* param;
     int param_len;
     struct list_node list;
@@ -258,7 +258,8 @@ void brcmf_dev_reset(struct brcmf_device* dev);
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state);
 
 zx_status_t brcmf_bus_started(struct brcmf_device* dev);
-zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len);
+zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, void* data,
+                                 uint32_t len);
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
 #ifdef CONFIG_BRCMFMAC_SDIO

@@ -59,7 +59,7 @@ static inline struct brcmf_device* ndev_to_dev(struct net_device* ndev) {
     return if_to_dev(ndev_to_if(ndev));
 }
 
-char* brcmf_ifname(struct brcmf_if* ifp) {
+const char* brcmf_ifname(struct brcmf_if* ifp) {
     if (!ifp) {
         return "<if_null>";
     }
@@ -144,7 +144,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     /* Send down the multicast list first. */
     cnt = netdev_mc_count(ndev);
     buflen = sizeof(cnt) + (cnt * ETH_ALEN);
-    buf = malloc(buflen);
+    buf = static_cast<decltype(buf)>(malloc(buflen));
     if (!buf) {
         return;
     }
@@ -245,7 +245,8 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
-    struct ethhdr* eh;
+    struct brcmf_netbuf* netbuf = nullptr;
+    struct ethhdr* eh = nullptr;
     int head_delta;
 
     brcmf_dbg(DATA, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
@@ -258,7 +259,7 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
         goto done;
     }
 
-    struct brcmf_netbuf* netbuf = brcmf_netbuf_allocate(ethmac_netbuf->data_size + drvr->hdrlen);
+    netbuf = brcmf_netbuf_allocate(ethmac_netbuf->data_size + drvr->hdrlen);
     brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->data_size + drvr->hdrlen);
     brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
     memcpy(netbuf->data, ethmac_netbuf->data_buffer, ethmac_netbuf->data_size);
@@ -516,7 +517,7 @@ static zx_protocol_device_t phy_impl_device_ops = {
 };
 
 zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
-    struct brcmf_if* ifp = ctx;
+    struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
     // See wlan/protocol/info.h
     wlan_info_t* info = &phy_info->wlan_info;
     memset(info, 0, sizeof(*info));
@@ -698,7 +699,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     if (!drvr->settings->p2p_enable && is_p2pdev) {
         /* this is P2P_DEVICE interface */
         brcmf_dbg(INFO, "allocate non-netdev interface\n");
-        ifp = calloc(1, sizeof(*ifp));
+        ifp = static_cast<decltype(ifp)>(calloc(1, sizeof(*ifp)));
         if (!ifp) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -724,7 +725,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     ifp->ifidx = ifidx;
     ifp->bsscfgidx = bsscfgidx;
 
-    ifp->pend_8021x_wait = SYNC_COMPLETION_INIT;
+    ifp->pend_8021x_wait = {};
     //spin_lock_init(&ifp->netif_stop_lock);
 
     if (mac_addr != NULL) {
@@ -953,7 +954,7 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
     brcmf_dbg(TRACE, "Enter\n");
 
     /* Allocate primary brcmf_info */
-    drvr = calloc(1, sizeof(struct brcmf_pub));
+    drvr = static_cast<decltype(drvr)>(calloc(1, sizeof(struct brcmf_pub)));
     if (!drvr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -995,7 +996,7 @@ fail:
 }
 
 static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(s->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(s->private_data));
     struct brcmf_rev_info* ri = &bus_if->drvr->revinfo;
     char drev[BRCMU_DOTREV_LEN];
     char brev[BRCMU_BOARDREV_LEN];
@@ -1186,7 +1187,8 @@ void brcmf_detach(struct brcmf_device* dev) {
     free(drvr);
 }
 
-zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, void* data,
+                                 uint32_t len) {
     struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_if* ifp = bus_if->drvr->iflist[0];
 

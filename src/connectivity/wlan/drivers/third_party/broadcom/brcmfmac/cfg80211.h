@@ -402,11 +402,11 @@ static inline struct net_device* wiphy_to_ndev(struct wiphy* wiphy) {
 }
 
 static inline struct brcmf_if* ndev_to_if(struct net_device* ndev) {
-    return ndev->priv;
+    return static_cast<brcmf_if*>(ndev->priv);
 }
 
 static inline struct brcmf_if* cfg_to_if(struct brcmf_cfg80211_info* cfg) {
-    return cfg_to_ndev(cfg)->priv;
+    return static_cast<brcmf_if*>(cfg_to_ndev(cfg)->priv);
 }
 
 static inline struct brcmf_cfg80211_vif* ndev_to_vif(struct net_device* ndev) {

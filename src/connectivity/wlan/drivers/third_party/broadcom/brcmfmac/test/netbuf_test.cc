@@ -18,12 +18,8 @@
 
 #include "gtest/gtest.h"
 
-extern "C" {
-
 #include "../debug.h"
 #include "../netbuf.h"
-
-}  // extern "C"
 
 namespace {
 

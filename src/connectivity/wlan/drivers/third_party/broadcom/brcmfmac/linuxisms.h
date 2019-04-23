@@ -184,10 +184,6 @@ LINUX_FUNCII(irq_get_irq_data) // OF only
 
 LINUX_FUNCVI(device_release_driver)
 #define module_param_string(a, b, c, d)
-#define module_exit(a) \
-    void* __modexit() { return a; }
-#define module_init(a) \
-    void* __modinit() { return a; }
 
 LINUX_FUNCVI(netif_stop_queue)
 LINUX_FUNCVI(cfg80211_classify8021d)
@@ -237,7 +233,7 @@ LINUX_FUNCVI(dma_mapping_error) // PCI only
 LINUX_FUNCVI(dma_unmap_single) // PCI only
 
 #define netdev_for_each_mc_addr(a, b) for (({brcmf_err("Calling netdev_for_each_mc_addr"); \
-                                             a = (void*)0;});1;)
+                                             a = nullptr;});1;)
 #define for_each_set_bit(a, b, c) for (({brcmf_err("Calling for_each_set_bit"); a = 0;});1;)
 
 #define DEBUG                         // Turns on struct members that debug.c needs

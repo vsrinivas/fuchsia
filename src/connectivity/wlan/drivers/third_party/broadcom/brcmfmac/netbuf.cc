@@ -22,11 +22,12 @@
 #include "debug.h"
 
 struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size) {
-    struct brcmf_netbuf* netbuf = calloc(1, sizeof(*netbuf));
+    struct brcmf_netbuf* netbuf = static_cast<decltype(netbuf)>(calloc(1, sizeof(*netbuf)));
     if (netbuf == NULL) {
         return NULL;
     }
-    netbuf->data = netbuf->allocated_buffer = malloc(size);
+    netbuf->data = netbuf->allocated_buffer =
+        static_cast<decltype(netbuf->allocated_buffer)>(malloc(size));
     if (netbuf->data == NULL) {
         free(netbuf);
         return NULL;

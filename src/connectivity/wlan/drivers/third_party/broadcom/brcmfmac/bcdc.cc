@@ -109,7 +109,7 @@ struct brcmf_bcdc {
 };
 
 struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = drvr->proto->pd;
+    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
     return bcdc->fws;
 }
@@ -341,7 +341,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
                                                   struct brcmf_netbuf* netbuf) {
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
-    struct brcmf_bcdc* bcdc = drvr->proto->pd;
+    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
     if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
         return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
@@ -367,7 +367,7 @@ void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
 
 void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success) {
     struct brcmf_bus* bus_if = dev_to_bus(dev);
-    struct brcmf_bcdc* bcdc = bus_if->drvr->proto->pd;
+    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(bus_if->drvr->proto->pd);
     struct brcmf_if* ifp;
 
     /* await txstatus signal for firmware if active */
@@ -410,7 +410,7 @@ static void brcmf_proto_bcdc_reset_if(struct brcmf_if* ifp) {
 }
 
 static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = drvr->proto->pd;
+    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
     struct brcmf_fws_info* fws;
     zx_status_t err;
 
@@ -427,7 +427,7 @@ static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
     struct brcmf_bcdc* bcdc;
 
-    bcdc = calloc(1, sizeof(*bcdc));
+    bcdc = static_cast<decltype(bcdc)>(calloc(1, sizeof(*bcdc)));
     if (!bcdc) {
         goto fail;
     }
@@ -463,7 +463,7 @@ fail:
 }
 
 void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = drvr->proto->pd;
+    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
     drvr->proto->pd = NULL;
     brcmf_fws_detach(bcdc->fws);

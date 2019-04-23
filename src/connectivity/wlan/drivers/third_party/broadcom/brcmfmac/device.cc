@@ -42,7 +42,7 @@ void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callbac
     timer->task.handler = brcmf_timer_handler;
     timer->data = data;
     timer->callback_function = callback;
-    timer->finished = SYNC_COMPLETION_INIT;
+    timer->finished = {};
     timer->scheduled = false;
     mtx_init(&timer->lock, mtx_plain);
 }
@@ -71,11 +71,11 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
 }
 
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
-    struct net_device* dev = calloc(1, sizeof(*dev));
+    struct net_device* dev = static_cast<decltype(dev)>(calloc(1, sizeof(*dev)));
     if (dev == NULL) {
         return NULL;
     }
-    dev->priv = calloc(1, priv_size);
+    dev->priv = static_cast<decltype(dev->priv)>(calloc(1, priv_size));
     if (dev->priv == NULL) {
         free(dev);
         return NULL;

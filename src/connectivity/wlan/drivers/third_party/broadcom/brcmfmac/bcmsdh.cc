@@ -578,7 +578,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              uint8_t* data, uint size) {
+                              void* data, uint size) {
     zx_status_t err = ZX_OK;
     struct brcmf_netbuf* pkt;
     uint32_t this_transfer_address;
@@ -638,7 +638,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         /* Adjust for next transfer (if any) */
         size -= this_transfer_size;
         if (size) {
-            data += this_transfer_size;
+            data = static_cast<char*>(data) + this_transfer_size;
             address += this_transfer_size;
             this_transfer_address += this_transfer_size;
             this_transfer_size = min_t(uint32_t, MAX_XFER_SIZE, size);
@@ -664,14 +664,13 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
 
 #ifdef CONFIG_PM_SLEEP
 static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
-    sdiodev->freezer = calloc(1, sizeof(*sdiodev->freezer));
-    if (!sdiodev->freezer) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    sdiodev->freezer =
+        static_cast<decltype(sdiodev->freezer)>(calloc(1, sizeof(*sdiodev->freezer)));
+    if (!sdiodev->freezer) { return ZX_ERR_NO_MEMORY; }
     atomic_store(&sdiodev->freezer->thread_count, 0);
     atomic_store(&sdiodev->freezer->freezing, 0);
-    sdiodev->freezer->thread_freeze = SYNC_COMPLETION_INIT;
-    sdiodev->freezer->resumed = SYNC_COMPLETION_INIT;
+    sdiodev->freezer->thread_freeze = {};
+    sdiodev->freezer->resumed = {};
     return ZX_OK;
 }
 
@@ -934,12 +933,12 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     // TODO(cphoenix): Linux power management stuff
     brcmf_sdiod_acpi_set_power_manageable(NULL, 0);
 
-    bus_if = calloc(1, sizeof(struct brcmf_bus));
+    bus_if = static_cast<decltype(bus_if)>(calloc(1, sizeof(struct brcmf_bus)));
     if (!bus_if) {
         err = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    func1 = calloc(1, sizeof(struct sdio_func));
+    func1 = static_cast<decltype(func1)>(calloc(1, sizeof(struct sdio_func)));
     if (!func1) {
         err = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -951,7 +950,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
             goto fail;
         }
     }
-    func2 = calloc(1, sizeof(struct sdio_func));
+    func2 = static_cast<decltype(func2)>(calloc(1, sizeof(struct sdio_func)));
     if (!func2) {
         err = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -963,7 +962,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
             goto fail;
         }
     }
-    sdiodev = calloc(1, sizeof(struct brcmf_sdio_dev));
+    sdiodev = static_cast<decltype(sdiodev)>(calloc(1, sizeof(struct brcmf_sdio_dev)));
     if (!sdiodev) {
         err = ZX_ERR_NO_MEMORY;
         goto fail;

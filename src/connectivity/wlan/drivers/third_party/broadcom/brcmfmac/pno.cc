@@ -326,7 +326,7 @@ static zx_status_t brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi,
     }
 
     *buckets = NULL;
-    fw_buckets = calloc(pi->n_reqs, sizeof(*fw_buckets));
+    fw_buckets = static_cast<decltype(fw_buckets)>(calloc(pi->n_reqs, sizeof(*fw_buckets)));
     if (!fw_buckets) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -412,7 +412,7 @@ static zx_status_t brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     }
 
     gsz = sizeof(*gscan_cfg) + (n_buckets - 1) * sizeof(*buckets);
-    gscan_cfg = calloc(1, gsz);
+    gscan_cfg = static_cast<decltype(gscan_cfg)>(calloc(1, gsz));
     if (!gscan_cfg) {
         err = ZX_ERR_NO_MEMORY;
         goto free_buckets;
@@ -524,7 +524,7 @@ zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_pno_info* pi;
 
     brcmf_dbg(TRACE, "enter\n");
-    pi = calloc(1, sizeof(*pi));
+    pi = static_cast<decltype(pi)>(calloc(1, sizeof(*pi)));
     if (!pi) {
         return ZX_ERR_NO_MEMORY;
     }

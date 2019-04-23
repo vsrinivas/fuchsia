@@ -215,7 +215,7 @@ struct brcmf_if {
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 
 /* Return pointer to interface name */
-char* brcmf_ifname(struct brcmf_if* ifp);
+const char* brcmf_ifname(struct brcmf_if* ifp);
 struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx);
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable);
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);

@@ -287,12 +287,12 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktids* pktids;
 
-    array = calloc(nr_array_entries, sizeof(*array));
+    array = static_cast<decltype(array)>(calloc(nr_array_entries, sizeof(*array)));
     if (!array) {
         return NULL;
     }
 
-    pktids = calloc(1, sizeof(*pktids));
+    pktids = static_cast<decltype(pktids)>(calloc(1, sizeof(*pktids)));
     if (!pktids) {
         free(array);
         return NULL;
@@ -616,7 +616,7 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
     struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
     uint32_t flowid;
 
-    create = calloc(1, sizeof(*create));
+    create = static_cast<decltype(create)>(calloc(1, sizeof(*create)));
     if (create == NULL) {
         return BRCMF_FLOWRING_INVALID_ID;
     }
@@ -873,7 +873,7 @@ static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32
         rx_bufpost->data_buf_addr.high_addr = address >> 32;
         rx_bufpost->data_buf_addr.low_addr = address & 0xffffffff;
 
-        ret_ptr += brcmf_commonring_len_item(commonring);
+        ret_ptr = static_cast<char*>(ret_ptr) + brcmf_commonring_len_item(commonring);
     }
 
     if (i) {
@@ -960,7 +960,7 @@ static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool e
         rx_bufpost->host_buf_addr.high_addr = address >> 32;
         rx_bufpost->host_buf_addr.low_addr = address & 0xffffffff;
 
-        ret_ptr += brcmf_commonring_len_item(commonring);
+        ret_ptr = static_cast<char*>(ret_ptr) + brcmf_commonring_len_item(commonring);
     }
 
     if (i) {
@@ -1152,12 +1152,12 @@ static void brcmf_msgbuf_process_msgtype(struct brcmf_msgbuf* msgbuf, void* buf)
 
 static void brcmf_msgbuf_process_rx(struct brcmf_msgbuf* msgbuf,
                                     struct brcmf_commonring* commonring) {
-    void* buf;
+    char* buf;
     uint16_t count;
     uint16_t processed;
 
 again:
-    buf = brcmf_commonring_get_read_ptr(commonring, &count);
+    buf = static_cast<char*>(brcmf_commonring_get_read_ptr(commonring, &count));
     if (buf == NULL) {
         return;
     }
@@ -1187,7 +1187,7 @@ zx_status_t brcmf_proto_msgbuf_rx_trigger(struct brcmf_device* dev) {
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;
-    void* buf;
+    struct brcmf_commonring* buf;
     uint32_t flowid;
     int qlen;
 
@@ -1214,7 +1214,7 @@ zx_status_t brcmf_proto_msgbuf_rx_trigger(struct brcmf_device* dev) {
 
 void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
-    struct msgbuf_tx_flowring_delete_req* delete;
+    struct msgbuf_tx_flowring_delete_req* delete_req;
     struct brcmf_commonring* commonring;
     void* ret_ptr;
     uint8_t ifidx;
@@ -1230,16 +1230,16 @@ void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid) {
         return;
     }
 
-    delete = (struct msgbuf_tx_flowring_delete_req*)ret_ptr;
+    delete_req = (struct msgbuf_tx_flowring_delete_req*)ret_ptr;
 
     ifidx = brcmf_flowring_ifidx_get(msgbuf->flow, flowid);
 
-    delete->msg.msgtype = MSGBUF_TYPE_FLOW_RING_DELETE;
-    delete->msg.ifidx = ifidx;
-    delete->msg.request_id = 0;
+    delete_req->msg.msgtype = MSGBUF_TYPE_FLOW_RING_DELETE;
+    delete_req->msg.ifidx = ifidx;
+    delete_req->msg.request_id = 0;
 
-    delete->flow_ring_id = flowid + BRCMF_H2D_MSGRING_FLOWRING_IDSTART;
-    delete->reason = 0;
+    delete_req->flow_ring_id = flowid + BRCMF_H2D_MSGRING_FLOWRING_IDSTART;
+    delete_req->reason = 0;
 
     brcmf_dbg(MSGBUF, "Send Flow Delete Req flow ID %d, ifindex %d\n", flowid, ifidx);
 
@@ -1253,7 +1253,7 @@ void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid) {
 
 #ifdef DEBUG
 static zx_status_t brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_commonring* commonring;
@@ -1320,7 +1320,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
         if_msgbuf->max_flowrings = BRCMF_FLOWRING_HASHSIZE - 1;
     }
 
-    msgbuf = calloc(1, sizeof(*msgbuf));
+    msgbuf = static_cast<decltype(msgbuf)>(calloc(1, sizeof(*msgbuf)));
     if (!msgbuf) {
         goto fail;
     }
@@ -1333,12 +1333,12 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     workqueue_init_work(&msgbuf->txflow_work, brcmf_msgbuf_txflow_worker);
     count = BITS_TO_LONGS(if_msgbuf->max_flowrings);
     count = count * sizeof(unsigned long);
-    msgbuf->flow_map = calloc(1, count);
+    msgbuf->flow_map = static_cast<decltype(msgbuf->flow_map)>(calloc(1, count));
     if (!msgbuf->flow_map) {
         goto fail;
     }
 
-    msgbuf->txstatus_done_map = calloc(1, count);
+    msgbuf->txstatus_done_map = static_cast<decltype(msgbuf->txstatus_done_map)>(calloc(1, count));
     if (!msgbuf->txstatus_done_map) {
         goto fail;
     }
@@ -1363,13 +1363,14 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     drvr->proto->rxreorder = brcmf_msgbuf_rxreorder;
     drvr->proto->pd = msgbuf;
 
-    msgbuf->ioctl_resp_wait = SYNC_COMPLETION_INIT;
+    msgbuf->ioctl_resp_wait = {};
 
     msgbuf->commonrings = (struct brcmf_commonring**)if_msgbuf->commonrings;
     msgbuf->flowrings = (struct brcmf_commonring**)if_msgbuf->flowrings;
     msgbuf->max_flowrings = if_msgbuf->max_flowrings;
     msgbuf->flowring_dma_handle =
-        calloc(1, msgbuf->max_flowrings * sizeof(*msgbuf->flowring_dma_handle));
+        static_cast<decltype(msgbuf->flowring_dma_handle)>(
+            calloc(1, msgbuf->max_flowrings * sizeof(*msgbuf->flowring_dma_handle)));
     if (!msgbuf->flowring_dma_handle) {
         goto fail;
     }

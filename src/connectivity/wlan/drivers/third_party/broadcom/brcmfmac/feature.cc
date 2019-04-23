@@ -61,7 +61,7 @@ static const char* const brcmf_quirk_names[] = {BRCMF_QUIRK_LIST};
  * @data: raw data pointer.
  */
 static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     uint32_t feats = bus_if->drvr->feat_flags;
     uint32_t quirks = bus_if->drvr->chip_quirks;
     int id;
@@ -91,7 +91,8 @@ static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
  * @id: feature id.
  * @name: iovar name.
  */
-static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id, char* name) {
+static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id,
+                                     const char* name) {
     uint32_t data;
     zx_status_t err;
 
@@ -105,7 +106,7 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
     }
 }
 
-static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id id, char* name,
+static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id id, const char* name,
                                       const void* data, size_t len) {
     zx_status_t err;
 

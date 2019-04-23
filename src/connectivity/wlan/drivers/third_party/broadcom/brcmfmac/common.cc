@@ -175,7 +175,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
         return ZX_OK;
     }
 
-    chunk_buf = calloc(1, sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1);
+    chunk_buf = static_cast<decltype(chunk_buf)>(calloc(1, sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1));
     if (!chunk_buf) {
         err = ZX_ERR_NO_MEMORY;
         goto done;
@@ -190,7 +190,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
             chunk_len = datalen;
             dl_flag |= DL_END;
         }
-        memcpy(chunk_buf->data, clm->data + cumulative_len, chunk_len);
+        memcpy(chunk_buf->data, static_cast<char*>(clm->data) + cumulative_len, chunk_len);
 
         err = brcmf_c_download(ifp, dl_flag, chunk_buf, chunk_len);
 
@@ -415,7 +415,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
     struct brcmf_mp_device* settings;
 
     brcmf_dbg(TEMP, "Enter, bus=%d, chip=%d, rev=%d\n", bus_type, chip, chiprev);
-    settings = calloc(1, sizeof(*settings));
+    settings = static_cast<decltype(settings)>(calloc(1, sizeof(*settings)));
     if (!settings) {
         return NULL;
     }
@@ -516,13 +516,10 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     return err;
 }
 
-static void brcmfmac_module_exit(void) {
+[[maybe_unused]] static void brcmfmac_module_exit(void) {
     brcmf_core_exit();
     if (default_dispatcher != NULL) {
         async_loop_destroy(async_loop_from_dispatcher(default_dispatcher));
     }
     brcmf_debugfs_exit();
 }
-
-module_init(brcmfmac_module_init)
-module_exit(brcmfmac_module_exit)

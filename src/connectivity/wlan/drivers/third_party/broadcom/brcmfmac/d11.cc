@@ -160,8 +160,8 @@ static void brcmu_d11ac_decchspec(struct brcmu_chan* ch) {
         break;
     case BRCMU_CHSPEC_D11AC_BW_80:
         ch->bw = BRCMU_CHAN_BW_80;
-        ch->sb =
-            brcmu_maskget16(ch->chspec, BRCMU_CHSPEC_D11AC_SB_MASK, BRCMU_CHSPEC_D11AC_SB_SHIFT);
+        ch->sb = static_cast<brcmu_chan_sb>(
+            brcmu_maskget16(ch->chspec, BRCMU_CHSPEC_D11AC_SB_MASK, BRCMU_CHSPEC_D11AC_SB_SHIFT));
         switch (ch->sb) {
         case BRCMU_CHAN_SB_LL:
             ch->control_ch_num -= CH_30MHZ_APART;

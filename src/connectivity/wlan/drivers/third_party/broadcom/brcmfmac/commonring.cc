@@ -123,7 +123,8 @@ again:
     }
 
     if (available > 1) {
-        ret_ptr = commonring->buf_addr + (commonring->w_ptr * commonring->item_len);
+        ret_ptr =
+            static_cast<char*>(commonring->buf_addr) + (commonring->w_ptr * commonring->item_len);
         commonring->w_ptr++;
         if (commonring->w_ptr == commonring->depth) {
             commonring->w_ptr = 0;
@@ -157,7 +158,8 @@ again:
     }
 
     if (available > 1) {
-        ret_ptr = commonring->buf_addr + (commonring->w_ptr * commonring->item_len);
+        ret_ptr =
+            static_cast<char*>(commonring->buf_addr) + (commonring->w_ptr * commonring->item_len);
         *alloced = min_t(uint16_t, n_items, available - 1);
         if (*alloced + commonring->w_ptr > commonring->depth) {
             *alloced = commonring->depth - commonring->w_ptr;
@@ -185,7 +187,7 @@ zx_status_t brcmf_commonring_write_complete(struct brcmf_commonring* commonring)
     void* address;
 
     address = commonring->buf_addr;
-    address += (commonring->f_ptr * commonring->item_len);
+    address = static_cast<char*>(address) + (commonring->f_ptr * commonring->item_len);
     if (commonring->f_ptr > commonring->w_ptr) {
         address = commonring->buf_addr;
         commonring->f_ptr = 0;
@@ -223,7 +225,7 @@ void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, uint16_
         return NULL;
     }
 
-    return commonring->buf_addr + (commonring->r_ptr * commonring->item_len);
+    return static_cast<char*>(commonring->buf_addr) + (commonring->r_ptr * commonring->item_len);
 }
 
 zx_status_t brcmf_commonring_read_complete(struct brcmf_commonring* commonring, uint16_t n_items) {

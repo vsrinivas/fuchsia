@@ -14,11 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-extern "C" {
-
 #include "../workqueue.h"
-
-}  // extern "C"
 
 #include <lib/sync/completion.h>
 

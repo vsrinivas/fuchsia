@@ -138,7 +138,7 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
             return ZX_ERR_NO_MEMORY;
         }
 
-        ring = calloc(1, sizeof(*ring));
+        ring = static_cast<decltype(ring)>(calloc(1, sizeof(*ring)));
         if (!ring) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -338,7 +338,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
     struct brcmf_flowring* flow;
     uint32_t i;
 
-    flow = calloc(1, sizeof(*flow));
+    flow = static_cast<decltype(flow)>(calloc(1, sizeof(*flow)));
     if (flow) {
         flow->dev = dev;
         flow->nrofrings = nrofrings;
@@ -349,7 +349,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
         for (i = 0; i < countof(flow->hash); i++) {
             flow->hash[i].ifidx = BRCMF_FLOWRING_INVALID_IFIDX;
         }
-        flow->rings = calloc(nrofrings, sizeof(*flow->rings));
+        flow->rings = static_cast<decltype(flow->rings)>(calloc(nrofrings, sizeof(*flow->rings)));
         if (!flow->rings) {
             free(flow);
             flow = NULL;
@@ -455,7 +455,7 @@ void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, uint8_
     struct brcmf_flowring_tdls_entry* tdls_entry;
     struct brcmf_flowring_tdls_entry* search;
 
-    tdls_entry = calloc(1, sizeof(*tdls_entry));
+    tdls_entry = static_cast<decltype(tdls_entry)>(calloc(1, sizeof(*tdls_entry)));
     if (tdls_entry == NULL) {
         return;
     }

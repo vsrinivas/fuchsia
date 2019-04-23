@@ -29,7 +29,7 @@ zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
 
     brcmf_dbg(TRACE, "Enter\n");
 
-    proto = calloc(1, sizeof(*proto));
+    proto = static_cast<decltype(proto)>(calloc(1, sizeof(*proto)));
     if (!proto) {
         goto fail;
     }

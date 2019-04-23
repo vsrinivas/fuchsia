@@ -188,7 +188,7 @@ struct brcmf_urb* brcmf_usb_allocate_urb(usb_protocol_t* usb, size_t parent_req_
     zx_status_t result;
     struct brcmf_urb* urb;
 
-    urb = malloc(sizeof(*urb));
+    urb = static_cast<decltype(urb)>(malloc(sizeof(*urb)));
     if (urb == NULL) {
         return NULL;
     }
@@ -323,7 +323,7 @@ static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, 
 }
 
 static void brcmf_usb_ctlread_complete(void* ctx, usb_request_t* zxurb) {
-    struct brcmf_urb* urb = ctx;
+    struct brcmf_urb* urb = static_cast<decltype(urb)>(ctx);
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     brcmf_dbg(USB, "Enter\n");
@@ -348,7 +348,7 @@ static void brcmf_usb_ctlread_complete(void* ctx, usb_request_t* zxurb) {
 }
 
 static void brcmf_usb_ctlwrite_complete(void* ctx, usb_request_t* zxurb) {
-    struct brcmf_urb* urb = ctx;
+    struct brcmf_urb* urb = static_cast<decltype(urb)>(ctx);
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     brcmf_dbg(USB, "Enter\n");
@@ -520,7 +520,7 @@ static struct brcmf_usbreq* brcmf_usbdev_qinit(struct brcmf_usbdev_info* devinfo
     struct brcmf_usbreq* req;
     struct brcmf_usbreq* reqs;
 
-    reqs = calloc(qsize, sizeof(struct brcmf_usbreq));
+    reqs = static_cast<decltype(reqs)>(calloc(qsize, sizeof(struct brcmf_usbreq)));
     if (reqs == NULL) {
         return NULL;
     }
@@ -579,7 +579,7 @@ static void brcmf_usb_del_fromq(struct brcmf_usbdev_info* devinfo, struct brcmf_
 }
 
 static void brcmf_usb_tx_complete(void* ctx, usb_request_t* zxurb) {
-    struct brcmf_urb* urb = ctx;
+    struct brcmf_urb* urb = static_cast<decltype(urb)>(ctx);
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
 
@@ -606,7 +606,7 @@ static void brcmf_usb_tx_complete(void* ctx, usb_request_t* zxurb) {
 }
 
 static void brcmf_usb_rx_complete(void* ctx, usb_request_t* zxurb) {
-    struct brcmf_urb* urb = ctx;
+    struct brcmf_urb* urb = static_cast<decltype(urb)>(ctx);
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
     struct brcmf_netbuf* netbuf;
@@ -694,9 +694,9 @@ static void brcmf_usb_rx_fill_all(struct brcmf_usbdev_info* devinfo) {
     }
 }
 
-static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state) {
+static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, enum brcmf_usb_state state) {
     struct brcmf_bus* bcmf_bus = devinfo->bus_pub.bus;
-    int old_state;
+    enum brcmf_usb_state old_state;
 
     brcmf_dbg(USB, "Enter, current state=%d, new state=%d\n", devinfo->bus_pub.state, state);
 
@@ -715,7 +715,7 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
         brcmf_dbg(USB, "DBUS is up\n");
         brcmf_bus_change_state(bcmf_bus, BRCMF_BUS_UP);
     } else {
-        brcmf_dbg(USB, "DBUS current state=%d\n", state);
+        brcmf_dbg(USB, "DBUS current state=%d\n", static_cast<int>(state));
     }
     brcmf_dbg(TEMP, "Exit");
 }
@@ -824,7 +824,7 @@ static void brcmf_usb_down(struct brcmf_device* dev) {
 }
 
 static void brcmf_usb_sync_complete(void* ctx, usb_request_t* zxurb) {
-    struct brcmf_urb* urb = ctx;
+    struct brcmf_urb* urb = static_cast<decltype(urb)>(ctx);
     pthread_mutex_lock(&irq_callback_lock);
 
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
@@ -853,7 +853,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
         return ZX_ERR_INVALID_ARGS;
     }
 
-    tmpbuf = malloc(buflen);
+    tmpbuf = static_cast<decltype(tmpbuf)>(malloc(buflen));
     if (!tmpbuf) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1010,7 +1010,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
 
     brcmf_dbg(USB, "Enter, fw %p, len %d\n", fw, fwlen);
 
-    bulkchunk = malloc(TRX_RDL_CHUNK);
+    bulkchunk = static_cast<decltype(bulkchunk)>(malloc(TRX_RDL_CHUNK));
     if (bulkchunk == NULL) {
         err = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -1227,7 +1227,7 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     devinfo->bus_pub.bus_mtu = BRCMF_USB_MAX_PKT_SIZE;
 
     /* Initialize other structure content */
-    devinfo->ioctl_resp_wait = SYNC_COMPLETION_INIT;
+    devinfo->ioctl_resp_wait = {};
 
     /* Initialize the spinlocks */
     //spin_lock_init(&devinfo->qlock);
@@ -1348,14 +1348,14 @@ static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
 
     brcmf_dbg(USB, "Start fw downloading\n");
 
-    ret = check_file(fw->data);
+    ret = check_file(static_cast<const uint8_t*>(fw->data));
     if (ret != ZX_OK) {
         ret = ZX_ERR_IO;
         brcmf_err("invalid firmware\n");
         goto error;
     }
 
-    devinfo->image = fw->data;
+    devinfo->image = static_cast<const uint8_t*>(fw->data);
     devinfo->image_len = fw->size;
 
     ret = brcmf_usb_fw_download(devinfo);
@@ -1368,11 +1368,9 @@ static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
         goto error;
     }
 
-    mtx_unlock(&devinfo->dev_init_lock);
     return;
 error:
     brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), ret);
-    mtx_unlock(&devinfo->dev_init_lock);
     brcmf_err("Need to implement driver release logic (WLAN-888)\n");
     // TODO(WLAN-888)
     // device_release_driver(dev);
@@ -1390,7 +1388,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
         return ZX_ERR_IO_NOT_PRESENT;
     }
 
-    bus = calloc(1, sizeof(struct brcmf_bus));
+    bus = static_cast<decltype(bus)>(calloc(1, sizeof(struct brcmf_bus)));
     if (!bus) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -1420,7 +1418,6 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
             goto fail;
         }
         /* we are done */
-        mtx_unlock(&devinfo->dev_init_lock);
         return ZX_OK;
     }
     bus->chip = bus_pub->devid;
@@ -1468,7 +1465,7 @@ static zx_status_t brcmf_usb_probe(struct brcmf_usb_interface* intf, usb_protoco
     uint32_t num_of_eps;
     uint8_t endpoint_num, ep;
 
-    devinfo = calloc(1, sizeof(*devinfo));
+    devinfo = static_cast<decltype(devinfo)>(calloc(1, sizeof(*devinfo)));
     if (devinfo == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1557,6 +1554,7 @@ static zx_status_t brcmf_usb_probe(struct brcmf_usb_interface* intf, usb_protoco
     }
 
     /* Success */
+    mtx_unlock(&devinfo->dev_init_lock);
     return ZX_OK;
 
 fail:
@@ -1579,10 +1577,12 @@ static void brcmf_usb_disconnect(struct brcmf_usb_interface* intf) {
          * may have released the device and cleared the intfdata.
          */
         if (intf->intfdata == NULL) {
+            mtx_unlock(&devinfo->dev_init_lock);
             goto done;
         }
 
         brcmf_usb_disconnect_cb(devinfo);
+        mtx_unlock(&devinfo->dev_init_lock);
         free(devinfo);
     }
 done:
@@ -1673,7 +1673,7 @@ static zx_status_t brcmf_usb_reset_device(struct brcmf_device* dev, void* notuse
     /* device past is the usb interface so we
      * need to use parent here.
      */
-    brcmf_dev_reset(dev->parent);
+    brcmf_dev_reset(static_cast<brcmf_device*>(dev->parent));
     return ZX_OK;
 }
 
@@ -1681,20 +1681,20 @@ static zx_status_t brcmf_usb_reset_device(struct brcmf_device* dev, void* notuse
 
 // TODO(cphoenix): This is just to prevent "unused function" warnings - clean up.
 struct brcmf_usb_driver {
-    void* disconnect;
-    void* suspend;
-    void* reset;
-    void* resume;
-    void* reset_resume;
+    void (*disconnect)(brcmf_usb_interface*);
+    zx_status_t (*suspend)(brcmf_usb_interface*, uint64_t);
+    zx_status_t (*reset)(brcmf_device*, void*);
+    zx_status_t (*resume)(brcmf_usb_interface*);
+    zx_status_t (*reset_resume)(brcmf_usb_interface*);
     const struct brcmf_usb_device_id* id_table;
 };
 
 struct brcmf_usb_driver brcmf_usbdrvr = {
-    .disconnect = brcmf_usb_disconnect,
-    .suspend = brcmf_usb_suspend,
-    .reset = brcmf_usb_reset_device,
-    .resume = brcmf_usb_resume,
-    .reset_resume = brcmf_usb_reset_resume,
+    .disconnect = &brcmf_usb_disconnect,
+    .suspend = &brcmf_usb_suspend,
+    .reset = &brcmf_usb_reset_device,
+    .resume = &brcmf_usb_resume,
+    .reset_resume = &brcmf_usb_reset_resume,
     //.id_table = brcmf_usb_devid_table,
 };
 
@@ -1717,7 +1717,8 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
     usb_get_device_descriptor(usb_proto, &descriptor);
     brcmf_dbg(USB, "Probing 0x%04x:0x%04x\n", descriptor.idVendor, descriptor.idProduct);
 
-    struct brcmf_usb_device* usb_device = calloc(1, sizeof(*usb_device));
+    struct brcmf_usb_device* usb_device =
+        static_cast<decltype(usb_device)>(calloc(1, sizeof(*usb_device)));
     if (usb_device == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1726,7 +1727,8 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
     usb_device->descriptor.bNumConfigurations = descriptor.bNumConfigurations;
     usb_device->descriptor.bDeviceClass = descriptor.bDeviceClass;
 
-    struct brcmf_usb_altsetting* altsetting = calloc(1, sizeof(*altsetting));
+    struct brcmf_usb_altsetting* altsetting =
+        static_cast<decltype(altsetting)>(calloc(1, sizeof(*altsetting)));
     if (altsetting == NULL) {
         free(usb_device);
         return ZX_ERR_NO_MEMORY;
@@ -1754,8 +1756,8 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
     altsetting->desc.bInterfaceSubClass = intfd->bInterfaceSubClass;
     altsetting->desc.bNumEndpoints = intfd->bNumEndpoints;
 
-    altsetting->endpoint =
-        calloc(altsetting->desc.bNumEndpoints, sizeof(struct brcmf_endpoint_container));
+    altsetting->endpoint = static_cast<decltype(altsetting->endpoint)>(
+        calloc(altsetting->desc.bNumEndpoints, sizeof(struct brcmf_endpoint_container)));
     if (altsetting->endpoint == NULL) {
         usb_desc_iter_release(&iter);
         free(usb_device);
@@ -1782,7 +1784,7 @@ zx_status_t brcmf_usb_register(zx_device_t* zxdev, usb_protocol_t* usb_proto) {
 
     usb_desc_iter_release(&iter);
 
-    struct brcmf_usb_interface* intf = calloc(1, sizeof(*intf));
+    struct brcmf_usb_interface* intf = static_cast<decltype(intf)>(calloc(1, sizeof(*intf)));
     if (intf == NULL) {
         free(usb_device);
         free(altsetting->endpoint);

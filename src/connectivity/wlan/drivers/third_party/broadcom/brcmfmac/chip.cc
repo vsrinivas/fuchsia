@@ -469,7 +469,7 @@ static zx_status_t brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t core
                                        uint32_t wrapbase, struct brcmf_core** core_out) {
     struct brcmf_core_priv* core;
 
-    core = calloc(1, sizeof(*core));
+    core = static_cast<decltype(core)>(calloc(1, sizeof(*core)));
     if (!core) {
         if (core_out) {
             *core_out = NULL;
@@ -1086,7 +1086,7 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    chip = calloc(1, sizeof(*chip));
+    chip = static_cast<decltype(chip)>(calloc(1, sizeof(*chip)));
     if (!chip) {
         return ZX_ERR_NO_MEMORY;
     }

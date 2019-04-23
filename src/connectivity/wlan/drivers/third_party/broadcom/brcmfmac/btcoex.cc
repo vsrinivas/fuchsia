@@ -265,7 +265,7 @@ static void brcmf_btcoex_restore_part1(struct brcmf_btcoex_info* btci) {
  */
 static void brcmf_btcoex_timerfunc(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
-    struct brcmf_btcoex_info* bt_local = data;
+    struct brcmf_btcoex_info* bt_local = static_cast<decltype(bt_local)>(data);
     brcmf_dbg(TRACE, "enter\n");
 
     bt_local->timer_on = false;
@@ -352,7 +352,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_btcoex_info* btci = NULL;
     brcmf_dbg(TRACE, "enter\n");
 
-    btci = malloc(sizeof(struct brcmf_btcoex_info));
+    btci = static_cast<decltype(btci)>(malloc(sizeof(struct brcmf_btcoex_info)));
     if (!btci) {
         return ZX_ERR_NO_MEMORY;
     }

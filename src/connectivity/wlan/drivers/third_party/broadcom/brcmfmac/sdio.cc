@@ -550,7 +550,7 @@ enum brcmf_sdio_frmtype {
     BRCMF_SDIO_FT_SUB,
 };
 
-#define SDIOD_DRVSTR_KEY(chip, pmu) (((chip) << 16) | (pmu))
+#define SDIOD_DRVSTR_KEY(chip, pmu) ((((uint32_t)chip) << 16) | (pmu))
 
 /* SDIO Pad drive strength to select value mappings */
 struct sdiod_drive_str {
@@ -1612,7 +1612,7 @@ static void brcmf_sdio_read_control(struct brcmf_sdio* bus, uint8_t* hdr, uint l
     brcmf_dbg(TRACE, "Enter\n");
 
     if (bus->rxblen) {
-        buf = calloc(1, bus->rxblen);
+        buf = static_cast<decltype(buf)>(calloc(1, bus->rxblen));
     }
     if (!buf) {
         goto done;
@@ -1973,7 +1973,7 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
     struct brcmf_netbuf* pkt_next;
     uint8_t txseq;
     zx_status_t ret;
-    struct brcmf_sdio_hdrinfo hd_info = {0};
+    struct brcmf_sdio_hdrinfo hd_info = {};
 
     txseq = bus->tx_seq;
     total_len = 0;
@@ -2137,7 +2137,7 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
     uint8_t doff;
     uint16_t pad;
     uint retries = 0;
-    struct brcmf_sdio_hdrinfo hd_info = {0};
+    struct brcmf_sdio_hdrinfo hd_info = {};
     // TODO(cphoenix): ret, err, rv, error, status - more consistency is better.
     zx_status_t ret;
 
@@ -2210,7 +2210,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
         brcmf_dbg(TEMP, "Closing and joining SDIO watchdog task");
         thread_result = pthread_join(bus->watchdog_tsk, NULL);
         brcmf_dbg(TEMP, "Result of thread join: %d", thread_result);
-        bus->watchdog_tsk = NULL;
+        bus->watchdog_tsk = 0;
     }
 
     if (sdiodev->state != BRCMF_SDIOD_NOMEDIUM) {
@@ -2577,7 +2577,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
     /* Allocate console buffer (one time only) */
     if (c->buf == NULL) {
         c->bufsize = c->log_le.buf_size;
-        c->buf = malloc(c->bufsize);
+        c->buf = static_cast<decltype(c->buf)>(malloc(c->bufsize));
         if (c->buf == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -2716,7 +2716,7 @@ static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sd
 
     /* allocate buffer for console data */
     if (console_size <= CONSOLE_BUFFER_MAX) {
-        conbuf = calloc(1, console_size + 1);
+        conbuf = static_cast<decltype(conbuf)>(calloc(1, console_size + 1));
     }
 
     if (!conbuf) {
@@ -2857,14 +2857,14 @@ done:
 }
 
 static zx_status_t brcmf_sdio_forensic_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     struct brcmf_sdio* bus = bus_if->bus_priv.sdio->bus;
 
     return brcmf_sdio_died_dump(seq, bus);
 }
 
 static zx_status_t brcmf_debugfs_sdio_count_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio_count* sdcnt = &sdiodev->bus->sdcnt;
 
@@ -2987,7 +2987,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 
     /* read back and verify */
     brcmf_dbg(INFO, "Compare RAM dl & ul at 0x%08x; size=%d\n", ram_addr, ram_sz);
-    ram_cmp = malloc(MEMBLOCK);
+    ram_cmp = static_cast<decltype(ram_cmp)>(malloc(MEMBLOCK));
     /* do not proceed while no memory but  */
     if (!ram_cmp) {
         return true;
@@ -3051,7 +3051,7 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, void* vars,
     err = brcmf_sdiod_ramrw(bus->sdiodev, true, address, vars, varsz);
     if (err != ZX_OK) {
         brcmf_err("error %d on writing %d nvram bytes at 0x%08x\n", err, varsz, address);
-    } else if (!brcmf_sdio_verifymemory(bus->sdiodev, address, vars, varsz)) {
+    } else if (!brcmf_sdio_verifymemory(bus->sdiodev, address, static_cast<uint8_t*>(vars), varsz)) {
         err = ZX_ERR_IO;
     }
 
@@ -3059,8 +3059,8 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, void* vars,
 }
 
 static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
-                                                const struct brcmf_firmware* fw,
-                                                void* nvram, uint32_t nvlen) {
+                                                const struct brcmf_firmware* fw, void* nvram,
+                                                uint32_t nvlen) {
     zx_status_t bcmerror;
     uint32_t rstvec;
 
@@ -3234,7 +3234,7 @@ static zx_status_t brcmf_sdio_bus_get_memdump(struct brcmf_device* dev, void* da
             brcmf_err("error %d on reading %d membytes at 0x%08x\n", err, len, address);
             goto done;
         }
-        data += len;
+        data = static_cast<char*>(data) + len;
         offset += len;
         address += len;
     }
@@ -3398,7 +3398,7 @@ static void brcmf_sdio_dataworker(struct work_struct* work) {
 }
 
 int brcmf_sdio_oob_irqhandler(void* cookie) {
-    struct brcmf_sdio_dev* sdiodev = cookie;
+    struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(cookie);
     zx_status_t status;
     uint32_t intstatus;
 
@@ -3494,7 +3494,7 @@ static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct 
 }
 
 static zx_status_t brcmf_sdio_buscoreprep(void* ctx) {
-    struct brcmf_sdio_dev* sdiodev = ctx;
+    struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(ctx);
     zx_status_t err = ZX_OK;
     uint8_t clkval, clkset;
 
@@ -3535,7 +3535,7 @@ static zx_status_t brcmf_sdio_buscoreprep(void* ctx) {
 }
 
 static void brcmf_sdio_buscore_activate(void* ctx, struct brcmf_chip* chip, uint32_t rstvec) {
-    struct brcmf_sdio_dev* sdiodev = ctx;
+    struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(ctx);
     struct brcmf_core* core = sdiodev->bus->sdio_core;
     uint32_t reg_addr;
 
@@ -3549,7 +3549,7 @@ static void brcmf_sdio_buscore_activate(void* ctx, struct brcmf_chip* chip, uint
 }
 
 static uint32_t brcmf_sdio_buscore_read32(void* ctx, uint32_t addr) {
-    struct brcmf_sdio_dev* sdiodev = ctx;
+    struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(ctx);
     uint32_t val, rev;
 
     val = brcmf_sdiod_func1_rl(sdiodev, addr, NULL);
@@ -3575,7 +3575,7 @@ static uint32_t brcmf_sdio_buscore_read32(void* ctx, uint32_t addr) {
 }
 
 static void brcmf_sdio_buscore_write32(void* ctx, uint32_t addr, uint32_t val) {
-    struct brcmf_sdio_dev* sdiodev = ctx;
+    struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(ctx);
 
     brcmf_sdiod_func1_wl(sdiodev, addr, val, NULL);
 }
@@ -3735,7 +3735,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     brcmu_pktq_init(&bus->txq, (PRIOMASK + 1), TXQLEN);
 
     /* allocate header buffer */
-    bus->hdrbuf = calloc(1, MAX_HDR_READ + bus->head_align);
+    bus->hdrbuf = static_cast<decltype(bus->hdrbuf)>(calloc(1, MAX_HDR_READ + bus->head_align));
     if (!bus->hdrbuf) {
 	brcmf_err("failed to allocate memory for SDIO hdrbuf\n");
 	// Don't go to 'fail' here because we've already released the host
@@ -3795,7 +3795,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
 
 static void brcmf_sdio_watchdog(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
-    struct brcmf_sdio* bus = data;
+    struct brcmf_sdio* bus = static_cast<decltype(bus)>(data);
 
     if (bus->watchdog_tsk) {
         // Currently signaling watchdog_wait does nothing; brcmf_sdio_watchdog_thread() will
@@ -3856,7 +3856,8 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     struct brcmf_sdio* bus = sdiodev->bus;
     struct brcmf_sdio_dev* sdiod = bus->sdiodev;
     struct brcmf_core* core = bus->sdio_core;
-    uint8_t saveclk;
+    struct sdpcm_shared sh = {};
+    uint8_t saveclk = 0;
 
     brcmf_dbg(TRACE, "Enter: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
 
@@ -3936,8 +3937,6 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
         brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
     }
 
-    struct sdpcm_shared sh = {};
-
     err = brcmf_sdio_readshared(bus, &sh);
     brcmf_dbg(TEMP, "Readshared returned %d", err);
     bus->console_addr = sh.console_addr;
@@ -3996,7 +3995,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(TRACE, "Enter\n");
 
     /* Allocate private bus interface state */
-    bus = calloc(1, sizeof(struct brcmf_sdio));
+    bus = static_cast<decltype(bus)>(calloc(1, sizeof(struct brcmf_sdio)));
     if (!bus) {
         goto fail;
     }
@@ -4012,8 +4011,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     /* single-threaded workqueue */
     char name[WORKQUEUE_NAME_MAXLEN];
     static int queue_uniquify = 0;
-    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d",
-             device_get_name(sdiodev->dev.zxdev), queue_uniquify++);
+    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->dev.zxdev),
+             queue_uniquify++);
     wq = workqueue_create(name);
     if (!wq) {
         brcmf_err("insufficient memory to create txworkqueue\n");
@@ -4032,18 +4031,18 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     //spin_lock_init(&bus->rxctl_lock);
     //spin_lock_init(&bus->txq_lock);
-    bus->ctrl_wait = SYNC_COMPLETION_INIT;
-    bus->dcmd_resp_wait = SYNC_COMPLETION_INIT;
+    bus->ctrl_wait = {};
+    bus->dcmd_resp_wait = {};
 
     /* Set up the watchdog timer */
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog, bus);
     /* Initialize watchdog thread */
-    bus->watchdog_wait = SYNC_COMPLETION_INIT;
+    bus->watchdog_wait = {};
     atomic_store(&bus->watchdog_should_stop, false);
     thread_result = pthread_create(&bus->watchdog_tsk, NULL, brcmf_sdio_watchdog_thread, bus);
     if (thread_result != 0) {
         brcmf_err("brcmf_watchdog thread failed to start: error %d\n", thread_result);
-        bus->watchdog_tsk = NULL;
+        bus->watchdog_tsk = 0;
     }
     /* Initialize DPC thread */
     atomic_store(&bus->dpc_triggered, false);
@@ -4074,7 +4073,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
         bus->sdiodev->bus_if->maxctl += bus->roundup;
         bus->rxblen =
             roundup((bus->sdiodev->bus_if->maxctl + SDPCM_HDRLEN), ALIGNMENT) + bus->head_align;
-        bus->rxbuf = malloc(bus->rxblen);
+        bus->rxbuf = static_cast<decltype(bus->rxbuf)>(malloc(bus->rxblen));
         if (!(bus->rxbuf)) {
             brcmf_err("rxbuf allocation failed\n");
             goto fail;

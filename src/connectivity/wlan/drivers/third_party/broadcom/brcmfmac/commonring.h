@@ -15,6 +15,7 @@
 #ifndef BRCMFMAC_COMMONRING_H
 #define BRCMFMAC_COMMONRING_H
 
+#include <stdatomic.h>
 #include <zircon/types.h>
 
 struct brcmf_commonring {

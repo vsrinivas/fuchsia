@@ -104,7 +104,7 @@ enum brcmf_fws_tlv_len { BRCMF_FWS_TLV_DEFLIST };
 /*
  * brcmf_fws_tlv_names - array of tlv names.
  */
-#define BRCMF_FWS_TLV_DEF(name, id, len) {id, #name},
+#define BRCMF_FWS_TLV_DEF(name, id, len) {BRCMF_FWS_TYPE_##name, #name},
 static struct {
     enum brcmf_fws_tlv_type id;
     const char* name;
@@ -1073,7 +1073,7 @@ static enum brcmf_fws_should_schedule brcmf_fws_macdesc_state_indicate(struct br
         ret = BRCMF_FWS_NOSCHEDULE;
     }
     brcmf_fws_unlock(fws);
-    return ret;
+    return static_cast<brcmf_fws_should_schedule>(ret);
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_interface_state_indicate(struct brcmf_fws_info* fws,
@@ -1098,7 +1098,8 @@ static enum brcmf_fws_should_schedule brcmf_fws_interface_state_indicate(struct 
         goto fail;
     }
 
-    brcmf_dbg(TRACE, "%s (%d): %s\n", brcmf_fws_get_tlv_name(type), type, entry->name);
+    brcmf_dbg(TRACE, "%s (%d): %s\n", brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)),
+              type, entry->name);
     brcmf_fws_lock(fws);
     switch (type) {
     case BRCMF_FWS_TYPE_INTERFACE_OPEN:
@@ -1138,7 +1139,8 @@ static enum brcmf_fws_should_schedule brcmf_fws_request_indicate(struct brcmf_fw
         return BRCMF_FWS_NOSCHEDULE;
     }
 
-    brcmf_dbg(TRACE, "%s (%d): %s cnt %d bmp %d\n", brcmf_fws_get_tlv_name(type), type, entry->name,
+    brcmf_dbg(TRACE, "%s (%d): %s cnt %d bmp %d\n",
+              brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, entry->name,
               data[0], data[2]);
     brcmf_fws_lock(fws);
     if (type == BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT) {
@@ -1553,7 +1555,7 @@ static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
     int i;
-    uint8_t* credits = data;
+    uint8_t* credits = static_cast<decltype(credits)>(data);
 
     if (e->datalen < BRCMF_FWS_FIFO_COUNT) {
         brcmf_err("event payload too small (%d)\n", e->datalen);
@@ -1662,7 +1664,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
 
         /* allocate space for flow reorder info */
         brcmf_dbg(INFO, "flow-%d: start, maxidx %d\n", flow_id, max_idx);
-        rfi = calloc(1, buf_size);
+        rfi = static_cast<decltype(rfi)>(calloc(1, buf_size));
         if (rfi == NULL) {
             brcmf_err("failed to alloc buffer\n");
             brcmf_netif_rx(ifp, pkt);
@@ -1824,16 +1826,17 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         len = signal_data[1];
         data = signal_data + 2;
 
-        err = brcmf_fws_get_tlv_len(fws, type, &tlv_len);
-        brcmf_dbg(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n", brcmf_fws_get_tlv_name(type), type,
-                  len, err, tlv_len);
+        err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
+        brcmf_dbg(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n",
+                  brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
+                  tlv_len);
 
         /* abort parsing when length invalid */
         if (data_len < len + 2) {
             break;
         }
 
-        err = brcmf_fws_get_tlv_len(fws, type, &tlv_len);
+        err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
         if (err != ZX_OK || len < tlv_len) {
             break;
         }
@@ -2204,7 +2207,7 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
 
 #ifdef DEBUG
 static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_to_bus(seq->private_data);
+    struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     struct brcmf_fws_stats* fwstats = &(drvr_to_fws(bus_if->drvr)->stats);
 
     seq_printf(seq,
@@ -2262,7 +2265,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
         *fws_out = NULL;
     }
 
-    fws = calloc(1, sizeof(*fws));
+    fws = static_cast<decltype(fws)>(calloc(1, sizeof(*fws)));
     if (!fws) {
         rc = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -2272,7 +2275,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 
     /* store drvr reference */
     fws->drvr = drvr;
-    fws->fcmode = drvr->settings->fcmode;
+    fws->fcmode = static_cast<brcmf_fws_fcmode>(drvr->settings->fcmode);
 
     if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
         fws->avoid_queueing = true;

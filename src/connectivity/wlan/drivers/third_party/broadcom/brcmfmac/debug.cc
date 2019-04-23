@@ -139,7 +139,7 @@ void brcmf_alphadump(const void* buf, size_t len) {
 }
 
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {
-    void* dump;
+    uint8_t* dump;
     size_t ramsize;
     zx_status_t err;
 
@@ -148,7 +148,7 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    dump = calloc(1, len + ramsize);
+    dump = static_cast<decltype(dump)>(calloc(1, len + ramsize));
     if (!dump) {
         return ZX_ERR_NO_MEMORY;
     }

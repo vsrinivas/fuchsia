@@ -187,7 +187,7 @@ zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* 
     return err;
 }
 
-static uint32_t brcmf_create_iovar(char* name, const char* data, uint32_t datalen, char* buf,
+static uint32_t brcmf_create_iovar(const char* name, const void* data, uint32_t datalen, char* buf,
                                    uint32_t buflen) {
     uint32_t len;
 
@@ -207,7 +207,7 @@ static uint32_t brcmf_create_iovar(char* name, const char* data, uint32_t datale
     return len + datalen;
 }
 
-zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data,
+zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, const void* data,
                                      uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
     zx_status_t err;
@@ -230,7 +230,8 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const voi
     return err;
 }
 
-zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, void* data,
+                                     uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
     zx_status_t err;
     uint32_t buflen;
@@ -255,13 +256,13 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* dat
     return err;
 }
 
-zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
+zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, const char* name, uint32_t data) {
     uint32_t data_le = data;
 
     return brcmf_fil_iovar_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
-zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
+zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data) {
     uint32_t data_le = *data;
     zx_status_t err;
 
@@ -272,8 +273,8 @@ zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* 
     return err;
 }
 
-static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, uint32_t datalen,
-                                    char* buf, uint32_t buflen) {
+static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, const char* name, const void* data,
+                                    uint32_t datalen, char* buf, uint32_t buflen) {
     const char* prefix = "bsscfg:";
     char* p;
     uint32_t prefixlen;
@@ -317,7 +318,8 @@ static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, u
     return iolen;
 }
 
-zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, const void* data,
+                                      uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
     zx_status_t err;
     uint32_t buflen;
@@ -341,7 +343,8 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* da
     return err;
 }
 
-zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, void* data,
+                                      uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
     zx_status_t err;
     uint32_t buflen;
@@ -367,13 +370,13 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* da
     return err;
 }
 
-zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
+zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, const char* name, uint32_t data) {
     uint32_t data_le = data;
 
     return brcmf_fil_bsscfg_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
-zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
+zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data) {
     uint32_t data_le = *data;
     zx_status_t err;
 

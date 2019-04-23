@@ -315,79 +315,79 @@ static const uint32_t brcmf_ring_itemsize[BRCMF_NROF_COMMON_MSGRINGS] = {
 };
 
 static uint32_t brcmf_pcie_read_reg32(struct brcmf_pciedev_info* devinfo, uint32_t reg_offset) {
-    void __iomem* address = devinfo->regs + reg_offset;
+    void __iomem* address = static_cast<char*>(devinfo->regs) + reg_offset;
 
     return (ioread32(address));
 }
 
 static void brcmf_pcie_write_reg32(struct brcmf_pciedev_info* devinfo, uint32_t reg_offset,
                                    uint32_t value) {
-    void __iomem* address = devinfo->regs + reg_offset;
+    void __iomem* address = static_cast<char*>(devinfo->regs) + reg_offset;
 
     iowrite32(value, address);
 }
 
 static uint8_t brcmf_pcie_read_tcm8(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    void __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
 
     return (ioread8(address));
 }
 
 static uint16_t brcmf_pcie_read_tcm16(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    void __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
 
     return (ioread16(address));
 }
 
 static void brcmf_pcie_write_tcm16(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                    uint16_t value) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    void __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
 
     iowrite16(value, address);
 }
 
 static uint16_t brcmf_pcie_read_idx(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset) {
-    uint16_t* address = devinfo->idxbuf + mem_offset;
+    uint16_t* address = reinterpret_cast<uint16_t*>(static_cast<char*>(devinfo->idxbuf) + mem_offset);
 
     return (*(address));
 }
 
 static void brcmf_pcie_write_idx(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                  uint16_t value) {
-    uint16_t* address = devinfo->idxbuf + mem_offset;
+    uint16_t* address = reinterpret_cast<uint16_t*>(static_cast<char*>(devinfo->idxbuf) + mem_offset);
 
     *(address) = value;
 }
 
 static uint32_t brcmf_pcie_read_tcm32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    void __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
 
     return (ioread32(address));
 }
 
 static void brcmf_pcie_write_tcm32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                    uint32_t value) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    void __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
 
     iowrite32(value, address);
 }
 
 static uint32_t brcmf_pcie_read_ram32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset) {
-    void __iomem* addr = devinfo->tcm + devinfo->ci->rambase + mem_offset;
+    void __iomem* addr = static_cast<char*>(devinfo->tcm) + devinfo->ci->rambase + mem_offset;
 
     return (ioread32(addr));
 }
 
 static void brcmf_pcie_write_ram32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                    uint32_t value) {
-    void __iomem* addr = devinfo->tcm + devinfo->ci->rambase + mem_offset;
+    void __iomem* addr = static_cast<char*>(devinfo->tcm) + devinfo->ci->rambase + mem_offset;
 
     iowrite32(value, addr);
 }
 
 static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                       void* srcaddr, uint32_t len) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    char __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
     uint32_t* src32;
     uint16_t* src16;
     uint8_t* src8;
@@ -428,7 +428,7 @@ static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32
 
 static void brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
                                       void* dstaddr, uint32_t len) {
-    void __iomem* address = devinfo->tcm + mem_offset;
+    char __iomem* address = static_cast<char*>(devinfo->tcm) + mem_offset;
     uint32_t* dst32;
     uint16_t* dst16;
     uint8_t* dst8;
@@ -904,7 +904,7 @@ static struct brcmf_pcie_ringbuf* brcmf_pcie_alloc_dma_and_ring(struct brcmf_pci
     addr = tcm_ring_phys_addr + BRCMF_RING_LEN_ITEMS_OFFSET;
     brcmf_pcie_write_tcm16(devinfo, addr, brcmf_ring_itemsize[ring_id]);
 
-    ring = calloc(1, sizeof(*ring));
+    ring = static_cast<decltype(ring)>(calloc(1, sizeof(*ring)));
     if (!ring) {
         dma_free_coherent(&devinfo->pdev->dev, size, dma_buf, dma_handle);
         return NULL;
@@ -971,7 +971,8 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
     uint16_t max_submissionrings;
     uint16_t max_completionrings;
 
-    memcpy_fromio(&ringinfo, devinfo->tcm + devinfo->shared.ring_info_addr, sizeof(ringinfo));
+    memcpy_fromio(&ringinfo, static_cast<char*>(devinfo->tcm) + devinfo->shared.ring_info_addr,
+                  sizeof(ringinfo));
     if (devinfo->shared.version >= 6) {
         max_submissionrings = ringinfo.max_submissionrings;
         max_flowrings = ringinfo.max_flowrings;
@@ -1027,7 +1028,8 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
         ringinfo.d2h_r_idx_hostaddr.low_addr = address & 0xffffffff;
         ringinfo.d2h_r_idx_hostaddr.high_addr = address >> 32;
 
-        memcpy_toio(devinfo->tcm + devinfo->shared.ring_info_addr, &ringinfo, sizeof(ringinfo));
+        memcpy_toio(static_cast<char*>(devinfo->tcm) + devinfo->shared.ring_info_addr, &ringinfo,
+                    sizeof(ringinfo));
         brcmf_dbg(PCIE, "Using host memory indices\n");
     }
 
@@ -1066,7 +1068,7 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
     devinfo->shared.max_flowrings = max_flowrings;
     devinfo->shared.max_submissionrings = max_submissionrings;
     devinfo->shared.max_completionrings = max_completionrings;
-    rings = calloc(max_flowrings, sizeof(*ring));
+    rings = static_cast<decltype(rings)>(calloc(max_flowrings, sizeof(*ring)));
     if (!rings) {
         goto fail;
     }
@@ -1462,7 +1464,7 @@ static void brcmf_pcie_buscore_write32(void* ctx, uint32_t addr, uint32_t value)
 }
 
 static zx_status_t brcmf_pcie_buscoreprep(void* ctx) {
-    return brcmf_pcie_get_resource(ctx);
+    return brcmf_pcie_get_resource(static_cast<brcmf_pciedev_info*>(ctx));
 }
 
 static zx_status_t brcmf_pcie_buscore_reset(void* ctx, struct brcmf_chip* chip) {
@@ -1548,7 +1550,8 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
         bus->msgbuf->commonrings[i] = &devinfo->shared.commonrings[i]->commonring;
     }
 
-    flowrings = calloc(devinfo->shared.max_flowrings, sizeof(*flowrings));
+    flowrings =
+        static_cast<decltype(flowrings)>(calloc(devinfo->shared.max_flowrings, sizeof(*flowrings)));
     if (!flowrings) {
         goto fail;
     }
@@ -1562,7 +1565,7 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
     bus->msgbuf->max_rxbufpost = devinfo->shared.max_rxbufpost;
     bus->msgbuf->max_flowrings = devinfo->shared.max_flowrings;
 
-    devinfo->mbdata_resp_wait = SYNC_COMPLETION_INIT;
+    devinfo->mbdata_resp_wait = {};
 
     brcmf_pcie_intr_enable(devinfo);
     if (brcmf_pcie_attach_bus(devinfo) == 0) {
@@ -1593,7 +1596,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     brcmf_dbg(PCIE, "Enter %x:%x (%d/%d)\n", pdev->vendor, pdev->device, domain_nr, bus_nr);
 
     ret = ZX_ERR_NO_MEMORY;
-    devinfo = calloc(1, sizeof(*devinfo));
+    devinfo = static_cast<decltype(devinfo)>(calloc(1, sizeof(*devinfo)));
     if (devinfo == NULL) {
         return ret;
     }
@@ -1607,7 +1610,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
         goto fail;
     }
 
-    pcie_bus_dev = calloc(1, sizeof(*pcie_bus_dev));
+    pcie_bus_dev = static_cast<decltype(pcie_bus_dev)>(calloc(1, sizeof(*pcie_bus_dev)));
     if (pcie_bus_dev == NULL) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -1621,12 +1624,12 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
         goto fail;
     }
 
-    bus = calloc(1, sizeof(*bus));
+    bus = static_cast<decltype(bus)>(calloc(1, sizeof(*bus)));
     if (!bus) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    bus->msgbuf = calloc(1, sizeof(*bus->msgbuf));
+    bus->msgbuf = static_cast<decltype(bus->msgbuf)>(calloc(1, sizeof(*bus->msgbuf)));
     if (!bus->msgbuf) {
         ret = ZX_ERR_NO_MEMORY;
         free(bus);
@@ -1806,7 +1809,7 @@ zx_status_t brcmf_pcie_register(zx_device_t* device, pci_protocol_t* pci_proto) 
     if (result != ZX_OK) {
         return result;
     }
-    pdev = calloc(1, sizeof(*pdev));
+    pdev = static_cast<decltype(pdev)>(calloc(1, sizeof(*pdev)));
     if (pdev == NULL) {
         return ZX_ERR_NO_MEMORY;
     }

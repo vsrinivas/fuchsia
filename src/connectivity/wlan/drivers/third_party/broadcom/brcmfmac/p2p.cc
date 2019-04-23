@@ -457,7 +457,7 @@ static void brcmf_p2p_get_current_chanspec(struct brcmf_p2p_info* p2p, uint16_t*
     ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
 
     if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSSID, mac_addr, ETH_ALEN) == ZX_OK) {
-        buf = calloc(1, WL_BSS_INFO_MAX);
+        buf = static_cast<decltype(buf)>(calloc(1, WL_BSS_INFO_MAX));
         if (buf != NULL) {
             *(uint32_t*)buf = WL_BSS_INFO_MAX;
             if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX) == ZX_OK) {
