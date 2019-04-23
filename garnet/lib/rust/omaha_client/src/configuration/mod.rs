@@ -24,4 +24,28 @@ pub struct Config {
     pub updater: Updater,
 
     pub os: OS,
+
+    /// This is the address of the Omaha service that should be used.
+    pub service_url: String,
+}
+
+#[cfg(test)]
+pub mod test_support {
+
+    use super::*;
+    use crate::{common::Version, protocol::request::OS};
+
+    /// Handy generator for an updater configuration.  Used to reduce test boilerplate.
+    pub fn config_generator() -> Config {
+        Config {
+            updater: Updater { name: "updater".to_string(), version: Version([1, 2, 3, 4]) },
+            os: OS {
+                platform: "platform".to_string(),
+                version: "0.1.2.3".to_string(),
+                service_pack: "sp".to_string(),
+                arch: "test_arch".to_string(),
+            },
+            service_url: "http://example.com/".to_string(),
+        }
+    }
 }

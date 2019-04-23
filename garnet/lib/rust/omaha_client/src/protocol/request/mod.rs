@@ -9,6 +9,18 @@ use serde_repr::Serialize_repr;
 #[cfg(test)]
 mod tests;
 
+/// This is the key for the http request header that identifies the 'updater' that is sending a
+/// request.
+pub const HEADER_UPDATER_NAME: &str = "X-Goog-Update-Updater";
+
+/// This is the key for the http request header that identifies whether this is an interactive
+/// or a background update (see InstallSource).
+pub const HEADER_INTERACTIVITY: &str = "X-Goog-Update-Interactivity";
+
+/// This is the key for the http request header that identifies the app id(s) that are included in
+/// this request.
+pub const HEADER_APP_ID: &str = "X-Goog-Update-AppId";
+
 /// An Omaha protocol request.
 ///
 /// This holds the data for constructing a request to the Omaha service.
@@ -61,7 +73,7 @@ pub struct Request {
 /// wrapping that Omaha expects to see.
 #[derive(Debug, Default, Serialize)]
 pub struct RequestWrapper {
-    request: Request,
+    pub request: Request,
 }
 
 /// Enum of the possible reasons that this update request was initiated.

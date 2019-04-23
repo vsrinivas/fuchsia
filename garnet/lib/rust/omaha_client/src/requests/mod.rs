@@ -6,14 +6,42 @@ use crate::{
     common::App,
     configuration::Config,
     protocol::{
-        request::{Event, InstallSource, Ping, Request, UpdateCheck},
+        request::{
+            Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, HEADER_APP_ID,
+            HEADER_INTERACTIVITY, HEADER_UPDATER_NAME,
+        },
         Cohort, PROTOCOL_V3,
     },
 };
 
+use http;
 use log::*;
+use std::result;
 
 type ProtocolApp = crate::protocol::request::App;
+
+/// Building a request can fail for multiple reasons, this enum consolidates them into a single
+/// type that can be used to express those reasons.
+#[derive(Debug)]
+pub enum Error {
+    Json(serde_json::Error),
+    Http(http::Error),
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::Json(e)
+    }
+}
+
+impl From<http::Error> for Error {
+    fn from(e: http::Error) -> Self {
+        Error::Http(e)
+    }
+}
+
+/// The builder's own Result type.
+pub type Result<T> = result::Result<T, Error>;
 
 /// These are the parameters that describe how the request should be performed.
 #[derive(Clone, Debug, PartialEq)]
@@ -177,19 +205,80 @@ impl<'a> RequestBuilder<'a> {
     /// This function constructs the protocol::request::Request object from this Builder.
     ///
     /// Note that the builder is consumed in the process, and cannot be used afterward.
-    pub fn build(self) -> Request {
-        let protocol_apps =
-            self.app_entries.into_iter().map(|entry| ProtocolApp::from(entry)).collect();
+    pub fn build(self) -> Result<http::Request<hyper::Body>> {
+        self.build_intermediate().into()
+    }
 
-        Request {
-            protocol_version: PROTOCOL_V3.to_string(),
-            updater: self.config.updater.name.clone(),
-            updater_version: self.config.updater.version.to_string(),
-            install_source: self.params.source.clone(),
-            is_machine: true,
-            os: self.config.os.clone(),
-            apps: protocol_apps,
+    /// Helper function that constructs the request body from the builder.
+    fn build_intermediate(self) -> Intermediate {
+        let mut headers = vec![
+            // Set the content-type to be JSON.
+            (http::header::CONTENT_TYPE.as_str(), "application/json".to_string()),
+            // The updater name header is always set directly from the name in the configuration
+            (HEADER_UPDATER_NAME, self.config.updater.name.clone()),
+            // The interactivity header is set based on the source of the request that's set in
+            // the request params
+            (
+                HEADER_INTERACTIVITY,
+                match self.params.source {
+                    InstallSource::OnDemand => "fg".to_string(),
+                    InstallSource::ScheduledTask => "bg".to_string(),
+                },
+            ),
+        ];
+        // And the app id header is based on the first app id in the request.
+        // TODO: Send all app ids, or only send the first based on configuration.
+        if let Some(main_app) = self.app_entries.first() {
+            headers.push((HEADER_APP_ID, main_app.app.id.clone()));
         }
+
+        let apps = self.app_entries.into_iter().map(|entry| ProtocolApp::from(entry)).collect();
+
+        Intermediate {
+            uri: self.config.service_url.clone(),
+            headers,
+            body: RequestWrapper {
+                request: Request {
+                    protocol_version: PROTOCOL_V3.to_string(),
+                    updater: self.config.updater.name.clone(),
+                    updater_version: self.config.updater.version.to_string(),
+                    install_source: self.params.source.clone(),
+                    is_machine: true,
+                    os: self.config.os.clone(),
+                    apps,
+                },
+            },
+        }
+    }
+}
+
+/// As the name implies, this is an itermediate that can be used to construct an http::Request from
+/// the data that's in the Builder.  It allows for type-aware inspection of the constructed protcol
+/// request, as well as the full construction of the http request (uri, headers, body).
+///
+/// This struct owns all of it's data, so that they can be moved directly into the constructed http
+/// request.
+struct Intermediate {
+    /// The URI for the http request.
+    uri: String,
+
+    /// The http request headers, in key:&str=value:String pairs
+    headers: Vec<(&'static str, String)>,
+
+    /// The request body, still in object form as a RequestWrapper
+    body: RequestWrapper,
+}
+
+impl From<Intermediate> for Result<http::Request<hyper::Body>> {
+    fn from(intermediate: Intermediate) -> Self {
+        let mut builder = hyper::Request::get(intermediate.uri);
+        for (key, value) in intermediate.headers {
+            builder.header(key, value);
+        }
+
+        let body = serde_json::to_string(&intermediate.body)?;
+        let request = builder.body(body.into())?;
+        Ok(request)
     }
 }
 
@@ -198,23 +287,12 @@ mod tests {
     use super::*;
     use crate::{
         common::Version,
-        configuration::Updater,
-        protocol::request::{EventResult, EventType, OS},
+        configuration::test_support::config_generator,
+        protocol::request::{EventResult, EventType},
     };
+    use futures::{compat::Stream01CompatExt, executor::block_on, prelude::*};
     use pretty_assertions::assert_eq;
-
-    /// Handy generator for an updater configuration.  Used to reduce test boilerplate.
-    fn config_generator() -> Config {
-        Config {
-            updater: Updater { name: "updater".to_string(), version: Version([1, 2, 3, 4]) },
-            os: OS {
-                platform: "platform".to_string(),
-                version: "0.1.2.3".to_string(),
-                service_pack: "sp".to_string(),
-                arch: "test_arch".to_string(),
-            },
-        }
-    }
+    use serde_json::json;
 
     /// Test that a simple request's fields are all correct:
     ///
@@ -224,7 +302,7 @@ mod tests {
     pub fn test_simple_request() {
         let config = config_generator();
 
-        let request = RequestBuilder::new(
+        let intermediate = RequestBuilder::new(
             &config,
             &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
         )
@@ -232,9 +310,10 @@ mod tests {
             &App { id: "app id".to_string(), version: Version([5, 6, 7, 8]), fingerprint: None },
             &Some(Cohort::new("some-channel")),
         )
-        .build();
+        .build_intermediate();
 
         // Assert that all the request fields are accurate (this is in their order of declaration)
+        let request = intermediate.body.request;
         assert_eq!(request.protocol_version, "3.0");
         assert_eq!(request.updater, config.updater.name);
         assert_eq!(request.updater_version, config.updater.version.to_string());
@@ -255,6 +334,85 @@ mod tests {
         assert_eq!(app.update_check, Some(UpdateCheck::default()));
         assert!(app.events.is_empty());
         assert_eq!(app.ping, None);
+
+        // Assert that the headers are set correctly
+        let headers = intermediate.headers;
+        assert_eq!(4, headers.len());
+        assert!(headers.contains(&("content-type", "application/json".to_string())));
+        assert!(headers.contains(&(HEADER_UPDATER_NAME, config.updater.name)));
+        assert!(headers.contains(&(HEADER_APP_ID, "app id".to_string())));
+        assert!(headers.contains(&(HEADER_INTERACTIVITY, "fg".to_string())));
+    }
+
+    /// Test that a simple update check results in the correct HTTP request:
+    ///  - service url
+    ///  - headers
+    ///  - request body
+    #[test]
+    pub fn test_single_request() {
+        let config = config_generator();
+
+        let (parts, body) = RequestBuilder::new(
+            &config,
+            &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
+        )
+        .add_update_check(
+            &App { id: "app id".to_string(), version: Version([5, 6, 7, 8]), fingerprint: None },
+            &Some(Cohort::new("some-channel")),
+        )
+        .build()
+        .unwrap()
+        .into_parts();
+
+        // Assert that the HTTP method and uri are accurate
+        assert_eq!(http::Method::GET, parts.method);
+        assert_eq!(config.service_url, parts.uri.to_string());
+
+        // Assert that all the request body is correct, by generating an equivalent JSON one and
+        // then comparing the resultant byte bodies
+        let expected = json!({
+            "request": {
+                "protocol": "3.0",
+                "updater": config.updater.name,
+                "updaterversion": config.updater.version.to_string(),
+                "installsource": "ondemand",
+                "ismachine": true,
+                "os": {
+                    "platform": config.os.platform,
+                    "version": config.os.version,
+                    "sp": config.os.service_pack,
+                    "arch": config.os.arch,
+                },
+                "app": [
+                    {
+                        "appid": "app id",
+                        "cohort": "some-channel",
+                        "version": "5.6.7.8",
+                        "updatecheck": {},
+                    },
+                ],
+            }
+        });
+
+        // Extract the request body out into a concatenated stream of Chunks, into a slice, so
+        // that serde can be used to parse the body into a JSON Value object that can be compared
+        // with the expected json constructed above.
+        let actual: serde_json::Value =
+            serde_json::from_slice(&block_on(body.compat().try_concat()).unwrap().to_vec())
+                .unwrap();
+
+        assert_eq!(expected, actual);
+
+        // Assert that the headers are all correct
+        let headers = parts.headers;
+        assert_eq!(4, headers.len());
+        assert_eq!("application/json", headers.get("content-type").unwrap().to_str().unwrap());
+        assert_eq!(
+            config.updater.name,
+            headers.get(HEADER_UPDATER_NAME).unwrap().to_str().unwrap()
+        );
+        assert_eq!("app id", headers.get(HEADER_APP_ID).unwrap().to_str().unwrap());
+        assert_eq!("fg", headers.get(HEADER_INTERACTIVITY).unwrap().to_str().unwrap());
     }
 
     /// Test that a ping is correctly added to an App entry.
@@ -262,7 +420,7 @@ mod tests {
     pub fn test_simple_ping() {
         let config = config_generator();
 
-        let request = RequestBuilder::new(
+        let intermediate = RequestBuilder::new(
             &config,
             &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
         )
@@ -275,10 +433,10 @@ mod tests {
             &Some(Cohort::new("ping-channel")),
             &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
         )
-        .build();
+        .build_intermediate();
 
         // Validate that the App was added, with it's cohort
-        let app = &request.apps[0];
+        let app = &intermediate.body.request.apps[0];
         assert_eq!(app.id, "ping app id");
         assert_eq!(app.version, "6.7.8.9");
         assert_eq!(app.cohort, Some(Cohort::new("ping-channel")));
@@ -288,6 +446,14 @@ mod tests {
         let ping = app.ping.as_ref().unwrap();
         assert_eq!(ping.date_last_active, Some(34));
         assert_eq!(ping.date_last_roll_call, Some(45));
+
+        // Assert that the headers are set correctly
+        let headers = intermediate.headers;
+        assert_eq!(4, headers.len());
+        assert!(headers.contains(&("content-type", "application/json".to_string())));
+        assert!(headers.contains(&(HEADER_UPDATER_NAME, config.updater.name)));
+        assert!(headers.contains(&(HEADER_APP_ID, "ping app id".to_string())));
+        assert!(headers.contains(&(HEADER_INTERACTIVITY, "bg".to_string())));
     }
 
     /// Test that an event is properly added to an App entry
@@ -313,7 +479,9 @@ mod tests {
                 ..Event::default()
             },
         )
-        .build();
+        .build_intermediate()
+        .body
+        .request;
 
         let app = &request.apps[0];
         assert_eq!(app.id, "event app id");
@@ -364,7 +532,9 @@ mod tests {
                 ..Event::default()
             },
         )
-        .build();
+        .build_intermediate()
+        .body
+        .request;
 
         // Validate that the resultant Request has the right fields and events
 
@@ -422,11 +592,13 @@ mod tests {
             &app_1_cohort,
             &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
         )
-        .build();
+        .build_intermediate()
+        .body
+        .request;
 
         // Validate the resultant Request is correct.
 
-        // There should only be the two entries.
+        // There should only be the two app entries.
         assert_eq!(request.apps.len(), 2);
 
         // The first app should have the ping attached to it.
@@ -481,7 +653,7 @@ mod tests {
             &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
         );
 
-        let request = builder.build();
+        let request = builder.build_intermediate().body.request;
 
         // Validate that the resultant request is correct.
 
@@ -544,7 +716,9 @@ mod tests {
                 ..Event::default()
             },
         )
-        .build();
+        .build_intermediate()
+        .body
+        .request;
 
         // There should only be the two entries.
         assert_eq!(request.apps.len(), 2);
@@ -607,7 +781,7 @@ mod tests {
             },
         );
 
-        let request = builder.build();
+        let request = builder.build_intermediate().body.request;
 
         // There should only be the two entries.
         assert_eq!(request.apps.len(), 2);
