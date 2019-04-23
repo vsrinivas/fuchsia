@@ -43,5 +43,7 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 
 std::string DR6ToString(uint64_t dr6);
 
+std::string DR7ToString(uint64_t dr7);
+
 }  // namespace arch
 }  // namespace debug_agent

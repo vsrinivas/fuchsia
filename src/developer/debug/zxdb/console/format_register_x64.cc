@@ -247,10 +247,10 @@ std::vector<OutputBuffer> FormatDr6(const Register& dr6,
   result.emplace_back(
       fxl::StringPrintf(
           "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
-          X86_FLAG_VALUE(value, Dr6B0), X86_FLAG_VALUE(value, Dr6B1),
-          X86_FLAG_VALUE(value, Dr6B2), X86_FLAG_VALUE(value, Dr6B3),
-          X86_FLAG_VALUE(value, Dr6BD), X86_FLAG_VALUE(value, Dr6BS),
-          X86_FLAG_VALUE(value, Dr6BT)),
+          X86_FLAG_VALUE(value, DR6B0), X86_FLAG_VALUE(value, DR6B1),
+          X86_FLAG_VALUE(value, DR6B2), X86_FLAG_VALUE(value, DR6B3),
+          X86_FLAG_VALUE(value, DR6BD), X86_FLAG_VALUE(value, DR6BS),
+          X86_FLAG_VALUE(value, DR6BT)),
       color);
 
   return result;
@@ -273,12 +273,12 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
           "L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, "
           "GE=%d, "
           "GD=%d",
-          X86_FLAG_VALUE(value, Dr7L0), X86_FLAG_VALUE(value, Dr7G0),
-          X86_FLAG_VALUE(value, Dr7L1), X86_FLAG_VALUE(value, Dr7G1),
-          X86_FLAG_VALUE(value, Dr7L2), X86_FLAG_VALUE(value, Dr7G2),
-          X86_FLAG_VALUE(value, Dr7L3), X86_FLAG_VALUE(value, Dr7G3),
-          X86_FLAG_VALUE(value, Dr7LE), X86_FLAG_VALUE(value, Dr7GE),
-          X86_FLAG_VALUE(value, Dr7GD)),
+          X86_FLAG_VALUE(value, DR7L0), X86_FLAG_VALUE(value, DR7G0),
+          X86_FLAG_VALUE(value, DR7L1), X86_FLAG_VALUE(value, DR7G1),
+          X86_FLAG_VALUE(value, DR7L2), X86_FLAG_VALUE(value, DR7G2),
+          X86_FLAG_VALUE(value, DR7L3), X86_FLAG_VALUE(value, DR7G3),
+          X86_FLAG_VALUE(value, DR7LE), X86_FLAG_VALUE(value, DR7GE),
+          X86_FLAG_VALUE(value, DR7GD)),
       color);
 
   // Second row only gets decoded values in the 3rd column.
@@ -290,10 +290,10 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
       fxl::StringPrintf(
           "R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, "
           "LEN2=%d, R/W3=%d, LEN3=%d",
-          X86_FLAG_VALUE(value, Dr7RW0), X86_FLAG_VALUE(value, Dr7LEN0),
-          X86_FLAG_VALUE(value, Dr7RW1), X86_FLAG_VALUE(value, Dr7LEN1),
-          X86_FLAG_VALUE(value, Dr7RW2), X86_FLAG_VALUE(value, Dr7LEN2),
-          X86_FLAG_VALUE(value, Dr7RW3), X86_FLAG_VALUE(value, Dr7LEN3)),
+          X86_FLAG_VALUE(value, DR7RW0), X86_FLAG_VALUE(value, DR7LEN0),
+          X86_FLAG_VALUE(value, DR7RW1), X86_FLAG_VALUE(value, DR7LEN1),
+          X86_FLAG_VALUE(value, DR7RW2), X86_FLAG_VALUE(value, DR7LEN2),
+          X86_FLAG_VALUE(value, DR7RW3), X86_FLAG_VALUE(value, DR7LEN3)),
       color);
 }
 

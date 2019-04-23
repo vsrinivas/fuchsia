@@ -10,6 +10,7 @@
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -252,12 +253,12 @@ debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
                        << DR6ToString(debug_regs.dr6);
 
     // HW breakpoints have priority over single-step.
-    if (FLAG_VALUE(debug_regs.dr6, kDR6B0) ||
-        FLAG_VALUE(debug_regs.dr6, kDR6B1) ||
-        FLAG_VALUE(debug_regs.dr6, kDR6B2) ||
-        FLAG_VALUE(debug_regs.dr6, kDR6B3)) {
+    if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0) ||
+        X86_FLAG_VALUE(debug_regs.dr6, DR6B1) ||
+        X86_FLAG_VALUE(debug_regs.dr6, DR6B2) ||
+        X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
       return debug_ipc::NotifyException::Type::kHardware;
-    } else if (FLAG_VALUE(debug_regs.dr6, kDR6BS)) {
+    } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6BS)) {
       return debug_ipc::NotifyException::Type::kSingleStep;
     } else {
       FXL_NOTREACHED() << "x86: No known hw exception set in DR6";

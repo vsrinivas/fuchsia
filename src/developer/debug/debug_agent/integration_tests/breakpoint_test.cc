@@ -190,10 +190,6 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   }
 }
 
-// TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
-//               emulated by QEMU without KVM. This will sometimes make tests
-//               fail or even crash QEMU. The bot configuration should avoid
-//               running this test on QEMU.
 TEST(BreakpointIntegration, HWBreakpoint) {
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
@@ -279,7 +275,8 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
     EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
-    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware);
+    EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware)
+        << "Got: " << debug_ipc::NotifyException::TypeToString(exception.type);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
     // Verify that the correct breakpoint was hit.

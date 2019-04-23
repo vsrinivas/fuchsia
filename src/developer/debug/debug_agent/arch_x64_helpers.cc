@@ -16,81 +16,85 @@ namespace arch {
 
 namespace {
 
-struct DebugRegMask {
-  int index = -1;
-  uint64_t bp_mask = 0;   // Enable mask within DR7
-  uint64_t rw_mask = 0;   // RW mask within DR7
-  uint64_t len_mask = 0;  // LEN mask within DR7
-};
-
-const DebugRegMask* GetDebugRegisterMasks(size_t index) {
-  static std::vector<DebugRegMask> masks = {
-      {0, kDR7L0, kDR7RW0 | (kDR7RW0 << 1), kDR7LEN0 | (kDR7LEN0 << 1)},
-      {1, kDR7L1, kDR7RW1 | (kDR7RW1 << 1), kDR7LEN1 | (kDR7LEN1 << 1)},
-      {2, kDR7L2, kDR7RW2 | (kDR7RW2 << 1), kDR7LEN2 | (kDR7LEN2 << 1)},
-      {3, kDR7L3, kDR7RW3 | (kDR7RW3 << 1), kDR7LEN3 | (kDR7LEN3 << 1)},
+uint64_t HWBreakpointEnabled(uint64_t dr7, size_t index) {
+  FXL_DCHECK(index < 4);
+  static uint64_t masks[4] = {
+      X86_FLAG_MASK(DR7L0),
+      X86_FLAG_MASK(DR7L1),
+      X86_FLAG_MASK(DR7L2),
+      X86_FLAG_MASK(DR7L3)
   };
-  FXL_DCHECK(index < masks.size());
-  return &masks[index];
+
+  return (dr7 & masks[index]) != 0;
+}
+
+// Mask needed to clear a particular HW breakpoint.
+uint64_t HWBreakpointD7ClearMask(size_t index) {
+  FXL_DCHECK(index < 4);
+  static uint64_t masks[4] = {
+    ~(X86_FLAG_MASK(DR7L0) | X86_FLAG_MASK(DR7RW0) | X86_FLAG_MASK(DR7LEN0)),
+    ~(X86_FLAG_MASK(DR7L1) | X86_FLAG_MASK(DR7RW1) | X86_FLAG_MASK(DR7LEN1)),
+    ~(X86_FLAG_MASK(DR7L2) | X86_FLAG_MASK(DR7RW2) | X86_FLAG_MASK(DR7LEN2)),
+    ~(X86_FLAG_MASK(DR7L3) | X86_FLAG_MASK(DR7RW3) | X86_FLAG_MASK(DR7LEN3)),
+  };
+  return masks[index];
+}
+
+// Mask needed to set a particular HW breakpoint.
+uint64_t HWBreakpointDR7SetMask(size_t index) {
+  FXL_DCHECK(index < 4);
+  // Mask is: L = 1, RW = 00, LEN = 10
+  static uint64_t dr_masks[4] = {
+      X86_FLAG_MASK(DR7L0),
+      X86_FLAG_MASK(DR7L1),
+      X86_FLAG_MASK(DR7L2),
+      X86_FLAG_MASK(DR7L3),
+  };
+  return dr_masks[index];
 }
 
 }  // namespace
 
 zx_status_t SetupHWBreakpoint(uint64_t address,
                               zx_thread_state_debug_regs_t* debug_regs) {
-  // Search for an unset register.
-  // TODO(donosoc): This doesn't check that the address is already set.
-  const DebugRegMask* slot = nullptr;
+  // Search for a free slot.
+  int slot = -1;
   for (size_t i = 0; i < 4; i++) {
-    const DebugRegMask* mask = GetDebugRegisterMasks(i);
-    // If it's the same address or it's free, we found our slot.
-    bool active = FLAG_VALUE(debug_regs->dr7, mask->bp_mask);
-    if (debug_regs->dr[i] == address || !active) {
-      slot = mask;
+    if (HWBreakpointEnabled(debug_regs->dr7, i)) {
+      // If it's already bound there, we don't need to do anything.
+      if (debug_regs->dr[i] == address)
+        return ZX_ERR_ALREADY_BOUND;
+    } else {
+      slot = i;
       break;
     }
   }
 
-  if (!slot)
+  if (slot == -1)
     return ZX_ERR_NO_RESOURCES;
 
-  debug_regs->dr[slot->index] = address;
-  // Modify the DR7 register.
-  // TODO(donosoc): For now only add execution breakpoints.
-  uint64_t dr7 = debug_regs->dr7;
-  dr7 |= slot->bp_mask;  // Activate the breakpoint.
-  uint64_t mask = ~(slot->rw_mask);
-  // TODO(donosoc): Handle LEN properties of the breakpoint.
-  dr7 &= mask;
-  debug_regs->dr7 = dr7;
-
+  // We found a slot, we bind the address.
+  debug_regs->dr[slot] = address;
+  debug_regs->dr7 &= HWBreakpointD7ClearMask(slot);
+  debug_regs->dr7 |= HWBreakpointDR7SetMask(slot);
   return ZX_OK;
 }
 
 zx_status_t RemoveHWBreakpoint(uint64_t address,
                                zx_thread_state_debug_regs_t* debug_regs) {
-  // Search for the address.
-  bool found = false;
-  for (size_t i = 0; i < 4; i++) {
+  // Search for the slot.
+  for (int i = 0; i < 4; i++) {
     if (address != debug_regs->dr[i])
       continue;
 
-    const DebugRegMask* mask = GetDebugRegisterMasks(i);
-    // Only unset the
-    uint64_t dr7 = debug_regs->dr7;
-    dr7 &= ~(mask->bp_mask);  // Disable the breakpoint.
-
+    // Clear this breakpoint.
     debug_regs->dr[i] = 0;
-    debug_regs->dr7 = dr7;
-
-    found = true;
+    debug_regs->dr7 &= HWBreakpointD7ClearMask(i);
+    return ZX_OK;
   }
 
-  // No register found, we warn the caller. No change was issued.
-  if (!found)
-    return ZX_ERR_OUT_OF_RANGE;
-
-  return ZX_OK;
+  // We didn't find the address.
+  return ZX_ERR_OUT_OF_RANGE;
 }
 
 zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
@@ -152,7 +156,7 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
      << "DR2: 0x" << std::hex << regs.dr[2] << std::endl
      << "DR3: 0x" << std::hex << regs.dr[3] << std::endl
      << "DR6: " << DR6ToString(regs.dr6) << std::endl
-     << "DR7: 0x" << std::hex << regs.dr7 << std::endl;
+     << "DR7: " << DR7ToString(regs.dr7) << std::endl;
 
   return ss.str();
 }
@@ -160,10 +164,27 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
 std::string DR6ToString(uint64_t dr6) {
   return fxl::StringPrintf(
       "0x%lx: B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d", dr6,
-      X86_FLAG_VALUE(dr6, Dr6B0), X86_FLAG_VALUE(dr6, Dr6B1),
-      X86_FLAG_VALUE(dr6, Dr6B2), X86_FLAG_VALUE(dr6, Dr6B3),
-      X86_FLAG_VALUE(dr6, Dr6BD), X86_FLAG_VALUE(dr6, Dr6BS),
-      X86_FLAG_VALUE(dr6, Dr6BT));
+      X86_FLAG_VALUE(dr6, DR6B0), X86_FLAG_VALUE(dr6, DR6B1),
+      X86_FLAG_VALUE(dr6, DR6B2), X86_FLAG_VALUE(dr6, DR6B3),
+      X86_FLAG_VALUE(dr6, DR6BD), X86_FLAG_VALUE(dr6, DR6BS),
+      X86_FLAG_VALUE(dr6, DR6BT));
+}
+
+std::string DR7ToString(uint64_t dr7) {
+  return fxl::StringPrintf(
+      "0x%lx: L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, "
+      "GE=%d, GD=%d, R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, LEN2=%d, "
+      "R/W3=%d, LEN3=%d",
+      dr7, X86_FLAG_VALUE(dr7, DR7L0), X86_FLAG_VALUE(dr7, DR7G0),
+      X86_FLAG_VALUE(dr7, DR7L1), X86_FLAG_VALUE(dr7, DR7G1),
+      X86_FLAG_VALUE(dr7, DR7L2), X86_FLAG_VALUE(dr7, DR7G2),
+      X86_FLAG_VALUE(dr7, DR7L3), X86_FLAG_VALUE(dr7, DR7G3),
+      X86_FLAG_VALUE(dr7, DR7LE), X86_FLAG_VALUE(dr7, DR7GE),
+      X86_FLAG_VALUE(dr7, DR7GD), X86_FLAG_VALUE(dr7, DR7RW0),
+      X86_FLAG_VALUE(dr7, DR7LEN0), X86_FLAG_VALUE(dr7, DR7RW1),
+      X86_FLAG_VALUE(dr7, DR7LEN1), X86_FLAG_VALUE(dr7, DR7RW2),
+      X86_FLAG_VALUE(dr7, DR7LEN2), X86_FLAG_VALUE(dr7, DR7RW3),
+      X86_FLAG_VALUE(dr7, DR7LEN3));
 }
 
 }  // namespace arch
