@@ -22,6 +22,7 @@ source_set("generic-arm") {
     "$zx/kernel/dev/psci",
     "$zx/kernel/dev/timer/arm_generic",
     "$zx/kernel/dev/uart/amlogic_s905",
+    "$zx/kernel/dev/uart/dw8250",
     "$zx/kernel/dev/uart/msm",
     "$zx/kernel/dev/uart/mt8167",
     "$zx/kernel/dev/uart/nxp-imx",

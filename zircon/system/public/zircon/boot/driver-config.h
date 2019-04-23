@@ -21,6 +21,7 @@
 #define KDRV_AMLOGIC_HDCP 0x484C4D41      // 'AMLH'
 #define KDRV_MSM_UART 0x554D534D          // 'MSMU'
 #define KDRV_MSM_POWER 1347244877         // 'MSMP'
+#define KDRV_DW8250_UART 0x44573855       // 'DW8U'
 
 // kernel driver struct that can be used for simple drivers
 // used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
