@@ -47,4 +47,4 @@ for file in $IMAGES; do
   set +x
 done
 
-echo -n reboot > /dev/misc/dmctl
+dm reboot
