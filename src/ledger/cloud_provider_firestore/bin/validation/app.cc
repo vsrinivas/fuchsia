@@ -61,6 +61,9 @@ int main(int argc, char** argv) {
         factory.MakeCloudProvider(
             cloud_provider_firestore::CloudProviderFactory::UserId::New(),
             std::move(request));
+        // Return null because we do not create individual instances of a
+        // component per request.
+        return nullptr;
       });
 
   int32_t return_code = -1;

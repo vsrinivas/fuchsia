@@ -7,6 +7,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/callback/auto_cleanable.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 
@@ -21,10 +22,13 @@ class ValidationTestsLauncher {
   // The constructor.
   //
   // |factory| is called to produce instances of the cloud provider under test.
+  // It may return a component controller: when the cloud provider instance is
+  // not used anymore (ie. the other end of the interface request is closed),
+  // the component controller is closed, which terminates the cloud provider.
   ValidationTestsLauncher(
       sys::ComponentContext* component_context,
-      fit::function<
-          void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
+      fit::function<fuchsia::sys::ComponentControllerPtr(
+          fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
           factory);
 
   // Starts the tests.
@@ -36,13 +40,32 @@ class ValidationTestsLauncher {
            fit::function<void(int32_t)> callback);
 
  private:
+  // Proxies requests from |request| to |proxied|, and terminates the component
+  // controlled by |controller| when one of the ends closes the channel.
+  class CloudProviderProxy {
+   public:
+    CloudProviderProxy(
+        fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied,
+        fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request,
+        fuchsia::sys::ComponentControllerPtr controller);
+    ~CloudProviderProxy();
+    void set_on_empty(fit::closure on_empty);
+
+   private:
+    fidl::Binding<fuchsia::ledger::cloud::CloudProvider> binding_;
+    fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied_;
+    fuchsia::sys::ComponentControllerPtr controller_;
+    fit::closure on_empty_;
+  };
+
   sys::ComponentContext* const component_context_;
-  fit::function<void(
+  fit::function<fuchsia::sys::ComponentControllerPtr(
       fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
       factory_;
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   fuchsia::sys::ComponentControllerPtr validation_tests_controller_;
   fit::function<void(int32_t)> callback_;
+  callback::AutoCleanableSet<CloudProviderProxy> proxies_;
 };
 
 }  // namespace cloud_provider

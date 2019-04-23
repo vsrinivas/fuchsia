@@ -16,15 +16,44 @@ constexpr char kValidationTestsUrl[] =
     "#meta/cloud_provider_validation_tests.cmx";
 }  // namespace
 
+ValidationTestsLauncher::CloudProviderProxy::CloudProviderProxy(
+    fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied,
+    fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request,
+    fuchsia::sys::ComponentControllerPtr controller)
+    : binding_(proxied.get(), std::move(request)),
+      proxied_(std::move(proxied)),
+      controller_(std::move(controller)) {
+  binding_.set_error_handler([this](zx_status_t status) {
+    if (on_empty_)
+      on_empty_();
+  });
+  proxied_.set_error_handler([this](zx_status_t status) {
+    if (on_empty_)
+      on_empty_();
+  });
+}
+
+ValidationTestsLauncher::CloudProviderProxy::~CloudProviderProxy(){};
+
+void ValidationTestsLauncher::CloudProviderProxy::set_on_empty(
+    fit::closure on_empty) {
+  on_empty_ = std::move(on_empty);
+}
+
 ValidationTestsLauncher::ValidationTestsLauncher(
     sys::ComponentContext* component_context,
-    fit::function<
-        void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
+    fit::function<fuchsia::sys::ComponentControllerPtr(
+        fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
         factory)
     : component_context_(component_context), factory_(std::move(factory)) {
   service_directory_provider_.AddService<fuchsia::ledger::cloud::CloudProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>
-                 request) { factory_(std::move(request)); });
+                 request) {
+        fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied;
+        auto controller = factory_(proxied.NewRequest());
+        proxies_.emplace(std::move(proxied), std::move(request),
+                         std::move(controller));
+      });
 }
 
 void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,

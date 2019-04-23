@@ -34,9 +34,12 @@ int main(int argc, char** argv) {
         auto cloud_provider_services = sys::ServiceDirectory::CreateWithRequest(
             &launch_info.directory_request);
 
-        component_launcher->CreateComponent(std::move(launch_info), nullptr);
+        fuchsia::sys::ComponentControllerPtr controller;
+        component_launcher->CreateComponent(std::move(launch_info),
+                                            controller.NewRequest());
         cloud_provider_services->Connect(
             std::move(request), fuchsia::ledger::cloud::CloudProvider::Name_);
+        return controller;
       });
 
   int32_t return_code = -1;
