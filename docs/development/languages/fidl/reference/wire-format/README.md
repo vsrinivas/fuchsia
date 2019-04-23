@@ -498,9 +498,9 @@ to the selected option.
 
 An envelope is a container for out-of-line data, used internally by tables
 and extensible unions.
-It is not exposed to the FIDL lanuage.
+It is not exposed to the FIDL language.
 
-It has a fixed, 24 byte format, and is not nullable:
+It has a fixed, 16 byte format, and is not nullable:
 
 ![drawing](envelope.png)
 
