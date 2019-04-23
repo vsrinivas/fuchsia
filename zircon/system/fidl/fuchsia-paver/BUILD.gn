@@ -8,4 +8,8 @@ fidl_library("fuchsia-paver") {
   sources = [
     "paver.fidl",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-io",
+    "$zx/system/fidl/fuchsia-mem",
+  ]
 }

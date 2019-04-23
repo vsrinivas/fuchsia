@@ -19,11 +19,11 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
-#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
@@ -181,8 +181,7 @@ bool Initialize() {
     return true;
 }
 
-bool InsertTestDevices(fbl::StringPiece path) {
-    BEGIN_HELPER;
+void InsertTestDevices(fbl::StringPiece path) {
     zx::channel device, device_remote;
     ASSERT_EQ(zx::channel::create(0, &device, &device_remote), ZX_OK);
     ASSERT_EQ(fdio_service_connect(path.data(), device_remote.release()), ZX_OK);
@@ -198,20 +197,17 @@ bool InsertTestDevices(fbl::StringPiece path) {
 
     fbl::String topo_path_str(topo_path);
     test_block_devices.push_back(std::move(topo_path_str));
-    END_HELPER;
 }
 
 class BlockDevice {
 public:
-    static bool Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device) {
-        BEGIN_HELPER;
+    static void Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device) {
         ramdisk_client_t* client;
         ASSERT_EQ(ramdisk_create_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
                                            &client),
                   ZX_OK);
-        ASSERT_TRUE(InsertTestDevices(ramdisk_get_path(client)));
+        InsertTestDevices(ramdisk_get_path(client));
         device->reset(new BlockDevice(client));
-        END_HELPER;
     }
 
     ~BlockDevice() {
@@ -245,8 +241,7 @@ void CreateBadBlockMap(void* buffer) {
 
 class SkipBlockDevice {
 public:
-    static bool Create(fbl::unique_ptr<SkipBlockDevice>* device) {
-        BEGIN_HELPER;
+    static void Create(fbl::unique_ptr<SkipBlockDevice>* device) {
         fzl::VmoMapper mapper;
         zx::vmo vmo;
         ASSERT_EQ(ZX_OK, mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
@@ -265,7 +260,6 @@ public:
         ASSERT_EQ(ramdevice_client::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
         device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand),
                                           std::move(mapper)));
-        END_HELPER;
     }
 
     fbl::unique_fd devfs_root() { return fbl::unique_fd(dup(ctl_->devfs_root().get())); }
@@ -284,83 +278,40 @@ private:
 
 } // namespace
 
-namespace efi {
-namespace {
-bool UseBlockInterfaceTest() {
-    BEGIN_TEST;
+TEST(EfiDevicePartitionerTests, UseBlockInterfaceTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<BlockDevice> device;
-    ASSERT_TRUE(BlockDevice::Create(kZirconAType, &device));
-
-    END_TEST;
+    BlockDevice::Create(kZirconAType, &device);
 }
 
-} // namespace
-} // namespace efi
-
-BEGIN_TEST_CASE(EfiDevicePartitionerTests)
-RUN_TEST(efi::UseBlockInterfaceTest)
-END_TEST_CASE(EfiDevicePartitionerTests)
-
-namespace cros {
-namespace {
-
-bool UseBlockInterfaceTest() {
-    BEGIN_TEST;
-
+TEST(CrosDevicePartitionerTests, UseBlockInterfaceTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<BlockDevice> device;
-    ASSERT_TRUE(BlockDevice::Create(kZirconAType, &device));
-
-    END_TEST;
+    BlockDevice::Create(kZirconAType, &device);
 }
 
-} // namespace
-} // namespace cros
-
-BEGIN_TEST_CASE(CrosDevicePartitionerTests)
-RUN_TEST(cros::UseBlockInterfaceTest)
-END_TEST_CASE(CrosDevicePartitionerTests)
-
-namespace fixed {
-namespace {
-
-bool UseBlockInterfaceTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, UseBlockInterfaceTest) {
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_FALSE(partitioner->UseSkipBlockInterface());
-
-    END_TEST;
 }
 
-bool AddPartitionTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, AddPartitionTest) {
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
-
-    END_TEST;
 }
 
-bool WipeFvmTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, WipeFvmTest) {
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
     ASSERT_EQ(partitioner->WipeFvm(), ZX_OK);
-
-    END_TEST;
 }
 
-bool FinalizePartitionTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, FinalizePartitionTest) {
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
@@ -371,21 +322,17 @@ bool FinalizePartitionTest() {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaA), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaB), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kFuchsiaVolumeManager), ZX_OK);
-
-    END_TEST;
 }
 
-bool FindPartitionTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, FindPartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
-    ASSERT_TRUE(BlockDevice::Create(kZirconAType, &zircon_a));
-    ASSERT_TRUE(BlockDevice::Create(kZirconBType, &zircon_b));
-    ASSERT_TRUE(BlockDevice::Create(kZirconRType, &zircon_r));
-    ASSERT_TRUE(BlockDevice::Create(kVbMetaAType, &vbmeta_a));
-    ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
-    ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
+    BlockDevice::Create(kZirconAType, &zircon_a);
+    BlockDevice::Create(kZirconBType, &zircon_b);
+    BlockDevice::Create(kZirconRType, &zircon_r);
+    BlockDevice::Create(kVbMetaAType, &vbmeta_a);
+    BlockDevice::Create(kVbMetaBType, &vbmeta_b);
+    BlockDevice::Create(kFvmType, &fvm);
 
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
@@ -398,21 +345,17 @@ bool FindPartitionTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaA, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
-
-    END_TEST;
 }
 
-bool GetBlockSizeTest() {
-    BEGIN_TEST;
-
+TEST(FixedDevicePartitionerTests, GetBlockSizeTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
-    ASSERT_TRUE(BlockDevice::Create(kZirconAType, &zircon_a));
-    ASSERT_TRUE(BlockDevice::Create(kZirconBType, &zircon_b));
-    ASSERT_TRUE(BlockDevice::Create(kZirconRType, &zircon_r));
-    ASSERT_TRUE(BlockDevice::Create(kVbMetaAType, &vbmeta_a));
-    ASSERT_TRUE(BlockDevice::Create(kVbMetaBType, &vbmeta_b));
-    ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
+    BlockDevice::Create(kZirconAType, &zircon_a);
+    BlockDevice::Create(kZirconBType, &zircon_b);
+    BlockDevice::Create(kZirconRType, &zircon_r);
+    BlockDevice::Create(kVbMetaAType, &vbmeta_a);
+    BlockDevice::Create(kVbMetaBType, &vbmeta_b);
+    BlockDevice::Create(kFvmType, &fvm);
 
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
@@ -438,76 +381,45 @@ bool GetBlockSizeTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kBlockSize);
-
-    END_TEST;
 }
 
-} // namespace
-} // namespace fixed
-
-BEGIN_TEST_CASE(FixedDevicePartitionerTests)
-RUN_TEST(fixed::UseBlockInterfaceTest)
-RUN_TEST(fixed::AddPartitionTest)
-RUN_TEST(fixed::WipeFvmTest)
-RUN_TEST(fixed::FinalizePartitionTest)
-RUN_TEST(fixed::FindPartitionTest)
-RUN_TEST(fixed::GetBlockSizeTest)
-END_TEST_CASE(FixedDevicePartitionerTests)
-
-namespace skipblock {
-namespace {
-
-bool UseSkipBlockInterfaceTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, UseSkipBlockInterfaceTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
               ZX_OK);
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());
-
-    END_TEST;
 }
 
-bool AddPartitionTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
               ZX_OK);
     ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
-
-    END_TEST;
 }
 
-bool WipeFvmTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, WipeFvmTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
               ZX_OK);
     ASSERT_EQ(partitioner->WipeFvm(), ZX_OK);
-
-    END_TEST;
 }
 
-bool FinalizePartitionTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, FinalizePartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
@@ -519,18 +431,14 @@ bool FinalizePartitionTest() {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kZirconR), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaA), ZX_OK);
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kVbMetaB), ZX_OK);
-
-    END_TEST;
 }
 
-bool FindPartitionTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
     fbl::unique_ptr<BlockDevice> fvm;
-    ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
+    BlockDevice::Create(kFvmType, &fvm);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
@@ -545,18 +453,14 @@ bool FindPartitionTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kVbMetaB, &fd), ZX_OK);
 
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
-
-    END_TEST;
 }
 
-bool GetBlockSizeTest() {
-    BEGIN_TEST;
-
+TEST(SkipBlockDevicePartitionerTests, GetBlockSizeTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;
-    ASSERT_TRUE(SkipBlockDevice::Create(&device));
+    SkipBlockDevice::Create(&device);
     fbl::unique_ptr<BlockDevice> fvm;
-    ASSERT_TRUE(BlockDevice::Create(kFvmType, &fvm));
+    BlockDevice::Create(kFvmType, &fvm);
 
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), &partitioner),
@@ -586,18 +490,4 @@ bool GetBlockSizeTest() {
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &fd), ZX_OK);
     ASSERT_EQ(partitioner->GetBlockSize(fd, &block_size), ZX_OK);
     ASSERT_EQ(block_size, kBlockSize);
-
-    END_TEST;
 }
-
-} // namespace
-} // namespace skipblock
-
-BEGIN_TEST_CASE(SkipBlockDevicePartitionerTests)
-RUN_TEST(skipblock::UseSkipBlockInterfaceTest)
-RUN_TEST(skipblock::AddPartitionTest)
-RUN_TEST(skipblock::WipeFvmTest)
-RUN_TEST(skipblock::FinalizePartitionTest)
-RUN_TEST(skipblock::FindPartitionTest)
-RUN_TEST(skipblock::GetBlockSizeTest)
-END_TEST_CASE(SkipBlockDevicePartitionerTests)

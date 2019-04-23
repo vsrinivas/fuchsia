@@ -11,9 +11,40 @@ group("disk-pave") {
 executable("install-disk-image") {
   sources = [
     "disk-pave.cpp",
+    "payload-streamer.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/paver",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("install-disk-image-test") {
+  output_name = "install-disk-image-test"
+  sources = [
+    "payload-streamer.cpp",
+    "test/payload-streamer-test.cpp",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }

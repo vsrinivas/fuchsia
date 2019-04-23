@@ -53,6 +53,11 @@ public:
         VmoMapper::Unmap();
     }
 
+    zx::vmo Release() {
+        VmoMapper::Unmap();
+        return std::move(vmo_);
+    }
+
     const zx::vmo& vmo() const { return vmo_; }
 
     using VmoMapper::start;

@@ -24,6 +24,7 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <fuchsia/hardware/zxcrypt/c/fidl.h>
+#include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
 #include <lib/cksum.h>
@@ -43,10 +44,10 @@
 #include <utility>
 
 #include "device-partitioner.h"
-#include "fvm/format.h"
-#include "fvm/fvm-sparse.h"
 #include "pave-logging.h"
 #include "pave-utils.h"
+#include "stream-reader.h"
+#include "vmo-reader.h"
 
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 
@@ -55,27 +56,32 @@ namespace {
 
 using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
-static Partition PartitionType(const Command command) {
-    switch (command) {
-    case Command::kInstallBootloader:
-        return Partition::kBootloader;
-    case Command::kInstallZirconA:
-        return Partition::kZirconA;
-    case Command::kInstallZirconB:
-        return Partition::kZirconB;
-    case Command::kInstallZirconR:
-        return Partition::kZirconR;
-    case Command::kInstallVbMetaA:
-        return Partition::kVbMetaA;
-    case Command::kInstallVbMetaB:
-        return Partition::kVbMetaB;
-    case Command::kInstallVbMetaR:
-        return Partition::kVbMetaR;
-    case Command::kInstallFvm:
-        return Partition::kFuchsiaVolumeManager;
-    default:
-        return Partition::kUnknown;
+Partition PartitionType(fuchsia_paver_Configuration configuration, fuchsia_paver_Asset asset) {
+    switch (asset) {
+    case fuchsia_paver_Asset_KERNEL: {
+        switch (configuration) {
+        case fuchsia_paver_Configuration_A:
+            return Partition::kZirconA;
+        case fuchsia_paver_Configuration_B:
+            return Partition::kZirconB;
+        case fuchsia_paver_Configuration_RECOVERY:
+            return Partition::kZirconR;
+        };
+        break;
     }
+    case fuchsia_paver_Asset_VERIFIED_BOOT_METADATA: {
+        switch (configuration) {
+        case fuchsia_paver_Configuration_A:
+            return Partition::kVbMetaA;
+        case fuchsia_paver_Configuration_B:
+            return Partition::kVbMetaB;
+        case fuchsia_paver_Configuration_RECOVERY:
+            return Partition::kVbMetaR;
+        };
+        break;
+    }
+    };
+    return Partition::kUnknown;
 }
 
 // The number of additional slices a partition will need to become
@@ -126,7 +132,8 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-    PartitionInfo() : pd(nullptr) {}
+    PartitionInfo()
+        : pd(nullptr) {}
 
     fvm::partition_descriptor_t* pd;
     fbl::unique_fd new_part;
@@ -252,41 +259,6 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
     return ZX_OK;
 }
 
-// Stream a raw (non-FVM) partition to a vmo.
-zx_status_t StreamPayloadToVmo(fzl::ResizeableVmoMapper& mapper, const fbl::unique_fd& src_fd,
-                               uint32_t block_size_bytes, size_t* payload_size) {
-    zx_status_t status;
-    ssize_t r;
-    size_t vmo_offset = 0;
-
-    while ((r = read(src_fd.get(), &reinterpret_cast<uint8_t*>(mapper.start())[vmo_offset],
-                     mapper.size() - vmo_offset)) > 0) {
-        vmo_offset += r;
-        if (mapper.size() - vmo_offset == 0) {
-            // The buffer is full, let's grow the VMO.
-            if ((status = mapper.Grow(mapper.size() << 1)) != ZX_OK) {
-                ERROR("Failed to grow VMO\n");
-                return status;
-            }
-        }
-    }
-
-    if (r < 0) {
-        ERROR("Error reading partition data\n");
-        return static_cast<zx_status_t>(r);
-    }
-
-    if (vmo_offset % block_size_bytes) {
-        // We have a partial block to write.
-        const size_t rounded_length = fbl::round_up(vmo_offset, block_size_bytes);
-        memset(&reinterpret_cast<uint8_t*>(mapper.start())[vmo_offset], 0,
-               rounded_length - vmo_offset);
-        vmo_offset = rounded_length;
-    }
-    *payload_size = vmo_offset;
-    return ZX_OK;
-}
-
 // Writes a raw (non-FVM) partition to a block device from a VMO.
 zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size, const fbl::unique_fd& partition_fd,
                             uint32_t block_size_bytes) {
@@ -322,8 +294,8 @@ zx_status_t WriteVmoToBlock(const zx::vmo& vmo, size_t vmo_size, const fbl::uniq
 }
 
 // Writes a raw (non-FVM) partition to a skip-block device from a VMO.
-zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size, const fzl::FdioCaller& caller,
-                                uint32_t block_size_bytes) {
+zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
+                                const fzl::UnownedFdioCaller& caller, uint32_t block_size_bytes) {
     ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
     zx::vmo dup;
@@ -794,10 +766,11 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 //
 // Decides to overwrite or create new partitions based on the type
 // GUID, not the instance GUID.
-zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_fd) {
+zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
+                                std::unique_ptr<fvm::ReaderInterface> payload) {
     fbl::unique_ptr<fvm::SparseReader> reader;
     zx_status_t status;
-    if ((status = fvm::SparseReader::Create(std::move(src_fd), &reader)) != ZX_OK) {
+    if ((status = fvm::SparseReader::Create(std::move(payload), &reader)) != ZX_OK) {
         return status;
     }
 
@@ -947,9 +920,51 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     return ZX_OK;
 }
 
+zx_status_t FvmPave(fbl::unique_ptr<DevicePartitioner> partitioner,
+                    fbl::unique_ptr<fvm::ReaderInterface> payload) {
+    LOG("Paving partition.\n");
+
+    constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
+    zx_status_t status;
+    fbl::unique_fd partition_fd;
+    if ((status = partitioner->FindPartition(partition_type, &partition_fd)) != ZX_OK) {
+        if (status != ZX_ERR_NOT_FOUND) {
+            ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+            return status;
+        }
+
+        LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
+            PartitionName(partition_type));
+
+        if ((status = partitioner->AddPartition(partition_type, &partition_fd)) != ZX_OK) {
+            ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+            return status;
+        }
+    } else {
+        LOG("Partition already exists\n");
+    }
+
+    if (partitioner->UseSkipBlockInterface()) {
+        LOG("Attempting to format FTL...\n");
+        status = partitioner->WipeFvm();
+        if (status != ZX_OK) {
+            ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
+        } else {
+            LOG("Formatted successfully!\n");
+        }
+    }
+    LOG("Streaming partitions...\n");
+    if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload))) != ZX_OK) {
+        ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    LOG("Completed successfully\n");
+    return ZX_OK;
+}
+
 // Paves an image onto the disk.
 zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
-                          fbl::unique_fd payload_fd, Partition partition_type) {
+                          zx::vmo payload_vmo, size_t payload_size, Partition partition_type) {
     LOG("Paving partition.\n");
 
     zx_status_t status;
@@ -971,51 +986,44 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         LOG("Partition already exists\n");
     }
 
-    if (partition_type == Partition::kFuchsiaVolumeManager) {
-        if (partitioner->UseSkipBlockInterface()) {
-            LOG("Attempting to format FTL...\n");
-            status = partitioner->WipeFvm();
-            if (status != ZX_OK) {
-                ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
-            } else {
-                LOG("Formatted successfully!\n");
-            }
-        }
-        LOG("Streaming partitions...\n");
-        if ((status = FvmStreamPartitions(std::move(partition_fd), std::move(payload_fd))) !=
-            ZX_OK) {
-            ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
-            return status;
-        }
-        LOG("Completed successfully\n");
-        return ZX_OK;
-    }
-
     uint32_t block_size_bytes;
     if ((status = partitioner->GetBlockSize(partition_fd, &block_size_bytes)) != ZX_OK) {
         ERROR("Couldn't get partition block size\n");
         return status;
     }
 
-    const size_t vmo_sz = fbl::round_up(1LU << 20, block_size_bytes);
-    fzl::ResizeableVmoMapper mapper;
-    if ((status = mapper.CreateAndMap(vmo_sz, "partition-pave")) != ZX_OK) {
-        ERROR("Failed to create stream VMO\n");
-        return status;
+    // Pad payload with 0s to make it block size aligned.
+    if (payload_size % block_size_bytes != 0) {
+        const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
+        size_t vmo_size;
+        if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
+            ERROR("Couldn't get vmo size\n");
+            return status;
+        }
+        // Grow VMO if it's too small.
+        if (vmo_size < payload_size + remaining_bytes) {
+            const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
+            status = payload_vmo.set_size(new_size);
+            if (status != ZX_OK) {
+                ERROR("Couldn't grow vmo\n");
+                return status;
+            }
+        }
+        auto buffer = std::make_unique<uint8_t[]>(remaining_bytes);
+        memset(buffer.get(), 0, remaining_bytes);
+        status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
+        if (status != ZX_OK) {
+          ERROR("Failed to write padding to vmo\n");
+          return status;
+        }
+        payload_size += remaining_bytes;
     }
-    // The streamed partition size may not line up with the mapped vmo size.
-    size_t payload_size = 0;
-    if ((status = StreamPayloadToVmo(mapper, payload_fd, block_size_bytes, &payload_size)) !=
-        ZX_OK) {
-        ERROR("Failed to stream partition to VMO\n");
-        return status;
-    }
+
     if (partitioner->UseSkipBlockInterface()) {
-        fzl::FdioCaller caller(std::move(partition_fd));
-        status = WriteVmoToSkipBlock(mapper.vmo(), payload_size, caller, block_size_bytes);
-        partition_fd = caller.release();
+        fzl::UnownedFdioCaller caller(partition_fd.get());
+        status = WriteVmoToSkipBlock(payload_vmo, payload_size, caller, block_size_bytes);
     } else {
-        status = WriteVmoToBlock(mapper.vmo(), payload_size, partition_fd, block_size_bytes);
+        status = WriteVmoToBlock(payload_vmo, payload_size, partition_fd, block_size_bytes);
     }
     if (status != ZX_OK) {
         ERROR("Failed to write partition to block\n");
@@ -1031,19 +1039,46 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     return ZX_OK;
 }
 
-// Reads the entire file from supplied file descriptor. This is necessary due to
-// implementation of streaming protocol which forces entire file to be
-// transferred.
-void Drain(fbl::unique_fd fd) {
-    char buf[8192];
-    while (read(fd.get(), &buf, sizeof(buf)) > 0)
-        continue;
+} // namespace
+
+zx_status_t WriteAsset(fuchsia_paver_Configuration configuration, fuchsia_paver_Asset asset,
+                       const fuchsia_mem_Buffer& payload) {
+    auto device_partitioner = DevicePartitioner::Create();
+    if (!device_partitioner) {
+        ERROR("Unable to initialize a partitioner.\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    return PartitionPave(std::move(device_partitioner), zx::vmo(payload.vmo), payload.size,
+                         PartitionType(configuration, asset));
 }
 
-// Paves |fd| to a target |data_path| within the /data partition.
-zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::unique_fd payload_fd,
-                         char* data_path) {
+zx_status_t WriteVolumes(zx::channel payload_stream) {
+    auto device_partitioner = DevicePartitioner::Create();
+    if (!device_partitioner) {
+        ERROR("Unable to initialize a partitioner.\n");
+        return ZX_ERR_BAD_STATE;
+    }
 
+    std::unique_ptr<StreamReader> reader;
+    auto status = StreamReader::Create(std::move(payload_stream), &reader);
+    if (status != ZX_OK) {
+        ERROR("Unable to create stream.\n");
+        return status;
+    }
+    return FvmPave(std::move(device_partitioner), std::move(reader));
+}
+
+zx_status_t WriteBootloader(const fuchsia_mem_Buffer& payload) {
+    auto device_partitioner = DevicePartitioner::Create();
+    if (!device_partitioner) {
+        ERROR("Unable to initialize a partitioner.\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    return PartitionPave(std::move(device_partitioner), zx::vmo(payload.vmo), payload.size,
+                         Partition::kBootloader);
+}
+
+zx_status_t WriteDataFile(fbl::String filename, const fuchsia_mem_Buffer& payload) {
     const char* mount_path = "/volume/data";
     const uint8_t data_guid[] = GUID_DATA_VALUE;
     char minfs_path[PATH_MAX] = {0};
@@ -1053,7 +1088,6 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::un
     fbl::unique_fd part_fd(open_partition(nullptr, data_guid, ZX_SEC(1), path));
     if (!part_fd) {
         ERROR("DATA partition not found in FVM\n");
-        Drain(std::move(payload_fd));
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -1072,9 +1106,10 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::un
     case DISK_FORMAT_ZXCRYPT: {
         fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
         uint8_t slot = 0;
-        if ((status = zxcrypt::FdioVolume::UnlockWithDeviceKey(
-                 std::move(part_fd), static_cast<zxcrypt::key_slot_t>(slot), &zxc_volume)) !=
-            ZX_OK) {
+        if ((status =
+                 zxcrypt::FdioVolume::UnlockWithDeviceKey(std::move(part_fd),
+                                                          static_cast<zxcrypt::key_slot_t>(slot),
+                                                          &zxc_volume)) != ZX_OK) {
             ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
             return status;
         }
@@ -1120,16 +1155,15 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::un
     if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts,
                         launch_logs_async)) != ZX_OK) {
         ERROR("mount error: %s\n", zx_status_get_string(status));
-        Drain(std::move(payload_fd));
         return status;
     }
 
-    // mkdir any intermediate directories between mount_path and basename(data_path)
-    snprintf(path, sizeof(path), "%s/%s", mount_path, data_path);
+    // mkdir any intermediate directories between mount_path and basename(filename).
+    snprintf(path, sizeof(path), "%s/%s", mount_path, filename.c_str());
     size_t cur = strlen(mount_path);
     size_t max = strlen(path) - strlen(basename(path));
     // note: the call to basename above modifies path, so it needs reconstruction.
-    snprintf(path, sizeof(path), "%s/%s", mount_path, data_path);
+    snprintf(path, sizeof(path), "%s/%s", mount_path, filename.c_str());
     while (cur < max) {
         ++cur;
         if (path[cur] == '/') {
@@ -1144,20 +1178,19 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::un
     // which can be appended, but we may want to revisit this choice for other
     // files in the future.
     {
-        char buf[8192];
-        ssize_t n;
+        uint8_t buf[8192];
         fbl::unique_fd kfd(open(path, O_CREAT | O_WRONLY | O_APPEND, 0600));
         if (!kfd) {
             umount(mount_path);
-            ERROR("open %s error: %s\n", data_path, strerror(errno));
-            Drain(std::move(payload_fd));
+            ERROR("open %s error: %s\n", filename.c_str(), strerror(errno));
             return ZX_ERR_IO;
         }
-        while ((n = read(payload_fd.get(), &buf, sizeof(buf))) > 0) {
-            if (write(kfd.get(), &buf, n) != n) {
+        VmoReader reader(payload);
+        size_t actual;
+        while ((status = reader.Read(buf, sizeof(buf), &actual)) == ZX_OK && actual > 0) {
+            if (write(kfd.get(), buf, actual) != static_cast<ssize_t>(actual)) {
                 umount(mount_path);
-                ERROR("write %s error: %s\n", data_path, strerror(errno));
-                Drain(std::move(payload_fd));
+                ERROR("write %s error: %s\n", filename.c_str(), strerror(errno));
                 return ZX_ERR_IO;
             }
         }
@@ -1169,38 +1202,17 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner, fbl::un
         return status;
     }
 
-    LOG("Wrote %s\n", data_path);
+    LOG("Wrote %s\n", filename.c_str());
     return ZX_OK;
 }
 
-} // namespace
-
-zx_status_t RealMain(Flags flags) {
+zx_status_t WipeVolumes() {
     auto device_partitioner = DevicePartitioner::Create();
     if (!device_partitioner) {
         ERROR("Unable to initialize a partitioner.");
         return ZX_ERR_BAD_STATE;
     }
-    switch (flags.cmd) {
-    case Command::kWipeFvm:
-        return device_partitioner->WipeFvm();
-    case Command::kInstallFvm:
-    case Command::kInstallVbMetaA:
-    case Command::kInstallVbMetaB:
-    case Command::kInstallVbMetaR:
-    case Command::kInstallZirconA:
-    case Command::kInstallZirconB:
-    case Command::kInstallZirconR:
-    case Command::kInstallBootloader:
-      return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
-                           PartitionType(flags.cmd));
-    case Command::kInstallDataFile:
-        return DataFilePave(std::move(device_partitioner), std::move(flags.payload_fd), flags.path);
-
-    default:
-        ERROR("Unsupported command.");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    return device_partitioner->WipeFvm();
 }
 
 } //  namespace paver

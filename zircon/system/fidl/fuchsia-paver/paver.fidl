@@ -4,22 +4,24 @@
 
 library fuchsia.paver;
 
+using fuchsia.io;
 using fuchsia.mem;
+using zx;
 
 /// Describes the version of an asset.
 enum Configuration {
-    PRIMARY_A,
-    PRIMARY_B,
-    RECOVERY,
+    A = 1;
+    B = 2;
+    RECOVERY = 3;
 };
 
 /// Describes assets which may be updated. Each asset has 3 versions, each tied to a particular
 /// configuration.
 enum Asset {
     /// Zircon Boot Image (ZBI) containing the kernel image as well as bootfs.
-    KERNEL,
+    KERNEL = 1;
     /// Metadata used for verified boot purposes.
-    VERIFIED_BOOT_METADATA,
+    VERIFIED_BOOT_METADATA = 2;
 };
 
 struct ReadInfo {
@@ -42,7 +44,7 @@ union ReadResult {
 [Layout = "Simple"]
 protocol PayloadStream {
     /// Registers a VMO to stream into.
-    RegisterVmo(handle<vmo> vmo) -> (zx.status s);
+    RegisterVmo(handle<vmo> vmo) -> (zx.status status);
 
     /// Reads data into the pre-registered vmo.
     ReadData() -> (ReadResult result);
@@ -52,43 +54,43 @@ protocol PayloadStream {
 [Discoverable, Layout = "Simple"]
 protocol Paver {
     /// Queries active configuration.
-    QueryActiveConfiguration() -> (zx.status s, Configuration configuration?);
+    QueryActiveConfiguration() -> (zx.status status, Configuration? configuration);
 
     /// Updates persistent metadata identifying which configuration should be selected as 'primary'
     /// for booting purposes. Should only be called after `KERNEL` as well as optional
     /// `VERIFIED_BOOT_METADATA` assets for specified |configuration| were written successfully.
-    SetActiveConfiguration(Configuration configuration) -> (zx.status s);
+    SetActiveConfiguration(Configuration configuration) -> (zx.status status);
 
     /// Updates persistent metadata identifying that active configuration is stable. Used to signal
     /// "rollback to previous slot" logic is not needed anymore. Meant to be called in boot attempt
     /// after `SetActiveConfiguration` was called.
-    MarkActiveConfigurationSuccessful() -> (zx.status s);
+    MarkActiveConfigurationSuccessful() -> (zx.status status);
 
     /// Force the next reboot to boot into the recovery configuration. Does not persist between
     /// subsequent boots.
-    ForceRecoveryConfiguration() -> (zx.status s);
+    ForceRecoveryConfiguration() -> (zx.status status);
 
     /// Writes partition corresponding to |configuration| and |asset| with data from |payload|.
     /// Will zero out rest of the partition if |payload| is smaller than the size of the partition
     /// being written.
     ///
     /// Returns ZX_ERR_INVALID_ARGS if |configuration| specifies active configuration.
-    WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload) -> (zx.status s);
+    WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Writes FVM with data from streamed via |payload|. This potentially affects all
     /// configurations.
-    WriteVolumes(request<PayloadStream> payload) -> (zx.status s);
+    WriteVolumes(request<PayloadStream> payload) -> (zx.status status);
 
     /// Writes bootloader partition with data from |payload|.
-    WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status s);
+    WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Writes /data/|filename| with data from |payload|. Overwrites file if it already exists.
-    WriteDataFile(string filename, fuchsia.mem.Buffer payload) -> (zx.status s);
+    WriteDataFile(string:fuchsia.io.MAX_PATH filename, fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Wipes the FVM partition from the device. Should not be confused with factory reset, which
     /// is less intrusive.
     ///
     /// Notable use cases include recovering from corrupted FVM as well as setting device to a
     /// "clean" state for automation.
-    WipeVolumes() -> (zx.status s);
+    WipeVolumes() -> (zx.status status);
 };

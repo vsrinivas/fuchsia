@@ -4,34 +4,29 @@
 
 #pragma once
 
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/paver/c/fidl.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 namespace paver {
 
-// List of commands supported by paver utility.
-enum class Command {
-    kUnknown,
-    kInstallBootloader,
-    kInstallZirconA,
-    kInstallZirconB,
-    kInstallZirconR,
-    kInstallVbMetaA,
-    kInstallVbMetaB,
-    kInstallVbMetaR,
-    kInstallDataFile,
-    kInstallFvm,
-    kWipeFvm,
-};
+// Writes a kernel or verified boot metadata payload to the appropriate
+// partition.
+zx_status_t WriteAsset(fuchsia_paver_Configuration configuration, fuchsia_paver_Asset asset,
+                       const fuchsia_mem_Buffer& payload);
 
-struct Flags {
-    Command cmd = Command::kUnknown;
-    bool force = false;
-    fbl::unique_fd payload_fd;
-    char* path = nullptr;
-};
+// Writes volumes to the FVM partition.
+zx_status_t WriteVolumes(zx::channel payload_stream);
 
-// Implements tool commands.
-extern zx_status_t RealMain(Flags flags);
+// Writes a bootloader image to the appropriate partition.
+zx_status_t WriteBootloader(const fuchsia_mem_Buffer& payload);
+
+// Writes a file to the data minfs partition, managed by the FVM.
+zx_status_t WriteDataFile(fbl::String filename, const fuchsia_mem_Buffer& payload);
+
+// Wipes all volumes from the FVM partition.
+zx_status_t WipeVolumes();
 
 } // namespace paver

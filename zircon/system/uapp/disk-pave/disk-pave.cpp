@@ -10,17 +10,22 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/algorithm.h>
+#include <fuchsia/paver/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/paver/paver.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 
 #include <cstdio>
 #include <utility>
 
+#include "payload-streamer.h"
+
 #define ERROR(fmt, ...) fprintf(stderr, "disk-pave:[%s] " fmt, __FUNCTION__, ##__VA_ARGS__);
 
 namespace {
-
-using paver::Command;
-using paver::Flags;
 
 void PrintUsage() {
     ERROR("install-disk-image <command> [options...]\n");
@@ -41,6 +46,24 @@ void PrintUsage() {
     ERROR("  --path <path>: Install DATA file to path\n");
 }
 
+// Refer to //zircon/system/fidl/fuchsia.paver/paver-fidl for a list of what
+// these commands translate to.
+enum class Command {
+    kWipe,
+    kAsset,
+    kBootloader,
+    kDataFile,
+    kFvm,
+};
+
+struct Flags {
+    Command cmd;
+    fuchsia_paver_Configuration configuration;
+    fuchsia_paver_Asset asset;
+    fbl::unique_fd payload_fd;
+    char* path = nullptr;
+};
+
 bool ParseFlags(int argc, char** argv, Flags* flags) {
 #define SHIFT_ARGS \
     do {           \
@@ -56,29 +79,43 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     SHIFT_ARGS;
 
     if (!strcmp(argv[0], "install-bootloader")) {
-        flags->cmd = Command::kInstallBootloader;
+        flags->cmd = Command::kBootloader;
     } else if (!strcmp(argv[0], "install-efi")) {
-        flags->cmd = Command::kInstallBootloader;
+        flags->cmd = Command::kBootloader;
     } else if (!strcmp(argv[0], "install-kernc")) {
-        flags->cmd = Command::kInstallZirconA;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_A;
+        flags->asset = fuchsia_paver_Asset_KERNEL;
     } else if (!strcmp(argv[0], "install-zircona")) {
-        flags->cmd = Command::kInstallZirconA;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_A;
+        flags->asset = fuchsia_paver_Asset_KERNEL;
     } else if (!strcmp(argv[0], "install-zirconb")) {
-        flags->cmd = Command::kInstallZirconB;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_B;
+        flags->asset = fuchsia_paver_Asset_KERNEL;
     } else if (!strcmp(argv[0], "install-zirconr")) {
-        flags->cmd = Command::kInstallZirconR;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_RECOVERY;
+        flags->asset = fuchsia_paver_Asset_KERNEL;
     } else if (!strcmp(argv[0], "install-vbmetaa")) {
-        flags->cmd = Command::kInstallVbMetaA;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_A;
+        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-vbmetab")) {
-        flags->cmd = Command::kInstallVbMetaB;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_B;
+        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-vbmetar")) {
-        flags->cmd = Command::kInstallVbMetaR;
+        flags->cmd = Command::kAsset;
+        flags->configuration = fuchsia_paver_Configuration_RECOVERY;
+        flags->asset = fuchsia_paver_Asset_VERIFIED_BOOT_METADATA;
     } else if (!strcmp(argv[0], "install-data-file")) {
-        flags->cmd = Command::kInstallDataFile;
+        flags->cmd = Command::kDataFile;
     } else if (!strcmp(argv[0], "install-fvm")) {
-        flags->cmd = Command::kInstallFvm;
+        flags->cmd = Command::kFvm;
     } else if (!strcmp(argv[0], "wipe")) {
-        flags->cmd = Command::kWipeFvm;
+        flags->cmd = Command::kWipe;
     } else {
         ERROR("Invalid command: %s\n", argv[0]);
         return false;
@@ -86,7 +123,6 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     SHIFT_ARGS;
 
     // Parse options.
-    flags->force = false;
     flags->payload_fd.reset(STDIN_FILENO);
     while (argc > 0) {
         if (!strcmp(argv[0], "--file")) {
@@ -108,29 +144,102 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
             }
             flags->path = argv[0];
         } else if (!strcmp(argv[0], "--force")) {
-            flags->force = true;
+            ERROR("Deprecated option \"--force\".");
         } else {
             return false;
         }
         SHIFT_ARGS;
     }
-
-    if (flags->cmd == Command::kInstallDataFile && flags->path == nullptr) {
-        ERROR("install-data-file requires --path\n");
-        return false;
-    }
-
     return true;
 #undef SHIFT_ARGS
+}
+
+zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem_Buffer* payload) {
+    constexpr size_t VmoSize = fbl::round_up(1LU << 20, ZX_PAGE_SIZE);
+    fzl::ResizeableVmoMapper mapper;
+    zx_status_t status;
+    if ((status = mapper.CreateAndMap(VmoSize, "partition-pave")) != ZX_OK) {
+        ERROR("Failed to create stream VMO\n");
+        return status;
+    }
+
+    ssize_t r;
+    size_t vmo_offset = 0;
+    while ((r = read(payload_fd.get(), &reinterpret_cast<uint8_t*>(mapper.start())[vmo_offset],
+                     mapper.size() - vmo_offset)) > 0) {
+        vmo_offset += r;
+        if (mapper.size() - vmo_offset == 0) {
+            // The buffer is full, let's grow the VMO.
+            if ((status = mapper.Grow(mapper.size() << 1)) != ZX_OK) {
+                ERROR("Failed to grow VMO\n");
+                return status;
+            }
+        }
+    }
+
+    if (r < 0) {
+        ERROR("Error reading partition data\n");
+        return static_cast<zx_status_t>(r);
+    }
+
+    payload->size = vmo_offset;
+    payload->vmo = mapper.Release().release();
+    return ZX_OK;
+}
+
+zx_status_t RealMain(Flags flags) {
+    switch (flags.cmd) {
+    case Command::kFvm: {
+        zx::channel client, server;
+        auto status = zx::channel::create(0, &client, &server);
+        if (status) {
+            return status;
+        }
+
+        // Launch thread which implements interface.
+        async::Loop loop(&kAsyncLoopConfigAttachToThread);
+        disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
+        loop.StartThread("payload-stream");
+
+        return paver::WriteVolumes(std::move(client));
+    }
+    case Command::kWipe:
+        return paver::WipeVolumes();
+    default:
+        break;
+    }
+
+    fuchsia_mem_Buffer payload;
+    auto status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    switch (flags.cmd) {
+    case Command::kDataFile: {
+        if (flags.path == nullptr) {
+            ERROR("install-data-file requires --path\n");
+            PrintUsage();
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return paver::WriteDataFile(fbl::String(flags.path), payload);
+    }
+    case Command::kBootloader:
+        return paver::WriteBootloader(payload);
+    case Command::kAsset:
+        return paver::WriteAsset(flags.configuration, flags.asset, payload);
+    default:
+        return ZX_ERR_INTERNAL;
+    }
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
-    Flags flags;
-    if (!(ParseFlags(argc, argv, &flags))) {
+    Flags flags = {};
+    if (!ParseFlags(argc, argv, &flags)) {
         PrintUsage();
         return -1;
     }
-    return paver::RealMain(std::move(flags)) == ZX_OK ? 0 : 1;
+    return RealMain(std::move(flags)) ? 1 : 0;
 }

@@ -9,6 +9,30 @@
 
 namespace fvm {
 
+namespace {
+
+class FileReader : public ReaderInterface {
+public:
+    FileReader(fbl::unique_fd fd)
+        : fd_(std::move(fd)) {}
+
+    virtual ~FileReader() = default;
+
+    virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) final {
+        auto n = read(fd_.get(), buf, buf_size);
+        if (n < 0) {
+            return ZX_ERR_IO;
+        }
+        *size_actual = static_cast<size_t>(n);
+        return ZX_OK;
+    }
+
+private:
+    fbl::unique_fd fd_;
+};
+
+} // namespace
+
 using Buffer = internal::Buffer;
 
 Buffer::Buffer() = default;
@@ -55,15 +79,21 @@ void Buffer::Read(uint8_t* target, size_t length, size_t* actual) {
 }
 
 zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
-    return SparseReader::CreateHelper(std::move(fd), true /* verbose */, out);
+    return SparseReader::CreateHelper(std::make_unique<FileReader>(std::move(fd)),
+                                      true /* verbose */, out);
+}
+zx_status_t SparseReader::Create(fbl::unique_ptr<ReaderInterface> reader,
+                                 fbl::unique_ptr<SparseReader>* out) {
+    return SparseReader::CreateHelper(std::move(reader), true /* verbose */, out);
 }
 zx_status_t SparseReader::CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
-    return SparseReader::CreateHelper(std::move(fd), false /* verbose */, out);
+    return SparseReader::CreateHelper(std::make_unique<FileReader>(std::move(fd)),
+                                      false /* verbose */, out);
 }
 
-zx_status_t SparseReader::CreateHelper(fbl::unique_fd fd, bool verbose,
+zx_status_t SparseReader::CreateHelper(fbl::unique_ptr<ReaderInterface> reader_intf, bool verbose,
                                        fbl::unique_ptr<SparseReader>* out) {
-    fbl::unique_ptr<SparseReader> reader(new SparseReader(std::move(fd), verbose));
+    fbl::unique_ptr<SparseReader> reader(new SparseReader(std::move(reader_intf), verbose));
 
     zx_status_t status;
     if ((status = reader->ReadMetadata()) != ZX_OK) {
@@ -74,13 +104,15 @@ zx_status_t SparseReader::CreateHelper(fbl::unique_fd fd, bool verbose,
     return ZX_OK;
 }
 
-SparseReader::SparseReader(fbl::unique_fd fd, bool verbose)
-    : compressed_(false), verbose_(verbose), fd_(std::move(fd)) {}
+SparseReader::SparseReader(fbl::unique_ptr<ReaderInterface> reader, bool verbose)
+    : compressed_(false), verbose_(verbose), reader_(std::move(reader)) {}
 
 zx_status_t SparseReader::ReadMetadata() {
     // Read sparse image header.
     fvm::sparse_image_t image;
-    if (read(fd_.get(), &image, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
+    size_t actual;
+    auto status = reader_->Read(&image, sizeof(fvm::sparse_image_t), &actual);
+    if (status != ZX_OK || actual != sizeof(fvm::sparse_image_t)) {
         fprintf(stderr, "failed to read the sparse header\n");
         return ZX_ERR_IO;
     }
@@ -100,12 +132,12 @@ zx_status_t SparseReader::ReadMetadata() {
     // Read remainder of metadata.
     size_t off = sizeof(image);
     while (off < image.header_length) {
-        ssize_t r = read(fd_.get(), &metadata_[off], image.header_length - off);
-        if (r < 0) {
+        status = reader_->Read(&metadata_[off], image.header_length - off, &actual);
+        if (status != ZX_OK) {
             fprintf(stderr, "SparseReader: Failed to read metadata\n");
-            return ZX_ERR_IO;
+            return status;
         }
-        off += r;
+        off += actual;
     }
 
     // If image is compressed, additional setup is required
@@ -130,8 +162,8 @@ zx_status_t SparseReader::ReadMetadata() {
         uint8_t* inbuf = inbufptr.get();
 
         // Read first 4 bytes to let LZ4 tell us how much it expects in the first pass.
-        ssize_t nr = read(fd_.get(), inbuf, src_sz);
-        if (nr < static_cast<ssize_t>(src_sz)) {
+        status = reader_->Read(inbuf, src_sz, &actual);
+        if (status != ZX_OK || actual < src_sz) {
             fprintf(stderr, "SparseReader: could not read from input\n");
             return ZX_ERR_IO;
         }
@@ -159,7 +191,7 @@ zx_status_t SparseReader::ReadMetadata() {
     }
 
     return ZX_OK;
-}
+} // namespace fvm
 
 zx_status_t SparseReader::InitializeBuffer(size_t size, Buffer* out_buffer) {
     if (size < LZ4_MAX_BLOCK_SIZE) {
@@ -269,12 +301,14 @@ zx_status_t SparseReader::ReadRaw(uint8_t* data, size_t length, size_t* actual) 
 #ifdef __Fuchsia__
     zx_ticks_t start = zx_ticks_get();
 #endif
-    ssize_t r;
+    zx_status_t status;
+    size_t size_actual;
     size_t total_size = 0;
     size_t bytes_left = length;
-    while ((r = read(fd_.get(), data + total_size, bytes_left)) > 0) {
-        total_size += r;
-        bytes_left -= r;
+    while ((status = reader_->Read(data + total_size, bytes_left, &size_actual)) == ZX_OK &&
+           size_actual > 0) {
+        total_size += size_actual;
+        bytes_left -= size_actual;
         if (bytes_left == 0) {
             break;
         }
@@ -284,8 +318,8 @@ zx_status_t SparseReader::ReadRaw(uint8_t* data, size_t length, size_t* actual) 
     read_time_ += zx_ticks_get() - start;
 #endif
 
-    if (r < 0) {
-        return static_cast<zx_status_t>(r);
+    if (status != ZX_OK) {
+        return status;
     }
 
     *actual = total_size;

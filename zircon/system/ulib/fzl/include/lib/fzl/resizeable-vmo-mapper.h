@@ -79,6 +79,7 @@ class ResizeableVmoMapper : protected OwnedVmoMapper {
     using VmoMapper::size;
     using VmoMapper::manager;
     using OwnedVmoMapper::Reset;
+    using OwnedVmoMapper::Release;
     using OwnedVmoMapper::vmo;
 
   private:
