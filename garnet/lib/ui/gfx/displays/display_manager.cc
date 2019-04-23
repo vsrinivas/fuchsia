@@ -262,6 +262,22 @@ void DisplayManager::Flip(Display* display, uint64_t buffer,
   FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 }
 
+void DisplayManager::SetDisplayColorConversion(
+    Display* display, const ColorTransform& transform) {
+  FXL_CHECK(display);
+  uint64_t display_id = display->display_id();
+
+  // For testing purposes, display_controller_ can be null
+  if (display_controller_) {
+    display_controller_->SetDisplayColorConversion(
+        display_id, transform.preoffsets, transform.matrix,
+        transform.postoffsets);
+  }
+
+  // For testing and future-proofing purposes.
+  display->set_color_transform(transform);
+}
+
 bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
   vsync_cb_ = std::move(vsync_cb);
   return display_controller_->EnableVsync(true) == ZX_OK;

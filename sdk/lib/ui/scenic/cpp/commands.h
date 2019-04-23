@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+
 #include <string>
 
 namespace scenic {
@@ -167,6 +168,12 @@ fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
     uint32_t node_id, fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
 fuchsia::ui::gfx::Command NewTakeSnapshotCmdHACK(
     uint32_t id, fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
+
+// Display Commands
+fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
+    uint32_t compositor_id, const std::array<float, 3>& preoffsets,
+    const std::array<float, 9>& matrix,
+    const std::array<float, 3>& postoffsets);
 
 // Camera and lighting operations.
 

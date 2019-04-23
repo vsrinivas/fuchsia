@@ -74,6 +74,7 @@ executable("unittests") {
 
   testonly = true
   sources = [
+    "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",

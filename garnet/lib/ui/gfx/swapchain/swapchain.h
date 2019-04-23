@@ -8,8 +8,10 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
+#include <array>
 
+#include "garnet/lib/ui/gfx/displays/color_transform.h"
+#include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
@@ -47,6 +49,13 @@ class Swapchain {
   virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame,
                                    const HardwareLayerAssignment& hla,
                                    DrawCallback draw_callback) = 0;
+
+  // If a swapchain subclass implements this interface has a display,
+  // this function passes along color correction information to the
+  // display. The three parameters modify the output display pixels
+  // using the following formula:
+  // (coefficients * (pixel + preoffsets)) + postoffsets.
+  virtual void SetDisplayColorConversion(const ColorTransform& transform) = 0;
 
   virtual ~Swapchain() = default;
 };

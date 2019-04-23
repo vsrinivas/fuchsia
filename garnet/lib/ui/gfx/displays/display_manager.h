@@ -66,6 +66,10 @@ class DisplayManager {
   void Flip(Display* display, uint64_t buffer,
             uint64_t render_finished_event_id, uint64_t frame_signal_event_id);
 
+  // Passes along color conversion information to the provided display.
+  void SetDisplayColorConversion(Display* display,
+                                 const ColorTransform& transform);
+
   // Gets information about the default display.
   // May return null if there isn't one.
   Display* default_display() const { return default_display_.get(); }

@@ -89,7 +89,7 @@ union Command {
     SceneAddDirectionalLightCmd scene__add_directional_light;
     SceneAddPointLightCmd scene__add_point_light;
 
-    SetDisplayColorConversionCmd set_display_color_conversion;
+    SetDisplayColorConversionCmdHACK set_display_color_conversion;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -787,20 +787,20 @@ struct SetImportFocusCmdDEPRECATED {
 // Set the color conversion applied to the compositor's display.
 // The conversion is applied to to each pixel according to the formula:
 //
-// (coefficients * (pixel + preoffsets)) + postoffsets
+// (matrix * (pixel + preoffsets)) + postoffsets
 //
 // where pixel is a column vector consisting of the pixel's 3 components.
 //
-// |coefficients| is passed in row-major order. Clients will be responsible
+// |matrix| is passed in row-major order. Clients will be responsible
 // for passing default values, when needed.
 // Default values are not currently supported in fidl.
 // Default Values:
 //   preoffsets = [0 0 0]
-//   coefficients = [1 0 0 0 1 0 0 0 1]
+//   matrix = [1 0 0 0 1 0 0 0 1]
 //   postoffsets = [0 0 0]
-struct SetDisplayColorConversionCmd {
+struct SetDisplayColorConversionCmdHACK {
     uint32 compositor_id;
     array<float32>:3 preoffsets;
-    array<float32>:9 coefficients;
+    array<float32>:9 matrix;
     array<float32>:3 postoffsets;
 };

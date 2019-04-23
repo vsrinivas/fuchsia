@@ -224,6 +224,10 @@ class GfxCommandApplier {
   static bool ApplyTakeSnapshotCmdHACK(
       Session* session, fuchsia::ui::gfx::TakeSnapshotCmdHACK command);
 
+  static bool ApplySetDisplayColorConversionCmd(
+      Session* session,
+      fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command);
+
   // Actually create resources.
   static ResourcePtr CreateMemory(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::MemoryArgs args);

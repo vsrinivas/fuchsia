@@ -226,7 +226,8 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
       return ApplyTakeSnapshotCmdHACK(session,
                                       std::move(command.take_snapshot_cmd()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion:
-      return false;
+      return ApplySetDisplayColorConversionCmd(
+          session, std::move(command.set_display_color_conversion()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -1400,6 +1401,23 @@ bool GfxCommandApplier::ApplyCreateVariable(
   auto variable = CreateVariable(session, id, std::move(args));
   return variable ? session->resources()->AddResource(id, std::move(variable))
                   : false;
+}
+
+bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
+    Session* session,
+    fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command) {
+  if (auto compositor = session->resources()->FindResource<Compositor>(
+          command.compositor_id)) {
+    if (auto swapchain = compositor->swapchain()) {
+      ColorTransform transform;
+      transform.preoffsets = command.preoffsets;
+      transform.matrix = command.matrix;
+      transform.postoffsets = command.postoffsets;
+      swapchain->SetDisplayColorConversion(transform);
+      return true;
+    }
+  }
+  return false;
 }
 
 ResourcePtr GfxCommandApplier::CreateMemory(Session* session, ResourceId id,

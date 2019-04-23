@@ -6,11 +6,14 @@
 #define GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_H_
 
 #include <zircon/types.h>
+
+#include <array>
 #include <cstdint>
 #include <vector>
 
-#include "src/lib/fxl/macros.h"
+#include "garnet/lib/ui/gfx/displays/color_transform.h"
 #include "lib/zx/event.h"
+#include "src/lib/fxl/macros.h"
 #include "zircon/pixelformat.h"
 
 namespace scenic_impl {
@@ -54,6 +57,12 @@ class Display {
 
   virtual bool is_test_display() const { return false; }
 
+  void set_color_transform(const ColorTransform& transform) {
+    color_transform_ = transform;
+  }
+
+  const ColorTransform& color_transform() const { return color_transform_; }
+
  protected:
   // Protected for testing purposes.
   zx_duration_t vsync_interval_;
@@ -66,6 +75,12 @@ class Display {
   // Vsync interval of a 60 Hz screen.
   // Used as a default value before real timings arrive.
   static constexpr zx_duration_t kNsecsFor60fps = 16'666'667;
+
+  // This is the color transform used by the display controller
+  // to augment the final display color. See |ColorTransform|
+  // comments for details on how this transform modifies the
+  // display pixels.
+  ColorTransform color_transform_;
 
   const uint64_t display_id_;
   const uint32_t width_in_px_;

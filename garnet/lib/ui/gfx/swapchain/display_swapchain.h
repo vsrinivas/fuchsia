@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_SWAPCHAIN_DISPLAY_SWAPCHAIN_H_
 #define GARNET_LIB_UI_GFX_SWAPCHAIN_DISPLAY_SWAPCHAIN_H_
 
-#include "garnet/lib/ui/gfx/swapchain/swapchain.h"
-
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
+
 #include <vulkan/vulkan.hpp>
 
+#include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/resources/resource_manager.h"
@@ -53,6 +53,9 @@ class DisplaySwapchain : public Swapchain {
 
   // Remove the registered vsync listener.
   void UnregisterVsyncListener() { on_vsync_ = nullptr; }
+
+  // Passes along color correction information to the display
+  void SetDisplayColorConversion(const ColorTransform& transform) override;
 
  private:
   struct Framebuffer {

@@ -83,9 +83,7 @@ DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager,
     device_ = escher_->vk_device();
     queue_ = escher_->device()->vk_main_queue();
     format_ = GetDisplayImageFormat(escher->device());
-
     display_->Claim();
-
     frames_.resize(kSwapchainImageCount);
 
     if (!InitializeFramebuffers(escher_->resource_recycler())) {
@@ -487,6 +485,12 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   display_manager_->ReleaseEvent(frame_record->retired_event_id);
 
   return true;
+}
+
+// Passes along color correction information to the display
+void DisplaySwapchain::SetDisplayColorConversion(
+    const ColorTransform& transform) {
+  display_manager_->SetDisplayColorConversion(display_, transform);
 }
 
 void DisplaySwapchain::OnFrameRendered(size_t frame_index,

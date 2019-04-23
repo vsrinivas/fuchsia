@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/ui/scenic/cpp/commands.h>
-
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/assert.h>
+
 #include <array>
 
 namespace scenic {
@@ -722,6 +722,22 @@ fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity) {
 
   fuchsia::ui::gfx::Command command;
   command.set_set_opacity(std::move(set_opacity));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
+    uint32_t compositor_id, const std::array<float, 3>& preoffsets,
+    const std::array<float, 9>& matrix,
+    const std::array<float, 3>& postoffsets) {
+  fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK color_conversion;
+  color_conversion.compositor_id = compositor_id;
+  color_conversion.preoffsets = preoffsets;
+  color_conversion.matrix = matrix;
+  color_conversion.postoffsets = postoffsets;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_display_color_conversion(std::move(color_conversion));
 
   return command;
 }

@@ -52,6 +52,7 @@ source_set("gfx_always_optimized") {
 
 source_set("gfx") {
   sources = [
+    "displays/color_transform.h",
     "displays/display.cc",
     "displays/display.h",
     "displays/display_manager.cc",

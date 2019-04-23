@@ -23,6 +23,11 @@ class FakeSwapchain : public Swapchain {
                            DrawCallback draw_callback) override {
     return true;
   }
+
+  // |Swapchain|
+  void SetDisplayColorConversion(const ColorTransform& transform) override {
+    // Do nothing.
+  }
 };
 
 TEST_F(HLATest, HasHardwareLayerAssignment) {
