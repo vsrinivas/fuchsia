@@ -175,9 +175,9 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     ASSERT_EQ(status, ZX_OK);
 
     // create process
-    const char* argv[] = {"sh", NULL};
+    const char* argv[] = {"sleep", "999999999", NULL};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    status = fdio_spawn_etc(job_.get(), FDIO_SPAWN_CLONE_ALL, "/boot/bin/sh",
+    status = fdio_spawn_etc(job_.get(), FDIO_SPAWN_CLONE_ALL, "/bin/sleep",
                             argv, NULL, 0, NULL,
                             process_.reset_and_get_address(), err_msg);
     ASSERT_EQ(status, ZX_OK) << err_msg;
