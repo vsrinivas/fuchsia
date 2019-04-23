@@ -4,6 +4,7 @@
 
 import("//build/test/test_package.gni")
 
+# TODO(turnage): low_layer part needs to not be test-only.
 group("sw") {
   testonly = true
   deps = [
@@ -13,7 +14,7 @@ group("sw") {
     ":mpsc_queue_test_bin",
     ":mpsc_queue_tests",
     "ffmpeg",
-    "omx",
+    "low_layer",
   ]
 }
 

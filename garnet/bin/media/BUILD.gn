@@ -11,7 +11,6 @@ group("media") {
     ":audio_core",
     ":codec_factory",
     ":codec_runner_sw_ffmpeg",
-    ":codec_runner_sw_omx",
     ":services",
     ":tools",
     "audio",
@@ -103,35 +102,6 @@ package("codec_factory") {
     {
       path = rebase_path("codec_factory/meta/codec_factory.cmx")
       dest = "codec_factory.cmx"
-    },
-  ]
-}
-
-# This package is only really expected to be used by the codec_factory package.
-package("codec_runner_sw_omx") {
-  meta = [
-    {
-      path = rebase_path("codecs/meta/codec_runner_sw_omx.cmx")
-      dest = "codec_runner_sw_omx.cmx"
-    },
-  ]
-
-  deps = [
-    "//garnet/bin/media/codecs/sw/omx/codec_runner_sw_omx:codec_runner_sw_omx",
-
-    # Codec loadable_module(s)
-    "//garnet/bin/media/codecs/sw/omx/dec/aac:libcodec_sw_omx_dec_aac",
-  ]
-
-  binaries = [
-    {
-      name = "codec_runner_sw_omx"
-    },
-  ]
-
-  loadable_modules = [
-    {
-      name = "libcodec_sw_omx_dec_aac.so"
     },
   ]
 }

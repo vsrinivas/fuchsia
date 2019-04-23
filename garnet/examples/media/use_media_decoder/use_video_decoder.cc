@@ -414,11 +414,6 @@ static void use_video_decoder(
                       packet_header = fidl::Clone(packet.header())]() mutable {
             // Using an auto call for this helps avoid losing track of the
             // output_buffer.
-            //
-            // If the omx_state_ or omx_state_desired_ isn't correct,
-            // UseOutputBuffer() will fail.  The only way that can happen here
-            // is if the OMX codec transitioned states unilaterally without any
-            // set state command, so if that occurs, exit.
             codec_client.RecycleOutputPacket(std::move(packet_header));
           });
       std::shared_ptr<const fuchsia::media::StreamOutputFormat> format =

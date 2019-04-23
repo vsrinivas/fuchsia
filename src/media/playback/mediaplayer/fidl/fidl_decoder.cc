@@ -21,25 +21,8 @@ static const char kAacAdtsMimeType[] = "audio/aac-adts";
 std::vector<uint8_t> MakeOobBytesFromAdtsHeader(const uint8_t* adts_header) {
   std::vector<uint8_t> asc(2);
 
-  // TODO(dustingreen): Switch from ADTS to .mp4 and fix AAC decoder to not
-  // require "AudioSpecificConfig()" when fed ADTS.  In other words, move the
-  // stuff here into a shim around the AAC OMX decoder, just next to (above or
-  // below) the OmxCodecRunner in the codec_runner_sw_omx isolate, probably.
-
-  // For SoftAAC2.cpp, for no particularly good reason, a CODECCONFIG buffer is
-  // expected, even when running in ADTS mode, despite all the relevant data
-  // being available from the ADTS header.  The CODECCONFIG buffer has an
-  // AudioSpecificConfig in it.  The AudioSpecificConfig has to be created based
-  // on corresponding fields of the ADTS header - not that requiring this of
-  // the codec client makes any sense whatsoever...
-  //
-  // TODO(dustingreen): maybe add a per-codec compensation layer to un-crazy the
-  // quirks of each codec.  For example, when decoding ADTS, all the needed info
-  // is there in the ADTS stream directly.  No reason to hassle the codec client
-  // for a pointless translated form of the same info.  In contrast, when it's
-  // an mp4 file (or mkv, or whatever modern container format), the codec config
-  // info is relevant.  But we should only force a client to provide it if
-  // it's really needed.
+  // TODO(dustingreen): Remove this function, as we don't need to be
+  // synthesizing oob_bytes from ADTS header data.
 
   uint8_t profile_ObjectType;        // name in AAC spec in adts_fixed_header
   uint8_t sampling_frequency_index;  // name in AAC spec in adts_fixed_header

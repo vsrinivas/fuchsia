@@ -99,8 +99,9 @@ class CodecPacket {
   // CodecAdapter's point of view.  This allows for the CodecAdapter to
   // determine whether to recycle a packet to the core codec depending on
   // whether the packet is new or not, on first call to
-  // CoreCodecRecycleOutputPacket().  Some core codecs want an internal recycle
-  // call or equivalent for new packets (OMX), and some don't (amlogic-video).
+  // CoreCodecRecycleOutputPacket().  Some core codecs potentially want an
+  // internal recycle call or equivalent for new packets, while others don't
+  // (such as amlogic-video).
   bool is_new_ = true;
 
   CodecPacket() = delete;

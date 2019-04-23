@@ -21,9 +21,9 @@ config("public_include_dirs") {
 }
 
 static_library("libFraunhoferAAC") {
+  # TODO(turnage): more visibility as needed
   visibility = [
     ":*",
-    "//garnet/bin/media/codecs/sw/omx/dec/aac/*",
   ]
   public = [
     "//third_party/android/platform/external/aac/libAACdec/include/aacdecoder_lib.h",
@@ -179,6 +179,6 @@ static_library("libFraunhoferAAC") {
     "-Wno-unused-label",
   ]
   deps = [
-    "//garnet/bin/media/codecs/sw/omx/low_layer/codec_android_pal:codec_android_pal",
+    "//garnet/bin/media/codecs/sw/low_layer/codec_android_pal:codec_android_pal",
   ]
 }

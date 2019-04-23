@@ -21,16 +21,6 @@ table CreateDecoder_Params {
     // audio/aac
     //   input_details.oob_bytes must be an AudioSpecificConfig() as defined
     //   by AAC spec.
-    // audio/aac-adts
-    //   On a temporary basis, input_details.oob_bytes must be an
-    //   AudioSpecificConfig() extracted from the ADTS stream data by the client.
-    //   This is temporary.  Later, oob_bytes will be ignored and allowed to
-    //   be null.  On a temporary basis, see
-    //   make_AudioSpecificConfig_from_ADTS_header() for some self-contained
-    //   conversion code.
-    //   TODO(dustingreen): fix this up server side and make most of this
-    //   paragraph go away, possibly by also parsing ADTS before it hits OMX
-    //   since the parsing code there doesn't tolerate split ADTS headers.
     1: fuchsia.media.FormatDetails input_details;
 
     // The settings below nail down more details.

@@ -623,14 +623,14 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(
       // server must do one of those things before long (not allowed to get
       // stuck while flushing).
       //
-      // Some core codecs (such as OMX codecs) have no way to report mid-stream
-      // input data corruption errors or similar without it being a stream
-      // failure, so if there's any stream error it turns into OnStreamFailed().
-      // It's also permitted for a server to set error_detected_ bool(s) on
-      // output packets and send OnOutputEndOfStream() despite detected errors,
-      // but this is only a reasonable behavior for the server if the server
-      // normally would detect and report mid-stream input corruption errors
-      // without an OnStreamFailed().
+      // Some core codecs have no way to report mid-stream input data corruption
+      // errors or similar without it being a stream failure, so if there's any
+      // stream error it turns into OnStreamFailed(). It's also permitted for a
+      // server to set error_detected_ bool(s) on output packets and send
+      // OnOutputEndOfStream() despite detected errors, but this is only a
+      // reasonable behavior for the server if the server normally would detect
+      // and report mid-stream input corruption errors without an
+      // OnStreamFailed().
       output_end_of_stream_seen_.wait(lock);
     }
 
@@ -2202,9 +2202,9 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   // the "meh" was with respect to the old stream, but just in case a core codec
   // cares, we move on from the old config before delivering new stream data.
   //
-  // Some core codecs (such as OMX codecs) require the output to be configured
-  // to _something_ as they don't support giving us the real output config
-  // unless the output is configured to at least something at first.
+  // Some core codecs may require the output to be configured to _something_ as
+  // they don't support giving us the real output config unless the output is
+  // configured to at least something at first.
   //
   // Other core codecs (such as some HW-based codecs) can deal with no output
   // configured while detecting the output format, but even for those codecs, we
@@ -2524,9 +2524,6 @@ bool CodecImpl::EnsureFutureStreamFlushSeenLocked(
 // this method and GenerateAndSendNewOutputConstraints() with
 // buffer_constraints_action_required true always run in pairs.
 //
-// This is what starts the interval during which
-// OmxTryRecycleOutputPacketLocked() won't call OMX.
-//
 // If the client is in the middle of configuring output, we'll start ignoring
 // the client's messages re. the old buffer_lifetime_ordinal and old
 // buffer_constraints_version_ordinal until the client catches up to the new
@@ -2698,18 +2695,11 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     }
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
 
-    // Now we need to start disabling the port, wait for buffers to come back
-    // from OMX, free buffer headers, wait for the port to become fully
-    // disabled, unilaterally de-configure output buffers, demand a new output
-    // config from the client, wait for the client to configure output (but be
-    // willing to bail on waiting for the client if we notice future stream
-    // discard), re-enable the output port, allocate headers, wait for the port
-    // to be fully enabled, call FillThisBuffer() on the protocol-free buffers.
+    // We can work through the mid-stream output constraints change step by step
+    // using this thread.
 
-    // This is what starts the interval during which
-    // OmxTryRecycleOutputPacketLocked() won't call OMX, and the interval during
-    // which we'll ignore any in-progress client output config until the client
-    // catches up.
+    // This is what starts the interval during which we'll ignore any
+    // in-progress client output config until the client catches up.
     StartIgnoringClientOldOutputConfig(lock);
 
     {  // scope unlock
@@ -3140,9 +3130,7 @@ void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(
   // re-config before more output data, this translates to an ordered emit
   // of a no-action-required OnOutputConstraints() that just updates to the new
   // format, without demanding output buffer re-config.  HDR info can be
-  // conveyed this way, ordered with respect to output frames.  OMX
-  // requires that we use this thread to collect OMX format info during
-  // EventHandler().
+  // conveyed this way, ordered with respect to output frames.
   if (!output_re_config_required) {
     std::unique_lock<std::mutex> lock(lock_);
     GenerateAndSendNewOutputConstraints(
@@ -3161,7 +3149,7 @@ void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(
   // talking about the same stream_lifetime_ordinal, and if not, we ignore
   // the event, because a new stream may or may not have the same output
   // settings, and we'll be re-generating an OnOutputConstraints() as needed
-  // from current/later OMX output config anyway.  Here are the
+  // from current/later core codec output constraints anyway.  Here are the
   // possibilities:
   //   * Prior to the client moving to a new stream, we process this event
   //     on StreamControl ordering domain and have bumped
@@ -3193,8 +3181,8 @@ void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(
     // For asserts.
     stream_->SetMidStreamOutputConstraintsChangeActive();
 
-    // This part is not speculative.  OMX has indicated that it's at least
-    // meh about the current output config, so ensure we do a required
+    // This part is not speculative.  The core codec has indicated that it's at
+    // least meh about the current output config, so ensure we do a required
     // OnOutputConstraints() before the next stream starts, even if the client
     // moves on to a new stream such that the speculative part below becomes
     // stale.
@@ -3228,8 +3216,8 @@ void CodecImpl::onCoreCodecOutputFormatChange() {
 }
 
 void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
-  // Free/busy coherency from Codec interface to OMX doesn't involve trusting
-  // the client, so assert we're doing it right server-side.
+  // Free/busy coherency from Codec interface to core codec doesn't involve
+  // trusting the client, so assert we're doing it right server-side.
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     // The core codec says the buffer-referening in-flight lifetime of this

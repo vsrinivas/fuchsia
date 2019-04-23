@@ -705,10 +705,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // The next value we'll use for output buffer_constraints_version_ordinal and
   // output format_details_version_ordinal.
   uint64_t next_output_buffer_constraints_version_ordinal_ = 1;
-  // For the OMX adapter, if the buffer constraints change, then the format
-  // details ordinal also changes (since there's not really any benefit to
-  // detecting lack of change).  But for format-only changes that don't require
-  // buffer re-allocation, we can just increment the format details ordinal.
+  // For format-only changes that don't require buffer re-allocation, we can
+  // just increment the format details ordinal.
   uint64_t next_output_format_details_version_ordinal_ = 1;
 
   // Separately from ordinal allocation, we track the most recent ordinal that
@@ -754,10 +752,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   //
   // Adapter-related
-  //
-  // TODO(dustingreen): Try to generalize this section more or move anything
-  // core-codec-specific to a different class, to make fully common between HW
-  // and OMX cases at least, if not fully general.
   //
 
   // This is called on Output ordering domain (FIDL thread) any time a message

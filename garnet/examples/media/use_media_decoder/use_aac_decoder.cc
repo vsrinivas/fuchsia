@@ -59,25 +59,8 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
     std::unique_ptr<uint8_t[]>* input_bytes) {
   std::unique_ptr<uint8_t[]> asc = std::make_unique<uint8_t[]>(2);
 
-  // TODO(dustingreen): Switch from ADTS to .mp4 and fix AAC decoder to not
-  // require "AudioSpecificConfig()" when fed ADTS.  In other words, move the
-  // stuff here into a shim around the AAC OMX decoder, just next to (above or
-  // below) the OmxCodecRunner in the codec_runner_sw_omx isolate, probably.
-
-  // For SoftAAC2.cpp, for no particularly good reason, a CODECCONFIG buffer is
-  // expected, even when running in ADTS mode, despite all the relevant data
-  // being available from the ADTS header.  The CODECCONFIG buffer has an
-  // AudioSpecificConfig in it.  The AudioSpecificConfig has to be created based
-  // on corresponding fields of the ADTS header - not that requiring this of
-  // the codec client makes any sense whatsoever...
-  //
-  // TODO(dustingreen): maybe add a per-codec compensation layer to un-crazy the
-  // quirks of each codec.  For example, when decoding ADTS, all the needed info
-  // is there in the ADTS stream directly.  No reason to hassle the codec client
-  // for a pointless translated form of the same info.  In contrast, when it's
-  // an mp4 file (or mkv, or whatever modern container format), the codec config
-  // info is relevant.  But we should only force a client to provide it if
-  // it's really needed.
+  // TODO(dustingreen): Remove this function as we don't need to be synthesizing
+  // oob_bytes from ADTS header data.
 
   // First, parse the stuff that's needed from the first ADTS header.
   uint8_t* adts_header = static_cast<uint8_t*>(input_bytes->get());
@@ -427,11 +410,6 @@ void use_aac_decoder(async::Loop* main_loop,
       auto cleanup = fit::defer([&codec_client, &packet] {
         // Using an auto call for this helps avoid losing track of the
         // output_buffer.
-        //
-        // If the omx_state_ or omx_state_desired_ isn't correct,
-        // UseOutputBuffer() will fail.  The only way that can happen here is
-        // if the OMX codec transitioned states unilaterally without any set
-        // state command, so if that occurs, exit.
         codec_client.RecycleOutputPacket(fidl::Clone(packet.header()));
       });
 
