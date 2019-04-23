@@ -20,6 +20,8 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -255,6 +257,26 @@ void FillEntries(
   page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
                                   std::move(on_done));
 }
+
+// Adapt callback for the error notifier API.
+template <typename... A>
+static fit::function<void(Status, A...)> AdaptCallback(
+    fit::function<void(Status, Status, A...)> callback) {
+  return [callback = std::move(callback)](Status status, A... args) {
+    Status disconnect_status;
+    switch (status) {
+      case Status::PARTIAL_RESULT:
+      case Status::KEY_NOT_FOUND:
+      case Status::NEEDS_FETCH:
+      case Status::NETWORK_ERROR:
+        disconnect_status = Status::OK;
+        break;
+      default:
+        disconnect_status = status;
+    }
+    callback(disconnect_status, status, std::forward<A>(args)...);
+  };
+}
 }  // namespace
 
 PageSnapshotImpl::PageSnapshotImpl(
@@ -266,25 +288,31 @@ PageSnapshotImpl::PageSnapshotImpl(
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetEntries(std::vector<uint8_t> key_start,
-                                  std::unique_ptr<Token> token,
-                                  GetEntriesCallback callback) {
+void PageSnapshotImpl::GetEntries(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, Status, std::vector<Entry>,
+                       std::unique_ptr<Token>)>
+        callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token),
-                     std::move(callback));
+                     AdaptCallback(std::move(callback)));
 }
 
-void PageSnapshotImpl::GetEntriesInline(std::vector<uint8_t> key_start,
-                                        std::unique_ptr<Token> token,
-                                        GetEntriesInlineCallback callback) {
+void PageSnapshotImpl::GetEntriesInline(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, Status, std::vector<InlinedEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
                             std::move(key_start), std::move(token),
-                            std::move(callback));
+                            AdaptCallback(std::move(callback)));
 }
 
-void PageSnapshotImpl::GetKeys(std::vector<uint8_t> key_start,
-                               std::unique_ptr<Token> token,
-                               GetKeysCallback callback) {
+void PageSnapshotImpl::GetKeys(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, Status, std::vector<std::vector<uint8_t>>,
+                       std::unique_ptr<Token>)>
+        callback) {
   // Represents the information that needs to be shared between on_next and
   // on_done callbacks.
   struct Context {
@@ -298,8 +326,8 @@ void PageSnapshotImpl::GetKeys(std::vector<uint8_t> key_start,
     std::unique_ptr<Token> next_token;
   };
 
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_keys");
+  auto timed_callback = TRACE_CALLBACK(AdaptCallback(std::move(callback)),
+                                       "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
   auto on_next = [this, context = context.get()](storage::Entry entry) {
@@ -341,9 +369,12 @@ void PageSnapshotImpl::GetKeys(std::vector<uint8_t> key_start,
   }
 }
 
-void PageSnapshotImpl::Get(std::vector<uint8_t> key, GetCallback callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get");
+void PageSnapshotImpl::Get(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
+        callback) {
+  auto timed_callback = TRACE_CALLBACK(AdaptCallback(std::move(callback)),
+                                       "ledger", "snapshot_get");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -370,10 +401,12 @@ void PageSnapshotImpl::Get(std::vector<uint8_t> key, GetCallback callback) {
       });
 }
 
-void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
-                                 GetInlineCallback callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
+void PageSnapshotImpl::GetInline(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, Status, std::unique_ptr<InlinedValue>)>
+        callback) {
+  auto timed_callback = TRACE_CALLBACK(AdaptCallback(std::move(callback)),
+                                       "ledger", "snapshot_get_inline");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -409,9 +442,12 @@ void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::Fetch(std::vector<uint8_t> key, FetchCallback callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch");
+void PageSnapshotImpl::Fetch(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
+        callback) {
+  auto timed_callback = TRACE_CALLBACK(AdaptCallback(std::move(callback)),
+                                       "ledger", "snapshot_fetch");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -433,11 +469,12 @@ void PageSnapshotImpl::Fetch(std::vector<uint8_t> key, FetchCallback callback) {
       });
 }
 
-void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key, int64_t offset,
-                                    int64_t max_size,
-                                    FetchPartialCallback callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch_partial");
+void PageSnapshotImpl::FetchPartial(
+    std::vector<uint8_t> key, int64_t offset, int64_t max_size,
+    fit::function<void(Status, Status, std::unique_ptr<fuchsia::mem::Buffer>)>
+        callback) {
+  auto timed_callback = TRACE_CALLBACK(AdaptCallback(std::move(callback)),
+                                       "ledger", "snapshot_fetch_partial");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -460,6 +497,61 @@ void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key, int64_t offset,
                        ToOptionalTransport(status, std::move(data)));
             });
       });
+}
+
+void PageSnapshotImpl::GetEntriesNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, std::vector<Entry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::GetEntriesInlineNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::GetKeysNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, IterationStatus,
+                       std::vector<std::vector<uint8_t>>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::GetNew(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, fuchsia::ledger::PageSnapshot_GetNew_Result)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::GetInlineNew(
+    std::vector<uint8_t> key,
+    fit::function<void(Status,
+                       fuchsia::ledger::PageSnapshot_GetInlineNew_Result)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::FetchNew(
+    std::vector<uint8_t> key,
+    fit::function<void(Status, fuchsia::ledger::PageSnapshot_FetchNew_Result)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageSnapshotImpl::FetchPartialNew(
+    std::vector<uint8_t> key, int64_t offset, int64_t max_size,
+    fit::function<void(Status,
+                       fuchsia::ledger::PageSnapshot_FetchPartialNew_Result)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace ledger

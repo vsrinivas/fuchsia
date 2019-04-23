@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/enum.h>
 #include <lib/fit/function.h>
+#include <zircon/errors.h>
 
 #include <map>
 #include <utility>
@@ -39,8 +40,10 @@ class ErrorNotifierBinding {
  public:
   explicit ErrorNotifierBinding(D* delegate)
       : impl_(delegate, this), binding_(&impl_) {
-    binding_.set_error_handler(
-        [this](zx_status_t /* status */) { CheckEmpty(); });
+    binding_.set_error_handler([this](zx_status_t status) {
+      binding_error_status_ = status;
+      CheckEmpty();
+    });
     sync_helper_.set_on_empty([this] { CheckEmpty(); });
   }
 
@@ -51,7 +54,14 @@ class ErrorNotifierBinding {
     binding_.Bind(std::move(request), dispatcher);
   }
 
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+  void set_on_empty(fit::closure on_empty) {
+    error_handler_ = [on_empty = std::move(on_empty)](zx_status_t /*status*/) {
+      on_empty();
+    };
+  }
+  void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
+    error_handler_ = std::move(error_handler);
+  }
   bool empty() { return !binding_.is_bound() && sync_helper_.empty(); }
 
   fidl::InterfaceRequest<typename D::FidlInterface> Unbind() {
@@ -105,15 +115,16 @@ class ErrorNotifierBinding {
   }
 
   void CheckEmpty() {
-    if (empty() && on_empty_) {
-      on_empty_();
+    if (empty() && error_handler_) {
+      error_handler_(binding_error_status_);
     }
   }
 
   typename D::Impl impl_;
   fidl::Binding<typename D::FidlInterface> binding_;
-  fit::closure on_empty_;
+  fit::function<void(zx_status_t)> error_handler_;
   SyncHelper sync_helper_;
+  zx_status_t binding_error_status_ = ZX_ERR_PEER_CLOSED;
 };
 
 }  // namespace ledger

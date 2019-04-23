@@ -1292,14 +1292,18 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
 
   EXPECT_EQ(value_string, ToString(actual_value));
 
+  zx_status_t zx_status;
+  bool error_hander_called;
+  snapshot.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&error_hander_called), &zx_status));
   std::unique_ptr<InlinedValue> inlined_value;
   snapshot->GetInline(convert::ToArray(key),
                       callback::Capture(callback::SetWhenCalled(&called),
                                         &status, &inlined_value));
   DrainLoop();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
-  EXPECT_FALSE(inlined_value);
+  EXPECT_FALSE(called);
+  EXPECT_TRUE(error_hander_called);
+  EXPECT_EQ(Status::VALUE_TOO_LARGE, static_cast<Status>(zx_status));
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {

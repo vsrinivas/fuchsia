@@ -20,6 +20,7 @@
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/sync_watcher_set.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
@@ -98,8 +99,9 @@ class PageManager {
   std::unique_ptr<sync_coordinator::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const zx::duration sync_timeout_;
-  callback::AutoCleanableSet<
-      fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl>>
+  callback::AutoCleanableSet<fidl_helpers::BoundInterface<
+      PageSnapshot, PageSnapshotImpl,
+      ErrorNotifierBinding<fuchsia::ledger::PageSnapshotErrorNotifierDelegate>>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> page_delegates_;
   fit::closure on_empty_callback_;

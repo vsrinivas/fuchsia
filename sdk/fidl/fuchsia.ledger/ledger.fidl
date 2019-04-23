@@ -267,11 +267,29 @@ struct InlinedEntry {
     Priority priority;
 };
 
+/// Status for methods that return a sequence of values.
+enum IterationStatus : int8 {
+    /// The iteration has finished.
+    OK = 0;
+    /// The iteration has not finished. The method must be called again to
+    /// retrieve the next batch of responses.
+    PARTIAL_RESULT = 1;
+};
+
+/// Error returned by the different PageSnapshot methods.
+enum Error {
+    KEY_NOT_FOUND = 1;
+    NEEDS_FETCH = 2;
+    NETWORK_ERROR = 3;
+};
+
 /// The content of a page at a given time. Closing the connection to a |Page|
 /// interface closes all |PageSnapshot| interfaces it created. The contents
 /// provided by this interface are limited to the prefix provided to the
 /// Page.GetSnapshot() call.
 protocol PageSnapshot {
+    compose ErrorNotifier;
+
     /// Returns the entries in the page with keys greater or equal to |key_start|
     /// using the lexicographic order. If |key_start| is empty, all entries are
     /// returned. If the result fits in a single fidl message, |status| will be
@@ -286,11 +304,16 @@ protocol PageSnapshot {
     /// The returned |entries| are sorted by |key|.
     GetEntries(Key key_start, Token? token)
         -> (Status status, vector<Entry> entries, Token? next_token);
+    GetEntriesNew(Key key_start, Token? token)
+        -> (IterationStatus status, vector<Entry> entries, Token? next_token);
 
-    /// Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
-    /// fit in a FIDL message.
+    /// Same as |GetEntries()|. The connection will be closed if a value does
+    /// not fit in a FIDL message.
     GetEntriesInline(Key key_start, Token? token)
         -> (Status status, vector<InlinedEntry> entries,
+            Token? next_token);
+    GetEntriesInlineNew(Key key_start, Token? token)
+        -> (IterationStatus status, vector<InlinedEntry> entries,
             Token? next_token);
 
     /// Returns the keys of all entries in the page which are greater or equal to
@@ -306,22 +329,28 @@ protocol PageSnapshot {
     GetKeys(Key key_start, Token? token)
         -> (Status status, vector<Key> keys,
             Token? next_token);
+    GetKeysNew(Key key_start, Token? token)
+        -> (IterationStatus status, vector<Key> keys,
+            Token? next_token);
 
     /// Returns the value of a given key.
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
     /// |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
     /// be retrieved over the network using a Fetch() call.
     Get(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    GetNew(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Returns the value of a given key if it fits in a FIDL message.
-    /// |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
+    /// The connection will be closed if the value does not fit in a FIDL message.
     /// See |Get()| for additional information.
     GetInline(Key key) -> (Status status, InlinedValue? value);
+    GetInlineNew(Key key) -> (InlinedValue value) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
     /// is not available).
     Fetch(Key key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    FetchNew(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally, and returns a shared handle of a part of the value of a given
@@ -331,6 +360,8 @@ protocol PageSnapshot {
     /// everything.
     FetchPartial(Key key, int64 offset, int64 max_size)
         -> (Status status, fuchsia.mem.Buffer? buffer);
+    FetchPartialNew(Key key, int64 offset, int64 max_size)
+        -> (fuchsia.mem.Buffer buffer) error Error;
 };
 
 enum ResultState {
@@ -458,15 +489,6 @@ struct DiffEntry {
 struct Value {
     fuchsia.mem.Buffer? value;
     Priority priority;
-};
-
-/// Status for methods that return a sequence of values.
-enum IterationStatus : int8 {
-    /// The iteration has finished.
-    OK = 0;
-    /// The iteration has not finished. The method must be called again to
-    /// retrieve the next batch of responses.
-    PARTIAL_RESULT = 1;
 };
 
 /// A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be

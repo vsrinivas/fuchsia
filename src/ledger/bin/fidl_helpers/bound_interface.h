@@ -12,7 +12,7 @@
 
 namespace ledger {
 namespace fidl_helpers {
-template <class Interface, class Impl>
+template <class Interface, class Impl, class Binding = fidl::Binding<Interface>>
 class BoundInterface {
  public:
   template <class... Args>
@@ -45,7 +45,7 @@ class BoundInterface {
 
  private:
   Impl impl_;
-  fidl::Binding<Interface> binding_;
+  Binding binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
 };
