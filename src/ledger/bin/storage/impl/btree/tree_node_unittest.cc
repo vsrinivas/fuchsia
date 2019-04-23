@@ -96,7 +96,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 }
 
-TEST_F(TreeNodeTest, GetEntryChild) {
+TEST_F(TreeNodeTest, GetEntry) {
   int size = 10;
   std::vector<Entry> entries;
   ASSERT_TRUE(CreateEntries(size, &entries));
@@ -105,19 +105,6 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   EXPECT_EQ(size, node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(entries[i], GetEntry(node.get(), i));
-  }
-
-  bool called;
-  for (int i = 0; i <= size; ++i) {
-    Status status;
-    std::unique_ptr<const TreeNode> child;
-    node->GetChild(i, callback::Capture(callback::SetWhenCalled(&called),
-                                        &status, &child));
-    RunLoopFor(kSufficientDelay);
-    ASSERT_TRUE(called);
-    ASSERT_EQ(Status::NO_SUCH_CHILD, status);
-    EXPECT_EQ(node->children_identifiers().find(i),
-              node->children_identifiers().end());
   }
 }
 

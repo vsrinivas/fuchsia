@@ -24,11 +24,10 @@
 namespace storage {
 namespace btree {
 
-TreeNode::TreeNode(PageStorage* page_storage, ObjectIdentifier identifier,
-                   uint8_t level, std::vector<Entry> entries,
+TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level,
+                   std::vector<Entry> entries,
                    std::map<size_t, ObjectIdentifier> children)
-    : page_storage_(page_storage),
-      identifier_(std::move(identifier)),
+    : identifier_(std::move(identifier)),
       level_(level),
       entries_(std::move(entries)),
       children_(std::move(children)) {
@@ -42,17 +41,34 @@ void TreeNode::FromIdentifier(
     fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   page_storage->GetObject(
       identifier, PageStorage::Location::NETWORK,
-      [page_storage, identifier, callback = std::move(callback)](
+      [identifier, callback = std::move(callback)](
           Status status, std::unique_ptr<const Object> object) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
         }
         std::unique_ptr<const TreeNode> node;
-        status = FromObject(page_storage, std::move(identifier),
-                            std::move(object), &node);
+        status = FromObject(*object, &node);
         callback(status, std::move(node));
       });
+}
+
+Status TreeNode::FromObject(const Object& object,
+                            std::unique_ptr<const TreeNode>* node) {
+  fxl::StringView data;
+  Status status = object.GetData(&data);
+  if (status != Status::OK) {
+    return status;
+  }
+  uint8_t level;
+  std::vector<Entry> entries;
+  std::map<size_t, ObjectIdentifier> children;
+  if (!DecodeNode(data, &level, &entries, &children)) {
+    return Status::FORMAT_ERROR;
+  }
+  node->reset(new TreeNode(object.GetIdentifier(), level, std::move(entries),
+                           std::move(children)));
+  return Status::OK;
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
@@ -95,19 +111,6 @@ Status TreeNode::GetEntry(int index, Entry* entry) const {
   return Status::OK;
 }
 
-void TreeNode::GetChild(
-    int index,
-    fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
-    const {
-  FXL_DCHECK(index >= 0 && index <= GetKeyCount());
-  const auto it = children_.find(index);
-  if (it == children_.end()) {
-    callback(Status::NO_SUCH_CHILD, nullptr);
-    return;
-  }
-  return FromIdentifier(page_storage_, it->second, std::move(callback));
-}
-
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
                                 int* index) const {
   if (key.empty()) {
@@ -132,26 +135,6 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
 }
 
 const ObjectIdentifier& TreeNode::GetIdentifier() const { return identifier_; }
-
-Status TreeNode::FromObject(PageStorage* page_storage,
-                            ObjectIdentifier identifier,
-                            std::unique_ptr<const Object> object,
-                            std::unique_ptr<const TreeNode>* node) {
-  fxl::StringView data;
-  Status status = object->GetData(&data);
-  if (status != Status::OK) {
-    return status;
-  }
-  uint8_t level;
-  std::vector<Entry> entries;
-  std::map<size_t, ObjectIdentifier> children;
-  if (!DecodeNode(data, &level, &entries, &children)) {
-    return Status::FORMAT_ERROR;
-  }
-  node->reset(new TreeNode(page_storage, std::move(identifier), level,
-                           std::move(entries), std::move(children)));
-  return Status::OK;
-}
 
 }  // namespace btree
 }  // namespace storage
