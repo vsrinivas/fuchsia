@@ -5,8 +5,21 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
+
+namespace {
+
+// Debug logging to see if a breakpoint applies to a thread.
+void LogAppliesToThread(uint32_t breakpoint_id, zx_koid_t pid, zx_koid_t tid,
+                        bool applies) {
+  DEBUG_LOG(Breakpoint) << "Breakpoint " << breakpoint_id
+                        << " applies to [P: " << pid << ", T: " << tid << "]? "
+                        << applies;
+}
+
+}  // namespace
 
 Breakpoint::Breakpoint(ProcessDelegate* process_delegate)
     : process_delegate_(process_delegate) {}
@@ -51,15 +64,20 @@ zx_status_t Breakpoint::SetSettings(
   return result;
 }
 
-bool Breakpoint::AppliesToThread(zx_koid_t process_koid,
-                                 zx_koid_t thread_koid) const {
+
+
+bool Breakpoint::AppliesToThread(zx_koid_t pid,
+                                 zx_koid_t tid) const {
   for (auto& location : settings_.locations) {
-    if (location.process_koid == process_koid) {
-      if (location.thread_koid == 0 || location.thread_koid == thread_koid)
+    if (location.process_koid == pid) {
+      if (location.thread_koid == 0 || location.thread_koid == tid) {
+        LogAppliesToThread(settings_.breakpoint_id, pid, tid, true);
         return true;
+      }
     }
   }
 
+  LogAppliesToThread(settings_.breakpoint_id, pid, tid, false);
   return false;
 }
 

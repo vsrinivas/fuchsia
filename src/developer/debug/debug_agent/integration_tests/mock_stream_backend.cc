@@ -49,6 +49,13 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
       HandleNotifyException(std::move(exception));
       break;
     }
+    case debug_ipc::MsgHeader::Type::kNotifyIO: {
+      debug_ipc::NotifyIO io;
+      if (!debug_ipc::ReadNotifyIO(&reader, &io))
+        FXL_NOTREACHED();
+      HandleNotifyIO(std::move(io));
+      break;
+    }
     case debug_ipc::MsgHeader::Type::kNotifyModules: {
       debug_ipc::NotifyModules modules;
       if (!debug_ipc::ReadNotifyModules(&reader, &modules))

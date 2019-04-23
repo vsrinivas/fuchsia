@@ -4,6 +4,14 @@
 
 #include "src/developer/debug/debug_agent/test_data/test_so_symbols.h"
 
+#include <atomic>
+
 int InsertBreakpointFunction(int c) { return 10 * c; }
 
 void AnotherFunctionForKicks() {}
+
+void MultithreadedFunctionToBreakOn() {
+  // This is meant to be a bare-bones example of multi-threaded logic.
+  static std::atomic<int> global_counter = 0;
+  global_counter++;
+}

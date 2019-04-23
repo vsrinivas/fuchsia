@@ -33,8 +33,8 @@ namespace {
 
 // Used to have better context upon reading the debug logs.
 std::string ThreadPreamble(const DebuggedThread* thread) {
-  return fxl::StringPrintf("[Pr: %lu, T: %lu] ", thread->process()->koid(),
-                           thread->koid());
+  return fxl::StringPrintf("[Pr: %lu (%s), T: %lu] ", thread->process()->koid(),
+                           thread->process()->name().c_str(), thread->koid());
 }
 
 // TODO(donosoc): Move this to a more generic place (probably shared) where it

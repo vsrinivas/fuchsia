@@ -21,6 +21,10 @@ EXPORT extern bool gTestPassed;
 EXPORT NOINLINE int InsertBreakpointFunction(int);
 EXPORT NOINLINE void AnotherFunctionForKicks();
 
+// Multithreaded Breakpoint Test -----------------------------------------------
+
+EXPORT NOINLINE void MultithreadedFunctionToBreakOn();
+
 // Write Register Symbols ------------------------------------------------------
 
 EXPORT NOINLINE void Test_BranchOnRAX();

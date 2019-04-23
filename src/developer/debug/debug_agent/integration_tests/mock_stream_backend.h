@@ -28,14 +28,15 @@ namespace debug_agent {
 class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
  public:
   MockStreamBackend();
-  RemoteAPI* remote_api() { return agent_.get(); }
-  DebugAgent* agent() { return agent_.get(); }
+  RemoteAPI* remote_api() const { return agent_.get(); }
+  DebugAgent* agent() const { return agent_.get(); }
 
   // Message dispatcher interface.
   // This should be overriden by every test interested in a particular set of
   // messages. By default they do nothing.
   virtual void HandleAttach(debug_ipc::AttachReply) {}
   virtual void HandleNotifyException(debug_ipc::NotifyException) {}
+  virtual void HandleNotifyIO(debug_ipc::NotifyIO) {}
   virtual void HandleNotifyModules(debug_ipc::NotifyModules) {}
   virtual void HandleNotifyProcessExiting(debug_ipc::NotifyProcessExiting) {}
   virtual void HandleNotifyProcessStarting(debug_ipc::NotifyProcessStarting) {}

@@ -23,6 +23,7 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
@@ -47,6 +48,12 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
   }
 
   return data;
+}
+
+// Meant to be used in debug logging.
+std::string ProcessPreamble(const DebuggedProcess* process) {
+  return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(),
+                           process->name().c_str());
 }
 
 }  // namespace
@@ -300,6 +307,8 @@ ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
 
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
                                                 uint64_t address) {
+  DEBUG_LOG(Process) << ProcessPreamble(this)
+                     << "Setting breakpoint on 0x: " << std::hex << address;
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
     auto process_breakpoint =
@@ -354,6 +363,7 @@ void DebuggedProcess::UnregisterWatchpoint(
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
+  DEBUG_LOG(Process) << ProcessPreamble(this) << "Terminating.";
   debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = process_koid;
 
@@ -501,26 +511,28 @@ zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
 void DebuggedProcess::OnStdout(bool close) {
   FXL_DCHECK(stdout_.valid());
   if (close) {
-    DEBUG_LOG(Process) << "Process " << name_ << ": stdout closed.";
+    DEBUG_LOG(Process) << ProcessPreamble(this) << "stdout closed.";
     stdout_.Reset();
     return;
   }
 
   auto data = ReadSocketInput(&stdout_);
   FXL_DCHECK(!data.empty());
+  DEBUG_LOG(Process) << ProcessPreamble(this) << "Got stdout: " << data.data();
   SendIO(debug_ipc::NotifyIO::Type::kStdout, std::move(data));
 }
 
 void DebuggedProcess::OnStderr(bool close) {
   FXL_DCHECK(stderr_.valid());
   if (close) {
-    DEBUG_LOG(Process) << "Process " << name_ << ": stderr closed.";
+    DEBUG_LOG(Process) << ProcessPreamble(this) << "stderr closed.";
     stderr_.Reset();
     return;
   }
 
   auto data = ReadSocketInput(&stderr_);
   FXL_DCHECK(!data.empty());
+  DEBUG_LOG(Process) << ProcessPreamble(this) << "Got stderr: " << data.data();
   SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
 }
 
