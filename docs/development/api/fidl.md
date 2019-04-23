@@ -668,8 +668,8 @@ return a value, or error out and produce `<type>`. Here is an example:
 ```fidl
 // Only erroneous status are listed
 enum MyErrorCode {
-    ERR_MISSING_FOO = 1;  // avoid using 0
-    ERR_NO_BAR = 2;
+    MISSING_FOO = 1;  // avoid using 0
+    NO_BAR = 2;
     ...
 };
 
@@ -691,8 +691,8 @@ optional value and an error code, is common practice. See for instance:
 ```fidl
 enum MyErrorCode {
     OK = 0;               // The success value should be 0,
-    ERR_MISSING_FOO = 1;  // with erroneous status next.
-    ERR_NO_BAR = 2;
+    MISSING_FOO = 1;      // with erroneous status next.
+    NO_BAR = 2;
     ...
 };
 
