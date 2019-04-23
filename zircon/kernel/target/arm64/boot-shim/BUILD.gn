@@ -147,6 +147,9 @@ template("boot_shim") {
   }
 }
 
+boot_shim("as370") {
+}
+
 boot_shim("hikey960") {
 }
 

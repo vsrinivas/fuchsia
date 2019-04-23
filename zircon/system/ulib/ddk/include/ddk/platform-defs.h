@@ -210,6 +210,10 @@ __BEGIN_CDECLS
 #define PDEV_DID_QUALCOMM_CLOCK      4
 #define PDEV_DID_QUALCOMM_POWER      5
 
+// Synaptics
+#define PDEV_VID_SYNAPTICS          20
+#define PDEV_PID_SYNAPTICS_AS370     1
+
 __END_CDECLS
 
 #endif  // DDK_PLATFORM_DEFS_H_
