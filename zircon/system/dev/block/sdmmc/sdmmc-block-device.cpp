@@ -177,8 +177,8 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     req->blocksize = static_cast<uint16_t>(block_info_.block_size);
 
     // convert offset_vmo and length to bytes
-    txn->operation()->rw.offset_vmo *= block_info_.block_size;
-    txn->operation()->rw.length *= block_info_.block_size;
+    uint64_t offset_vmo = txn->operation()->rw.offset_vmo * block_info_.block_size;
+    uint64_t length = txn->operation()->rw.length * block_info_.block_size;
 
     fzl::VmoMapper mapper;
 
@@ -188,18 +188,18 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
         req->virt_buffer = nullptr;
         req->pmt = ZX_HANDLE_INVALID;
         req->dma_vmo = txn->operation()->rw.vmo;
-        req->buf_offset = txn->operation()->rw.offset_vmo;
+        req->buf_offset = offset_vmo;
     } else {
         req->use_dma = false;
-        st = mapper.Map(*zx::unowned_vmo(txn->operation()->rw.vmo), txn->operation()->rw.offset_vmo,
-                        txn->operation()->rw.length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+        st = mapper.Map(*zx::unowned_vmo(txn->operation()->rw.vmo), offset_vmo, length,
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
             BlockComplete(txn, st, async_id_);
             return;
         }
         req->virt_buffer = mapper.start();
-        req->virt_size = txn->operation()->rw.length;
+        req->virt_size = length;
     }
 
     st = sdmmc_.host().Request(req);
