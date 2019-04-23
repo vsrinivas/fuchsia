@@ -215,8 +215,8 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -258,8 +258,8 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -310,8 +310,8 @@ TEST(NetStreamTest, BlockingAcceptDupWrite) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -355,8 +355,8 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -402,8 +402,8 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -453,8 +453,8 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -511,8 +511,8 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -575,8 +575,8 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -630,8 +630,8 @@ TEST(NetStreamTest, Shutdown) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
   ASSERT_EQ(0, ret) << "bind failed: " << strerror(errno);
 
@@ -673,7 +673,7 @@ TEST(NetDatagramTest, DatagramSendto) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
+  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   int ret = bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr));
@@ -716,7 +716,7 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
+  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   int ret = bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr));
@@ -758,7 +758,7 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
+  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   int ret = bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr));
@@ -825,7 +825,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
+  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   int ret = bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr),
@@ -897,7 +897,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   struct sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin6_family = AF_INET6;
-  addr.sin6_port = 0;
+  addr.sin6_port = htons(0);
   addr.sin6_addr = in6addr_loopback;
 
   int ret = bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr),
@@ -969,7 +969,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = 0;
+  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   socklen_t addrlen = sizeof(addr);
 
