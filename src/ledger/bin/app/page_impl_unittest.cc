@@ -284,14 +284,14 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
-  zx_status_t status = reader.rea2(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
+  zx_status_t status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value));
-  status = reader.rea2(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
+  status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
 }
@@ -320,7 +320,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   std::string key = GetKey(1, key_size);
   page_ptr_->PutReference(convert::ToArray(key), fidl::Clone(*reference),
                           Priority::EAGER);
-  zx_status_t status = reader.rea2(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
+  zx_status_t status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
@@ -328,7 +328,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   key = GetKey(1, kMaxKeySize);
   page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
                           Priority::EAGER);
-  status = reader.rea2(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
+  status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
 }

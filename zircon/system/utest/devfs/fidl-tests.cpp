@@ -49,7 +49,7 @@ bool FidlOpenValidator(const zx::channel& directory, const char* path,
     zx_handle_t handles[4];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    ASSERT_EQ(client.rea2(0, buf, handles, sizeof(buf), fbl::count_of(handles),
+    ASSERT_EQ(client.read(0, buf, handles, sizeof(buf), fbl::count_of(handles),
                           &actual_bytes, &actual_handles), ZX_OK);
     ASSERT_EQ(actual_bytes, sizeof(fs::OnOpenMsg));
     ASSERT_EQ(actual_handles, expected_handles);
@@ -75,7 +75,7 @@ bool FidlOpenErrorValidator(const zx::channel& directory) {
     zx_handle_t handles[4];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    ASSERT_EQ(client.rea2(0, buf, handles, sizeof(buf), fbl::count_of(handles),
+    ASSERT_EQ(client.read(0, buf, handles, sizeof(buf), fbl::count_of(handles),
                           &actual_bytes, &actual_handles), ZX_OK);
     ASSERT_EQ(actual_bytes, sizeof(fuchsia_io_NodeOnOpenEvent));
     ASSERT_EQ(actual_handles, 0);
@@ -179,7 +179,7 @@ bool ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
                   ZX_OK);
         ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
         uint32_t actual;
-        ASSERT_EQ(c.rea2(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr), ZX_OK);
+        ASSERT_EQ(c.read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr), ZX_OK);
         wb->size = actual;
         wb->ptr = wb->buf;
     }

@@ -225,7 +225,7 @@ bool ExternalThread::Start() {
     ASSERT_NE(sigs & ZX_CHANNEL_READABLE, 0);
 
     uint32_t rxed_handles = 0;
-    ASSERT_EQ(local.rea2(0, nullptr, external_thread_.reset_and_get_address(),
+    ASSERT_EQ(local.read(0, nullptr, external_thread_.reset_and_get_address(),
                          0, 1, nullptr, &rxed_handles), ZX_OK);
     ASSERT_EQ(rxed_handles, 1u);
 

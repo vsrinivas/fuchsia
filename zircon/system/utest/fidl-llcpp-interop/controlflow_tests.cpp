@@ -100,7 +100,7 @@ bool ServerShutdownTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0,
+            ASSERT_EQ(client_chan.read(0,
                                        &epitaph, tmp_handles, sizeof(epitaph), 1,
                                        &out_bytes, &out_handles),
                       ZX_OK);
@@ -115,7 +115,7 @@ bool ServerShutdownTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
+            ASSERT_EQ(client_chan.read(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
                       ZX_ERR_PEER_CLOSED);
             ASSERT_EQ(out_bytes, 0);
             ASSERT_EQ(out_handles, 0);
@@ -150,7 +150,7 @@ bool NoReplyMustSendEpitaphTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0,
+            ASSERT_EQ(client_chan.read(0,
                                        &epitaph, tmp_handles, sizeof(epitaph), 1,
                                        &out_bytes, &out_handles),
                       ZX_OK);
@@ -165,7 +165,7 @@ bool NoReplyMustSendEpitaphTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
+            ASSERT_EQ(client_chan.read(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
                       ZX_ERR_PEER_CLOSED);
             ASSERT_EQ(out_bytes, 0);
             ASSERT_EQ(out_handles, 0);
@@ -203,7 +203,7 @@ bool MustSendEpitaphTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0,
+            ASSERT_EQ(client_chan.read(0,
                                        &epitaph, tmp_handles, sizeof(epitaph), 1,
                                        &out_bytes, &out_handles),
                       ZX_OK);
@@ -218,7 +218,7 @@ bool MustSendEpitaphTest() {
             zx_handle_t tmp_handles[1] = {};
             uint32_t out_bytes = 0;
             uint32_t out_handles = 0;
-            ASSERT_EQ(client_chan.rea2(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
+            ASSERT_EQ(client_chan.read(0, tmp_bytes, tmp_handles, 1, 1, &out_bytes, &out_handles),
                       ZX_ERR_PEER_CLOSED);
             ASSERT_EQ(out_bytes, 0);
             ASSERT_EQ(out_handles, 0);

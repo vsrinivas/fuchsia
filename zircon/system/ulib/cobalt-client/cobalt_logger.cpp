@@ -80,7 +80,7 @@ zx_status_t ReadLoggerSimpleCreateResponse(zx::channel* logger, fuchsia_cobalt_S
     uint32_t msg_size = sizeof(fuchsia_cobalt_LoggerSimpleLogIntHistogramResponse);
     FIDL_ALIGNDECL uint8_t msg[msg_size];
     uint32_t read_bytes = 0;
-    zx_status_t result = logger->rea2(0l, &msg, nullptr, msg_size, 0, &read_bytes, nullptr);
+    zx_status_t result = logger->read(0l, &msg, nullptr, msg_size, 0, &read_bytes, nullptr);
     if (result != ZX_OK) {
         return result;
     }

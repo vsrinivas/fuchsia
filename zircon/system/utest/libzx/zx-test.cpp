@@ -164,7 +164,7 @@ static bool channel_rw_test() {
     zx_handle_t recv[2] = {0};
 
     ASSERT_EQ(channel[0].write(0u, nullptr, 0u, handles, 2), ZX_OK);
-    ASSERT_EQ(channel[1].rea2(0u, nullptr, recv, 0u, 2, nullptr, nullptr), ZX_OK);
+    ASSERT_EQ(channel[1].read(0u, nullptr, recv, 0u, 2, nullptr, nullptr), ZX_OK);
 
     ASSERT_EQ(zx_handle_close(recv[0]), ZX_OK);
     ASSERT_EQ(zx_handle_close(recv[1]), ZX_OK);
@@ -188,7 +188,7 @@ static bool channel_rw_etc_test() {
     uint32_t h_count = 0;
 
     ASSERT_EQ(channel[0].write(0u, nullptr, 0u, handles, 2), ZX_OK);
-    ASSERT_EQ(channel[1].rea2_etc(0u, nullptr, recv, 0u, 2, nullptr, &h_count), ZX_OK);
+    ASSERT_EQ(channel[1].read_etc(0u, nullptr, recv, 0u, 2, nullptr, &h_count), ZX_OK);
 
     ASSERT_EQ(h_count, 2u);
     ASSERT_EQ(recv[0].type, ZX_OBJ_TYPE_EVENTPAIR);

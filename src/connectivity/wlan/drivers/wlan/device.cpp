@@ -780,7 +780,7 @@ void Device::ProcessChannelPacketLocked(uint64_t signal_count) {
 
     for (size_t i = 0; i < signal_count; ++i) {
         uint32_t read = 0;
-        zx_status_t status = channel_.rea2(0, fidl_msg_buf_.data(), nullptr, fidl_msg_buf_.size(),
+        zx_status_t status = channel_.read(0, fidl_msg_buf_.data(), nullptr, fidl_msg_buf_.size(),
                                            0, &read, nullptr);
         if (status == ZX_ERR_SHOULD_WAIT) { break; }
         if (status != ZX_OK) {

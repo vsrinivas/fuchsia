@@ -636,7 +636,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
     zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = fbl::count_of(hin);
-    zx_status_t status = conn->rea2(0, msg, hin, msize, hcount, &msize, &hcount);
+    zx_status_t status = conn->read(0, msg, hin, msize, hcount, &msize, &hcount);
     if (status != ZX_OK) {
         return status;
     }
@@ -697,7 +697,7 @@ zx_status_t DevhostControllerConnection::HandleRead() {
     zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = fbl::count_of(hin);
-    zx_status_t status = conn->rea2(0, msg, hin, msize, hcount, &msize, &hcount);
+    zx_status_t status = conn->read(0, msg, hin, msize, hcount, &msize, &hcount);
     if (status != ZX_OK) {
         return status;
     }

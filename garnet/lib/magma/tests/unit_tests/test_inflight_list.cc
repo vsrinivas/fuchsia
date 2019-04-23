@@ -35,7 +35,7 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
     zx_status_t status =
         static_cast<TestConnection*>(connection)
             ->channel[0]
-            .rea2(0, buffer, nullptr, buffer_size, 0, &buffer_actual_size, nullptr);
+            .read(0, buffer, nullptr, buffer_size, 0, &buffer_actual_size, nullptr);
     if (status == ZX_OK) {
         *buffer_size_out = buffer_actual_size;
         return MAGMA_STATUS_OK;

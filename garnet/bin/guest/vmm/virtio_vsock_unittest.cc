@@ -127,7 +127,7 @@ struct TestChannelConnection : public TestConnectionBase<zx::channel> {
   zx_status_t read(uint8_t* data, size_t size, size_t* actual) {
     uint32_t actual_bytes;
     zx_status_t status =
-        channel.rea2(0, data, nullptr, size, 0, &actual_bytes, nullptr);
+        channel.read(0, data, nullptr, size, 0, &actual_bytes, nullptr);
     if (status == ZX_OK) {
       *actual = actual_bytes;
     }

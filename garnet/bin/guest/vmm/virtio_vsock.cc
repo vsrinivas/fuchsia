@@ -436,7 +436,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue,
   while (status == ZX_OK) {
     size_t len = std::min(desc->len, PeerFree());
     uint32_t actual;
-    status = channel_.rea2(0, desc->addr, nullptr, len, 0, &actual, nullptr);
+    status = channel_.read(0, desc->addr, nullptr, len, 0, &actual, nullptr);
     if (status != ZX_OK) {
       // We are handling two different cases in this branch:
       // 1. If the channel is empty.

@@ -143,7 +143,7 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
             break;
         }
 
-        res = rb_ch_.rea2(0,
+        res = rb_ch_.read(0,
                           &pos_notif, nullptr, sizeof(pos_notif), 0,
                           &bytes_read, &junk);
         if (res != ZX_OK) {

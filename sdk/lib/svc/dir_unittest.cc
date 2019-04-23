@@ -24,7 +24,7 @@ static void connect(void* context, const char* service_name,
   EXPECT_EQ(ZX_OK, binding.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
                                     &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
-            binding.rea2(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
+            binding.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
   EXPECT_EQ(ZX_OK, binding.write(0, "ok", 2, 0, 0));
 }
 
@@ -61,7 +61,7 @@ TEST_F(ServiceTest, Control) {
   EXPECT_EQ(ZX_OK,
             svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
-            svc.rea2(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
+            svc.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
 
   // Verify that connection to a removed service fails.
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
@@ -107,7 +107,7 @@ TEST_F(ServiceTest, PublishLegacyService) {
   EXPECT_EQ(ZX_OK,
             svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
-            svc.rea2(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
+            svc.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
 
   // Verify that connection to a removed service fails.
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));

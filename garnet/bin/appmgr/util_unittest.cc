@@ -55,8 +55,8 @@ TEST(UtilTests, BindDirectory) {
   char got1[strlen(msg1) + 1];
   char got2[strlen(msg2) + 1];
 
-  channels.client_request.rea2(0, got1, nullptr, sizeof(got1), 0, nullptr, nullptr);
-  launchInfo.directory_request.rea2(0, got2, nullptr, sizeof(got2), 0, nullptr, nullptr);
+  channels.client_request.read(0, got1, nullptr, sizeof(got1), 0, nullptr, nullptr);
+  launchInfo.directory_request.read(0, got2, nullptr, sizeof(got2), 0, nullptr, nullptr);
 
   EXPECT_STREQ(got1, msg1);
   EXPECT_STREQ(got2, msg2);

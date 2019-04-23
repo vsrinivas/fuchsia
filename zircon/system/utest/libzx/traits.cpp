@@ -312,7 +312,7 @@ bool traits_test() {
         zx_exception_info_t info;
         ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr),
                   ZX_OK);
-        ASSERT_EQ(exception_channel.rea2(0, &info, exception.reset_and_get_address(),
+        ASSERT_EQ(exception_channel.read(0, &info, exception.reset_and_get_address(),
                                          sizeof(info), 1, nullptr, nullptr),
                   ZX_OK);
 

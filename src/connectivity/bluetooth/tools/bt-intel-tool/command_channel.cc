@@ -202,7 +202,7 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
     }
     auto packet_bytes = packet->mutable_view()->mutable_data();
     zx_status_t read_status =
-        channel.rea2(0u, packet_bytes.mutable_data(), nullptr,
+        channel.read(0u, packet_bytes.mutable_data(), nullptr,
                      packet_bytes.size(), 0, &read_size, nullptr);
     if (read_status < 0) {
       std::cerr << "CommandChannel: Failed to read event bytes: "

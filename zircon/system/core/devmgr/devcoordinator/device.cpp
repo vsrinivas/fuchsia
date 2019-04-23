@@ -325,7 +325,7 @@ zx_status_t Device::HandleRead() {
     }
 
     zx_status_t r;
-    if ((r = channel()->rea2(0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
+    if ((r = channel()->read(0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
         return r;
     }
 

@@ -795,7 +795,7 @@ bool AssertReadOnDirentsEvent(const zx::channel& chan, const DirentArray& expect
 
     auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
     uint32_t actual = 0;
-    ASSERT_EQ(chan.rea2(0, buffer.get(), nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &actual, nullptr),
+    ASSERT_EQ(chan.read(0, buffer.get(), nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &actual, nullptr),
               ZX_OK);
     ASSERT_GE(actual, sizeof(fidl_message_header_t));
     ASSERT_EQ(reinterpret_cast<fidl_message_header_t*>(buffer.get())->ordinal,

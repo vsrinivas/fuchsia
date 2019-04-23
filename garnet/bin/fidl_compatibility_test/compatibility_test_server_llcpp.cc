@@ -64,7 +64,7 @@ class EchoClientApp {
           bytes = std::move(response_buffer);
           uint32_t actual_bytes = 0;
           uint32_t actual_handles = 0;
-          ZX_ASSERT(client_end_->rea2(0, bytes.data(), handles.data(),
+          ZX_ASSERT(client_end_->read(0, bytes.data(), handles.data(),
                                       bytes.capacity(), handles.capacity(),
                                       &actual_bytes, &actual_handles) == ZX_OK);
           // TODO(FIDL-350): Hard-coding the event ordinal due to no event

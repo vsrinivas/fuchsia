@@ -948,7 +948,7 @@ zx_status_t BtHciMediatek::HostToCardPacket(const zx::channel& channel, uint8_t 
     uint8_t* snoop_buf = header_buf + kHciPacketHeaderSize - 1;
 
     uint32_t actual;
-    status = channel.rea2(0, packet_buf, nullptr, packet_buf_size, 0, &actual, nullptr);
+    status = channel.read(0, packet_buf, nullptr, packet_buf_size, 0, &actual, nullptr);
     while (status == ZX_OK) {
         uint32_t snoop_size = actual + 1;
         actual += kHciPacketHeaderSize;
@@ -984,7 +984,7 @@ zx_status_t BtHciMediatek::HostToCardPacket(const zx::channel& channel, uint8_t 
             }
         }
 
-        status = channel.rea2(0, packet_buf, nullptr, packet_buf_size, 0, &actual, nullptr);
+        status = channel.read(0, packet_buf, nullptr, packet_buf_size, 0, &actual, nullptr);
     }
 
     if (status != ZX_ERR_SHOULD_WAIT) {

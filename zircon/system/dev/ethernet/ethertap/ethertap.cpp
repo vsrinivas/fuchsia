@@ -365,7 +365,7 @@ int TapDevice::Thread() {
         }
 
         if (pending & ZX_CHANNEL_READABLE) {
-            status = channel_.rea2(0, msg.bytes, msg.handles, buff_size, handle_count,
+            status = channel_.read(0, msg.bytes, msg.handles, buff_size, handle_count,
                                    &msg.num_bytes, &msg.num_handles);
             if (status != ZX_OK) {
                 ethertap_trace("message read failed: %d\n", status);
