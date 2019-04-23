@@ -182,6 +182,9 @@ bool TestWrapper(void) {
                    " (block %" PRIu64 " / %" PRIu64 ")\n", total,
                    gRamdiskFailureLoops ? gRamdiskFailureLoops : block_count, i, block_count);
         }
+        // TODO: When we convert to zxtest, print the above error message within this
+        // assertion.
+        ASSERT_EQ(fsck_result, ZX_OK);
 
         // The fsck check during Teardown should verify that journal replay was successful.
         ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
@@ -219,7 +222,7 @@ const fsck_options_t test_fsck_options = {
     .never_modify = true,
     .always_modify = false,
     .force = true,
-    .apply_journal = false,
+    .apply_journal = true,
 };
 
 BlobfsTest::~BlobfsTest() {
