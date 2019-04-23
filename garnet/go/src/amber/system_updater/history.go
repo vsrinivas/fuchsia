@@ -18,7 +18,7 @@ type UpdateHistory struct {
 	Attempts      int       `json:"attempts"`
 }
 
-const historyPath = "/data/amber/update_history.json"
+const historyPath = "/data/update_history.json"
 
 // IncrementOrCreateUpdateHistory loads the last update history struct from
 // disk, incrementing its attempt counter, or starts over with a fresh history
