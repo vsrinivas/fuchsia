@@ -91,9 +91,17 @@ pub enum Opt {
     /// commands for wlan iface devices
     Iface(IfaceCmd),
 
-    #[structopt(name = "client")]
     /// commands for client stations
+    #[structopt(name = "client")]
     Client(ClientCmd),
+    #[structopt(name = "connect")]
+    Connect(ClientConnectCmd),
+    #[structopt(name = "disconnect")]
+    Disconnect(ClientDisconnectCmd),
+    #[structopt(name = "scan")]
+    Scan(ClientScanCmd),
+    #[structopt(name = "status")]
+    Status(ClientStatusCmd),
 
     #[structopt(name = "ap")]
     /// commands for AP stations
@@ -172,76 +180,88 @@ pub enum MinstrelCmd {
 }
 
 #[derive(StructOpt, Clone, Debug)]
+pub struct ClientConnectCmd {
+    #[structopt(short = "i", long = "iface", default_value = "0")]
+    pub iface_id: u16,
+    #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
+    pub password: Option<String>,
+    #[structopt(short = "hash", long = "hash", help = "WPA2 PSK as hex string")]
+    pub psk: Option<String>,
+    #[structopt(
+        short = "y",
+        long = "phy",
+        raw(possible_values = "&PhyArg::variants()"),
+        raw(case_insensitive = "true"),
+        help = "Specify an upper bound"
+    )]
+    pub phy: Option<PhyArg>,
+    #[structopt(
+        short = "w",
+        long = "cbw",
+        raw(possible_values = "&CbwArg::variants()"),
+        raw(case_insensitive = "true"),
+        help = "Specify an upper bound"
+    )]
+    pub cbw: Option<CbwArg>,
+    #[structopt(
+        short = "s",
+        long = "scan-type",
+        default_value = "passive",
+        raw(possible_values = "&ScanTypeArg::variants()"),
+        raw(case_insensitive = "true"),
+        help = "Experimental. Default scan type on each channel. \
+                Behavior may differ on DFS channel"
+    )]
+    pub scan_type: ScanTypeArg,
+    #[structopt(raw(required = "true"))]
+    pub ssid: String,
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub struct ClientDisconnectCmd {
+    #[structopt(short = "i", long = "iface", default_value = "0")]
+    pub iface_id: u16,
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub struct ClientScanCmd {
+    #[structopt(short = "i", long = "iface", default_value = "0")]
+    pub iface_id: u16,
+    #[structopt(
+        short = "s",
+        long = "scan-type",
+        default_value = "passive",
+        raw(possible_values = "&ScanTypeArg::variants()"),
+        raw(case_insensitive = "true"),
+        help = "Experimental. Default scan type on each channel. \
+                Behavior may differ on DFS channel"
+    )]
+    pub scan_type: ScanTypeArg,
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub struct ClientStatusCmd {
+    #[structopt(short = "i", long = "iface", default_value = "0")]
+    pub iface_id: u16,
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub enum ClientCmd {
     #[structopt(name = "scan")]
-    Scan {
-        #[structopt(raw(required = "true"))]
-        iface_id: u16,
-        #[structopt(
-            short = "s",
-            long = "scan-type",
-            default_value = "passive",
-            raw(possible_values = "&ScanTypeArg::variants()"),
-            raw(case_insensitive = "true"),
-            help = "Experimental. Default scan type on each channel. \
-                    Behavior may differ on DFS channel"
-        )]
-        scan_type: ScanTypeArg,
-    },
+    Scan(ClientScanCmd),
     #[structopt(name = "connect")]
-    Connect {
-        #[structopt(raw(required = "true"))]
-        iface_id: u16,
-        #[structopt(raw(required = "true"))]
-        ssid: String,
-        #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
-        password: Option<String>,
-        #[structopt(short = "hash", long = "hash", help = "WPA2 PSK as hex string")]
-        psk: Option<String>,
-        #[structopt(
-            short = "y",
-            long = "phy",
-            raw(possible_values = "&PhyArg::variants()"),
-            raw(case_insensitive = "true"),
-            help = "Specify an upper bound"
-        )]
-        phy: Option<PhyArg>,
-        #[structopt(
-            short = "w",
-            long = "cbw",
-            raw(possible_values = "&CbwArg::variants()"),
-            raw(case_insensitive = "true"),
-            help = "Specify an upper bound"
-        )]
-        cbw: Option<CbwArg>,
-        #[structopt(
-            short = "s",
-            long = "scan-type",
-            default_value = "passive",
-            raw(possible_values = "&ScanTypeArg::variants()"),
-            raw(case_insensitive = "true"),
-            help = "Experimental. Default scan type on each channel. \
-                    Behavior may differ on DFS channel"
-        )]
-        scan_type: ScanTypeArg,
-    },
+    Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
-    Disconnect {
-        #[structopt(raw(required = "true"))]
-        iface_id: u16,
-    },
+    Disconnect(ClientDisconnectCmd),
     #[structopt(name = "status")]
-    Status {
-        #[structopt(raw(required = "true"))]
-        iface_id: u16,
-    },
+    Status(ClientStatusCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
 pub enum ApCmd {
     #[structopt(name = "start")]
     Start {
-        #[structopt(raw(required = "true"))]
+        #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
         #[structopt(short = "s", long = "ssid")]
         ssid: String,
@@ -253,7 +273,7 @@ pub enum ApCmd {
     },
     #[structopt(name = "stop")]
     Stop {
-        #[structopt(raw(required = "true"))]
+        #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
     },
 }
@@ -262,7 +282,7 @@ pub enum ApCmd {
 pub enum MeshCmd {
     #[structopt(name = "join")]
     Join {
-        #[structopt(raw(required = "true"))]
+        #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
         #[structopt(short = "m", long = "mesh_id")]
         mesh_id: String,
@@ -272,12 +292,12 @@ pub enum MeshCmd {
     },
     #[structopt(name = "leave")]
     Leave {
-        #[structopt(raw(required = "true"))]
+        #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
     },
     #[structopt(name = "paths")]
     Paths {
-        #[structopt(raw(required = "true"))]
+        #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
     },
 }

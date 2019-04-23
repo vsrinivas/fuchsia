@@ -46,7 +46,18 @@ fn main() -> Result<(), Error> {
         match opt {
             Opt::Phy(cmd) => await!(do_phy(cmd, wlan_svc)),
             Opt::Iface(cmd) => await!(do_iface(cmd, wlan_svc)),
-            Opt::Client(cmd) => await!(do_client(cmd, wlan_svc)),
+            Opt::Client(opts::ClientCmd::Connect(cmd)) | Opt::Connect(cmd) => {
+                await!(do_client_connect(cmd, wlan_svc))
+            }
+            Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
+                await!(do_client_disconnect(cmd, wlan_svc))
+            }
+            Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
+                await!(do_client_scan(cmd, wlan_svc))
+            }
+            Opt::Client(opts::ClientCmd::Status(cmd)) | Opt::Status(cmd) => {
+                await!(do_client_status(cmd, wlan_svc))
+            }
             Opt::Ap(cmd) => await!(do_ap(cmd, wlan_svc)),
             Opt::Mesh(cmd) => await!(do_mesh(cmd, wlan_svc)),
         }
@@ -155,74 +166,83 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     Ok(())
 }
 
-async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
-    match cmd {
-        opts::ClientCmd::Scan { iface_id, scan_type } => {
-            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            let (local, remote) = endpoints::create_proxy()?;
-            let mut req = fidl_sme::ScanRequest {
-                timeout: SCAN_REQUEST_TIMEOUT_SEC,
-                scan_type: scan_type.into(),
-            };
-            sme.scan(&mut req, remote).context("error sending scan request")?;
-            await!(handle_scan_transaction(local))
+async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
+    let credential = match make_credential(password, psk) {
+        Ok(c) => c,
+        Err(e) => {
+            println!("credential error: {}", e);
+            return Ok(());
         }
-        opts::ClientCmd::Connect { iface_id, ssid, password, psk, phy, cbw, scan_type } => {
-            let credential = match make_credential(password, psk) {
-                Ok(c) => c,
-                Err(e) => {
-                    println!("credential error: {}", e);
-                    return Ok(());
-                }
-            };
-            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            let (local, remote) = endpoints::create_proxy()?;
-            let mut req = fidl_sme::ConnectRequest {
-                ssid: ssid.as_bytes().to_vec(),
-                credential,
-                radio_cfg: fidl_sme::RadioConfig {
-                    override_phy: phy.is_some(),
-                    phy: phy.unwrap_or(PhyArg::Vht).into(),
-                    override_cbw: cbw.is_some(),
-                    cbw: cbw.unwrap_or(CbwArg::Cbw80).into(),
-                    override_primary_chan: false,
-                    primary_chan: 0,
-                },
-                scan_type: scan_type.into(),
-            };
-            sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
-            await!(handle_connect_transaction(local))
+    };
+    let sme = await!(get_client_sme(wlan_svc, iface_id)).map_err(|e| {
+      format_err!("error accessing client SME for iface {}: {};\
+                   please ensure the selected iface supports client mode", iface_id, e)  
+    })?;
+    let (local, remote) = endpoints::create_proxy()?;
+    let mut req = fidl_sme::ConnectRequest {
+        ssid: ssid.as_bytes().to_vec(),
+        credential,
+        radio_cfg: fidl_sme::RadioConfig {
+            override_phy: phy.is_some(),
+            phy: phy.unwrap_or(PhyArg::Vht).into(),
+            override_cbw: cbw.is_some(),
+            cbw: cbw.unwrap_or(CbwArg::Cbw80).into(),
+            override_primary_chan: false,
+            primary_chan: 0,
+        },
+        scan_type: scan_type.into(),
+    };
+    sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
+    await!(handle_connect_transaction(local))
+}
+
+async fn do_client_disconnect(
+    cmd: opts::ClientDisconnectCmd,
+    wlan_svc: WlanSvc,
+) -> Result<(), Error> {
+    let opts::ClientDisconnectCmd { iface_id } = cmd;
+    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+    await!(sme.disconnect()).map_err(|e| format_err!("error sending disconnect request: {}", e))
+}
+
+async fn do_client_scan(cmd: opts::ClientScanCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    let opts::ClientScanCmd { iface_id, scan_type } = cmd;
+    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+    let (local, remote) = endpoints::create_proxy()?;
+    let mut req =
+        fidl_sme::ScanRequest { timeout: SCAN_REQUEST_TIMEOUT_SEC, scan_type: scan_type.into() };
+    sme.scan(&mut req, remote).context("error sending scan request")?;
+    await!(handle_scan_transaction(local))
+}
+
+async fn do_client_status(cmd: opts::ClientStatusCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    let opts::ClientStatusCmd { iface_id } = cmd;
+    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+    let st = await!(sme.status())?;
+    match st.connected_to {
+        Some(bss) => {
+            println!(
+                "Connected to '{}' (bssid {})",
+                String::from_utf8_lossy(&bss.ssid),
+                MacAddr(bss.bssid)
+            );
         }
-        opts::ClientCmd::Disconnect { iface_id } => {
-            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            await!(sme.disconnect())
-                .map_err(|e| format_err!("error sending disconnect request: {}", e))
-        }
-        opts::ClientCmd::Status { iface_id } => {
-            let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-            let st = await!(sme.status())?;
-            match st.connected_to {
-                Some(bss) => {
-                    println!(
-                        "Connected to '{}' (bssid {})",
-                        String::from_utf8_lossy(&bss.ssid),
-                        MacAddr(bss.bssid)
-                    );
-                }
-                None => println!("Not connected to a network"),
-            }
-            if !st.connecting_to_ssid.is_empty() {
-                println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
-            }
-            Ok(())
-        }
+        None => println!("Not connected to a network"),
     }
+    if !st.connecting_to_ssid.is_empty() {
+        println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+    }
+    Ok(())
 }
 
 async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::ApCmd::Start { iface_id, ssid, password, channel } => {
-            let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
+            let sme = await!(get_ap_sme(wlan_svc, iface_id)).map_err(|e| {
+                format_err!("error accessing client SME for iface {}: {};\
+                             please ensure the selected iface supports AP mode", iface_id, e)
+            })?;
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
@@ -256,7 +276,10 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
-            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
+            let sme = await!(get_mesh_sme(wlan_svc, iface_id)).map_err(|e| {
+                format_err!("error accessing client SME for iface {}: {};\
+                             please ensure the selected iface supports Mesh mode", iface_id, e)
+            })?;
             let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
             let r = await!(sme.join(&mut config))?;
             match r {
