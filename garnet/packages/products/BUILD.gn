@@ -5,74 +5,10 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("sshd") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/products:base",
-  ]
-}
-
-group("interactive") {
+group("interactive_minimal") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:fonts",
-    "//garnet/packages/products:interactive_base",
-  ]
-}
-
-group("toulouse") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:router",
-    "//garnet/packages/prod:boringssl_tool",
-    "//garnet/packages/prod:chrealm",
-    "//garnet/packages/prod:cmdutils",
-    "//garnet/packages/prod:cpuperf",
-    "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:debugserver",
-    "//garnet/packages/prod:dhcpd",
-    "//garnet/packages/prod:dhcpd_test_client",
-    "//garnet/packages/prod:insntrace",
-    "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:kernel_crash_checker",
-    "//garnet/packages/prod:mdns-util",
-    "//garnet/packages/prod:memory_monitor",
-    "//garnet/packages/prod:net-cli",
-    "//garnet/packages/prod:netcfg",
-    "//garnet/packages/prod:netconnector",
-    "//garnet/packages/prod:netstack3",
-    "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:overnetstack",
-    "//garnet/packages/prod:pm",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/prod:sbase",
-    "//garnet/packages/prod:ssh",
-    "//garnet/packages/prod:telephony",
-    "//garnet/packages/prod:terminal",
-    "//garnet/packages/prod:test_runner",
-    "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:tz-util",
-    "//garnet/packages/prod:vboot_reference",
-    "//garnet/packages/prod:vim",
-    "//garnet/packages/prod:wlanif",
-    "//garnet/packages/prod:wlanphy",
-    "//garnet/packages/prod:wlanstack",
-    "//garnet/packages/tools:netstack",
-    "//src/connectivity/wlan:tests",
-    "//src/connectivity/wlan:tools",
-  ]
-}
-
-group("test_runner_dev") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/test_runner:test_runner_tests",
-  ]
-}
-
-group("interactive_base") {
-  testonly = true
-  public_deps = [
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:media_audio",
@@ -80,14 +16,6 @@ group("interactive_base") {
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
-  ]
-}
-
-group("interactive_minimal") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:fonts",
-    "//garnet/packages/products:interactive_base",
   ]
 }
 
@@ -166,23 +94,6 @@ group("base") {
     "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:wlancfg",
     "//garnet/packages/prod:wlanstack",
-  ]
-}
-
-group("graphics-dev") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:cmdutils",
-    "//garnet/packages/prod:pm",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/prod:ssh",
-    "//garnet/packages/prod:tiles",
-    "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:vboot_reference",
-    "//garnet/packages/products:graphical",
-    "//garnet/packages/tests:run_test_component",
-    "//garnet/packages/tools:scenic",
-    "//garnet/packages/tools:tiles",
   ]
 }
 
