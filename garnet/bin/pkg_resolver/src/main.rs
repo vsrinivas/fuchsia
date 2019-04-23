@@ -14,7 +14,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use futures::{StreamExt, TryFutureExt};
 use parking_lot::RwLock;
-use std::path::Path;
+use std::io;
 use std::sync::Arc;
 
 mod repository_manager;
@@ -29,15 +29,16 @@ mod test_util;
 use repository_manager::{RepositoryManager, RepositoryManagerBuilder};
 use repository_service::RepositoryService;
 
-use rewrite_manager::RewriteManager;
+use rewrite_manager::{RewriteManager, RewriteManagerBuilder};
 use rewrite_service::RewriteService;
 
 const SERVER_THREADS: usize = 2;
 
-const STATIC_REPO_DIR: &str = "/config/data/pkg_resolver/repositories";
+const STATIC_REPO_DIR: &str = "/config/data/repositories";
 const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
 
-const DYNAMIC_RULES_PATH: &str = "/data/rewrite_rules.json";
+const STATIC_RULES_PATH: &str = "/config/data/rewrites.json";
+const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
@@ -121,14 +122,22 @@ fn load_repo_manager() -> RepositoryManager {
 }
 
 fn load_rewrite_manager() -> RewriteManager {
-    let dynamic_rules_path = Path::new(DYNAMIC_RULES_PATH);
-
-    if !dynamic_rules_path.exists() {
-        return RewriteManager::new(dynamic_rules_path.to_owned());
-    }
-
-    RewriteManager::load(dynamic_rules_path).unwrap_or_else(|e| {
-        fx_log_err!("unable to load dynamic rewrite rules from disk, using defaults: {}", e);
-        RewriteManager::new(dynamic_rules_path.to_owned())
-    })
+    RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
+        .unwrap_or_else(|(builder, err)| {
+            if err.kind() != io::ErrorKind::NotFound {
+                fx_log_err!(
+                    "unable to load dynamic rewrite rules from disk, using defaults: {}",
+                    err
+                );
+            }
+            builder
+        })
+        .static_rules_path(STATIC_RULES_PATH)
+        .unwrap_or_else(|(builder, err)| {
+            if err.kind() != io::ErrorKind::NotFound {
+                fx_log_err!("unable to load static rewrite rules from disk: {}", err);
+            }
+            builder
+        })
+        .build()
 }

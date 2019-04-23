@@ -72,21 +72,6 @@ pub async fn run_resolver_service(
     Ok(())
 }
 
-fn rewrite_uri(rewrites: &Arc<RwLock<RewriteManager>>, uri: PkgUri) -> PkgUri {
-    for rule in rewrites.read().list() {
-        match rule.apply(&uri) {
-            Some(Ok(res)) => {
-                return res;
-            }
-            Some(Err(err)) => {
-                fx_log_err!("re-write rule {:?} produced an invalid URI, ignoring rule", err);
-            }
-            _ => {}
-        }
-    }
-    uri
-}
-
 /// Resolve the package.
 ///
 /// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
@@ -105,7 +90,7 @@ async fn resolve<'a>(
         Err(Status::INVALID_ARGS)
     })?;
     let was_fuchsia_host = uri.host() == "fuchsia.com";
-    let uri = rewrite_uri(rewrites, uri);
+    let uri = rewrites.read().rewrite(uri);
 
     // FIXME: at the moment only the fuchsia.com host is supported.
     if !was_fuchsia_host && uri.host() != "fuchsia.com" {
@@ -221,7 +206,7 @@ async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<Blob
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rewrite_manager::tests::make_dynamic_rule_config;
+    use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
     use failure::Error;
     use fidl::endpoints::{RequestStream, ServerEnd};
     use fidl_fuchsia_amber::{ControlRequest, ControlRequestStream};
@@ -530,9 +515,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mock_amber() {
-        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
-        let rewrite_manager =
-            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
+        let dynamic_rule_config = make_rule_config(vec![]);
+        let rewrite_manager = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+        ));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
@@ -563,9 +549,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package() {
-        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
-        let rewrite_manager =
-            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
+        let dynamic_rule_config = make_rule_config(vec![]);
+        let rewrite_manager = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+        ));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
@@ -591,9 +578,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
-        let dynamic_rule_config = make_dynamic_rule_config(vec![]);
-        let rewrite_manager =
-            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
+        let dynamic_rule_config = make_rule_config(vec![]);
+        let rewrite_manager = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+        ));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
@@ -633,9 +621,10 @@ mod tests {
             "/foo/".to_owned(),
         )
         .unwrap()];
-        let dynamic_rule_config = make_dynamic_rule_config(rules);
-        let rewrite_manager =
-            Arc::new(RwLock::new(RewriteManager::load(&dynamic_rule_config).unwrap()));
+        let dynamic_rule_config = make_rule_config(vec![]);
+        let rewrite_manager = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().static_rules(rules).build(),
+        ));
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
