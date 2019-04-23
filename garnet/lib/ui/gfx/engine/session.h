@@ -84,6 +84,7 @@ class Session {
   EventReporter* event_reporter() const;  // Never nullptr.
 
   ResourceMap* resources() { return &resources_; }
+  const ResourceMap* resources() const { return &resources_; }
 
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().

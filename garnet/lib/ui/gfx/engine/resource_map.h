@@ -5,11 +5,11 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_RESOURCE_MAP_H_
 #define GARNET_LIB_UI_GFX_ENGINE_RESOURCE_MAP_H_
 
+#include <unordered_map>
+
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-
-#include <unordered_map>
 
 namespace scenic_impl {
 namespace gfx {
@@ -30,6 +30,9 @@ class ResourceMap {
   // false if the ID was not present in the map.
   bool RemoveResource(ResourceId id);
 
+  const std::unordered_map<ResourceId, ResourcePtr>& map() const {
+    return resources_;
+  }
   size_t size() const { return resources_.size(); }
 
   enum class ErrorBehavior { kDontReportErrors, kReportErrors };

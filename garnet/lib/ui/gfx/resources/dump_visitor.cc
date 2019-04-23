@@ -35,9 +35,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-DumpVisitor::DumpVisitor(std::ostream& output) : output_(output) {}
+using escher::operator<<;
 
-DumpVisitor::~DumpVisitor() = default;
+DumpVisitor::DumpVisitor(VisitorContext context)
+    : context_(std::move(context)) {}
 
 void DumpVisitor::Visit(Memory* r) {
   // To prevent address space layout leakage, we don't print the pointers.
@@ -49,11 +50,15 @@ void DumpVisitor::Visit(Memory* r) {
 }
 
 void DumpVisitor::VisitEscherImage(escher::Image* i) {
-  WriteProperty("width") << i->width();
-  WriteProperty("height") << i->height();
-  WriteProperty("format") << static_cast<int>(i->format());
-  WriteProperty("has_depth") << i->has_depth();
-  WriteProperty("has_stencil") << i->has_stencil();
+  if (i) {
+    WriteProperty("image.width") << i->width();
+    WriteProperty("image.height") << i->height();
+    WriteProperty("image.format") << static_cast<int>(i->format());
+    WriteProperty("image.has_depth") << i->has_depth();
+    WriteProperty("image.has_stencil") << i->has_stencil();
+  } else {
+    WriteProperty("image.value") << "(null)";
+  }
 }
 
 void DumpVisitor::Visit(Image* r) {
@@ -66,21 +71,19 @@ void DumpVisitor::Visit(Image* r) {
 void DumpVisitor::Visit(Buffer* r) {
   BeginItem("Buffer", r);
   WriteProperty("size") << r->size();
-  VisitResource(r);
   BeginSection("memory");
   if (r->backing_resource()) {
     r->backing_resource()->Accept(this);
   }
   EndSection();
+  VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(ImagePipe* r) {
   BeginItem("ImagePipe", r);
   if (r->GetEscherImage()) {
-    BeginSection("currently presented image");
     VisitEscherImage(r->GetEscherImage().get());
-    EndSection();
   }
   VisitResource(r);
   EndItem();
@@ -90,6 +93,7 @@ void DumpVisitor::Visit(View* r) {
   ViewHolder* vh = r->view_holder();
   WriteProperty("view") << r->global_id() << "->"
                         << (vh ? vh->global_id() : GlobalId());
+  VisitResource(r);
 }
 
 void DumpVisitor::Visit(ViewNode* r) {
@@ -126,7 +130,6 @@ void DumpVisitor::Visit(OpacityNode* r) {
 
 void DumpVisitor::Visit(ShapeNode* r) {
   BeginItem("ShapeNode", r);
-  VisitNode(r);
   if (r->shape()) {
     BeginSection("shape");
     r->shape()->Accept(this);
@@ -137,6 +140,7 @@ void DumpVisitor::Visit(ShapeNode* r) {
     r->material()->Accept(this);
     EndSection();
   }
+  VisitNode(r);
   EndItem();
 }
 
@@ -252,21 +256,29 @@ void DumpVisitor::Visit(Material* r) {
   WriteProperty("green") << r->green();
   WriteProperty("blue") << r->blue();
   WriteProperty("alpha") << r->alpha();
-  if (r->escher_material()->texture()) {
-    auto texture = r->escher_material()->texture();
+  if (auto texture = r->escher_material()->texture()) {
+    BeginSection("image");
+    if (auto backing_image = r->texture_image()) {
+      if (auto image = backing_image->As<Image>()) {
+        Visit(image.get());
+      } else if (auto image_pipe = backing_image->As<ImagePipe>()) {
+        Visit(image_pipe.get());
+      }
+    } else {
+      WriteProperty("image.value") << "(null)";
+    }
+    EndSection();
     WriteProperty("texture.width") << texture->width();
     WriteProperty("texture.height") << texture->height();
     WriteProperty("texture.size") << texture->image()->size();
-  } else if (r->texture_image()) {
-    auto image = r->texture_image()->GetEscherImage();
-    if (image) {
-      WriteProperty("texture.pending") << "true";
-      WriteProperty("texture.width") << image->width();
-      WriteProperty("texture.height") << image->height();
-      WriteProperty("texture.size") << image->size();
-    } else {
-      WriteProperty("texture") << "(null)";
+  } else if (auto backing_image = r->texture_image()) {
+    BeginSection("image");
+    if (auto image = backing_image->As<Image>()) {
+      Visit(image.get());
+    } else if (auto image_pipe = backing_image->As<ImagePipe>()) {
+      Visit(image_pipe.get());
     }
+    EndSection();
   }
   VisitResource(r);
   EndItem();
@@ -323,7 +335,6 @@ void DumpVisitor::Visit(Layer* r) {
 }
 
 void DumpVisitor::Visit(Camera* r) {
-  using escher::operator<<;
   BeginItem("Camera", r);
   WriteProperty("position") << r->eye_position();
   WriteProperty("look_at") << r->eye_look_at();
@@ -352,23 +363,23 @@ void DumpVisitor::Visit(Light* r) {
 
 void DumpVisitor::Visit(AmbientLight* r) {
   BeginItem("AmbientLight", r);
-  escher::operator<<(WriteProperty("color"), r->color());
+  WriteProperty("color") << r->color();
   VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(DirectionalLight* r) {
   BeginItem("DirectionalLight", r);
-  escher::operator<<(WriteProperty("direction"), r->direction());
-  escher::operator<<(WriteProperty("color"), r->color());
+  WriteProperty("direction") << r->direction();
+  WriteProperty("color") << r->color();
   VisitResource(r);
   EndItem();
 }
 
 void DumpVisitor::Visit(PointLight* r) {
   BeginItem("PointLight", r);
-  escher::operator<<(WriteProperty("position"), r->position());
-  escher::operator<<(WriteProperty("color"), r->color());
+  WriteProperty("position") << r->position();
+  WriteProperty("color") << r->color();
   VisitResource(r);
   EndItem();
 }
@@ -396,17 +407,21 @@ void DumpVisitor::VisitResource(Resource* r) {
     }
     EndSection();
   }
+
+  if (context_.visited) {
+    context_.visited->emplace(GlobalId(r->session()->id(), r->id()));
+  }
 }
 
 void DumpVisitor::BeginItem(const char* type, Resource* r) {
   BeginLine();
   if (r) {
-    output_ << r->global_id();
+    context_.output << r->global_id();
     if (!r->label().empty())
-      output_ << ":\"" << r->label() << "\"";
-    output_ << "> ";
+      context_.output << ":\"" << r->label() << "\"";
+    context_.output << "> ";
   }
-  output_ << type;
+  context_.output << type;
   indentation_ += 1;
 }
 
@@ -414,14 +429,14 @@ std::ostream& DumpVisitor::WriteProperty(const char* label) {
   property_count_++;
   if (partial_line_) {
     if (property_count_ == 1u)
-      output_ << ": ";
+      context_.output << ": ";
     else
-      output_ << ", ";
+      context_.output << ", ";
   } else {
     BeginLine();
   }
-  output_ << label << "=";
-  return output_;
+  context_.output << label << "=";
+  return context_.output;
 }
 
 void DumpVisitor::EndItem() {
@@ -431,7 +446,7 @@ void DumpVisitor::EndItem() {
 
 void DumpVisitor::BeginSection(const char* label) {
   BeginLine();
-  output_ << label << ":";
+  context_.output << label << ":";
   EndLine();
 }
 
@@ -439,14 +454,14 @@ void DumpVisitor::EndSection() { FXL_DCHECK(!partial_line_); }
 
 void DumpVisitor::BeginLine() {
   EndLine();
-  output_ << std::string(indentation_, ' ');
+  context_.output << std::string(indentation_, ' ');
   partial_line_ = true;
 }
 
 void DumpVisitor::EndLine() {
   if (!partial_line_)
     return;
-  output_ << std::endl;
+  context_.output << std::endl;
   partial_line_ = false;
   property_count_ = 0u;
 }

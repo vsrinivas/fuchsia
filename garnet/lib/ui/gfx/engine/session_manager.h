@@ -36,7 +36,9 @@ class SessionManager {
   // Finds and returns a pointer the session handler corresponding to the given
   // |id|. Returns nullptr if none found.
   SessionHandler* FindSessionHandler(SessionId id) const;
-
+  const std::unordered_map<SessionId, SessionHandler*> sessions() {
+    return session_handlers_;
+  }
   size_t GetSessionCount() { return session_count_; }
 
   // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by

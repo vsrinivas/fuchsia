@@ -19,6 +19,7 @@
 namespace scenic_impl {
 namespace gfx {
 
+static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
 GfxSystem::GfxSystem(SystemContext context,
@@ -202,13 +203,14 @@ void GfxSystem::Initialize() {
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   context()->app_context()->outgoing()->debug_dir()->AddEntry(
-      "dump-scenes",
-      std::make_unique<vfs::PseudoFile>([this](std::vector<uint8_t>* output) {
-        auto out = engine_->DumpScenes();
-        output->resize(out.length());
-        std::copy(out.begin(), out.end(), output->begin());
-        return ZX_OK;
-      }));
+      "dump-scenes", std::make_unique<vfs::PseudoFile>(
+                         [this](std::vector<uint8_t>* output) {
+                           auto out = engine_->DumpScenes();
+                           output->resize(out.length());
+                           std::copy(out.begin(), out.end(), output->begin());
+                           return ZX_OK;
+                         },
+                         nullptr, kDumpScenesBufferCapacity));
 
   SetToInitialized();
 };

@@ -5,11 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 
+#include <lib/escher/vk/image.h>
+
 #include <cstdint>
 #include <iosfwd>
+#include <unordered_set>
 
-#include "lib/escher/vk/image.h"
-
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 
 namespace scenic_impl {
@@ -19,11 +21,24 @@ class Node;
 class Resource;
 
 // Dumps information about resources to an output stream.
-// The output stream must remain in scope until the visitor is destroyed.
 class DumpVisitor : public ResourceVisitor {
  public:
-  DumpVisitor(std::ostream& output);
-  ~DumpVisitor();
+  // Context for a DumpVisitor.
+  // The VisitorContext is only valid during a DumpVisitor pass, and should not
+  // be accessed outside of that.
+  struct VisitorContext {
+    VisitorContext(std::ostream& out,
+                   std::unordered_set<GlobalId, GlobalId::Hash>* visited_list)
+        : output(out), visited(visited_list) {}
+    VisitorContext(const VisitorContext&& other)
+        : output(other.output), visited(other.visited) {}
+
+    std::ostream& output;
+    std::unordered_set<GlobalId, GlobalId::Hash>* visited;
+  };
+
+  DumpVisitor(VisitorContext context);
+  virtual ~DumpVisitor() = default;
 
   void Visit(Memory* r) override;
   void Visit(Image* r) override;
@@ -68,7 +83,8 @@ class DumpVisitor : public ResourceVisitor {
   void BeginLine();
   void EndLine();
 
-  std::ostream& output_;
+  VisitorContext context_;
+
   bool partial_line_ = false;
   uint32_t property_count_ = 0u;
   uint32_t indentation_ = 0u;

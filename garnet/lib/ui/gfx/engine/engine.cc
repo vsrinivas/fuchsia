@@ -4,19 +4,21 @@
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
 
-#include <fbl/string.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
 #include <set>
+#include <string>
+#include <unordered_set>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
+#include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
@@ -111,7 +113,7 @@ void Engine::InitializeInspectObjects() {
         for (auto& c : scene_graph_.compositors()) {
           output << "========== BEGIN COMPOSITOR DUMP ======================"
                  << std::endl;
-          DumpVisitor visitor(output);
+          DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
           c->Accept(&visitor);
           output << "============ END COMPOSITOR DUMP ======================";
         }
@@ -250,7 +252,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
       // Verbose logging of the entire Compositor resource tree.
       if (FXL_VLOG_IS_ON(3)) {
         std::ostringstream output;
-        DumpVisitor visitor(output);
+        DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
         compositor->Accept(&visitor);
         FXL_VLOG(3) << "Compositor dump\n" << output.str();
       }
@@ -393,32 +395,101 @@ void Engine::CleanupEscher() {
     // Wait long enough to give GPU work a chance to finish.
     const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [weak = weak_factory_.GetWeakPtr()] {
-                             if (weak) {
-                               // Recursively reschedule if cleanup is
-                               // incomplete.
-                               weak->escher_cleanup_scheduled_ = false;
-                               weak->CleanupEscher();
-                             }
-                           },
-                           kCleanupDelay);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [weak = weak_factory_.GetWeakPtr()] {
+          if (weak) {
+            // Recursively reschedule if cleanup is incomplete.
+            weak->escher_cleanup_scheduled_ = false;
+            weak->CleanupEscher();
+          }
+        },
+        kCleanupDelay);
   }
 }
 
 std::string Engine::DumpScenes() const {
   std::ostringstream output;
-  DumpVisitor visitor(output);
+  std::unordered_set<GlobalId, GlobalId::Hash> visited_resources;
 
-  bool first = true;
+  // Dump all Compositors and all transitively-reachable Resources.
+  // Remember the set of visited resources; the next step will be to dump the
+  // unreachable resources.
+  output << "Compositors: \n";
   for (auto compositor : scene_graph_.compositors()) {
-    if (first)
-      first = false;
-    else
-      output << std::endl << "===" << std::endl << std::endl;
+    DumpVisitor visitor(
+        DumpVisitor::VisitorContext(output, &visited_resources));
 
     compositor->Accept(&visitor);
+    output << "\n===\n\n";
   }
+
+  // Iterate through all sessions to find Nodes that weren't reachable from any
+  // compositor.  When such a Node is found, we walk up the tree to find the
+  // un-reachable sub-tree root, and then dump that. All visited Resources are
+  // added to |visited_resources|, so that they are not printed again later.
+  output << "============================================================\n";
+  output << "============================================================\n\n";
+  output << "Detached Nodes (unreachable by any Compositor): \n";
+  for (auto& [session_id, session_handler] : session_manager_->sessions()) {
+    const std::unordered_map<ResourceId, ResourcePtr>& resources =
+        session_handler->session()->resources()->map();
+    for (auto& [resource_id, resource_ptr] : resources) {
+      auto visited_resource_iter =
+          visited_resources.find(GlobalId(session_id, resource_id));
+      if (visited_resource_iter == visited_resources.end()) {
+        FXL_DCHECK(resource_ptr);  // Should always be valid.
+
+        if (resource_ptr->IsKindOf<Node>()) {
+          // Attempt to find the root of this detached tree of Nodes.
+          Node* root_node = resource_ptr->As<Node>().get();
+
+          while (Node* new_root = root_node->parent()) {
+            auto visited_node_iter =
+                visited_resources.find(GlobalId(session_id, new_root->id()));
+            if (visited_node_iter != visited_resources.end()) {
+              FXL_NOTREACHED()
+                  << "Unvisited child should not have a visited parent!";
+            }
+
+            root_node = new_root;
+          }
+
+          // Dump the entire detached Node tree, starting from the root.  This
+          // will also mark everything in the tree as visited.
+          DumpVisitor visitor(
+              DumpVisitor::VisitorContext(output, &visited_resources));
+          root_node->Accept(&visitor);
+
+          output << "\n===\n\n";
+        }
+      }
+    }
+  }
+
+  // Dump any detached resources which could not be reached by a compositor
+  // or a Node tree.
+  output << "============================================================\n";
+  output << "============================================================\n\n";
+  output << "Other Detached Resources (unreachable by any Compositor): \n";
+  for (auto& [session_id, session_handler] : session_manager_->sessions()) {
+    const std::unordered_map<ResourceId, ResourcePtr>& resources =
+        session_handler->session()->resources()->map();
+    for (auto& [resource_id, resource_ptr] : resources) {
+      auto visited_resource_iter =
+          visited_resources.find(GlobalId(session_id, resource_id));
+      if (visited_resource_iter == visited_resources.end()) {
+        FXL_DCHECK(resource_ptr);  // Should always be valid.
+
+        DumpVisitor visitor(
+            DumpVisitor::VisitorContext(output, &visited_resources));
+        resource_ptr->Accept(&visitor);
+
+        output << "\n===\n\n";
+      }
+    }
+  }
+
   return output.str();
 }
 
