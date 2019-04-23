@@ -235,9 +235,11 @@ impl App {
                         .as_mut()
                         .unwrap()
                         .handle_service_connection_request(service_name, channel)
-                        .unwrap_or_else(|e| eprintln!("error running {} server: {:?}", service_name, e));
+                        .unwrap_or_else(|e| {
+                            eprintln!("error running {} server: {:?}", service_name, e)
+                        });
                 });
-            },
+            }
             Err(e) => eprintln!("error asyncifying channel: {:?}", e),
         }
     }

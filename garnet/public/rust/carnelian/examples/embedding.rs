@@ -10,7 +10,7 @@ use failure::Error;
 use fidl_fuchsia_math::RectF;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
-use fuchsia_component::client::{App as LaunchedApp, launcher, launch};
+use fuchsia_component::client::{launch, launcher, App as LaunchedApp};
 use fuchsia_scenic::{
     new_view_token_pair, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
 };

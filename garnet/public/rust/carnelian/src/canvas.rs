@@ -20,6 +20,15 @@ pub struct Color {
     pub a: u8,
 }
 
+pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
+    let red = pixel[0] >> 3;
+    let green = pixel[1] >> 2;
+    let blue = pixel[2] >> 3;
+    let b1 = (red << 3) | ((green & 0b11_1000) >> 3);
+    let b2 = ((green & 0b111) << 5) | blue;
+    [b2, b1]
+}
+
 #[allow(missing_docs)]
 impl Color {
     pub fn new() -> Color {
@@ -48,6 +57,11 @@ impl Color {
 
     pub fn make_color_rgba(&self) -> ColorRgba {
         ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
+    }
+
+    pub fn to_565(&self) -> [u8; 2] {
+        let pixel = [self.r, self.g, self.b, self.a];
+        to_565(&pixel)
     }
 }
 
@@ -147,8 +161,14 @@ impl<T: PixelSink> Canvas<T> {
     /// Update the pixel at a particular byte offset with a particular
     /// color.
     fn write_color_at_offset(&mut self, offset: usize, color: Color) {
-        let pixel = [color.b, color.g, color.r, color.a];
-        self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+        if self.col_stride == 2 {
+            let pixel = color.to_565();
+            self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+        } else {
+            let pixel = [color.b, color.g, color.r, color.a];
+
+            self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+        };
     }
 
     #[inline]
@@ -177,7 +197,12 @@ impl<T: PixelSink> Canvas<T> {
                     (((bg.r as u32) * blend_factor + (fg.r as u32) * a) >> 8) as u8,
                     (blend_factor + (fg.a as u32)) as u8,
                 ];
-                self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+                if self.col_stride == 2 {
+                    let pixel = to_565(&pixel);
+                    self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+                } else {
+                    self.pixel_sink.write_pixel_at_offset(offset, &pixel);
+                }
             }
         }
     }
