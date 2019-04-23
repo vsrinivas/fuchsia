@@ -36,6 +36,10 @@ public:
     virtual void OnOneChild() = 0;
 };
 
+typedef struct vm_lock : fbl::RefCounted<struct vm_lock> {
+    DECLARE_MUTEX(struct vm_lock) lock;
+} vm_lock_t;
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
@@ -256,10 +260,7 @@ public:
     virtual void DetachSource() {}
 
 protected:
-    // private constructor (use Create())
-    explicit VmObject(fbl::RefPtr<VmObject> parent);
-    VmObject()
-        : VmObject(nullptr) {}
+    VmObject(fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock);
 
     // private destructor, only called from refptr
     virtual ~VmObject();
@@ -281,15 +282,11 @@ protected:
     // magic value
     fbl::Canary<fbl::magic("VMO_")> canary_;
 
-    // members
-
-    // declare a local mutex and default to pointing at it
-    // if constructed with a parent vmo, point lock_ at the parent's lock
-private:
-    DECLARE_MUTEX(VmObject) local_lock_;
-
-protected:
+    // The lock which protects this class. All VmObjects in a clone tree
+    // share the same lock.
     Lock<Mutex>& lock_;
+    // Pointer to the actual lock.
+    fbl::RefPtr<vm_lock_t> lock_ptr_;
 
     // list of every mapping
     fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);

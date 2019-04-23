@@ -141,7 +141,12 @@ private:
     // private constructor (use Create())
     VmObjectPaged(
         uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
-        fbl::RefPtr<VmObject> parent, fbl::RefPtr<PageSource> page_source);
+        fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock,
+        fbl::RefPtr<PageSource> page_source);
+
+    static zx_status_t CreateCommon(uint32_t pmm_alloc_flags,
+                                    uint32_t options,
+                                    uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;

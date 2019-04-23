@@ -22,8 +22,8 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-VmObjectPhysical::VmObjectPhysical(paddr_t base, uint64_t size)
-    : size_(size), base_(base) {
+VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size)
+    : VmObject(nullptr, ktl::move(lock)), size_(size), base_(base) {
     LTRACEF("%p, size %#" PRIx64 "\n", this, size_);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -50,7 +50,12 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
     }
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
+    auto lock = fbl::AdoptRef<vm_lock_t>(new (&ac) vm_lock_t);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(ktl::move(lock), base, size));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

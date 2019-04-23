@@ -29,10 +29,13 @@
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
-VmObject::VmObject(fbl::RefPtr<VmObject> parent)
-    : lock_(parent ? parent->lock_ref() : local_lock_),
-      parent_(ktl::move(parent)) {
+VmObject::VmObject(fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> lock_ptr)
+    : lock_(lock_ptr->lock), lock_ptr_(ktl::move(lock_ptr)), parent_(ktl::move(parent)) {
     LTRACEF("%p\n", this);
+
+    if (parent_) {
+        DEBUG_ASSERT(lock_ptr_ == parent_->lock_ptr_);
+    }
 }
 
 VmObject::~VmObject() {

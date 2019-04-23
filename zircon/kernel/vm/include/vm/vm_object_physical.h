@@ -46,7 +46,7 @@ public:
 
 private:
     // private constructor (use Create())
-    VmObjectPhysical(paddr_t base, uint64_t size);
+    VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size);
 
     // private destructor, only called from refptr
     ~VmObjectPhysical() override;
