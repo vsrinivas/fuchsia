@@ -13,13 +13,12 @@
 #include <lib/zx/channel.h>
 #include <variant>
 
+#include "composite-device.h"
 #include "metadata.h"
 #include "../shared/async-loop-ref-counted-rpc-handler.h"
 
 namespace devmgr {
 
-class CompositeDevice;
-class CompositeDeviceComponent;
 class Coordinator;
 class Devhost;
 struct Devnode;
@@ -90,57 +89,134 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     // access to a device in the list.  This is achieved by making the linked
     // list iterator opaque. It is not safe to modify the underlying list while
     // this iterator is in use.
-    template <typename IterType, typename ValueType>
+    template <typename IterType, typename DeviceType>
     class ChildListIterator {
     public:
-        explicit ChildListIterator(IterType itr) : itr_(std::move(itr)) {}
+        ChildListIterator() : state_(Done{}) {}
+        explicit ChildListIterator(DeviceType* device)
+                : state_(device->children_.begin()), device_(device) {
+            SkipInvalidStates();
+        }
 
-        ChildListIterator& operator++() { ++itr_; return *this; }
         ChildListIterator operator++(int) {
             auto other = *this;
             ++*this;
             return other;
         }
-        ValueType& operator*() const { return *itr_; }
-        bool operator==(const ChildListIterator& other) const { return itr_ == other.itr_; }
-        bool operator!=(const ChildListIterator& other) const { return itr_ != other.itr_; }
+        bool operator==(const ChildListIterator& other) const { return state_ == other.state_; }
+        bool operator!=(const ChildListIterator& other) const { return !(state_ == other.state_); }
+
+        // The iterator implementation for the child list.  This is the source of truth
+        // for what devices are children of the device.
+        ChildListIterator& operator++() {
+            std::visit([this](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, IterType>) {
+                    ++arg;
+                } else if constexpr (std::is_same_v<T, Composite>) {
+                    state_ = Done{};
+                } else if constexpr (std::is_same_v<T, Done>) {
+                    state_ = Done{};
+                }
+            }, state_);
+            SkipInvalidStates();
+            return *this;
+        }
+
+        DeviceType& operator*() const {
+            return std::visit([this](auto&& arg) -> DeviceType& {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, IterType>) {
+                    return *arg;
+                } else if constexpr (std::is_same_v<T, Composite>) {
+                    return *device_->parent_->component()->composite()->device();
+                } else {
+                    __builtin_trap();
+                }
+            }, state_);
+        }
     private:
-        IterType itr_;
+        // Advance the iterator to the next valid state or reach the done state.
+        // This is used to handle advancement between the different state variants.
+        void SkipInvalidStates() {
+            bool more = true;
+            while (more) {
+                more = std::visit([this](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, IterType>) {
+                        // Check if there are any more children in the list.  If
+                        // there are, we're in a valid state and can stop.
+                        // Otherwise, advance to the next variant and check if
+                        // it's a valid state.
+                        if (arg != device_->children_.end()) {
+                            return false;
+                        }
+                        state_ = Composite{};
+                        return true;
+                    } else if constexpr (std::is_same_v<T, Composite>) {
+                        // Check if this device is an internal component device
+                        // that bound to a composite component.  If it is, and
+                        // the composite has been constructed, the iterator
+                        // should yield the composite.
+                        CompositeDeviceComponent* component = nullptr;
+                        if (device_->parent_) {
+                            component = device_->parent_->component();
+                        }
+                        if (component != nullptr && component->composite()->device() != nullptr) {
+                            return false;
+                        }
+                        state_ = Done{};
+                        return false;
+                    } else if constexpr (std::is_same_v<T, Done>) {
+                        return false;
+                    }
+                }, state_);
+            }
+        }
+
+        struct Composite {
+            bool operator==(Composite) const { return true; }
+        };
+        struct Done {
+            bool operator==(Done) const { return true; }
+        };
+        std::variant<IterType, Composite, Done> state_;
+        DeviceType* device_;
     };
 
     // This class exists to allow consumers of the Device class to write
     //   for (auto& child : dev->children())
     // and get mutable access to the children without getting mutable access to
     // the list.
-    template <typename ListType, typename IterType>
+    template <typename DeviceType, typename IterType>
     class ChildListIteratorFactory {
     public:
-        explicit ChildListIteratorFactory(ListType& list) : list_(list) {}
+        explicit ChildListIteratorFactory(DeviceType* device) : device_(device) {}
 
-        IterType begin() const { return IterType(list_.begin()); }
-        IterType end() const { return IterType(list_.end()); }
+        IterType begin() const { return IterType(device_); }
+        IterType end() const { return IterType(); }
 
         bool is_empty() const { return begin() == end(); }
     private:
-        ListType& list_;
+        DeviceType* device_;
     };
 
     using NonConstChildListIterator =
             ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
     using ConstChildListIterator =
             ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::const_iterator, const Device>;
-    using NonConstChildListIteratorFactory = ChildListIteratorFactory<
-            fbl::DoublyLinkedList<Device*, Node>, NonConstChildListIterator>;
-    using ConstChildListIteratorFactory = ChildListIteratorFactory<
-            const fbl::DoublyLinkedList<Device*, Node>, ConstChildListIterator>;
+    using NonConstChildListIteratorFactory =
+            ChildListIteratorFactory<Device, NonConstChildListIterator>;
+    using ConstChildListIteratorFactory =
+            ChildListIteratorFactory<const Device, ConstChildListIterator>;
     // We do not want to expose the list itself for mutation, even if the
     // children are allowed to be mutated.  We manage this by making the
     // iterator opaque.
     NonConstChildListIteratorFactory children() {
-        return NonConstChildListIteratorFactory(children_);
+        return NonConstChildListIteratorFactory(this);
     }
     ConstChildListIteratorFactory children() const {
-        return ConstChildListIteratorFactory(children_);
+        return ConstChildListIteratorFactory(this);
     }
 
     // Signal that this device is ready for bind to happen.  This should happen
@@ -219,7 +295,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     CompositeDeviceComponent* component() const {
         auto val = std::get_if<CompositeDeviceComponent*>(&composite_);
         return val ? *val : nullptr;
-
     }
     void set_component(CompositeDeviceComponent* component) {
         ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
@@ -230,7 +305,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     CompositeDevice* composite() const {
         auto val = std::get_if<CompositeDevice*>(&composite_);
         return val ? *val : nullptr;
-
     }
     void set_composite(CompositeDevice* composite) {
         ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
@@ -271,7 +345,9 @@ private:
     // listnode for this device in its parent's list-of-children
     fbl::DoublyLinkedListNodeState<Device*> node_;
 
-    // list of all child devices of this device
+    // List of all child devices of this device, except for composite devices.
+    // Composite devices are excluded because their multiple-parent nature
+    // precludes using the same intrusive nodes as single-parent devices.
     fbl::DoublyLinkedList<Device*, Node> children_;
 
     // - If this device is part of a composite device, this is inhabited by
