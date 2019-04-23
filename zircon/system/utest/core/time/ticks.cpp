@@ -19,7 +19,7 @@ static bool elapsed_time_using_ticks(void) {
     zx_ticks_t y = zx_ticks_get();
     ASSERT_GE(y, x, "Ticks went backwards");
 
-    double seconds = (y - x) / (double)per_second;
+    double seconds = (double)(y - x) / (double)per_second;
     ASSERT_GE(seconds, 0u, "Time went backwards");
 
     END_TEST;
