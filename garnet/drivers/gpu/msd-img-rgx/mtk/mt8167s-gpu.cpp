@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <mutex>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -15,8 +16,12 @@
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
+#include <lib/fidl-utils/bind.h>
 
+#include "magma_util/macros.h"
 #include "sys_driver/magma_driver.h"
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -58,16 +63,27 @@ struct ComponentDescription {
 
 class Mt8167sGpu;
 
-using DeviceType = ddk::Device<Mt8167sGpu>;
+using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
 
-class Mt8167sGpu : public DeviceType {
+class Mt8167sGpu : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
 public:
     Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
 
+    ~Mt8167sGpu();
+
     zx_status_t Bind();
     void DdkRelease();
+
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+    zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
+    zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
+    zx_status_t DumpState(uint32_t dump_type);
+    zx_status_t Restart();
+
 private:
-    bool StartMagma();
+    bool StartMagma() MAGMA_REQUIRES(magma_mutex_);
+    void StopMagma() MAGMA_REQUIRES(magma_mutex_);
 
     // MFG is Mediatek's name for their graphics subsystem.
     zx_status_t PowerOnMfgAsync();
@@ -85,9 +101,16 @@ private:
     std::optional<ddk::MmioBuffer> power_gpu_buffer_; // SCPSYS MMIO
     std::optional<ddk::MmioBuffer> clock_gpu_buffer_; // XO MMIO
 
-    std::unique_ptr<MagmaDriver> magma_driver_;
-    std::shared_ptr<MagmaSystemDevice> magma_system_device_;
+    std::mutex magma_mutex_;
+    std::unique_ptr<MagmaDriver> magma_driver_ MAGMA_GUARDED(magma_mutex_);
+    std::shared_ptr<MagmaSystemDevice> magma_system_device_ MAGMA_GUARDED(magma_mutex_);
 };
+
+Mt8167sGpu::~Mt8167sGpu()
+{
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+    StopMagma();
+}
 
 bool Mt8167sGpu::StartMagma()
 {
@@ -95,7 +118,27 @@ bool Mt8167sGpu::StartMagma()
     return !!magma_system_device_;
 }
 
+void Mt8167sGpu::StopMagma()
+{
+    if (magma_system_device_) {
+        magma_system_device_->Shutdown();
+        magma_system_device_.reset();
+    }
+}
+
 void Mt8167sGpu::DdkRelease() { delete this; }
+
+static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
+    .Query = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Query>,
+    .Connect = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Connect>,
+    .DumpState = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::DumpState>,
+    .TestRestart = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Restart>,
+};
+
+zx_status_t Mt8167sGpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
+{
+    return fuchsia_gpu_magma_Device_dispatch(this, txn, msg, &device_fidl_ops);
+}
 
 zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer)
 {
@@ -235,7 +278,7 @@ zx_status_t Mt8167sGpu::Bind()
             zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
             return status;
         }
-     }
+    }
 
     status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
     if (status != ZX_OK) {
@@ -278,19 +321,80 @@ zx_status_t Mt8167sGpu::Bind()
     zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
            ReadHW64(&real_gpu_buffer_.value(), 0x20));
 
-    magma_driver_ = MagmaDriver::Create();
-    if (!magma_driver_) {
-        GPU_ERROR("Failed to create MagmaDriver\n");
-        return ZX_ERR_INTERNAL;
-    }
+    {
+        std::lock_guard<std::mutex> lock(magma_mutex_);
+        magma_driver_ = MagmaDriver::Create();
+        if (!magma_driver_) {
+            GPU_ERROR("Failed to create MagmaDriver\n");
+            return ZX_ERR_INTERNAL;
+        }
 
-    if (!StartMagma()) {
-        GPU_ERROR("Failed to start Magma system device\n");
-        return ZX_ERR_INTERNAL;
+        if (!StartMagma()) {
+            GPU_ERROR("Failed to start Magma system device\n");
+            return ZX_ERR_INTERNAL;
+        }
     }
 
     return DdkAdd("mt8167s-gpu");
 }
+
+zx_status_t Mt8167sGpu::Query(uint64_t query_id, fidl_txn_t* transaction)
+{
+    DLOG("Mt8167sGpu::Query");
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+
+    uint64_t result;
+    switch (query_id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            result = magma_system_device_->GetDeviceId();
+            break;
+        case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+            result = 0;
+            break;
+        default:
+            if (!magma_system_device_->Query(query_id, &result))
+                return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);
+    }
+    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sGpu::Connect(uint64_t client_id, fidl_txn_t* transaction)
+{
+    DLOG("Mt8167sGpu::Connect");
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+
+    auto connection = MagmaSystemDevice::Open(magma_system_device_, client_id);
+    if (!connection)
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
+
+    zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
+        transaction, connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
+    if (status != ZX_OK)
+        return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
+
+    magma_system_device_->StartConnectionThread(std::move(connection));
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sGpu::DumpState(uint32_t dump_type)
+{
+    DLOG("Mt8167sGpu::DumpState");
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+    if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                      MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE))
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %x", dump_type);
+
+    if (magma_system_device_)
+        magma_system_device_->DumpStatus(dump_type);
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sGpu::Restart() { return ZX_ERR_NOT_SUPPORTED; }
 
 extern "C" zx_status_t mt8167s_gpu_bind(void* ctx, zx_device_t* parent)
 {
@@ -317,4 +421,3 @@ ZIRCON_DRIVER_BEGIN(mt8167s_gpu, mt8167s_gpu_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_GPU),
 ZIRCON_DRIVER_END(mt8167s_gpu)
-// clang-format on
