@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! The omaha_client::common module contains those types that are common to many parts of the
+//! library.  Many of these don't belong to a specific sub-module.
+
 use crate::protocol::request::InstallSource;
 use std::fmt;
 use std::time::SystemTime;
-
-/// The omaha_client::common module contains those types that are common to many parts of the
-/// library.  Many of these don't belong to a specific sub-module.
 
 /// Omaha has historically supported multiple methods of counting devices.  Currently, the
 /// only recommended method is the Client Regulated - Date method.
