@@ -127,7 +127,6 @@ sdk("core") {
   testonly = true
 
   deps = [
-    ":images_molecule",
     ":open_source",
     "docs",
     "tools:dev_finder_sdk($host_toolchain)",
