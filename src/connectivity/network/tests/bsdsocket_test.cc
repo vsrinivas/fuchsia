@@ -97,19 +97,12 @@ TEST(LocalhostTest, ConnectAFMismatchINET6) {
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_LOOPBACK;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   addr.sin_port = htons(1337);
-  // TODO(NET-2125): the behaviour is incorrect on Fuchsia. Fix this upstream
-  // and re-enable the test.
   EXPECT_EQ(
       connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-#if defined(__linux__)
       0)
       << strerror(errno);
-#else
-      -1);
-  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
-#endif
   EXPECT_EQ(close(s), 0) << strerror(errno);
 }
 
