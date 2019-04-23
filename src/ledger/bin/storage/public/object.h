@@ -50,6 +50,13 @@ class Piece {
   // piece is not deleted.
   virtual fxl::StringView GetData() const = 0;
 
+  // If this piece references other pieces (eg. an index referencing some
+  // chunks), adds them to |references|. Does not clear |references|. Does not
+  // add |Object| references even if the piece represents a full object of its
+  // own.
+  virtual Status AppendReferences(
+      ObjectReferencesAndPriority* references) const = 0;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(Piece);
 };
 

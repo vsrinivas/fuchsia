@@ -64,9 +64,7 @@ class SplitContext {
  public:
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-      fit::function<void(IterationStatus, std::unique_ptr<Piece>,
-                         ObjectReferencesAndPriority references)>
-          callback,
+      fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback,
       ObjectType object_type)
       : make_object_identifier_(std::move(make_object_identifier)),
         callback_(std::move(callback)),
@@ -78,7 +76,7 @@ class SplitContext {
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {
-      callback_(IterationStatus::ERROR, nullptr, {});
+      callback_(IterationStatus::ERROR, nullptr);
       return;
     }
 
@@ -133,7 +131,6 @@ class SplitContext {
   // Information about a piece of data (chunk or index) to be sent.
   struct PendingPiece {
     ObjectIdentifier identifier;
-    ObjectReferencesAndPriority references;
     std::unique_ptr<DataSource::DataChunk> data;
 
     bool ready() { return data != nullptr; }
@@ -145,14 +142,12 @@ class SplitContext {
   // treated differently in |SendDone|. |children| must contain the identifiers
   // of the children pieces if |type| is INDEX, and be empty otherwise.
   ObjectIdentifier SendInProgress(PieceType type,
-                                  ObjectReferencesAndPriority references,
                                   std::unique_ptr<DataSource::DataChunk> data) {
     if (latest_piece_.ready()) {
       callback_(
           IterationStatus::IN_PROGRESS,
           std::make_unique<DataChunkPiece>(std::move(latest_piece_.identifier),
-                                           std::move(latest_piece_.data)),
-          std::move(latest_piece_.references));
+                                           std::move(latest_piece_.data)));
     }
     auto data_view = data->Get();
     // object_type for inner (IN_PROGRESS) pieces is always BLOB, regardless of
@@ -165,7 +160,6 @@ class SplitContext {
         ComputeObjectDigest(type, ObjectType::BLOB, data_view);
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
-    latest_piece_.references = std::move(references);
     latest_piece_.data = std::move(data);
     return latest_piece_.identifier;
   }
@@ -182,11 +176,9 @@ class SplitContext {
         object_type_, data_view);
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
-    callback_(
-        IterationStatus::DONE,
-        std::make_unique<DataChunkPiece>(std::move(latest_piece_.identifier),
-                                         std::move(latest_piece_.data)),
-        std::move(latest_piece_.references));
+    callback_(IterationStatus::DONE, std::make_unique<DataChunkPiece>(
+                                         std::move(latest_piece_.identifier),
+                                         std::move(latest_piece_.data)));
   }
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
@@ -226,7 +218,7 @@ class SplitContext {
   void BuildAndSendNextChunk(size_t split_index) {
     auto data = BuildNextChunk(split_index);
     auto size = data->Get().size();
-    auto identifier = SendInProgress(PieceType::CHUNK, {}, std::move(data));
+    auto identifier = SendInProgress(PieceType::CHUNK, std::move(data));
     AddIdentifierAtLevel(0, {std::move(identifier), size});
   }
 
@@ -276,18 +268,7 @@ class SplitContext {
         << "Expected maximum of: " << kMaxChunkSize
         << ", but got: " << chunk->Get().size();
 
-    ObjectReferencesAndPriority references;
-    for (const auto& [identifier, size] : identifiers_and_sizes) {
-      const auto& digest = identifier.object_digest();
-      // Skip inline pieces from references.
-      if (GetObjectDigestInfo(digest).is_inlined())
-        continue;
-      // Links between pieces are eager, only node-value links can be lazy.
-      references.emplace(digest, KeyPriority::EAGER);
-    }
-
-    auto identifier = SendInProgress(PieceType::INDEX, std::move(references),
-                                     std::move(chunk));
+    auto identifier = SendInProgress(PieceType::INDEX, std::move(chunk));
     return {std::move(identifier), total_size};
   }
 
@@ -341,9 +322,7 @@ class SplitContext {
   }
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
-  fit::function<void(IterationStatus, std::unique_ptr<Piece>,
-                     ObjectReferencesAndPriority references)>
-      callback_;
+  fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback_;
   // The object encoded by DataSource.
   const ObjectType object_type_;
   bup::RollSumSplit roll_sum_split_;
@@ -422,9 +401,7 @@ void CollectPiecesInternal(ObjectIdentifier root,
 void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-    fit::function<void(IterationStatus, std::unique_ptr<Piece>,
-                       ObjectReferencesAndPriority)>
-        callback) {
+    fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),
                        object_type);
   source->Get([context = std::move(context)](

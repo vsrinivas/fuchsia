@@ -9,17 +9,24 @@
 
 #include <memory>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/storage/impl/constants.h"
+#include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/data_source.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/logging.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
 
 namespace storage {
 namespace {
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
 ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) {
   return {1u, 2u, std::move(digest)};
@@ -137,6 +144,59 @@ TEST_F(ObjectImplTest, LevelDBPiece) {
 
   const LevelDBPiece piece(identifier, std::move(iterator));
   EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
+}
+
+TEST_F(ObjectImplTest, PieceReferences) {
+  // Create various types of identifiers for the piece children. Small pieces
+  // fit in chunks, while bigger ones are split and yield identifiers of index
+  // pieces.
+  constexpr size_t kInlineSize = kStorageHashSize;
+  const ObjectIdentifier inline_chunk = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                          RandomString(environment_.random(), kInlineSize)));
+  ASSERT_TRUE(GetObjectDigestInfo(inline_chunk.object_digest()).is_chunk());
+  ASSERT_TRUE(GetObjectDigestInfo(inline_chunk.object_digest()).is_inlined());
+
+  const ObjectIdentifier inline_index = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB,
+                          RandomString(environment_.random(), kInlineSize)));
+  ASSERT_FALSE(GetObjectDigestInfo(inline_index.object_digest()).is_chunk());
+  ASSERT_TRUE(GetObjectDigestInfo(inline_index.object_digest()).is_inlined());
+
+  constexpr size_t kNoInlineSize = kStorageHashSize + 1;
+  const ObjectIdentifier noinline_chunk = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                          RandomString(environment_.random(), kNoInlineSize)));
+  ASSERT_TRUE(GetObjectDigestInfo(noinline_chunk.object_digest()).is_chunk());
+  ASSERT_FALSE(
+      GetObjectDigestInfo(noinline_chunk.object_digest()).is_inlined());
+
+  const ObjectIdentifier noinline_index = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB,
+                          RandomString(environment_.random(), kNoInlineSize)));
+  ASSERT_FALSE(GetObjectDigestInfo(noinline_index.object_digest()).is_chunk());
+  ASSERT_FALSE(
+      GetObjectDigestInfo(noinline_index.object_digest()).is_inlined());
+
+  // Create the parent piece.
+  std::unique_ptr<DataSource::DataChunk> data;
+  size_t total_size;
+  FileIndexSerialization::BuildFileIndex({{inline_chunk, kInlineSize},
+                                          {noinline_chunk, kInlineSize},
+                                          {inline_index, kNoInlineSize},
+                                          {noinline_index, kNoInlineSize}},
+                                         &data, &total_size);
+  const ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, data->Get()));
+  DataChunkPiece piece(identifier, std::move(data));
+
+  // Check that inline children are not included in the references.
+  ObjectReferencesAndPriority references;
+  ASSERT_EQ(Status::OK, piece.AppendReferences(&references));
+  EXPECT_THAT(references,
+              UnorderedElementsAre(
+                  Pair(noinline_chunk.object_digest(), KeyPriority::EAGER),
+                  Pair(noinline_index.object_digest(), KeyPriority::EAGER)));
 }
 
 TEST_F(ObjectImplTest, ChunkObject) {

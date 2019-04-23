@@ -8,9 +8,13 @@
 
 #include <utility>
 
+#include "src/ledger/bin/storage/impl/file_index.h"
+#include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace storage {
 
@@ -19,6 +23,34 @@ uint64_t ToFullPages(uint64_t value) {
   return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 }
 }  // namespace
+
+Status BasePiece::AppendReferences(
+    ObjectReferencesAndPriority* references) const {
+  // Chunks have no references.
+  const auto digest_info = GetObjectDigestInfo(GetIdentifier().object_digest());
+  if (digest_info.is_chunk()) {
+    return Status::OK;
+  }
+  FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+  // The piece is an index: parse it and append its children to references.
+  const FileIndex* file_index;
+  Status status =
+      FileIndexSerialization::ParseFileIndex(GetData(), &file_index);
+  if (status != Status::OK) {
+    return status;
+  }
+  for (const auto* child : *file_index->children()) {
+    ObjectDigest child_digest =
+        ToObjectIdentifier(child->object_identifier()).object_digest();
+    // References must not contain inline pieces.
+    if (GetObjectDigestInfo(child_digest).is_inlined()) {
+      continue;
+    }
+    // Piece references are always eager.
+    references->emplace(child_digest, KeyPriority::EAGER);
+  }
+  return Status::OK;
+}
 
 InlinePiece::InlinePiece(ObjectIdentifier identifier)
     : identifier_(std::move(identifier)) {}

@@ -15,8 +15,11 @@ namespace fake {
 class FakePiece : public Piece {
  public:
   FakePiece(ObjectIdentifier identifier, fxl::StringView content);
+
   fxl::StringView GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
+  Status AppendReferences(
+      ObjectReferencesAndPriority* references) const override;
 
  private:
   ObjectIdentifier identifier_;

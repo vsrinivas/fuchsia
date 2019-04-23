@@ -18,8 +18,15 @@
 #include "third_party/leveldb/include/leveldb/iterator.h"
 
 namespace storage {
+// Common methods shared by all piece implementations.
+class BasePiece : public Piece {
+ public:
+  Status AppendReferences(
+      ObjectReferencesAndPriority* references) const override;
+};
+
 // Piece whose data is equal to its id.
-class InlinePiece : public Piece {
+class InlinePiece : public BasePiece {
  public:
   explicit InlinePiece(ObjectIdentifier identifier);
 
@@ -32,7 +39,7 @@ class InlinePiece : public Piece {
 };
 
 // Piece whose data is backed by a DataChunk.
-class DataChunkPiece : public Piece {
+class DataChunkPiece : public BasePiece {
  public:
   explicit DataChunkPiece(ObjectIdentifier identifier,
                           std::unique_ptr<DataSource::DataChunk> chunk);
@@ -47,7 +54,7 @@ class DataChunkPiece : public Piece {
 };
 
 // Piece whose data is backed by a value in LevelDB.
-class LevelDBPiece : public Piece {
+class LevelDBPiece : public BasePiece {
  public:
   explicit LevelDBPiece(ObjectIdentifier identifier,
                         std::unique_ptr<leveldb::Iterator> iterator);

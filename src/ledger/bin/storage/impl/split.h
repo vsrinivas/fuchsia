@@ -25,19 +25,13 @@ enum class IterationStatus {
 // builds a multi-level index from the content. The |source| is consumed and
 // split using a rolling hash. Each chunk and each index file is returned. On
 // each iteration, |make_object_identifier| is called first and must return the
-// |ObjectIdentifier| to use to reference the given content id. The piece
-// (second argument) and the identifiers of its children (third argument) are
+// |ObjectIdentifier| to use to reference the given content id. The piece is
 // then passed to |callback|, along with a status of |IN_PROGRESS|, except for
-// the last piece which has a status of |DONE|. The returned children are only
-// children pieces of INDEX pieces; children tree nodes are not included, even
-// if |type| is TREE_NODE. |callback| is not called anymore once |source| is
-// deleted.
+// the last piece which has a status of |DONE|.
 void SplitDataSource(
     DataSource* source, ObjectType type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-    fit::function<void(IterationStatus, std::unique_ptr<Piece>,
-                       ObjectReferencesAndPriority)>
-        callback);
+    fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
 
 // Iterates over the pieces of an index object.
 Status ForEachPiece(fxl::StringView index_content,

@@ -52,8 +52,7 @@ ObjectIdentifier GetObjectIdentifier(std::string value,
         return encryption::MakeDefaultObjectIdentifier(
             std::move(object_digest));
       },
-      [&result](IterationStatus status, std::unique_ptr<Piece> piece,
-                ObjectReferencesAndPriority references) {
+      [&result](IterationStatus status, std::unique_ptr<Piece> piece) {
         if (status == IterationStatus::DONE) {
           result = piece->GetIdentifier().object_digest();
         }
@@ -122,9 +121,8 @@ ObjectIdentifier MakeSplitMap(
         return encryption::MakeDefaultObjectIdentifier(
             std::move(object_digest));
       },
-      [&result, callback = std::move(callback)](
-          IterationStatus status, std::unique_ptr<Piece> piece,
-          ObjectReferencesAndPriority /*references*/) {
+      [&result, callback = std::move(callback)](IterationStatus status,
+                                                std::unique_ptr<Piece> piece) {
         callback(piece->GetIdentifier(), piece->GetData().ToString());
         if (status == IterationStatus::DONE) {
           result = piece->GetIdentifier().object_digest();

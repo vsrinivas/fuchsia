@@ -86,7 +86,6 @@ struct Call {
 
 struct SplitResult {
   std::vector<Call> calls;
-  std::map<ObjectDigest, ObjectReferencesAndPriority> references;
   std::map<ObjectDigest, std::unique_ptr<Piece>> pieces;
 };
 
@@ -99,28 +98,14 @@ void DoSplit(DataSource* source, ObjectType object_type,
         return encryption::MakeDefaultObjectIdentifier(std::move(digest));
       },
       [result = std::move(result), callback = std::move(callback)](
-          IterationStatus status, std::unique_ptr<Piece> piece,
-          ObjectReferencesAndPriority references) mutable {
+          IterationStatus status, std::unique_ptr<Piece> piece) mutable {
         EXPECT_TRUE(result);
         const auto digest =
             piece ? piece->GetIdentifier().object_digest() : ObjectDigest();
         if (status != IterationStatus::ERROR) {
           EXPECT_LE(piece->GetData().size(), kMaxChunkSize);
-          // Accumulate returned references and data in result, checking that
-          // they match if we have already seen this digest.
-          if (result->references.count(digest) != 0) {
-            EXPECT_THAT(result->references[digest],
-                        UnorderedElementsAreArray(references));
-          } else {
-            // Check that references do not point to inline pieces.
-            for (const auto& [reference, priority] : references) {
-              EXPECT_FALSE(GetObjectDigestInfo(reference).is_inlined())
-                  << "SplitDataSource returned a reference to an inline "
-                     "object: "
-                  << reference;
-            }
-            result->references[digest] = std::move(references);
-          }
+          // Accumulate pieces in result, checking that they match if we have
+          // already seen this digest.
           if (result->pieces.count(digest) != 0) {
             EXPECT_EQ(result->pieces[digest]->GetData(), piece->GetData());
           } else {
@@ -218,20 +203,6 @@ TEST_P(SplitBigValueTest, BigValues) {
 
   fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
-    // Check that chunks have no references and indexes have at least one, with
-    // associated data.
-    if (call.status != IterationStatus::ERROR) {
-      if (GetObjectDigestInfo(call.digest).is_chunk()) {
-        EXPECT_THAT(split_result.references[call.digest], IsEmpty());
-      } else {
-        EXPECT_THAT(split_result.references[call.digest], Not(IsEmpty()));
-        for (const auto& [child, priority] :
-             split_result.references[call.digest]) {
-          EXPECT_THAT(split_result.pieces, Contains(Key(child)));
-          EXPECT_EQ(priority, KeyPriority::EAGER);
-        }
-      }
-    }
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
       EXPECT_EQ(
@@ -324,11 +295,6 @@ TEST(SplitTest, IndexToInlinePiece) {
   EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[2].digest).is_chunk());
   EXPECT_EQ(GetObjectDigestInfo(split_result.calls[2].digest).object_type,
             ObjectType::TREE_NODE);
-  // The reference from the root piece to the inline one should be skipped, so
-  // we expect only one reference here.
-  EXPECT_THAT(
-      split_result.references[split_result.calls[2].digest],
-      ElementsAre(Pair(split_result.calls[0].digest, KeyPriority::EAGER)));
 }
 
 TEST(SplitTest, Error) {

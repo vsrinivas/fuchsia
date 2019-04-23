@@ -12,6 +12,11 @@ FakePiece::FakePiece(ObjectIdentifier identifier, fxl::StringView content)
 
 fxl::StringView FakePiece::GetData() const { return content_; }
 
+Status FakePiece::AppendReferences(
+    ObjectReferencesAndPriority* references) const {
+  return Status::OK;
+}
+
 ObjectIdentifier FakePiece::GetIdentifier() const { return identifier_; }
 
 FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)

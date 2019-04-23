@@ -47,13 +47,13 @@ class ObjectData {
   const ObjectIdentifier object_identifier;
 };
 
-// Builder the object digest for the given content. If |inline_behavior| is
+// Computes the object digest for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
 ObjectDigest MakeObjectDigest(
     std::string content,
     InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
-// Builder the object identifier for the given content. If |inline_behavior| is
+// Computes the object identifier for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
 ObjectIdentifier MakeObjectIdentifier(
     std::string content,

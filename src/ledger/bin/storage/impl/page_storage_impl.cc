@@ -414,18 +414,23 @@ void PageStorageImpl::AddObjectFromLocal(
       [this, waiter, managed_data_source = std::move(managed_data_source),
        tree_references = std::move(tree_references),
        callback = std::move(traced_callback)](
-          IterationStatus status, std::unique_ptr<Piece> piece,
-          ObjectReferencesAndPriority piece_references) mutable {
+          IterationStatus status, std::unique_ptr<Piece> piece) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
           return;
         }
 
         FXL_DCHECK(piece != nullptr);
-
         ObjectIdentifier identifier = piece->GetIdentifier();
         auto object_info = GetObjectDigestInfo(identifier.object_digest());
         if (!object_info.is_inlined()) {
+          ObjectReferencesAndPriority piece_references;
+          if (piece->AppendReferences(&piece_references) != Status::OK) {
+            // The piece is generated internally by splitting, not coming from
+            // untrusted source, so decoding should never fail.
+            callback(Status::INTERNAL_ERROR, ObjectIdentifier());
+            return;
+          }
           if (object_info.object_type == ObjectType::TREE_NODE) {
             // There is at most one TREE_NODE, and it must be the last piece, so
             // it is safe to add tree_references to piece_references there.
