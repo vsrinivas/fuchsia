@@ -32,6 +32,13 @@ set -x
     cmd = ['exec', '"$dir/%s"' % bootserver]
     if board_name:
         cmd += ['--board_name', '"%s"' % board_name]
+
+        # CONN-50: important mitigation for USB reliability issues with
+        # specific USB adapters, slowing down the pave process keeps the flow
+        # working.
+        if board_name == "astro":
+            cmd += ['-w', '10']
+
     for switch, path in sorted(switches.iteritems()):
         cmd += [switch, path]
     cmd.append('"$@"')
