@@ -48,6 +48,7 @@ executable("fshost") {
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/minfs",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",

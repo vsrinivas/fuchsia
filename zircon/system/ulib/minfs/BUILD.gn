@@ -46,6 +46,7 @@ library("minfs") {
     public_deps += [
       "$zx/system/fidl/fuchsia-hardware-block:c",
       "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+      "$zx/system/ulib/block-client",
       "$zx/system/ulib/zx:headers",
     ]
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
@@ -58,7 +59,6 @@ library("minfs") {
       "$zx/system/ulib/async:async-default",
       "$zx/system/ulib/async-loop",
       "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",

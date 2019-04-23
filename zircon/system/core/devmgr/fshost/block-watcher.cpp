@@ -28,6 +28,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <loader-service/loader-service.h>
+#include <minfs/minfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/processargs.h>
@@ -290,22 +291,22 @@ bool pkgfs_launch(BlockWatcher* watcher) {
     return true;
 }
 
-void launch_blob_init(BlockWatcher* watcher) {
+void LaunchBlobInit(BlockWatcher* watcher) {
     pkgfs_launch(watcher);
 }
 
-zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
+zx_status_t LaunchBlobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
     return devmgr_launch(*g_job, "blobfs:/blob", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
-zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
+zx_status_t LaunchMinfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
     return devmgr_launch(*g_job, "minfs:/data", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
-zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
+zx_status_t LaunchFAT(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
     return devmgr_launch(*g_job, "fatfs:/volume", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
@@ -317,7 +318,7 @@ zx_status_t BlockWatcher::MountData(fbl::unique_fd fd, mount_options_t* options)
     options->wait_until_ready = true;
 
     zx_status_t status =
-        mount(fd.release(), "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
+        mount(fd.release(), "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, LaunchMinfs);
     if (status != ZX_OK) {
         printf("fshost: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(status));
     } else {
@@ -332,7 +333,7 @@ zx_status_t BlockWatcher::MountInstall(fbl::unique_fd fd, mount_options_t* optio
     }
     options->readonly = true;
     zx_status_t status =
-        mount(fd.release(), "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
+        mount(fd.release(), "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, LaunchMinfs);
     if (status != ZX_OK) {
         printf("fshost: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(status));
     } else {
@@ -346,7 +347,7 @@ zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options)
         return ZX_ERR_ALREADY_BOUND;
     }
     zx_status_t status =
-        mount(fd.release(), "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS, options, launch_blobfs);
+        mount(fd.release(), "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS, options, LaunchBlobfs);
     if (status != ZX_OK) {
         printf("fshost: failed to mount %s: %s.\n", PATH_BLOB, zx_status_get_string(status));
     } else {
@@ -440,7 +441,7 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
+zx_status_t MountMinfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
     fuchsia_hardware_block_partition_GUID type_guid;
     {
         fzl::UnownedFdioCaller disk_connection(fd.get());
@@ -473,7 +474,7 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 // return value is ignored
-int unseal_zxcrypt_threadfunc(void* arg) {
+int UnsealZxcrypt(void* arg) {
     fbl::unique_ptr<int> fd_ptr(static_cast<int*>(arg));
     fbl::unique_fd fd(*fd_ptr);
 
@@ -500,7 +501,28 @@ int unseal_zxcrypt_threadfunc(void* arg) {
     return 0;
 }
 
-zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
+zx_status_t FormatMinfs(const fbl::unique_fd& block_device,
+                        const fuchsia_hardware_block_BlockInfo& info) {
+
+    fprintf(stderr, "fshost: Formatting minfs.\n");
+    uint64_t device_size = info.block_size * info.block_count;
+    fbl::unique_ptr<minfs::Bcache> bc;
+    zx_status_t status;
+    if ((status = minfs::Bcache::Create(&bc, block_device.duplicate(),
+                                        static_cast<uint32_t>(device_size))) != ZX_OK) {
+        fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
+        return status;
+    }
+    minfs::MountOptions options = {};
+    if ((status = Mkfs(options, std::move(bc))) != ZX_OK) {
+        fprintf(stderr, "fshost: Could not format minfs filesystem.\n");
+        return status;
+    }
+    printf("fshost: Minfs filesystem re-formatted. Expect data loss.\n");
+    return ZX_OK;
+}
+
+zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cookie) {
     auto watcher = static_cast<BlockWatcher*>(cookie);
 
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -516,12 +538,12 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     }
 
     disk_format_t df = detect_disk_format(fd.get());
+    fuchsia_hardware_block_BlockInfo info;
     fuchsia_hardware_block_partition_GUID guid;
     {
         fzl::UnownedFdioCaller disk_connection(fd.get());
         zx::unowned_channel disk(disk_connection.borrow_channel());
 
-        fuchsia_hardware_block_BlockInfo info;
         zx_status_t io_status, call_status;
         io_status = fuchsia_hardware_block_BlockGetInfo(disk->get(), &call_status, &info);
         if (io_status != ZX_OK || call_status != ZX_OK) {
@@ -569,7 +591,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
                 int loose_fd = fd.release();
                 int* raw_fd_ptr = new int(loose_fd);
                 thrd_t th;
-                int err = thrd_create_with_name(&th, &unseal_zxcrypt_threadfunc, raw_fd_ptr, "zxcrypt-unseal");
+                int err = thrd_create_with_name(&th, &UnsealZxcrypt, raw_fd_ptr, "zxcrypt-unseal");
                 if (err != thrd_success) {
                     printf("fshost: failed to spawn zxcrypt unseal thread");
                     close(loose_fd);
@@ -597,7 +619,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         if (gpt_is_install_guid(guid.value, GPT_GUID_LEN)) {
             printf("fshost: mounting install partition\n");
             mount_options_t options = default_mount_options;
-            mount_minfs(watcher, std::move(fd), &options);
+            MountMinfs(watcher, std::move(fd), &options);
             return ZX_OK;
         }
 
@@ -625,7 +647,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
             printf("fshost: Failed to mount blobfs partition %s at %s: %s.\n", device_path,
                    PATH_BLOB, zx_status_get_string(status));
         } else {
-            launch_blob_init(watcher);
+            LaunchBlobInit(watcher);
         }
         return ZX_OK;
     }
@@ -633,10 +655,12 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         printf("fshost: mounting minfs\n");
         fsck_options_t fsck_options = default_fsck_options;
         if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS, &fsck_options) != ZX_OK) {
-            return ZX_OK;
+            if (FormatMinfs(fd, info) != ZX_OK) {
+                return ZX_OK;
+            }
         }
         mount_options_t options = default_mount_options;
-        mount_minfs(watcher, std::move(fd), &options);
+        MountMinfs(watcher, std::move(fd), &options);
         return ZX_OK;
     }
     case DISK_FORMAT_FAT: {
@@ -653,7 +677,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", "/fs" PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
         printf("fshost: mounting fatfs\n");
-        mount(fd.release(), mountpath, df, &options, launch_fat);
+        mount(fd.release(), mountpath, df, &options, LaunchFAT);
         return ZX_OK;
     }
     default:
@@ -669,7 +693,7 @@ void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, 
 
     fbl::unique_fd dirfd(open("/dev/class/block", O_DIRECTORY | O_RDONLY));
     if (dirfd) {
-        fdio_watch_directory(dirfd.get(), block_device_added, ZX_TIME_INFINITE, &watcher);
+        fdio_watch_directory(dirfd.get(), BlockDeviceAdded, ZX_TIME_INFINITE, &watcher);
     }
 }
 

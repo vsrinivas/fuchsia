@@ -15,7 +15,6 @@
 #include <fbl/unique_ptr.h>
 
 #ifdef __Fuchsia__
-#include <fuchsia/minfs/c/fidl.h>
 #include <lib/async/dispatcher.h>
 #endif
 
