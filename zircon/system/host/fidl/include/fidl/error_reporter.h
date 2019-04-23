@@ -36,12 +36,18 @@ public:
 
     void ReportErrorWithSquiggle(const SourceLocation& location,
                                  StringView message);
-    void ReportError(const SourceLocation& location, StringView message);
+    void ReportError(const SourceLocation& location, StringView message) {
+        ReportError(&location, message);
+    }
+    void ReportError(const SourceLocation* maybe_location, StringView message);
     void ReportError(const Token& token, StringView message);
     void ReportError(StringView message);
     void ReportWarningWithSquiggle(const SourceLocation& location,
                                    StringView message);
-    void ReportWarning(const SourceLocation& location, StringView message);
+    void ReportWarning(const SourceLocation& location, StringView message) {
+        ReportWarning(&location, message);
+    }
+    void ReportWarning(const SourceLocation* maybe_location, StringView message);
     void PrintReports();
     Counts Checkpoint() const { return Counts(this); }
     const std::vector<std::string>& errors() const { return errors_; }

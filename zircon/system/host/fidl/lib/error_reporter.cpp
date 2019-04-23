@@ -24,8 +24,16 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
     return squiggle;
 }
 
-std::string Format(std::string qualifier, const SourceLocation& location,
+std::string Format(std::string qualifier, const SourceLocation* maybe_location,
                    StringView message, size_t squiggle_size = 0u) {
+    if (!maybe_location) {
+        std::string error = qualifier;
+        error.append(": ");
+        error.append(message);
+        return error;
+    }
+
+    const auto& location = *maybe_location;
     SourceFile::Position position;
     std::string surrounding_line = location.SourceLine(&position);
 
@@ -53,7 +61,6 @@ std::string Format(std::string qualifier, const SourceLocation& location,
     error.push_back('\n');
     error.append(surrounding_line);
     error.append(squiggle);
-
     return error;
 }
 
@@ -75,8 +82,8 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
 //     filename:line:col: error: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportError(const SourceLocation& location, StringView message) {
-    auto error = Format("error", location, message);
+void ErrorReporter::ReportError(const SourceLocation* maybe_location, StringView message) {
+    auto error = Format("error", maybe_location, message);
     AddError(std::move(error));
 }
 
@@ -89,7 +96,7 @@ void ErrorReporter::ReportError(const SourceLocation& location, StringView messa
 void ErrorReporter::ReportErrorWithSquiggle(
     const SourceLocation& location, StringView message) {
     auto token_data = location.data();
-    auto error = Format("error", location, message, token_data.size());
+    auto error = Format("error", &location, message, token_data.size());
     AddError(std::move(error));
 }
 
@@ -118,8 +125,8 @@ void ErrorReporter::ReportError(StringView message) {
 //     filename:line:col: warning: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportWarning(const SourceLocation& location, StringView message) {
-    auto warning = Format("warning", location, message);
+void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, StringView message) {
+    auto warning = Format("warning", maybe_location, message);
     AddWarning(std::move(warning));
 }
 
@@ -132,7 +139,7 @@ void ErrorReporter::ReportWarning(const SourceLocation& location, StringView mes
 void ErrorReporter::ReportWarningWithSquiggle(
     const SourceLocation& location, StringView message) {
     auto token_data = location.data();
-    auto warning = Format("warning", location, message, token_data.size());
+    auto warning = Format("warning", &location, message, token_data.size());
     AddWarning(std::move(warning));
 }
 

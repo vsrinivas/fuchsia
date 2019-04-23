@@ -16,11 +16,16 @@
 namespace fidl {
 
 struct NameLocation {
-    explicit NameLocation(const SourceLocation& source_location)
-        : filename(source_location.source_file().filename()) {
-      source_location.SourceLine(&position);
+    explicit NameLocation(const SourceLocation& location)
+        : filename(location.source_file().filename()) {
+      location.SourceLine(&position);
     }
-    explicit NameLocation(const flat::Name& name) : NameLocation(name.source_location()) {}
+
+    // TODO(FIDL-596): We are incorrectly assuming that the provided name is not
+    // anonymous, and relying on callers to avoid derefencing a nullptr
+    // location.
+    explicit NameLocation(const flat::Name& name) : NameLocation(*name.maybe_location()) {}
+
     const std::string filename;
     SourceFile::Position position;
 };

@@ -65,13 +65,12 @@ struct Name {
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
-    bool is_anonymous() const { return name_from_source_ == nullptr; }
     const Library* library() const { return library_; }
-    const SourceLocation& source_location() const {
-        return *name_from_source_.get();
+    const SourceLocation* maybe_location() const {
+        return name_from_source_.get();
     }
     const StringView name_part() const {
-        if (is_anonymous())
+        if (!name_from_source_)
             return *anonymous_name_.get();
         return name_from_source_->data();
     }
@@ -892,7 +891,7 @@ public:
 
     const Name* name() const { return &name_; }
 
-    virtual bool Create(const SourceLocation& location,
+    virtual bool Create(const SourceLocation* maybe_location,
                         const Type* arg_type,
                         const types::HandleSubtype* handle_subtype,
                         const Size* size,
@@ -900,12 +899,22 @@ public:
                         std::unique_ptr<Type>* out_type) const = 0;
 
 protected:
-    bool MustBeParameterized(const SourceLocation& location) const { return Fail(location, "must be parametrized"); }
-    bool MustHaveSize(const SourceLocation& location) const { return Fail(location, "must have size"); }
-    bool CannotBeParameterized(const SourceLocation& location) const { return Fail(location, "cannot be parametrized"); }
-    bool CannotHaveSize(const SourceLocation& location) const { return Fail(location, "cannot have size"); }
-    bool CannotBeNullable(const SourceLocation& location) const { return Fail(location, "cannot be nullable"); }
-    bool Fail(const SourceLocation& location, const std::string& content) const;
+    bool MustBeParameterized(const SourceLocation* maybe_location) const {
+        return Fail(maybe_location, "must be parametrized");
+    }
+    bool MustHaveSize(const SourceLocation* maybe_location) const {
+        return Fail(maybe_location, "must have size");
+    }
+    bool CannotBeParameterized(const SourceLocation* maybe_location) const {
+        return Fail(maybe_location, "cannot be parametrized");
+    }
+    bool CannotHaveSize(const SourceLocation* maybe_location) const {
+        return Fail(maybe_location, "cannot have size");
+    }
+    bool CannotBeNullable(const SourceLocation* maybe_location) const {
+        return Fail(maybe_location, "cannot be nullable");
+    }
+    bool Fail(const SourceLocation* maybe_location, const std::string& content) const;
 
     Typespace* typespace_;
 
@@ -1090,12 +1099,12 @@ private:
     friend class TypeAliasTypeTemplate;
 
     bool Fail(StringView message);
-    bool Fail(const SourceLocation& location, StringView message);
+    bool Fail(const SourceLocation& location, StringView message) {
+        return Fail(&location, message);
+    }
+    bool Fail(const SourceLocation* maybe_location, StringView message);
     bool Fail(const Name& name, StringView message) {
-        if (name.is_anonymous()) {
-            return Fail(message);
-        }
-        return Fail(name.source_location(), message);
+        return Fail(name.maybe_location(), message);
     }
     bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
 
@@ -1104,8 +1113,13 @@ private:
     void ValidateAttributesConstraints(const Decl* decl,
                                        const raw::AttributeList* attributes);
 
+    // TODO(FIDL-596): Rationalize the use of names. Here, a simple name is
+    // one that is not scoped, it is just text. An anonymous name is one that
+    // is guaranteed to be unique within the library, and a derived name is one
+    // that is library scoped but derived from the concatenated components using
+    // underscores as delimiters.
+    SourceLocation GeneratedSimpleName(const std::string& name);
     Name NextAnonymousName();
-    Name GeneratedName(const std::string& name);
     Name DerivedName(const std::vector<StringView>& components);
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,

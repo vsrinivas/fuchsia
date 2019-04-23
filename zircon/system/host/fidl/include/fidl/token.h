@@ -69,7 +69,7 @@ public:
     }
 
     StringView data() const { return location_.data(); }
-    SourceLocation location() const { return location_; }
+    const SourceLocation& location() const { return location_; }
     void set_previous_end(SourceLocation location) { previous_end_ = location; }
     SourceLocation previous_end() const { return previous_end_; }
     Kind kind() const { return kind_and_subkind_.kind(); }

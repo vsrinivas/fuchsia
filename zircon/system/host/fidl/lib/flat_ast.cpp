@@ -400,15 +400,16 @@ bool Typespace::CreateNotOwned(const flat::Name& name,
     // return it rather than create a new one. Lookup must be by name,
     // arg_type, size, and nullability.
 
-    auto const& location = name.source_location();
+    auto maybe_location = name.maybe_location();
     auto type_template = LookupTemplate(name);
     if (type_template == nullptr) {
         std::string message("unknown type ");
         message.append(name.name_part());
-        error_reporter_->ReportError(location, message);
+        error_reporter_->ReportError(maybe_location, message);
         return false;
     }
-    return type_template->Create(location, arg_type, handle_subtype, size, nullability, out_type);
+    return type_template->Create(maybe_location, arg_type, handle_subtype, size,
+                                 nullability, out_type);
 
 }
 
@@ -429,11 +430,11 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
     return nullptr;
 }
 
-bool TypeTemplate::Fail(const SourceLocation& location, const std::string& content) const {
+bool TypeTemplate::Fail(const SourceLocation* maybe_location, const std::string& content) const {
     std::string message(NameName(name_, ".", "/"));
     message.append(" ");
     message.append(content);
-    error_reporter_->ReportError(location, message);
+    error_reporter_->ReportError(maybe_location, message);
     return false;
 }
 
@@ -444,18 +445,18 @@ public:
         : TypeTemplate(Name(nullptr, name), typespace, error_reporter),
           subtype_(subtype) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (maybe_arg_type != nullptr)
-            return CannotBeParameterized(location);
+            return CannotBeParameterized(maybe_location);
         if (maybe_size != nullptr)
-            return CannotHaveSize(location);
+            return CannotHaveSize(maybe_location);
         if (nullability == types::Nullability::kNullable)
-            return CannotBeNullable(location);
+            return CannotBeNullable(maybe_location);
 
         *out_type = std::make_unique<PrimitiveType>(subtype_);
         return true;
@@ -471,14 +472,14 @@ public:
         : TypeTemplate(Name(nullptr, "bytes"), typespace, error_reporter),
           uint8_type_(types::PrimitiveSubtype::kUint8) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (maybe_arg_type != nullptr)
-            return CannotBeParameterized(location);
+            return CannotBeParameterized(maybe_location);
         if (size == nullptr)
             size = &max_size;
 
@@ -496,18 +497,18 @@ public:
     ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (arg_type == nullptr)
-            return MustBeParameterized(location);
+            return MustBeParameterized(maybe_location);
         if (size == nullptr)
-            return MustHaveSize(location);
+            return MustHaveSize(maybe_location);
         if (nullability == types::Nullability::kNullable)
-            return CannotBeNullable(location);
+            return CannotBeNullable(maybe_location);
 
         *out_type = std::make_unique<ArrayType>(arg_type, size);
         return true;
@@ -519,14 +520,14 @@ public:
     VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (arg_type == nullptr)
-            return MustBeParameterized(location);
+            return MustBeParameterized(maybe_location);
         if (size == nullptr)
             size = &max_size;
 
@@ -543,14 +544,14 @@ public:
     StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (arg_type != nullptr)
-            return CannotBeParameterized(location);
+            return CannotBeParameterized(maybe_location);
         if (size == nullptr)
             size = &max_size;
 
@@ -567,7 +568,7 @@ public:
     HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
                 const types::HandleSubtype* maybe_handle_subtype,
                 const Size* maybe_size,
@@ -576,7 +577,7 @@ public:
         assert(maybe_arg_type == nullptr);
 
         if (maybe_size != nullptr)
-            return CannotHaveSize(location);
+            return CannotHaveSize(maybe_location);
 
         auto handle_subtype = types::HandleSubtype::kHandle;
         if (maybe_handle_subtype != nullptr)
@@ -592,21 +593,21 @@ public:
     RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
         if (arg_type == nullptr)
-            return MustBeParameterized(location);
+            return MustBeParameterized(maybe_location);
         if (arg_type->kind != Type::Kind::kIdentifier)
-            return Fail(location, "must be an interface");
+            return Fail(maybe_location, "must be an interface");
         auto interface_type = static_cast<const IdentifierType*>(arg_type);
         if (interface_type->type_decl->kind != Decl::Kind::kInterface)
-            return Fail(location, "must be an interface");
+            return Fail(maybe_location, "must be an interface");
         if (maybe_size != nullptr)
-            return CannotHaveSize(location);
+            return CannotHaveSize(maybe_location);
 
         *out_type = std::make_unique<RequestHandleType>(interface_type, nullability);
         return true;
@@ -625,7 +626,7 @@ public:
         : TypeTemplate(std::move(name), typespace, error_reporter),
           library_(library), type_decl_(type_decl) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
                 const types::HandleSubtype* handle_subtype,
                 const Size* size,
@@ -654,7 +655,7 @@ public:
 
         case Decl::Kind::kTable:
             if (nullability == types::Nullability::kNullable)
-                return CannotBeNullable(location);
+                return CannotBeNullable(maybe_location);
             break;
 
         default:
@@ -684,7 +685,7 @@ public:
         : TypeTemplate(std::move(name), typespace, error_reporter),
           library_(library), partial_type_ctor_(std::move(partial_type_ctor)) {}
 
-    bool Create(const SourceLocation& location,
+    bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
                 const types::HandleSubtype* no_handle_subtype,
                 const Size* maybe_size,
@@ -695,7 +696,7 @@ public:
         const Type* arg_type = nullptr;
         if (partial_type_ctor_->maybe_arg_type_ctor) {
             if (maybe_arg_type) {
-                return Fail(location, "cannot parametrize twice");
+                return Fail(maybe_location, "cannot parametrize twice");
             }
             if (!partial_type_ctor_->maybe_arg_type_ctor->type) {
                 if (!library_->CompileTypeConstructor(
@@ -711,10 +712,10 @@ public:
         const Size* size = nullptr;
         if (partial_type_ctor_->maybe_size) {
             if (maybe_size) {
-                return Fail(location, "cannot bound twice");
+                return Fail(maybe_location, "cannot bound twice");
             }
             if (!library_->ResolveConstant(partial_type_ctor_->maybe_size.get(), &library_->kSizeType))
-                return Fail(location, "unable to parse size bound");
+                return Fail(maybe_location, "unable to parse size bound");
             size = static_cast<const Size*>(&partial_type_ctor_->maybe_size->Value());
         } else {
             size = maybe_size;
@@ -723,7 +724,7 @@ public:
         types::Nullability nullability;
         if (partial_type_ctor_->nullability == types::Nullability::kNullable) {
             if (maybe_nullability == types::Nullability::kNullable) {
-                return Fail(location, "cannot indicate nullability twice");
+                return Fail(maybe_location, "cannot indicate nullability twice");
             }
             nullability = types::Nullability::kNullable;
         } else {
@@ -1000,7 +1001,7 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter,
         (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
          error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
         error_reporter->ReportError(
-            decl->name.source_location(),
+            decl->name.maybe_location(),
             "invalid error type: must be int32, uint32 or an enum therof");
         return false;
     }
@@ -1053,7 +1054,7 @@ bool TransportConstraint(ErrorReporter* error_reporter,
                 first = false;
                 out << t;
             }
-            error_reporter->ReportError(decl->name.source_location(), out.str());
+            error_reporter->ReportError(decl->name.maybe_location(), out.str());
             return false;
         }
     }
@@ -1262,8 +1263,8 @@ bool Library::Fail(StringView message) {
     return false;
 }
 
-bool Library::Fail(const SourceLocation& location, StringView message) {
-    error_reporter_->ReportError(location, message);
+bool Library::Fail(const SourceLocation* maybe_location, StringView message) {
+    error_reporter_->ReportError(maybe_location, message);
     return false;
 }
 
@@ -1291,22 +1292,22 @@ void Library::ValidateAttributesConstraints(const Decl* decl,
     }
 }
 
+SourceLocation Library::GeneratedSimpleName(const std::string& name) {
+    return generated_source_file_.AddLine(name);
+}
+
 Name Library::NextAnonymousName() {
-    // TODO(pascallouis): Improve anonymous name generation. We want to be
+    // TODO(FIDL-596): Improve anonymous name generation. We want to be
     // specific about how these names are generated once they appear in the
     // JSON IR, and are exposed to the backends.
     std::ostringstream data;
     data << "SomeLongAnonymousPrefix";
     data << anon_counter_++;
-    return GeneratedName(data.str());
-}
-
-Name Library::GeneratedName(const std::string& name) {
-    return Name(this, generated_source_file_.AddLine(name));
+    return Name(this, GeneratedSimpleName(data.str()));
 }
 
 Name Library::DerivedName(const std::vector<StringView>& components) {
-    return GeneratedName(StringJoin(components, "_"));
+    return Name(this, GeneratedSimpleName(StringJoin(components, "_")));
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
@@ -1581,11 +1582,11 @@ bool Library::CreateMethodResult(const Name& interface_name,
     // error type.
     Union::Member response_member{
         IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
-        GeneratedName("response").source_location(),
+        GeneratedSimpleName("response"),
         nullptr};
     Union::Member error_member{
         std::move(error_type_ctor),
-        GeneratedName("err").source_location(),
+        GeneratedSimpleName("err"),
         nullptr};
     SourceLocation method_name = method->identifier->location();
     Name result_name = DerivedName({interface_name.name_part(), method_name.data(), "Result"});
@@ -1607,7 +1608,7 @@ bool Library::CreateMethodResult(const Name& interface_name,
     // result union.
     std::vector<Struct::Member> response_members;
     response_members.push_back(Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
-                                              GeneratedName("result").source_location(), nullptr, nullptr));
+                                              GeneratedSimpleName("result"), nullptr, nullptr));
     struct_declarations_.push_back(std::make_unique<Struct>(nullptr, NextAnonymousName(), std::move(response_members), true));
     *out_response = struct_declarations_.back().get();
     if (!RegisterDecl(*out_response))
@@ -2843,8 +2844,9 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(name, message);
             }
             auto superinterface = static_cast<const Interface*>(decl);
-            assert(!superinterface->name.is_anonymous());
-            if (method_scope.interfaces.Insert(superinterface, superinterface->name.source_location()).ok()) {
+            auto maybe_location = superinterface->name.maybe_location();
+            assert(maybe_location);
+            if (method_scope.interfaces.Insert(superinterface, *maybe_location).ok()) {
                 if (!Visitor(superinterface, Visitor))
                     return false;
             } else {
@@ -3117,7 +3119,6 @@ bool Library::Compile() {
 }
 
 bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_typeshape) {
-    auto const& location = type_ctor->name.source_location();
     const Type* maybe_arg_type = nullptr;
     if (type_ctor->maybe_arg_type_ctor != nullptr) {
         if (!CompileTypeConstructor(type_ctor->maybe_arg_type_ctor.get(), nullptr))
@@ -3127,7 +3128,7 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
     const Size* size = nullptr;
     if (type_ctor->maybe_size != nullptr) {
         if (!ResolveConstant(type_ctor->maybe_size.get(), &kSizeType))
-            return Fail(location, "unable to parse size bound");
+            return Fail(type_ctor->name.maybe_location(), "unable to parse size bound");
         size = static_cast<const Size*>(&type_ctor->maybe_size->Value());
     }
     if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->maybe_handle_subtype.get(),

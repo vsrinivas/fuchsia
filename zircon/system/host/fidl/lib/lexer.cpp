@@ -182,7 +182,7 @@ Token Lexer::LexIdentifier() {
         std::string msg("invalid identifier '");
         msg.append(identifier_data);
         msg.append("'");
-        error_reporter_->ReportError(location, msg);
+        error_reporter_->ReportError(&location, msg);
     }
     auto subkind = Token::Subkind::kNone;
     auto lookup = keyword_table_.find(identifier_data);
@@ -368,7 +368,7 @@ Token Lexer::Lex() {
                 std::string msg("invalid character '");
                 msg.append(location.data());
                 msg.append("'");
-                error_reporter_->ReportError(location, msg);
+                error_reporter_->ReportError(&location, msg);
                 continue;
             }
             } // switch
@@ -410,7 +410,7 @@ Token Lexer::Lex() {
             std::string msg("invalid character '");
             msg.append(location.data());
             msg.append("'");
-            error_reporter_->ReportError(location, msg);
+            error_reporter_->ReportError(&location, msg);
             continue;
         }
         } // switch
