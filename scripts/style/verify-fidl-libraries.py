@@ -47,6 +47,8 @@ def main():
     for file in files.splitlines():
         if any(file.startswith(ignored) for ignored in IGNORED_DIRS):
           continue
+        elif file.endswith('test.fidl'):
+          continue
 
         with open(os.path.join(repo, file), 'r') as fidl:
             contents = fidl.read()
