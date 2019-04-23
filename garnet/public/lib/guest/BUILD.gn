@@ -15,6 +15,7 @@ source_set("guest") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.wayland",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 }

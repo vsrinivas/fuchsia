@@ -24,8 +24,7 @@ fuchsia::guest::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
         .url = kWaylandDispatcherPackage,
         .directory_request = services.NewRequest(),
     };
-    context_->launcher()->CreateComponent(std::move(launch_info),
-                                          bridge_.NewRequest());
+    ConnectToLauncher()->CreateComponent(std::move(launch_info), bridge_.NewRequest());
     // If we hit an error just close the bridge. It will get relaunched in
     // response to the next new connection.
     bridge_.set_error_handler(
@@ -57,6 +56,16 @@ void ScenicWaylandDispatcher::Reset(zx_status_t status) {
 void ScenicWaylandDispatcher::OnNewView(
     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view) {
   listener_(std::move(view));
+}
+
+fuchsia::sys::LauncherPtr ScenicWaylandDispatcher::ConnectToLauncher() const {
+  fuchsia::sys::LauncherPtr launcher;
+  if (deprecated_context_) {
+    deprecated_context_->ConnectToEnvironmentService(launcher.NewRequest());
+  } else {
+    context_->svc()->Connect(launcher.NewRequest());
+  }
+  return launcher;
 }
 
 };  // namespace guest
