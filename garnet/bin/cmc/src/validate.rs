@@ -484,6 +484,63 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/capability")),
         },
+        test_cm_exposes_source_missing_variant => {
+            input = json!({
+                "exposes": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {},
+                        "target_path": "/svc/fuchsia.ui.Scenic"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
+        },
+        test_cm_exposes_source_multiple_variants => {
+            input = json!({
+                "exposes": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {
+                            "myself": {},
+                            "child": {
+                                "name": "foo"
+                            }
+                        },
+                        "target_path": "/svc/fuchsia.ui.Scenic"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
+        },
+        test_cm_exposes_source_bad_child_name => {
+            input = json!({
+                "exposes": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {
+                            "child": {
+                                "name": "bad^"
+                            }
+                        },
+                        "target_path": "/svc/fuchsia.ui.Scenic"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/source/child/name")),
+        },
 
         // offers
         test_cm_offers => {
@@ -600,6 +657,78 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/capability")),
+        },
+        test_cm_offers_source_missing_variant => {
+            input = json!({
+                "offers": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {},
+                        "targets": [
+                            {
+                                "target_path": "/svc/fuchsia.ui.Scenic",
+                                "child_name": "user_shell"
+                            }
+                        ]
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/source")),
+        },
+        test_cm_offers_source_multiple_variants => {
+            input = json!({
+                "offers": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {
+                            "myself": {},
+                            "child": {
+                                "name": "foo"
+                            }
+                        },
+                        "targets": [
+                            {
+                                "target_path": "/svc/fuchsia.ui.Scenic",
+                                "child_name": "user_shell"
+                            }
+                        ]
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/source")),
+        },
+        test_cm_offers_source_bad_child_name => {
+            input = json!({
+                "offers": [
+                    {
+                        "capability": {
+                            "service": {
+                               "path": "/svc/fuchsia.ui.Scenic"
+                            }
+                        },
+                        "source": {
+                            "child": {
+                                "name": "bad^"
+                            }
+                        },
+                        "targets": [
+                            {
+                                "target_path": "/svc/fuchsia.ui.Scenic",
+                                "child_name": "user_shell"
+                            }
+                        ]
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/source/child/name")),
         },
         test_cm_offers_target_missing_props => {
             input = json!({
@@ -864,61 +993,6 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/uri")),
-        },
-        test_cm_relative_id_missing_variant => {
-            input = json!({
-                "exposes": [
-                    {
-                        "capability": {
-                            "service": {
-                               "path": "/svc/fuchsia.ui.Scenic"
-                            }
-                        },
-                        "source": {},
-                        "target_path": "/svc/fuchsia.ui.Scenic"
-                    }
-                ]
-            }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
-        },
-        test_cm_relative_id_multiple_variants => {
-            input = json!({
-                "exposes": [
-                    {
-                        "capability": {
-                            "service": {
-                               "path": "/svc/fuchsia.ui.Scenic"
-                            }
-                        },
-                        "source": {
-                            "realm": {},
-                            "myself": {}
-                        },
-                        "target_path": "/svc/fuchsia.ui.Scenic"
-                    }
-                ]
-            }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
-        },
-        test_cm_relative_id_bad_child_name => {
-            input = json!({
-                "exposes": [
-                    {
-                        "capability": {
-                            "service": {
-                               "path": "/svc/fuchsia.ui.Scenic"
-                            }
-                        },
-                        "source": {
-                            "child": {
-                                "name": "bad^"
-                            }
-                        },
-                        "target_path": "/svc/fuchsia.ui.Scenic"
-                    }
-                ]
-            }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/source/child/name")),
         },
     }
 

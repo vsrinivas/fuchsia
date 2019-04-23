@@ -100,7 +100,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let capability = extract_capability(expose)?;
-        let source = extract_source(expose)?;
+        let source = extract_expose_source(expose)?;
         let target_path = extract_target_path(expose, &capability)?;
         out_exposes.push(cm::Expose { capability, source, target_path });
     }
@@ -111,7 +111,7 @@ fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> 
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         let capability = extract_capability(offer)?;
-        let source = extract_source(offer)?;
+        let source = extract_offer_source(offer)?;
         let targets = extract_targets(offer, &capability)?;
         out_offers.push(cm::Offer { capability, source, targets });
     }
@@ -133,8 +133,7 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, E
     Ok(out_children)
 }
 
-// Extract "source" from "from".
-fn extract_source<T>(in_obj: &T) -> Result<cm::Source, Error>
+fn extract_expose_source<T>(in_obj: &T) -> Result<cm::ExposeSource, Error>
 where
     T: cml::FromClause,
 {
@@ -144,13 +143,32 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::Source::Child(cm::ChildId { name: child_name.to_string() })
-    } else if from == "realm" {
-        cm::Source::Realm(cm::RealmId {})
+        cm::ExposeSource::Child(cm::ChildId { name: child_name.to_string() })
     } else if from == "self" {
-        cm::Source::Myself(cm::SelfId {})
+        cm::ExposeSource::Myself(cm::SelfId {})
     } else {
+        return Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", from)));
+    };
+    Ok(ret)
+}
+
+fn extract_offer_source<T>(in_obj: &T) -> Result<cm::OfferSource, Error>
+where
+    T: cml::FromClause,
+{
+    let from = in_obj.from().to_string();
+    if !cml::FROM_RE.is_match(&from) {
         return Err(Error::internal(format!("invalid \"from\": {}", from)));
+    }
+    let ret = if from.starts_with("#") {
+        let (_, child_name) = from.split_at(1);
+        cm::OfferSource::Child(cm::ChildId { name: child_name.to_string() })
+    } else if from == "realm" {
+        cm::OfferSource::Realm(cm::RealmId {})
+    } else if from == "self" {
+        cm::OfferSource::Myself(cm::SelfId {})
+    } else {
+        return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
     };
     Ok(ret)
 }

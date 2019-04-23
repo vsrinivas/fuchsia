@@ -5,7 +5,7 @@
 use {
     crate::io_util,
     crate::model::*,
-    cm_rust::{self, Capability, RelativeId},
+    cm_rust::{self, Capability, ExposeSource, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fuchsia_zircon as zx,
@@ -118,7 +118,7 @@ async fn find_capability_source<'a>(
 
         if let Some(offer) = decl.find_offer_source(&s.capability, &s.name.unwrap().name()) {
             match &offer.source {
-                RelativeId::Realm => {
+                OfferSource::Realm => {
                     // The offered capability comes from the realm, so follow the
                     // parent
                     s.capability = offer.capability.clone();
@@ -133,7 +133,7 @@ async fn find_capability_source<'a>(
                     };
                     continue 'offerloop;
                 }
-                RelativeId::Myself => {
+                OfferSource::Myself => {
                     // The offered capability comes from the current component,
                     // return our current location in the tree.
                     return Ok(CapabilitySource::Component(
@@ -141,7 +141,7 @@ async fn find_capability_source<'a>(
                         current_realm_mutex.clone(),
                     ));
                 }
-                RelativeId::Child(child_name) => {
+                OfferSource::Child(child_name) => {
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
                     s.capability = offer.capability.clone();
@@ -166,7 +166,7 @@ async fn find_capability_source<'a>(
 
         if let Some(expose) = decl.find_expose_source(&s.capability) {
             match &expose.source {
-                RelativeId::Myself => {
+                ExposeSource::Myself => {
                     // The offered capability comes from the current component, return our
                     // current location in the tree.
                     return Ok(CapabilitySource::Component(
@@ -174,13 +174,12 @@ async fn find_capability_source<'a>(
                         current_realm_mutex.clone(),
                     ));
                 }
-                RelativeId::Child(child_name) => {
+                ExposeSource::Child(child_name) => {
                     // The offered capability comes from a child, so follow the child.
                     s.capability = expose.capability.clone();
                     s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string()));
                     continue;
                 }
-                _ => panic!("relation on an expose wasn't self or child"),
             }
         } else {
             // We didn't find any matching exposes! Oh no!

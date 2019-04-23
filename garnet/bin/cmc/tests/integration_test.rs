@@ -2,8 +2,8 @@ use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
-    Capability, ChildDecl, ChildId, ComponentDecl, DirectoryCapability, ExposeDecl, OfferDecl,
-    OfferTarget, RelativeId, SelfId, ServiceCapability, StartupMode, UseDecl,
+    Capability, ChildDecl, ChildId, ComponentDecl, DirectoryCapability, ExposeDecl, ExposeSource,
+    OfferDecl, OfferSource, OfferTarget, SelfId, ServiceCapability, StartupMode, UseDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -32,14 +32,14 @@ fn main() {
             capability: Some(Capability::Directory(DirectoryCapability {
                 path: Some("/volumes/blobfs".to_string()),
             })),
-            source: Some(RelativeId::Myself(SelfId {})),
+            source: Some(ExposeSource::Myself(SelfId {})),
             target_path: Some("/volumes/blobfs".to_string()),
         }];
         let offers = vec![OfferDecl {
             capability: Some(Capability::Service(ServiceCapability {
                 path: Some("/svc/fuchsia.logger.Log".to_string()),
             })),
-            source: Some(RelativeId::Child(ChildId { name: Some("logger".to_string()) })),
+            source: Some(OfferSource::Child(ChildId { name: Some("logger".to_string()) })),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                 child_name: Some("netstack".to_string()),

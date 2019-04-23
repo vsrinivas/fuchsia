@@ -31,14 +31,14 @@ pub struct Use {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Expose {
     pub capability: Capability,
-    pub source: Source,
+    pub source: ExposeSource,
     pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Offer {
     pub capability: Capability,
-    pub source: Source,
+    pub source: OfferSource,
     pub targets: Vec<Target>,
 }
 
@@ -58,7 +58,15 @@ pub enum Capability {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum Source {
+pub enum ExposeSource {
+    #[serde(rename = "myself")]
+    Myself(SelfId),
+    #[serde(rename = "child")]
+    Child(ChildId),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum OfferSource {
     #[serde(rename = "realm")]
     Realm(RealmId),
     #[serde(rename = "myself")]

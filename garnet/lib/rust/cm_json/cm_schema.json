@@ -28,41 +28,6 @@
       "minLength": 1,
       "maxLength": 100
     },
-    "relative-id-clause": {
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [ "realm" ]
-        },
-        {
-          "required": [ "myself" ]
-        },
-        {
-          "required": [ "child" ]
-        }
-      ],
-      "properties": {
-        "realm": {
-          "type": "object",
-          "title": "Component's realm"
-        },
-        "myself": {
-          "type": "object",
-          "title": "Component itself"
-        },
-        "child": {
-          "type": "object",
-          "title": "Component's child",
-          "required": [ "name" ],
-          "properties": {
-            "name": {
-              "title": "Child name",
-              "allOf": [{ "$ref": "#/definitions/name-clause" }]
-            }
-          }
-        }
-      }
-    },
     "capability-clause": {
       "type": "object",
       "oneOf": [
@@ -146,7 +111,32 @@
           },
           "source": {
             "title": "Exposed capability source component",
-            "allOf": [ { "$ref": "#/definitions/relative-id-clause" } ]
+            "type": "object",
+            "oneOf": [
+              {
+                "required": [ "myself" ]
+              },
+              {
+                "required": [ "child" ]
+              }
+            ],
+            "properties": {
+              "myself": {
+                "type": "object",
+                "title": "Component itself"
+              },
+              "child": {
+                "type": "object",
+                "title": "Component's child",
+                "required": [ "name" ],
+                "properties": {
+                  "name": {
+                    "title": "Child name",
+                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
+                  }
+                }
+              }
+            }
           },
           "target_path": {
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -170,6 +160,42 @@
           "capability": {
             "title": "Offered capability",
             "allOf": [{ "$ref": "#/definitions/capability-clause" }]
+          },
+          "source": {
+            "title": "Offered capability source component",
+            "type": "object",
+            "oneOf": [
+              {
+                "required": [ "realm" ]
+              },
+              {
+                "required": [ "myself" ]
+              },
+              {
+                "required": [ "child" ]
+              }
+            ],
+            "properties": {
+              "realm": {
+                "type": "object",
+                "title": "Component's realm"
+              },
+              "myself": {
+                "type": "object",
+                "title": "Component itself"
+              },
+              "child": {
+                "type": "object",
+                "title": "Component's child",
+                "required": [ "name" ],
+                "properties": {
+                  "name": {
+                    "title": "Child name",
+                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
+                  }
+                }
+              }
+            }
           },
           "targets": {
             "type": "array",

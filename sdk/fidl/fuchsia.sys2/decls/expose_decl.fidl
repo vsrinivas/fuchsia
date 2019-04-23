@@ -11,12 +11,17 @@ table ExposeDecl {
     1: Capability capability;
 
     /// The provider of the capability relative to the component itself.
-    ///
-    /// Valid relations: myself, child.
-    2: RelativeId source;
+    2: ExposeSource source;
 
     /// The path by which the capability is being exposed.
     ///
     /// Must be an absolute path starting with /.
     3: string:MAX_PATH_LENGTH target_path;
 };
+
+/// Identifies a source component of an ExposeDecl.
+xunion ExposeSource {
+  SelfId myself;
+  ChildId child;
+};
+

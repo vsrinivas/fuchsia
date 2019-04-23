@@ -12,12 +12,17 @@ table OfferDecl {
     1: Capability capability;
 
     /// The provider of the capability relative to the component itself.
-    ///
-    /// Valid relations: realm, myself, child.
-    2: RelativeId source;
+    2: OfferSource source;
 
     /// The list of children to which the capability should be offered.
     3: vector<OfferTarget> targets;
+};
+
+/// Identifies a source component of an OfferDecl.
+xunion OfferSource {
+  RealmId realm;
+  SelfId myself;
+  ChildId child;
 };
 
 /// Describes a target for a capability offering.

@@ -4,13 +4,6 @@
 
 library fuchsia.sys2;
 
-/// Identifies a relative component.
-xunion RelativeId {
-  RealmId realm;
-  SelfId myself;
-  ChildId child;
-};
-
 /// Represents a component’s containing realm, i.e. the parent component.
 table RealmId {};
 

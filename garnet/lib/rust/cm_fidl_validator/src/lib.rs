@@ -109,7 +109,7 @@ impl fmt::Display for ErrorList {
 /// caller. Either way, a ComponentDecl should always be validated before it's used. Examples
 /// of what is validated (which may evolve in the future):
 /// - That all semantically required fields are present
-/// - That a child_name referenced in a RelativeId actually exists in the list of children
+/// - That a child_name referenced in a source actually exists in the list of children
 /// - That there are no duplicate target ptahs
 pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext { decl, all_children: HashSet::new(), errors: vec![] };
@@ -224,11 +224,11 @@ impl<'a> ValidationContext<'a> {
         self.validate_capability(expose.capability.as_ref(), "ExposeDecl");
         match expose.source.as_ref() {
             Some(r) => match r {
-                fsys::RelativeId::Myself(_) => {}
-                fsys::RelativeId::Child(child) => {
+                fsys::ExposeSource::Myself(_) => {}
+                fsys::ExposeSource::Child(child) => {
                     self.validate_source_child(child, "ExposeDecl");
                 }
-                fsys::RelativeId::Realm(_) | fsys::RelativeId::__UnknownVariant { .. } => {
+                fsys::ExposeSource::__UnknownVariant { .. } => {
                     self.errors.push(Error::invalid_field("ExposeDecl", "source"));
                 }
             },
@@ -253,12 +253,12 @@ impl<'a> ValidationContext<'a> {
         self.validate_capability(offer.capability.as_ref(), "OfferDecl");
         match offer.source.as_ref() {
             Some(r) => match r {
-                fsys::RelativeId::Realm(_) => {}
-                fsys::RelativeId::Myself(_) => {}
-                fsys::RelativeId::Child(child) => {
+                fsys::OfferSource::Realm(_) => {}
+                fsys::OfferSource::Myself(_) => {}
+                fsys::OfferSource::Child(child) => {
                     self.validate_source_child(child, "OfferDecl");
                 }
-                fsys::RelativeId::__UnknownVariant { .. } => {
+                fsys::OfferSource::__UnknownVariant { .. } => {
                     self.errors.push(Error::invalid_field("OfferDecl", "source"));
                 }
             },
@@ -275,7 +275,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_targets(
         &mut self,
-        source: Option<&fsys::RelativeId>,
+        source: Option<&fsys::OfferSource>,
         targets: &'a Vec<fsys::OfferTarget>,
         prev_target_paths: &mut PathMap<'a>,
     ) {
@@ -314,7 +314,7 @@ impl<'a> ValidationContext<'a> {
                 }
 
                 if let Some(source) = source {
-                    if let fsys::RelativeId::Child(source_child) = source {
+                    if let fsys::OfferSource::Child(source_child) = source {
                         if let Some(source_child_name) = &source_child.name {
                             if source_child_name == child_name {
                                 self.errors.push(Error::offer_target_equals_source(
@@ -369,8 +369,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_sys2::{
-            Capability, ChildDecl, ChildId, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget,
-            RealmId, RelativeId, SelfId, ServiceCapability, StartupMode, UseDecl,
+            Capability, ChildDecl, ChildId, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
+            OfferSource, OfferTarget, RealmId, SelfId, ServiceCapability, StartupMode, UseDecl,
         },
     };
 
@@ -600,7 +600,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("foo/".to_string()),
                     })),
-                    source: Some(RelativeId::Child(ChildId{name: Some("^bad".to_string())})),
+                    source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
                     target_path: Some("/".to_string()),
                 }]);
                 decl
@@ -618,7 +618,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some(format!("/{}", "a".repeat(1024))),
                     })),
-                    source: Some(RelativeId::Child(ChildId{name: Some("b".repeat(101))})),
+                    source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
                     target_path: Some(format!("/{}", "b".repeat(1024))),
                 }]);
                 decl
@@ -629,24 +629,6 @@ mod tests {
                 Error::field_too_long("ExposeDecl", "target_path"),
             ])),
         },
-        test_validate_exposes_invalid_relation => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.exposes = Some(vec![
-                    ExposeDecl{
-                        capability: Some(Capability::Service(ServiceCapability{
-                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        })),
-                        source: Some(RelativeId::Realm(RealmId{})),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                    },
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::invalid_field("ExposeDecl", "source"),
-            ])),
-        },
         test_validate_exposes_invalid_child => {
             input = {
                 let mut decl = new_component_decl();
@@ -655,7 +637,7 @@ mod tests {
                         capability: Some(Capability::Service(ServiceCapability{
                             path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         })),
-                        source: Some(RelativeId::Child(ChildId {
+                        source: Some(ExposeSource::Child(ChildId {
                             name: Some("netstack".to_string()),
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -675,14 +657,14 @@ mod tests {
                         capability: Some(Capability::Service(ServiceCapability{
                             path: Some("/svc/logger".to_string()),
                         })),
-                        source: Some(RelativeId::Myself(SelfId{})),
+                        source: Some(ExposeSource::Myself(SelfId{})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                     ExposeDecl{
                         capability: Some(Capability::Service(ServiceCapability{
                             path: Some("/svc/logger2".to_string()),
                         })),
-                        source: Some(RelativeId::Myself(SelfId{})),
+                        source: Some(ExposeSource::Myself(SelfId{})),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     },
                 ]);
@@ -717,7 +699,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some(format!("/{}", "a".repeat(1024))),
                     })),
-                    source: Some(RelativeId::Child(ChildId{name: Some("a".repeat(101))})),
+                    source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
                     targets: Some(vec![
                         OfferTarget{
                             target_path: Some(format!("/{}", "b".repeat(1024))),
@@ -742,7 +724,7 @@ mod tests {
                         capability: Some(Capability::Service(ServiceCapability{
                             path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         })),
-                        source: Some(RelativeId::Child(ChildId{name: Some("logger".to_string())})),
+                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
                         targets: Some(vec![
                             OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
@@ -771,7 +753,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("/svc/logger".to_string()),
                     })),
-                    source: Some(RelativeId::Myself(SelfId{})),
+                    source: Some(OfferSource::Realm(RealmId{})),
                     targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
                 }]);
                 decl
@@ -788,7 +770,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("/svc/logger".to_string()),
                     })),
-                    source: Some(RelativeId::Myself(SelfId{})),
+                    source: Some(OfferSource::Myself(SelfId{})),
                     targets: Some(vec![]),
                 }]);
                 decl
@@ -804,7 +786,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("/svc/logger".to_string()),
                     })),
-                    source: Some(RelativeId::Child(ChildId{name: Some("logger".to_string())})),
+                    source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
                     targets: Some(vec![OfferTarget{
                         target_path: Some("/svc/logger".to_string()),
                         child_name: Some("logger".to_string()),
@@ -828,7 +810,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("/svc/logger".to_string()),
                     })),
-                    source: Some(RelativeId::Myself(SelfId{})),
+                    source: Some(OfferSource::Myself(SelfId{})),
                     targets: Some(vec![
                         OfferTarget{
                             target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -860,7 +842,7 @@ mod tests {
                     capability: Some(Capability::Service(ServiceCapability{
                         path: Some("/svc/logger".to_string()),
                     })),
-                    source: Some(RelativeId::Myself(SelfId{})),
+                    source: Some(OfferSource::Myself(SelfId{})),
                     targets: Some(vec![
                         OfferTarget{
                             target_path: Some("/svc/fuchsia.logger.Log".to_string()),

@@ -142,12 +142,21 @@ impl CmInto<fsys::DirectoryCapability> for cm::Directory {
     }
 }
 
-impl CmInto<fsys::RelativeId> for cm::Source {
-    fn cm_into(self) -> Result<fsys::RelativeId, Error> {
+impl CmInto<fsys::ExposeSource> for cm::ExposeSource {
+    fn cm_into(self) -> Result<fsys::ExposeSource, Error> {
         Ok(match self {
-            cm::Source::Realm(r) => fsys::RelativeId::Realm(r.cm_into()?),
-            cm::Source::Myself(s) => fsys::RelativeId::Myself(s.cm_into()?),
-            cm::Source::Child(c) => fsys::RelativeId::Child(c.cm_into()?),
+            cm::ExposeSource::Myself(s) => fsys::ExposeSource::Myself(s.cm_into()?),
+            cm::ExposeSource::Child(c) => fsys::ExposeSource::Child(c.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferSource> for cm::OfferSource {
+    fn cm_into(self) -> Result<fsys::OfferSource, Error> {
+        Ok(match self {
+            cm::OfferSource::Realm(r) => fsys::OfferSource::Realm(r.cm_into()?),
+            cm::OfferSource::Myself(s) => fsys::OfferSource::Myself(s.cm_into()?),
+            cm::OfferSource::Child(c) => fsys::OfferSource::Child(c.cm_into()?),
         })
     }
 }
@@ -488,7 +497,7 @@ mod tests {
                         capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
                             path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                        source: Some(fsys::ExposeSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -497,7 +506,7 @@ mod tests {
                         capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
                             path: Some("/volumes/blobfs".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
+                        source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
@@ -591,7 +600,7 @@ mod tests {
                         capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
                             path: Some("/data/assets".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Realm(fsys::RealmId{})),
+                        source: Some(fsys::OfferSource::Realm(fsys::RealmId{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
@@ -607,7 +616,7 @@ mod tests {
                         capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
                             path: Some("/data/config".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
+                        source: Some(fsys::OfferSource::Myself(fsys::SelfId{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
@@ -619,7 +628,7 @@ mod tests {
                         capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
                             path: Some("/svc/fuchsia.logger.Log".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                        source: Some(fsys::OfferSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
                         targets: Some(vec![
@@ -801,7 +810,7 @@ mod tests {
                         capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
                             path: Some("/volumes/blobfs".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Myself(fsys::SelfId{})),
+                        source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
@@ -810,7 +819,7 @@ mod tests {
                         capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
                             path: Some("/svc/fuchsia.logger.Log".to_string()),
                         })),
-                        source: Some(fsys::RelativeId::Child(fsys::ChildId {
+                        source: Some(fsys::OfferSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
                         targets: Some(vec![

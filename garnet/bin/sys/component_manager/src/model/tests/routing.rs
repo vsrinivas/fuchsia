@@ -6,8 +6,8 @@ use {
     crate::model::tests::routing_test_helpers::*,
     crate::model::*,
     cm_rust::{
-        self, Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl,
-        OfferTarget, RelativeId, UseDecl,
+        self, Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource,
+        OfferDecl, OfferSource, OfferTarget, UseDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryFrom,
@@ -38,7 +38,7 @@ async fn use_from_parent() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                                 child_name: "b".to_string(),
@@ -48,7 +48,7 @@ async fn use_from_parent() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                                 child_name: "b".to_string(),
@@ -116,7 +116,7 @@ async fn use_from_grandparent() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                                 child_name: "b".to_string(),
@@ -126,7 +126,7 @@ async fn use_from_grandparent() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                                 child_name: "b".to_string(),
@@ -149,7 +149,7 @@ async fn use_from_grandparent() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/bar").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                                 child_name: "c".to_string(),
@@ -159,7 +159,7 @@ async fn use_from_grandparent() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/bar").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                                 child_name: "c".to_string(),
@@ -235,7 +235,7 @@ async fn use_from_sibling_no_root() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("d".to_string()),
+                            source: OfferSource::Child("d".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                                 child_name: "c".to_string(),
@@ -245,7 +245,7 @@ async fn use_from_sibling_no_root() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("d".to_string()),
+                            source: OfferSource::Child("d".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                                 child_name: "c".to_string(),
@@ -295,14 +295,14 @@ async fn use_from_sibling_no_root() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         },
                         ExposeDecl {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         }
                     ],
@@ -337,7 +337,7 @@ async fn use_from_sibling_root() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                                 child_name: "c".to_string(),
@@ -347,7 +347,7 @@ async fn use_from_sibling_root() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                                 child_name: "c".to_string(),
@@ -377,14 +377,14 @@ async fn use_from_sibling_root() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         },
                         ExposeDecl {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         },
                     ],
@@ -442,7 +442,7 @@ async fn use_from_niece() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/baz").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                                 child_name: "c".to_string(),
@@ -452,7 +452,7 @@ async fn use_from_niece() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/baz").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                                 child_name: "c".to_string(),
@@ -482,14 +482,14 @@ async fn use_from_niece() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("d".to_string()),
+                            source: ExposeSource::Child("d".to_string()),
                             target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         },
                         ExposeDecl {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/bar").unwrap(),
                             ),
-                            source: RelativeId::Child("d".to_string()),
+                            source: ExposeSource::Child("d".to_string()),
                             target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         },
                     ],
@@ -529,14 +529,14 @@ async fn use_from_niece() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         },
                         ExposeDecl {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         }
                     ],
@@ -578,7 +578,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                                 child_name: "b".to_string(),
@@ -588,7 +588,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                                 child_name: "c".to_string(),
@@ -619,7 +619,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             ),
-                            source: RelativeId::Child("d".to_string()),
+                            source: OfferSource::Child("d".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                                 child_name: "e".to_string(),
@@ -629,7 +629,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                                 child_name: "e".to_string(),
@@ -640,7 +640,7 @@ async fn use_kitchen_sink() {
                         capability: Capability::Directory(
                             CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         ),
-                        source: RelativeId::Child("d".to_string()),
+                        source: ExposeSource::Child("d".to_string()),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     },],
                     children: vec![
@@ -667,7 +667,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                                 child_name: "f".to_string(),
@@ -677,7 +677,7 @@ async fn use_kitchen_sink() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                             ),
-                            source: RelativeId::Child("g".to_string()),
+                            source: OfferSource::Child("g".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                                 child_name: "f".to_string(),
@@ -706,7 +706,7 @@ async fn use_kitchen_sink() {
                         capability: Capability::Directory(
                             CapabilityPath::try_from("/data/foo").unwrap(),
                         ),
-                        source: RelativeId::Myself,
+                        source: ExposeSource::Myself,
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     },],
                     ..default_component_decl()
@@ -760,7 +760,7 @@ async fn use_kitchen_sink() {
                         capability: Capability::Service(
                             CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         ),
-                        source: RelativeId::Child("h".to_string()),
+                        source: ExposeSource::Child("h".to_string()),
                         target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     },],
                     children: vec![ChildDecl {
@@ -778,7 +778,7 @@ async fn use_kitchen_sink() {
                         capability: Capability::Service(
                             CapabilityPath::try_from("/svc/foo").unwrap(),
                         ),
-                        source: RelativeId::Myself,
+                        source: ExposeSource::Myself,
                         target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     },],
                     ..default_component_decl()
@@ -816,7 +816,7 @@ async fn use_from_component_manager_namespace() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/hippo/data/foo").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/foo").unwrap(),
                                 child_name: "b".to_string(),
@@ -826,7 +826,7 @@ async fn use_from_component_manager_namespace() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/fidl.examples.echo.Echo").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                                 child_name: "b".to_string(),
@@ -942,7 +942,7 @@ async fn use_offer_source_not_exposed() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/hippo").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                                 child_name: "c".to_string(),
@@ -952,7 +952,7 @@ async fn use_offer_source_not_exposed() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/hippo").unwrap(),
                             ),
-                            source: RelativeId::Child("b".to_string()),
+                            source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                                 child_name: "c".to_string(),
@@ -1038,7 +1038,7 @@ async fn use_offer_source_not_offered() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/hippo").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                                 child_name: "c".to_string(),
@@ -1048,7 +1048,7 @@ async fn use_offer_source_not_offered() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/hippo").unwrap(),
                             ),
-                            source: RelativeId::Realm,
+                            source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                                 child_name: "c".to_string(),
@@ -1151,14 +1151,14 @@ async fn use_from_expose() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/hippo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         },
                         ExposeDecl {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/hippo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: ExposeSource::Myself,
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         }
                     ],
@@ -1195,7 +1195,7 @@ async fn offer_from_non_executable() {
                             capability: Capability::Directory(
                                 CapabilityPath::try_from("/data/hippo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                                 child_name: "b".to_string(),
@@ -1205,7 +1205,7 @@ async fn offer_from_non_executable() {
                             capability: Capability::Service(
                                 CapabilityPath::try_from("/svc/hippo").unwrap(),
                             ),
-                            source: RelativeId::Myself,
+                            source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                                 child_name: "b".to_string(),

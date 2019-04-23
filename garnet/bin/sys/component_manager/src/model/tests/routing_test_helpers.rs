@@ -4,7 +4,7 @@
 
 use {
     crate::{directory_broker, io_util, model::tests::mocks::*, model::*},
-    cm_rust::{Capability, CapabilityPath, ComponentDecl, RelativeId, UseDecl},
+    cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeSource, OfferSource, UseDecl},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
@@ -135,6 +135,14 @@ impl OutDir {
                 },
             );
         })
+    }
+}
+
+/// Add `capability` to `out_dir`, initializing `out_dir` if required.
+fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
+    match capability {
+        Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
+        Capability::Directory(_) => out_dir.get_or_insert(OutDir::new()).add_directory(),
     }
 }
 
@@ -294,21 +302,18 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
 
     let mut mock_resolver = MockResolver::new();
     for (name, decl) in test.components.clone() {
-        // if this decl is offer/exposing something from Myself, let's host it
-        let source_iter = decl
-            .offers
-            .iter()
-            .map(|o| (o.capability.clone(), o.source.clone()))
-            .chain(decl.exposes.iter().map(|e| (e.capability.clone(), e.source.clone())));
+        // if this decl is offering/exposing something from Myself, let's host it
         let mut out_dir = None;
+        let source_iter = decl.exposes.iter().map(|e| (e.capability.clone(), e.source.clone()));
         for (capability, source) in source_iter {
-            if source == RelativeId::Myself {
-                match capability {
-                    Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
-                    Capability::Directory(_) => {
-                        out_dir.get_or_insert(OutDir::new()).add_directory()
-                    }
-                }
+            if source == ExposeSource::Myself {
+                host_capability(&mut out_dir, &capability);
+            }
+        }
+        let source_iter = decl.offers.iter().map(|o| (o.capability.clone(), o.source.clone()));
+        for (capability, source) in source_iter {
+            if source == OfferSource::Myself {
+                host_capability(&mut out_dir, &capability);
             }
         }
         if let Some(out_dir) = out_dir {
