@@ -23,6 +23,7 @@ common_sources = [
 group("common") {
   visibility = [ ":*" ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
