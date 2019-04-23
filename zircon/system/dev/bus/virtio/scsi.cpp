@@ -9,6 +9,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
+#include <lib/scsi/scsilib.h>
+#include <lib/scsi/scsilib_controller.h>
 #include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -20,8 +22,6 @@
 
 #include <utility>
 
-#include "scsilib.h"
-#include "scsilib_controller.h"
 #include "trace.h"
 
 #define LOCAL_TRACE 0

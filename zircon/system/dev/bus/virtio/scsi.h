@@ -11,8 +11,8 @@
 #include <stdlib.h>
 
 #include "backends/backend.h"
-#include "scsilib_controller.h"
 #include <fbl/auto_lock.h>
+#include <lib/scsi/scsilib_controller.h>
 #include <lib/sync/completion.h>
 #include <sys/uio.h>
 #include <virtio/scsi.h>

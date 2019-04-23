@@ -35,12 +35,12 @@ source_set("common") {
     "device.cpp",
     "ring.cpp",
     "scsi.cpp",
-    "scsilib.cpp",
   ]
   public_deps = [
     "$zx/system/banjo/ddk-protocol-block",
     "$zx/system/banjo/ddk-protocol-pci",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/scsi",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",

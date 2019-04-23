@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "scsilib.h"
-
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/block.h>
 #include <fbl/alloc_checker.h>
+#include <lib/scsi/scsilib.h>
 #include <netinet/in.h>
 #include <zircon/process.h>
 
