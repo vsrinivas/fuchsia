@@ -116,17 +116,12 @@ group("helper_executables") {
     ":debug_test_false",
     ":debug_test_true",
     ":multi_threaded",
+    ":hw_breakpointer",
+    ":hw_watchpointer",
     ":printer",
     ":process_loop",
     ":process_spawner",
   ]
-
-  if (current_cpu == "arm64") {
-    public_deps += [
-      # TODO(donosoc): This file should support both architectures inherently.
-      ":arm64_hw_breakpointer",
-    ]
-  }
 }
 
 executable("debug_test_true") {
@@ -138,6 +133,36 @@ executable("debug_test_true") {
 executable("debug_test_false") {
   sources = [
     "false.c",
+  ]
+}
+
+executable("hw_breakpointer") {
+  testonly = true
+  output_name = "hw_breakpointer"
+
+  sources = [
+    "hw_breakpointer.cc",
+  ]
+
+  deps = [
+    "//src/developer/debug/shared",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("hw_watchpointer") {
+  testonly = true
+  output_name = "hw_watchpointer"
+
+  sources = [
+    "hw_watchpointer.cc",
+  ]
+
+  deps = [
+    "//src/developer/debug/shared",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -184,19 +209,4 @@ executable("process_spawner") {
   ]
 }
 
-if (current_cpu == "arm64") {
-  executable("arm64_hw_breakpointer") {
-    testonly = true
-    output_name = "hw_breakpointer"
 
-    sources = [
-      "hw_breakpointer.cc",
-    ]
-
-    deps = [
-      "//src/developer/debug/shared",
-      "//src/lib/fxl",
-      "//zircon/public/lib/zx",
-    ]
-  }
-}

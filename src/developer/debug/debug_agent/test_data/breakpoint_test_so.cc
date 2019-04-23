@@ -11,7 +11,7 @@ int InsertBreakpointFunction(int c) { return 10 * c; }
 void AnotherFunctionForKicks() {}
 
 void MultithreadedFunctionToBreakOn() {
-  // This is meant to be a bare-bones example of multi-threaded logic.
+  // This counter is meant to be a bare-bones example of multi-threaded logic.
   static std::atomic<int> global_counter = 0;
   global_counter++;
 }

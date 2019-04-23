@@ -241,6 +241,12 @@ test_package("debug_agent_tests") {
       name = "debug_test_true"
     },
     {
+      name = "hw_breakpointer"
+    },
+    {
+      name = "hw_watchpointer"
+    },
+    {
       name = "multi_threaded"
     },
     {
@@ -253,14 +259,6 @@ test_package("debug_agent_tests") {
       name = "process_loop"
     },
   ]
-
-  if (current_cpu == "arm64") {
-    binaries += [
-      {
-        name = "hw_breakpointer"
-      },
-    ]
-  }
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]
