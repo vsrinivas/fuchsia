@@ -5,10 +5,6 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_
 #define GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_
 
-#include <threads.h>
-#include <optional>
-#include <queue>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/media/codec_impl/codec_adapter.h>
@@ -17,6 +13,10 @@
 #include <lib/media/codec_impl/codec_packet.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/synchronization/thread_annotations.h>
+#include <threads.h>
+
+#include <optional>
+#include <queue>
 
 #include "buffer_pool.h"
 #include "mpsc_queue.h"
@@ -52,13 +52,9 @@ class CodecAdapterSW : public CodecAdapter {
     return false;
   }
 
-  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override {
-    return true;
-  }
+  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override { return true; }
 
-  bool IsCoreCodecHwBased() override {
-    return false;
-  }
+  bool IsCoreCodecHwBased() override { return false; }
 
   void CoreCodecInit(const fuchsia::media::FormatDetails&
                          initial_input_format_details) override {
@@ -86,9 +82,8 @@ class CodecAdapterSW : public CodecAdapter {
     if (port != kOutputPort) {
       return;
     }
-    // TODO(turnage): The core codec must not emit any output (format, AUs, or
-    // EOS) until CoreCodecMidStreamOutputBufferReConfigFinish has been called.
-    output_buffer_pool_.AddBuffer(buffer);
+
+    staged_output_buffers_.push_back(buffer);
   }
 
   void CoreCodecConfigureBuffers(
@@ -104,6 +99,7 @@ class CodecAdapterSW : public CodecAdapter {
     input_queue_.Reset();
     free_output_packets_.Reset(/*keep_data=*/true);
     output_buffer_pool_.Reset(/*keep_data=*/true);
+    LoadStagedOutputBuffers();
 
     zx_status_t post_result = async::PostTask(
         input_processing_loop_.dispatcher(), [this] { ProcessInputLoop(); });
@@ -176,6 +172,7 @@ class CodecAdapterSW : public CodecAdapter {
     }
 
     output_buffer_pool_.Reset();
+    staged_output_buffers_.clear();
 
     std::map<CodecPacket*, LocalOutput> to_drop;
     {
@@ -192,14 +189,11 @@ class CodecAdapterSW : public CodecAdapter {
   }
 
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override {
-    // Nothing to do here for now.
+    // Nothing to do here.
   }
 
   void CoreCodecMidStreamOutputBufferReConfigFinish() override {
-    // Nothing to do here for now.
-    //
-    // TODO(turnage): The core codec must not emit any output (format, AUs, or
-    // EOS) until CoreCodecMidStreamOutputBufferReConfigFinish has been called.
+    LoadStagedOutputBuffers();
   }
 
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
@@ -213,8 +207,8 @@ class CodecAdapterSW : public CodecAdapter {
 
     config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
-    // For the moment, there will be only one StreamOutputConstraints, and it'll need
-    // output buffers configured for it.
+    // For the moment, there will be only one StreamOutputConstraints, and it'll
+    // need output buffers configured for it.
     ZX_DEBUG_ASSERT(buffer_constraints_action_required);
     config->set_buffer_constraints_action_required(
         buffer_constraints_action_required);
@@ -296,6 +290,17 @@ class CodecAdapterSW : public CodecAdapter {
                                   [&stream_stopped] { return stream_stopped; });
   }
 
+  // We don't give the codec any buffers in its output pool until
+  // configuration is finished or a stream starts. Until finishing
+  // configuration we stage all the buffers. Here we load all the staged
+  // buffers so the codec can make output.
+  void LoadStagedOutputBuffers() {
+    std::vector<const CodecBuffer*> to_add = std::move(staged_output_buffers_);
+    for (auto buffer : to_add) {
+      output_buffer_pool_.AddBuffer(buffer);
+    }
+  }
+
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.
   virtual void ProcessInputLoop() = 0;
@@ -313,6 +318,10 @@ class CodecAdapterSW : public CodecAdapter {
 
   std::map<CodecPacket*, LocalOutput> in_use_by_client_ FXL_GUARDED_BY(lock_);
   BufferPool output_buffer_pool_;
+
+  // Buffers the client has added but that we cannot use until configuration is
+  // complete.
+  std::vector<const CodecBuffer*> staged_output_buffers_;
 
   uint64_t input_format_details_version_ordinal_;
 
