@@ -36,6 +36,23 @@ std::ostream& operator<<(std::ostream& stream, Fixed<Integer, FractionalBits> va
     return stream;
 }
 
+bool format_conversion() {
+    BEGIN_TEST;
+
+    // Construct an expression with a 40bit intermediate fractional component.
+    // This tests a compile-time fix to ffl::FixedFormat::Convert, where an
+    // integer constant 1 is shifted by more than 32bits. Converting the
+    // constant to the intermediate type fixes the compiler error. This test
+    // simply exercises that path, the runtime results are not important.
+    const Fixed<int64_t, 20> denominator = FromRatio(1, 2);
+    const Fixed<int64_t, 20> value = 1 / denominator;
+    const Fixed<int64_t, 20> expected{2};
+
+    EXPECT_TRUE(value == expected);
+
+    END_TEST;
+}
+
 template <typename Integer, size_t FractionalBits>
 bool integer_arithmetic() {
     BEGIN_TEST;
@@ -149,6 +166,8 @@ bool floor_test() {
 } // anonymous namespace
 
 BEGIN_TEST_CASE(ffl_tests)
+RUN_NAMED_TEST("format conversion", format_conversion)
+
 RUN_NAMED_TEST("integer arithmetic", (integer_arithmetic<int8_t, 0>))
 RUN_NAMED_TEST("integer arithmetic", (integer_arithmetic<int8_t, 1>))
 RUN_NAMED_TEST("integer arithmetic", (integer_arithmetic<int8_t, 2>))

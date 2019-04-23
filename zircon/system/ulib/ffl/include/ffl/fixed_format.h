@@ -177,13 +177,13 @@ struct FixedFormat {
 
         if constexpr (SourceFormat::FractionalBits >= FractionalBits) {
             const size_t delta = SourceFormat::FractionalBits - FractionalBits;
-            const ValueType power = 1 << delta;
+            const ValueType power = ValueType{1} << delta;
             const ValueType converted_value =
                 IntermediateFormat::Round(value.value, ToPlace<delta>) / power;
             return Value<FixedFormat>{static_cast<Intermediate>(converted_value)};
         } else {
             const size_t delta = FractionalBits - SourceFormat::FractionalBits;
-            const ValueType power = 1 << delta;
+            const ValueType power = ValueType{1} << delta;
             const ValueType converted_value = static_cast<ValueType>(value.value * power);
             return Value<FixedFormat>{static_cast<Intermediate>(converted_value)};
         }
