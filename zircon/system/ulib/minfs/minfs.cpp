@@ -116,6 +116,14 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         return ZX_ERR_INVALID_ARGS;
     }
 
+#ifdef __Fuchsia__
+    if ((info->flags & kMinfsFlagClean) == 0) {
+        FS_TRACE_ERROR("minfs: filesystem in dirty state. Was not unmounted cleanly.\n");
+    } else {
+        FS_TRACE_INFO("minfs: filesystem in clean state.\n");
+    }
+#endif
+
     TransactionLimits limits(*info);
     if ((info->flags & kMinfsFlagFVM) == 0) {
         if (info->dat_block + info->block_count > max) {
