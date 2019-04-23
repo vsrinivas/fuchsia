@@ -110,6 +110,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener)
       override;
+  void InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) override;
 
   // Sets |display_metrics_| and updates Scenic.  Returns false if the updates
   // were skipped (if display initialization hasn't happened yet).

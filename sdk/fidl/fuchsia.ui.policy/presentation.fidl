@@ -73,6 +73,12 @@ protocol Presentation {
     // Registers a listener for media buttons events.
     [Transitional]
     RegisterMediaButtonsListener(MediaButtonsListener listener);
+
+    // EXPERIMENTAL. Inject pointer events into input stream. This WILL go
+    // away. Used exclusively by Session Shells to test focus navigation.
+    // TODO(SCN-1186): Delete when RequestFocus is available.
+    [Transitional]
+    InjectPointerEventHACK(fuchsia.ui.input.PointerEvent event);
 };
 
 // Screen modes that can be detected via sensor data.

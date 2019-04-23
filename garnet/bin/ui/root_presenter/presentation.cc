@@ -8,8 +8,8 @@
 #include <utility>
 
 #include <lib/component/cpp/connect.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
@@ -572,6 +572,13 @@ void Presentation::RegisterMediaButtonsListener(
   });
 
   media_buttons_listeners_.push_back(std::move(listener));
+}
+
+void Presentation::InjectPointerEventHACK(
+    fuchsia::ui::input::PointerEvent event) {
+  fuchsia::ui::input::InputEvent input_event;
+  input_event.set_pointer(std::move(event));
+  OnEvent(std::move(input_event));
 }
 
 bool Presentation::GlobalHooksHandleEvent(
