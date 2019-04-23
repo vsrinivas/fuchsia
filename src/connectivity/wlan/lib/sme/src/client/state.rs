@@ -5,7 +5,7 @@
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
 use wlan_common::RadioConfig;
-use wlan_inspect::nodes::NodeExt;
+use wlan_inspect::{inspect_log, log::InspectBytes};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
 
@@ -15,7 +15,6 @@ use super::{ConnectFailure, ConnectResult, InfoEvent, Status};
 
 use crate::client::{
     event::{self, Event},
-    inspect::TransmitDirection,
     report_connect_finished, Context,
 };
 use crate::clone_utils::clone_bss_desc;
@@ -331,7 +330,11 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            context.inspect.log_state_change(start_state, new_state.state_name(), state_change_msg);
+            inspect_log!(context.inspect.states, {
+                from: start_state,
+                to: new_state.state_name(),
+                ctx: state_change_msg,
+            });
         }
         new_state
     }
@@ -416,7 +419,11 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            context.inspect.log_state_change(start_state, new_state.state_name(), state_change_msg);
+            inspect_log!(context.inspect.states, {
+                from: start_state,
+                to: new_state.state_name(),
+                ctx: state_change_msg,
+            });
         }
         new_state
     }
@@ -442,11 +449,16 @@ impl State {
         context.info_sink.send(InfoEvent::AssociationStarted { att_id: context.att_id });
 
         let msg = connect_cmd_inspect_summary(&cmd);
-        context.inspect.log_state_change(start_state, JOINING_STATE, Some(msg));
+        inspect_log!(context.inspect.states, from: start_state, to: JOINING_STATE, ctx: msg);
         State::Joining { cmd }
     }
 
-    pub fn disconnect(self, context: &Context) -> Self {
+    pub fn disconnect(self, context: &mut Context) -> Self {
+        inspect_log!(context.inspect.states, {
+            from: self.state_name(),
+            to: IDLE_STATE,
+            ctx: "disconnect command",
+        });
         self.disconnect_internal(context);
         State::Idle
     }
@@ -540,12 +552,12 @@ fn process_eapol_ind(
 ) -> RsnaStatus {
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
-    let node = context.inspect.log_eapol_frame(eapol_pdu.to_vec(), TransmitDirection::Rx);
+    inspect_log!(context.inspect.rsn_events, rx_eapol_frame: InspectBytes(&eapol_pdu));
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
         Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
-            node.lock().insert_debug("parse_error", e);
+            inspect_log!(context.inspect.rsn_events, parse_eapol_error: format!("{:?}", e));
             return RsnaStatus::Unchanged;
         }
     };
@@ -554,7 +566,7 @@ fn process_eapol_ind(
     match rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
         Err(e) => {
             error!("error processing EAPOL key frame: {}", e);
-            node.lock().insert_debug("processing_error", e);
+            inspect_log!(context.inspect.rsn_events, process_eapol_error: format!("{:?}", e));
             return RsnaStatus::Unchanged;
         }
         Ok(_) if update_sink.is_empty() => return RsnaStatus::Unchanged,
@@ -565,7 +577,6 @@ fn process_eapol_ind(
     let sta_addr = ind.dst_addr;
     let mut new_resp_timeout = None;
     for update in update_sink {
-        context.inspect.log_supplicant_update(&update);
         match update {
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.
@@ -574,21 +585,27 @@ fn process_eapol_ind(
             }
             // ESS Security Association derived a new key.
             // Configure key in MLME.
-            SecAssocUpdate::Key(key) => send_keys(&context.mlme_sink, bssid, key),
+            SecAssocUpdate::Key(key) => {
+                inspect_log!(context.inspect.rsn_events, derived_key: key.name());
+                send_keys(&context.mlme_sink, bssid, key)
+            },
             // Received a status update.
             // TODO(hahnr): Rework this part.
             // As of now, we depend on the fact that the status is always the last update.
             // However, this fact is not clear from the API.
             // We should fix the API and make this more explicit.
             // Then we should rework this part.
-            SecAssocUpdate::Status(status) => match status {
-                // ESS Security Association was successfully established. Link is now up.
-                SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
-                // TODO(hahnr): The API should not expose whether or not the connection failed
-                // because of bad credentials as it allows callers to reason about location
-                // information since the network was apparently found.
-                SecAssocStatus::WrongPassword => {
-                    return RsnaStatus::Failed(ConnectResult::BadCredentials);
+            SecAssocUpdate::Status(status) => {
+                inspect_log!(context.inspect.rsn_events, rsna_status: format!("{:?}", status));
+                match status {
+                    // ESS Security Association was successfully established. Link is now up.
+                    SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
+                    // TODO(hahnr): The API should not expose whether or not the connection failed
+                    // because of bad credentials as it allows callers to reason about location
+                    // information since the network was apparently found.
+                    SecAssocStatus::WrongPassword => {
+                        return RsnaStatus::Failed(ConnectResult::BadCredentials);
+                    }
                 }
             },
         }
@@ -613,7 +630,7 @@ fn send_eapol_frame(
 
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(false, &mut buf);
-    context.inspect.log_eapol_frame(buf.to_vec(), TransmitDirection::Tx);
+    inspect_log!(context.inspect.rsn_events, tx_eapol_frame: InspectBytes(&buf));
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
         dst_addr: bssid,
@@ -1123,7 +1140,7 @@ mod tests {
     #[test]
     fn disconnect_while_idle() {
         let mut h = TestHelper::new();
-        let new_state = idle_state().disconnect(&h.context);
+        let new_state = idle_state().disconnect(&mut h.context);
         assert_idle(new_state);
         // Expect no messages to the MLME
         assert!(h.mlme_stream.try_next().is_err());
@@ -1131,20 +1148,20 @@ mod tests {
 
     #[test]
     fn disconnect_while_joining() {
-        let h = TestHelper::new();
+        let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = joining_state(cmd);
-        let state = state.disconnect(&h.context);
+        let state = state.disconnect(&mut h.context);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_authenticating() {
-        let h = TestHelper::new();
+        let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = authenticating_state(cmd);
-        let state = state.disconnect(&h.context);
+        let state = state.disconnect(&mut h.context);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
     }
@@ -1154,7 +1171,7 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = associating_state(cmd);
-        let state = state.disconnect(&h.context);
+        let state = state.disconnect(&mut h.context);
         let state = exchange_deauth(state, &mut h);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
@@ -1164,7 +1181,7 @@ mod tests {
     fn disconnect_while_link_up() {
         let mut h = TestHelper::new();
         let state = link_up_state(connect_command_one().0.bss);
-        let state = state.disconnect(&h.context);
+        let state = state.disconnect(&mut h.context);
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
     }
@@ -1178,7 +1195,7 @@ mod tests {
         let state = state.connect(connect_command_one().0, &mut h.context);
         assert_eq!(h.context.att_id, 1);
 
-        let state = state.disconnect(&h.context);
+        let state = state.disconnect(&mut h.context);
         assert_eq!(h.context.att_id, 1);
 
         let state = state.connect(connect_command_two().0, &mut h.context);

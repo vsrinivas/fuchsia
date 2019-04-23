@@ -209,7 +209,7 @@ impl ClientSme {
     }
 
     pub fn on_disconnect_command(&mut self) {
-        self.state = self.state.take().map(|state| state.disconnect(&self.context));
+        self.state = self.state.take().map(|state| state.disconnect(&mut self.context));
     }
 
     pub fn on_scan_command(
