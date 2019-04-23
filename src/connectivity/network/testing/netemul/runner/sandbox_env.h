@@ -18,20 +18,34 @@ namespace netemul {
 class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
+  class Events {
+   public:
+    Events() = default;
+    Events(Events&& other) = default;
+
+   public:
+    fit::function<void(const std::string&, int64_t,
+                       fuchsia::sys::TerminationReason)>
+        service_terminated;
+    FXL_DISALLOW_COPY_AND_ASSIGN(Events);
+  };
 
   // Creates a sandbox environment
-  SandboxEnv() = default;
+  explicit SandboxEnv(Events events = Events()) : events_(std::move(events)) {}
 
   const std::string& default_name() const { return default_name_; }
   void set_default_name(std::string default_name) {
     default_name_ = std::move(default_name);
   }
 
+  const Events& events() const { return events_; }
+
   NetworkContext& network_context() { return net_context_; }
   SyncManager& sync_manager() { return sync_manager_; }
 
  private:
   std::string default_name_;
+  Events events_;
   NetworkContext net_context_;
   SyncManager sync_manager_;
 

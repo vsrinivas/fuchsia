@@ -80,7 +80,18 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
   helper_executor_ =
       std::make_unique<async::Executor>(helper_loop_->dispatcher());
 
-  sandbox_env_ = std::make_shared<SandboxEnv>();
+  SandboxEnv::Events global_events;
+  global_events.service_terminated = [this](const std::string& service,
+                                            int64_t exit_code,
+                                            TerminationReason reason) {
+    if (helper_loop_ &&
+        (reason != TerminationReason::EXITED || exit_code != 0)) {
+      async::PostTask(helper_loop_->dispatcher(), [this]() {
+        PostTerminate(TerminationReason::INTERNAL_ERROR);
+      });
+    }
+  };
+  sandbox_env_ = std::make_shared<SandboxEnv>(std::move(global_events));
   sandbox_env_->set_default_name(env_config_.default_url());
 
   if (services_created_callback_) {

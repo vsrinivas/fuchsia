@@ -5,6 +5,7 @@
 #include "managed_environment.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <sdk/lib/sys/cpp/termination_reason.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include <random>
@@ -65,6 +66,18 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
     std::random_device rnd;
     options.set_name(fxl::StringPrintf("netemul-env-%08x", rnd()));
   }
+
+  services->SetServiceTerminatedCallback(
+      [this, name = options.name()](const std::string& service,
+                                    int64_t exit_code,
+                                    fuchsia::sys::TerminationReason reason) {
+        FXL_LOG(WARNING) << "Service " << service << " exitted on environment "
+                         << name << " with (" << exit_code << ") reason: "
+                         << sys::HumanReadableTerminationReason(reason);
+        if (sandbox_env_->events().service_terminated) {
+          sandbox_env_->events().service_terminated(service, exit_code, reason);
+        }
+      });
 
   loggers_ = std::make_unique<ManagedLoggerCollection>(options.name());
 

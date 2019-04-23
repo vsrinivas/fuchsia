@@ -6,9 +6,11 @@
 
 use {
     failure::{format_err, Error, ResultExt},
+    fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_zircon as zx,
     futures::TryStreamExt,
     structopt::StructOpt,
 };
@@ -27,6 +29,8 @@ struct Opt {
     event: Option<i32>,
     #[structopt(short = "d")]
     look_at_data: bool,
+    #[structopt(short = "s")]
+    service: Option<String>,
 }
 
 const BUS_NAME: &str = "test-bus";
@@ -87,8 +91,15 @@ async fn perform_bus_ops(
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
+
+    if let Some(svc) = opt.service {
+        let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+        let (_dummy, server) = zx::Channel::create()?;
+        env.connect_to_service(&svc, server)?;
+    }
 
     if let Some(wait) = opt.wait {
         std::thread::sleep(std::time::Duration::from_millis(wait));
@@ -104,8 +115,7 @@ fn main() -> Result<(), Error> {
     };
 
     if opt.publish != None || opt.event != None {
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
-        let () = executor.run_singlethreaded(perform_bus_ops(opt.publish, opt.event, opt.name))?;
+        let () = await!(perform_bus_ops(opt.publish, opt.event, opt.name))?;
     }
 
     if opt.fail {

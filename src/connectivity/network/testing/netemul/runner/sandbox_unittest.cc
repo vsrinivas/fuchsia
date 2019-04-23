@@ -708,20 +708,41 @@ TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
   RunSandboxSuccess();
 }
 
-TEST_F(SandboxTest, Sequencer) {
-  fit::sequencer seq;
-  fit::single_threaded_executor exec;
-  std::stringstream ss;
+TEST_F(SandboxTest, BadServiceCausesFailure) {
+  SetCmx(R"(
+{
+   "environment" : {
+     "services": {
+        "fuchsia.dummy.service" : "fuchsia-pkg://fuchsia.com/bad_package#meta/bad_service.cmx"
+      },
+      "test": [{
+          "url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+          "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
+      }]
+   }
+}
+)");
+  RunSandboxInternalError();
+}
 
-  std::vector<fit::promise<>> proms;
-  proms.emplace_back(seq.wrap(fit::make_promise([&]() { ss << "a"; })));
-
-  proms.emplace_back(seq.wrap(fit::make_promise([&]() { ss << "b"; })));
-
-  exec.schedule_task(fit::join_promise_vector(std::move(proms)));
-  exec.run();
-
-  EXPECT_EQ(ss.str(), "ab");
+TEST_F(SandboxTest, ServiceExittingCausesFailure) {
+  SetCmx(R"(
+{
+   "environment" : {
+     "services": {
+        "fuchsia.dummy.service" : {
+           "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+           "arguments" : ["-f"]
+        }
+      },
+      "test": [{
+          "url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+          "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
+      }]
+   }
+}
+)");
+  RunSandboxInternalError();
 }
 
 TEST_F(SandboxTest, DestructorRunsCleanly) {
