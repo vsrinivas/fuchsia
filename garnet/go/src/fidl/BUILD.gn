@@ -64,7 +64,7 @@ go_test("fidlgen_cpp_test") {
 }
 
 go_test("fidlgen_llcpp_test") {
-  gopackage = "fidl/compiler/llcpp_backend/llcpp"
+  gopackage = "fidl/compiler/llcpp_backend"
 
   deps = [
     ":fidlgen_test_lib",

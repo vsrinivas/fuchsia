@@ -12,7 +12,6 @@ import("//build/sdk/sdk_atom_alias.gni")
 # relevant parameters in this template are:
 #   - name;
 #   - sources;
-
 template("fidl_cpp_codegen") {
   if (defined(invoker.sources)) {
     not_needed(invoker, [ "sources" ])
@@ -48,7 +47,7 @@ template("fidl_cpp_codegen") {
 
     visibility = [ ":$main_target_name" ]
 
-    tool = invoker.fidlgen_tool 
+    tool = invoker.fidlgen_tool
 
     inputs = [
       json_representation,
@@ -68,6 +67,70 @@ template("fidl_cpp_codegen") {
       rebase_path(fidl_target_gen_dir, root_build_dir),
       "--generators",
       invoker.generator,
+    ]
+
+    deps = [
+      ":$fidl_target_name($fidl_toolchain)",
+    ]
+  }
+}
+
+# Generates low-level C++ bindings for a library.
+template("fidl_llcpp_codegen") {
+  if (defined(invoker.sources)) {
+    not_needed(invoker, [ "sources" ])
+  }
+
+  if (defined(invoker.public_deps)) {
+    not_needed(invoker, [ "public_deps" ])
+  }
+
+  main_target_name = target_name
+  generation_target_name =
+      "${invoker.root_target}_llcpp_generate"
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  fidl_target_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+
+  include_stem = string_replace(library_name, ".", "/") + "/" +
+                 invoker.generated_source_base
+  file_stem = "$fidl_target_gen_dir/$include_stem"
+
+  fidl_target_name = invoker.root_target
+  fidl_target_gen_dir =
+      get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
+  json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
+
+  compiled_action(generation_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    visibility = [ ":$main_target_name" ]
+
+    tool = "//garnet/go/src/fidl:fidlgen_llcpp"
+
+    inputs = [
+      json_representation,
+    ]
+
+    outputs = [
+      "$file_stem.h",
+      "$file_stem.cc",
+    ]
+
+    args = [
+      "--json",
+      rebase_path(json_representation, root_build_dir),
+      "--header",
+      rebase_path("$file_stem.h", root_build_dir),
+      "--source",
+      rebase_path("$file_stem.cc", root_build_dir),
+      "--include-base",
+      rebase_path(fidl_target_gen_dir, root_build_dir),
     ]
 
     deps = [
@@ -136,7 +199,10 @@ template("fidl_cpp_library") {
 
 template("fidl_cpp") {
   assert(defined(invoker.generators), "Need a list of generator tuples")
-  not_needed(invoker, [ "generators" ])
+  not_needed(invoker, [
+    "generators",
+    "llcpp_generators"
+  ])
 
   if (current_toolchain == fidl_toolchain) {
     library_name = target_name
@@ -160,6 +226,21 @@ template("fidl_cpp") {
         root_target = target_name
       }
     }
+
+    foreach(generator_settings, invoker.llcpp_generators) {
+      if (defined(generator_settings.target_suffix)) {
+        lib_name = "${target_name}_${generator_settings.target_suffix}"
+      } else {
+        lib_name = target_name
+      }
+
+      fidl_llcpp_codegen(lib_name) {
+        forward_variables_from(invoker, "*")
+        name = library_name
+        generated_source_base = generator_settings.output_stem
+        root_target = target_name
+      }
+    }
   } else {
     library_name = target_name
     if (defined(invoker.name)) {
@@ -167,15 +248,15 @@ template("fidl_cpp") {
     }
 
     if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
-      # Instead of depending on the generated bindings, set up a dependency on the
-      # original library.
+      # Instead of depending on the generated bindings, set up a dependency on
+      # the original library.
       sdk_target_name = "${target_name}_sdk"
       sdk_atom_alias(sdk_target_name) {
         atom = ":$sdk_target_name($fidl_toolchain)"
       }
     }
 
-    foreach(generator_settings, invoker.generators) {
+    foreach(generator_settings, invoker.generators + invoker.llcpp_generators) {
       library_public_deps = []
       if (defined(invoker.public_deps)) {
         library_public_deps += invoker.public_deps

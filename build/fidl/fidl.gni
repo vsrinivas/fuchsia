@@ -76,10 +76,9 @@ template("fidl") {
 
     if (is_fuchsia) {
       hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
-      llcpp_generators = [
+      _llcpp_generators = [
         {
           target_suffix = "llcpp"
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen_llcpp"
           fidlgen_generator = "llcpp"
           output_stem = "llcpp/fidl"
           additional_public_deps = [
@@ -90,7 +89,7 @@ template("fidl") {
       ]
     } else {
       hlcpp_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
-      llcpp_generators = []
+      _llcpp_generators = []
     }
 
     fidl_cpp(target_name) {
@@ -124,7 +123,7 @@ template("fidl") {
           ]
         },
       ]
-      generators += llcpp_generators
+      llcpp_generators = _llcpp_generators
     }
 
     fidl_tables(target_name) {

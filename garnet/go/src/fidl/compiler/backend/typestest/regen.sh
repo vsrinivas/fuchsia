@@ -76,9 +76,9 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
 
     echo "  llcpp: ${json_name} > ${llcpp_header_name} and ${llcpp_source_name}"
     ${FIDLGEN_LLCPP} \
-        -generators llcpp \
         -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}.llcpp" \
+        -header "${GOLDENS_DIR}/${llcpp_header_name}" \
+        -source "${GOLDENS_DIR}/${llcpp_source_name}" \
         -include-base "${GOLDENS_DIR}"
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"

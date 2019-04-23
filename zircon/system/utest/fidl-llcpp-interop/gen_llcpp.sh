@@ -6,8 +6,13 @@ set -o pipefail
 LLCPP_TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="$( echo ${LLCPP_TEST_DIR} | sed -e 's,zircon/system/utest.*$,,' )"
 
-FIDLC=${FUCHSIA_DIR}out/default/host_x64/fidlc
-FIDLGEN=${FUCHSIA_DIR}out/default/host_x64/fidlgen_llcpp
+if [ -z ${FUCHSIA_BUILD_DIR+x} ]; then
+    echo "please use fx exec to run this script" 1>&2
+    exit 1
+fi
+
+FIDLC=${FUCHSIA_BUILD_DIR}/host_x64/fidlc
+FIDLGEN=${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp
 
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build?" 1>&2
@@ -31,9 +36,9 @@ for src_path in `find "${LLCPP_TEST_DIR}" -name '*.fidl'`; do
            --files ${src_path}
 
   # generate llcpp bindings
-  ${FIDLGEN} -generators llcpp \
-             -json /tmp/${json_name} \
-             -output-base fidl_llcpp_${src_name} \
+  ${FIDLGEN} -json /tmp/${json_name} \
+             -header fidl_llcpp_${src_name}.h \
+             -source fidl_llcpp_${src_name}.cc \
              -include-base .
 
   # move bindings to the `generated` directory

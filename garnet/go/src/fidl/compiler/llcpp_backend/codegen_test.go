@@ -1,7 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package llcpp
+
+package main
 
 import (
 	"bytes"
@@ -44,7 +45,7 @@ func TestCodegenHeader(t *testing.T) {
 			header := typestest.GetGolden(basePath, example(filename).header())
 
 			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
+			if err := newGenerator().generateHeader(buf, tree); err != nil {
 				t.Fatalf("unexpected error while generating header: %s", err)
 			}
 
@@ -61,7 +62,7 @@ func TestCodegenSource(t *testing.T) {
 			source := typestest.GetGolden(basePath, example(filename).source())
 
 			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {
+			if err := newGenerator().generateSource(buf, tree); err != nil {
 				t.Fatalf("unexpected error while generating source: %s", err)
 			}
 
