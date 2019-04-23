@@ -26,7 +26,7 @@ mod kw {
     syn::custom_keyword!(protection_attributes);
 }
 
-/// See [fuchsia-vfs-pseudo-fs/src/lib.rs] for the documentation for this macro usage.
+/// See [fuchsia-vfs/pseudo-fs/src/lib.rs] for the documentation for this macro usage.
 //
 // TODO It would be nice to provide support for "shorthand" syntax for the on_read expression.
 // When the value of the expression is a String, &str, &[u8], or &[u8; N] it can be trivially

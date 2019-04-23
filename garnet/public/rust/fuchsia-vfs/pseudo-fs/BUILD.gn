@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("fuchsia-vfs-pseudo-fs") {
+rustc_library("pseudo-fs") {
   name = "fuchsia_vfs_pseudo_fs"
   version = "0.1.0"
   with_unit_tests = true
@@ -13,7 +13,7 @@ rustc_library("fuchsia-vfs-pseudo-fs") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-pseudo-fs/macros",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs/macros",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",

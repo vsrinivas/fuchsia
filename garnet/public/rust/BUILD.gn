@@ -22,7 +22,7 @@ package("rust-crates-tests") {
     "fuchsia-syslog",
     "fuchsia-syslog",
     "fuchsia-trace",
-    "fuchsia-vfs/fuchsia-vfs-pseudo-fs",
+    "fuchsia-vfs/pseudo-fs",
     "fuchsia-zircon",
     "mapped-vmo",
     "mundane",
