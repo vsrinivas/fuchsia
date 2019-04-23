@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 package("component_index") {
   testonly = true
@@ -24,7 +27,19 @@ package("component_index") {
 
 rustc_binary("component_index_bin") {
   name = "component_index"
+  with_unit_tests = true
   edition = "2018"
+
+  deps = [
+    "//garnet/bin/component_index/fidl:index-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
 }
 
 fuchsia_component("component_index_component") {
@@ -34,4 +49,18 @@ fuchsia_component("component_index_component") {
   ]
 
   binary = "component_index"
+}
+
+test_package("component_index_tests") {
+  deps = [
+    ":component_index_bin",
+  ]
+
+  tests = [
+    {
+      name = "component_index_bin_test"
+      dest = "component_index_tests"
+      environments = basic_envs
+    },
+  ]
 }
