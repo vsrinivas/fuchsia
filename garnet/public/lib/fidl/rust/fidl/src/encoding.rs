@@ -136,11 +136,20 @@ pub struct Decoder<'a> {
     /// The maximum remaining number of recursive steps.
     remaining_depth: usize,
 
-    /// Buffer from which to read data.
+    /// Buffer from which to read data for the inline part of the message.
     buf: &'a [u8],
+
+    /// Original length of the buf slice. Used to report error messages. A difference between this
+    /// value and buf.len() is the current decoding position for the inline part of the message.
+    initial_buf_len: usize,
 
     /// Buffer from which to read out-of-line data.
     out_of_line_buf: &'a [u8],
+
+    /// Original length of the out_of_line_buf slice. Used to report error messages. A difference
+    /// between this value and out_of_line_buf.len() is the current decoding position for th
+    /// out-of-line part of the message.
+    initial_out_of_line_buf_len: usize,
 
     /// Buffer from which to read handles.
     handles: &'a mut [zx::Handle],
@@ -184,6 +193,27 @@ impl<'a> Encoder<'a> {
         let ret = self.buf.get_mut(self.offset..(self.offset + len)).ok_or(Error::OutOfRange)?;
         self.offset += len;
         Ok(ret)
+    }
+
+    /// Adds specified number of zero bytes as padding.  Effectively, just increases `offset` by
+    /// `len`.
+    pub fn padding(&mut self, len: usize) -> Result<()> {
+        if self.offset + len > self.buf.len() {
+            return Err(Error::OutOfRange);
+        }
+        self.offset += len;
+        Ok(())
+    }
+
+    /// Adds as many zero bytes as padding as necessary to make sure that the `target` object size
+    /// is equal to `inline_size()`. `start_pos` is the position in the `encoder` buffer of where
+    /// the encoding started.  See `Encoder::offset`.
+    pub fn tail_padding<Target>(&mut self, target: &mut Target, start_pos: usize) -> Result<()>
+    where
+        Target: Encodable
+    {
+        debug_assert!(start_pos <= self.offset);
+        self.padding(target.inline_size() - (self.offset - start_pos))
     }
 
     /// Runs the provided closure inside an encoder modified
@@ -234,7 +264,14 @@ impl<'a> Decoder<'a> {
 
         let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
 
-        let mut decoder = Decoder { remaining_depth: MAX_RECURSION, buf, out_of_line_buf, handles };
+        let mut decoder = Decoder {
+            remaining_depth: MAX_RECURSION,
+            buf,
+            initial_buf_len: buf.len(),
+            out_of_line_buf,
+            initial_out_of_line_buf_len: out_of_line_buf.len(),
+            handles,
+        };
         value.decode(&mut decoder)?;
         if decoder.out_of_line_buf.len() != 0 {
             return Err(Error::ExtraBytes);
@@ -279,9 +316,14 @@ impl<'a> Decoder<'a> {
         //
         // [---------------------------------]
         //     ^old--buf^      ^--buf--^^ool^
+        //
+        // We also adjust the initial_buf_len, so that the index of an invalid byte can still be
+        // comupted using the same formula: initial_buf_len - buf.len().
 
         // We split off the first `len` bytes from `out_of_line`.
         let new_buf = split_off_front(&mut self.out_of_line_buf, len)?;
+        let new_initial_buf_len =
+            self.initial_buf_len + self.initial_out_of_line_buf_len - self.out_of_line_buf.len();
         // Split off any trailing bytes up to the alignment and discard them.
         if len % 8 != 0 {
             let trailer = 8 - (len % 8);
@@ -290,7 +332,9 @@ impl<'a> Decoder<'a> {
 
         // Store the current `buf` slice and shift the `buf` slice to point at the out-of-line data.
         let old_buf = take_slice(&mut self.buf);
+        let old_initial_buf_len = self.initial_buf_len;
         self.buf = new_buf;
+        self.initial_buf_len = new_initial_buf_len;
         let res = f(self);
 
         // Set the current `buf` back to its original position.
@@ -300,12 +344,25 @@ impl<'a> Decoder<'a> {
         //     ^---buf--^               ^ool^ (slices)
         //                              ^out-of-line-advanced (index)
         self.buf = old_buf;
+        self.initial_buf_len = old_initial_buf_len;
         res
     }
 
     /// Whether or not the current section of inline bytes has been fully read.
     pub fn is_empty(&self) -> bool {
         self.buf.is_empty()
+    }
+
+    /// Current decoding position in the inline part of the message, counting from the original
+    /// first byte passed to `decode_into`.
+    pub fn inline_pos(&self) -> usize {
+        self.initial_buf_len - self.buf.len()
+    }
+
+    /// Current decoding position in the out-of-line part of the message, counting from the
+    /// original first byte passed to `decode_into`.
+    pub fn out_of_line_pos(&self) -> usize {
+        self.initial_out_of_line_buf_len - self.out_of_line_buf.len()
     }
 
     /// The number of out-of-line bytes not yet accounted for by a `read_out_of_line`
@@ -332,6 +389,33 @@ impl<'a> Decoder<'a> {
     /// Take the next handle from the `handles` list and shift the list down by one element.
     pub fn take_handle(&mut self) -> Result<zx::Handle> {
         split_off_first_mut(&mut self.handles).map(take_handle)
+    }
+
+    /// A convenience method to skip over the specified number of zero bytes used for padding, also
+    /// checking that all those bytes are in fact zeroes.
+    pub fn skip_padding(&mut self, len: usize) -> Result<()> {
+        let padding_start = self.inline_pos();
+        let padding = self.next_slice(len)?;
+        for i in 0..padding.len() {
+            if padding[i] != 0 {
+                return Err(Error::NonZeroPadding {
+                    padding_start,
+                    non_zero_pos: padding_start + i,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Skips padding at the end of the object, by decoding as many bytes as necessary to decode
+    /// `inline_size()` bytes starting at the `start_pos`. Uses `Decoder::skip_padding`, so will
+    /// check that all the skipped bytes are indeed zeroes.
+    pub fn skip_tail_padding<Target>(&mut self, _target: &Target, start_pos: usize) -> Result<()>
+    where
+        Target: Decodable + Sized,
+    {
+        debug_assert!(start_pos <= self.inline_pos());
+        self.skip_padding(Target::inline_size() - (self.inline_pos() - start_pos))
     }
 }
 
@@ -1404,6 +1488,7 @@ impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
             *self = None;
             // Eat the full `inline_size` bytes including the
             // ALLOC_ABSENT that we only peeked at before
+            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
             decoder.next_slice(inline_size)?;
             Ok(())
         }
@@ -1505,13 +1590,13 @@ macro_rules! fidl_struct {
                     let mut cur_offset = 0;
                     $(
                         // Skip to the start of the next field
-                        encoder.next_slice($member_offset - cur_offset)?;
+                        encoder.padding($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
                         $crate::fidl_encode!(&mut self.$member_name, encoder)?;
                         cur_offset += $crate::fidl_inline_size!($member_ty);
                     )*
                     // Skip to the end of the struct's size
-                    encoder.next_slice($size - cur_offset)?;
+                    encoder.padding($size - cur_offset)?;
                     Ok(())
                 })
             }
@@ -1539,12 +1624,14 @@ macro_rules! fidl_struct {
                     let mut cur_offset = 0;
                     $(
                         // Skip to the start of the next field
+                        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                         decoder.next_slice($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
                         $crate::fidl_decode!(&mut self.$member_name, decoder)?;
                         cur_offset += $crate::fidl_inline_size!($member_ty);
                     )*
                     // Skip to the end of the struct's size
+                    // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                     decoder.next_slice($size - cur_offset)?;
                     Ok(())
                 })
@@ -1860,6 +1947,7 @@ where
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
+        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
         decoder.next_slice(fidl_inline_align!(Self) - 4)?;
 
         match tag {
@@ -1957,11 +2045,11 @@ macro_rules! fidl_union {
                     match self { $(
                         $name::$member_name ( val ) => {
                             // Jump to offset minus 4-byte tag
-                            encoder.next_slice($member_offset - 4)?;
+                            encoder.padding($member_offset - 4)?;
                             // Encode value
                             $crate::fidl_encode!(val, encoder)?;
                             // Skip to the end of the union's size
-                            encoder.next_slice($size - (
+                            encoder.padding($size - (
                                 $crate::fidl_inline_size!($member_ty) + $member_offset
                             ))?;
                             Ok(())
@@ -1997,6 +2085,7 @@ macro_rules! fidl_union {
                     $(
                         if index == tag {
                             // Jump to offset minus 4-byte tag
+                            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                             decoder.next_slice($member_offset - 4)?;
                             // Loop will only ever run once-- if the variant is not correct,
                             // it is fixed up.
@@ -2011,6 +2100,7 @@ macro_rules! fidl_union {
                                 *self = $name::$member_name($crate::fidl_new_empty!($member_ty));
                             }
                             // Skip to the end of the union's size
+                            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                             decoder.next_slice($size - ($crate::fidl_inline_size!($member_ty) + $member_offset))?;
                             return Ok(());
                         }
@@ -2326,13 +2416,13 @@ macro_rules! tuple_impls {
                     $(
                         // Skip to the start of the next field
                         let member_offset = round_up_to_align(cur_offset, self.$nidx.inline_align());
-                        encoder.next_slice(member_offset - cur_offset)?;
+                        encoder.padding(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         self.$nidx.encode(encoder)?;
                         cur_offset += self.$nidx.inline_size();
                     )*
                     // Skip to the end of the struct's size
-                    encoder.next_slice(self.inline_size() - cur_offset)?;
+                    encoder.padding(self.inline_size() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -2382,12 +2472,14 @@ macro_rules! tuple_impls {
                     $(
                         // Skip to the start of the next field
                         let member_offset = round_up_to_align(cur_offset, $ntyp::inline_align());
+                        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                         decoder.next_slice(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         self.$nidx.decode(decoder)?;
                         cur_offset += $ntyp::inline_size();
                     )*
                     // Skip to the end of the struct's size
+                    // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                     decoder.next_slice(Self::inline_size() - cur_offset)?;
                     Ok(())
                 })

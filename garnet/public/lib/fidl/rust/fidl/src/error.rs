@@ -43,6 +43,20 @@ pub enum Error {
     #[fail(display = "Decoding the FIDL object did not use all of the handles provided.")]
     ExtraHandles,
 
+    /// Decoding the FIDL object observed non-zero value in a padding byte.
+    #[fail(
+        display = "Decoding the FIDL object observed non-zero value in the padding at byte {}. \
+                   Padding starts at byte {}.",
+        non_zero_pos, padding_start
+    )]
+    NonZeroPadding {
+        /// Index of the first byte of the padding, relative to the beginning of the message.
+        padding_start: usize,
+        /// Index of the byte in the padding that was non-zero, relative to the beginning of the
+        /// message.
+        non_zero_pos: usize,
+    },
+
     /// The FIDL object had too many layers of structural recursion.
     #[fail(display = "The FIDL object had too many layers of structural recursion.")]
     MaxRecursionDepth,
