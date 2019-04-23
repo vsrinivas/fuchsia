@@ -402,6 +402,8 @@ public:
 
     bool DeviceHasPendingMessages(size_t device_index);
     bool DeviceHasPendingMessages(const zx::channel& remote);
+
+    void DoSuspend(uint32_t flags);
 protected:
     void SetUp() override {
         ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
@@ -507,6 +509,45 @@ bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
     return DeviceHasPendingMessages(devices_[device_index].remote);
 }
 
+void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
+    const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
+    if (vfs_exit_expected) {
+        zx::unowned_event event(coordinator()->fshost_event());
+        auto thrd_func = [](void* ctx) -> int {
+            zx::unowned_event event(*static_cast<zx::unowned_event*>(ctx));
+            if (event->wait_one(FSHOST_SIGNAL_EXIT, zx::time::infinite(), nullptr) != ZX_OK) {
+                return false;
+            }
+            if (event->signal(0, FSHOST_SIGNAL_EXIT_DONE) != ZX_OK) {
+                return false;
+            }
+            return true;
+        };
+        thrd_t fshost_thrd;
+        ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
+
+        coordinator()->Suspend(flags);
+        loop()->RunUntilIdle();
+
+        int thread_status;
+        ASSERT_EQ(thrd_join(fshost_thrd, &thread_status), thrd_success);
+        ASSERT_TRUE(thread_status);
+
+        // Make sure that vfs_exit() happened.
+        ASSERT_OK(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0),
+                                                         nullptr));
+    } else {
+        coordinator()->Suspend(flags);
+        loop()->RunUntilIdle();
+
+        // Make sure that vfs_exit() didn't happen.
+        ASSERT_EQ(
+                coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT | FSHOST_SIGNAL_EXIT_DONE,
+                                                       zx::time(0), nullptr),
+                ZX_ERR_TIMED_OUT);
+    }
+}
+
 class SuspendTestCase : public MultipleDeviceTestCase {
 public:
     void SuspendTest(uint32_t flags);
@@ -562,42 +603,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
                                            &desc.index));
     }
 
-    const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
-    if (vfs_exit_expected) {
-        zx::unowned_event event(coordinator()->fshost_event());
-        auto thrd_func = [](void* ctx) -> int {
-            zx::unowned_event event(*static_cast<zx::unowned_event*>(ctx));
-            if (event->wait_one(FSHOST_SIGNAL_EXIT, zx::time::infinite(), nullptr) != ZX_OK) {
-                return false;
-            }
-            if (event->signal(0, FSHOST_SIGNAL_EXIT_DONE) != ZX_OK) {
-                return false;
-            }
-            return true;
-        };
-        thrd_t fshost_thrd;
-        ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
-
-        coordinator()->Suspend(flags);
-        loop()->RunUntilIdle();
-
-        int thread_status;
-        ASSERT_EQ(thrd_join(fshost_thrd, &thread_status), thrd_success);
-        ASSERT_TRUE(thread_status);
-
-        // Make sure that vfs_exit() happened.
-        ASSERT_OK(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0),
-                                                         nullptr));
-    } else {
-        coordinator()->Suspend(flags);
-        loop()->RunUntilIdle();
-
-        // Make sure that vfs_exit() didn't happen.
-        ASSERT_EQ(
-                coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT | FSHOST_SIGNAL_EXIT_DONE,
-                                                       zx::time(0), nullptr),
-                ZX_ERR_TIMED_OUT);
-    }
+    ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
 
     size_t num_to_suspend = fbl::count_of(devices);
     while (num_to_suspend > 0) {
@@ -646,12 +652,40 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
 class CompositeTestCase : public MultipleDeviceTestCase {
 public:
     ~CompositeTestCase() override = default;
+
+    void CheckCompositeCreation(const char* composite_name,
+                                const size_t* device_indexes, size_t device_indexes_count,
+                                size_t* component_indexes_out, zx::channel* composite_remote_out);
 protected:
     void SetUp() override {
         MultipleDeviceTestCase::SetUp();
         ASSERT_NOT_NULL(coordinator_.component_driver());
     }
 };
+
+void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
+                                               const size_t* device_indexes,
+                                               size_t device_indexes_count,
+                                               size_t* component_indexes_out,
+                                               zx::channel* composite_remote_out) {
+    for (size_t i = 0; i < device_indexes_count; ++i) {
+        auto device_state = device(device_indexes[i]);
+        // Check that the components got bound
+        fbl::String driver = coordinator()->component_driver()->libname;
+        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+        loop()->RunUntilIdle();
+
+        // Synthesize the AddDevice request the component driver would send
+        char name[32];
+        snprintf(name, sizeof(name), "component-device-%zu", i);
+        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, name, 0,
+                                           driver, &component_indexes_out[i]));
+    }
+    // Make sure the composite comes up
+    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), composite_name,
+                                                                device_indexes_count,
+                                                                composite_remote_out));
+}
 
 class CompositeAddOrderTestCase : public CompositeTestCase {
 public:
@@ -701,25 +735,11 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
         ASSERT_NO_FATAL_FAILURES(do_add());
     }
 
-    size_t component_device_indexes[fbl::count_of(device_indexes)];
-    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
-        auto device_state = device(device_indexes[i]);
-        // Check that the components got bound
-        fbl::String driver = coordinator()->component_driver()->libname;
-        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-        loop()->RunUntilIdle();
-
-        // Synthesize the AddDevice request the component driver would send
-        char name[32];
-        snprintf(name, sizeof(name), "component-device-%zu", i);
-        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, name, 0,
-                                           driver, &component_device_indexes[i]));
-    }
-
     zx::channel composite_remote;
-    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
-                                                                fbl::count_of(device_indexes),
-                                                                &composite_remote));
+    size_t component_device_indexes[fbl::count_of(device_indexes)];
+    ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName,
+                                                    device_indexes, fbl::count_of(device_indexes),
+                                                    component_device_indexes, &composite_remote));
 }
 
 TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
@@ -765,26 +785,11 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
         ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
                                            &device_indexes[i]));
     }
-    // Make sure the component devices come up
-    size_t component_device_indexes[fbl::count_of(device_indexes)];
-    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
-        auto device_state = device(device_indexes[i]);
-        // Wait for the components to get bound
-        fbl::String driver = coordinator()->component_driver()->libname;
-        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
-        loop()->RunUntilIdle();
-
-        // Synthesize the AddDevice request the component driver would send
-        char name[32];
-        snprintf(name, sizeof(name), "component-device-%zu", i);
-        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, name, 0,
-                                           driver, &component_device_indexes[i]));
-    }
-    // Make sure the composite comes up
     zx::channel composite_remote;
-    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
-                                                                fbl::count_of(device_indexes),
-                                                                &composite_remote));
+    size_t component_device_indexes[fbl::count_of(device_indexes)];
+    ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName,
+                                                    device_indexes, fbl::count_of(device_indexes),
+                                                    component_device_indexes, &composite_remote));
     loop()->RunUntilIdle();
 
     {
@@ -814,6 +819,70 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
     ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
                                                                 fbl::count_of(device_indexes),
                                                                 &composite_remote));
+}
+
+TEST_F(CompositeTestCase, SuspendOrder) {
+    size_t device_indexes[2];
+    uint32_t protocol_id[] = {
+        ZX_PROTOCOL_GPIO,
+        ZX_PROTOCOL_I2C,
+    };
+    static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+    const char* kCompositeDevName = "composite-dev";
+    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+            platform_bus(), protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+            0, kCompositeDevName));
+    // Add the devices to construct the composite out of.
+    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+        char name[32];
+        snprintf(name, sizeof(name), "device-%zu", i);
+        ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
+                                           &device_indexes[i]));
+    }
+
+    zx::channel composite_remote;
+    size_t component_device_indexes[fbl::count_of(device_indexes)];
+    ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName,
+                                                    device_indexes, fbl::count_of(device_indexes),
+                                                    component_device_indexes, &composite_remote));
+
+    const uint32_t suspend_flags = DEVICE_SUSPEND_FLAG_POWEROFF;
+    ASSERT_NO_FATAL_FAILURES(DoSuspend(suspend_flags));
+
+    // Make sure none of the components have received their suspend requests
+    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
+    for (auto idx : device_indexes) {
+        ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    }
+    for (auto idx : component_device_indexes) {
+        ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    }
+    // The composite should have been the first to get one
+    ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(composite_remote, suspend_flags, ZX_OK));
+    loop()->RunUntilIdle();
+
+    // Next, all of the internal component devices should have them, but none of the devices
+    // themselves
+    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
+    for (auto idx : device_indexes) {
+        ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    }
+    for (auto idx : component_device_indexes) {
+        ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(idx)->remote, suspend_flags, ZX_OK));
+    }
+    loop()->RunUntilIdle();
+
+    // Next, the devices should get them
+    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
+    for (auto idx : device_indexes) {
+        ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(idx)->remote, suspend_flags, ZX_OK));
+    }
+    loop()->RunUntilIdle();
+
+    // Finally, the platform bus driver, which is the parent of all of the devices
+    ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), suspend_flags, ZX_OK));
+    loop()->RunUntilIdle();
 }
 
 } // namespace
