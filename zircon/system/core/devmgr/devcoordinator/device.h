@@ -56,7 +56,7 @@ class SuspendContext;
 // clang-format on
 
 struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHandler<Device> {
-    explicit Device(Coordinator* coord);
+    Device(Coordinator* coord, fbl::RefPtr<Device> parent);
     ~Device();
 
     // Create a new device with the given parameters.  This sets up its
@@ -206,9 +206,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
 
     const fbl::RefPtr<Device>& parent() { return parent_; }
     fbl::RefPtr<const Device> parent() const { return parent_; }
-    // TODO: Remove set_parent once this class is further encapsulated.  It
-    // should be unnecessary.
-    void set_parent(fbl::RefPtr<Device> parent) { parent_ = std::move(parent); }
 
     uint32_t protocol_id() const { return protocol_id_; }
     // TODO: Remove set_protocol_id once this class is further encapsulated.  It

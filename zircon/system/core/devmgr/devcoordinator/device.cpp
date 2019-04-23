@@ -14,8 +14,8 @@
 
 namespace devmgr {
 
-Device::Device(Coordinator* coord)
-    : coordinator(coord),
+Device::Device(Coordinator* coord, fbl::RefPtr<Device> parent)
+    : coordinator(coord), parent_(std::move(parent)),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }) {}
 
 Device::~Device() {
@@ -51,7 +51,16 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                            zx::channel rpc, bool invisible, zx::channel client_remote,
                            fbl::RefPtr<Device>* device) {
-    auto dev = fbl::MakeRefCounted<Device>(coordinator);
+    fbl::RefPtr<Device> real_parent;
+    // If our parent is a proxy, for the purpose of devfs, we need to work with
+    // *its* parent which is the device that it is proxying.
+    if (parent->flags & DEV_CTX_PROXY) {
+        real_parent = parent->parent();
+    } else {
+        real_parent = parent;
+    }
+
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, real_parent);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -74,17 +83,6 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
     // We exist within our parent's device host
     dev->set_host(parent->host());
-
-    fbl::RefPtr<Device> real_parent;
-    // If our parent is a proxy, for the purpose
-    // of devicefs, we need to work with *its* parent
-    // which is the device that it is proxying.
-    if (parent->flags & DEV_CTX_PROXY) {
-        real_parent = parent->parent();
-    } else {
-        real_parent = parent;
-    }
-    dev->set_parent(real_parent);
 
     // We must mark the device as invisible before publishing so
     // that we don't send "device added" notifications.
@@ -119,7 +117,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
                                        composite_props.size());
     memcpy(props.get(), composite_props.get(), props.size() * sizeof(props[0]));
 
-    auto dev = fbl::MakeRefCounted<Device>(coordinator);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, nullptr);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -159,7 +157,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
 zx_status_t Device::CreateProxy() {
     ZX_ASSERT(this->proxy == nullptr);
 
-    auto dev = fbl::MakeRefCounted<Device>(this->coordinator);
+    auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::WrapRefPtr(this));
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -180,7 +178,6 @@ zx_status_t Device::CreateProxy() {
 
     dev->flags = DEV_CTX_PROXY;
     dev->set_protocol_id(protocol_id_);
-    dev->set_parent(fbl::WrapRefPtr(this));
     this->proxy = std::move(dev);
     log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, this->name.data());
     return ZX_OK;

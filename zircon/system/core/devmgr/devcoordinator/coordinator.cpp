@@ -113,10 +113,10 @@ bool Coordinator::InSuspend() const {
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
-    root_device_ = fbl::MakeRefCounted<Device>(this);
-    misc_device_ = fbl::MakeRefCounted<Device>(this);
-    sys_device_ = fbl::MakeRefCounted<Device>(this);
-    test_device_ = fbl::MakeRefCounted<Device>(this);
+    root_device_ = fbl::MakeRefCounted<Device>(this, nullptr);
+    misc_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
+    sys_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
+    test_device_ = fbl::MakeRefCounted<Device>(this, root_device_);
 
     fbl::AllocChecker ac;
     {
@@ -133,7 +133,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        misc_device_->set_parent(root_device_);
         misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
         misc_device_->set_protocol_id(ZX_PROTOCOL_MISC_PARENT);
         misc_device_->name = fbl::String("misc", &ac);
@@ -147,7 +146,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        sys_device_->set_parent(root_device_);
         sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
         sys_device_->name = fbl::String("sys", &ac);
         if (!ac.check()) {
@@ -164,7 +162,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        test_device_->set_parent(root_device_);
         test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
         test_device_->set_protocol_id(ZX_PROTOCOL_TEST_PARENT);
         test_device_->name = fbl::String("test", &ac);
