@@ -5,9 +5,8 @@
 mod impls;
 pub mod wrappers;
 
-pub use wrappers::{InspectBytes, InspectList};
+pub use wrappers::{InspectBytes, InspectList, InspectListClosure};
 
-use crate::NodeExt;
 use fuchsia_inspect as finspect;
 
 pub trait WriteInspect {
@@ -49,6 +48,8 @@ macro_rules! inspect_log {
     // non-block version (no-trailing comma)
     ($bounded_list_node:expr, $($key:ident: $val:expr),+) => {
         {
+            use $crate::{log::WriteInspect, NodeExt};
+
             let node = $bounded_list_node.request_entry();
             let mut node = node.lock();
             node.set_time();
@@ -65,6 +66,7 @@ mod tests {
 
     use crate::nodes::BoundedListNode;
     use crate::test_utils;
+    use crate::NodeExt;
 
     use fuchsia_inspect::{self as finspect, object::ObjectUtil};
 
@@ -139,6 +141,23 @@ mod tests {
     }
 
     #[test]
+    fn test_log_option() {
+        let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
+
+        inspect_log!(node, some: Some("a"));
+        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
+        let obj0 = node0.lock().evaluate();
+        obj0.get_property("@time").expect("expect time property");
+        test_utils::assert_str_prop(&obj0, "some", "a");
+
+        inspect_log!(node, none: None as Option<String>);
+        let node1 = node.inner().lock().get_child("1").expect("expect node entry 1");
+        let obj1 = node1.lock().evaluate();
+        obj1.get_property("@time").expect("expect time property");
+        assert!(obj1.get_property("none").is_none());
+    }
+
+    #[test]
     fn test_log_inspect_bytes() {
         let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
         let bytes = [11u8, 22, 33];
@@ -165,5 +184,24 @@ mod tests {
         test_utils::assert_uint_metric(&list_obj, "0", 11);
         test_utils::assert_uint_metric(&list_obj, "1", 22);
         test_utils::assert_uint_metric(&list_obj, "2", 33);
+    }
+
+    #[test]
+    fn test_log_inspect_list_closure() {
+        let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
+        let list = [13u32, 17, 29];
+        let list_mapped = InspectListClosure(&list, |node, key, item| {
+            node.insert(key, item * 2);
+        });
+        inspect_log!(node, list: list_mapped);
+
+        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
+        let obj0 = node0.lock().evaluate();
+        obj0.get_property("@time").expect("expect time property");
+        let list_node = node0.lock().get_child("list").expect("expect node entry 'list'");
+        let list_obj = list_node.lock().evaluate();
+        test_utils::assert_uint_metric(&list_obj, "0", 26);
+        test_utils::assert_uint_metric(&list_obj, "1", 34);
+        test_utils::assert_uint_metric(&list_obj, "2", 58);
     }
 }

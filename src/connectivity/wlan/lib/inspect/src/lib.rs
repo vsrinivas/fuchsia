@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod iface_mgr;
+#[macro_use]
 pub mod log;
 pub mod nodes;
 

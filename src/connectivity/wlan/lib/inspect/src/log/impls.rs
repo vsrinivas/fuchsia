@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{NodeExt, WriteInspect};
+use super::WriteInspect;
+
+use crate::NodeExt;
 
 use fidl_fuchsia_inspect as fidl_inspect;
 use fidl_fuchsia_wlan_common as fidl_common;
@@ -63,6 +65,16 @@ impl_write_inspect!(Double, self => (*self).into(), f32, f64);
 impl<V: WriteInspect + ?Sized> WriteInspect for &V {
     fn write_inspect(&self, node: &mut finspect::ObjectTreeNode, key: &str) {
         (*self).write_inspect(node, key);
+    }
+}
+
+/// `Option<T>` does not write an inspect value in the `None` case
+impl<T: WriteInspect> WriteInspect for Option<T> {
+    fn write_inspect(&self, node: &mut finspect::ObjectTreeNode, key: &str) {
+        match self {
+            Some(val) => val.write_inspect(node, key),
+            None => (),
+        }
     }
 }
 

@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use wlan_common::format::MacFmt;
 use wlan_common::RadioConfig;
-use wlan_inspect;
+use wlan_inspect::{inspect_log, log::InspectListClosure, NodeExt, nodes::BoundedListNode};
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
@@ -261,7 +261,8 @@ impl super::Station for ClientSme {
                 match result {
                     ScanResult::None => state,
                     ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
-                        match get_best_bss(&bss_list) {
+                        let mut inspect_msg: Option<String> = None;
+                        let new_state = match get_best_bss(&bss_list) {
                             Some(best_bss) => {
                                 match get_rsna(
                                     &self.context.device_info,
@@ -269,6 +270,7 @@ impl super::Station for ClientSme {
                                     &best_bss,
                                 ) {
                                     Ok(rsna) => {
+                                        inspect_msg.replace("attempt to connect".to_string());
                                         let cmd = ConnectCommand {
                                             bss: Box::new(clone_bss_desc(&best_bss)),
                                             responder: Some(token.responder),
@@ -278,6 +280,7 @@ impl super::Station for ClientSme {
                                         state.connect(cmd, &mut self.context)
                                     }
                                     Err(err) => {
+                                        inspect_msg.replace(format!("cannot join: {}", err));
                                         error!(
                                             "cannot join '{}' ({}): {}",
                                             String::from_utf8_lossy(&best_bss.ssid[..]),
@@ -295,6 +298,7 @@ impl super::Station for ClientSme {
                                 }
                             }
                             None => {
+                                inspect_msg.replace("no matching BSS".to_string());
                                 error!("no matching BSS found");
                                 report_connect_finished(
                                     Some(token.responder),
@@ -304,9 +308,20 @@ impl super::Station for ClientSme {
                                 );
                                 state
                             }
-                        }
+                        };
+
+                        inspect_log_join_scan(
+                            &mut self.context.inspect.join_scan_events,
+                            &bss_list,
+                            inspect_msg,
+                        );
+                        new_state
                     }
                     ScanResult::JoinScanFinished { token, result: Err(e) } => {
+                        inspect_log!(
+                            self.context.inspect.join_scan_events,
+                            scan_failure: format!("{:?}", e),
+                        );
                         error!("cannot join network because scan failed: {:?}", e);
                         let (result, failure) = match e {
                             JoinScanFailure::Canceled => (ConnectResult::Canceled, None),
@@ -363,6 +378,25 @@ impl super::Station for ClientSme {
             }
         });
     }
+}
+
+fn inspect_log_join_scan(
+    node: &mut BoundedListNode,
+    bss_list: &[fidl_mlme::BssDescription],
+    result_msg: Option<String>,
+) {
+    let inspect_bss = InspectListClosure(&bss_list, |node, key, bss| {
+        let ssid = String::from_utf8_lossy(&bss.ssid[..]);
+        node.create_child(key)
+            .lock()
+            .insert("bssid", bss.bssid.to_mac_str())
+            .insert("ssid", ssid.as_ref())
+            .insert("channel", &bss.chan)
+            .insert("rcpi_dbm", bss.rcpi_dbmh / 2)
+            .insert("rsni_db", bss.rsni_dbh / 2)
+            .insert("rssi_dbm", bss.rssi_dbm);
+    });
+    inspect_log!(node, bss_list: inspect_bss, result: result_msg);
 }
 
 fn report_connect_finished(

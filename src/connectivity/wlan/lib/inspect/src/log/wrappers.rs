@@ -34,3 +34,22 @@ where
         }
     }
 }
+
+/// Wrapper around a list `[T]` and a closure function `F` that determines how to map
+/// and log each value of `T`.
+pub struct InspectListClosure<'a, T, F>(pub &'a [T], pub F)
+where
+    F: Fn(&mut finspect::ObjectTreeNode, &str, &T);
+
+impl<'a, T, F> WriteInspect for InspectListClosure<'a, T, F>
+where
+    F: Fn(&mut finspect::ObjectTreeNode, &str, &T),
+{
+    fn write_inspect(&self, node: &mut finspect::ObjectTreeNode, key: &str) {
+        let child = node.create_child(key);
+        let mut child = child.lock();
+        for (i, val) in self.0.iter().enumerate() {
+            self.1(&mut child, &i.to_string(), val);
+        }
+    }
+}
