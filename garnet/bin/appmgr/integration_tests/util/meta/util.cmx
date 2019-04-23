@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage",
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ]
     }
 }

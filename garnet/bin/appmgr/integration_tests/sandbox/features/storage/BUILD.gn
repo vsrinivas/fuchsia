@@ -6,29 +6,14 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
-group("persistent-storage") {
+group("storage") {
   testonly = true
   deps = [
     ":has_isolated_cache_storage",
     ":has_isolated_persistent_storage",
-    ":has_persistent_storage",
     ":isolated_persistent_storage",
-    ":isolated_persistent_storage_bin",
     ":no_persistent_storage",
   ]
-}
-
-sandbox_test_package("has_persistent_storage") {
-  deprecated_global_persistent_storage = "//build"
-  sources = [
-    "has_persistent_storage.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  environments = basic_envs
 }
 
 sandbox_test_package("no_persistent_storage") {
@@ -44,9 +29,6 @@ sandbox_test_package("no_persistent_storage") {
 }
 
 sandbox_test_package("has_isolated_persistent_storage") {
-  # This reuses the same source file as the has_persistent_storage test since it
-  # is very simple (just check if /data exists), but the test runs with a
-  # different sandbox.
   sources = [
     "has_persistent_storage.cc",
   ]

@@ -6,9 +6,9 @@ group("features") {
   testonly = true
   deps = [
     "build-info",
-    "persistent-storage",
     "shell",
     "shell-commands",
+    "storage",
     "system-temp",
   ]
 }

@@ -3,28 +3,6 @@
 # found in the LICENSE file.
 #
 
-group("deprecated_global_persistent_storage_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have components manifests that include
-  # the "deprecated-global-persistent-storage" feature. Do not add to this
-  # list. Use "isolated-persistent-storage" instead.
-  visibility = [
-    # These first two entries do not need migration and will be updated when
-    # deleting the 'deprecated-global-persistent-storage' feature.
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
-    "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
-
-    "//garnet/bin/auth:token_manager_factory",
-  ]
-}
-
 group("deprecated_misc_storage_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \

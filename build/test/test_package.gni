@@ -125,7 +125,6 @@ template("test_package") {
                              "binaries",
                              "components",
                              "data_deps",
-                             "deprecated_global_persistent_storage",
                              "deps",
                              "extra",
                              "public_deps",

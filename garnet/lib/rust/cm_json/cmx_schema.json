@@ -74,7 +74,6 @@
             "enum": [
               "build-info",
               "config-data",
-              "deprecated-global-persistent-storage",
               "deprecated-misc-storage",
               "isolated-cache-storage",
               "isolated-persistent-storage",

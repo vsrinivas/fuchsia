@@ -27,7 +27,6 @@ template("executable_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "deprecated_global_persistent_storage",
                              "public_deps",
                              "testonly",
                              "meta",

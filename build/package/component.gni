@@ -78,7 +78,6 @@ template("fuchsia_component") {
                                "binary",
                                "binary_dest",
                                "data_deps",
-                               "deprecated_global_persistent_storage",
                                "deps",
                                "public_deps",
                                "loadable_modules",
@@ -149,18 +148,6 @@ template("fuchsia_component") {
         # but we don't know which one, so depend on all package deps here.
         deps = component.deps
         public_deps = component.public_deps
-
-        # TODO(bryanhenry,CF-28): Remove this validation when the
-        # "deprecated-global-persistent-storage" feature is removed.
-        if (!defined(component.deprecated_global_persistent_storage)) {
-          extra_schemas = [
-            {
-              schema =
-                  "//build/cmx/block_deprecated_global_persistent_storage.json"
-              error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by an allowlist. Use 'isolated-persistent-storage' instead."
-            },
-          ]
-        }
       }
       component.deps += [ ":$validate" ]
 
@@ -247,13 +234,6 @@ template("fuchsia_component") {
       response_file_contents = manifest_args
       deps = component.deps
       public_deps = component.public_deps
-
-      # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
-      # specific targets by the package target's name using visibility.
-      # TODO(bryanhenry,CF-28): Remove along with deprecated-global-persistent-storage feature
-      if (defined(component.deprecated_global_persistent_storage)) {
-        deps += [ "${component.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_allowlist" ]
-      }
     }
   } else {
     group(target_name) {

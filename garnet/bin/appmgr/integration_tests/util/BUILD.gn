@@ -56,7 +56,6 @@ executable("persistent_storage_test_util_bin") {
 }
 
 package("persistent_storage_test_util") {
-  deprecated_global_persistent_storage = "//build"
   testonly = true
 
   meta = [

@@ -4,4 +4,5 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
+TEST_F(NamespaceTest, NoCacheStorage) { ExpectDoesNotExist("/cache/"); }
 TEST_F(NamespaceTest, NoPersistentStorage) { ExpectDoesNotExist("/data/"); }
