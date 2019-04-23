@@ -29,7 +29,8 @@ use {
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
         connection::{
-            BufferResult, ConnectionState, FileConnection, FileConnectionFuture, InitialConnectionState,
+            BufferResult, ConnectionState, FileConnection, FileConnectionFuture,
+            InitialConnectionState,
         },
         DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
         DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
@@ -782,13 +783,12 @@ mod tests {
     fn write_error() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(
-                100,
-                |content| fast_future!({
+            write_only(100, |content| {
+                fast_future!({
                     assert_eq!(*&content, b"Wrong format");
                     Err(Status::INVALID_ARGS)
-                }),
-            ),
+                })
+            }),
             async move |proxy| {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
