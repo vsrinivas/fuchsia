@@ -39,6 +39,5 @@ universe_package_labels += [
   "//topaz/packages/prod:dart_aot_runner",
   "//topaz/packages/prod:flutter_aot",
   "//topaz/packages/prod:flutter_aot_product",
-  "//topaz/packages/prod:google_auth_provider",
   "//topaz/packages/prod:mondrian",
 ]

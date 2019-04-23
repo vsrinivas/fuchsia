@@ -17,6 +17,5 @@ group("tools") {
     "//topaz/packages/prod:chromium",
     "//topaz/packages/prod:dart_runner",
     "//topaz/packages/prod:flutter",
-    "//topaz/packages/prod:google_auth_provider",
   ]
 }
