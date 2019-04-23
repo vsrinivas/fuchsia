@@ -58,6 +58,7 @@ executable("unittest") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.math",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback_agent:src",
     "//src/lib/files",

@@ -7,6 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -32,6 +33,7 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -132,9 +134,32 @@ struct TakeScreenshotResponse {
 // Represents arguments for DataProvider::GetScreenshotCallback.
 struct GetScreenshotResponse {
   std::unique_ptr<Screenshot> screenshot;
+
+  // This should be kept in sync with DoGetScreenshotResponseMatch() as we only
+  // want to display what we actually compare, for now the presence of a
+  // screenshot and its dimensions if present.
+  operator std::string() const {
+    if (!screenshot) {
+      return "no screenshot";
+    }
+    const fuchsia::math::Size& dimensions_in_px = screenshot->dimensions_in_px;
+    return fxl::StringPrintf("a %d x %d screenshot", dimensions_in_px.width,
+                             dimensions_in_px.height);
+  }
+
+  // This is used by gTest to pretty-prints failed expectations instead of the
+  // default byte string.
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const GetScreenshotResponse& response) {
+    return os << std::string(response);
+  }
 };
 
 // Compares two GetScreenshotResponse.
+//
+// This should be kept in sync with std::string() as we only want to display
+// what we actually compare, for now the presence of a screenshot and its
+// dimensions.
 template <typename ResultListenerT>
 bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
                                   const GetScreenshotResponse& expected,
@@ -167,7 +192,8 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
 
 // Returns true if gMock |arg| matches |expected|, assuming two
 // GetScreenshotResponse.
-MATCHER_P(MatchesGetScreenshotResponse, expected, "") {
+MATCHER_P(MatchesGetScreenshotResponse, expected,
+          "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
 }
 
