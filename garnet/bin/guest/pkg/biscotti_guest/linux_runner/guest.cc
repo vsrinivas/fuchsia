@@ -6,10 +6,6 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <memory>
-
 #include <grpc++/grpc++.h>
 #include <grpc++/server_posix.h>
 #include <lib/async/default.h>
@@ -18,8 +14,12 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/vector.h>
 #include <lib/fzl/fdio.h>
+#include <netinet/in.h>
 #include <src/lib/fxl/logging.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
+
+#include <memory>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
@@ -61,8 +61,8 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
   if (fd < 0 && errno == ENOENT) {
     fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
     if (fd < 0) {
-          FXL_LOG(ERROR) << "Failed to create stateful image: " << strerror(errno);
-          return nullptr;
+      FXL_LOG(ERROR) << "Failed to create stateful image: " << strerror(errno);
+      return nullptr;
     }
     if (ftruncate(fd, kStatefulImageSize) < 0) {
       FXL_LOG(ERROR) << "Failed to truncate image: " << strerror(errno);

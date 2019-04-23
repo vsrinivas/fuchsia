@@ -5,10 +5,6 @@
 #ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 #define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 
-#include <zircon/types.h>
-#include <deque>
-#include <memory>
-
 #include <fuchsia/guest/cpp/fidl.h>
 #include <grpc++/grpc++.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,6 +12,10 @@
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <trace/event.h>
+#include <zircon/types.h>
+
+#include <deque>
+#include <memory>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_component.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/log_collector.h"
