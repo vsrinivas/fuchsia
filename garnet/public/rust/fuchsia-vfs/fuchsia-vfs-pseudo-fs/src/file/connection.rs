@@ -23,6 +23,7 @@ use {
         task::Waker,
         Future, FutureExt, Poll,
     },
+    static_assertions::assert_eq_size,
     std::{io::Write, iter, mem, pin::Pin},
 };
 

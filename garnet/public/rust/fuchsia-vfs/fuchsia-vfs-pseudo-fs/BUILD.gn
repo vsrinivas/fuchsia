@@ -22,6 +22,7 @@ rustc_library("fuchsia-vfs-pseudo-fs") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:proc-macro-hack",
     "//third_party/rust_crates:proc-macro-nested",
+    "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

@@ -32,6 +32,7 @@ use {
         task::Waker,
         Future, Poll,
     },
+    static_assertions::assert_eq_size,
     std::{
         collections::BTreeMap, iter, iter::ExactSizeIterator, marker::Unpin, ops::Bound, pin::Pin,
     },

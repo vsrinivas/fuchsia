@@ -10,15 +10,14 @@
 
 use proc_macro_hack::proc_macro_hack;
 
-#[macro_use]
-mod common;
-
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils;
 
 pub mod directory;
 pub mod file;
+
+mod common;
 
 // --- pseudo_directory ---
 

@@ -14,6 +14,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
+    static_assertions::assert_eq_size,
     std::{io::Write, mem::size_of},
 };
 

@@ -45,17 +45,3 @@ pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, st
         }
     }
 }
-
-/// We assume that usize/isize and u64/i64 are of the same size in a few locations in the code.
-/// This macro is used to mark the locations of those assumptions.
-/// Copied from
-///
-///     https://docs.rs/static_assertions/0.2.5/static_assertions/macro.assert_eq_size.html
-///
-/// TODO Ideally we should import static_assertions and remove this macro.
-/// See https://fuchsia.atlassian.net/projects/OSRB/issues/OSRB-165
-macro_rules! assert_eq_size {
-    ($x:ty, $($xs:ty),+ $(,)*) => {
-        $(let _ = core::mem::transmute::<$x, $xs>;)+
-    };
-}
