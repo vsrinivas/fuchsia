@@ -4,6 +4,7 @@
 
 library fuchsia.accessibility;
 
+using fuchsia.accessibility.semantics;
 using fuchsia.ui.input;
 using fuchsia.ui.viewsv1;
 
@@ -15,6 +16,7 @@ using fuchsia.ui.viewsv1;
 // The Manager interface itself defines the API surface for accessibility
 // services to access semantics information and apply accessibility actions.
 //
+
 // TODO(SCN-812) This is a stub implementation and is currently a work in
 // progress. Currently, there are three levels of identification used in the
 // system (All prone to change):
@@ -28,7 +30,7 @@ protocol Manager {
     // know which view tree to search.
     GetHitAccessibilityNode(fuchsia.ui.viewsv1.ViewTreeToken tree_token,
                             fuchsia.ui.input.PointerEvent input)
-        -> (int32 view_id, Node? node);
+        -> (int32 view_id, fuchsia.accessibility.semantics.Node node);
 
     // Sets accessibility focus to the specified node in the frontend with the
     // specified id. Previously set accessibility focus is removed.
@@ -36,9 +38,9 @@ protocol Manager {
 
     // Performs an accessibility action on the current accessibility focused
     // element. If no element has accessibility focus, does nothing.
-    PerformAccessibilityAction(Action action);
+    PerformAccessibilityAction(fuchsia.accessibility.semantics.Action action);
 
     // Event to notify that a node in a front-end referenced by id had an
     // action applied on it.
-    -> OnNodeAction(int32 view_id, Node node, Action action);
+    -> OnNodeAction(int32 view_id, fuchsia.accessibility.semantics.Node node, fuchsia.accessibility.semantics.Action action);
 };

@@ -15,9 +15,7 @@ executable("a11y_manager_apptests") {
 
   testonly = true
 
-  sources = [
-    "semantic_tree_test.cc",
-  ]
+  sources = []
 
   deps = [
     "//garnet/bin/a11y/a11y_manager:lib",

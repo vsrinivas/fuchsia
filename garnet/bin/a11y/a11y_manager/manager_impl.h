@@ -5,13 +5,12 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_MANAGER_IMPL_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_MANAGER_IMPL_H_
 
-#include <unordered_map>
-
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
+#include <unordered_map>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
@@ -36,11 +35,11 @@ class ManagerImpl : public fuchsia::accessibility::Manager {
       GetHitAccessibilityNodeCallback callback) override;
   void SetAccessibilityFocus(int32_t view_id, int32_t node_id) override;
   void PerformAccessibilityAction(
-      fuchsia::accessibility::Action action) override;
+      fuchsia::accessibility::semantics::Action action) override;
 
   void BroadcastOnNodeAccessibilityAction(
-      int32_t id, fuchsia::accessibility::Node node,
-      fuchsia::accessibility::Action action);
+      int32_t id, fuchsia::accessibility::semantics::Node node,
+      fuchsia::accessibility::semantics::Action action);
 
   fidl::BindingSet<fuchsia::accessibility::Manager> bindings_;
 

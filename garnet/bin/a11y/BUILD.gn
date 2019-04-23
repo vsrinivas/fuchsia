@@ -11,8 +11,6 @@ group("a11y") {
   deps = [
     ":a11y_tests",
     "a11y_manager",
-    "a11y_toggler",
-    "fuchsiavox",
   ]
 }
 

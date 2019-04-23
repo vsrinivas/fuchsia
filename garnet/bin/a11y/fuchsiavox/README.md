@@ -1,4 +1,7 @@
 # Fuchsiavox
+This directory is deprecated. All the files in this directory are for reference only
+and will be deleted once they are replaced with new implementation.
+
 
 This is a basic implementation of the Fuchsiavox a11y service for Fuchsia. Its a work
 in progress with the current capabilities:

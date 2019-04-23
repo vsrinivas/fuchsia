@@ -77,15 +77,15 @@ void ManagerImpl::SetAccessibilityFocus(int32_t view_id, int32_t node_id) {
 }
 
 void ManagerImpl::PerformAccessibilityAction(
-    fuchsia::accessibility::Action action) {
+    fuchsia::accessibility::semantics::Action action) {
   // TODO(MI4-1736): implement action with KOID-based semantic tree
 }
 
 void ManagerImpl::BroadcastOnNodeAccessibilityAction(
-    int32_t id, fuchsia::accessibility::Node node,
-    fuchsia::accessibility::Action action) {
+    int32_t id, fuchsia::accessibility::semantics::Node node,
+    fuchsia::accessibility::semantics::Action action) {
   for (auto& bind : bindings_.bindings()) {
-    fuchsia::accessibility::Node node_copy;
+    fuchsia::accessibility::semantics::Node node_copy;
     node.Clone(&node_copy);
     bind.get()->events().OnNodeAction(id, std::move(node_copy), action);
   }

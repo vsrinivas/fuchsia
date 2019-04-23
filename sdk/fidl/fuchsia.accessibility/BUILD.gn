@@ -8,15 +8,12 @@ fidl("fuchsia.accessibility") {
   sdk_category = "experimental"
 
   sources = [
-    "data.fidl",
     "manager.fidl",
-    "semantics_root.fidl",
     "settings.fidl",
-    "toggler.fidl",
-    "touch_dispatcher.fidl",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
