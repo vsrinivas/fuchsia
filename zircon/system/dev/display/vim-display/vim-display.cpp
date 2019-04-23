@@ -12,6 +12,7 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform-device-lib.h>
@@ -31,6 +32,14 @@
 #include <zircon/assert.h>
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_HPD_GPIO,
+    COMPONENT_CANVAS,
+    COMPONENT_SYSMEM,
+    COMPONENT_COUNT,
+};
 
 /* Default formats */
 static const uint8_t _ginput_color_format   = HDMI_COLOR_FORMAT_444;
@@ -854,9 +863,24 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         display_release(display);
     });
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &display->pdev);
+    composite_protocol_t composite;
+    status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get composite protocol\n");
+        return status;
+    }
+
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(&composite, components, countof(components), &actual);
+    if (actual != countof(components)) {
+        DISP_ERROR("could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &display->pdev);
     if (status !=  ZX_OK) {
-        DISP_ERROR("Could not get parent protocol\n");
+        DISP_ERROR("Could not get PDEV protocol\n");
         return status;
     }
 
@@ -896,19 +920,20 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &display->gpio);
+    status = device_get_protocol(components[COMPONENT_HPD_GPIO], ZX_PROTOCOL_GPIO, &display->gpio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display GPIO protocol\n");
         return status;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &display->canvas);
+    status = device_get_protocol(components[COMPONENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS,
+                                 &display->canvas);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display CANVAS protocol\n");
         return status;
     }
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &display->sysmem);
+    status = device_get_protocol(components[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &display->sysmem);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display SYSMEM protocol\n");
         return status;
@@ -1180,7 +1205,7 @@ static zx_driver_ops_t vim2_display_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(vim2_display, vim2_display_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM_DISPLAY),

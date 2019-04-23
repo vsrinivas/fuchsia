@@ -16,6 +16,7 @@ driver("vim-display") {
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-amlogiccanvas",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-display-controller",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2cimpl",

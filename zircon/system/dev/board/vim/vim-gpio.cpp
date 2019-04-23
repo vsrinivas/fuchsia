@@ -91,6 +91,8 @@ static const gpio_pin_t gpio_pins[] = {
     // For ethernet.
     { GPIO_ETH_MAC_RST },
     { GPIO_ETH_MAC_INTR },
+    // For display.
+    { GPIO_DISPLAY_HPD },
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
