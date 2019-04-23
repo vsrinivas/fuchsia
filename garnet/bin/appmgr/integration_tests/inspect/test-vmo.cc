@@ -4,10 +4,10 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/expose.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>

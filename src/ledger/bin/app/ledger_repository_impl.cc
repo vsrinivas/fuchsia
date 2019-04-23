@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
-#include <lib/component/cpp/expose.h>
-#include <lib/component/cpp/object_dir.h>
+#include <lib/inspect/deprecated/expose.h>
+#include <lib/inspect/deprecated/object_dir.h>
 #include <trace/event.h>
 
 #include "peridot/lib/base64url/base64url.h"

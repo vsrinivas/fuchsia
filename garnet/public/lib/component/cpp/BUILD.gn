@@ -7,8 +7,6 @@ source_set("cpp") {
     "connect.h",
     "outgoing.cc",
     "outgoing.h",
-    "service_provider_impl.cc",
-    "service_provider_impl.h",
     "startup_context.cc",
     "startup_context.h",
   ]
@@ -20,7 +18,8 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    ":deprecated_inspect",
+    ":deprecated_service_provider",
+    "//garnet/public/lib/inspect",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -77,7 +76,6 @@ source_set("cpp") {
     "//garnet/lib/vulkan/tests/vkcube/*",
     "//garnet/public/lib/cobalt/cpp/*",
     "//garnet/public/lib/guest/*",
-    "//garnet/public/lib/inspect/*",
     "//garnet/public/lib/test_runner/cpp/*",
     "//garnet/public/lib/ui/base_view/cpp/*",
     "//garnet/public/lib/ui/sketchy/client/*",
@@ -106,42 +104,31 @@ source_set("cpp") {
     "//src/media/playback/*",
 
     "//topaz/app/term:*",
-    "//topaz/auth_providers/google:*",
     "//topaz/bin/ui/skottie_viewer:*",
     "//vendor/*",
   ]
 }
 
-source_set("deprecated_inspect") {
+source_set("deprecated_service_provider") {
   sources = [
-    "expose.cc",
-    "expose.h",
-    "exposed_object.cc",
-    "exposed_object.h",
-    "object_dir.cc",
-    "object_dir.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/syslog/cpp",
+    "service_provider_impl.cc",
+    "service_provider_impl.h",
   ]
 
   public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//zircon/public/fidl/fuchsia-inspect",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/zx",
+    "//sdk/fidl/fuchsia.sys",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 
   # This library is deprecated.
   #
-  # Use //garnet/public/lib/inspect instead.
+  # Use a directory(sys::ServiceDirectory) instead.
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
+    "//src/ledger/bin/p2p_provider/impl",
     ":cpp",
-    "//garnet/bin/appmgr:lib",
   ]
 }
 

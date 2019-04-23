@@ -5,12 +5,12 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/expose.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <src/lib/fxl/strings/substitute.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/lib/fxl/strings/substitute.h>
 
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"

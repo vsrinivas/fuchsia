@@ -5,11 +5,12 @@
 #ifndef LIB_INSPECT_TESTING_INSPECT_H_
 #define LIB_INSPECT_TESTING_INSPECT_H_
 
+#include <lib/inspect/inspect.h>
+#include <lib/inspect/reader.h>
+
 #include "fuchsia/inspect/cpp/fidl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/inspect/inspect.h"
-#include "lib/inspect/reader.h"
 
 namespace inspect {
 

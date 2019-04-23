@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/syslog/cpp/logger.h>
-
-#include "expose.h"
 
 namespace component {
 

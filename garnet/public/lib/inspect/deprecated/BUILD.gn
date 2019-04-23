@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("deprecated") {
+  sources = [
+    "expose.cc",
+    "expose.h",
+    "exposed_object.cc",
+    "exposed_object.h",
+    "object_dir.cc",
+    "object_dir.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/fidl/fuchsia-inspect",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}

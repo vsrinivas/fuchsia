@@ -5,9 +5,9 @@
 #ifndef LIB_INSPECT_INSPECT_H_
 #define LIB_INSPECT_INSPECT_H_
 
-#include <lib/component/cpp/exposed_object.h>
 #include <lib/fit/variant.h>
 #include <lib/inspect-vmo/inspect.h>
+#include <lib/inspect/deprecated/exposed_object.h>
 #include <zircon/types.h>
 
 #include <string>

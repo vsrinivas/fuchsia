@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/exposed_object.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/inspect/deprecated/exposed_object.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include "lib/inspect/deprecated/object_dir.h"
 
 const char* VALUE = "value";
 
@@ -53,11 +55,12 @@ class Table : public component::ExposedObject {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
   Table t1("t1"), t2("t2");
-  t1.set_parent(*context->outgoing().object_dir());
-  t2.set_parent(*context->outgoing().object_dir());
+  auto root_object = component::ObjectDir::Make("root");
+  t1.set_parent(root_object);
+  t2.set_parent(root_object);
 
   t1.NewItem(10);
   t1.NewItem(100);
@@ -92,13 +95,16 @@ int main(int argc, const char** argv) {
   Table subtable3("subtable3");
   subtable2.set_parent(t1.object_dir());
   subtable2.set_parent(invalid);
-
-  context->outgoing().object_dir()->set_children_callback(
-      [](component::Object::ObjectVector* out) {
-        auto dir = component::ObjectDir::Make("lazy_child");
-        dir.set_prop("version", "1");
-        out->push_back(dir.object());
-      });
+  root_object.set_children_callback([](component::Object::ObjectVector* out) {
+    auto dir = component::ObjectDir::Make("lazy_child");
+    dir.set_prop("version", "1");
+    out->push_back(dir.object());
+  });
+  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+  context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
+      fuchsia::inspect::Inspect::Name_,
+      std::make_unique<vfs::Service>(
+          inspect_bindings_.GetHandler(root_object.object().get())));
 
   loop.Run();
   return 0;

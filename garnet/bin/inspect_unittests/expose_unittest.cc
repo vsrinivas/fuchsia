@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/component/cpp/expose.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/testing/inspect.h>
 
 #include "gmock/gmock.h"

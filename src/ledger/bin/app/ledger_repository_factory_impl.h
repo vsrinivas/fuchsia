@@ -12,7 +12,7 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/managed_container.h>
-#include <lib/component/cpp/expose.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/inspect.h>
 
 #include <memory>

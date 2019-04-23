@@ -95,7 +95,7 @@ This interface supports exposing objects using the fuchsia.inspect.Inspect
 FIDL interface. The main feature this supports over the VMO solution is
 dynamic children and values, though these features are planned for VMO.
 
-## [Object Wrapper](/garnet/public/lib/component/cpp/expose.h)
+## [Object Wrapper](/garnet/public/lib/inspect/deprecated/expose.h)
 
 Class `Object` is the implementation of an object in C++. It implements
 the `Vnode` and `Inspect` interfaces to expose the object through the
@@ -120,7 +120,7 @@ children and on-demand children provided by callback.
 `Metric` allows for typed addition and subtraction. The `Set*` methods set
 the type of the metric, and arithmetic operations do not modify this type.
 
-## [ObjectDir](/garnet/public/lib/component/cpp/object_dir.h)
+## [ObjectDir](/garnet/public/lib/inspect/deprecated/object_dir.h)
 
 Class `ObjectDir` is a lightweight wrapper around a refcounted pointer
 to an `Object`. `ObjectDirs` are safe to copy, and provide a stable
@@ -129,7 +129,7 @@ reference to a single object.
 `ObjectDir` simplifies traversing a tree of objects by name and setting
 properties/metrics on those objects with a STL-style wrapper.
 
-## [ExposedObject](/garnet/public/lib/component/cpp/exposed_object.h)
+## [ExposedObject](/garnet/public/lib/inspect/deprecated/exposed_object.h)
 
 Class `ExposedObject` is a base class simplifying management of complex
 persistent hierarchies of objects. It is the recommended implementation

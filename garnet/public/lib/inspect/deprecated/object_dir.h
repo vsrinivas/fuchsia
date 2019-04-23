@@ -5,10 +5,10 @@
 // !!! DEPRECATED !!!
 // New usages should reference garnet/public/lib/inpect/cpp...
 
-#ifndef LIB_COMPONENT_CPP_OBJECT_DIR_H_
-#define LIB_COMPONENT_CPP_OBJECT_DIR_H_
+#ifndef LIB_INSPECT_DEPRECATED_OBJECT_DIR_H_
+#define LIB_INSPECT_DEPRECATED_OBJECT_DIR_H_
 
-#include "expose.h"
+#include <lib/inspect/deprecated/expose.h>
 
 namespace component {
 
@@ -140,4 +140,4 @@ class ObjectDir {
 
 }  // namespace component
 
-#endif  // LIB_COMPONENT_CPP_OBJECT_DIR_H_
+#endif  // LIB_INSPECT_DEPRECATED_OBJECT_DIR_H_

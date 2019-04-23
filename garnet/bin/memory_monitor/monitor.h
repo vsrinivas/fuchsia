@@ -7,8 +7,8 @@
 
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/object_dir.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/inspect/deprecated/object_dir.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
 #include <trace/observer.h>

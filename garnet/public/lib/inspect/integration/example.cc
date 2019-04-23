@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fit/defer.h"
-#include "lib/inspect/inspect.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/defer.h>
+#include <lib/inspect/deprecated/object_dir.h>
+#include <lib/inspect/inspect.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <string>
 
@@ -288,10 +289,16 @@ int main(int argc, const char** argv) {
   // Standard component setup, create an event loop and obtain the
   // |StartupContext|.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
-  // Create a root object from the context's object_dir.
-  inspect::Object root_object(*context->outgoing().object_dir());
+  // Create a root object and bind it to out/
+  auto root_object_dir = component::ObjectDir::Make("root");
+  inspect::Object root_object(root_object_dir);
+  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+  context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
+      fuchsia::inspect::Inspect::Name_,
+      std::make_unique<vfs::Service>(
+          inspect_bindings_.GetHandler(root_object_dir.object().get())));
 
   // Create global metrics and globally publish pointers to them.
   auto employee_count = root_object.CreateUIntMetric("employee_count", 0);

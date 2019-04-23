@@ -13,7 +13,6 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/inspect",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -28,7 +27,6 @@ executable("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/files",
     "//src/lib/fxl",

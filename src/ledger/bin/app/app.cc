@@ -6,9 +6,9 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/component/cpp/object_dir.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/deprecated/object_dir.h>
 #include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>

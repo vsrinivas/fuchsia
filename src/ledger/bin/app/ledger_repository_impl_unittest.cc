@@ -7,10 +7,10 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/component/cpp/expose.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/hierarchy.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>

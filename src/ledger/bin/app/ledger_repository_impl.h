@@ -8,9 +8,9 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
-#include <lib/component/cpp/expose.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/inspect.h>
 
 #include "peridot/lib/convert/convert.h"

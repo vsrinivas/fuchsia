@@ -2,31 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <random>
-#include <vector>
-
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <perftest/perftest.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
 #include <iostream>
+#include <random>
 #include <sstream>
+#include <vector>
 
-#include "lib/component/cpp/exposed_object.h"
+#include "lib/inspect/deprecated/exposed_object.h"
 
 namespace {
 
 using ByteVector = component::Property::ByteVector;
-using component::ObjectPath;
-using component::Metric;
-using component::IntMetric;
-using component::UIntMetric;
-using component::DoubleMetric;
 using component::CallbackMetric;
-using component::Property;
+using component::DoubleMetric;
+using component::IntMetric;
+using component::Metric;
 using component::Object;
+using component::ObjectPath;
+using component::Property;
+using component::UIntMetric;
 
 const char kValue[] = "value";
 const int kSmallPropertySize = 8;
@@ -38,14 +37,14 @@ const ObjectPath kPath10 = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
 class NumericItem : public component::ExposedObject {
  public:
-  NumericItem(ObjectPath path) : ExposedObject(UniqueName("itemN-")), path_{std::move(path)} {
+  NumericItem(ObjectPath path)
+      : ExposedObject(UniqueName("itemN-")), path_{std::move(path)} {
     object_dir().set_metric(path_, kValue, component::IntMetric(0));
   }
   NumericItem() : NumericItem(ObjectPath()) {}
 
-  void increment() {
-    object_dir().add_metric(path_, kValue, 1);
-  }
+  void increment() { object_dir().add_metric(path_, kValue, 1); }
+
  private:
   ObjectPath path_;
 };
@@ -55,8 +54,12 @@ class PropertyItem : public component::ExposedObject {
   PropertyItem() : ExposedObject(UniqueName("itemS-")) {
     object_dir().set_prop(kValue, component::Property());
   }
-  void set(std::string str_value) { object_dir().set_prop(kValue, std::move(str_value)); }
-  void set(ByteVector vector_value) { object_dir().set_prop(kValue, std::move(vector_value)); }
+  void set(std::string str_value) {
+    object_dir().set_prop(kValue, std::move(str_value));
+  }
+  void set(ByteVector vector_value) {
+    object_dir().set_prop(kValue, std::move(vector_value));
+  }
 };
 
 // Measure the time taken to create and destroy metrics and properties.
@@ -306,14 +309,16 @@ bool TestCallbackMetricLifecycle(perftest::RepeatState* state) {
   state->DeclareStep("Create");
   state->DeclareStep("Destroy");
   while (state->KeepRunning()) {
-    Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+    Metric item =
+        CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
     state->NextStep();
   }
   return true;
 }
 
 bool TestCallbackMetricSet(perftest::RepeatState* state) {
-  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  Metric item =
+      CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
   while (state->KeepRunning()) {
     item.SetCallback([](Metric* out_metric) { out_metric->SetInt(10); });
   }
@@ -321,7 +326,8 @@ bool TestCallbackMetricSet(perftest::RepeatState* state) {
 }
 
 bool TestCallbackMetricToString(perftest::RepeatState* state) {
-  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  Metric item =
+      CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
   while (state->KeepRunning()) {
     perftest::DoNotOptimize(item.ToString());
   }
@@ -329,7 +335,8 @@ bool TestCallbackMetricToString(perftest::RepeatState* state) {
 }
 
 bool TestCallbackMetricToFidl(perftest::RepeatState* state) {
-  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  Metric item =
+      CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
   while (state->KeepRunning()) {
     perftest::DoNotOptimize(item.ToFidl("a_name"));
   }
@@ -506,7 +513,7 @@ bool TestObjectChildrenCallback(perftest::RepeatState* state) {
   state->DeclareStep("SetCallback");
   state->DeclareStep("RemoveCallback");
   while (state->KeepRunning()) {
-    parent->SetChildrenCallback([] (auto vector) { });
+    parent->SetChildrenCallback([](auto vector) {});
     state->NextStep();
     parent->ClearChildrenCallback();
   }
@@ -524,25 +531,36 @@ bool TestObjectToFidl(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
-  perftest::RegisterTest("Expose/ExposedObject/Lifecycle", TestExposedObjectLifecycle);
-  perftest::RegisterTest("Expose/ExposedObject/Increment", TestExposedObjectIncrement);
-  perftest::RegisterTest("Expose/ExposedObject/Parenting", TestExposedObjectParenting);
-  perftest::RegisterTest("Expose/ExposedObject/Path/0", TestIncrementPath, kPath0);
-  perftest::RegisterTest("Expose/ExposedObject/Path/1", TestIncrementPath, kPath1);
-  perftest::RegisterTest("Expose/ExposedObject/Path/2", TestIncrementPath, kPath2);
-  perftest::RegisterTest("Expose/ExposedObject/Path/10", TestIncrementPath, kPath10);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetString/%d",
-                                           kSmallPropertySize).c_str(),
-                         TestExposedObjectSetString, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetString/%d",
-                                           kLargePropertySize).c_str(),
-                         TestExposedObjectSetString, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetVector/%d",
-                                           kSmallPropertySize).c_str(),
-                         TestExposedObjectSetVector, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetVector/%d",
-                                           kLargePropertySize).c_str(),
-                         TestExposedObjectSetVector, kLargePropertySize);
+  perftest::RegisterTest("Expose/ExposedObject/Lifecycle",
+                         TestExposedObjectLifecycle);
+  perftest::RegisterTest("Expose/ExposedObject/Increment",
+                         TestExposedObjectIncrement);
+  perftest::RegisterTest("Expose/ExposedObject/Parenting",
+                         TestExposedObjectParenting);
+  perftest::RegisterTest("Expose/ExposedObject/Path/0", TestIncrementPath,
+                         kPath0);
+  perftest::RegisterTest("Expose/ExposedObject/Path/1", TestIncrementPath,
+                         kPath1);
+  perftest::RegisterTest("Expose/ExposedObject/Path/2", TestIncrementPath,
+                         kPath2);
+  perftest::RegisterTest("Expose/ExposedObject/Path/10", TestIncrementPath,
+                         kPath10);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/ExposedObject/SetString/%d", kSmallPropertySize)
+          .c_str(),
+      TestExposedObjectSetString, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/ExposedObject/SetString/%d", kLargePropertySize)
+          .c_str(),
+      TestExposedObjectSetString, kLargePropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/ExposedObject/SetVector/%d", kSmallPropertySize)
+          .c_str(),
+      TestExposedObjectSetVector, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/ExposedObject/SetVector/%d", kLargePropertySize)
+          .c_str(),
+      TestExposedObjectSetVector, kLargePropertySize);
 
   perftest::RegisterTest("Expose/IntMetric/Lifecycle", TestIntMetricLifecycle);
   perftest::RegisterTest("Expose/IntMetric/Set", TestIntMetricSet);
@@ -551,74 +569,97 @@ void RegisterTests() {
   perftest::RegisterTest("Expose/IntMetric/ToString", TestIntMetricToString);
   perftest::RegisterTest("Expose/IntMetric/ToFidl", TestIntMetricToFidl);
 
-  perftest::RegisterTest("Expose/UIntMetric/Lifecycle", TestUIntMetricLifecycle);
+  perftest::RegisterTest("Expose/UIntMetric/Lifecycle",
+                         TestUIntMetricLifecycle);
   perftest::RegisterTest("Expose/UIntMetric/Set", TestUIntMetricSet);
   perftest::RegisterTest("Expose/UIntMetric/Add", TestUIntMetricAdd);
   perftest::RegisterTest("Expose/UIntMetric/Sub", TestUIntMetricSub);
   perftest::RegisterTest("Expose/UIntMetric/ToString", TestUIntMetricToString);
   perftest::RegisterTest("Expose/UIntMetric/ToFidl", TestUIntMetricToFidl);
 
-  perftest::RegisterTest("Expose/DoubleMetric/Lifecycle", TestDoubleMetricLifecycle);
+  perftest::RegisterTest("Expose/DoubleMetric/Lifecycle",
+                         TestDoubleMetricLifecycle);
   perftest::RegisterTest("Expose/DoubleMetric/Set", TestDoubleMetricSet);
   perftest::RegisterTest("Expose/DoubleMetric/Add", TestDoubleMetricAdd);
   perftest::RegisterTest("Expose/DoubleMetric/Sub", TestDoubleMetricSub);
-  perftest::RegisterTest("Expose/DoubleMetric/ToString", TestDoubleMetricToString);
+  perftest::RegisterTest("Expose/DoubleMetric/ToString",
+                         TestDoubleMetricToString);
   perftest::RegisterTest("Expose/DoubleMetric/ToFidl", TestDoubleMetricToFidl);
 
-  perftest::RegisterTest("Expose/CallbackMetric/Lifecycle", TestCallbackMetricLifecycle);
+  perftest::RegisterTest("Expose/CallbackMetric/Lifecycle",
+                         TestCallbackMetricLifecycle);
   perftest::RegisterTest("Expose/CallbackMetric/Set", TestCallbackMetricSet);
-  perftest::RegisterTest("Expose/CallbackMetric/ToString", TestCallbackMetricToString);
-  perftest::RegisterTest("Expose/CallbackMetric/ToFidl", TestCallbackMetricToFidl);
+  perftest::RegisterTest("Expose/CallbackMetric/ToString",
+                         TestCallbackMetricToString);
+  perftest::RegisterTest("Expose/CallbackMetric/ToFidl",
+                         TestCallbackMetricToFidl);
 
   perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/Lifecycle/%d",
-                                           kSmallPropertySize).c_str(),
+                                           kSmallPropertySize)
+                             .c_str(),
                          TestStringPropertyLifecycle, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/Set/%d",
-                                           kSmallPropertySize).c_str(),
-                         TestStringPropertySet, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/ToFidl/%d",
-                                           kSmallPropertySize).c_str(),
-                       TestStringPropertyToFidl, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/StringProperty/Set/%d", kSmallPropertySize)
+          .c_str(),
+      TestStringPropertySet, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/StringProperty/ToFidl/%d", kSmallPropertySize)
+          .c_str(),
+      TestStringPropertyToFidl, kSmallPropertySize);
 
   perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/Lifecycle/%d",
-                                           kLargePropertySize).c_str(),
+                                           kLargePropertySize)
+                             .c_str(),
                          TestStringPropertyLifecycle, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/Set/%d",
-                                           kLargePropertySize).c_str(),
-                         TestStringPropertySet, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/StringProperty/ToFidl/%d",
-                                           kLargePropertySize).c_str(),
-                       TestStringPropertyToFidl, kLargePropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/StringProperty/Set/%d", kLargePropertySize)
+          .c_str(),
+      TestStringPropertySet, kLargePropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/StringProperty/ToFidl/%d", kLargePropertySize)
+          .c_str(),
+      TestStringPropertyToFidl, kLargePropertySize);
 
   perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/Lifecycle/%d",
-                                           kSmallPropertySize).c_str(),
-                       TestVectorPropertyLifecycle, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/Set/%d",
-                                           kSmallPropertySize).c_str(),
-                       TestVectorPropertySet, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/ToFidl/%d",
-                                           kSmallPropertySize).c_str(),
-                       TestVectorPropertyToFidl, kSmallPropertySize);
+                                           kSmallPropertySize)
+                             .c_str(),
+                         TestVectorPropertyLifecycle, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/VectorProperty/Set/%d", kSmallPropertySize)
+          .c_str(),
+      TestVectorPropertySet, kSmallPropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/VectorProperty/ToFidl/%d", kSmallPropertySize)
+          .c_str(),
+      TestVectorPropertyToFidl, kSmallPropertySize);
 
   perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/Lifecycle/%d",
-                                           kLargePropertySize).c_str(),
-                       TestVectorPropertyLifecycle, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/Set/%d",
-                                           kLargePropertySize).c_str(),
-                       TestVectorPropertySet, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Expose/VectorProperty/ToFidl/%d",
-                                           kLargePropertySize).c_str(),
-                       TestVectorPropertyToFidl, kLargePropertySize);
+                                           kLargePropertySize)
+                             .c_str(),
+                         TestVectorPropertyLifecycle, kLargePropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/VectorProperty/Set/%d", kLargePropertySize)
+          .c_str(),
+      TestVectorPropertySet, kLargePropertySize);
+  perftest::RegisterTest(
+      fxl::StringPrintf("Expose/VectorProperty/ToFidl/%d", kLargePropertySize)
+          .c_str(),
+      TestVectorPropertyToFidl, kLargePropertySize);
 
-  perftest::RegisterTest("Expose/CallbackProperty/Lifecycle", TestCallbackPropertyLifecycle);
-  perftest::RegisterTest("Expose/CallbackProperty/Set", TestCallbackPropertySet);
+  perftest::RegisterTest("Expose/CallbackProperty/Lifecycle",
+                         TestCallbackPropertyLifecycle);
+  perftest::RegisterTest("Expose/CallbackProperty/Set",
+                         TestCallbackPropertySet);
 
   perftest::RegisterTest("Expose/Object/Lifecycle", TestObjectLifecycle);
   perftest::RegisterTest("Expose/Object/Parenting", TestObjectParenting);
-  perftest::RegisterTest("Expose/Object/MetricOperations", TestObjectMetricOperations);
-  perftest::RegisterTest("Expose/Object/PropertyOperations", TestObjectPropertyOperations);
+  perftest::RegisterTest("Expose/Object/MetricOperations",
+                         TestObjectMetricOperations);
+  perftest::RegisterTest("Expose/Object/PropertyOperations",
+                         TestObjectPropertyOperations);
   perftest::RegisterTest("Expose/Object/ToFidl", TestObjectToFidl);
-  perftest::RegisterTest("Expose/Object/ChildrenCallback", TestObjectChildrenCallback);
+  perftest::RegisterTest("Expose/Object/ChildrenCallback",
+                         TestObjectChildrenCallback);
 }
 PERFTEST_CTOR(RegisterTests);
 

@@ -12,11 +12,11 @@
 #include <fs/service.h>
 #include <lib/fidl/cpp/thread_safe_binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/deprecated/object_dir.h>
 
 #include <memory>
 
 #include "lib/svc/cpp/service_namespace.h"
-#include "object_dir.h"
 
 namespace component {
 

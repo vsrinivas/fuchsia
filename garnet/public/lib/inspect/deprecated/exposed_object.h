@@ -5,10 +5,10 @@
 // !!! DEPRECATED !!!
 // New usages should reference garnet/public/lib/inpect/cpp...
 
-#ifndef LIB_COMPONENT_CPP_EXPOSED_OBJECT_H_
-#define LIB_COMPONENT_CPP_EXPOSED_OBJECT_H_
+#ifndef LIB_INSPECT_DEPRECATED_EXPOSED_OBJECT_H_
+#define LIB_INSPECT_DEPRECATED_EXPOSED_OBJECT_H_
 
-#include "object_dir.h"
+#include <lib/inspect/deprecated/object_dir.h>
 
 namespace component {
 
@@ -69,4 +69,4 @@ class ExposedObject {
 
 }  // namespace component
 
-#endif  // LIB_COMPONENT_CPP_EXPOSED_OBJECT_H_
+#endif  // LIB_INSPECT_DEPRECATED_EXPOSED_OBJECT_H_
