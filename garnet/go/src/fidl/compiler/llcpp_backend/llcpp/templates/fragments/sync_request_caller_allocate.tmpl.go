@@ -21,8 +21,33 @@ const SyncRequestCallerAllocate = `
   {{- end -}}
 {{- end }}
 
+{{- define "StaticCallSyncRequestCallerAllocateMethodSignature" -}}
+  {{- if .Response -}}
+{{ .Name }}(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer, {{ template "OutParams" .Response }})
+  {{- else -}}
+{{ .Name }}(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }})
+  {{- end -}}
+{{- end }}
+
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCallerAllocateMethodSignature" . }} {
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+    {{- if or .Request .Response }}, {{ end }}
+    {{- if .Request -}}
+      std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
+    {{- end }}
+    {{- if and .Request .Response }}, {{ end }}
+    {{- if .Response -}}
+      std::move(_response_buffer), {{ range $index, $param := .Response -}}
+        {{- if $index }}, {{ end -}} out_{{ $param.Name }}
+      {{- end -}}
+    {{- end -}}
+  );
+}
+{{- end }}
+
+{{- define "StaticCallSyncRequestCallerAllocateMethodDefinition" }}
+zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }} {
   {{- if not .Request }}
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
@@ -60,7 +85,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
     {{- end }}
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -74,7 +99,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
     {{- template "ReturnResponseStructMembers" .Response }}
   return ZX_OK;
   {{- else }}
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

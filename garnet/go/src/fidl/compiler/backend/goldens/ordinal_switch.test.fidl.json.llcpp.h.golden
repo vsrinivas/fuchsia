@@ -41,6 +41,16 @@ class SwitchingOrdinals final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t OrdinalFive(zx::unowned_channel _client_end);
+
+    static zx_status_t OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

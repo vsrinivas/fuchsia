@@ -177,6 +177,57 @@ class DirEntTestInterface final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Iterate over the dirents and return the number of directories within them.
+    static zx_status_t CountNumDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, int64_t* out_num_dir);
+
+    // Iterate over the dirents and return the number of directories within them.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
+
+    // Iterate over the dirents and return the number of directories within them.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer);
+
+
+    // Return a vector of dirents. Empty request. Response may stack-allocate.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
+
+    // Return a vector of dirents. Empty request. Response may stack-allocate.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<ReadDirResponse> ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Consume dirents. Empty response. Request may stack-allocate.
+    static zx_status_t ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents);
+
+    // Consume dirents. Empty response. Request may stack-allocate.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
+
+    // Consume dirents. Empty response. Request may stack-allocate.
+    // Messages are encoded and decoded in-place.
+    static zx_status_t ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeDirectoriesRequest> params);
+
+    // Binding will not wait for response.
+    // But here we send an eventpair which the server will signal upon receipt of message.
+    static zx_status_t OneWayDirents(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
+
+    // Binding will not wait for response.
+    // But here we send an eventpair which the server will signal upon receipt of message.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t OneWayDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
+
+    // Binding will not wait for response.
+    // But here we send an eventpair which the server will signal upon receipt of message.
+    // Messages are encoded and decoded in-place.
+    static zx_status_t OneWayDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

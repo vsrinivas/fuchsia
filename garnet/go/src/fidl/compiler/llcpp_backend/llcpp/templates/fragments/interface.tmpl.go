@@ -149,6 +149,39 @@ class {{ .Name }} final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+{{ "" }}
+    {{- range .Methods }}
+      {{- /* Client-calling functions do not apply to events. */}}
+      {{- if not .HasRequest -}} {{ continue }} {{- end -}}
+      {{- if .LLProps.CBindingCompatible }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    static zx_status_t {{ template "StaticCallSyncRequestCFlavorMethodSignature" . }};
+      {{- end }}
+{{ "" }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t {{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }};
+{{ "" }}
+      {{- end }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Messages are encoded and decoded in-place.
+    static {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "StaticCallSyncRequestInPlaceMethodSignature" . }};
+{{ "" }}
+      {{- end }}
+    {{- end }}
+  };
+
   {{- if .Methods }}
 {{ "" }}
   // Pure-virtual interface to be implemented by a server.
@@ -313,14 +346,20 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- if .LLProps.CBindingCompatible }}
 {{ "" }}
     {{- template "SyncRequestCFlavorMethodDefinition" . }}
+{{ "" }}
+    {{- template "StaticCallSyncRequestCFlavorMethodDefinition" . }}
   {{- end }}
   {{- if or .Request .Response }}
 {{ "" }}
     {{- template "SyncRequestCallerAllocateMethodDefinition" . }}
+{{ "" }}
+    {{- template "StaticCallSyncRequestCallerAllocateMethodDefinition" . }}
   {{- end }}
   {{- if or .Request .Response }}
 {{ "" }}
     {{- template "SyncRequestInPlaceMethodDefinition" . }}
+{{ "" }}
+    {{- template "StaticCallSyncRequestInPlaceMethodDefinition" . }}
   {{- end }}
 {{ "" }}
 {{- end }}

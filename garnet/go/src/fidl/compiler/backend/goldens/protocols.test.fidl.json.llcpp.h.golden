@@ -260,6 +260,36 @@ class KitchenSink final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -437,6 +467,36 @@ class ChannelProtocol final {
 
    private:
     ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -618,6 +678,36 @@ class SocketControlProtocol final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -795,6 +885,36 @@ class OvernetInternalProtocol final {
 
    private:
     ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -993,6 +1113,46 @@ class WithAndWithoutRequestResponse final {
 
    private:
     ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t NoRequestNoResponse(zx::unowned_channel _client_end);
+
+    static zx_status_t NoRequestEmptyResponse(zx::unowned_channel _client_end);
+
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static zx_status_t WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
+
+    static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
+
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1242,6 +1402,28 @@ class WithErrorSyntax final {
 
    private:
     ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t ErrorAsPrimitive(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static zx_status_t ErrorAsEnum(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsEnum_Result* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.

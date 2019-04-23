@@ -80,6 +80,41 @@ class ControlFlow final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Shutdown the server without a reply.
+    // The server should unbind the channel from the dispatch loop, closing it.
+    static zx_status_t Shutdown(zx::unowned_channel _client_end);
+
+    // Calling this method generates no reply and a epitaph with error set to
+    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // This tests sending an epitaph from the one-way method call handler.
+    static zx_status_t NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    static zx_status_t MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, int32_t* out_reply);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_reply);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

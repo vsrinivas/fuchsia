@@ -220,6 +220,37 @@ class TestInterface final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    static zx_status_t ConsumeSimpleStruct(zx::unowned_channel _client_end, SimpleStruct arg, int32_t* out_status, int32_t* out_field);
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
+
+    // Loops back the field which is set, along with its index.
+    static zx_status_t ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
+
+    // Loops back the field which is set, along with its index.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
+
+    // Loops back the field which is set, along with its index.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

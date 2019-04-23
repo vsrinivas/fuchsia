@@ -115,6 +115,44 @@ class Parent final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    static zx_status_t GetChild(zx::unowned_channel _client_end, ::zx::channel* out_c);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<GetChildResponse> GetChild(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static zx_status_t GetChildRequest(zx::unowned_channel _client_end, ::zx::channel* out_r);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static zx_status_t TakeChild(zx::unowned_channel _client_end, ::zx::channel c);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t TakeChild(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel c);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t TakeChild(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequest> params);
+
+    static zx_status_t TakeChildRequest(zx::unowned_channel _client_end, ::zx::channel r);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t TakeChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel r);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t TakeChildRequest(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequestRequest> params);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -193,6 +231,12 @@ class Child final {
 
    private:
     ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
   };
 };
 

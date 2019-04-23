@@ -17,6 +17,12 @@ const SyncRequestCFlavor = `
   {{- end -}}
 {{- end }}
 
+{{- define "SyncClientMoveParams" }}
+  {{- range $index, $param := . }}
+    {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
+  {{- end }}
+{{- end }}
+
 {{- define "SyncRequestCFlavorMethodSignature" -}}
   {{- if .Response -}}
 {{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
@@ -25,8 +31,29 @@ const SyncRequestCFlavor = `
   {{- end -}}
 {{- end }}
 
+{{- define "StaticCallSyncRequestCFlavorMethodSignature" -}}
+  {{- if .Response -}}
+{{ .Name }}(zx::unowned_channel _client_end, {{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
+  {{- else -}}
+{{ .Name }}(zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }})
+  {{- end -}}
+{{- end }}
+
 {{- define "SyncRequestCFlavorMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCFlavorMethodSignature" . }} {
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+    {{- if or .Request .Response }}, {{ end }}
+    {{- template "SyncClientMoveParams" .Request }}
+    {{- if and .Request .Response }}, {{ end }}
+    {{- range $index, $param := .Response -}}
+      {{- if $index }}, {{ end -}} out_{{ $param.Name }}
+    {{- end -}}
+  );
+}
+{{- end }}
+
+{{- define "StaticCallSyncRequestCFlavorMethodDefinition" }}
+zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncRequestCFlavorMethodSignature" . }} {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request>();
 
   {{- if .LLProps.StackAllocRequest }}
@@ -62,6 +89,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
 
   {{- if .HasResponse }}
 
+  {{- /* Has response */}}
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
   {{- if .LLProps.StackAllocResponse }}
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
@@ -71,7 +99,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
   {{- end }}
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -86,7 +114,9 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
   return ZX_OK;
 
   {{- else }}
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+
+  {{- /* Does not have response */}}
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

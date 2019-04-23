@@ -224,13 +224,13 @@ struct SelectResponseType {
                                                   ResponseType>::type;
 };
 
-// Perform a synchronous FIDL channel call.
+// Perform a synchronous FIDL channel call. This overload takes a |zx::unowned_channel|.
 // Sends the request message down the channel, then waits for the desired reply message, and
 // wraps it in an EncodeResult for the response type.
 // If |RequestType| is |AnyZeroArgMessage|, the caller may explicitly specify an expected response
 // type by overriding the template parameter |ResponseType|.
 template <typename RequestType, typename ResponseType = typename RequestType::ResponseType>
-EncodeResult<ResponseType> Call(zx::channel& chan,
+EncodeResult<ResponseType> Call(zx::unowned_channel chan,
                                 EncodedMessage<RequestType> request,
                                 BytePart response_buffer) {
     static_assert(IsFidlMessage<RequestType>::value, "FIDL transactional message type required");
@@ -255,7 +255,7 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
 
         uint32_t actual_num_bytes = 0u;
         uint32_t actual_num_handles = 0u;
-        result.status = chan.call(
+        result.status = chan->call(
             0u, zx::time::infinite(), &args, &actual_num_bytes, &actual_num_handles);
         request.ReleaseBytesAndHandles();
         if (result.status != ZX_OK) {
@@ -266,6 +266,20 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
         handles.set_actual(actual_num_handles);
     });
     return result;
+}
+
+// Perform a synchronous FIDL channel call. This overload takes a |zx::channel&|.
+// Sends the request message down the channel, then waits for the desired reply message, and
+// wraps it in an EncodeResult for the response type.
+// If |RequestType| is |AnyZeroArgMessage|, the caller may explicitly specify an expected response
+// type by overriding the template parameter |ResponseType|.
+template <typename RequestType, typename ResponseType = typename RequestType::ResponseType>
+EncodeResult<ResponseType> Call(zx::channel& chan,
+                                EncodedMessage<RequestType> request,
+                                BytePart response_buffer) {
+    return Call<RequestType, ResponseType>(zx::unowned_channel(chan),
+                                           std::move(request),
+                                           std::move(response_buffer));
 }
 
 #endif

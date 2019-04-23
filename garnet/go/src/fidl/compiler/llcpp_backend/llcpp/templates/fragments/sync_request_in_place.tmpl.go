@@ -9,9 +9,25 @@ const SyncRequestInPlace = `
 {{ .Name }}({{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
+{{- define "StaticCallSyncRequestInPlaceMethodSignature" -}}
+{{ .Name }}(zx::unowned_channel _client_end, {{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
+{{- end }}
+
 {{- define "SyncRequestInPlaceMethodDefinition" }}
 {{- $interface_name := .LLProps.InterfaceName }}
 {{ if .Response }}::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface_name }}::SyncClient::{{ template "SyncRequestInPlaceMethodSignature" . }} {
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+    {{- if or .Request .Response }}, {{ end }}
+    {{- if .Request }}std::move(params){{ end -}}
+    {{- if and .Request .Response }}, {{ end -}}
+    {{- if .Response }}std::move(response_buffer){{ end -}}
+  );
+}
+{{- end }}
+
+{{- define "StaticCallSyncRequestInPlaceMethodDefinition" }}
+{{- $interface_name := .LLProps.InterfaceName }}
+{{ if .Response }}::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface_name }}::Call::{{ template "StaticCallSyncRequestInPlaceMethodSignature" . }} {
   {{- if not .Request }}
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
   constexpr uint32_t _write_num_bytes = sizeof({{ .Name }}Request);
@@ -38,7 +54,7 @@ const SyncRequestInPlace = `
   ::fidl::BytePart response_buffer(_read_bytes, sizeof(_read_bytes));
     {{- end }}
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     {{- if .Response }}
     return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>(
@@ -56,7 +72,7 @@ const SyncRequestInPlace = `
   return _decode_result.status;
     {{- end }}
   {{- else }}
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

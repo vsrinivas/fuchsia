@@ -29,6 +29,10 @@ extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDir
 }  // namespace
 
 zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::VectorView<DirEnt> dirents, int64_t* out_num_dir) {
+  return DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel(this->channel_), std::move(dirents), out_num_dir);
+}
+
+zx_status_t DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, int64_t* out_num_dir) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CountNumDirectoriesRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -45,12 +49,11 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::VectorV
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<CountNumDirectoriesResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<CountNumDirectoriesRequest, CountNumDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -64,6 +67,10 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::VectorV
 }
 
 zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir) {
+  return DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(dirents), std::move(_response_buffer), out_num_dir);
+}
+
+zx_status_t DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir) {
   if (_request_buffer.capacity() < CountNumDirectoriesRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -80,7 +87,7 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::BytePar
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<CountNumDirectoriesRequest, CountNumDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -94,6 +101,10 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::BytePar
 }
 
 ::fidl::DecodeResult<DirEntTestInterface::CountNumDirectoriesResponse> DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer) {
+  return DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<DirEntTestInterface::CountNumDirectoriesResponse> DirEntTestInterface::Call::CountNumDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -104,7 +115,7 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::BytePar
       ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesResponse>());
   }
   auto _call_result = ::fidl::Call<CountNumDirectoriesRequest, CountNumDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirEntTestInterface::CountNumDirectoriesResponse>(
       _call_result.status,
@@ -116,6 +127,10 @@ zx_status_t DirEntTestInterface::SyncClient::CountNumDirectories(::fidl::BytePar
 
 
 zx_status_t DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents) {
+  return DirEntTestInterface::Call::ReadDir(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_dirents);
+}
+
+zx_status_t DirEntTestInterface::Call::ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadDirRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ReadDirRequest*>(_request_buffer.data());
@@ -127,7 +142,7 @@ zx_status_t DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart _response_
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<ReadDirRequest, ReadDirResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -141,6 +156,10 @@ zx_status_t DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart _response_
 }
 
 ::fidl::DecodeResult<DirEntTestInterface::ReadDirResponse> DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart response_buffer) {
+  return DirEntTestInterface::Call::ReadDir(zx::unowned_channel(this->channel_), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<DirEntTestInterface::ReadDirResponse> DirEntTestInterface::Call::ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadDirRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ReadDirRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -155,7 +174,7 @@ zx_status_t DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart _response_
       ::fidl::DecodedMessage<DirEntTestInterface::ReadDirResponse>());
   }
   auto _call_result = ::fidl::Call<ReadDirRequest, ReadDirResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirEntTestInterface::ReadDirResponse>(
       _call_result.status,
@@ -167,6 +186,10 @@ zx_status_t DirEntTestInterface::SyncClient::ReadDir(::fidl::BytePart _response_
 
 
 zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::VectorView<DirEnt> dirents) {
+  return DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel(this->channel_), std::move(dirents));
+}
+
+zx_status_t DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeDirectoriesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   ConsumeDirectoriesRequest _request = {};
@@ -182,12 +205,11 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::VectorVi
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeDirectoriesResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ConsumeDirectoriesRequest, ConsumeDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -199,6 +221,10 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::VectorVi
 }
 
 zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents) {
+  return DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(dirents));
+}
+
+zx_status_t DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents) {
   if (_request_buffer.capacity() < ConsumeDirectoriesRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -218,7 +244,7 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::BytePart
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<ConsumeDirectoriesRequest, ConsumeDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -230,6 +256,10 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::BytePart
 }
 
 zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::DecodedMessage<ConsumeDirectoriesRequest> params) {
+  return DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t DirEntTestInterface::Call::ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeDirectoriesRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -240,7 +270,7 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::DecodedM
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<ConsumeDirectoriesRequest, ConsumeDirectoriesResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -250,6 +280,10 @@ zx_status_t DirEntTestInterface::SyncClient::ConsumeDirectories(::fidl::DecodedM
 
 
 zx_status_t DirEntTestInterface::SyncClient::OneWayDirents(::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep) {
+  return DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel(this->channel_), std::move(dirents), std::move(ep));
+}
+
+zx_status_t DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OneWayDirentsRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -267,10 +301,14 @@ zx_status_t DirEntTestInterface::SyncClient::OneWayDirents(::fidl::VectorView<Di
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t DirEntTestInterface::SyncClient::OneWayDirents(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep) {
+  return DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(dirents), std::move(ep));
+}
+
+zx_status_t DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep) {
   if (_request_buffer.capacity() < OneWayDirentsRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -287,17 +325,21 @@ zx_status_t DirEntTestInterface::SyncClient::OneWayDirents(::fidl::BytePart _req
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t DirEntTestInterface::SyncClient::OneWayDirents(::fidl::DecodedMessage<OneWayDirentsRequest> params) {
+  return DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDirEntTestInterface_OneWayDirents_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 

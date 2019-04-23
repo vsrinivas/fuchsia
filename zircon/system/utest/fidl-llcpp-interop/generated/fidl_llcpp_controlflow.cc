@@ -20,6 +20,10 @@ constexpr uint32_t kControlFlow_MustSendAccessDeniedEpitaph_Ordinal = 1394461447
 }  // namespace
 
 zx_status_t ControlFlow::SyncClient::Shutdown() {
+  return ControlFlow::Call::Shutdown(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t ControlFlow::Call::Shutdown(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ShutdownRequest*>(_write_bytes);
@@ -30,11 +34,15 @@ zx_status_t ControlFlow::SyncClient::Shutdown() {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t ControlFlow::SyncClient::NoReplyMustSendAccessDeniedEpitaph() {
+  return ControlFlow::Call::NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t ControlFlow::Call::NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoReplyMustSendAccessDeniedEpitaphRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoReplyMustSendAccessDeniedEpitaphRequest*>(_write_bytes);
@@ -45,11 +53,15 @@ zx_status_t ControlFlow::SyncClient::NoReplyMustSendAccessDeniedEpitaph() {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(int32_t* out_reply) {
+  return ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel(this->channel_), out_reply);
+}
+
+zx_status_t ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, int32_t* out_reply) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MustSendAccessDeniedEpitaphRequest*>(_write_bytes);
@@ -60,12 +72,11 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(int32_t* out_re
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MustSendAccessDeniedEpitaphRequest, MustSendAccessDeniedEpitaphResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -79,6 +90,10 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(int32_t* out_re
 }
 
 zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(::fidl::BytePart _response_buffer, int32_t* out_reply) {
+  return ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_reply);
+}
+
+zx_status_t ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_reply) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MustSendAccessDeniedEpitaphRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<MustSendAccessDeniedEpitaphRequest*>(_request_buffer.data());
@@ -90,7 +105,7 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(::fidl::BytePar
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MustSendAccessDeniedEpitaphRequest, MustSendAccessDeniedEpitaphResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -104,6 +119,10 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(::fidl::BytePar
 }
 
 ::fidl::DecodeResult<ControlFlow::MustSendAccessDeniedEpitaphResponse> ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(::fidl::BytePart response_buffer) {
+  return ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel(this->channel_), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<ControlFlow::MustSendAccessDeniedEpitaphResponse> ControlFlow::Call::MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MustSendAccessDeniedEpitaphRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(MustSendAccessDeniedEpitaphRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -118,7 +137,7 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph(::fidl::BytePar
       ::fidl::DecodedMessage<ControlFlow::MustSendAccessDeniedEpitaphResponse>());
   }
   auto _call_result = ::fidl::Call<MustSendAccessDeniedEpitaphRequest, MustSendAccessDeniedEpitaphResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ControlFlow::MustSendAccessDeniedEpitaphResponse>(
       _call_result.status,

@@ -44,6 +44,17 @@ class Interface final {
     ::zx::channel channel_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // method comment #1
+    //
+    // method comment #3
+    static zx_status_t Method(zx::unowned_channel _client_end);
+
+  };
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:

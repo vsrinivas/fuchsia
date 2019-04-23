@@ -14,6 +14,10 @@ constexpr uint32_t kInterface_Method_Ordinal = 1061382220u;
 }  // namespace
 
 zx_status_t Interface::SyncClient::Method() {
+  return Interface::Call::Method(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t Interface::Call::Method(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodRequest*>(_write_bytes);
@@ -24,7 +28,7 @@ zx_status_t Interface::SyncClient::Method() {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 

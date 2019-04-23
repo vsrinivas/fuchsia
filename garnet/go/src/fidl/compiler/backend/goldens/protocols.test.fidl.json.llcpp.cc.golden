@@ -61,6 +61,10 @@ extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 }  // namespace
 
 zx_status_t KitchenSink::SyncClient::MethodA(int64_t a, int64_t b) {
+  return KitchenSink::Call::MethodA(zx::unowned_channel(this->channel_), std::move(a), std::move(b));
+}
+
+zx_status_t KitchenSink::Call::MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
@@ -73,10 +77,14 @@ zx_status_t KitchenSink::SyncClient::MethodA(int64_t a, int64_t b) {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t KitchenSink::SyncClient::MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
+  return KitchenSink::Call::MethodA(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b));
+}
+
+zx_status_t KitchenSink::Call::MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
   if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -90,21 +98,29 @@ zx_status_t KitchenSink::SyncClient::MethodA(::fidl::BytePart _request_buffer, i
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t KitchenSink::SyncClient::MethodA(::fidl::DecodedMessage<MethodARequest> params) {
+  return KitchenSink::Call::MethodA(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t KitchenSink::Call::MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kKitchenSink_MethodA_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t KitchenSink::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_result) {
+  return KitchenSink::Call::MethodB(zx::unowned_channel(this->channel_), std::move(a), std::move(b), out_result);
+}
+
+zx_status_t KitchenSink::Call::MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
@@ -117,12 +133,11 @@ zx_status_t KitchenSink::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -136,6 +151,10 @@ zx_status_t KitchenSink::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_
 }
 
 zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
+  return KitchenSink::Call::MethodB(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b), std::move(_response_buffer), out_result);
+}
+
+zx_status_t KitchenSink::Call::MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
   if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -150,7 +169,7 @@ zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, i
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -164,6 +183,10 @@ zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, i
 }
 
 ::fidl::DecodeResult<KitchenSink::MethodBResponse> KitchenSink::SyncClient::MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
+  return KitchenSink::Call::MethodB(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<KitchenSink::MethodBResponse> KitchenSink::Call::MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kKitchenSink_MethodB_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -174,7 +197,7 @@ zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, i
       ::fidl::DecodedMessage<KitchenSink::MethodBResponse>());
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<KitchenSink::MethodBResponse>(
       _call_result.status,
@@ -186,6 +209,10 @@ zx_status_t KitchenSink::SyncClient::MethodB(::fidl::BytePart _request_buffer, i
 
 
 zx_status_t KitchenSink::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  return KitchenSink::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(a), out_b);
+}
+
+zx_status_t KitchenSink::Call::MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
@@ -197,12 +224,11 @@ zx_status_t KitchenSink::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -216,6 +242,10 @@ zx_status_t KitchenSink::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* 
 }
 
 zx_status_t KitchenSink::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  return KitchenSink::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(_response_buffer), out_b);
+}
+
+zx_status_t KitchenSink::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
   if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -229,7 +259,7 @@ zx_status_t KitchenSink::SyncClient::MutateSocket(::fidl::BytePart _request_buff
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -243,6 +273,10 @@ zx_status_t KitchenSink::SyncClient::MutateSocket(::fidl::BytePart _request_buff
 }
 
 ::fidl::DecodeResult<KitchenSink::MutateSocketResponse> KitchenSink::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  return KitchenSink::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<KitchenSink::MutateSocketResponse> KitchenSink::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kKitchenSink_MutateSocket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -253,7 +287,7 @@ zx_status_t KitchenSink::SyncClient::MutateSocket(::fidl::BytePart _request_buff
       ::fidl::DecodedMessage<KitchenSink::MutateSocketResponse>());
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<KitchenSink::MutateSocketResponse>(
       _call_result.status,
@@ -427,6 +461,10 @@ extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 }  // namespace
 
 zx_status_t ChannelProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
+  return ChannelProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(a), std::move(b));
+}
+
+zx_status_t ChannelProtocol::Call::MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
@@ -439,10 +477,14 @@ zx_status_t ChannelProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t ChannelProtocol::SyncClient::MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
+  return ChannelProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b));
+}
+
+zx_status_t ChannelProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
   if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -456,21 +498,29 @@ zx_status_t ChannelProtocol::SyncClient::MethodA(::fidl::BytePart _request_buffe
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t ChannelProtocol::SyncClient::MethodA(::fidl::DecodedMessage<MethodARequest> params) {
+  return ChannelProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t ChannelProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kChannelProtocol_MethodA_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t ChannelProtocol::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_result) {
+  return ChannelProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(a), std::move(b), out_result);
+}
+
+zx_status_t ChannelProtocol::Call::MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
@@ -483,12 +533,11 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(int64_t a, int64_t b, int64_t* 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -502,6 +551,10 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(int64_t a, int64_t b, int64_t* 
 }
 
 zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
+  return ChannelProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b), std::move(_response_buffer), out_result);
+}
+
+zx_status_t ChannelProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
   if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -516,7 +569,7 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffe
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -530,6 +583,10 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffe
 }
 
 ::fidl::DecodeResult<ChannelProtocol::MethodBResponse> ChannelProtocol::SyncClient::MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
+  return ChannelProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<ChannelProtocol::MethodBResponse> ChannelProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -540,7 +597,7 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffe
       ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>());
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ChannelProtocol::MethodBResponse>(
       _call_result.status,
@@ -552,6 +609,10 @@ zx_status_t ChannelProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffe
 
 
 zx_status_t ChannelProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  return ChannelProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(a), out_b);
+}
+
+zx_status_t ChannelProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
@@ -563,12 +624,11 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::sock
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -582,6 +642,10 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::sock
 }
 
 zx_status_t ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  return ChannelProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(_response_buffer), out_b);
+}
+
+zx_status_t ChannelProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
   if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -595,7 +659,7 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -609,6 +673,10 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_
 }
 
 ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse> ChannelProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  return ChannelProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse> ChannelProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -619,7 +687,7 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_
       ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>());
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>(
       _call_result.status,
@@ -793,6 +861,10 @@ extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponse
 }  // namespace
 
 zx_status_t SocketControlProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
+  return SocketControlProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(a), std::move(b));
+}
+
+zx_status_t SocketControlProtocol::Call::MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
@@ -805,10 +877,14 @@ zx_status_t SocketControlProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t SocketControlProtocol::SyncClient::MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
+  return SocketControlProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b));
+}
+
+zx_status_t SocketControlProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
   if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -822,21 +898,29 @@ zx_status_t SocketControlProtocol::SyncClient::MethodA(::fidl::BytePart _request
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t SocketControlProtocol::SyncClient::MethodA(::fidl::DecodedMessage<MethodARequest> params) {
+  return SocketControlProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t SocketControlProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSocketControlProtocol_MethodA_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t SocketControlProtocol::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_result) {
+  return SocketControlProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(a), std::move(b), out_result);
+}
+
+zx_status_t SocketControlProtocol::Call::MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
@@ -849,12 +933,11 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(int64_t a, int64_t b, int
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -868,6 +951,10 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(int64_t a, int64_t b, int
 }
 
 zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
+  return SocketControlProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b), std::move(_response_buffer), out_result);
+}
+
+zx_status_t SocketControlProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
   if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -882,7 +969,7 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -896,6 +983,10 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request
 }
 
 ::fidl::DecodeResult<SocketControlProtocol::MethodBResponse> SocketControlProtocol::SyncClient::MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
+  return SocketControlProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<SocketControlProtocol::MethodBResponse> SocketControlProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSocketControlProtocol_MethodB_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -906,7 +997,7 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request
       ::fidl::DecodedMessage<SocketControlProtocol::MethodBResponse>());
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SocketControlProtocol::MethodBResponse>(
       _call_result.status,
@@ -918,6 +1009,10 @@ zx_status_t SocketControlProtocol::SyncClient::MethodB(::fidl::BytePart _request
 
 
 zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  return SocketControlProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(a), out_b);
+}
+
+zx_status_t SocketControlProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
@@ -929,12 +1024,11 @@ zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -948,6 +1042,10 @@ zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx
 }
 
 zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  return SocketControlProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(_response_buffer), out_b);
+}
+
+zx_status_t SocketControlProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
   if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -961,7 +1059,7 @@ zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::fidl::BytePart _re
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -975,6 +1073,10 @@ zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::fidl::BytePart _re
 }
 
 ::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse> SocketControlProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  return SocketControlProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse> SocketControlProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSocketControlProtocol_MutateSocket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -985,7 +1087,7 @@ zx_status_t SocketControlProtocol::SyncClient::MutateSocket(::fidl::BytePart _re
       ::fidl::DecodedMessage<SocketControlProtocol::MutateSocketResponse>());
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SocketControlProtocol::MutateSocketResponse>(
       _call_result.status,
@@ -1159,6 +1261,10 @@ extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRespon
 }  // namespace
 
 zx_status_t OvernetInternalProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
+  return OvernetInternalProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(a), std::move(b));
+}
+
+zx_status_t OvernetInternalProtocol::Call::MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
@@ -1171,10 +1277,14 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodA(int64_t a, int64_t b) {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t OvernetInternalProtocol::SyncClient::MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
+  return OvernetInternalProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b));
+}
+
+zx_status_t OvernetInternalProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
   if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1188,21 +1298,29 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodA(::fidl::BytePart _reque
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t OvernetInternalProtocol::SyncClient::MethodA(::fidl::DecodedMessage<MethodARequest> params) {
+  return OvernetInternalProtocol::Call::MethodA(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t OvernetInternalProtocol::Call::MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kOvernetInternalProtocol_MethodA_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t OvernetInternalProtocol::SyncClient::MethodB(int64_t a, int64_t b, int64_t* out_result) {
+  return OvernetInternalProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(a), std::move(b), out_result);
+}
+
+zx_status_t OvernetInternalProtocol::Call::MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
@@ -1215,12 +1333,11 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(int64_t a, int64_t b, i
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1234,6 +1351,10 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(int64_t a, int64_t b, i
 }
 
 zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
+  return OvernetInternalProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(b), std::move(_response_buffer), out_result);
+}
+
+zx_status_t OvernetInternalProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result) {
   if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1248,7 +1369,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _reque
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1262,6 +1383,10 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _reque
 }
 
 ::fidl::DecodeResult<OvernetInternalProtocol::MethodBResponse> OvernetInternalProtocol::SyncClient::MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
+  return OvernetInternalProtocol::Call::MethodB(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<OvernetInternalProtocol::MethodBResponse> OvernetInternalProtocol::Call::MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kOvernetInternalProtocol_MethodB_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1272,7 +1397,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _reque
       ::fidl::DecodedMessage<OvernetInternalProtocol::MethodBResponse>());
   }
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<OvernetInternalProtocol::MethodBResponse>(
       _call_result.status,
@@ -1284,6 +1409,10 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB(::fidl::BytePart _reque
 
 
 zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::zx::socket a, ::zx::socket* out_b) {
+  return OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(a), out_b);
+}
+
+zx_status_t OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
@@ -1295,12 +1424,11 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::zx::socket a, ::
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1314,6 +1442,10 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::zx::socket a, ::
 }
 
 zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
+  return OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(a), std::move(_response_buffer), out_b);
+}
+
+zx_status_t OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b) {
   if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1327,7 +1459,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::BytePart _
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1341,6 +1473,10 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::BytePart _
 }
 
 ::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse> OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
+  return OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse> OvernetInternalProtocol::Call::MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kOvernetInternalProtocol_MutateSocket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1351,7 +1487,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket(::fidl::BytePart _
       ::fidl::DecodedMessage<OvernetInternalProtocol::MutateSocketResponse>());
   }
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<OvernetInternalProtocol::MutateSocketResponse>(
       _call_result.status,
@@ -1537,6 +1673,10 @@ extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithRespon
 }  // namespace
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestNoResponse() {
+  return WithAndWithoutRequestResponse::Call::NoRequestNoResponse(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::NoRequestNoResponse(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestNoResponseRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoRequestNoResponseRequest*>(_write_bytes);
@@ -1547,11 +1687,15 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestNoResponse() {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestEmptyResponse() {
+  return WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoRequestEmptyResponseRequest*>(_write_bytes);
@@ -1562,12 +1706,11 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestEmptyResponse() 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<NoRequestEmptyResponseRequest, NoRequestEmptyResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1580,6 +1723,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestEmptyResponse() 
 
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret) {
+  return WithAndWithoutRequestResponse::Call::NoRequestWithResponse(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_ret);
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<NoRequestWithResponseRequest*>(_request_buffer.data());
@@ -1591,7 +1738,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::f
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<NoRequestWithResponseRequest, NoRequestWithResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1605,6 +1752,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::f
 }
 
 ::fidl::DecodeResult<WithAndWithoutRequestResponse::NoRequestWithResponseResponse> WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::fidl::BytePart response_buffer) {
+  return WithAndWithoutRequestResponse::Call::NoRequestWithResponse(zx::unowned_channel(this->channel_), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<WithAndWithoutRequestResponse::NoRequestWithResponseResponse> WithAndWithoutRequestResponse::Call::NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(NoRequestWithResponseRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -1619,7 +1770,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::f
       ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>());
   }
   auto _call_result = ::fidl::Call<NoRequestWithResponseRequest, NoRequestWithResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>(
       _call_result.status,
@@ -1631,6 +1782,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(::f
 
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(::fidl::StringView arg) {
+  return WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel(this->channel_), std::move(arg));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::StringView arg) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestNoResponseRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1647,10 +1802,14 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(::f
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
+  return WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
   if (_request_buffer.capacity() < WithRequestNoResponseRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1666,21 +1825,29 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(::f
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(::fidl::DecodedMessage<WithRequestNoResponseRequest> params) {
+  return WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(::fidl::StringView arg) {
+  return WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel(this->channel_), std::move(arg));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::StringView arg) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1697,12 +1864,11 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest, WithRequestEmptyResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1714,6 +1880,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
 }
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
+  return WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
   if (_request_buffer.capacity() < WithRequestEmptyResponseRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1733,7 +1903,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest, WithRequestEmptyResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1745,6 +1915,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
 }
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params) {
+  return WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1755,7 +1929,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest, WithRequestEmptyResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1765,6 +1939,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
 
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret) {
+  return WithAndWithoutRequestResponse::Call::WithRequestWithResponse(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer), out_ret);
+}
+
+zx_status_t WithAndWithoutRequestResponse::Call::WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret) {
   if (_request_buffer.capacity() < WithRequestWithResponseRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1781,7 +1959,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(:
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<WithRequestWithResponseRequest, WithRequestWithResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -1795,6 +1973,10 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(:
 }
 
 ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestWithResponseResponse> WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer) {
+  return WithAndWithoutRequestResponse::Call::WithRequestWithResponse(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestWithResponseResponse> WithAndWithoutRequestResponse::Call::WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1805,7 +1987,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(:
       ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>());
   }
   auto _call_result = ::fidl::Call<WithRequestWithResponseRequest, WithRequestWithResponseResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>(
       _call_result.status,
@@ -2102,6 +2284,10 @@ constexpr uint32_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143u;
 }  // namespace
 
 zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+  return WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel(this->channel_), out_result);
+}
+
+zx_status_t WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_write_bytes);
@@ -2112,12 +2298,11 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(WithErrorSyntax_ErrorA
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -2131,6 +2316,10 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(WithErrorSyntax_ErrorA
 }
 
 zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+  return WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
+}
+
+zx_status_t WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_request_buffer.data());
@@ -2142,7 +2331,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _resp
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -2156,6 +2345,10 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _resp
 }
 
 ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse> WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart response_buffer) {
+  return WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel(this->channel_), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse> WithErrorSyntax::Call::ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ErrorAsPrimitiveRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -2170,7 +2363,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _resp
       ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>());
   }
   auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>(
       _call_result.status,
@@ -2182,6 +2375,10 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _resp
 
 
 zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+  return WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel(this->channel_), out_result);
+}
+
+zx_status_t WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_write_bytes);
@@ -2192,12 +2389,11 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(WithErrorSyntax_ErrorAsEnum
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-
   constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -2211,6 +2407,10 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(WithErrorSyntax_ErrorAsEnum
 }
 
 zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+  return WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
+}
+
+zx_status_t WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_request_buffer.data());
@@ -2222,7 +2422,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_
     return _encode_request_result.status;
   }
   auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
   }
@@ -2236,6 +2436,10 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_
 }
 
 ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse> WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart response_buffer) {
+  return WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel(this->channel_), std::move(response_buffer));
+}
+
+::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse> WithErrorSyntax::Call::ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ErrorAsEnumRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -2250,7 +2454,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_
       ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>());
   }
   auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
-    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>(
       _call_result.status,
