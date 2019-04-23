@@ -28,8 +28,8 @@ void SuspendTask::Run() {
         case Device::State::kSuspended: continue;
         case Device::State::kActive: break;
         }
-        auto task = SuspendTask::Create(fbl::WrapRefPtr(&child), flags_);
-        AddDependency(std::move(task));
+
+        AddDependency(child.RequestSuspendTask(flags_));
         found_more_dependencies = true;
     }
     if (found_more_dependencies) {
@@ -42,8 +42,7 @@ void SuspendTask::Run() {
         switch (device_->proxy->state()) {
         case Device::State::kSuspended: break;
         case Device::State::kActive: {
-            auto task = SuspendTask::Create(device_->proxy, flags_);
-            AddDependency(std::move(task));
+            AddDependency(device_->proxy->RequestSuspendTask(flags_));
             return;
         }
         }

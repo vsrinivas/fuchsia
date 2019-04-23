@@ -17,6 +17,8 @@ public:
     // Don/t invoke this, use Create
     SuspendTask(fbl::RefPtr<Device> device, uint32_t flags, Completion completion);
 
+    uint32_t suspend_flags() { return flags_; }
+
     ~SuspendTask() final;
 private:
     void Run() final;

@@ -24,6 +24,7 @@ class Coordinator;
 class Devhost;
 struct Devnode;
 class SuspendContext;
+class SuspendTask;
 
 // clang-format off
 
@@ -252,6 +253,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
 
     State state() const { return state_; }
 
+    // Creates a new suspend task if necessary and returns a reference to it.
+    // If one is already in-progress, a reference to it is returned instead
+    fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
 private:
     zx_status_t HandleRead();
 
@@ -289,8 +293,11 @@ private:
     // The current state of the device
     State state_ = State::kActive;
 
+    // If a suspend is in-progress, this task represents it.
+    fbl::RefPtr<SuspendTask> active_suspend_;
     // If a suspend is in-progress, this completion will be invoked when it is
-    // completed.
+    // completed.  It will likely mark |active_suspend_| as completed and clear
+    // it.
     SuspendCompletion suspend_completion_;
 };
 

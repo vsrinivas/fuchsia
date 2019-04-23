@@ -11,6 +11,7 @@
 #include "coordinator.h"
 #include "devfs.h"
 #include "fidl.h"
+#include "suspend-task.h"
 
 namespace devmgr {
 
@@ -193,6 +194,17 @@ zx_status_t Device::SignalReadyForBind(zx::duration delay) {
     return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }
 
+fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
+    if (active_suspend_) {
+        // We don't support different types of suspends concurrently, and
+        // shouldn't be able to reach this state.
+        ZX_ASSERT(suspend_flags == active_suspend_->suspend_flags());
+    } else {
+        active_suspend_ = SuspendTask::Create(fbl::WrapRefPtr(this), suspend_flags);
+    }
+    return active_suspend_;
+}
+
 zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
     if (suspend_completion_) {
         // We already have a pending suspend
@@ -212,6 +224,7 @@ void Device::CompleteSuspend(zx_status_t status) {
         state_ = Device::State::kSuspended;
     }
 
+    active_suspend_ = nullptr;
     SuspendCompletion completion(std::move(suspend_completion_));
     if (completion) {
         completion(status);
