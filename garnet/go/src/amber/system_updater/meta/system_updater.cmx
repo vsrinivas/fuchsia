@@ -15,6 +15,7 @@
         "services": [
             "fuchsia.pkg.PackageResolver",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]

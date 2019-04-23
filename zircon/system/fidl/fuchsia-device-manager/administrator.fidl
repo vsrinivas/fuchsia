@@ -6,6 +6,10 @@ library fuchsia.device.manager;
 
 using zx;
 
+/// Check the DDK for all available flags.
+const uint32 SUSPEND_FLAG_REBOOT = 0xdcdc0100;
+const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
+
 /// Provides administration services for the device manager service and the device tree it controls.
 [Discoverable, Layout = "Simple"]
 protocol Administrator {

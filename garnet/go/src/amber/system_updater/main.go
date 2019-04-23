@@ -10,8 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/fidl"
 
 	"app/context"
+	devmgr "fidl/fuchsia/device/manager"
 	"syslog/logger"
 
 	"metrics"
@@ -136,17 +140,32 @@ func run() (err error) {
 
 	logger.Infof("system update complete, rebooting...")
 
-	dmctl, err := os.OpenFile("/dev/misc/dmctl", os.O_RDWR, os.ModePerm)
-	if err != nil {
-		logger.Errorf("error forcing restart: %s", err)
-	}
-	defer dmctl.Close()
-	cmd := []byte("reboot")
-	if _, err := dmctl.Write(cmd); err != nil {
-		logger.Errorf("error writing to control socket: %s", err)
-	}
+	SendReboot()
 
 	return nil
+}
+
+func SendReboot() {
+	channel_local, channel_remote, err := zx.NewChannel(0)
+	if err != nil {
+		logger.Errorf("error creating channel: %s", err)
+		return
+	}
+
+	err = fdio.ServiceConnect(
+		"/svc/fuchsia.device.manager.Administrator", zx.Handle(channel_remote))
+	if err != nil {
+		logger.Errorf("error connecting to devmgr service: %s", err)
+		return
+	}
+
+	var administrator = devmgr.AdministratorInterface(
+		fidl.ChannelProxy{Channel: zx.Channel(channel_local)})
+	var status int32
+	status, err = administrator.Suspend(devmgr.SuspendFlagReboot)
+	if err != nil || status != 0 {
+		logger.Errorf("error sending restart to Administrator: %s status: %d", err, status)
+	}
 }
 
 type InitiatorValue struct {

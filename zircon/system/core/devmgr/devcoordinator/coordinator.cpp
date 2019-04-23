@@ -1649,6 +1649,9 @@ void Coordinator::InitOutgoingServices() {
     const auto& public_dir = outgoing_services_.public_dir();
 
     const auto admin = [this](zx::channel request) {
+        static_assert(fuchsia_device_manager_SUSPEND_FLAG_REBOOT == DEVICE_SUSPEND_FLAG_REBOOT);
+        static_assert(fuchsia_device_manager_SUSPEND_FLAG_POWEROFF == DEVICE_SUSPEND_FLAG_POWEROFF);
+
         static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
             .Suspend = [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
                 static_cast<Coordinator*>(ctx)->Suspend(flags);
