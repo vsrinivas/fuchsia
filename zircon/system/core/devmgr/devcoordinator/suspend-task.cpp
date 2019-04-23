@@ -21,7 +21,7 @@ fbl::RefPtr<SuspendTask> SuspendTask::Create(fbl::RefPtr<Device> device, uint32_
 
 void SuspendTask::Run() {
     bool found_more_dependencies = false;
-    for (auto& child : device_->children) {
+    for (auto& child : device_->children()) {
         // Use a switch statement here so that this gets reconsidered if we add
         // more states.
         switch (child.state()) {

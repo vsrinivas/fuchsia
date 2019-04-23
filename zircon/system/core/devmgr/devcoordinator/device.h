@@ -77,6 +77,71 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
+    // Node for entry in device child list
+    struct Node {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+            return obj.node_;
+        }
+    };
+
+    // This iterator provides access to a list of devices that does not provide
+    // mechanisms for mutating that list.  With this, a user can get mutable
+    // access to a device in the list.  This is achieved by making the linked
+    // list iterator opaque. It is not safe to modify the underlying list while
+    // this iterator is in use.
+    template <typename IterType, typename ValueType>
+    class ChildListIterator {
+    public:
+        explicit ChildListIterator(IterType itr) : itr_(std::move(itr)) {}
+
+        ChildListIterator& operator++() { ++itr_; return *this; }
+        ChildListIterator operator++(int) {
+            auto other = *this;
+            ++*this;
+            return other;
+        }
+        ValueType& operator*() const { return *itr_; }
+        bool operator==(const ChildListIterator& other) const { return itr_ == other.itr_; }
+        bool operator!=(const ChildListIterator& other) const { return itr_ != other.itr_; }
+    private:
+        IterType itr_;
+    };
+
+    // This class exists to allow consumers of the Device class to write
+    //   for (auto& child : dev->children())
+    // and get mutable access to the children without getting mutable access to
+    // the list.
+    template <typename ListType, typename IterType>
+    class ChildListIteratorFactory {
+    public:
+        explicit ChildListIteratorFactory(ListType& list) : list_(list) {}
+
+        IterType begin() const { return IterType(list_.begin()); }
+        IterType end() const { return IterType(list_.end()); }
+
+        bool is_empty() const { return begin() == end(); }
+    private:
+        ListType& list_;
+    };
+
+    using NonConstChildListIterator =
+            ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
+    using ConstChildListIterator =
+            ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::const_iterator, const Device>;
+    using NonConstChildListIteratorFactory = ChildListIteratorFactory<
+            fbl::DoublyLinkedList<Device*, Node>, NonConstChildListIterator>;
+    using ConstChildListIteratorFactory = ChildListIteratorFactory<
+            const fbl::DoublyLinkedList<Device*, Node>, ConstChildListIterator>;
+    // We do not want to expose the list itself for mutation, even if the
+    // children are allowed to be mutated.  We manage this by making the
+    // iterator opaque.
+    NonConstChildListIteratorFactory children() {
+        return NonConstChildListIteratorFactory(children_);
+    }
+    ConstChildListIteratorFactory children() const {
+        return ConstChildListIteratorFactory(children_);
+    }
+
     // Signal that this device is ready for bind to happen.  This should happen
     // either immediately after the device is created, if it's created visible,
     // or after it becomes visible.
@@ -110,13 +175,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     // or once the device becomes visible.
     zx::channel client_remote;
 
-    // listnode for this device in its parent's
-    // list-of-children
-    fbl::DoublyLinkedListNodeState<Device*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node; }
-    };
-
     // listnode for this device in its devhost's
     // list-of-devices
     fbl::DoublyLinkedListNodeState<Device*> dhnode;
@@ -126,9 +184,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
         }
     };
 
-    // list of all child devices of this device
-    fbl::DoublyLinkedList<Device*, Node> children;
-
     // listnode for this device in the all devices list
     fbl::DoublyLinkedListNodeState<Device*> anode;
     struct AllDevicesNode {
@@ -136,6 +191,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
             return obj.anode;
         }
     };
+
+    // Break the relationship between this device object and its parent
+    void DetachFromParent();
 
     // Metadata entries associated to this device.
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
@@ -198,7 +256,7 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
         kSuspended,
     };
 
-    State state() { return state_; }
+    State state() const { return state_; }
 
 private:
     zx_status_t HandleRead();
@@ -211,6 +269,12 @@ private:
     const zx_device_prop_t* topo_prop_ = nullptr;
 
     async::TaskClosure publish_task_;
+
+    // listnode for this device in its parent's list-of-children
+    fbl::DoublyLinkedListNodeState<Device*> node_;
+
+    // list of all child devices of this device
+    fbl::DoublyLinkedList<Device*, Node> children_;
 
     // - If this device is part of a composite device, this is inhabited by
     //   CompositeDeviceComponent* and it points to the component that matched it.

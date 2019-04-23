@@ -104,7 +104,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         // TODO host == nullptr should be impossible
         dev->host_->devices().push_back(dev.get());
     }
-    real_parent->children.push_back(dev.get());
+    real_parent->children_.push_back(dev.get());
     log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
 
     *device = std::move(dev);
@@ -184,6 +184,15 @@ zx_status_t Device::CreateProxy() {
     this->proxy = std::move(dev);
     log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, this->name.data());
     return ZX_OK;
+}
+
+void Device::DetachFromParent() {
+    if (this->flags & DEV_CTX_PROXY) {
+        parent_->proxy = nullptr;
+    } else {
+        parent_->children_.erase(*this);
+    }
+    parent_ = nullptr;
 }
 
 zx_status_t Device::SignalReadyForBind(zx::duration delay) {

@@ -294,7 +294,7 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
         indent++;
         DumpDevice(vmo, dev->proxy.get(), indent);
     }
-    for (const auto& child : dev->children) {
+    for (const auto& child : dev->children()) {
         DumpDevice(vmo, &child, indent + 1);
     }
 }
@@ -345,7 +345,7 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     if (dev->proxy) {
         DumpDeviceProps(vmo, dev->proxy.get());
     }
-    for (const auto& child : dev->children) {
+    for (const auto& child : dev->children()) {
         DumpDeviceProps(vmo, &child);
     }
 }
@@ -765,12 +765,9 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // if we have a parent, disconnect and downref it
     fbl::RefPtr<Device> parent = dev->parent();
     if (parent != nullptr) {
-        dev->set_parent(nullptr);
-        if (dev->flags & DEV_CTX_PROXY) {
-            parent->proxy = nullptr;
-        } else {
-            parent->children.erase(*dev);
-            if (parent->children.is_empty()) {
+        dev->DetachFromParent();
+        if (!(dev->flags & DEV_CTX_PROXY)) {
+            if (parent->children().is_empty()) {
                 parent->flags &= (~DEV_CTX_BOUND);
 
                 // TODO: This code is to cause the bind process to
