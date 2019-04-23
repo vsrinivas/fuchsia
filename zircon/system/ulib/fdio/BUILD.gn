@@ -28,7 +28,7 @@ library("fdio") {
     "namespace/local-vnode.cpp",
     "namespace/namespace.cpp",
     "null.c",
-    "remoteio.c",
+    "remoteio.cpp",
     "socket.c",
     "spawn.c",
     "stubs.c",

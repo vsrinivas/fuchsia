@@ -359,13 +359,13 @@ static zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
 static zx_status_t fdio_from_node_info(zx_handle_t handle,
                                        fuchsia_io_NodeInfo* info,
                                        fdio_t** out_io) {
+    fdio_t* io = NULL;
     zx_status_t status = ZX_OK;
     if (handle == ZX_HANDLE_INVALID) {
         status = ZX_ERR_INVALID_ARGS;
         goto failure;
     }
 
-    fdio_t* io = NULL;
     switch (info->tag) {
     case fuchsia_io_NodeInfoTag_directory:
         io = fdio_dir_create(handle);
