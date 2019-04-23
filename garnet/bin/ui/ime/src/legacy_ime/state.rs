@@ -88,15 +88,20 @@ pub fn get_range(
 }
 
 impl ImeState {
+    /// Forwards a keyboard event to any listening clients without changing the actual state of the
+    /// IME at all.
+    pub fn forward_event(&mut self, ev: uii::KeyboardEvent) {
+        let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
+        self.client
+            .did_update_state(&mut state, Some(OutOfLine(&mut uii::InputEvent::Keyboard(ev))))
+            .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
+    }
+
     /// Any time the state is updated, this method is called, which allows ImeState to inform any
     /// listening clients (either TextField or InputMethodEditorClientProxy) that state has updated.
     /// If InputMethodEditorClient caused the update with SetState, set call_did_update_state so that
     /// we don't send its own edit back to it. Otherwise, set to true.
-    pub fn increment_revision(
-        &mut self,
-        e: Option<uii::KeyboardEvent>,
-        call_did_update_state: bool,
-    ) {
+    pub fn increment_revision(&mut self, call_did_update_state: bool) {
         self.revision += 1;
         self.text_points = HashMap::new();
         let state = self.as_text_field_state();
@@ -108,20 +113,9 @@ impl ImeState {
 
         if call_did_update_state {
             let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
-            if let Some(ev) = e {
-                self.client
-                    .did_update_state(
-                        &mut state,
-                        Some(OutOfLine(&mut uii::InputEvent::Keyboard(ev))),
-                    )
-                    .unwrap_or_else(|e| {
-                        fx_log_warn!("error sending state update to ImeClient: {:?}", e)
-                    });
-            } else {
-                self.client.did_update_state(&mut state, None).unwrap_or_else(|e| {
-                    fx_log_warn!("error sending state update to ImeClient: {:?}", e)
-                });
-            }
+            self.client.did_update_state(&mut state, None).unwrap_or_else(|e| {
+                fx_log_warn!("error sending state update to ImeClient: {:?}", e)
+            });
         }
     }
 

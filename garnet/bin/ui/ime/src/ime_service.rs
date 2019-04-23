@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fidl_helpers::clone_keyboard_event;
 use crate::legacy_ime::Ime;
 use crate::legacy_ime::ImeState;
 use failure::ResultExt;
@@ -109,6 +110,10 @@ impl ImeService {
     /// This is called by the operating system when input from the physical keyboard comes in.
     /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
     async fn inject_input(&mut self, mut event: uii::InputEvent) {
+        let keyboard_event = match &event {
+            uii::InputEvent::Keyboard(e) => clone_keyboard_event(e),
+            _ => return,
+        };
         let mut state = await!(self.0.lock());
         let ime = {
             let active_ime_weak = match state.active_ime {
@@ -120,6 +125,10 @@ impl ImeService {
                 None => return, // IME no longer exists
             }
         };
+
+        // send the legacy ime a keystroke event to forward
+        await!(ime.forward_event(clone_keyboard_event(&keyboard_event)));
+
         state.text_input_context_clients.retain(|listener| {
             // drop listeners if they error on send
             listener.send_on_input_event(&mut event).is_ok()
@@ -127,7 +136,7 @@ impl ImeService {
         // only use the default text input handler in ime.rs if there are no text_input_context_clients
         // attached to handle it
         if state.text_input_context_clients.len() == 0 {
-            await!(ime.inject_input(event));
+            await!(ime.inject_input(keyboard_event));
         }
     }
 
@@ -249,6 +258,27 @@ mod test {
     use fidl_fuchsia_ui_input as uii;
     use fuchsia_async as fasync;
     use pin_utils::pin_mut;
+
+    async fn get_state_update(editor_stream: &mut uii::InputMethodEditorClientRequestStream) -> (uii::TextInputState, Option<uii::KeyboardEvent>) {
+        let msg = await!(editor_stream.try_next())
+            .expect("expected working event stream")
+            .expect("ime should have sent message");
+        if let uii::InputMethodEditorClientRequest::DidUpdateState {
+            state, event, ..
+        } = msg
+        {
+            let keyboard_event = event.map(|e| {
+                if let uii::InputEvent::Keyboard(keyboard_event) = *e {
+                    keyboard_event
+                } else {
+                    panic!("expected DidUpdateState to only send Keyboard events");
+                }
+            });
+            (state, keyboard_event)
+        } else {
+            panic!("request should be DidUpdateState");
+        }
+    }
 
     fn async_service_test<T, F>(test_fn: T)
     where
@@ -377,35 +407,53 @@ mod test {
 
                 // type 'a'
                 simulate_keypress(&ime_service, 'a'.into(), 0);
-                let msg = await!(editor_stream.try_next())
-                    .expect("expected working event stream")
-                    .expect("ime should have sent message");
-                if let uii::InputMethodEditorClientRequest::DidUpdateState {
-                    state, event: _, ..
-                } = msg
-                {
-                    assert_eq!(state.text, "a");
-                    assert_eq!(state.selection.base, 1);
-                    assert_eq!(state.selection.extent, 1);
-                } else {
-                    panic!("request should be DidUpdateState");
-                }
+
+                // get first message with keypress event but no state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let event = event.expect("expected event to be set");
+                assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
+                assert_eq!(event.code_point, 97);
+                assert_eq!(state.text, "");
+
+                // get second message with state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                assert!(event.is_none());
+                assert_eq!(state.text, "a");
+                assert_eq!(state.selection.base, 1);
+                assert_eq!(state.selection.extent, 1);
+
+                // get third message with keyrelease event but no state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let event = event.expect("expected event to be set");
+                assert_eq!(event.phase, uii::KeyboardEventPhase::Released);
+                assert_eq!(event.code_point, 97);
+                assert_eq!(state.text, "a");
 
                 // press left arrow
                 simulate_keypress(&ime_service, 0, HID_USAGE_KEY_LEFT);
-                let msg = await!(editor_stream.try_next())
-                    .expect("expected working event stream")
-                    .expect("ime should have sent message");
-                if let uii::InputMethodEditorClientRequest::DidUpdateState {
-                    state, event: _, ..
-                } = msg
-                {
-                    assert_eq!(state.text, "a");
-                    assert_eq!(state.selection.base, 0);
-                    assert_eq!(state.selection.extent, 0);
-                } else {
-                    panic!("request should be DidUpdateState");
-                }
+
+                // get first message with keypress event but no state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let event = event.expect("expected event to be set");
+                assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
+                assert_eq!(event.code_point, 0);
+                assert_eq!(event.hid_usage, HID_USAGE_KEY_LEFT);
+                assert_eq!(state.text, "a");
+
+                // get second message with state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                assert!(event.is_none());
+                assert_eq!(state.text, "a");
+                assert_eq!(state.selection.base, 0);
+                assert_eq!(state.selection.extent, 0);
+
+                // get first message with keyrelease event but no state update
+                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let event = event.expect("expected event to be set");
+                assert_eq!(event.phase, uii::KeyboardEventPhase::Released);
+                assert_eq!(event.code_point, 0);
+                assert_eq!(event.hid_usage, HID_USAGE_KEY_LEFT);
+                assert_eq!(state.text, "a");
             }
         });
     }
@@ -415,7 +463,18 @@ mod test {
         async_service_test(|ime_service, _visibility_service| {
             async move {
                 let (_ime, mut editor_stream) = bind_ime_for_test(&ime_service);
+
+                // send key events
                 simulate_keypress(&ime_service, 0, HID_USAGE_KEY_ENTER);
+
+                // get first message with keypress event
+                let (_state, event) = await!(get_state_update(&mut editor_stream));
+                let event = event.expect("expected event to be set");
+                assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
+                assert_eq!(event.code_point, 0);
+                assert_eq!(event.hid_usage, HID_USAGE_KEY_ENTER);
+
+                // get second message with onaction event
                 let msg = await!(editor_stream.try_next())
                     .expect("expected working event stream")
                     .expect("ime should have sent message");

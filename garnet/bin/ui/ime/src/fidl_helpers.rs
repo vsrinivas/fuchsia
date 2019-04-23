@@ -26,3 +26,14 @@ pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
         composing: uii::TextRange { start: state.composing.start, end: state.composing.end },
     }
 }
+
+pub fn clone_keyboard_event(ev: &uii::KeyboardEvent) -> uii::KeyboardEvent {
+    uii::KeyboardEvent {
+        event_time: ev.event_time,
+        device_id: ev.device_id,
+        phase: ev.phase,
+        hid_usage: ev.hid_usage,
+        code_point: ev.code_point,
+        modifiers: ev.modifiers,
+    }
+}

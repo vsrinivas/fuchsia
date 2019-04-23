@@ -48,22 +48,22 @@ async fn simulate_keypress<K: Into<u32> + Copy + 'static>(
 ) {
     let hid_usage = if hid_key { key.into() } else { 0 };
     let code_point = if hid_key { 0 } else { key.into() };
-    await!(ime.inject_input(uii::InputEvent::Keyboard(uii::KeyboardEvent {
+    await!(ime.inject_input(uii::KeyboardEvent {
         event_time: 0,
         device_id: 0,
         phase: uii::KeyboardEventPhase::Pressed,
         hid_usage,
         code_point,
         modifiers,
-    })));
-    await!(ime.inject_input(uii::InputEvent::Keyboard(uii::KeyboardEvent {
+    }));
+    await!(ime.inject_input(uii::KeyboardEvent {
         event_time: 0,
         device_id: 0,
         phase: uii::KeyboardEventPhase::Released,
         hid_usage,
         code_point,
         modifiers,
-    })));
+    }));
 }
 
 struct MockImeClient {

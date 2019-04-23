@@ -201,7 +201,7 @@ impl Ime {
                 }
                 let res = if ime_state.apply_transaction() {
                     let res = responder.send(txt::Error::Ok);
-                    ime_state.increment_revision(None, true);
+                    ime_state.increment_revision(true);
                     res
                 } else {
                     responder.send(txt::Error::BadRequest)
@@ -240,7 +240,11 @@ impl Ime {
                 await!(self.set_state(idx::text_state_codeunit_to_byte(state)));
             }
             ImeReq::InjectInput { event, .. } => {
-                await!(self.inject_input(event));
+                let keyboard_event = match event {
+                    uii::InputEvent::Keyboard(e) => e,
+                    _ => return,
+                };
+                await!(self.inject_input(keyboard_event));
             }
             ImeReq::Show { .. } => {
                 // clone to ensure we only hold one lock at a time
@@ -261,39 +265,40 @@ impl Ime {
         let mut state = await!(self.0.lock());
         state.text_state = idx::text_state_codeunit_to_byte(input_state);
         // the old C++ IME implementation didn't call did_update_state here, so this second argument is false.
-        state.increment_revision(None, false);
+        state.increment_revision(false);
     }
 
-    pub async fn inject_input(&self, event: uii::InputEvent) {
+    pub async fn forward_event(&self, keyboard_event: uii::KeyboardEvent) {
         let mut state = await!(self.0.lock());
-        let keyboard_event = match event {
-            uii::InputEvent::Keyboard(e) => e,
-            _ => return,
-        };
+        state.forward_event(keyboard_event);
+    }
+
+    pub async fn inject_input(&self, keyboard_event: uii::KeyboardEvent) {
+        let mut state = await!(self.0.lock());
 
         if keyboard_event.phase == uii::KeyboardEventPhase::Pressed
             || keyboard_event.phase == uii::KeyboardEventPhase::Repeat
         {
             if keyboard_event.code_point != 0 {
                 state.type_keycode(keyboard_event.code_point);
-                state.increment_revision(Some(keyboard_event), true)
+                state.increment_revision(true)
             } else {
                 match keyboard_event.hid_usage {
                     HID_USAGE_KEY_BACKSPACE => {
                         state.delete_backward();
-                        state.increment_revision(Some(keyboard_event), true);
+                        state.increment_revision(true);
                     }
                     HID_USAGE_KEY_DELETE => {
                         state.delete_forward();
-                        state.increment_revision(Some(keyboard_event), true);
+                        state.increment_revision(true);
                     }
                     HID_USAGE_KEY_LEFT => {
                         state.cursor_horizontal_move(keyboard_event.modifiers, false);
-                        state.increment_revision(Some(keyboard_event), true);
+                        state.increment_revision(true);
                     }
                     HID_USAGE_KEY_RIGHT => {
                         state.cursor_horizontal_move(keyboard_event.modifiers, true);
-                        state.increment_revision(Some(keyboard_event), true);
+                        state.increment_revision(true);
                     }
                     HID_USAGE_KEY_ENTER => {
                         state.client.on_action(state.action).unwrap_or_else(|e| {
@@ -302,7 +307,7 @@ impl Ime {
                     }
                     _ => {
                         // Not an editing key, forward the event to clients.
-                        state.increment_revision(Some(keyboard_event), true);
+                        state.increment_revision(true);
                     }
                 }
             }
