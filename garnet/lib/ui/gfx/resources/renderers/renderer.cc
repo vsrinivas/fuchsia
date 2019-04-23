@@ -6,7 +6,6 @@
 
 #include <trace/event.h>
 
-#include "lib/escher/impl/ssdo_sampler.h"
 #include "lib/escher/renderer/renderer.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
@@ -32,9 +31,6 @@ namespace gfx {
 
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
                                               "Renderer"};
-
-const uint32_t Renderer::kRequiredSwapchainPixelMultiple =
-    escher::impl::SsdoSampler::kSsdoAccelDownsampleFactor;
 
 Renderer::Renderer(Session* session, ResourceId id)
     : Resource(session, id, Renderer::kTypeInfo) {

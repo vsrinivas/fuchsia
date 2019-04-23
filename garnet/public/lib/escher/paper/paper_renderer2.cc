@@ -11,7 +11,6 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/geometry/tessellation.h"
-#include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/paper/paper_legacy_drawable.h"
 #include "lib/escher/paper/paper_render_queue_context.h"
 #include "lib/escher/paper/paper_scene.h"

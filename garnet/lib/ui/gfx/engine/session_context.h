@@ -8,7 +8,6 @@
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/release_fence_signaller.h"
-#include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 

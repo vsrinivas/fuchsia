@@ -9,7 +9,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/geometry/types.h"
-#include "lib/escher/impl/descriptor_set_pool.h"
 #include "lib/escher/impl/uniform_buffer_pool.h"
 #include "lib/escher/shape/modifier_wobble.h"
 #include "lib/escher/util/hash_map.h"
@@ -98,22 +97,6 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
 
   UniformBufferPool* uniform_buffer_pool() { return &uniform_buffer_pool_; }
 
-  DescriptorSetPool* per_model_descriptor_set_pool() {
-    return &per_model_descriptor_set_pool_;
-  }
-
-  DescriptorSetPool* per_object_descriptor_set_pool() {
-    return &per_object_descriptor_set_pool_;
-  }
-
-  vk::DescriptorSetLayout per_model_layout() const {
-    return per_model_descriptor_set_pool_.layout();
-  }
-
-  vk::DescriptorSetLayout per_object_layout() const {
-    return per_object_descriptor_set_pool_.layout();
-  }
-
   const MeshShaderBinding& GetMeshShaderBinding(MeshSpec spec);
 
  private:
@@ -122,17 +105,8 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
 
   ~ModelData();
 
-  // Provide access to statically-allocated layout info for per-model and
-  // per-object descriptor-sets.
-  static const vk::DescriptorSetLayoutCreateInfo&
-  GetPerModelDescriptorSetLayoutCreateInfo();
-  static const vk::DescriptorSetLayoutCreateInfo&
-  GetPerObjectDescriptorSetLayoutCreateInfo();
-
   vk::Device device_;
   UniformBufferPool uniform_buffer_pool_;
-  DescriptorSetPool per_model_descriptor_set_pool_;
-  DescriptorSetPool per_object_descriptor_set_pool_;
 
   HashMap<MeshSpec, std::unique_ptr<MeshShaderBinding>>
       mesh_shader_binding_cache_;

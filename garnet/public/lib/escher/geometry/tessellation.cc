@@ -7,7 +7,6 @@
 #include <math.h>
 #include <algorithm>
 
-#include "lib/escher/impl/model_data.h"
 #include "lib/escher/shape/mesh_builder.h"
 #include "lib/escher/shape/mesh_builder_factory.h"
 #include "src/lib/fxl/logging.h"

@@ -31,71 +31,9 @@ ModelData::ModelData(EscherWeakPtr escher, GpuAllocator* allocator)
       // Furthermore, if this is deeper that 1, the buffers would never be
       // recycled because nobody calls BeginFrame() on this pool.  In the future
       // we'll likely move to an Escher-wide UniformBufferPool.
-      uniform_buffer_pool_(escher, 1, allocator),
-      per_model_descriptor_set_pool_(escher,
-                                     GetPerModelDescriptorSetLayoutCreateInfo(),
-                                     kInitialPerModelDescriptorSetCount),
-      per_object_descriptor_set_pool_(
-          escher, GetPerObjectDescriptorSetLayoutCreateInfo(),
-          kInitialPerObjectDescriptorSetCount) {}
+      uniform_buffer_pool_(escher, 1, allocator) {}
 
 ModelData::~ModelData() {}
-
-const vk::DescriptorSetLayoutCreateInfo&
-ModelData::GetPerModelDescriptorSetLayoutCreateInfo() {
-  constexpr uint32_t kNumBindings = 3;
-  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
-  static vk::DescriptorSetLayoutCreateInfo info;
-  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
-  if (!ptr) {
-    auto& uniform_binding = bindings[0];
-    auto& texture_binding = bindings[1];
-    auto& vp_uniform_binding = bindings[2];
-    uniform_binding.binding = 0;
-    uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-    uniform_binding.descriptorCount = 1;
-    uniform_binding.stageFlags =
-        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-    texture_binding.binding = 1;
-    texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    texture_binding.descriptorCount = 1;
-    texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    vp_uniform_binding.binding = 2;
-    vp_uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-    vp_uniform_binding.descriptorCount = 1;
-    vp_uniform_binding.stageFlags =
-        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-    info.bindingCount = kNumBindings;
-    info.pBindings = bindings;
-    ptr = &info;
-  }
-  return *ptr;
-}
-
-const vk::DescriptorSetLayoutCreateInfo&
-ModelData::GetPerObjectDescriptorSetLayoutCreateInfo() {
-  constexpr uint32_t kNumBindings = 2;
-  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
-  static vk::DescriptorSetLayoutCreateInfo info;
-  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
-  if (!ptr) {
-    auto& uniform_binding = bindings[0];
-    auto& texture_binding = bindings[1];
-    uniform_binding.binding = 0;
-    uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-    uniform_binding.descriptorCount = 1;
-    uniform_binding.stageFlags =
-        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-    texture_binding.binding = 1;
-    texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    texture_binding.descriptorCount = 1;
-    texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    info.bindingCount = kNumBindings;
-    info.pBindings = bindings;
-    ptr = &info;
-  }
-  return *ptr;
-}
 
 const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   auto ptr = mesh_shader_binding_cache_[spec].get();
