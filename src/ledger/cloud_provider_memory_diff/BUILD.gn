@@ -34,3 +34,25 @@ package("cloud_provider_memory_diff") {
     },
   ]
 }
+
+package("cloud_provider_memory_diff_tests") {
+  testonly = true
+
+  deps = [
+    "validation",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("validation/validation_memory_diff.cmx")
+      dest = "validation_memory_diff.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "launch_validation_tests_memory_diff"
+      environments = basic_envs
+    },
+  ]
+}

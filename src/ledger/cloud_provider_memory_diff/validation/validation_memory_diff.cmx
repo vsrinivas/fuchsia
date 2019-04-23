@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/launch_validation_tests_memory_diff"
+    }
+}
