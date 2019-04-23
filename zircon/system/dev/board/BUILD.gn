@@ -12,6 +12,7 @@ group("board") {
   ]
   if (current_cpu == "arm64") {
     deps += [
+      "as370",
       "astro",
       "gauss",
       "hikey960",
