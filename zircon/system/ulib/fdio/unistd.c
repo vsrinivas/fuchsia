@@ -1511,7 +1511,7 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
         }
         mode = va_arg(args, uint32_t) & 0777;
     }
-    if ((r = __fdio_open_at(&io, dirfd, path, flags, mode)) < 0) {
+    if ((r = __fdio_open_at(&io, dirfd, path, flags, mode)) != ZX_OK) {
         return ERROR(r);
     }
     if (flags & O_NONBLOCK) {
@@ -2489,7 +2489,7 @@ int fstatvfs(int fd, struct statvfs* buf) {
         // The following fields have slightly different semantics
         // between the two.
 
-        // The two have different represenations for the fsid.
+        // The two have different representations for the fsid.
         vstats.f_fsid = stats.f_fsid.__val[0] + (((uint64_t)stats.f_fsid.__val[1]) << 32);
 
         // The statvfs "fragment size" value best corresponds to the
@@ -2497,7 +2497,7 @@ int fstatvfs(int fd, struct statvfs* buf) {
         vstats.f_frsize = stats.f_bsize;
 
         // The statvfs struct distinguishes between available files,
-        // and available files for unpriviliged processes. fuchsia.io
+        // and available files for unprivileged processes. fuchsia.io
         // makes no such distinction, so use the same value for both.
         vstats.f_favail = stats.f_ffree;
 
