@@ -437,7 +437,7 @@ bool TestThread::Reset(bool explicit_kill) {
         EXPECT_TRUE(allow_shutdown_.state(), "");
     }
 
-    constexpr zx_duration_t join_timeout = ZX_MSEC(200);
+    constexpr zx_duration_t join_timeout = ZX_MSEC(500);
 
     switch (state_) {
     case State::INITIAL:
@@ -508,7 +508,7 @@ int TestThread::ThreadEntry() {
 bool TestThread::WaitForBlocked() {
     BEGIN_TEST;
 
-    constexpr zx_duration_t timeout = ZX_MSEC(500);
+    constexpr zx_duration_t timeout = ZX_MSEC(1000);
     constexpr zx_duration_t poll_interval = ZX_USEC(100);
     zx_time_t deadline = current_time() + timeout;
 
