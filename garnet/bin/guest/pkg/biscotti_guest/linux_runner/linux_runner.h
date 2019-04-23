@@ -6,11 +6,11 @@
 #define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_LINUX_RUNNER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/command_line.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/guest.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace linux_runner {
 
@@ -30,7 +30,7 @@ class LinuxRunner : public fuchsia::sys::Runner {
       ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
       override;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
   std::unique_ptr<linux_runner::Guest> guest_;
 };

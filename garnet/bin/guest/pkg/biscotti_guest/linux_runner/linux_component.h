@@ -8,12 +8,11 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <lib/component/cpp/outgoing.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/eventpair.h>
 
 namespace linux_runner {
@@ -35,8 +34,7 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   TerminationCallback termination_callback_;
   fidl::Binding<fuchsia::sys::ComponentController> application_controller_;
   fidl::InterfaceRequest<fuchsia::io::Directory> directory_request_;
-  component::Outgoing outgoing_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  sys::OutgoingDirectory outgoing_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_bindings_;
   fuchsia::ui::app::ViewProviderPtr remote_view_provider_;
 

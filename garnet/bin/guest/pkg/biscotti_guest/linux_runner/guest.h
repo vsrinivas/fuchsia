@@ -11,9 +11,9 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <grpc++/grpc++.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <trace/event.h>
 
@@ -45,11 +45,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
               public vm_tools::container::ContainerListener::Service {
  public:
   // Creates a new |Guest|
-  static zx_status_t CreateAndStart(component::StartupContext* context,
+  static zx_status_t CreateAndStart(sys::ComponentContext* context,
                                     fxl::CommandLine cl,
                                     std::unique_ptr<Guest>* guest);
 
-  Guest(component::StartupContext* context,
+  Guest(sys::ComponentContext* context,
         fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl);
 
   void Launch(AppLaunchRequest request);

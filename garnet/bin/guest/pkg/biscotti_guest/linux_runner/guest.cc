@@ -143,13 +143,13 @@ static int convert_socket_to_fd(zx::socket socket) {
 }
 
 // static
-zx_status_t Guest::CreateAndStart(component::StartupContext* context,
+zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
                                   fxl::CommandLine cl,
                                   std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
   FXL_LOG(INFO) << "Creating Guest Environment...";
   fuchsia::guest::EnvironmentManagerPtr guestmgr;
-  context->ConnectToEnvironmentService(guestmgr.NewRequest());
+  context->svc()->Connect(guestmgr.NewRequest());
   fuchsia::guest::EnvironmentControllerPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
@@ -158,7 +158,7 @@ zx_status_t Guest::CreateAndStart(component::StartupContext* context,
   return ZX_OK;
 }
 
-Guest::Guest(component::StartupContext* context,
+Guest::Guest(sys::ComponentContext* context,
              fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
     : guest_env_(std::move(env)),
       cl_(std::move(cl)),

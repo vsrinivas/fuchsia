@@ -6,14 +6,12 @@
 
 #include <memory>
 
-#include "lib/svc/cpp/service_provider_bridge.h"
 #include "src/lib/fxl/logging.h"
 
 namespace linux_runner {
 
-LinuxRunner::LinuxRunner()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::Create()) {
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 zx_status_t LinuxRunner::Init(fxl::CommandLine cl) {
