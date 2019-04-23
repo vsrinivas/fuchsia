@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
@@ -20,9 +21,6 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/paper/paper_scene.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/renderer/shadow_map.h"
-#include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/vk/image.h"
@@ -40,10 +38,6 @@ namespace gfx {
 
 EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
-      paper_renderer_(escher::PaperRenderer::New(escher_)),
-      shadow_renderer_(
-          escher::ShadowMapRenderer::New(escher_, paper_renderer_->model_data(),
-                                         paper_renderer_->model_renderer())),
       // We use two depth buffers so that we can render multiple Layers without
       // introducing a GPU stall.
       paper_renderer2_(escher::PaperRenderer2::New(
@@ -51,7 +45,6 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
                     .num_depth_buffers = 2})),
       pose_buffer_latching_shader_(
           std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
-  paper_renderer_->set_sort_by_pipeline(false);
 }
 
 EngineRenderer::~EngineRenderer() = default;
@@ -114,56 +107,6 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame,
             escher::Model(std::move(overlay_objects)));
 }
 
-// Helper function for DrawLayer().
-static void InitEscherStage(
-    escher::Stage* stage, const escher::ViewingVolume& viewing_volume,
-    const std::vector<AmbientLightPtr>& ambient_lights,
-    const std::vector<DirectionalLightPtr>& directional_lights) {
-  stage->set_viewing_volume(viewing_volume);
-
-  if (ambient_lights.empty()) {
-    constexpr float kIntensity = 0.3f;
-    FXL_LOG(WARNING) << "scenic::gfx::Compositor::InitEscherStage(): no "
-                        "ambient light was provided.  Using one with "
-                        "intensity: "
-                     << kIntensity << ".";
-    stage->set_fill_light(escher::AmbientLight(kIntensity));
-  } else {
-    if (ambient_lights.size() > 1) {
-      FXL_LOG(WARNING)
-          << "scenic::gfx::Compositor::InitEscherStage(): only a single "
-             "ambient light is supported, but "
-          << ambient_lights.size() << " were provided.  Using the first one.";
-    }
-    stage->set_fill_light(escher::AmbientLight(ambient_lights[0]->color()));
-  }
-
-  if (directional_lights.empty()) {
-    constexpr float kHeading = 1.5f * M_PI;
-    constexpr float kElevation = 1.5f * M_PI;
-    constexpr float kIntensity = 0.3f;
-    constexpr float kDispersion = 0.15f * M_PI;
-    FXL_LOG(WARNING) << "scenic::gfx::Compositor::InitEscherStage(): no "
-                        "directional light was provided (heading: "
-                     << kHeading << ", elevation: " << kElevation
-                     << ", intensity: " << kIntensity << ").";
-    stage->set_key_light(
-        escher::DirectionalLight(escher::vec2(kHeading, kElevation),
-                                 kDispersion, escher::vec3(kIntensity)));
-  } else {
-    if (directional_lights.size() > 1) {
-      FXL_LOG(WARNING)
-          << "scenic::gfx::Compositor::InitEscherStage(): only a single "
-             "directional light is supported, but "
-          << directional_lights.size()
-          << " were provided.  Using the first one.";
-    }
-    auto& light = directional_lights[0];
-    stage->set_key_light(escher::DirectionalLight(
-        light->direction(), 0.15f * M_PI, light->color()));
-  }
-}
-
 // Helper function for DrawLayer
 static escher::PaperRendererShadowType GetPaperRendererShadowType(
     fuchsia::ui::gfx::ShadowTechnique technique) {
@@ -209,26 +152,18 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
   escher::PaperRendererShadowType shadow_type =
       GetPaperRendererShadowType(layer->renderer()->shadow_technique());
   switch (shadow_type) {
-#if !SCENIC_USE_PAPERRENDERER2
     case escher::PaperRendererShadowType::kNone:
-#endif
-    case escher::PaperRendererShadowType::kSsdo:
-    case escher::PaperRendererShadowType::kShadowMap:
-    case escher::PaperRendererShadowType::kMomentShadowMap:
-      DrawLayerWithPaperRenderer(frame, target_presentation_time, layer,
-                                 shadow_type, output_image, overlay_model);
-      break;
-#if SCENIC_USE_PAPERRENDERER2
-    case escher::PaperRendererShadowType::kNone:
-#endif
     case escher::PaperRendererShadowType::kShadowVolume:
-      DrawLayerWithPaperRenderer2(frame, target_presentation_time, layer,
-                                  shadow_type, output_image, overlay_model);
       break;
-    case escher::PaperRendererShadowType::kEnumCount:
-      FXL_CHECK(false) << "kEnumCount is not a valid shadow type.";
-      break;
+    default:
+      FXL_LOG(WARNING) << "EngineRenderer does not support "
+                       << layer->renderer()->shadow_technique()
+                       << "; using UNSHADOWED.";
+      shadow_type = escher::PaperRendererShadowType::kNone;
   }
+
+  DrawLayerWithPaperRenderer2(frame, target_presentation_time, layer,
+                              shadow_type, output_image, overlay_model);
 }
 
 std::vector<escher::Camera>
@@ -266,46 +201,6 @@ EngineRenderer::GenerateEscherCamerasForPaperRenderer(
     }
 
     return {escher_camera};
-  }
-}
-
-void EngineRenderer::DrawLayerWithPaperRenderer(
-    const escher::FramePtr& frame, zx_time_t target_presentation_time,
-    Layer* layer, escher::PaperRendererShadowType shadow_type,
-    const escher::ImagePtr& output_image, const escher::Model& overlay_model) {
-  TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
-
-  auto& renderer = layer->renderer();
-  auto& scene = renderer->camera()->scene();
-
-  escher::Stage stage;
-  InitEscherStage(&stage, layer->GetViewingVolume(), scene->ambient_lights(),
-                  scene->directional_lights());
-
-  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
-  escher::Model model(renderer->CreateDisplayList(
-      renderer->camera()->scene(), escher::vec2(layer->size()), &gpu_uploader));
-  gpu_uploader.Submit();
-
-  // Set the renderer's shadow mode, and generate a shadow map if necessary.
-  escher::ShadowMapPtr shadow_map;
-  if (shadow_type == escher::PaperRendererShadowType::kMomentShadowMap) {
-    FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
-    shadow_type = escher::PaperRendererShadowType::kShadowMap;
-  }
-  if (shadow_type == escher::PaperRendererShadowType::kShadowMap) {
-    shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
-        frame, stage, model, stage.key_light().direction(),
-        stage.key_light().color());
-  }
-  paper_renderer_->set_shadow_type(shadow_type);
-
-  auto escher_cameras = GenerateEscherCamerasForPaperRenderer(
-      frame, renderer->camera(), layer->GetViewingVolume(),
-      target_presentation_time);
-  for (auto& c : escher_cameras) {
-    paper_renderer_->DrawFrame(frame, stage, model, c, output_image, shadow_map,
-                               &overlay_model);
   }
 }
 

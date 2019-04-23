@@ -6,10 +6,6 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
   scenic_ignore_vsync = false
-
-  # Specifies whether Scenic uses the new "PaperRenderer2" when
-  # rendering Scenes with fuchsia.ui.gfx.ShadowTechnique.UNSHADOWED.
-  scenic_use_new_renderer = true
 }
 
 config("common_include_dirs") {
@@ -22,7 +18,6 @@ config("common_include_dirs") {
 config("swapchain") {
   defines = [
     "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
-    "SCENIC_USE_PAPERRENDERER2=$scenic_use_new_renderer",
   ]
 }
 

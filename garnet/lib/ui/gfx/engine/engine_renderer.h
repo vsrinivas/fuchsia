@@ -35,13 +35,6 @@ class EngineRenderer {
                  const escher::ImagePtr& output_image,
                  const escher::Model& overlay_model);
 
-  void DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
-                                  zx_time_t target_presentation_time,
-                                  Layer* layer,
-                                  escher::PaperRendererShadowType shadow_type,
-                                  const escher::ImagePtr& output_image,
-                                  const escher::Model& overlay_model);
-
   void DrawLayerWithPaperRenderer2(const escher::FramePtr& frame,
                                    zx_time_t target_presentation_time,
                                    Layer* layer,
@@ -56,8 +49,6 @@ class EngineRenderer {
       escher::ViewingVolume viewing_volume, zx_time_t target_presentation_time);
 
   const escher::EscherWeakPtr escher_;
-  escher::PaperRendererPtr paper_renderer_;
-  escher::ShadowMapRendererPtr shadow_renderer_;
   escher::PaperRenderer2Ptr paper_renderer2_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader>
       pose_buffer_latching_shader_;
