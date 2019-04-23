@@ -11,12 +11,14 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+using namespace debug_ipc;
+
 namespace debug_agent {
 namespace arch {
 
 namespace {
 
-uint64_t HWBreakpointEnabled(uint64_t dr7, size_t index) {
+uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
   static uint64_t masks[4] = {
       X86_FLAG_MASK(DR7L0),
@@ -28,8 +30,48 @@ uint64_t HWBreakpointEnabled(uint64_t dr7, size_t index) {
   return (dr7 & masks[index]) != 0;
 }
 
-// Mask needed to clear a particular HW breakpoint.
-uint64_t HWBreakpointD7ClearMask(size_t index) {
+// A HW breakpoint is configured by DR7RW<i> = 0b00.
+bool IsHWBreakpoint(uint64_t dr7, size_t index) {
+  FXL_DCHECK(index < 4);
+  switch (index) {
+    case 0:
+      return X86_FLAG_VALUE(dr7, DR7RW0) == 0;
+    case 1:
+      return X86_FLAG_VALUE(dr7, DR7RW1) == 0;
+    case 2:
+      return X86_FLAG_VALUE(dr7, DR7RW2) == 0;
+    case 3:
+      return X86_FLAG_VALUE(dr7, DR7RW3) == 0;
+    default:
+      break;
+  }
+
+  FXL_NOTREACHED();
+  return false;
+}
+
+// A watchpoint is configured by DR7RW<i> = 0b10 (write) or 0b11 (read/write).
+bool IsWatchpoint(uint64_t dr7, size_t index) {
+  FXL_DCHECK(index < 4);
+  switch (index) {
+    case 0:
+      return (X86_FLAG_VALUE(dr7, DR7RW0) & 1) == 1;
+    case 1:
+      return (X86_FLAG_VALUE(dr7, DR7RW1) & 1) == 1;
+    case 2:
+      return (X86_FLAG_VALUE(dr7, DR7RW2) & 1) == 1;
+    case 3:
+      return (X86_FLAG_VALUE(dr7, DR7RW3) & 1) == 1;
+    default:
+      break;
+  }
+
+  FXL_NOTREACHED();
+  return false;
+}
+
+// Mask needed to clear a particular HW debug resource.
+uint64_t HWDebugResourceD7ClearMask(size_t index) {
   FXL_DCHECK(index < 4);
   static uint64_t masks[4] = {
     ~(X86_FLAG_MASK(DR7L0) | X86_FLAG_MASK(DR7RW0) | X86_FLAG_MASK(DR7LEN0)),
@@ -44,58 +86,30 @@ uint64_t HWBreakpointD7ClearMask(size_t index) {
 uint64_t HWBreakpointDR7SetMask(size_t index) {
   FXL_DCHECK(index < 4);
   // Mask is: L = 1, RW = 00, LEN = 10
-  static uint64_t dr_masks[4] = {
+  static uint64_t masks[4] = {
       X86_FLAG_MASK(DR7L0),
       X86_FLAG_MASK(DR7L1),
       X86_FLAG_MASK(DR7L2),
       X86_FLAG_MASK(DR7L3),
   };
-  return dr_masks[index];
+  return masks[index];
+}
+
+uint64_t WatchpointDR7SetMask(size_t index) {
+  FXL_DCHECK(index < 4);
+  // Mask is: L = 1, RW = 0b01, LEN = 10 (8 bytes).
+  // TODO(donosoc): This is only setting write-only watchpoints.
+  //                When enabled in the client, we need to allow read/write.
+  static uint64_t masks[4] = {
+    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b11 << kDR7LEN0Shift,
+    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b11 << kDR7LEN1Shift,
+    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b11 << kDR7LEN2Shift,
+    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b11 << kDR7LEN3Shift,
+  };
+  return masks[index];
 }
 
 }  // namespace
-
-zx_status_t SetupHWBreakpoint(uint64_t address,
-                              zx_thread_state_debug_regs_t* debug_regs) {
-  // Search for a free slot.
-  int slot = -1;
-  for (size_t i = 0; i < 4; i++) {
-    if (HWBreakpointEnabled(debug_regs->dr7, i)) {
-      // If it's already bound there, we don't need to do anything.
-      if (debug_regs->dr[i] == address)
-        return ZX_ERR_ALREADY_BOUND;
-    } else {
-      slot = i;
-      break;
-    }
-  }
-
-  if (slot == -1)
-    return ZX_ERR_NO_RESOURCES;
-
-  // We found a slot, we bind the address.
-  debug_regs->dr[slot] = address;
-  debug_regs->dr7 &= HWBreakpointD7ClearMask(slot);
-  debug_regs->dr7 |= HWBreakpointDR7SetMask(slot);
-  return ZX_OK;
-}
-
-zx_status_t RemoveHWBreakpoint(uint64_t address,
-                               zx_thread_state_debug_regs_t* debug_regs) {
-  // Search for the slot.
-  for (int i = 0; i < 4; i++) {
-    if (address != debug_regs->dr[i])
-      continue;
-
-    // Clear this breakpoint.
-    debug_regs->dr[i] = 0;
-    debug_regs->dr7 &= HWBreakpointD7ClearMask(i);
-    return ZX_OK;
-  }
-
-  // We didn't find the address.
-  return ZX_ERR_OUT_OF_RANGE;
-}
 
 zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
                                   zx_thread_state_general_regs_t* gen_regs) {
@@ -119,6 +133,112 @@ zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
   }
 
   return ZX_OK;
+}
+
+// HW Breakpoints --------------------------------------------------------------
+
+zx_status_t SetupHWBreakpoint(uint64_t address,
+                              zx_thread_state_debug_regs_t* debug_regs) {
+  // Search for a free slot.
+  int slot = -1;
+  for (size_t i = 0; i < 4; i++) {
+    if (HWDebugResourceEnabled(debug_regs->dr7, i)) {
+      // If it's already bound there, we don't need to do anything.
+      if (debug_regs->dr[i] == address)
+        return ZX_ERR_ALREADY_BOUND;
+    } else {
+      slot = i;
+      break;
+    }
+  }
+
+  if (slot == -1)
+    return ZX_ERR_NO_RESOURCES;
+
+  // We found a slot, we bind the address.
+  debug_regs->dr[slot] = address;
+  debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
+  debug_regs->dr7 |= HWBreakpointDR7SetMask(slot);
+  return ZX_OK;
+}
+
+zx_status_t RemoveHWBreakpoint(uint64_t address,
+                               zx_thread_state_debug_regs_t* debug_regs) {
+  // Search for the slot.
+  for (int i = 0; i < 4; i++) {
+    if (!HWDebugResourceEnabled(debug_regs->dr7, i) ||
+        IsWatchpoint(debug_regs->dr7, i)) {
+      continue;
+    }
+
+    if (debug_regs->dr[i] != address)
+      continue;
+
+    // Clear this breakpoint.
+    debug_regs->dr[i] = 0;
+    debug_regs->dr7 &= HWDebugResourceD7ClearMask(i);
+    return ZX_OK;
+  }
+
+  // We didn't find the address.
+  return ZX_ERR_OUT_OF_RANGE;
+}
+
+// HW Watchpoints --------------------------------------------------------------
+
+namespace {
+
+inline uint64_t AlignedAddress(uint64_t address) {
+  return address & ~0b111;
+}
+
+}
+
+zx_status_t SetupWatchpoint(uint64_t address,
+                            zx_thread_state_debug_regs_t* debug_regs) {
+  // Search for a free slot.
+  int slot = -1;
+  for (int i = 0; i < 4; i++) {
+    if (HWDebugResourceEnabled(debug_regs->dr7, i)) {
+      // If it's the same address, we don't need to do anything.
+      // For watchpoints, we need to compare against the aligned address.
+      if (debug_regs->dr[i] == AlignedAddress(address))
+        return ZX_ERR_ALREADY_BOUND;
+    } else {
+      slot = i;
+      break;
+    }
+  }
+
+  if (slot == -1)
+    return ZX_ERR_NO_RESOURCES;
+
+  // We found a slot, we bind the watchpoint.
+  debug_regs->dr[slot] = AlignedAddress(address);   // 8-byte aligned.
+  debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
+  debug_regs->dr7 |= WatchpointDR7SetMask(slot);
+  return ZX_OK;
+}
+
+zx_status_t RemoveWatchpoint(uint64_t address,
+                             zx_thread_state_debug_regs_t* debug_regs) {
+  for (int i = 0; i < 4; i++) {
+    if (!HWDebugResourceEnabled(debug_regs->dr7, i) ||
+        IsHWBreakpoint(debug_regs->dr7, i)) {
+      continue;
+    }
+
+    if (debug_regs->dr[i] != AlignedAddress(address))
+      continue;
+
+    // Clear this breakpoint.
+    debug_regs->dr[i] = 0;
+    debug_regs->dr7 &= HWDebugResourceD7ClearMask(i);
+    return ZX_OK;
+  }
+
+  // We didn't find the address.
+  return ZX_ERR_OUT_OF_RANGE;
 }
 
 // Debug functions -------------------------------------------------------------

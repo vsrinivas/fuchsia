@@ -22,9 +22,13 @@ namespace arch {
 // They are on a separate header/implementation so that it can be more easily
 // tested.
 
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>&,
+                                  zx_thread_state_general_regs_t*);
+
 // Returns the state the debug registers should be if we added a execution HW
 // breakpoint for |address|.
-// return ZX_ERR_NO_RESOURCES if there are no registers left.
+// Returns ZX_ERR_ALREADY_BOUND if |address| is already installed.
+// Returns ZX_ERR_NO_RESOURCES if there are no registers left.
 zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
 // Removes an installed execution HW breakpoint for |address|.
@@ -32,8 +36,16 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // ZX_ERR_OUT_OF_RANGE will be returned.
 zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
-zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>&,
-                                  zx_thread_state_general_regs_t*);
+// Returns the state the debug registers should be if we added a watchpoing.
+// for |address|.
+// Returns ZX_ERR_ALREADY_BOUND if |address| is already installed.
+// Returns ZX_ERR_NO_RESOURCES if there are no registers left.
+zx_status_t SetupWatchpoint(uint64_t address, zx_thread_state_debug_regs_t*);
+
+// Removes an installed execution watchpoint for |address|.
+// If the address is not installed, no functional change will happen and
+// ZX_ERR_OUT_OF_RANGE will be returned.
+zx_status_t RemoveWatchpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
 // Debug functions -------------------------------------------------------------
 
