@@ -27,6 +27,8 @@ pub type zx_koid_t = u64;
 pub type zx_object_info_topic_t = u32;
 pub type zx_guest_trap_t = u32;
 
+pub const ZX_MAX_NAME_LEN: usize = 32;
+
 // TODO: combine these macros with the bitflags and assoc consts macros below
 // so that we only have to do one macro invocation.
 // The result would look something like:

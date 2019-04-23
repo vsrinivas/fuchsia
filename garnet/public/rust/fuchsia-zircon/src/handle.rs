@@ -5,9 +5,12 @@
 //! Type-safe bindings for Zircon handles.
 //!
 use crate::{
-    object_get_info, ok, ObjectQuery, Port, Rights, Signals, Status, Time, Topic, WaitAsyncOpts,
+    object_get_info, object_get_property, object_set_property, ok, ObjectQuery, Port, Property,
+    PropertyQuery, PropertyQueryGet, PropertyQuerySet, Rights, Signals, Status, Time, Topic,
+    WaitAsyncOpts,
 };
 use fuchsia_zircon_sys as sys;
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::mem::{self, ManuallyDrop};
 use std::ops::Deref;
@@ -72,7 +75,16 @@ impl Handle {
         let status = unsafe { sys::zx_handle_replace(handle, rights.bits(), &mut out) };
         ok(status).map(|()| Handle(out))
     }
+
 }
+
+struct NameProperty();
+unsafe impl PropertyQuery for NameProperty {
+    const PROPERTY: Property = Property::NAME;
+    type PropTy = [u8; sys::ZX_MAX_NAME_LEN];
+}
+unsafe impl PropertyQueryGet for NameProperty {}
+unsafe impl PropertyQuerySet for NameProperty {}
 
 /// A borrowed value of type `T`.
 ///
@@ -193,6 +205,38 @@ pub trait AsHandleRef {
     {
         self.as_handle_ref().wait_async(port, key, signals, options)
     }
+
+    /// Get the [Property::NAME] property for this object.
+    ///
+    /// Wraps a call to the
+    /// [zx_object_get_property](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_property.md)
+    /// syscall for the ZX_PROP_NAME property.
+    fn get_name(&self) -> Result<CString, Status> {
+        let buf = object_get_property::<NameProperty>(self.as_handle_ref())?;
+        let nul_pos = buf.iter().position(|&x| x == b'\0').ok_or(Status::INTERNAL)?;
+        // We already checked for nul bytes, so simply unwrap.
+        Ok(CString::new(&buf[..nul_pos]).unwrap())
+    }
+
+    /// Set the [Property::NAME] property for this object.
+    ///
+    /// The name's length must be less than [sys::ZX_MAX_NAME_LEN], i.e.
+    /// name.[to_bytes_with_nul()](CStr::to_bytes_with_nul()).len() <= [sys::ZX_MAX_NAME_LEN], or
+    /// Err([Status::INVALID_ARGS]) will be returned.
+    ///
+    /// Wraps a call to the
+    /// [zx_object_get_property](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_property.md)
+    /// syscall for the ZX_PROP_NAME property.
+    fn set_name(&self, name: &CStr) -> Result<(), Status> {
+        let bytes = name.to_bytes_with_nul();
+        if bytes.len() > sys::ZX_MAX_NAME_LEN {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut buf = [0u8; sys::ZX_MAX_NAME_LEN];
+        buf[..bytes.len()].copy_from_slice(bytes);
+        object_set_property::<NameProperty>(self.as_handle_ref(), &buf)
+    }
 }
 
 impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
@@ -297,4 +341,36 @@ impl Deref for HandleBasicInfo {
 unsafe impl ObjectQuery for HandleBasicInfo {
     const TOPIC: Topic = Topic::HANDLE_BASIC;
     type InfoTy = HandleBasicInfo;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Vmo;
+
+    #[test]
+    fn set_get_name() {
+        // We need some concrete object to exercise the AsHandleRef set/get_name functions.
+        let vmo = Vmo::create(1).unwrap();
+        let short_name = CStr::from_bytes_with_nul(b"v\0").unwrap();
+        assert!(vmo.set_name(short_name).is_ok());
+        assert_eq!(vmo.get_name(), Ok(short_name.to_owned()));
+    }
+
+    #[test]
+    fn set_get_max_len_name() {
+        let vmo = Vmo::create(1).unwrap();
+        let max_len_name =
+            CStr::from_bytes_with_nul(b"a_great_maximum_length_vmo_name\0").unwrap(); // 32 bytes
+        assert!(vmo.set_name(max_len_name).is_ok());
+        assert_eq!(vmo.get_name(), Ok(max_len_name.to_owned()));
+    }
+
+    #[test]
+    fn set_get_too_long_name() {
+        let vmo = Vmo::create(1).unwrap();
+        let too_long_name =
+            CStr::from_bytes_with_nul(b"bad_really_too_too_long_vmo_name\0").unwrap(); // 33 bytes
+        assert_eq!(vmo.set_name(too_long_name), Err(Status::INVALID_ARGS));
+    }
 }
