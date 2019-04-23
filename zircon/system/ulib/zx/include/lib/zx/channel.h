@@ -38,23 +38,7 @@ public:
                                num_handles, actual_bytes, actual_handles);
     }
 
-    // ZX-2812 Do not use rea2, use read instead. This will be removed shortly.
-    zx_status_t rea2(uint32_t flags, void* bytes, zx_handle_t* handles,
-                     uint32_t num_bytes, uint32_t num_handles,
-                     uint32_t* actual_bytes, uint32_t* actual_handles) const {
-        return zx_channel_read(get(), flags, bytes, handles, num_bytes,
-                               num_handles, actual_bytes, actual_handles);
-    }
-
     zx_status_t read_etc(uint32_t flags, void* bytes, zx_handle_info_t* handles,
-                         uint32_t num_bytes, uint32_t num_handles,
-                         uint32_t* actual_bytes, uint32_t* actual_handles) const {
-        return zx_channel_read_etc(get(), flags, bytes, handles, num_bytes,
-                                   num_handles, actual_bytes, actual_handles);
-    }
-
-    // ZX-2812 Do not use rea2_etc, use read_etc instead. This will be removed shortly.
-    zx_status_t rea2_etc(uint32_t flags, void* bytes, zx_handle_info_t* handles,
                          uint32_t num_bytes, uint32_t num_handles,
                          uint32_t* actual_bytes, uint32_t* actual_handles) const {
         return zx_channel_read_etc(get(), flags, bytes, handles, num_bytes,

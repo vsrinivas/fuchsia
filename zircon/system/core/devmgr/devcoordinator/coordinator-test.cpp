@@ -269,7 +269,7 @@ void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    zx_status_t status = remote.rea2(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+    zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
                                      &actual_bytes, &actual_handles);
     ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);

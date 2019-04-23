@@ -36,7 +36,7 @@ TEST(HandleTransferTest, OverChannelThenRead) {
     a_remote_raw = ZX_HANDLE_INVALID;
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 1u;
-    ASSERT_OK(b_remote.rea2(0u, nullptr, &a_remote_raw,
+    ASSERT_OK(b_remote.read(0u, nullptr, &a_remote_raw,
               num_bytes, num_handles, &num_bytes, &num_handles));
     ASSERT_EQ(num_handles, 1);
     a_remote.reset(a_remote_raw);
@@ -48,7 +48,7 @@ TEST(HandleTransferTest, OverChannelThenRead) {
         char incoming_byte;
         num_bytes = 1u;
         num_handles = 0u;
-        ASSERT_OK(a_remote.rea2(0u, &incoming_byte, nullptr, num_bytes,
+        ASSERT_OK(a_remote.read(0u, &incoming_byte, nullptr, num_bytes,
                   num_handles, nullptr, &num_handles));
         ASSERT_EQ(num_handles, 0);
         ASSERT_EQ(kMessage[i], incoming_byte);
@@ -84,7 +84,7 @@ int DoWork(void* arg) {
 
     // Read from b_0 into handle_a_0_incoming, thus canceling any waits on a_0.
     uint32_t num_handles = 1;
-    test->fail_incoming_a_0_from_b_0 = test->b_client.rea2(0,
+    test->fail_incoming_a_0_from_b_0 = test->b_client.read(0,
         nullptr, &a_client_raw, 0, num_handles, nullptr, &num_handles);
     test->num_handles = num_handles;
 
