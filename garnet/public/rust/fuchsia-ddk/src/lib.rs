@@ -154,16 +154,6 @@ impl Device {
         unsafe { sys::device_get_size(self.device) }
     }
 
-    pub fn ioctl(&mut self, op: u32, in_buf: &[u8], out_buf: &mut [u8]) -> Result<usize, Status> {
-        let mut out_actual = 0;
-        let status = unsafe {
-            sys::device_ioctl(self.device, op, in_buf.as_ptr(), in_buf.len(),
-                out_buf.as_mut_ptr(), out_buf.len(), &mut out_actual)
-        };
-        ok(status)?;
-        Ok(out_actual)
-    }
-
     pub fn load_firmware(&mut self, path: &str) -> Result<(Vmo, usize), Status> {
         let mut size = 0;
         let mut fw = 0;

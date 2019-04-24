@@ -401,6 +401,5 @@ extern "C" {
     pub fn device_read(dev: *mut zx_device_t, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_write(dev: *mut zx_device_t, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_get_size(dev: *mut zx_device_t) -> sys::zx_off_t;
-    pub fn device_ioctl(dev: *mut zx_device_t, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t;
     pub fn device_state_clr_set(dev: *mut zx_device_t, clearflag: sys::zx_signals_t, setflag: sys::zx_signals_t);
 }

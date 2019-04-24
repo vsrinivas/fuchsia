@@ -253,10 +253,6 @@ zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count,
 
 zx_off_t device_get_size(zx_device_t* dev);
 
-zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
-
 // Device Metadata Support
 
 // retrieves metadata for a specific device

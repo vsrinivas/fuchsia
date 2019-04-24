@@ -191,11 +191,6 @@ __EXPORT zx_status_t device_write(zx_device_t* dev, const void* buf, size_t coun
     return dev->ops->write(dev->ctx, buf, count, off, actual);
 }
 
-__EXPORT zx_status_t device_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
-}
-
 // LibDriver Misc Interfaces
 
 namespace devmgr {
