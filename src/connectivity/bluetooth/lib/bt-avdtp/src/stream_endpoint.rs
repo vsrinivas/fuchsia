@@ -95,6 +95,16 @@ impl StreamEndpoint {
         })
     }
 
+    pub fn as_new(&self) -> Self {
+        StreamEndpoint::new(
+            self.id.0,
+            self.media_type.clone(),
+            self.endpoint_type.clone(),
+            self.capabilities.clone(),
+        )
+        .expect("as_new")
+    }
+
     /// Attempt to Configure this stream using the capabilities given.
     /// If the stream is not in an Idle state, fails with Err(InvalidState).
     /// Used for the Stream Configuration procedure, see Section 6.9

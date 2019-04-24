@@ -137,8 +137,19 @@ impl Stream {
     }
 }
 
+impl Clone for Stream {
+    fn clone(&self) -> Self {
+        Stream {
+            endpoint: self.endpoint.as_new(),
+            encoding: self.encoding.clone(),
+            suspend_sender: None,
+        }
+    }
+}
+
 /// A collection of streams that can be indexed by their EndpointId to their
 /// endpoint and the codec to use for this endpoint.
+#[derive(Clone)]
 struct Streams(HashMap<avdtp::StreamEndpointId, Stream>);
 
 impl Streams {
@@ -148,34 +159,36 @@ impl Streams {
     }
 
     /// Builds a set of endpoints from the available codecs.
-    fn build() -> avdtp::Result<Streams> {
+    async fn build() -> Result<Streams, Error> {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
-        let sbc_stream = avdtp::StreamEndpoint::new(
-            SBC_SEID,
-            avdtp::MediaType::Audio,
-            avdtp::EndpointType::Sink,
-            vec![
-                avdtp::ServiceCapability::MediaTransport,
-                avdtp::ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
-                    // SBC Codec Specific Information Elements:
-                    // These are the mandatory support in sink.
-                    // Byte 0:
-                    //  - Sampling Frequencies: 44.1kHz, 48.0kHz
-                    //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
-                    // Byte 1:
-                    //  - Block length: all (4, 8, 12, 16)
-                    //  - Subbands: all (4, 8)
-                    //  - Allocation Method: all (SNR and loudness)
-                    // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
-                    // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
-                    codec_extra: vec![0x3F, 0xFF, 2, 250],
-                },
-            ],
-        )?;
-        s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+        if let Ok(_player) = await!(player::Player::new(AUDIO_ENCODING_SBC.to_string())) {
+            let sbc_stream = avdtp::StreamEndpoint::new(
+                SBC_SEID,
+                avdtp::MediaType::Audio,
+                avdtp::EndpointType::Sink,
+                vec![
+                    avdtp::ServiceCapability::MediaTransport,
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+                        // SBC Codec Specific Information Elements:
+                        // These are the mandatory support in sink.
+                        // Byte 0:
+                        //  - Sampling Frequencies: 44.1kHz, 48.0kHz
+                        //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
+                        // Byte 1:
+                        //  - Block length: all (4, 8, 12, 16)
+                        //  - Subbands: all (4, 8)
+                        //  - Allocation Method: all (SNR and loudness)
+                        // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
+                        // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
+                        codec_extra: vec![0x3F, 0xFF, 2, 250],
+                    },
+                ],
+            )?;
+            s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+        }
         Ok(s)
     }
 
@@ -199,6 +212,11 @@ impl Streams {
     /// Returns the information on all known streams.
     fn information(&self) -> Vec<avdtp::StreamInformation> {
         self.0.values().map(|x| x.endpoint.information()).collect()
+    }
+
+    /// Gives a count of how many streams are currently registered.
+    fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
@@ -235,12 +253,8 @@ struct RemotePeer {
 type RemotesMap = HashMap<String, RemotePeer>;
 
 impl RemotePeer {
-    fn new(peer: avdtp::Peer) -> RemotePeer {
-        RemotePeer {
-            peer: Arc::new(peer),
-            opening: None,
-            streams: Streams::build().expect("Can't build streams"),
-        }
+    fn new(peer: avdtp::Peer, streams: Streams) -> RemotePeer {
+        RemotePeer { peer: Arc::new(peer), opening: None, streams }
     }
 
     /// Provides a reference to the AVDTP peer.
@@ -489,6 +503,13 @@ async fn decode_media_stream(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
+
+    let streams = await!(Streams::build())?;
+
+    if streams.len() == 0 {
+        return Err(format_err!("Can't play media - no codecs found or media player missing"));
+    }
+
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 
@@ -544,7 +565,7 @@ async fn main() -> Result<(), Error> {
                                 continue;
                             }
                         };
-                        let remote = entry.insert(RemotePeer::new(peer));
+                        let remote = entry.insert(RemotePeer::new(peer, streams.clone()));
                         // Spawn tasks to handle this remote
                         remote.start_requests_task(remotes.clone(), device_id);
                         fuchsia_async::spawn(discover_remote_streams(remote.peer()));
