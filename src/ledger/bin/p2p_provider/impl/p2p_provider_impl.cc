@@ -142,11 +142,6 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
 
   connection_map_[remote_name] = connection;
 
-  connection->set_on_close([this, remote_name]() {
-    connection_map_.erase(remote_name);
-    OnDeviceChange(remote_name, DeviceChangeType::DELETED);
-  });
-
   connection->set_on_message([this, remote_name](std::vector<uint8_t> data) {
     Dispatch(remote_name, std::move(data));
   });
@@ -170,6 +165,11 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
     // If the connection existed before, we don't need to notify again.
     OnDeviceChange(remote_name, DeviceChangeType::NEW);
   }
+
+  connection->set_on_close([this, remote_name]() {
+    connection_map_.erase(remote_name);
+    OnDeviceChange(remote_name, DeviceChangeType::DELETED);
+  });
 }
 
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {

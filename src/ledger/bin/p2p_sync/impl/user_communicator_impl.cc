@@ -121,9 +121,7 @@ void UserCommunicatorImpl::OnDeviceChange(
     }
     case p2p_provider::DeviceChangeType::DELETED: {
       auto it = devices_.find(remote_device);
-      if (it == devices_.end()) {
-        return;
-      }
+      FXL_DCHECK(it != devices_.end());
       devices_.erase(it);
       break;
     }
