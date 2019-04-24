@@ -231,11 +231,41 @@ executable("return_child_result_tests") {
   ]
 }
 
+executable("run_awhile") {
+  testonly = true
+  output_name = "run_awhile"
+
+  sources = [
+    "run_awhile.cc"
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("detach_tests") {
+  testonly = true
+  output_name = "detach_tests"
+
+  sources = [
+    "detach_tests.cc"
+  ]
+
+  deps = [
+    ":run_test",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 test_package("trace_tests") {
   deps = [
     ":basic_integration_test_app",
+    ":detach_tests",
     ":return_1234",
     ":return_child_result_tests",
+    ":run_awhile",
     ":run_integration_test",
     ":trace_integration_tests",
     ":trace_tests_bin",
@@ -244,6 +274,10 @@ test_package("trace_tests") {
   ]
 
   tests = [
+    {
+      name = "detach_tests"
+      environments = basic_envs
+    },
     {
       name = "return_child_result_tests"
       environments = basic_envs
@@ -264,6 +298,9 @@ test_package("trace_tests") {
     },
     {
       name = "return_1234"
+    },
+    {
+      name = "run_awhile"
     },
     {
       name = "run_integration_test"

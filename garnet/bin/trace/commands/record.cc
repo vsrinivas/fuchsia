@@ -84,10 +84,9 @@ static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
   return true;
 }
 
-zx_handle_t Launch(const std::vector<std::string>& args) {
-  zx_handle_t subprocess = ZX_HANDLE_INVALID;
-  if (!args.size())
-    return subprocess;
+zx_status_t Spawn(const std::vector<std::string>& args,
+                  zx::process* subprocess) {
+  FXL_DCHECK(args.size() > 0);
 
   std::vector<const char*> raw_args;
   for (const auto& item : args) {
@@ -95,37 +94,9 @@ zx_handle_t Launch(const std::vector<std::string>& args) {
   }
   raw_args.push_back(nullptr);
 
-  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                  raw_args[0], raw_args.data(), &subprocess);
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
-                   << "\" Did you provide the full path to the tool?";
-  }
-
-  return subprocess;
-}
-
-bool WaitForExit(zx_handle_t process, int* return_code) {
-  zx_signals_t signals_observed = 0;
-  zx_status_t status = zx_object_wait_one(process, ZX_TASK_TERMINATED,
-                                          ZX_TIME_INFINITE, &signals_observed);
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_wait_one failed, status: " << status;
-    return false;
-  }
-
-  zx_info_process_t proc_info;
-  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
-    return false;
-  }
-
-  *return_code = proc_info.return_code;
-  return true;
+  return fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                    raw_args[0], raw_args.data(),
+                    subprocess->reset_and_get_address());
 }
 
 bool LookupBufferingMode(
@@ -458,9 +429,7 @@ Command::Info Record::Describe() {
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
-       {"spawn=[false]",
-        "Use fdio_spawn to run a legacy app. Detach will have no effect when "
-        "using this option."},
+       {"spawn=[false]", "Use fdio_spawn to run a legacy app."},
        {"return-child-result=[true]",
         "Return with the same return code as the child. "
         "Only valid when a child program is passed."},
@@ -484,7 +453,12 @@ Command::Info Record::Describe() {
 }
 
 Record::Record(sys::ComponentContext* context)
-    : CommandWithController(context), weak_ptr_factory_(this) {}
+    : CommandWithController(context),
+      dispatcher_(async_get_default_dispatcher()),
+      wait_spawned_app_(this),
+      weak_ptr_factory_(this) {
+  wait_spawned_app_.set_trigger(ZX_PROCESS_TERMINATED);
+}
 
 static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
                               addrinfo* out_addr) {
@@ -662,7 +636,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
       std::move(record_consumer), std::move(error_handler),
       [this] {
         if (!options_.app.empty())
-          options_.spawn ? LaunchTool() : LaunchApp();
+          options_.spawn ? LaunchSpawnedApp() : LaunchComponentApp();
         StartTimer();
       },
       [this] { DoneTrace(); });
@@ -674,6 +648,9 @@ void Record::StopTrace(int32_t return_code) {
     tracing_ = false;
     return_code_ = return_code;
     tracer_->Stop();
+    if (spawned_app_ && !options_.detach) {
+      KillSpawnedApp();
+    }
   }
 }
 
@@ -788,7 +765,7 @@ static std::string JoinArgsForLogging(
   return result;
 }
 
-void Record::LaunchApp() {
+void Record::LaunchComponentApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
@@ -829,7 +806,7 @@ void Record::LaunchApp() {
   }
 }
 
-void Record::LaunchTool() {
+void Record::LaunchSpawnedApp() {
   std::vector<std::string> all_args = {options_.app};
   all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
 
@@ -837,30 +814,66 @@ void Record::LaunchTool() {
   // see how the passed command+args ended up after shell processing.
   FXL_LOG(INFO) << "Spawning: " << JoinArgsForLogging(all_args);
 
-  zx_handle_t process = Launch(all_args);
-  if (process == ZX_HANDLE_INVALID) {
+  zx::process subprocess;
+  zx_status_t status = Spawn(all_args, &subprocess);
+  if (status != ZX_OK) {
     StopTrace(-1);
-    FXL_LOG(ERROR) << "Unable to launch " << options_.app;
+    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
+                   << "\" Did you provide the full path to the tool?";
     return;
   }
 
-  int return_code = -1;
-  if (!WaitForExit(process, &return_code))
-    FXL_LOG(ERROR) << "Unable to get return code";
+  spawned_app_ = std::move(subprocess);
 
-  out() << "Application exited with return code " << return_code << std::endl;
-  if (!options_.decouple) {
-    if (options_.return_child_result) {
-      StopTrace(return_code);
-    } else {
-      StopTrace(0);
-    }
+  wait_spawned_app_.set_object(spawned_app_.get());
+  status = wait_spawned_app_.Begin(dispatcher_);
+  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
+}
+
+void Record::OnSpawnedAppExit(
+    async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+    const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
+    StopTrace(-1);
+    return;
   }
+
+  if (signal->observed & ZX_PROCESS_TERMINATED) {
+    zx_info_process_t proc_info;
+    [[maybe_unused]] zx_status_t info_status =
+      spawned_app_.get_info(ZX_INFO_PROCESS, &proc_info,
+                            sizeof(proc_info), nullptr, nullptr);
+    FXL_DCHECK(info_status == ZX_OK);
+
+    out() << "Application exited with return code " << proc_info.return_code
+          << std::endl;
+    if (!options_.decouple) {
+      if (options_.return_child_result) {
+        StopTrace(proc_info.return_code);
+      } else {
+        StopTrace(0);
+      }
+    }
+  } else {
+    FXL_NOTREACHED();
+  }
+}
+
+void Record::KillSpawnedApp() {
+  FXL_DCHECK(spawned_app_);
+
+  // If already dead this is a no-op.
+  [[maybe_unused]] zx_status_t status = spawned_app_.kill();
+  FXL_DCHECK(status == ZX_OK);
+
+  wait_spawned_app_.Cancel();
+  wait_spawned_app_.set_object(ZX_HANDLE_INVALID);
 }
 
 void Record::StartTimer() {
   async::PostDelayedTask(
-      async_get_default_dispatcher(),
+      dispatcher_,
       [weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak)
           weak->StopTrace(0);

@@ -11,6 +11,9 @@
 #include <string>
 #include <vector>
 
+#include <lib/async/cpp/wait.h>
+#include <lib/zx/process.h>
+
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
@@ -62,11 +65,17 @@ class Record : public CommandWithController {
   void StopTrace(int32_t return_code);
   void ProcessMeasurements();
   void DoneTrace();
-  void LaunchApp();
-  void LaunchTool();
+  void LaunchComponentApp();
+  void LaunchSpawnedApp();
   void StartTimer();
+  void OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
+  void KillSpawnedApp();
 
+  async_dispatcher_t* dispatcher_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
+  zx::process spawned_app_;
+  async::WaitMethod<Record, &Record::OnSpawnedAppExit> wait_spawned_app_;
   std::unique_ptr<std::ostream> binary_out_;
   // TODO(PT-113): Remove |exporter_|.
   std::unique_ptr<ChromiumExporter> exporter_;
