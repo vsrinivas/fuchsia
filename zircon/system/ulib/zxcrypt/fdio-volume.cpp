@@ -77,7 +77,7 @@ zx_status_t SelectKeySource(KeySource* out) {
     }
 }
 
-zx_status_t DoWithHardwareKey(fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t>, size_t)>
+zx_status_t DoWithHardwareKey(fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>, size_t)>
                               callback) {
     KeySource source;
     zx_status_t rc;
@@ -91,13 +91,13 @@ zx_status_t DoWithHardwareKey(fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t>
             uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = {0};
             memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
             return kms_stateless::GetHardwareDerivedKey([&](
-                    fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+                    fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
                 return callback(std::move(key_buffer), key_size);
             }, key_info);
         }
         case NullSource: {
             // If we don't have secure storage for the root key, just use the null key
-            fbl::unique_ptr<uint8_t> key_buffer(new uint8_t[kKeyLength]);
+            fbl::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kKeyLength]);
             memset(key_buffer.get(), 0, kKeyLength);
             return callback(std::move(key_buffer), kKeyLength);
         }
@@ -125,7 +125,7 @@ zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_
 }
 
 zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         return Unseal(key_buffer.release(), key_size, slot);
     });
 }
@@ -199,7 +199,7 @@ zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
 
 zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& fd,
                                             fbl::unique_ptr<FdioVolume>* out) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         crypto::Secret secret;
         zx_status_t rc;
         uint8_t* inner;
@@ -235,7 +235,7 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key
 zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd fd,
                                             key_slot_t slot,
                                             fbl::unique_ptr<FdioVolume>* out) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         crypto::Secret secret;
         zx_status_t rc;
         uint8_t* inner;

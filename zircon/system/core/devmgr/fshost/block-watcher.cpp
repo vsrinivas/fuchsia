@@ -494,6 +494,53 @@ int UnsealZxcrypt(void* arg) {
     return 0;
 }
 
+disk_format_t ReformatDataPartition(fbl::unique_fd fd, zx_handle_t disk_channel,
+                                    const char* device_path) {
+    zx_status_t call_status;
+    fbl::StringBuffer<PATH_MAX> path;
+    path.Resize(path.capacity());
+    size_t path_len;
+    // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
+    // determine which one we actually need to format. We do this by looking up
+    // the topological path, if it is the zxcrypt driver, then we format it as
+    // minfs, otherwise as zxcrypt.
+    if (fuchsia_device_ControllerGetTopologicalPath(disk_channel, &call_status, path.data(),
+                                                    path.capacity(), &path_len) != ZX_OK) {
+        return DISK_FORMAT_UNKNOWN;
+    }
+    const fbl::StringPiece kZxcryptPath("/zxcrypt/unsealed/block");
+    if (fbl::StringPiece(path.begin() + path_len - kZxcryptPath.length()).compare(kZxcryptPath) == 0) {
+        printf("fshost: Minfs data partition is corrupt. Will attempt to reformat %s\n", device_path);
+        if (mkfs(device_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options) == ZX_OK) {
+            return DISK_FORMAT_MINFS;
+        }
+    } else {
+      printf("fshost: zxcrypt volume is corrupt. Will attempt to reformat %s\n", device_path);
+      if (zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(fd), nullptr) == ZX_OK) {
+          return DISK_FORMAT_ZXCRYPT;
+      }
+    }
+    return DISK_FORMAT_UNKNOWN;
+}
+
+// Attempts to reformat the partition at the device path. Returns the specific
+// disk format if successful and unknown otherwise.  Currently only works for
+// minfs and zxcrypt data partitions.
+disk_format_t ReformatPartition(fbl::unique_fd fd, zx_handle_t disk_channel,
+                                const char* device_path) {
+    zx_status_t call_status, io_status;
+    fuchsia_hardware_block_partition_GUID guid;
+    io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(disk_channel, &call_status,
+                                                                      &guid);
+    if (io_status != ZX_OK || call_status != ZX_OK) {
+        return DISK_FORMAT_UNKNOWN;
+    }
+    if (gpt_is_data_guid(guid.value, GPT_GUID_LEN)) {
+        return ReformatDataPartition(std::move(fd), disk_channel, device_path);
+    }
+    return DISK_FORMAT_UNKNOWN;
+}
+
 zx_status_t FormatMinfs(const fbl::unique_fd& block_device,
                         const fuchsia_hardware_block_BlockInfo& info) {
 
@@ -541,6 +588,10 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
         io_status = fuchsia_hardware_block_BlockGetInfo(disk->get(), &call_status, &info);
         if (io_status != ZX_OK || call_status != ZX_OK) {
             return ZX_OK;
+        }
+
+        if (df == DISK_FORMAT_UNKNOWN && !watcher->Netbooting()) {
+            df = ReformatPartition(fd.duplicate(), disk->get(), device_path);
         }
 
         if (info.flags & BLOCK_FLAG_BOOTPART) {
