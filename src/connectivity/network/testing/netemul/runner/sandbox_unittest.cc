@@ -745,7 +745,7 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
   RunSandboxInternalError();
 }
 
-TEST_F(SandboxTest, DestructorRunsCleanly) {
+TEST_F(SandboxTest, DISABLED_DestructorRunsCleanly) {
   // This test verifies that if the sandbox is destroyed while tests are
   // running inside it, it'll shutdown cleanly.
   // Specifically, this test was added due to a crash in the destruction
