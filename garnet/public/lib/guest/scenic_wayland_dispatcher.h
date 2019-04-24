@@ -7,7 +7,6 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/wayland/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
@@ -22,10 +21,6 @@ class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
  public:
   using ViewListener = fit::function<void(
       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
-
-  ScenicWaylandDispatcher(component::StartupContext* context,
-                          ViewListener listener = nullptr)
-      : deprecated_context_(context), listener_(std::move(listener)){};
 
   ScenicWaylandDispatcher(sys::ComponentContext* context,
                           ViewListener listener = nullptr)
@@ -46,7 +41,6 @@ class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
 
   fuchsia::guest::WaylandDispatcher* GetOrStartBridge();
 
-  component::StartupContext* deprecated_context_;
   sys::ComponentContext* context_;
 
   ViewListener listener_;

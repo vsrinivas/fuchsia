@@ -611,6 +611,7 @@ group("guest") {
     "//garnet/bin/vsock_service:vsock_service-tests",
     "//garnet/packages/experimental:debian_guest",
     "//garnet/packages/experimental:zircon_guest",
+    "//garnet/public/lib/guest:guest_lib_tests",
   ]
 }
 

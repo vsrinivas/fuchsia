@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/guest/scenic_wayland_dispatcher.h>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/guest/scenic_wayland_dispatcher.h>
+#include <lib/sys/cpp/service_directory.h>
+
+#include "src/lib/fxl/logging.h"
 
 static constexpr char kWaylandDispatcherPackage[] =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
@@ -19,12 +20,14 @@ void ScenicWaylandDispatcher::OnNewConnection(zx::channel channel) {
 fuchsia::guest::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
   if (!dispatcher_) {
     // Launch the bridge process.
-    component::Services services;
+    zx::channel request;
+    auto services = sys::ServiceDirectory::CreateWithRequest(&request);
     fuchsia::sys::LaunchInfo launch_info{
         .url = kWaylandDispatcherPackage,
-        .directory_request = services.NewRequest(),
+        .directory_request = std::move(request),
     };
-    ConnectToLauncher()->CreateComponent(std::move(launch_info), bridge_.NewRequest());
+    ConnectToLauncher()->CreateComponent(std::move(launch_info),
+                                         bridge_.NewRequest());
     // If we hit an error just close the bridge. It will get relaunched in
     // response to the next new connection.
     bridge_.set_error_handler(
@@ -34,8 +37,8 @@ fuchsia::guest::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
 
     // Connect to the |WaylandDispatcher| FIDL interface and forward the
     // channel along.
-    services.ConnectToService(dispatcher_.NewRequest());
-    services.ConnectToService(view_producer_.NewRequest());
+    services->Connect(dispatcher_.NewRequest());
+    services->Connect(view_producer_.NewRequest());
     view_producer_.events().OnNewView =
         fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
   }
@@ -60,11 +63,7 @@ void ScenicWaylandDispatcher::OnNewView(
 
 fuchsia::sys::LauncherPtr ScenicWaylandDispatcher::ConnectToLauncher() const {
   fuchsia::sys::LauncherPtr launcher;
-  if (deprecated_context_) {
-    deprecated_context_->ConnectToEnvironmentService(launcher.NewRequest());
-  } else {
-    context_->svc()->Connect(launcher.NewRequest());
-  }
+  context_->svc()->Connect(launcher.NewRequest());
   return launcher;
 }
 
