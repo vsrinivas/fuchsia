@@ -6,9 +6,9 @@ use {
     crate::ast::{
         self, Attrs, BanjoAst, Constant, Decl, EnumVariant, Ident, Method, StructField, UnionField,
     },
+    crate::backends::util::to_c_name,
     crate::backends::Backend,
     failure::{format_err, Error},
-    heck::SnakeCase,
     std::io,
     std::iter,
 };
@@ -21,24 +21,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     pub fn new(w: &'a mut W) -> Self {
         CBackend { w }
     }
-}
-
-pub fn to_c_name(name: &str) -> String {
-    // strip FQN
-    let name = name.split(".").last().unwrap();
-    // Force uppercase characters the follow one another to lowercase.
-    // e.g. GUIDType becomes Guidtype
-    let mut iter = name.chars();
-    let name = iter::once(iter.next().unwrap())
-        .chain(iter.zip(name.chars()).map(|(c1, c2)| {
-            if c2.is_ascii_uppercase() {
-                c1.to_ascii_lowercase()
-            } else {
-                c1
-            }
-        }))
-        .collect::<String>();
-    name.trim().to_snake_case()
 }
 
 pub fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {

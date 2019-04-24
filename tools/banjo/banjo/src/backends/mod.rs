@@ -6,12 +6,15 @@ use {crate::ast::BanjoAst, failure::Error, std::io};
 
 pub use self::{
     abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppInternalBackend,
+    kernel::KernelBackend,
 };
 
 mod abigen;
 mod ast;
 mod c;
 mod cpp;
+mod kernel;
+mod util;
 
 pub trait Backend<'a, W: io::Write> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error>;

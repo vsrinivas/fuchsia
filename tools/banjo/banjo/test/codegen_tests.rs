@@ -248,3 +248,23 @@ mod abigen {
         "abigen/abigen-protocol-markup.abigen.out"
     );
 }
+
+mod kernel {
+    use super::*;
+
+    codegen_test!(
+        trace_empty,
+        KernelBackend,
+        ["banjo/empty.test.banjo"],
+        "kernel/trace-empty.inc",
+        "trace"
+    );
+
+    codegen_test!(
+        trace_basic,
+        KernelBackend,
+        ["banjo/abigen-protocol-basic.test.banjo"],
+        "kernel/trace-basic.inc",
+        "trace"
+    );
+}

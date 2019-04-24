@@ -44,9 +44,10 @@ macro_rules! assert_eq_trim {
 ///     backend: backend generator (CBackend, AstBackend, RustBackend, etc...)
 ///     [input files]: vector of path relative input files
 ///     output file: file to compare against generated output
+///     subtype: optional argument to backend generator
 #[macro_export]
 macro_rules! codegen_test {
-    ( $id:ident, $backend: ident, [ $( $banjo_file:expr),* ], $ast_file:expr ) => {
+    ( $id:ident, $backend: ident, [ $( $banjo_file:expr),* ], $ast_file:expr $(, $subtype:expr)? ) => {
             #[test]
             fn $id() {
                 use pest::Parser;
@@ -65,7 +66,7 @@ macro_rules! codegen_test {
                 let ast = banjo_lib::ast::BanjoAst::parse(pair_vec, Vec::new()).unwrap();
                 {
                     let mut backend: Box<dyn backends::Backend<_>> =
-                        Box::new(backends::$backend::new(&mut output));
+                        Box::new(backends::$backend::new(&mut output $(, $subtype)?));
                     backend.codegen(ast).unwrap();
                 }
                 let output = String::from_utf8(output).unwrap();
