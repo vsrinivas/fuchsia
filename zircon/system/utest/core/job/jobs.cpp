@@ -260,6 +260,9 @@ static bool kill_test() {
     zx_handle_t job_child;
     ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
 
+    zx_handle_t job_grandchild;
+    ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild), ZX_OK, "");
+
     zx_handle_t event;
     ASSERT_EQ(zx_event_create(0u, &event), ZX_OK, "");
 
@@ -273,14 +276,20 @@ static bool kill_test() {
         process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK, "");
     ASSERT_EQ(signals, ZX_TASK_TERMINATED, "");
 
-    ASSERT_EQ(zx_object_wait_one(
-        job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
+    ASSERT_EQ(zx_object_wait_one(job_child, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals),
+              ZX_OK, "");
+    ASSERT_EQ(signals, ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     // Process should be in the dead state here.
     zx_info_job_t job_info;
     ASSERT_EQ(zx_object_get_info(
             job_child, ZX_INFO_JOB, &job_info, sizeof(job_info), NULL, NULL), ZX_OK);
+    EXPECT_TRUE(job_info.exited);
+    EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "");
+
+    ASSERT_EQ(zx_object_get_info(
+                  job_grandchild, ZX_INFO_JOB, &job_info, sizeof(job_info), NULL, NULL),
+              ZX_OK);
     EXPECT_TRUE(job_info.exited);
     EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "");
 
@@ -292,14 +301,15 @@ static bool kill_test() {
 
     // Can't create more processes or jobs.
 
-    zx_handle_t job_grandchild;
-    ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild), ZX_ERR_BAD_STATE, "");
+    zx_handle_t job_grandchild_2;
+    ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild_2), ZX_ERR_BAD_STATE, "");
 
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(process), ZX_OK, "");
     ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), ZX_ERR_BAD_STATE, "");
 
     ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(job_grandchild), ZX_OK, "");
     END_TEST;
 }
 
@@ -324,6 +334,111 @@ static bool kill_job_no_child_test() {
     ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), ZX_ERR_BAD_STATE, "");
 
     ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool kill_job_removes_from_tree() {
+    BEGIN_TEST;
+
+    zx_handle_t job_parent, job_child;
+    ASSERT_EQ(zx_job_create(zx_job_default(), 0u, &job_parent), ZX_OK, "");
+    ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
+
+    zx_info_handle_basic_t job_child_info;
+    ASSERT_EQ(zx_object_get_info(job_child, ZX_INFO_HANDLE_BASIC, &job_child_info,
+                                 sizeof(job_child_info), nullptr, nullptr),
+              ZX_OK, "");
+
+    zx_koid_t children_koids[1] = {ZX_KOID_INVALID};
+    size_t num_children = 0;
+    ASSERT_EQ(zx_object_get_info(job_parent, ZX_INFO_JOB_CHILDREN, children_koids,
+                                 sizeof(children_koids), nullptr, &num_children),
+              ZX_OK, "");
+    ASSERT_EQ(num_children, 1, "");
+    ASSERT_EQ(children_koids[0], job_child_info.koid, "");
+
+    ASSERT_EQ(zx_task_kill(job_child), ZX_OK, "");
+    ASSERT_EQ(zx_object_wait_one(job_child, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr),
+              ZX_OK, "");
+
+    ASSERT_EQ(zx_object_get_info(job_parent, ZX_INFO_JOB_CHILDREN, children_koids,
+                                 sizeof(children_koids), nullptr, &num_children),
+              ZX_OK, "");
+    ASSERT_EQ(num_children, 0, "");
+
+    ASSERT_EQ(zx_handle_close(job_parent), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+
+    END_TEST;
+}
+
+// Jobs aren't always killed, it should also be removed from the tree if the
+// last handle is closed when it has no children.
+static bool close_job_removes_from_tree() {
+    BEGIN_TEST;
+
+    zx_handle_t job_parent, job_child;
+    ASSERT_EQ(zx_job_create(zx_job_default(), 0u, &job_parent), ZX_OK, "");
+    ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
+
+    zx_info_handle_basic_t job_child_info;
+    ASSERT_EQ(zx_object_get_info(job_child, ZX_INFO_HANDLE_BASIC, &job_child_info,
+                                 sizeof(job_child_info), nullptr, nullptr),
+              ZX_OK, "");
+
+    zx_koid_t children_koids[1] = {ZX_KOID_INVALID};
+    size_t num_children = 0;
+    ASSERT_EQ(zx_object_get_info(job_parent, ZX_INFO_JOB_CHILDREN, children_koids,
+                                 sizeof(children_koids), nullptr, &num_children),
+              ZX_OK, "");
+    ASSERT_EQ(num_children, 1, "");
+    ASSERT_EQ(children_koids[0], job_child_info.koid, "");
+
+    ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+
+    ASSERT_EQ(zx_object_get_info(job_parent, ZX_INFO_JOB_CHILDREN, children_koids,
+                                 sizeof(children_koids), nullptr, &num_children),
+              ZX_OK, "");
+    ASSERT_EQ(num_children, 0, "");
+
+    ASSERT_EQ(zx_handle_close(job_parent), ZX_OK, "");
+
+    END_TEST;
+}
+
+// Make sure a chain of jobs killed from the top cascades properly.
+static bool kill_job_chain() {
+    BEGIN_TEST;
+
+    zx_handle_t jobs[5];
+    zx_handle_t parent = zx_job_default();
+    for (zx_handle_t& job : jobs) {
+        ASSERT_EQ(zx_job_create(parent, 0u, &job), ZX_OK, "");
+        parent = job;
+
+        zx_handle_t event, process, thread;
+        ASSERT_EQ(zx_event_create(0u, &event), ZX_OK, "");
+        ASSERT_EQ(start_mini_process(job, event, &process, &thread), ZX_OK, "");
+        ASSERT_EQ(zx_handle_close(process), ZX_OK, "");
+        ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
+    }
+
+    ASSERT_EQ(zx_task_kill(jobs[0]), ZX_OK, "");
+
+    // Jobs should terminate bottom-up, so grab the signals right when the top
+    // job terminates and all other jobs should have terminated as well.
+    zx_wait_item_t wait_items[5] = {{jobs[0], ZX_TASK_TERMINATED, 0},
+                                    {jobs[1], 0, 0},
+                                    {jobs[2], 0, 0},
+                                    {jobs[3], 0, 0},
+                                    {jobs[4], 0, 0}};
+    ASSERT_EQ(zx_object_wait_many(wait_items, countof(wait_items), ZX_TIME_INFINITE), ZX_OK, "");
+    for (const zx_wait_item_t& wait_item : wait_items) {
+        EXPECT_EQ(wait_item.pending, ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
+    }
+
+    ASSERT_EQ(zx_handle_close_many(jobs, countof(jobs)), ZX_OK, "");
 
     END_TEST;
 }
@@ -376,7 +491,7 @@ static bool wait_test() {
 
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(process), ZX_OK, "");
@@ -461,6 +576,9 @@ RUN_TEST(policy_timer_slack_valid)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
 RUN_TEST(kill_job_no_child_test)
+RUN_TEST(kill_job_removes_from_tree)
+RUN_TEST(close_job_removes_from_tree)
+RUN_TEST(kill_job_chain)
 RUN_TEST(set_job_oom_kill_bit)
 RUN_TEST(wait_test)
 RUN_TEST(info_task_stats_fails)

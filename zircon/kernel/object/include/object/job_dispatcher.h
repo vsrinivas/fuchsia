@@ -176,6 +176,25 @@ private:
     bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
     void RemoveChildJob(JobDispatcher* job);
 
+    // Remove this job from its parent's job list and the global job tree,
+    // either when the job was killed or its last reference was dropped.
+    // It's safe to call this multiple times.
+    //
+    // We cannot be holding our lock when we call this because it requires
+    // locking our parent, and we only nest locks down the tree.
+    void RemoveFromJobTreesUnlocked() TA_EXCL(get_lock());
+
+    // Helpers to transition into the DEAD state.
+    //
+    // The check for whether we should transition needs to be done under the
+    // lock, but actually moving into the dead state has to be done after
+    // releasing the lock.
+    //
+    // FinishDeadTransitionUnlocked() is thread-safe and idempotent so it's OK
+    // if multiple concurrent threads end up calling it.
+    bool IsReadyForDeadTransitionLocked() TA_REQ(get_lock());
+    void FinishDeadTransitionUnlocked() TA_EXCL(get_lock());
+
     void UpdateSignalsIncrementLocked() TA_REQ(get_lock());
     void UpdateSignalsDecrementLocked() TA_REQ(get_lock());
 

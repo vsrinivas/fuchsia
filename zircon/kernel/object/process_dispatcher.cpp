@@ -468,9 +468,6 @@ void ProcessDispatcher::FinishDeadTransition() {
     // consistent, and JobDispatcher::EnumerateChildren's order makes
     // sense. We don't need |get_lock()| when calling RemoveChildProcess
     // here. ZX-880
-    // RemoveChildProcess is called soon after releasing |get_lock()| so that
-    // the semantics of signaling ZX_JOB_NO_PROCESSES match that of
-    // ZX_TASK_TERMINATED.
     job_->RemoveChildProcess(this);
 }
 

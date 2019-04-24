@@ -136,9 +136,7 @@ typedef uint32_t zx_signals_t;
 #define ZX_TASK_TERMINATED          __ZX_OBJECT_SIGNALED
 
 // Job
-// TODO(ZX-3919): we can repurpose __ZX_JOB_NO_PROCESSES_OLD once SDKs have
-// picked up the new value.
-#define __ZX_JOB_NO_PROCESSES_OLD   __ZX_OBJECT_SIGNALED
+#define ZX_JOB_TERMINATED           __ZX_OBJECT_SIGNALED
 #define ZX_JOB_NO_JOBS              __ZX_OBJECT_SIGNAL_4
 #define ZX_JOB_NO_PROCESSES         __ZX_OBJECT_SIGNAL_5
 

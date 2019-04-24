@@ -145,7 +145,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
                              JobPolicy policy)
-    : SoloDispatcher(__ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
+    : SoloDispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       parent_(ktl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
@@ -156,57 +156,17 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       policy_(policy),
       exceptionate_(ExceptionPort::Type::JOB),
       debug_exceptionate_(ExceptionPort::Type::JOB_DEBUGGER) {
-
     kcounter_add(dispatcher_job_create_count, 1);
 
-    // Maintain consistent lock ordering by grabbing the all-jobs lock before
-    // any individual JobDispatcher lock.
-    Guard<Mutex> guard{AllJobsLock::Get()};
-
-    // Set the initial job order, and try to make older jobs closer to
-    // the root (both hierarchically and temporally) show up earlier
-    // in enumeration.
     if (parent_ == nullptr) {
-        // Root job is the most important.
+        Guard<Mutex> guard{AllJobsLock::Get()};
         all_jobs_list_.push_back(this);
-    } else {
-        Guard<fbl::Mutex> parent_guard{parent_->get_lock()};
-        JobDispatcher* neighbor;
-        if (!parent_->jobs_.is_empty()) {
-            // Our youngest sibling.
-            //
-            // IMPORTANT: We must hold the parent's lock during list insertion
-            // to ensure that our sibling stays alive until we're done with it.
-            // The sibling may be in its dtor right now, trying to remove itself
-            // from parent_->jobs_ but blocked on parent_->get_lock(), and could be
-            // freed if we released the lock.
-            neighbor = &parent_->jobs_.back();
-
-            // This can't be us: we aren't added to our parent's child list
-            // until after construction.
-            DEBUG_ASSERT(!dll_job_raw_.InContainer());
-            DEBUG_ASSERT(neighbor != this);
-        } else {
-            // Our parent.
-            neighbor = parent_.get();
-        }
-
-        // Make ourselves appear after our next-youngest neighbor.
-        all_jobs_list_.insert(all_jobs_list_.make_iterator(*neighbor), this);
     }
 }
 
 JobDispatcher::~JobDispatcher() {
     kcounter_add(dispatcher_job_destroy_count, 1);
-
-    if (parent_)
-        parent_->RemoveChildJob(this);
-
-    {
-        Guard<Mutex> guard{AllJobsLock::Get()};
-        DEBUG_ASSERT(dll_all_jobs_.InContainer());
-        all_jobs_list_.erase(*this);
-    }
+    RemoveFromJobTreesUnlocked();
 }
 
 zx_koid_t JobDispatcher::get_related_koid() const {
@@ -228,9 +188,26 @@ bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& proces
 bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
     canary_.Assert();
 
+    // Maintain consistent lock ordering by grabbing the all-jobs lock before
+    // any individual JobDispatcher lock.
+    Guard<fbl::Mutex> all_jobs_guard{AllJobsLock::Get()};
     Guard<fbl::Mutex> guard{get_lock()};
+
     if (state_ != State::READY)
         return false;
+
+    // Put the new job after our next-youngest child, or us if we have none.
+    //
+    // We try to make older jobs closer to the root (both hierarchically and
+    // temporally) show up earlier in enumeration.
+    JobDispatcher* neighbor = (jobs_.is_empty() ? this : &jobs_.back());
+
+    // This can only be called once, the job should not already be part
+    // of any job tree.
+    DEBUG_ASSERT(!job->dll_job_raw_.InContainer());
+    DEBUG_ASSERT(neighbor != job.get());
+
+    all_jobs_list_.insert(all_jobs_list_.make_iterator(*neighbor), job.get());
 
     jobs_.push_back(job.get());
     ++job_count_;
@@ -241,25 +218,72 @@ bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
 void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     canary_.Assert();
 
-    Guard<fbl::Mutex> guard{get_lock()};
-    // The process dispatcher can call us in its destructor, Kill(),
-    // or RemoveThread().
-    if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
-        return;
-    procs_.erase(*process);
-    --process_count_;
-    UpdateSignalsDecrementLocked();
+    bool should_die = false;
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+        // The process dispatcher can call us in its destructor, Kill(),
+        // or RemoveThread().
+        if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
+            return;
+        procs_.erase(*process);
+        --process_count_;
+        UpdateSignalsDecrementLocked();
+        should_die = IsReadyForDeadTransitionLocked();
+    }
+
+    if (should_die)
+        FinishDeadTransitionUnlocked();
 }
 
 void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     canary_.Assert();
 
+    bool should_die = false;
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+        if (!JobDispatcher::ListTraitsRaw::node_state(*job).InContainer())
+            return;
+        jobs_.erase(*job);
+        --job_count_;
+        UpdateSignalsDecrementLocked();
+        should_die = IsReadyForDeadTransitionLocked();
+    }
+
+    if (should_die)
+        FinishDeadTransitionUnlocked();
+}
+
+void JobDispatcher::RemoveFromJobTreesUnlocked() {
+    canary_.Assert();
+
+    if (parent_)
+        parent_->RemoveChildJob(this);
+
+    {
+        Guard<Mutex> guard{AllJobsLock::Get()};
+        if (dll_all_jobs_.InContainer())
+            all_jobs_list_.erase(*this);
+    }
+}
+
+bool JobDispatcher::IsReadyForDeadTransitionLocked() {
+    canary_.Assert();
+    return state_ == State::KILLING && job_count_ == 0 && process_count_ == 0;
+}
+
+void JobDispatcher::FinishDeadTransitionUnlocked() {
+    canary_.Assert();
+
+    RemoveFromJobTreesUnlocked();
+
+    // Wait to assert the TERMINATED signal until we're removed from the
+    // job trees to make sure anyone pending on this signal sees a
+    // consistent and fully cleaned-up state.
     Guard<fbl::Mutex> guard{get_lock()};
-    if (!JobDispatcher::ListTraitsRaw::node_state(*job).InContainer())
-        return;
-    jobs_.erase(*job);
-    --job_count_;
-    UpdateSignalsDecrementLocked();
+    state_ = State::DEAD;
+    exceptionate_.Shutdown();
+    debug_exceptionate_.Shutdown();
+    UpdateStateLocked(0u, ZX_TASK_TERMINATED);
 }
 
 void JobDispatcher::UpdateSignalsDecrementLocked() {
@@ -271,27 +295,19 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
     zx_signals_t set = 0u;
     if (process_count_ == 0u) {
         DEBUG_ASSERT(procs_.is_empty());
-        set |= __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES;
+        set |= ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 0u) {
         DEBUG_ASSERT(jobs_.is_empty());
         set |= ZX_JOB_NO_JOBS;
     }
 
-    if ((job_count_ == 0) && (process_count_ == 0)) {
-        if (state_ == State::KILLING) {
-            state_ = State::DEAD;
-            exceptionate_.Shutdown();
-            debug_exceptionate_.Shutdown();
-        }
-
-        if (!parent_) {
-            // There are no userspace process left. From here, there's
-            // no particular context as to whether this was
-            // intentional, or if a core devhost crashed due to a
-            // bug. Either way, shut down the kernel.
-            platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
-        }
+    if (!parent_ && (job_count_ == 0) && (process_count_ == 0)) {
+        // There are no userspace process left. From here, there's
+        // no particular context as to whether this was
+        // intentional, or if a core devhost crashed due to a
+        // bug. Either way, shut down the kernel.
+        platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
     }
 
     UpdateStateLocked(0u, set);
@@ -306,7 +322,7 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
     zx_signals_t clear = 0u;
     if (process_count_ == 1u) {
         DEBUG_ASSERT(!procs_.is_empty());
-        clear |= __ZX_JOB_NO_PROCESSES_OLD | ZX_JOB_NO_PROCESSES;
+        clear |= ZX_JOB_NO_PROCESSES;
     }
     if (job_count_ == 1u) {
         DEBUG_ASSERT(!jobs_.is_empty());
@@ -329,6 +345,7 @@ bool JobDispatcher::Kill(int64_t return_code) {
     LiveRefsArray jobs_refs;
     LiveRefsArray proc_refs;
 
+    bool should_die = false;
     {
         Guard<fbl::Mutex> guard{get_lock()};
         if (state_ != State::READY)
@@ -347,7 +364,12 @@ bool JobDispatcher::Kill(int64_t return_code) {
             procs_to_kill.push_front(ktl::move(proc));
             return ZX_OK;
         });
+
+        should_die = IsReadyForDeadTransitionLocked();
     }
+
+    if (should_die)
+        FinishDeadTransitionUnlocked();
 
     // Since we kill the child jobs first we have a depth-first massacre.
     while (!jobs_to_kill.is_empty()) {
