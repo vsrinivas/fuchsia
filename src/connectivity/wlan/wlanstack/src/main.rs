@@ -26,7 +26,7 @@ use failure::Error;
 use fidl_fuchsia_inspect::InspectRequestStream;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
-use fuchsia_cobalt;
+use fuchsia_cobalt::{self, CobaltSender};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect as finspect;
 use futures::prelude::*;
@@ -63,12 +63,14 @@ async fn main() -> Result<(), Error> {
         fuchsia_cobalt::serve(COBALT_BUFFER_SIZE, COBALT_CONFIG_PATH);
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
-    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender, inspect_root.clone())
-        .map_ok(|x| match x {});
+    // TODO(WLAN-927): Remove once drivers support SME channel.
+    let iface_server =
+        device::serve_ifaces(ifaces.clone(), cobalt_sender.clone(), inspect_root.clone())
+            .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let services_server =
-        serve_fidl(phys, ifaces, watcher_service, inspect_root).try_join(watcher_fut);
+    let services_server = serve_fidl(phys, ifaces, watcher_service, inspect_root, cobalt_sender)
+        .try_join(watcher_fut);
 
     await!(services_server.try_join5(
         phy_server,
@@ -89,6 +91,7 @@ async fn serve_fidl(
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     inspect_root: wlan_inspect::SharedNodePtr,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("public")
@@ -102,12 +105,18 @@ async fn serve_fidl(
         let ifaces = ifaces.clone();
         let watcher_service = watcher_service.clone();
         let inspect_root = inspect_root.clone();
+        let cobalt_sender = cobalt_sender.clone();
         async move {
             match s {
-                IncomingServices::Device(stream) => {
-                    await!(service::serve_device_requests(phys, ifaces, watcher_service, stream)
-                        .unwrap_or_else(|e| println!("{:?}", e)))
-                }
+                IncomingServices::Device(stream) => await!(service::serve_device_requests(
+                    phys,
+                    ifaces,
+                    watcher_service,
+                    stream,
+                    inspect_root,
+                    cobalt_sender,
+                )
+                .unwrap_or_else(|e| println!("{:?}", e))),
                 IncomingServices::Inspect(stream) => {
                     await!(finspect::serve_request_stream(inspect_root, stream)
                         .unwrap_or_else(|e| println!("{:?}", e)))

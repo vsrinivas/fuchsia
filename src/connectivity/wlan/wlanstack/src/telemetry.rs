@@ -78,8 +78,11 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
                 Err(e) => {
                     last_reported_stats.remove(&id);
                     error!(
-                        "Failed to get the stats for iface '{}': {}",
-                        iface.device.path().display(),
+                        "Failed to get the stats for iface '{:?}': {}",
+                        match &iface.device {
+                            Some(device) => device.path().to_string_lossy().into_owned(),
+                            None => "TODO(WLAN-927)".to_string(),
+                        },
                         e
                     );
                 }

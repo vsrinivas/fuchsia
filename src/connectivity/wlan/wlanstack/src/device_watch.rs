@@ -35,7 +35,9 @@ pub fn watch_phy_devices() -> io::Result<impl Stream<Item = io::Result<NewPhyDev
         .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_phy(&path))))))
 }
 
+#[deprecated(note = "function is obsolete once WLAN-927 landed")]
 pub fn watch_iface_devices() -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>> {
+    #[allow(deprecated)]
     Ok(watch_new_devices(IFACE_PATH)?
         .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_iface(&path))))))
 }
@@ -71,6 +73,7 @@ fn new_phy(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
     Ok(NewPhyDevice { id, proxy, device })
 }
 
+#[deprecated(note = "function is obsolete once WLAN-927 landed")]
 fn new_iface(path: &PathBuf) -> Result<NewIfaceDevice, failure::Error> {
     let id = id_from_path(path)?;
     let device = wlan_dev::Device::new(path)?;

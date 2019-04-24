@@ -4,15 +4,19 @@
 
 use failure::ResultExt;
 use fidl::encoding::OutOfLine;
+use fidl::endpoints::create_proxy;
+use fidl_fuchsia_wlan_common::DriverFeature;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse, MlmeMarker};
+use fuchsia_async as fasync;
+use fuchsia_cobalt::{self, CobaltSender};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
 
-use crate::device::{self, IfaceDevice, IfaceMap, PhyDevice, PhyMap};
+use crate::device::{self, IfaceDevice, IfaceMap, NewIface, PhyDevice, PhyMap};
 use crate::station;
 use crate::stats_scheduler::StatsRef;
 use crate::watcher_service::WatcherService;
@@ -22,78 +26,99 @@ pub async fn serve_device_requests(
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
+    inspect_root: wlan_inspect::SharedNodePtr,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
     while let Some(req) = await!(req_stream.try_next()).context("error running DeviceService")? {
-        await!(handle_fidl_request(req, phys.clone(), ifaces.clone(), watcher_service.clone()))?;
+        // Note that errors from responder.send() are propagated intentionally.
+        // If we fail to send a response, the only way to recover is to stop serving the
+        // client and close the channel. Otherwise, the client would be left hanging
+        // forever.
+        match req {
+            DeviceServiceRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
+            DeviceServiceRequest::QueryPhy { req, responder } => {
+                let result = await!(query_phy(&phys, req.phy_id));
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+            }
+            DeviceServiceRequest::ListIfaces { responder } => {
+                responder.send(&mut list_ifaces(&ifaces))
+            }
+            DeviceServiceRequest::QueryIface { iface_id, responder } => {
+                let result = query_iface(&ifaces, iface_id);
+                let (status, mut response) = into_status_and_opt(result);
+                responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+            }
+            DeviceServiceRequest::CreateIface { req, responder } => {
+                match await!(create_iface(&phys, req)) {
+                    Ok(new_iface) => {
+                        info!(
+                            "iface #{} started (phy id: {}, local id: {})",
+                            new_iface.id, new_iface.phy_id, new_iface.phy_assigned_id
+                        );
+                        // TODO(WLAN-927): We use the wrong ID use global ID instead.
+                        let iface_id = new_iface.phy_assigned_id;
+                        let resp = fidl_svc::CreateIfaceResponse { iface_id };
+                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut().map(OutOfLine))?;
+
+                        // TODO(WLAN-927): Remove check once all drivers support SME channels.
+                        if new_iface.mlme_proxy.is_some() {
+                            let serve_sme_fut = device::query_and_serve_iface(
+                                new_iface,
+                                ifaces.clone(),
+                                inspect_root.clone(),
+                                cobalt_sender.clone()
+                            ).map(move |result| if let Err(e) = result {
+                                error!("error serving iface {}: {}", iface_id, e);
+                            });
+                            fasync::spawn(serve_sme_fut);
+                        } else {
+                            info!("iface's driver does not support SME channels");
+                        }
+                        Ok(())
+                    }
+                    Err(status) => responder.send(status.into_raw(), None),
+                }
+            }
+            DeviceServiceRequest::DestroyIface { req: _, responder: _ } => unimplemented!(),
+            DeviceServiceRequest::GetClientSme { iface_id, sme, responder } => {
+                let status = get_client_sme(&ifaces, iface_id, sme);
+                responder.send(status.into_raw())
+            }
+            DeviceServiceRequest::GetApSme { iface_id, sme, responder } => {
+                let status = get_ap_sme(&ifaces, iface_id, sme);
+                responder.send(status.into_raw())
+            }
+            DeviceServiceRequest::GetMeshSme { iface_id, sme, responder } => {
+                let status = get_mesh_sme(&ifaces, iface_id, sme);
+                responder.send(status.into_raw())
+            }
+            DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
+                match await!(get_iface_stats(&ifaces, iface_id)) {
+                    Ok(stats_ref) => {
+                        let mut stats = stats_ref.lock();
+                        responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
+                    }
+                    Err(status) => responder.send(status.into_raw(), None),
+                }
+            }
+            DeviceServiceRequest::GetMinstrelList { iface_id, responder } => {
+                let (status, mut peers) = await!(list_minstrel_peers(&ifaces, iface_id));
+                responder.send(status.into_raw(), &mut peers)
+            }
+            DeviceServiceRequest::GetMinstrelStats { iface_id, peer_addr, responder } => {
+                let (status, mut peer) = await!(get_minstrel_stats(&ifaces, iface_id, peer_addr));
+                responder.send(status.into_raw(), peer.as_mut().map(|x| OutOfLine(x.as_mut())))
+            }
+            DeviceServiceRequest::WatchDevices { watcher, control_handle: _ } => {
+                watcher_service
+                    .add_watcher(watcher)
+                    .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
+                Ok(())
+            }
+        }?;
     }
     Ok(())
-}
-
-async fn handle_fidl_request(
-    request: fidl_svc::DeviceServiceRequest,
-    phys: Arc<PhyMap>,
-    ifaces: Arc<IfaceMap>,
-    watcher_service: WatcherService<PhyDevice, IfaceDevice>,
-) -> Result<(), fidl::Error> {
-    // Note that errors from responder.send() are propagated intentionally.
-    // If we fail to send a response, the only way to recover is to stop serving the
-    // client and close the channel. Otherwise, the client would be left hanging
-    // forever.
-    match request {
-        DeviceServiceRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
-        DeviceServiceRequest::QueryPhy { req, responder } => {
-            let result = await!(query_phy(&phys, req.phy_id));
-            let (status, mut response) = into_status_and_opt(result);
-            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
-        }
-        DeviceServiceRequest::ListIfaces { responder } => responder.send(&mut list_ifaces(&ifaces)),
-        DeviceServiceRequest::QueryIface { iface_id, responder } => {
-            let result = query_iface(&ifaces, iface_id);
-            let (status, mut response) = into_status_and_opt(result);
-            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
-        }
-        DeviceServiceRequest::CreateIface { req, responder } => {
-            let result = await!(create_iface(&phys, req));
-            let (status, mut response) = into_status_and_opt(result);
-            responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
-        }
-        DeviceServiceRequest::DestroyIface { req: _, responder: _ } => unimplemented!(),
-        DeviceServiceRequest::GetClientSme { iface_id, sme, responder } => {
-            let status = get_client_sme(&ifaces, iface_id, sme);
-            responder.send(status.into_raw())
-        }
-        DeviceServiceRequest::GetApSme { iface_id, sme, responder } => {
-            let status = get_ap_sme(&ifaces, iface_id, sme);
-            responder.send(status.into_raw())
-        }
-        DeviceServiceRequest::GetMeshSme { iface_id, sme, responder } => {
-            let status = get_mesh_sme(&ifaces, iface_id, sme);
-            responder.send(status.into_raw())
-        }
-        DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
-            match await!(get_iface_stats(&ifaces, iface_id)) {
-                Ok(stats_ref) => {
-                    let mut stats = stats_ref.lock();
-                    responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
-                }
-                Err(status) => responder.send(status.into_raw(), None),
-            }
-        }
-        DeviceServiceRequest::GetMinstrelList { iface_id, responder } => {
-            let (status, mut peers) = await!(list_minstrel_peers(&ifaces, iface_id));
-            responder.send(status.into_raw(), &mut peers)
-        }
-        DeviceServiceRequest::GetMinstrelStats { iface_id, peer_addr, responder } => {
-            let (status, mut peer) = await!(get_minstrel_stats(&ifaces, iface_id, peer_addr));
-            responder.send(status.into_raw(), peer.as_mut().map(|x| OutOfLine(x.as_mut())))
-        }
-        DeviceServiceRequest::WatchDevices { watcher, control_handle: _ } => {
-            watcher_service
-                .add_watcher(watcher)
-                .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
-            Ok(())
-        }
-    }
 }
 
 fn into_status_and_opt<T>(r: Result<T, zx::Status>) -> (zx::Status, Option<T>) {
@@ -136,7 +161,10 @@ fn list_ifaces(ifaces: &IfaceMap) -> fidl_svc::ListIfacesResponse {
         .iter()
         .map(|(iface_id, iface)| fidl_svc::IfaceListItem {
             iface_id: *iface_id,
-            path: iface.device.path().to_string_lossy().into_owned(),
+            path: match &iface.device {
+                Some(device) => device.path().to_string_lossy().into_owned(),
+                None => "TODO(WLAN-927)".to_string(),
+            },
         })
         .collect();
     fidl_svc::ListIfacesResponse { ifaces: list }
@@ -151,7 +179,10 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
         fidl_mlme::MacRole::Ap => fidl_wlan_dev::MacRole::Ap,
         fidl_mlme::MacRole::Mesh => fidl_wlan_dev::MacRole::Mesh,
     };
-    let dev_path = iface.device.path().to_string_lossy().into_owned();
+    let dev_path = match &iface.device {
+        Some(device) => device.path().to_string_lossy().into_owned(),
+        None => "TODO(WLAN-927)".to_string(),
+    };
     let mac_addr = iface.device_info.mac_addr;
     Ok(fidl_svc::QueryIfaceResponse { role, id, dev_path, mac_addr })
 }
@@ -159,16 +190,42 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
 async fn create_iface(
     phys: &PhyMap,
     req: fidl_svc::CreateIfaceRequest,
-) -> Result<fidl_svc::CreateIfaceResponse, zx::Status> {
+) -> Result<NewIface, zx::Status> {
+    let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
-    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel: None };
+    let phy_info = await!(phy.proxy.query())
+        .map_err(|e| {
+            error!("error sending query request to phy #{}: {}", phy_id, e);
+            zx::Status::INTERNAL
+        })
+        .map(|x| x.info)?;
+
+    let supports_sme_channel =
+        phy_info.driver_features.contains(&DriverFeature::TempDirectSmeChannel);
+    let (mlme_proxy, sme_channel) = if supports_sme_channel {
+        create_proxy::<MlmeMarker>()
+            .map_err(|e| {
+                error!("failed to create MlmeProxy: {}", e);
+                zx::Status::INTERNAL
+            })
+            .map(|(p, c)| (Some(p), Some(c.into_channel())))?
+    } else {
+        (None, None)
+    };
+
+    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel };
     let r = await!(phy.proxy.create_iface(&mut phy_req)).map_err(move |e| {
         error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
         zx::Status::INTERNAL
     })?;
     zx::Status::ok(r.status)?;
-    // TODO(gbonik): this is not the ID that we want to return
-    Ok(fidl_svc::CreateIfaceResponse { iface_id: r.iface_id })
+
+    Ok(NewIface {
+        id: 0, // TODO(WLAN-927): Hand out global IDs for ifaces.
+        phy_id,
+        phy_assigned_id: r.iface_id,
+        mlme_proxy,
+    })
 }
 
 fn get_client_sme(
@@ -268,7 +325,6 @@ async fn get_minstrel_stats(
 mod tests {
     use super::*;
 
-    use fidl::endpoints::create_proxy;
     use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_dev, PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
@@ -419,12 +475,32 @@ mod tests {
             fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
         );
         pin_mut!(create_fut);
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut create_fut));
+        match exec.run_until_stalled(&mut create_fut) {
+            Poll::Pending => (),
+            _ => panic!("expected pending iface creation"),
+        };
 
-        // The call above should trigger a CreateIface message to the phy.
-        // Pretend that we are the phy and read the message from the other side.
+        // TODO(WLAN-927): SME Channel transition requires querying PHY for driver feature
+        // support. Remove once feature landed.
+        let responder = match exec.run_until_stalled(&mut phy_stream.next()) {
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder,
+            _ => panic!("phy_stream returned unexpected result"),
+        };
+        responder.send(&mut fidl_wlan_dev::QueryResponse {
+            status: zx::sys::ZX_OK,
+            info: fake_phy_info(),
+        }).expect("failed to send QueryResponse");
+
+        // Continue running create iface request.
+        match exec.run_until_stalled(&mut create_fut) {
+            Poll::Pending => (),
+            _ => panic!("expected pending iface creation"),
+        };
+
         let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder),
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => {
+                (req, responder)
+            },
             _ => panic!("phy_stream returned unexpected result"),
         };
 
@@ -444,7 +520,7 @@ mod tests {
         };
         // This assertion likely needs to change once we figure out a solution
         // to the iface id problem.
-        assert_eq!(123, response.iface_id);
+        assert_eq!(123, response.phy_assigned_id);
     }
 
     #[test]
@@ -458,7 +534,10 @@ mod tests {
             fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
         );
         pin_mut!(fut);
-        assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Ready(Err(zx::Status::NOT_FOUND)) => (),
+            _ => panic!("expected error creating iface on invalid phy"),
+        }
     }
 
     #[test]
@@ -603,7 +682,7 @@ mod tests {
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            device,
+            device: Some(device),
             mlme_query,
             device_info,
         };
@@ -627,7 +706,7 @@ mod tests {
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Ap(sme_sender),
             stats_sched,
-            device,
+            device: Some(device),
             mlme_query,
             device_info,
         };

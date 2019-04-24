@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    failure::{bail, format_err, Error},
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
     fuchsia_cobalt::CobaltSender,
@@ -32,6 +32,18 @@ use crate::{
 
 const MAX_DEAD_IFACE_NODES: usize = 3;
 
+#[derive(Debug)]
+pub struct NewIface {
+    // Global iface ID.
+    pub id: u16,
+    // Iface's global PHY ID.
+    pub phy_id: u16,
+    // Local ID assigned by this iface's PHY.
+    pub phy_assigned_id: u16,
+    // TODO(WLAN-927): mlme_proxy is None if the iface's driver doesn't support SME channels.
+    pub mlme_proxy: Option<fidl_mlme::MlmeProxy>,
+}
+
 pub struct PhyDevice {
     pub proxy: fidl_wlan_dev::PhyProxy,
     pub device: wlan_dev::Device,
@@ -50,7 +62,8 @@ pub enum SmeServer {
 pub struct IfaceDevice {
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
-    pub device: wlan_dev::Device,
+    // TODO(WLAN-927): Remove. Present for drivers which don't support new SME channel.
+    pub device: Option<wlan_dev::Device>,
     pub mlme_query: MlmeQueryProxy,
     pub device_info: DeviceInfo,
 }
@@ -96,6 +109,7 @@ pub async fn serve_ifaces(
     cobalt_sender: CobaltSender,
     inspect_root: wlan_inspect::SharedNodePtr,
 ) -> Result<Void, Error> {
+    #[allow(deprecated)]
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
     let inspect_ifacemgr =
@@ -109,9 +123,10 @@ pub async fn serve_ifaces(
                     let iface_id = new_iface.id;
                     let inspect_ifacemgr = inspect_ifacemgr.clone();
                     let inspect_sme = inspect_ifacemgr.lock().create_iface_child(iface_id);
-                    let fut = query_and_serve_iface(new_iface, &ifaces, cobalt_sender.clone(),
-                                                    inspect_sme)
-                        .then(move |_| async move {
+                    #[allow(deprecated)]
+                    let fut = query_and_serve_iface_deprecated(
+                            new_iface, &ifaces, cobalt_sender.clone(), inspect_sme
+                        ).then(move |_| async move {
                             inspect_ifacemgr.lock().notify_iface_removed(iface_id);
                         });
                     active_ifaces.push(fut);
@@ -122,7 +137,8 @@ pub async fn serve_ifaces(
     }
 }
 
-async fn query_and_serve_iface(
+#[deprecated(note = "function is obsolete once WLAN-927 landed")]
+async fn query_and_serve_iface_deprecated(
     new_iface: NewIfaceDevice,
     ifaces: &IfaceMap,
     cobalt_sender: CobaltSender,
@@ -162,8 +178,10 @@ async fn query_and_serve_iface(
         device.path().to_string_lossy()
     );
     let mlme_query = MlmeQueryProxy::new(proxy);
-    ifaces
-        .insert(id, IfaceDevice { sme_server: sme, stats_sched, device, mlme_query, device_info });
+    ifaces.insert(
+        id,
+        IfaceDevice { sme_server: sme, stats_sched, device: Some(device), mlme_query, device_info },
+    );
 
     let r = await!(sme_fut);
     if let Err(e) = r {
@@ -171,6 +189,41 @@ async fn query_and_serve_iface(
     }
     ifaces.remove(&id);
     info!("iface removed: {}", id);
+}
+
+pub async fn query_and_serve_iface(
+    new_iface: NewIface,
+    ifaces: Arc<IfaceMap>,
+    inspect_sme: wlan_inspect::SharedNodePtr,
+    cobalt_sender: CobaltSender,
+) -> Result<(), failure::Error> {
+    let mlme_proxy = new_iface.mlme_proxy.expect("MlmeProxy must not be None");
+    let event_stream = mlme_proxy.take_event_stream();
+    let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
+
+    let device_info = await!(mlme_proxy.query_device_info())
+        .map_err(|e| format_err!("failed querying iface: {}", e))?;
+    let (sme, sme_fut) = create_sme(
+        mlme_proxy.clone(),
+        event_stream,
+        &device_info,
+        stats_reqs,
+        cobalt_sender,
+        inspect_sme,
+    )
+    .map_err(|e| format_err!("failed to creating SME: {}", e))?;
+
+    info!("new iface #{} with role '{:?}'", new_iface.id, device_info.role,);
+    let mlme_query = MlmeQueryProxy::new(mlme_proxy);
+    ifaces.insert(
+        new_iface.id,
+        IfaceDevice { sme_server: sme, stats_sched, device: None, mlme_query, device_info },
+    );
+
+    let result = await!(sme_fut).map_err(|e| format_err!("error while serving SME: {}", e));
+    info!("iface removed: {}", new_iface.id);
+    ifaces.remove(&new_iface.id);
+    result
 }
 
 fn create_sme<S>(
