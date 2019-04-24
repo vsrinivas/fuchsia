@@ -27,7 +27,6 @@ group("bin") {
     "glob",
     "guest",
     "http",
-    "http_client",
     "insntrace",
     "inspect_unittests",
     "installer",
