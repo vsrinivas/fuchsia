@@ -110,7 +110,7 @@ serializes its headers and footers, expands the buffer's body to contain the
 whole packet as the body to be encapsulated in the next layer, and returns the
 buffer to be handled by the next layer.
 
-When control makes its way to a layer of the stack that has a minimimum body
+When control makes its way to a layer of the stack that has a minimum body
 length requirement, that layer is responsible for consuming any bytes following
 the range for use as padding (and zeroing those bytes for security). This logic
 is handled by `EncapsulatingSerializer`'s implementation of `serialize`.

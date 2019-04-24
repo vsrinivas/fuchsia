@@ -158,7 +158,7 @@ never repeat, even if a device is removed. Thus, over time, the `Vec` would tend
 to get sparse. However, it's likely that this would happen very slowly, as
 devices are not removed and added with any frequency. Another problem would be
 that, because all device IDs share the same namespace regardless of device type,
-all of the `Vec`s would have to be long enough to accomodate every device ID,
+all of the `Vec`s would have to be long enough to accommodate every device ID,
 even device IDs of other types. This could, in turn, be alleviated by allocating
 device IDs in pools (e.g., using the top 32 bits to identify the type of device,
 and the bottom 32 bits to identify the device itself).

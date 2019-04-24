@@ -3,7 +3,7 @@
 This document describes and motivates the design of the netstack into separate
 "core" and "bindings" components.
 
-## Architecute
+## Architecture
 
 The netstack codebase is split into two crates - the `core` crate, and the
 top-level `netstack3` crate. We refer to these as the "core" and bindings"

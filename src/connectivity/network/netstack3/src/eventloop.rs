@@ -13,11 +13,11 @@
 //! allowing it to delegate work to the `EventLoop` by sending a message. In this documentation, we
 //! call anything that holds a producer a "worker".
 //!
-//! Having a single queue for all of the message types is beneficial, since in guarantees a FIFO
+//! Having a single queue for all of the message types is beneficial, since it guarantees a FIFO
 //! ordering for all messages - whichever messages arrive first, will be handled first.
 //!
 //! We'll look at each type of message, to see how each one is handled - starting with FIDL
-//! messages, since they can be thought of as the entrypoint for the whole loop (as nothing happens
+//! messages, since they can be thought of as the entry point for the whole loop (as nothing happens
 //! until a FIDL call is made).
 //!
 //! # FIDL Worker
@@ -67,7 +67,7 @@
 //! without requiring access to the full netstack state - instead the future that the
 //! `schedule_timeout` function spawns can delegate performing actions that require the full
 //! netstack state to the outer `EventLoop` by sending a message. However, this does come with a few
-//! drawbacks - notably, it can be difficult to reason about what exactly the behaviour of the
+//! drawbacks - notably, it can be difficult to reason about what exactly the behavior of the
 //! timers is - see the comment below on race conditions. Particularly, it's a bit tricky that the
 //! timer is not cancelled when the timer trigger message is _sent_, but when it is _received_.
 
