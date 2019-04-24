@@ -7,6 +7,7 @@
 use bitflags::bitflags;
 use crate::ok;
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Vmo};
+use crate::{object_get_info, ObjectQuery, Topic};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -81,6 +82,27 @@ impl Vmar {
     pub unsafe fn destroy(&self) -> Result<(), Status> {
         ok(sys::zx_vmar_destroy(self.raw_handle()))
     }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_VMAR topic.
+    pub fn info(&self) -> Result<VmarInfo, Status> {
+        let mut info = VmarInfo::default();
+        object_get_info::<VmarInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
+}
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct VmarInfo {
+    pub base: usize,
+    pub len: usize,
+}
+
+unsafe impl ObjectQuery for VmarInfo {
+    const TOPIC: Topic = Topic::VMAR;
+    type InfoTy = VmarInfo;
 }
 
 // TODO(smklein): Ideally we would have two separate sets of bitflags,
@@ -132,4 +154,45 @@ vmar_flags! {
     extended: [
         SPECIFIC_OVERWRITE: ZX_VM_SPECIFIC_OVERWRITE,
     ],
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Unowned;
+    use fuchsia_zircon_sys as sys;
+
+    extern "C" {
+        pub fn zx_vmar_root_self() -> sys::zx_handle_t;
+    }
+
+    // Can't depend on fuchsia-runtime here so its vmar_root_self function is duplicated.
+    fn vmar_root_self() -> Unowned<'static, Vmar> {
+        unsafe {
+            let handle = zx_vmar_root_self();
+            Unowned::from_raw_handle(handle)
+        }
+    }
+
+    #[test]
+    fn allocate_and_info() -> Result<(), Status> {
+        let size = usize::pow(2, 20); // 1MiB
+        let root_vmar = vmar_root_self();
+        let (vmar, base) = root_vmar.allocate(0, size, VmarFlags::empty())?;
+
+        let info = vmar.info()?;
+        assert!(info.base == base);
+        assert!(info.len == size);
+        Ok(())
+    }
+
+    #[test]
+    fn root_vmar_info() -> Result<(), Status> {
+        let root_vmar = vmar_root_self();
+        let info = root_vmar.info()?;
+        assert!(info.base > 0);
+        assert!(info.len > 0);
+        Ok(())
+    }
+
 }
