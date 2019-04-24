@@ -54,19 +54,8 @@ bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
 
   const auto args = program_value.FindMember(kArgs);
   if (args != program_value.MemberEnd()) {
-    if (!args->value.IsArray()) {
-      json_parser->ReportError("'args' in program is not an array.");
-    } else {
-      for (const auto& entry : args->value.GetArray()) {
-        if (!entry.IsString()) {
-          json_parser->ReportError(
-              "'args' in program contains an item that's not a string.");
-        } else {
-          args_.push_back(entry.GetString());
-        }
-      }
-      args_null_ = false;
-    }
+    json_parser->CopyStringArray("args", args->value, &args_);
+    args_null_ = false;
   }
 
   return !json_parser->HasError();

@@ -111,7 +111,7 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
                     "'sandbox' is not an object.");
   ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
-                    "'dev' in sandbox is not an array.");
+                    "'dev' is not an array.");
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON", "'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
                     "'binary' in program is not a string.");

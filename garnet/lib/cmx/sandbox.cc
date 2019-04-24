@@ -12,28 +12,6 @@
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace component {
-namespace {
-
-template <typename Value>
-void CopyArrayToVector(const std::string& name, const Value& value,
-                       json::JSONParser* json_parser,
-                       std::vector<std::string>* vec) {
-  if (!value.IsArray()) {
-    json_parser->ReportError(
-        fxl::Substitute("'$0' in sandbox is not an array.", name));
-    return;
-  }
-  for (const auto& entry : value.GetArray()) {
-    if (!entry.IsString()) {
-      json_parser->ReportError(
-          fxl::Substitute("Entry for '$0' in sandbox is not a string.", name));
-      return;
-    }
-    vec->push_back(entry.GetString());
-  }
-}
-
-}  // namespace
 
 constexpr char kDev[] = "dev";
 constexpr char kSystem[] = "system";
@@ -63,7 +41,7 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value,
     auto* vec = entry.second;
     auto member = sandbox_value.FindMember(name);
     if (member != sandbox_value.MemberEnd()) {
-      CopyArrayToVector(name, member->value, json_parser, vec);
+      json_parser->CopyStringArray(name, member->value, vec);
     }
   }
 

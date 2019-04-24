@@ -6,9 +6,9 @@
 
 #include <string>
 
-#include "lib/json/json_parser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 
 namespace component {
@@ -128,7 +128,7 @@ TEST_F(SandboxMetadataTest, ParseWithErrors) {
       R"JSON({
         "dev": [ "class/input", 3 ]
       })JSON",
-      "Entry for 'dev' in sandbox is not a string.");
+      "'dev' contains an item that's not a string");
 }
 
 }  // namespace

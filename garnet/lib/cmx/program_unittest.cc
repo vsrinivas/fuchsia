@@ -77,7 +77,7 @@ TEST_F(ProgramMetadataTest, ParseBinaryArgsWithErrors) {
       &program, R"JSON({ "binary": "bin/app", "args": [0, 1] })JSON", &error));
   EXPECT_THAT(error,
               ::testing::HasSubstr(
-                  "'args' in program contains an item that's not a string"));
+                  "'args' contains an item that's not a string"));
 }
 
 TEST_F(ProgramMetadataTest, ParseData) {

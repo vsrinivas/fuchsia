@@ -54,8 +54,15 @@ class JSONParser {
   void ParseFromDirectory(const std::string& path,
                           fit::function<void(rapidjson::Document)> cb);
 
+  // Copies the string values from a |name|d |value| to the |out| vector.
+  // Clears |out| and calls ReportError() if |value| does not refer to an array,
+  // or if the array contains non-string values.
+  void CopyStringArray(const std::string& name, const rapidjson::Value& value,
+                       std::vector<std::string>* out);
+
   // Returns true if there was an error initializing the document.
   bool HasError() const;
+
   // If HasError() is true, returns a human-readable string describing the
   // error(s) initializing the document.
   std::string error_str() const;

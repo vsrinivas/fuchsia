@@ -121,6 +121,25 @@ void JSONParser::ParseFromDirectory(
   }
 }
 
+void JSONParser::CopyStringArray(const std::string& name,
+                                 const rapidjson::Value& value,
+                                 std::vector<std::string>* out) {
+  out->clear();
+  if (!value.IsArray()) {
+    ReportError(fxl::StringPrintf("'%s' is not an array.", name.c_str()));
+    return;
+  }
+  for (const auto& entry : value.GetArray()) {
+    if (!entry.IsString()) {
+      ReportError(
+          fxl::StringPrintf("'%s' contains an item that's not a string", name.c_str()));
+      out->clear();
+      return;
+    }
+    out->push_back(entry.GetString());
+  }
+}
+
 void JSONParser::ReportError(const std::string& error) {
   ReportErrorInternal(0, error);
 }

@@ -250,5 +250,61 @@ TEST_F(JSONParserTest, ParseFromDirectoryWithErrors) {
   EXPECT_EQ(1, props_found_);
 }
 
+TEST_F(JSONParserTest, CopyArrayToVectorNonArray) {
+  const std::string json = R"JSON({
+    "foo": 0
+  })JSON";
+  JSONParser parser;
+  auto document = parser.ParseFromString(json, "test_file");
+  ASSERT_FALSE(parser.HasError());
+  std::vector<std::string> vec = {"foo"};
+  parser.CopyStringArray("foo", document["foo"], &vec);
+  EXPECT_TRUE(parser.HasError());
+  EXPECT_EQ(parser.error_str(), "test_file: 'foo' is not an array.");
+  EXPECT_EQ(vec.size(), 0u);
+}
+
+TEST_F(JSONParserTest, CopyArrayToVectorNonString) {
+  const std::string json = R"JSON({
+    "bar": [ "1", 2, "3" ]
+  })JSON";
+  JSONParser parser;
+  auto document = parser.ParseFromString(json, "test_file");
+  ASSERT_FALSE(parser.HasError());
+  std::vector<std::string> vec = {"foo"};
+  parser.CopyStringArray("bar", document["bar"], &vec);
+  EXPECT_TRUE(parser.HasError());
+  EXPECT_EQ(parser.error_str(), "test_file: 'bar' contains an item that's not a string");
+  EXPECT_EQ(vec.size(), 0u);
+}
+
+TEST_F(JSONParserTest, CopyArrayToVectorEmpty) {
+  const std::string json = R"JSON({
+    "baz": []
+  })JSON";
+  JSONParser parser;
+  auto document = parser.ParseFromString(json, "test_file");
+  ASSERT_FALSE(parser.HasError());
+  std::vector<std::string> vec = {"foo"};
+  parser.CopyStringArray("baz", document["baz"], &vec);
+  EXPECT_FALSE(parser.HasError());
+  EXPECT_EQ(vec.size(), 0u);
+}
+
+TEST_F(JSONParserTest, CopyArrayToVector) {
+  const std::string json = R"JSON({
+    "qux": [ "quux", "quuz" ]
+  })JSON";
+  JSONParser parser;
+  auto document = parser.ParseFromString(json, "test_file");
+  ASSERT_FALSE(parser.HasError());
+  std::vector<std::string> vec = {"foo"};
+  parser.CopyStringArray("qux", document["qux"], &vec);
+  EXPECT_FALSE(parser.HasError());
+  EXPECT_EQ(vec.size(), 2u);
+  EXPECT_EQ(vec[0], "quux");
+  EXPECT_EQ(vec[1], "quuz");
+}
+
 }  // namespace
 }  // namespace json
