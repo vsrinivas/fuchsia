@@ -3,40 +3,40 @@
 ### adding_test
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.950-1.053    991 +/- 25   991 +/- 25
-SecondExample        added             -              -            1975 +/- 76
+ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+SecondExample        added             -              -            1975 +/- 78
 
 
 ### comparison_improvement
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  faster            0.900-0.967    1491 +/- 25  1391 +/- 25
-SecondExample        no_sig_diff       0.925-1.081    1975 +/- 76  1975 +/- 76
+ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
+SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_improvement_small
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.933-1.001    1491 +/- 25  1441 +/- 25
-SecondExample        no_sig_diff       0.925-1.081    1975 +/- 76  1975 +/- 76
+ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26  1441 +/- 26
+SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_no_change
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.950-1.053    991 +/- 25   991 +/- 25
-SecondExample        no_sig_diff       0.925-1.081    1975 +/- 76  1975 +/- 76
+ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_regression
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  slower            1.032-1.103    1491 +/- 25  1591 +/- 25
-SecondExample        no_sig_diff       0.925-1.081    1975 +/- 76  1975 +/- 76
+ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
+SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### removing_test
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  ----------
-ClockGetTimeExample  no_sig_diff       0.950-1.053    991 +/- 25   991 +/- 25
-SecondExample        removed           -              1975 +/- 76  -
+ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+SecondExample        removed           -              1975 +/- 78  -

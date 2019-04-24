@@ -12,6 +12,8 @@ import math
 import os
 import sys
 
+import scipy.stats
+
 
 # For comparing results from a performance test, we calculate
 # confidence intervals for the mean running times of the test.  If the
@@ -28,11 +30,10 @@ import sys
 # This is intended to account for variation across boots and across process
 # launches.
 #
-# Currently we use z-test confidence intervals.  In future we should either
-# use t-test confidence intervals, or (preferably) use bootstrap confidence
-# intervals.
+# Currently we use t-test confidence intervals.  In future we could instead
+# use bootstrap confidence intervals.
 #
-#  * We apply the z-test confidence interval to the mean running times from
+#  * We apply the t-test confidence interval to the mean running times from
 #    each process instance (from level #3).  This means we treat the sample
 #    size as being the number of processes launches.  This is rather
 #    ad-hoc: it assumes that there is a lot of between-process variation
@@ -40,30 +41,16 @@ import sys
 #    Using bootstrapping with resampling across the 3 levels above should
 #    account for that variation without making ad-hoc assumptions.
 #
-#  * This assumes that the values we apply the z-test to are normally
+#  * This assumes that the values we apply the t-test to are normally
 #    distributed, or approximately normally distributed.  Using
 #    bootstrapping instead would avoid this assumption.
-#
-#  * t-test confidence intervals would be better than z-test confidence
-#    intervals, especially for smaller sample sizes.  The former is easier
-#    to do if the SciPy library is available.  However, this code runs
-#    using infra's copy of Python, which doesn't make SciPy available at
-#    the moment.
 
 
 # ALPHA is a parameter for calculating confidence intervals.  It is
 # the probability that the true value for the statistic we're
 # estimating (here, the mean running time) lies outside the confidence
 # interval.
-#
-# TODO(IN-646): Figure out how to use SciPy with Python on the bots.
-# Then we can uncomment ALPHA here and avoid using the pre-calculated
-# Z_TEST_OFFSET below.
-#
-# ALPHA = 0.01
-
-# This is the value of scipy.stats.norm.ppf(ALPHA / 2).
-Z_TEST_OFFSET = -2.5758293035489008
+ALPHA = 0.01
 
 
 def Mean(values):
@@ -93,7 +80,8 @@ class Stats(object):
     def __init__(self, values):
         sample_size = len(values)
         mean, stddev = MeanAndStddev(values)
-        offset = -Z_TEST_OFFSET * stddev / math.sqrt(sample_size)
+        offset = (-scipy.stats.t.ppf(ALPHA / 2, sample_size - 1)
+                  * stddev / math.sqrt(sample_size))
         self._mean = mean
         self._offset = offset
         # Confidence interval for the mean.

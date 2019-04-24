@@ -1,0 +1,15 @@
+# This is a vpython "spec" file.  It describes dependencies for the
+# "perfcompare" tool.  vpython will download these dependencies
+# automatically when perfcompare is run using vpython.
+#
+# vpython is described here:
+# https://chromium.googlesource.com/infra/infra/+/master/doc/users/vpython.md
+
+wheel <
+  name: "infra/python/wheels/numpy/${vpython_platform}"
+  version: "version:1.12.1"
+>
+wheel: <
+  name: "infra/python/wheels/scipy/${vpython_platform}"
+  version: "version:0.19.0"
+>
