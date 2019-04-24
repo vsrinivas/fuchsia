@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{bail, Error};
+use fidl_fuchsia_bluetooth_control::RemoteDevice;
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, SecurityRequirements, ServiceInfo,
 };
@@ -26,6 +27,15 @@ pub enum BluetoothMethod {
     BleStopScan,
     BleStopAdvertise,
     BleUndefined,
+    BluetoothConnectDevice,
+    BluetoothDisconnectDevice,
+    BluetoothForgetDevice,
+    BluetoothGetActiveAdapterAddress,
+    BluetoothInitControl,
+    BluetoothGetKnownRemoteDevices,
+    BluetoothRequestDiscovery,
+    BluetoothSetDiscoverable,
+    BluetoothSetName,
     GattcConnectToService,
     GattcDiscoverCharacteristics,
     GattcWriteCharacteristicById,
@@ -51,6 +61,15 @@ impl BluetoothMethod {
             "BleStopScan" => BluetoothMethod::BleStopScan,
             "BleGetDiscoveredDevices" => BluetoothMethod::BleGetDiscoveredDevices,
             "BleStopAdvertise" => BluetoothMethod::BleStopAdvertise,
+            "BluetoothConnectDevice" => BluetoothMethod::BluetoothConnectDevice,
+            "BluetoothDisconnectDevice" => BluetoothMethod::BluetoothDisconnectDevice,
+            "BluetoothForgetDevice" => BluetoothMethod::BluetoothForgetDevice,
+            "BluetoothGetActiveAdapterAddress" => BluetoothMethod::BluetoothGetActiveAdapterAddress,
+            "BluetoothInitControl" => BluetoothMethod::BluetoothInitControl,
+            "BluetoothGetKnownRemoteDevices" => BluetoothMethod::BluetoothGetKnownRemoteDevices,
+            "BluetoothRequestDiscovery" => BluetoothMethod::BluetoothRequestDiscovery,
+            "BluetoothSetDiscoverable" => BluetoothMethod::BluetoothSetDiscoverable,
+            "BluetoothSetName" => BluetoothMethod::BluetoothSetName,
             "GattcConnectToService" => BluetoothMethod::GattcConnectToService,
             "GattcDiscoverCharacteristics" => BluetoothMethod::GattcDiscoverCharacteristics,
             "GattcListServices" => BluetoothMethod::GattcListServices,
@@ -233,5 +252,28 @@ impl BleConnectPeripheralResponse {
             res.push(copy)
         }
         res
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CustomRemoteDevice {
+    pub address: String,
+    pub id: String,
+    pub name: Option<String>,
+    pub connected: bool,
+    pub bonded: bool,
+    pub service_uuids: Vec<String>,
+}
+
+impl From<&RemoteDevice> for CustomRemoteDevice {
+    fn from(device: &RemoteDevice) -> Self {
+        CustomRemoteDevice {
+            address: device.address.clone(),
+            id: device.identifier.clone(),
+            name: device.name.clone(),
+            connected: device.connected,
+            bonded: device.bonded,
+            service_uuids: device.service_uuids.clone(),
+        }
     }
 }

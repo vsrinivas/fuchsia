@@ -30,6 +30,7 @@ use crate::auth::facade::AuthFacade;
 
 // Bluetooth related includes
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
+use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
@@ -42,6 +43,17 @@ use crate::scenic::facade::ScenicFacade;
 
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
+
+pub mod macros {
+    pub use crate::with_line;
+}
+
+#[macro_export]
+macro_rules! with_line {
+    ($tag:expr) => {
+        format!("{}:{}", $tag, line!())
+    };
+}
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
@@ -60,6 +72,9 @@ pub struct Sl4f {
 
     // bt_facade: Thread safe object for state for bluetooth connectivity tests
     bt_facade: Arc<RwLock<BluetoothFacade>>,
+
+    // bt_control_facade: Thread safe object for state for  Bluetooth control tests
+    bt_control_facade: Arc<BluetoothControlFacade>,
 
     // gatt_client_facade: Thread safe object for state for Gatt Client tests
     gatt_client_facade: Arc<GattClientFacade>,
@@ -87,6 +102,7 @@ impl Sl4f {
         let audio_facade = Arc::new(AudioFacade::new()?);
         let auth_facade = Arc::new(AuthFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
+        let bt_control_facade = Arc::new(BluetoothControlFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
         let netstack_facade = Arc::new(NetstackFacade::new());
@@ -97,6 +113,7 @@ impl Sl4f {
             auth_facade,
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
+            bt_control_facade,
             gatt_client_facade,
             gatt_server_facade,
             netstack_facade,
@@ -120,6 +137,10 @@ impl Sl4f {
 
     pub fn get_ble_advertise_facade(&self) -> Arc<BleAdvertiseFacade> {
         self.ble_advertise_facade.clone()
+    }
+
+    pub fn get_bt_control_facade(&self) -> Arc<BluetoothControlFacade> {
+        self.bt_control_facade.clone()
     }
 
     pub fn get_gatt_client_facade(&self) -> Arc<GattClientFacade> {
@@ -153,6 +174,7 @@ impl Sl4f {
     pub fn cleanup(&mut self) {
         BluetoothFacade::cleanup(self.bt_facade.clone());
         self.ble_advertise_facade.cleanup();
+        self.bt_control_facade.cleanup();
         self.gatt_client_facade.cleanup();
         self.gatt_server_facade.cleanup();
         self.cleanup_clients();
@@ -166,6 +188,7 @@ impl Sl4f {
     pub fn print(&self) {
         self.bt_facade.read().print();
         self.ble_advertise_facade.print();
+        self.bt_control_facade.print();
         self.gatt_client_facade.print();
         self.gatt_server_facade.print();
     }

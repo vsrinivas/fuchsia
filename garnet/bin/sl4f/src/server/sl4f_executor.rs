@@ -20,6 +20,7 @@ use crate::audio::commands::audio_method_to_fidl;
 use crate::auth::commands::auth_method_to_fidl;
 use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
+use crate::bluetooth::commands::bt_control_method_to_fidl;
 use crate::bluetooth::commands::gatt_client_method_to_fidl;
 use crate::bluetooth::commands::gatt_server_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
@@ -95,6 +96,11 @@ async fn method_to_fidl(
         FacadeType::Bluetooth => {
             await!(ble_method_to_fidl(method_name, args, sl4f_session.read().get_bt_facade(),))
         }
+        FacadeType::BluetoothControlFacade => await!(bt_control_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_bt_control_facade(),
+        )),
         FacadeType::GattClientFacade => await!(gatt_client_method_to_fidl(
             method_name,
             args,

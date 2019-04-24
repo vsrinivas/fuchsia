@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 // Bluetooth-related functionality
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
+use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
@@ -203,6 +204,58 @@ pub async fn ble_method_to_fidl(
             await!(publish_service_async(&facade, service_info, local_service_id))
         }
         _ => bail!("Invalid BLE FIDL method: {:?}", method_name),
+    }
+}
+
+pub async fn bt_control_method_to_fidl(
+    method_name: String,
+    args: Value,
+    facade: Arc<BluetoothControlFacade>,
+) -> Result<Value, Error> {
+    match BluetoothMethod::from_str(&method_name) {
+        BluetoothMethod::BluetoothInitControl => {
+            let result = await!(facade.init_control_interface_proxy())?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothGetKnownRemoteDevices => {
+            let result = await!(facade.get_known_remote_devices())?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothSetDiscoverable => {
+            let discoverable = parse_arg!(args, as_bool, "discoverable")?;
+            let result = await!(facade.set_discoverable(discoverable))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothSetName => {
+            let name = parse_arg!(args, as_str, "name")?;
+            let result = await!(facade.set_name(name.to_string()))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothForgetDevice => {
+            let identifier = parse_arg!(args, as_str, "identifier")?;
+            let result = await!(facade.forget(identifier.to_string()))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothConnectDevice => {
+            let identifier = parse_arg!(args, as_str, "identifier")?;
+            let result = await!(facade.connect(identifier.to_string()))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothDisconnectDevice => {
+            let identifier = parse_arg!(args, as_str, "identifier")?;
+            let result = await!(facade.disconnect(identifier.to_string()))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothRequestDiscovery => {
+            let discovery = parse_arg!(args, as_bool, "discovery")?;
+            let result = await!(facade.request_discovery(discovery))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothGetActiveAdapterAddress => {
+            let result = await!(facade.get_active_adapter_address())?;
+            Ok(to_value(result)?)
+        }
+        _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method_name),
     }
 }
 

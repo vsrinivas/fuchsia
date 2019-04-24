@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod ble_advertise_facade;
+pub mod bt_control_facade;
 pub mod commands;
 pub mod constants;
 pub mod facade;
