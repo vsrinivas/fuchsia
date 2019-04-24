@@ -82,7 +82,7 @@ void P2PProviderImpl::StartService() {
   network_service_provider_.AddBinding(handle.NewRequest());
   network_service_provider_.AddServiceForName(
       [this](zx::channel channel) {
-        RemoteConnection& connection = connections_.emplace(host_name_);
+        RemoteConnection& connection = connections_.emplace();
         connection.set_on_message(
             [this, &connection](std::vector<uint8_t> data) {
               ProcessHandshake(&connection, std::move(data), true,
@@ -208,7 +208,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
               buffer, EnvelopeMessage_Handshake, request.Union());
           buffer.Finish(envelope);
 
-          RemoteConnection& connection = connections_.emplace(host_name_);
+          RemoteConnection& connection = connections_.emplace();
           connection.set_on_message(
               [this, &connection, remote_name_str](std::vector<uint8_t> data) {
                 ProcessHandshake(&connection, std::move(data), false,

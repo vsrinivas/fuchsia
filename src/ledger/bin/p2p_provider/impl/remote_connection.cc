@@ -12,8 +12,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace p2p_provider {
-RemoteConnection::RemoteConnection(std::string local_name)
-    : local_name_(std::move(local_name)) {
+RemoteConnection::RemoteConnection() {
   message_relay_.SetChannelClosedCallback([this] { OnChannelClosed(); });
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> data) { OnNewMessage(std::move(data)); });

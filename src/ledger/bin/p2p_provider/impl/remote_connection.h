@@ -18,7 +18,7 @@ namespace p2p_provider {
 // RemoteConnection holds a connection with a single remote device.
 class RemoteConnection {
  public:
-  explicit RemoteConnection(std::string local_name);
+  RemoteConnection();
 
   // Starts listening on the provided channel for new messages.
   // |channel| is presumed to be sending/receiving messages from/to another
@@ -47,7 +47,6 @@ class RemoteConnection {
 
   bool started_ = false;
 
-  const std::string local_name_;
   netconnector::MessageRelay message_relay_;
 
   fit::closure on_empty_;
