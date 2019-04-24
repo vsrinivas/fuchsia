@@ -741,6 +741,8 @@ void Device::MainLoop() {
             }
             break;
         case ZX_PKT_TYPE_SIGNAL_ONE:
+            timer_scheduler_.scheduled_timers_.erase(pkt.key);
+
             switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kMlme:
                 dispatcher_->HandlePortPacket(pkt.key);
@@ -919,12 +921,19 @@ void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     minstrel_->AddPeer(assoc_ctx);
 }
 
-zx_status_t Device::TimerSchedulerImpl::Schedule(Timer* timer, zx::time deadline) {
+zx_status_t Device::TimerSchedulerImpl::Schedule(Timer* timer, zx::time deadline) __TA_NO_THREAD_SAFETY_ANALYSIS  {
     auto sys_timer = static_cast<SystemTimer*>(timer);
     zx_status_t status = sys_timer->inner()->set(deadline, zx::nsec(0));
     if (status != ZX_OK) { return status; }
-    return sys_timer->inner()->wait_async(device_->port_, sys_timer->id(), ZX_TIMER_SIGNALED,
-                                          ZX_WAIT_ASYNC_ONCE);
+
+    // Only wait if the timer has not been already scheduled.
+    if (scheduled_timers_.find(sys_timer->id()) != scheduled_timers_.end()) {
+        return ZX_OK;
+    } else {
+        scheduled_timers_.insert(sys_timer->id());
+        return sys_timer->inner()->wait_async(device_->port_, sys_timer->id(), ZX_TIMER_SIGNALED,
+                                              ZX_WAIT_ASYNC_ONCE);
+    }
 }
 
 zx_status_t Device::TimerSchedulerImpl::Cancel(Timer* timer) {

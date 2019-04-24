@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 #include <tuple>
+#include <unordered_set>
 
 #include "lib/svc/cpp/services.h"
 #include "minstrel.h"
@@ -87,6 +88,7 @@ class Device : public DeviceInterface {
    private:
     struct TimerSchedulerImpl : public TimerScheduler {
         Device* device_;
+        std::unordered_set<uint64_t> scheduled_timers_ = {};
 
         explicit TimerSchedulerImpl(Device* device) : device_(device) {}
 
