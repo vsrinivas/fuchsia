@@ -30,37 +30,60 @@ func (m *fakeMDNS) AddHandler(f func(net.Interface, net.Addr, mdns.Packet)) {
 func (m *fakeMDNS) AddWarningHandler(func(net.Addr, error)) {}
 func (m *fakeMDNS) AddErrorHandler(func(error))             {}
 func (m *fakeMDNS) SendTo(mdns.Packet, *net.UDPAddr) error  { return nil }
-func (m *fakeMDNS) Send(mdns.Packet) error                  { return nil }
-func (m *fakeMDNS) Start(context.Context, int) error {
+func (m *fakeMDNS) Send(packet mdns.Packet) error {
 	if m.answer != nil {
-		ifc := net.Interface{}
-		ip := net.IPAddr{IP: net.ParseIP(m.answer.ip)}
-		answers := make([]mdns.Record, len(m.answer.domains))
-		for _, d := range m.answer.domains {
-			data := make([]byte, len(d)+1)
-			data[0] = byte(len(d))
-			copy(data[1:], []byte(d))
-			answers = append(answers, mdns.Record{
-				Class: mdns.IN,
-				Type:  mdns.PTR,
-				Data:  data,
-			})
-		}
-		pkt := mdns.Packet{Answers: answers}
 		go func() {
-			for _, h := range m.handlers {
-				h(ifc, &ip, pkt)
+			ifc := net.Interface{}
+			ip := net.IPAddr{IP: net.ParseIP(m.answer.ip).To4()}
+			for _, q := range packet.Questions {
+				switch {
+				case q.Type == mdns.PTR && q.Class == mdns.IN:
+					// 'list' command
+					answers := make([]mdns.Record, len(m.answer.domains))
+					for _, d := range m.answer.domains {
+						data := make([]byte, len(d)+1)
+						data[0] = byte(len(d))
+						copy(data[1:], []byte(d))
+						answers = append(answers, mdns.Record{
+							Class: mdns.IN,
+							Type:  mdns.PTR,
+							Data:  data,
+						})
+					}
+					pkt := mdns.Packet{Answers: answers}
+					for _, h := range m.handlers {
+						h(ifc, &ip, pkt)
+					}
+				case q.Type == mdns.A && q.Class == mdns.IN:
+					// 'resolve' command
+					answers := make([]mdns.Record, len(m.answer.domains))
+					for _, d := range m.answer.domains {
+						answers = append(answers, mdns.Record{
+							Class:  mdns.IN,
+							Type:   mdns.A,
+							Data:   net.ParseIP(m.answer.ip).To4(),
+							Domain: d,
+						})
+					}
+					pkt := mdns.Packet{Answers: answers}
+					for _, h := range m.handlers {
+						h(ifc, &ip, pkt)
+					}
+				}
 			}
 		}()
 	}
 	return nil
 }
+func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
 func compareFuchsiaDevices(d1, d2 *fuchsiaDevice) bool {
 	return cmp.Equal(d1.addr, d2.addr) && cmp.Equal(d1.domain, d2.domain)
 }
 
-func TestListFindDevices(t *testing.T) {
+//// Tests for the `list` command.
+
+func TestListDevices(t *testing.T) {
 	// Because mdnsPorts have two ports specified, two MDNS objects are
 	// created. To emulate the case where only one port responds, create
 	// only one fake MDNS object with answers. The other one wouldn't
@@ -70,7 +93,7 @@ func TestListFindDevices(t *testing.T) {
 		devFinderCmd: devFinderCmd{
 			mdnsHandler: listMDNSHandler,
 			mdnsPorts:   "5353,5356",
-			timeout:     2000,
+			timeout:     10,
 			newMDNSFunc: func() mdnsInterface {
 				mdnsCount++
 				switch mdnsCount {
@@ -91,27 +114,27 @@ func TestListFindDevices(t *testing.T) {
 		},
 	}
 
-	got, err := cmd.findDevices(context.Background())
+	got, err := cmd.listDevices(context.Background())
 	if err != nil {
-		t.Fatalf("findDevices: %v", err)
+		t.Fatalf("listDevices: %v", err)
 	}
 	want := []*fuchsiaDevice{
 		{
-			addr:   net.ParseIP("192.168.0.42"),
+			addr:   net.ParseIP("192.168.0.42").To4(),
 			domain: "some.domain",
 		},
 		{
-			addr:   net.ParseIP("192.168.0.42"),
+			addr:   net.ParseIP("192.168.0.42").To4(),
 			domain: "another.domain",
 		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("findDevices mismatch: (-want +got):\n%s", d)
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
 	}
 
 }
 
-func TestListFindDevices_domainFilter(t *testing.T) {
+func TestListDevices_domainFilter(t *testing.T) {
 	// Because mdnsPorts have two ports specified, two MDNS objects are
 	// created. To emulate the case where only one port responds, create
 	// only one fake MDNS object with answers. The other one wouldn't
@@ -121,7 +144,7 @@ func TestListFindDevices_domainFilter(t *testing.T) {
 		devFinderCmd: devFinderCmd{
 			mdnsHandler: listMDNSHandler,
 			mdnsPorts:   "5353,5356",
-			timeout:     2000,
+			timeout:     10,
 			newMDNSFunc: func() mdnsInterface {
 				mdnsCount++
 				switch mdnsCount {
@@ -143,148 +166,180 @@ func TestListFindDevices_domainFilter(t *testing.T) {
 		domainFilter: "some",
 	}
 
-	got, err := cmd.findDevices(context.Background())
+	got, err := cmd.listDevices(context.Background())
 	if err != nil {
-		t.Fatalf("findDevices: %v", err)
+		t.Fatalf("listDevices: %v", err)
 	}
 	want := []*fuchsiaDevice{
 		{
-			addr:   net.ParseIP("192.168.0.42"),
+			addr:   net.ParseIP("192.168.0.42").To4(),
 			domain: "some.domain",
 		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("findDevices mismatch: (-want +got):\n%s", d)
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
 	}
 
 }
 
-func TestListOutputNormal(t *testing.T) {
+//// Tests for the `resolve` command.
+
+func TestResolveDevices(t *testing.T) {
+	// Because mdnsPorts have two ports specified, two MDNS objects are
+	// created. To emulate the case where only one port responds, create
+	// only one fake MDNS object with answers. The other one wouldn't
+	// respond at all. See the Start() method above.
+	mdnsCount := 0
+	cmd := resolveCmd{
+		devFinderCmd: devFinderCmd{
+			mdnsHandler: resolveMDNSHandler,
+			mdnsPorts:   "5353,5356",
+			timeout:     10,
+			newMDNSFunc: func() mdnsInterface {
+				mdnsCount++
+				switch mdnsCount {
+				case 1:
+					return &fakeMDNS{
+						answer: &fakeAnswer{
+							ip: "192.168.0.42",
+							domains: []string{
+								"some.domain.local",
+								"another.domain.local",
+							},
+						},
+					}
+				default:
+					return &fakeMDNS{}
+				}
+			},
+		},
+	}
+
+	got, err := cmd.resolveDevices(context.Background(), "some.domain")
+	if err != nil {
+		t.Fatalf("resolveDevices: %v", err)
+	}
+	want := []*fuchsiaDevice{
+		{
+			addr:   net.ParseIP("192.168.0.42").To4(),
+			domain: "some.domain.local",
+		},
+	}
+	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("resolveDevices mismatch: (-want +got):\n%s", d)
+	}
+
+}
+
+//// Tests for output functions.
+
+func TestOutputNormal(t *testing.T) {
 	devs := []*fuchsiaDevice{
 		{
-			addr: net.ParseIP("123.12.234.23"),
+			addr:   net.ParseIP("123.12.234.23").To4(),
+			domain: "hello.world",
 		},
 		{
-			addr: net.ParseIP("11.22.33.44"),
+			addr:   net.ParseIP("11.22.33.44").To4(),
+			domain: "fuchsia.rocks",
 		},
 	}
-	var buf strings.Builder
-	cmd := listCmd{
-		devFinderCmd: devFinderCmd{output: &buf},
-	}
-	cmd.outputNormal(devs)
 
-	got := buf.String()
-	want := `123.12.234.23
+	{
+		var buf strings.Builder
+		cmd := devFinderCmd{output: &buf}
+
+		cmd.outputNormal(devs, false)
+
+		got := buf.String()
+		want := `123.12.234.23
 11.22.33.44
 `
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
+		}
 	}
-}
 
-func TestListOutputNormal_fullInfo(t *testing.T) {
-	devs := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("123.12.234.23"),
-			domain: "hello.world",
-		},
-		{
-			addr:   net.ParseIP("11.22.33.44"),
-			domain: "fuchsia.rocks",
-		},
-	}
-	var buf strings.Builder
-	cmd := listCmd{
-		devFinderCmd: devFinderCmd{output: &buf},
-		fullInfo:     true,
-	}
-	cmd.outputNormal(devs)
+	{
+		var buf strings.Builder
+		cmd := devFinderCmd{output: &buf}
+		cmd.outputNormal(devs, true)
 
-	got := buf.String()
-	want := `123.12.234.23 hello.world
+		got := buf.String()
+		want := `123.12.234.23 hello.world
 11.22.33.44 fuchsia.rocks
 `
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("outputNormal(includeDomain) mismatch: (-want +got):\n%s", d)
+		}
 	}
+
 }
 
-func TestListOutputJSON(t *testing.T) {
+func TestOutputJSON(t *testing.T) {
 	devs := []*fuchsiaDevice{
 		{
-			addr: net.ParseIP("123.12.234.23"),
-		},
-		{
-			addr: net.ParseIP("11.22.33.44"),
-		},
-	}
-	var buf bytes.Buffer
-	cmd := listCmd{
-		devFinderCmd: devFinderCmd{
-			json:   true,
-			output: &buf,
-		},
-	}
-	cmd.outputJSON(devs)
-
-	var got jsonOutput
-	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-		t.Fatalf("json.Unmarshal: %v", err)
-	}
-
-	want := jsonOutput{
-		Devices: []jsonDevice{
-			{Addr: "123.12.234.23"},
-			{Addr: "11.22.33.44"},
-		},
-	}
-
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
-	}
-}
-
-func TestListOutputJSON_fullInfo(t *testing.T) {
-	devs := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("123.12.234.23"),
+			addr:   net.ParseIP("123.12.234.23").To4(),
 			domain: "hello.world",
 		},
 		{
-			addr:   net.ParseIP("11.22.33.44"),
+			addr:   net.ParseIP("11.22.33.44").To4(),
 			domain: "fuchsia.rocks",
 		},
 	}
-	var buf bytes.Buffer
-	cmd := listCmd{
-		devFinderCmd: devFinderCmd{
+
+	{
+		var buf bytes.Buffer
+		cmd := devFinderCmd{
 			json:   true,
 			output: &buf,
-		},
-		fullInfo: true,
-	}
-	cmd.outputJSON(devs)
+		}
 
-	var got jsonOutput
-	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-		t.Fatalf("json.Unmarshal: %v", err)
-	}
+		cmd.outputJSON(devs, false)
 
-	want := jsonOutput{
-		Devices: []jsonDevice{
-			{
-				Addr:   "123.12.234.23",
-				Domain: "hello.world",
+		var got jsonOutput
+		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+			t.Fatalf("json.Unmarshal: %v", err)
+		}
+		want := jsonOutput{
+			Devices: []jsonDevice{
+				{Addr: "123.12.234.23"},
+				{Addr: "11.22.33.44"},
 			},
-			{
-				Addr:   "11.22.33.44",
-				Domain: "fuchsia.rocks",
-			},
-		},
+		}
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
+		}
 	}
 
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("outputNormal mismatch: (-want +got):\n%s", d)
+	{
+		var buf bytes.Buffer
+		cmd := devFinderCmd{
+			json:   true,
+			output: &buf,
+		}
+
+		cmd.outputJSON(devs, true)
+
+		var got jsonOutput
+		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+			t.Fatalf("json.Unmarshal: %v", err)
+		}
+
+		want := jsonOutput{
+			Devices: []jsonDevice{
+				{
+					Addr:   "123.12.234.23",
+					Domain: "hello.world",
+				},
+				{
+					Addr:   "11.22.33.44",
+					Domain: "fuchsia.rocks",
+				},
+			},
+		}
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("outputNormal(includeDomain) mismatch: (-want +got):\n%s", d)
+		}
 	}
 }

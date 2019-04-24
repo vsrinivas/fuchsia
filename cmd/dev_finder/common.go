@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -187,4 +188,31 @@ type jsonDevice struct {
 	Addr string `json:"addr"`
 	// Device domain name. Can be omitted.
 	Domain string `json:"domain,omitempty"`
+}
+
+func (cmd *devFinderCmd) outputNormal(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
+	for _, device := range filteredDevices {
+		if includeDomain {
+			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addr, device.domain)
+		} else {
+			fmt.Fprintf(cmd.Output(), "%v\n", device.addr)
+		}
+	}
+	return nil
+}
+
+func (cmd *devFinderCmd) outputJSON(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
+	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(filteredDevices))}
+
+	for _, device := range filteredDevices {
+		dev := jsonDevice{Addr: device.addr.String()}
+		if includeDomain {
+			dev.Domain = device.domain
+		}
+		jsonOut.Devices = append(jsonOut.Devices, dev)
+	}
+
+	e := json.NewEncoder(cmd.Output())
+	e.SetIndent("", "  ")
+	return e.Encode(jsonOut)
 }

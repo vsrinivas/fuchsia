@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -77,7 +76,7 @@ func listMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchs
 	}
 }
 
-func (cmd *listCmd) findDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
+func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 	listPacket := mdns.Packet{
 		Header: mdns.Header{QDCount: 1},
 		Questions: []mdns.Question{
@@ -106,42 +105,15 @@ func (cmd *listCmd) findDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 }
 
 func (cmd *listCmd) execute(ctx context.Context) error {
-	filteredDevices, err := cmd.findDevices(ctx)
+	filteredDevices, err := cmd.listDevices(ctx)
 	if err != nil {
 		return err
 	}
 
 	if cmd.json {
-		return cmd.outputJSON(filteredDevices)
+		return cmd.outputJSON(filteredDevices, cmd.fullInfo)
 	}
-	return cmd.outputNormal(filteredDevices)
-}
-
-func (cmd *listCmd) outputNormal(filteredDevices []*fuchsiaDevice) error {
-	for _, device := range filteredDevices {
-		if cmd.fullInfo {
-			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addr, device.domain)
-		} else {
-			fmt.Fprintf(cmd.Output(), "%v\n", device.addr)
-		}
-	}
-	return nil
-}
-
-func (cmd *listCmd) outputJSON(filteredDevices []*fuchsiaDevice) error {
-	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(filteredDevices))}
-
-	for _, device := range filteredDevices {
-		dev := jsonDevice{Addr: device.addr.String()}
-		if cmd.fullInfo {
-			dev.Domain = device.domain
-		}
-		jsonOut.Devices = append(jsonOut.Devices, dev)
-	}
-
-	e := json.NewEncoder(cmd.Output())
-	e.SetIndent("", "  ")
-	return e.Encode(jsonOut)
+	return cmd.outputNormal(filteredDevices, cmd.fullInfo)
 }
 
 func (cmd *listCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

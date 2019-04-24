@@ -5,13 +5,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
-	"os"
 
 	"github.com/google/subcommands"
 
@@ -60,9 +58,9 @@ func resolveMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fu
 	}
 }
 
-func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
+func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([]*fuchsiaDevice, error) {
 	if len(domains) == 0 {
-		return errors.New("no domains supplied")
+		return nil, errors.New("no domains supplied")
 	}
 
 	var outDevices []*fuchsiaDevice
@@ -70,7 +68,7 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 		mDNSDomain := fmt.Sprintf("%s.local", domain)
 		devices, err := cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(mDNSDomain))
 		if err != nil {
-			return fmt.Errorf("sending/receiving mdns packets during resolve of domain '%s': %v", domain, err)
+			return nil, fmt.Errorf("sending/receiving mdns packets during resolve of domain '%s': %v", domain, err)
 		}
 		filteredDevices := make([]*fuchsiaDevice, 0)
 		for _, device := range devices {
@@ -79,36 +77,26 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 			}
 		}
 		if len(filteredDevices) == 0 {
-			return fmt.Errorf("no devices with domain %v", domain)
+			return nil, fmt.Errorf("no devices with domain %v", domain)
 		}
 
 		for _, device := range filteredDevices {
 			outDevices = append(outDevices, device)
 		}
 	}
+	return outDevices, nil
+}
+
+func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
+	outDevices, err := cmd.resolveDevices(ctx, domains...)
+	if err != nil {
+		return err
+	}
 
 	if cmd.json {
-		return cmd.outputJSON(outDevices)
+		return cmd.outputJSON(outDevices, false /* includeDomain */)
 	}
-	return cmd.outputNormal(outDevices)
-}
-
-func (cmd *resolveCmd) outputNormal(devices []*fuchsiaDevice) error {
-	for _, device := range devices {
-		fmt.Println(device.addr)
-	}
-	return nil
-}
-
-func (cmd *resolveCmd) outputJSON(devices []*fuchsiaDevice) error {
-	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(devices))}
-	for _, device := range devices {
-		jsonOut.Devices = append(jsonOut.Devices, jsonDevice{Addr: device.addr.String()})
-	}
-
-	e := json.NewEncoder(os.Stdout)
-	e.SetIndent("", "  ")
-	return e.Encode(jsonOut)
+	return cmd.outputNormal(outDevices, false /* includeDomain */)
 }
 
 func (cmd *resolveCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
