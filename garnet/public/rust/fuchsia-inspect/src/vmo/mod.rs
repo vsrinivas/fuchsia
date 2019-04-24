@@ -6,5 +6,6 @@
 #![allow(dead_code)]
 
 mod bitfields;
+mod block;
 mod block_type;
 mod constants;

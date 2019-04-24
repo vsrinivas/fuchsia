@@ -22,7 +22,7 @@ use self::objectwrapper::{MetricValueWrapper, ObjectWrapper, PropertyValueWrappe
 
 pub mod object;
 mod objectwrapper;
-mod vmo;
+pub mod vmo;
 
 pub use self::objectwrapper::{MetricValueGenerator, PropertyValueGenerator};
 

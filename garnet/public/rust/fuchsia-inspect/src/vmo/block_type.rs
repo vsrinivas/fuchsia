@@ -5,7 +5,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use std::fmt;
 
-#[derive(Debug, PartialOrd, PartialEq, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
 pub enum BlockType {
     // Contains index of the next free block of the same order.
     Free = 0,
@@ -73,5 +73,21 @@ impl BlockType {
             BlockType::NodeValue | BlockType::Tombstone => true,
             _ => false,
         }
+    }
+
+    pub fn all() -> [BlockType; 11] {
+        [
+            BlockType::Free,
+            BlockType::Reserved,
+            BlockType::Header,
+            BlockType::NodeValue,
+            BlockType::IntValue,
+            BlockType::UintValue,
+            BlockType::DoubleValue,
+            BlockType::PropertyValue,
+            BlockType::Extent,
+            BlockType::Name,
+            BlockType::Tombstone,
+        ]
     }
 }
