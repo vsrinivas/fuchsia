@@ -133,6 +133,7 @@ Benchmarking docs moved to a [separate doc](
 The tracing configuration is a JSON file consisting of a list of known
 category names and descriptions.
 
+```json
     {
       "categories": {
         "category1": "description1",
@@ -142,3 +143,4 @@ category names and descriptions.
         "provider-label": "file:///provider-to-start-automatically"
       }
     }
+```

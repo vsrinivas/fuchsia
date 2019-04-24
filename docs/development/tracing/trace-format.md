@@ -3,7 +3,7 @@
 This document describes the binary format used to collect, store, and
 transmit Fuchsia trace records.
 
-See [Fuchsia Tracing](design.md) for an overview.
+See [Fuchsia Tracing System Design](design.md) for an overview.
 
 ## Purpose
 
@@ -38,7 +38,7 @@ or save them to a file for later consumption.
   - Overall record size is limited to 32 KB.
   - Large objects may need to be broken up into multiple records.
 - Extensible
-  - There’s room to define new record types as needed.
+  - There's room to define new record types as needed.
   - Unrecognized or malformed trace records can be skipped.
 
 ## Encoding Primitives
@@ -223,6 +223,8 @@ together with 48 bits of data whose usage varies by record type.
 
 ##### Format
 
+![drawing](record.png)
+
 _header word_
 - `[0 .. 3]`: record type
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
@@ -242,6 +244,8 @@ information.
 
 ##### Format
 
+![drawing](metadata.png)
+
 _header word_
 - `[0 .. 3]`: record type (0)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
@@ -258,6 +262,8 @@ All data which follows until the next **Provider Section Metadata** or
 same provider.
 
 ##### Format
+
+![drawing](metadata1.png)
 
 _header word_
 - `[0 .. 3]`: record type (0)
@@ -280,12 +286,14 @@ All data which follows until the next **Provider Section Metadata** or
 from the same provider.
 
 When reading a trace consisting of an accumulation of traces from different
-trace providers, the reader must maintain state separately for each provider’s
+trace providers, the reader must maintain state separately for each provider's
 traces (such as the initialization data, string table, thread table,
 userspace object table, and kernel object table) and switch contexts
 whenever it encounters a new **Provider Section Metadata** record.
 
 ##### Format
+
+![drawing](metadata2.png)
 
 _header word_
 - `[0 .. 3]`: record type (0)
@@ -302,6 +310,8 @@ This record may appear anywhere in the output, and does not delimit what
 came before it or what comes after it.
 
 ##### Format
+
+![drawing](metadata3.png)
 
 _header word_
 - `[0 .. 3]`: record type (0)
@@ -366,6 +376,8 @@ of this record, the reader may assume that 1 tick is 1 nanosecond.
 
 ##### Format
 
+![drawing](initialization.png)
+
 _header word_
 - `[0 .. 3]`: record type (1)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
@@ -383,10 +395,12 @@ for the given string index when interpreting the records which follow.
 String records which attempt to set a value for string index `0x0000` must be
 ignored since this value is reserved to represent the empty string.
 
-String records which contain empty strings must be tolerated but they’re
+String records which contain empty strings must be tolerated but they're
 pointless since the empty string can simply be encoded as zero in a string ref.
 
 ##### Format
+
+![drawing](string.png)
 
 _header word_
 - `[0 .. 3]`: record type (2)
@@ -413,6 +427,8 @@ must be ignored.
 
 ##### Format
 
+![drawing](thread.png)
+
 _header word_
 - `[0 .. 3]`: record type (3)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
@@ -434,6 +450,8 @@ when and where it happened followed by event arguments and event subtype
 specific data.
 
 ##### Format
+
+![drawing](event.png)
 
 _header word_
 - `[0 .. 3]`: record type (4)
@@ -472,15 +490,19 @@ kernel probes.
 
 ##### Format
 
+![drawing](event0.png)
+
 No event-type specific data required.
 
 #### Counter Event (event type = 1)
 
 Records sample values of each argument as data in a time series associated
-with the counter’s name and id.  The values may be presented graphically as a
+with the counter's name and id.  The values may be presented graphically as a
 stacked area chart.
 
 ##### Format
+
+![drawing](event1.png)
 
 _counter word_
 - `[0 .. 63]`: counter id
@@ -492,6 +514,8 @@ by a **Duration End Event**.  May be nested.
 
 ##### Format
 
+![drawing](event23.png)
+
 No event-type specific data required.
 
 #### Duration End Event (event type = 3)
@@ -500,6 +524,8 @@ Marks the end of an operation on a particular thread.
 
 ##### Format
 
+![drawing](event23.png)
+
 No event-type specific data required.
 
 #### Duration Complete Event (event type = 4)
@@ -507,6 +533,8 @@ No event-type specific data required.
 Marks the beginning and end of an operation on a particular thread.
 
 ##### Format
+
+![drawing](event4.png)
 
 _end time word_
 - `[0 .. 63]`: end time number of ticks
@@ -517,6 +545,8 @@ Marks the beginning of an operation which may span threads.  Must be matched
 by an **Async End Event** using the same async correlation id.
 
 ##### Format
+
+![drawing](event567.png)
 
 _async correlation word_
 - `[0 .. 63]`: async correlation id
@@ -529,6 +559,8 @@ correlation id.
 
 ##### Format
 
+![drawing](event567.png)
+
 _async correlation word_
 - `[0 .. 63]`: async correlation id
 
@@ -537,6 +569,8 @@ _async correlation word_
 Marks the end of an operation which may span threads.
 
 ##### Format
+
+![drawing](event567.png)
 
 _async correlation word_
 - `[0 .. 63]`: async correlation id
@@ -553,6 +587,8 @@ for this thread; it begins where the enclosing **Duration Event** ends.
 
 ##### Format
 
+![drawing](event8910.png)
+
 _flow correlation word_
 - `[0 .. 63]`: flow correlation id
 
@@ -566,6 +602,8 @@ at the point where the enclosing **Duration Event** event ends.
 
 ##### Format
 
+![drawing](event8910.png)
+
 _flow correlation word_
 - `[0 .. 63]`: flow correlation id
 
@@ -577,6 +615,8 @@ The end of the flow is associated with the enclosing duration event for this
 thread; the flow resumes where the enclosing **Duration Event** begins.
 
 ##### Format
+
+![drawing](event8910.png)
 
 _flow correlation word_
 - `[0 .. 63]`: flow correlation id
@@ -593,6 +633,8 @@ data can be appended to a previously created blob.
 The blob type indicates the representation of the blob's content.
 
 ##### Format
+
+![drawing](blob.png)
 
 _header word_
 - `[0 .. 3]`: record type (5)
@@ -623,11 +665,13 @@ key/value data with it as arguments.  Information about the object is added
 to a per-process userspace object table.
 
 When a trace consumer encounters an event with a **Pointer Argument** whose
-value matches an entry in the process’s object table, it can cross-reference
-the argument’s pointer value with a prior **Userspace Object Record** to find a
+value matches an entry in the process's object table, it can cross-reference
+the argument's pointer value with a prior **Userspace Object Record** to find a
 description of the referent.
 
 ##### Format
+
+![drawing](userspace.png)
 
 _header word_
 - `[0 .. 3]`: record type (6)
@@ -657,10 +701,12 @@ to a global kernel object table.
 
 When a trace consumer encounters an event with a **Koid Argument**
 whose value matches an entry in the kernel object table, it can
-cross-reference the argument’s koid value with a prior **Kernel Object Record**
+cross-reference the argument's koid value with a prior **Kernel Object Record**
 to find a description of the referent.
 
 ##### Format
+
+![drawing](kernel.png)
 
 _header word_
 - `[0 .. 3]`: record type (7)
@@ -687,7 +733,7 @@ helps trace consumers correlate relationships among kernel objects.
 
 _This information may not always be available._
 
-- `“process”`: for `ZX_OBJ_TYPE_THREAD` objects, specifies the koid of the
+- `"process"`: for `ZX_OBJ_TYPE_THREAD` objects, specifies the koid of the
   process which contains the thread
 
 ### Context Switch Record (record type = 8)
@@ -701,11 +747,13 @@ context switch.  By definition, the new state of the incoming thread is
 
 ##### Format
 
+![drawing](context.png)
+
 _header word_
 - `[0 .. 3]`: record type (8)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: cpu number
-- `[24 .. 27]`: outgoing thread state (any of the values below except “running”)
+- `[24 .. 27]`: outgoing thread state (any of the values below except "running")
 - `[28 .. 35]`: outgoing thread (thread ref)
 - `[36 .. 43]`: incoming thread (thread ref)
 - `[44 .. 51]`: outgoing thread priority
@@ -745,6 +793,8 @@ Describes a message written to the log at a particular moment in time.
 
 ##### Format
 
+![drawing](log.png)
+
 _header word_
 - `[0 .. 3]`: record type (9)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
@@ -783,6 +833,8 @@ argument type.
 
 ##### Format
 
+![drawing](argument.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -797,6 +849,8 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 Represents an argument which appears in name only without a value.
 
 ##### Format
+
+![drawing](argument0.png)
 
 _argument header word_
 - `[0 .. 3]`: argument type (0)
@@ -813,6 +867,8 @@ Represents a 32-bit signed integer.
 
 ##### Format
 
+![drawing](argument1.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type (1)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -827,6 +883,8 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 Represents a 32-bit unsigned integer.
 
 ##### Format
+
+![drawing](argument2.png)
 
 _argument header word_
 - `[0 .. 3]`: argument type (2)
@@ -843,6 +901,8 @@ Represents a 64-bit signed integer.  If a value will fit in 32-bits, prefer
 using the **32-bit Signed Integer Argument** type instead.
 
 ##### Format
+
+![drawing](argument3.png)
 
 _argument header word_
 - `[0 .. 3]`: argument type (3)
@@ -863,6 +923,8 @@ using the **32-bit Unsigned Integer Argument** type instead.
 
 ##### Format
 
+![drawing](argument4.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type (4)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -881,6 +943,8 @@ Represents a double-precision floating point number.
 
 ##### Format
 
+![drawing](argument5.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type (5)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -898,6 +962,8 @@ _argument value word_
 Represents a string value.
 
 ##### Format
+
+![drawing](argument6.png)
 
 _argument header word_
 - `[0 .. 3]`: argument type (6)
@@ -919,6 +985,8 @@ be provided by a **Userspace Object Record** associated with the same pointer.
 
 ##### Format
 
+![drawing](argument7.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type (7)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -939,6 +1007,8 @@ same koid.
 
 ##### Format
 
+![drawing](argument8.png)
+
 _argument header word_
 - `[0 .. 3]`: argument type (8)
 - `[4 .. 15]`: argument size (inclusive of this word) as a multiple of 8 bytes
@@ -950,3 +1020,8 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 _argument value word_
 - `[0 .. 63]`: the koid (kernel object id)
+
+<!-- xrefs -->
+
+<!-- drawings are sourced from https://docs.google.com/document/d/1fb-59VqAU25hlNnQxFxj57aJGFBB8GRLC3-FjvN3ndY/edit# -->
+

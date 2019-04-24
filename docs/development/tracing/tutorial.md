@@ -459,7 +459,7 @@ zx_status_t VnodeBlob::InitCompressed() {
 Here, the length of time spent in the constructor, along with the size and number
 of blocks, is captured.
 By the way, notice how the macros for the types of `inode_.blob_size` and
-`inode_.num_blocks` are not used in the C++ version &mdash; they type is inferred
+`inode_.num_blocks` are not used in the C++ version &mdash; their type is inferred
 by the compiler.
 
 ## Use for arbitrary scope

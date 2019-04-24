@@ -51,7 +51,7 @@ Ideally we would pass `--duration=0s` but `traceutil` currently interprets
 that as requesting the default which is ten seconds.
 
 The `--stream` arg just says to send the results directly to the development
-host instead of first writing them to disk on the target first.
+host instead of first writing them to disk on the target.
 
 # Changing kernel trace parameters at boot
 
