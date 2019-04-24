@@ -953,6 +953,7 @@ template("environment") {
 
 set_defaults("environment") {
   configs = standard_configs
+  implicit_deps = []
 }
 
 # Define environments based on $standard_environments.
@@ -982,6 +983,7 @@ template("standard_environments") {
                                "*",
                                [
                                  "configs",
+                                 "implicit_deps",
                                  "cpu",
                                  "os",
                                ])
@@ -994,6 +996,12 @@ template("standard_environments") {
         }
         if (defined(invoker.configs)) {
           configs += invoker.configs
+        }
+
+        # Append the invoker's implicit_deps to those provided by the base
+        # environment.
+        if (defined(invoker.implicit_deps)) {
+          implicit_deps += invoker.implicit_deps
         }
       }
     }
