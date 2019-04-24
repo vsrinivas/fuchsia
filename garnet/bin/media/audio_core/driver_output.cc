@@ -23,8 +23,11 @@ static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(20);
-static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(30);
+// TODO(MTWN-269): Revert these to 20/30 instead of 50/60.  The long term
+//                 goal is to be able to get these down into the range of
+//                 5/10.
+static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(50);
+static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(60);
 static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
 static constexpr int64_t kDefaultRetentionGapNsec = ZX_MSEC(10);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
