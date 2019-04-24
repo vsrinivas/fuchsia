@@ -61,6 +61,10 @@ void UsbPeripheral::RequestComplete(usb_request_t* req) {
 
 void UsbPeripheral::UsbPeripheralRequestQueue(usb_request_t* usb_request,
                                               const usb_request_complete_t* complete_cb) {
+    if (shutting_down_) {
+        usb_request_complete(usb_request, ZX_ERR_IO_NOT_PRESENT, 0, complete_cb);
+        return;
+    }
     fbl::AutoLock l(&pending_requests_lock_);
     usb::UnownedRequest<void> request(usb_request, *complete_cb, dci_.GetRequestSize());
     __UNUSED usb_request_complete_t completion;
@@ -461,6 +465,7 @@ zx_status_t UsbPeripheral::BindFunctions() {
 
 zx_status_t UsbPeripheral::ClearFunctions() {
     fbl::AutoLock lock(&lock_);
+    shutting_down_ = true;
     for (size_t i = 0; i < 256; i++) {
         dci_.CancelAll(static_cast<uint8_t>(i));
     }
@@ -470,7 +475,7 @@ zx_status_t UsbPeripheral::ClearFunctions() {
             function->DdkRemove();
         }
     }
-    this->shutting_down_ = false;
+    shutting_down_ = false;
     functions_.reset();
     config_desc_.reset();
     functions_bound_ = false;

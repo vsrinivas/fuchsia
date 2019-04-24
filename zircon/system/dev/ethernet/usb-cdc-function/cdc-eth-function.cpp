@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <atomic>
+#include <fbl/auto_lock.h>
 #include <inttypes.h>
+#include <memory>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/errors.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -32,37 +36,43 @@ namespace usb_cdc_function {
 #define BULK_RX_COUNT   16
 #define INTR_COUNT      8
 
-#define BULK_MAX_PACKET     512 // FIXME(voydanoff) USB 3.0 support
-#define INTR_MAX_PACKET     sizeof(usb_cdc_speed_change_notification_t)
+#define BULK_MAX_PACKET 512 // FIXME(voydanoff) USB 3.0 support
+#define INTR_MAX_PACKET sizeof(usb_cdc_speed_change_notification_t)
 
 typedef struct {
-    zx_device_t* zxdev;
-    usb_function_protocol_t function;
+    zx_device_t* zxdev = nullptr;
+    usb_function_protocol_t function = {};
 
-    list_node_t bulk_out_reqs;      // list of usb_request_t
-    list_node_t bulk_in_reqs;       // list of usb_request_t
-    list_node_t intr_reqs;          // list of usb_request_t
-    list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
-    bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
+    list_node_t bulk_out_reqs = {};    // list of usb_request_t
+    list_node_t bulk_in_reqs = {};     // list of usb_request_t
+    list_node_t intr_reqs = {};        // list of usb_request_t
+    list_node_t tx_pending_infos = {}; // list of ethmac_netbuf_t
+    bool unbound = false;              // set to true when device is going away. Guarded by tx_mutex
 
     // Device attributes
-    uint8_t mac_addr[ETH_MAC_SIZE];
+    uint8_t mac_addr[ETH_MAC_SIZE] = {};
+    // Ethmac lock -- must be acquired after tx_mutex
+    // when both locks are held.
+    mtx_t ethmac_mutex = {};
+    ethmac_ifc_protocol_t ethmac_ifc = {};
+    bool online = false;
+    usb_speed_t speed = 0;
+    // TX lock -- Must be acquired before ethmac_mutex
+    // when both locks are held.
+    mtx_t tx_mutex = {};
+    mtx_t rx_mutex = {};
+    mtx_t intr_mutex = {};
 
-    mtx_t ethmac_mutex;
-    ethmac_ifc_protocol_t ethmac_ifc;
-    bool online;
-    usb_speed_t speed;
+    uint8_t bulk_out_addr = 0;
+    uint8_t bulk_in_addr = 0;
+    uint8_t intr_addr = 0;
+    uint16_t bulk_max_packet = 0;
 
-    mtx_t tx_mutex;
-    mtx_t rx_mutex;
-    mtx_t intr_mutex;
-
-    uint8_t bulk_out_addr;
-    uint8_t bulk_in_addr;
-    uint8_t intr_addr;
-    uint16_t bulk_max_packet;
-
-    size_t parent_req_size;
+    size_t parent_req_size = 0;
+    mtx_t pending_request_lock = {};
+    cnd_t pending_requests_completed = {};
+    std::atomic_int32_t pending_request_count;
+    size_t usb_request_offset = 0;
 } usb_cdc_t;
 
 typedef struct txn_info {
@@ -165,6 +175,41 @@ typedef struct txn_info {
 
 static void cdc_tx_complete(void* ctx, usb_request_t* req);
 
+static void usb_request_callback(void* ctx, usb_request_t* req) {
+    usb_cdc_t* cdc = static_cast<usb_cdc_t*>(ctx);
+    // Invoke the real completion if not shutting down.
+    if (!cdc->unbound) {
+        usb_request_complete_t completion;
+        memcpy(&completion, reinterpret_cast<unsigned char*>(req) + cdc->usb_request_offset,
+               sizeof(completion));
+        completion.callback(completion.ctx, req);
+    }
+    int value = --cdc->pending_request_count;
+    if (value == 0) {
+        mtx_lock(&cdc->pending_request_lock);
+        cnd_signal(&cdc->pending_requests_completed);
+        mtx_unlock(&cdc->pending_request_lock);
+    }
+}
+
+static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_request_t* req,
+                              const usb_request_complete_t* completion) {
+    usb_cdc_t* cdc = static_cast<usb_cdc_t*>(ctx);
+    mtx_lock(&cdc->pending_request_lock);
+    if (cdc->unbound) {
+        mtx_unlock(&cdc->pending_request_lock);
+        return;
+    }
+    cdc->pending_request_count++;
+    mtx_unlock(&cdc->pending_request_lock);
+    usb_request_complete_t internal_completion;
+    internal_completion.callback = usb_request_callback;
+    internal_completion.ctx = ctx;
+    memcpy(reinterpret_cast<unsigned char*>(req) + cdc->usb_request_offset, completion,
+           sizeof(*completion));
+    usb_function_request_queue(function, req, &internal_completion);
+}
+
 static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
     zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
 
@@ -204,17 +249,20 @@ static zx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
 static void cdc_ethmac_stop(void* cookie) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(cookie);
-
+    mtx_lock(&cdc->tx_mutex);
     mtx_lock(&cdc->ethmac_mutex);
     cdc->ethmac_ifc.ops = NULL;
     mtx_unlock(&cdc->ethmac_mutex);
+    mtx_unlock(&cdc->tx_mutex);
 }
 
 static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(ctx_cookie);
     zx_status_t status = ZX_OK;
-
+    if (cdc->unbound) {
+        return ZX_ERR_BAD_STATE;
+    }
     mtx_lock(&cdc->ethmac_mutex);
     if (cdc->ethmac_ifc.ops) {
         status = ZX_ERR_ALREADY_BOUND;
@@ -228,6 +276,9 @@ static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_
 }
 
 static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
+    if (!cdc->ethmac_ifc.ops) {
+        return ZX_ERR_BAD_STATE;
+    }
     const auto* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
     size_t length = netbuf->data_size;
 
@@ -254,7 +305,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         .callback = cdc_tx_complete,
         .ctx = cdc,
     };
-    usb_function_request_queue(&cdc->function, tx_req, &complete);
+    usb_request_queue(cdc, &cdc->function, tx_req, &complete);
 
     return ZX_OK;
 }
@@ -264,7 +315,7 @@ static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
     size_t length = netbuf->data_size;
     zx_status_t status;
 
-    if (!cdc->online || length > ETH_MTU || length == 0) {
+    if (!cdc->online || length > ETH_MTU || length == 0 || cdc->unbound) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -362,7 +413,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
         .callback = cdc_intr_complete,
         .ctx = cdc,
     };
-    usb_function_request_queue(&cdc->function, req, &complete);
+    usb_request_queue(cdc, &cdc->function, req, &complete);
 
     mtx_lock(&cdc->intr_mutex);
     req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
@@ -375,7 +426,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
     req->header.length = sizeof(speed_notification);
 
-    usb_function_request_queue(&cdc->function, req, &complete);
+    usb_request_queue(cdc, &cdc->function, req, &complete);
 }
 
 static void cdc_rx_complete(void* ctx, usb_request_t* req) {
@@ -409,14 +460,16 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
         .callback = cdc_rx_complete,
         .ctx = cdc,
     };
-    usb_function_request_queue(&cdc->function, req, &complete);
+    usb_request_queue(cdc, &cdc->function, req, &complete);
 }
 
 static void cdc_tx_complete(void* ctx, usb_request_t* req) {
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
     zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
-
+    if (cdc->unbound) {
+        return;
+    }
     mtx_lock(&cdc->tx_mutex);
     zx_status_t status = usb_req_list_add_tail(&cdc->bulk_in_reqs, req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -536,7 +589,7 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
                 .callback = cdc_rx_complete,
                 .ctx = cdc,
             };
-            usb_function_request_queue(&cdc->function, req, &complete);
+            usb_request_queue(cdc, &cdc->function, req, &complete);
         }
         mtx_unlock(&cdc->rx_mutex);
     }
@@ -565,18 +618,26 @@ usb_function_interface_protocol_ops_t device_ops = {
 static void usb_cdc_unbind(void* ctx) {
     zxlogf(TRACE, "%s\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(ctx);
-
-    mtx_lock(&cdc->tx_mutex);
-    cdc->unbound = true;
-    if (cdc->ethmac_ifc.ops) {
-        txn_info_t* txn;
-        while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) !=
-               NULL) {
-            ethmac_ifc_complete_tx(&cdc->ethmac_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
+    {
+        fbl::AutoLock l(&cdc->tx_mutex);
+        cdc->unbound = true;
+    }
+    {
+        fbl::AutoLock l(&cdc->pending_request_lock);
+        while (cdc->pending_request_count) {
+            cnd_wait(&cdc->pending_requests_completed, &cdc->pending_request_lock);
         }
     }
-    mtx_unlock(&cdc->tx_mutex);
-
+    {
+        fbl::AutoLock l(&cdc->tx_mutex);
+        if (cdc->ethmac_ifc.ops) {
+            txn_info_t* txn;
+            while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) !=
+                   NULL) {
+                ethmac_ifc_complete_tx(&cdc->ethmac_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
+            }
+        }
+    }
     device_remove(cdc->zxdev);
 }
 
@@ -598,10 +659,10 @@ static void usb_cdc_release(void* ctx) {
     mtx_destroy(&cdc->tx_mutex);
     mtx_destroy(&cdc->rx_mutex);
     mtx_destroy(&cdc->intr_mutex);
-    free(cdc);
+    delete cdc;
 }
 
-static zx_protocol_device_t usb_cdc_proto = [](){
+static zx_protocol_device_t usb_cdc_proto = []() {
     zx_protocol_device_t dev = {};
     dev.version = DEVICE_OPS_VERSION;
     dev.unbind = usb_cdc_unbind;
@@ -611,20 +672,18 @@ static zx_protocol_device_t usb_cdc_proto = [](){
 
 zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "%s\n", __func__);
-
     device_add_args_t args = {};
 
-    auto* cdc = static_cast<usb_cdc_t*>(calloc(1, sizeof(usb_cdc_t)));
+    auto cdc = std::make_unique<usb_cdc_t>();
     if (!cdc) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB_FUNCTION, &cdc->function);
     if (status != ZX_OK) {
-        free(cdc);
         return status;
     }
-
+    cnd_init(&cdc->pending_requests_completed);
     list_initialize(&cdc->bulk_out_reqs);
     list_initialize(&cdc->bulk_in_reqs);
     list_initialize(&cdc->intr_reqs);
@@ -636,8 +695,9 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
 
     cdc->bulk_max_packet = BULK_MAX_PACKET; // FIXME(voydanoff) USB 3.0 support
     cdc->parent_req_size = usb_function_get_request_size(&cdc->function);
-    uint64_t req_size = cdc->parent_req_size + sizeof(usb_req_internal_t);
-
+    uint64_t req_size =
+        cdc->parent_req_size + sizeof(usb_req_internal_t) + sizeof(usb_request_complete_t);
+    cdc->usb_request_offset = cdc->parent_req_size + sizeof(usb_req_internal_t);
     status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.bInterfaceNumber);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: usb_function_alloc_interface failed\n", __func__);
@@ -672,7 +732,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     descriptors.bulk_in_ep.bEndpointAddress = cdc->bulk_in_addr;
     descriptors.intr_ep.bEndpointAddress = cdc->intr_addr;
 
-    status = cdc_generate_mac_address(cdc);
+    status = cdc_generate_mac_address(cdc.get());
     if (status != ZX_OK) {
         goto fail;
     }
@@ -715,7 +775,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
 
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "cdc-eth-function";
-    args.ctx = cdc;
+    args.ctx = cdc.get();
     args.ops = &usb_cdc_proto;
     args.proto_id = ZX_PROTOCOL_ETHMAC;
     args.proto_ops = &ethmac_ops;
@@ -725,13 +785,15 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: add_device failed %d\n", __func__, status);
         goto fail;
     }
-
-    usb_function_set_interface(&cdc->function, cdc, &device_ops);
-
+    usb_function_set_interface(&cdc->function, cdc.get(), &device_ops);
+    {
+        // The DDK now owns this reference.
+        __UNUSED auto released = cdc.release();
+    }
     return ZX_OK;
 
 fail:
-    usb_cdc_release(cdc);
+    usb_cdc_release(cdc.get());
     return status;
 }
 

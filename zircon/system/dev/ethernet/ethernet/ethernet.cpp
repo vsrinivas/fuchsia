@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #include "ethernet.h"
+#include <type_traits>
 
 namespace eth {
 
 TransmitInfo* EthDev0::NetbufToTransmitInfo(ethmac_netbuf_t* netbuf) {
+    // NOTE: Alignment is guaranteed by the static_asserts for alignment and padding of the
+    // TransmitInfo structure, combined with the value of transmit_buffer_size_.
     return reinterpret_cast<TransmitInfo*>(reinterpret_cast<uintptr_t>(netbuf) + info_.netbuf_size);
 }
 
@@ -210,11 +213,16 @@ TransmitInfo* EthDev::GetTransmitInfo() {
     if (transmit_info == nullptr) {
         zxlogf(ERROR, "eth [%s]: transmit_info pool empty\n", name_);
     }
+    new (transmit_info) TransmitInfo();
+    transmit_info->edev = fbl::RefPtr<EthDev>(this);
     return transmit_info;
 }
 
 // Returns a TX buffer to the pool.
 void EthDev::PutTransmitInfo(TransmitInfo* transmit_info) {
+    // Call the destructor on TransmitInfo since we are effectively "freeing" the
+    // TransmitInfo structure. This needs to be done manually, since it is an inline structure.
+    transmit_info->~TransmitInfo();
     fbl::AutoLock lock(&lock_);
     list_add_head(&free_transmit_buffers_, &transmit_info->node);
 }
@@ -245,7 +253,7 @@ void EthDev0::Recv(const void* data, size_t len, uint32_t flags) TA_NO_THREAD_SA
 
 void EthDev0::CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
     TransmitInfo* transmit_info = NetbufToTransmitInfo(netbuf);
-    EthDev* edev = transmit_info->edev;
+    auto edev = transmit_info->edev;
     eth_fifo_entry_t entry = {
         .offset = static_cast<uint32_t>(reinterpret_cast<const char*>(netbuf->data_buffer) -
                                         reinterpret_cast<const char*>(edev->io_buffer_.start())),
@@ -544,7 +552,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (status == ZX_OK) {
         state_ |= kStateRunning;
         edev0_->list_idle_.erase(*this);
-        edev0_->list_active_.push_back(this);
+        edev0_->list_active_.push_back(fbl::WrapRefPtr(this));
         // Trigger the status signal so the client will query the status at the start.
         receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
     } else {
@@ -560,7 +568,7 @@ zx_status_t EthDev::StopLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (state_ & kStateRunning) {
         state_ &= (~kStateRunning);
         edev0_->list_active_.erase(*this);
-        edev0_->list_idle_.push_back(this);
+        edev0_->list_idle_.push_back(fbl::WrapRefPtr(this));
         // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
         // this ethdev had any state set. Ignore failures, which may come from drivers not
         // supporting the feature. (TODO: check failure codes).
@@ -802,7 +810,17 @@ void EthDev::KillLocked() {
 void EthDev::StopAndKill() {
     fbl::AutoLock lock(&edev0_->ethdev_lock_);
     StopLocked();
-    KillLocked();
+    SetPromiscLocked(false);
+    if (transmit_fifo_.is_valid()) {
+        // Ask the Transmit thread to exit.
+        transmit_fifo_.signal(0, kSignalFifoTerminate);
+    }
+    if (state_ & kStateTransmitThreadCreated) {
+        state_ &= (~kStateTransmitThreadCreated);
+        int ret;
+        thrd_join(transmit_thread_, &ret);
+        zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
+    }
     // Check if it is part of the idle list and remove.
     // It will not be part of active list as StopLocked() would have moved it to Idle.
     if (InContainer()) {
@@ -811,9 +829,35 @@ void EthDev::StopAndKill() {
 }
 
 void EthDev::DdkRelease() {
-    // Ensure that the instance is stopped.
-    ZX_DEBUG_ASSERT(state_ & kStateDead);
-    delete this;
+    // Release the device (and wait for completion)!
+    if (Release()) {
+        delete this;
+    } else {
+        // TODO (ZX-3934): It is not presently safe to block here.
+        // So we cannot satisfy the assumptions of the DDK.
+        // If we block here, we will deadlock the entire system
+        // due to the virtual bus's control channel being controlled via FIDL.
+        // as well as its need to issue lifecycle events to the main event loop
+        // in order to remove the bus during shutdown.
+        // Uncomment the lines below when we can do so safely.
+        // sync_completion_t completion;
+        // completion_ = &completion;
+        // sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    }
+}
+
+EthDev::~EthDev() {
+    if (transmit_fifo_.is_valid()) {
+        // Ask the Transmit thread to exit.
+        transmit_fifo_.signal(0, kSignalFifoTerminate);
+    }
+    if (state_ & kStateTransmitThreadCreated) {
+        state_ &= (~kStateTransmitThreadCreated);
+        int ret;
+        thrd_join(transmit_thread_, &ret);
+        zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
+    }
+    // sync_completion_signal(completion_);
 }
 
 zx_status_t EthDev::DdkOpen(zx_device_t** out, uint32_t flags) {
@@ -848,8 +892,13 @@ zx_status_t EthDev::DdkClose(uint32_t flags) {
 zx_status_t EthDev::AddDevice(zx_device_t** out) {
     zx_status_t status;
 
-    transmit_buffer_size_ = ROUNDUP(sizeof(TransmitInfo) + edev0_->info_.netbuf_size, 8);
-
+    transmit_buffer_size_ =
+        ROUNDUP(sizeof(TransmitInfo) + edev0_->info_.netbuf_size, __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+    // Ensure that we can meet alignment requirement of TransmitInfo in this allocation,
+    // and that sufficient padding exists between elements in the struct to guarantee safe
+    // accesses of this array.
+    static_assert(std::alignment_of_v<TransmitInfo> <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+    static_assert(std::alignment_of_v<TransmitInfo> <= sizeof(ethmac_netbuf_t));
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> all_transmit_buffers =
         fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[kFifoDepth * transmit_buffer_size_]());
@@ -859,11 +908,9 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
 
     list_initialize(&free_transmit_buffers_);
     for (size_t ndx = 0; ndx < kFifoDepth; ndx++) {
-        ethmac_netbuf_t* netbuf =
-            (ethmac_netbuf_t*)((uintptr_t)all_transmit_buffers.get() +
-                               (transmit_buffer_size_ * ndx));
+        ethmac_netbuf_t* netbuf = (ethmac_netbuf_t*)((uintptr_t)all_transmit_buffers.get() +
+                                                     (transmit_buffer_size_ * ndx));
         TransmitInfo* transmit_info = edev0_->NetbufToTransmitInfo(netbuf);
-        transmit_info->edev = this;
         list_add_tail(&free_transmit_buffers_, &transmit_info->node);
     }
 
@@ -880,11 +927,15 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
 
 zx_status_t EthDev0::DdkOpen(zx_device_t** out, uint32_t flags) {
     fbl::AllocChecker ac;
-    auto edev = fbl::make_unique_checked<EthDev>(&ac, this->zxdev_, this);
+    auto edev = fbl::MakeRefCountedChecked<EthDev>(&ac, this->zxdev_, this);
+    // Hold a second reference to the device to prevent a use-after-free
+    // in the case where DdkRelease is called immediately after AddDevice.
+    fbl::RefPtr<EthDev> dev_ref_2 = edev;
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-
+    // Add a reference for the devhost handle.
+    // This will be removed in DdkRelease.
     zx_status_t status;
     if ((status = edev->AddDevice(out)) < 0) {
         return status;
@@ -892,13 +943,9 @@ zx_status_t EthDev0::DdkOpen(zx_device_t** out, uint32_t flags) {
 
     {
         fbl::AutoLock lock(&ethdev_lock_);
-        list_idle_.push_back(edev.get());
+        list_idle_.push_back(edev);
     }
-
-    // On successful Add, Devmgr takes ownership (relinquished on DdkRelease),
-    // so transfer our ownership to a local var, and let it go out of scope.
-    auto __UNUSED temp_ref = edev.release();
-
+    __UNUSED auto dev = edev.leak_ref();
     return ZX_OK;
 }
 
@@ -1011,7 +1058,15 @@ static zx_driver_ops_t eth_driver_ops = {
     .init = nullptr,
     .bind = &eth::EthDev0::EthBind,
     .create = nullptr,
-    .release = nullptr};
+    .release = [](void* ctx) {
+        // We don't support unloading. Assert if this ever
+        // happens. In order to properly support unloading,
+        // we need a way to inform the DDK when all of our
+        // resources have been freed, so it can safely
+        // unload the driver. This mechanism does not currently
+        // exist.
+        ZX_ASSERT(false);
+    }};
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)

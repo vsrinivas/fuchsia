@@ -30,6 +30,9 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <lib/sync/completion.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +45,7 @@ class EthDev0;
 class EthDev;
 
 struct TransmitInfo {
-    EthDev* edev;
+    fbl::RefPtr<EthDev> edev;
     uint64_t fifo_cookie;
     list_node_t node;
 };
@@ -91,15 +94,16 @@ private:
     fbl::Mutex ethdev_lock_;
 
     // Active and idle instances (EthDev).
-    fbl::DoublyLinkedList<EthDev*> list_active_ __TA_GUARDED(ethdev_lock_);
-    fbl::DoublyLinkedList<EthDev*> list_idle_ __TA_GUARDED(ethdev_lock_);
+    fbl::DoublyLinkedList<fbl::RefPtr<EthDev>> list_active_ __TA_GUARDED(ethdev_lock_);
+    fbl::DoublyLinkedList<fbl::RefPtr<EthDev>> list_idle_ __TA_GUARDED(ethdev_lock_);
 };
 
 using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
 class EthDev : public EthDevType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET>,
-               public fbl::DoublyLinkedListable<EthDev*> {
+               public fbl::DoublyLinkedListable<fbl::RefPtr<EthDev>>,
+               public fbl::RefCounted<EthDev> {
 
 public:
     EthDev(zx_device_t* parent, EthDev0* edev0)
@@ -140,8 +144,8 @@ public:
         __TA_REQUIRES(edev0_->ethdev_lock_);
     zx_status_t MsgConfigMulticastTestFilterLocked(fidl_txn_t* txn)
         __TA_REQUIRES(edev0_->ethdev_lock_);
-    zx_status_t MsgDumpRegistersLocked(fidl_txn_t* txn)
-        __TA_REQUIRES(edev0_->ethdev_lock_);
+    zx_status_t MsgDumpRegistersLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
+    ~EthDev();
 
 private:
     friend class EthDev0;
@@ -253,6 +257,7 @@ private:
     uint32_t fail_receive_write_ = 0;
     uint32_t ethmac_request_count_ = 0;
     uint32_t ethmac_response_count_ = 0;
+    // sync_completion_t* completion_ = nullptr;
 };
 
 } // namespace eth

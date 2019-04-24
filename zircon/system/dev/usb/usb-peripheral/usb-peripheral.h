@@ -191,7 +191,7 @@ private:
     // True if we are connected to a host,
     bool connected_ __TA_GUARDED(lock_) = false;
     // True if we are shutting down/clearing functions
-    bool shutting_down_ __TA_GUARDED(lock_) = false;
+    bool shutting_down_ = false;
     // Current configuration number selected via USB_REQ_SET_CONFIGURATION
     // (will be 0 or 1 since we currently do not support multiple configurations).
     uint8_t configuration_;
