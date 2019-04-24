@@ -210,45 +210,6 @@ void AmlMipiDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t AmlMipiDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
-    switch (proto_id) {
-    case ZX_PROTOCOL_ISP_IMPL: {
-        if (!parent_protocol_.is_valid()) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        parent_protocol_.GetProto(static_cast<isp_impl_protocol_t*>(out_protocol));
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_MIPI_CSI: {
-        self_protocol_.GetProto(static_cast<mipi_csi_protocol_t*>(out_protocol));
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
-zx_status_t AmlMipiDevice::Bind(camera_sensor_t* sensor_info) {
-
-    zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, sensor_info->vid},
-        {BIND_PLATFORM_DEV_PID, 0, sensor_info->pid},
-        {BIND_PLATFORM_DEV_DID, 0, sensor_info->did},
-    };
-
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "aml-mipi";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    return pdev_.DeviceAdd(0, &args, &zxdev_);
-}
-
 // static
 zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
@@ -262,17 +223,13 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
         return status;
     }
 
-    // Populate board specific information
-    camera_sensor_t sensor_info;
-    size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &sensor_info,
-                                 sizeof(camera_sensor_t), &actual);
-    if (status != ZX_OK || actual != sizeof(camera_sensor_t)) {
-        zxlogf(ERROR, "aml-mipi: Could not get Sensor Info metadata %d\n", status);
-        return status;
-    }
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_T931},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_MIPI_CSI},
+    };
 
-    status = mipi_device->Bind(&sensor_info);
+    status = mipi_device->DdkAdd("aml-mipi", 0,  props, countof(props));
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-mipi driver failed to get added\n");
         return status;

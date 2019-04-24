@@ -27,7 +27,9 @@ driver("sherlock") {
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-clockimpl",
     "$zx/system/banjo/ddk-protocol-iommu",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",

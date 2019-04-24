@@ -4,8 +4,8 @@
 
 import("$zx/public/gn/banjo.gni")
 
-banjo_library("ddk-protocol-ispimpl") {
+banjo_library("ddk-protocol-camerasensor") {
   sources = [
-    "isp-impl.banjo",
+    "camerasensor.banjo",
   ]
 }

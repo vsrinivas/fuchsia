@@ -4,8 +4,11 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/clock.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -25,6 +28,19 @@ static const pbus_mmio_t clk_mmios[] = {
     },
 };
 
+static const clock_id_t clock_ids[] = {
+    // For Camera Sensor.
+    {G12B_CLK_CAM_INCK_24M},
+};
+
+static const pbus_metadata_t clock_metadata[] = {
+    {
+        .type = DEVICE_METADATA_CLOCK_IDS,
+        .data_buffer = &clock_ids,
+        .data_size = sizeof(clock_ids),
+    },
+};
+
 static pbus_dev_t clk_dev = []() {
     pbus_dev_t dev;
     dev.name = "sherlock-clk",
@@ -32,6 +48,8 @@ static pbus_dev_t clk_dev = []() {
     dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
     dev.mmio_list = clk_mmios;
     dev.mmio_count = countof(clk_mmios);
+    dev.metadata_list = clock_metadata;
+    dev.metadata_count = countof(clock_metadata);
     return dev;
 }();
 

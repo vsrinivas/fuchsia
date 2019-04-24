@@ -6,7 +6,6 @@
 #include "../global_regs.h"
 #include "../pingpong_regs.h"
 #include <ddk/debug.h>
-#include <ddktl/protocol/ispimpl.h>
 #include <zircon/types.h>
 
 namespace camera {
@@ -18,7 +17,7 @@ zx_status_t Sensor::HwInit() {
         .set_mode_request(0)
         .WriteTo(&isp_mmio_);
 
-    zx_status_t status = sensor_callbacks_.SetMode(current_sensor_mode_);
+    zx_status_t status = camera_sensor_.SetMode(current_sensor_mode_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Sensor SetMode failed %d\n", __func__, status);
         return status;
@@ -145,16 +144,16 @@ zx_status_t Sensor::SwInit() {
 
 zx_status_t Sensor::Init() {
 
-    zx_status_t status = sensor_callbacks_.Init();
+    zx_status_t status = camera_sensor_.Init();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Sensor Init failed %d\n", __func__, status);
         return status;
     }
 
     size_t actual_modes;
-    status = sensor_callbacks_.GetSupportedModes((sensor_mode_t*)(&sensor_modes_),
-                                                 kNumModes,
-                                                 &actual_modes);
+    status = camera_sensor_.GetSupportedModes((sensor_mode_t*)(&sensor_modes_),
+                                              kNumModes,
+                                              &actual_modes);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Sensor GetSupportedModes failed %d\n", __func__, status);
         return status;
@@ -206,29 +205,29 @@ zx_status_t Sensor::GetSupportedModes(sensor_mode_t* out_modes_list,
 }
 
 int32_t Sensor::SetAnalogGain(int32_t gain) {
-    return sensor_callbacks_.SetAnalogGain(gain);
+    return camera_sensor_.SetAnalogGain(gain);
 }
 
 int32_t Sensor::SetDigitalGain(int32_t gain) {
-    return sensor_callbacks_.SetDigitalGain(gain);
+    return camera_sensor_.SetDigitalGain(gain);
 }
 
 void Sensor::StartStreaming() {
-    sensor_callbacks_.StartStreaming();
+    camera_sensor_.StartStreaming();
 }
 
 void Sensor::StopStreaming() {
-    sensor_callbacks_.StopStreaming();
+    camera_sensor_.StopStreaming();
 }
 
 void Sensor::SetIntegrationTime(int32_t int_time,
                                 int32_t int_time_M,
                                 int32_t int_time_L) {
-    sensor_callbacks_.SetIntegrationTime(int_time, int_time_M, int_time_L);
+    camera_sensor_.SetIntegrationTime(int_time, int_time_M, int_time_L);
 }
 
 zx_status_t Sensor::Update() {
-    return sensor_callbacks_.Update();
+    return camera_sensor_.Update();
 }
 
 zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
@@ -236,7 +235,7 @@ zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_status_t status = sensor_callbacks_.GetInfo(out_info);
+    zx_status_t status = camera_sensor_.GetInfo(out_info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Sensor GetInfo failed %d\n", __func__, status);
         return status;
@@ -248,12 +247,12 @@ zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
 // static
 fbl::unique_ptr<Sensor> Sensor::Create(ddk::MmioView isp_mmio,
                                        ddk::MmioView isp_mmio_local,
-                                       isp_callbacks_protocol_t sensor_callbacks) {
+                                       ddk::CameraSensorProtocolClient camera_sensor) {
     fbl::AllocChecker ac;
     auto sensor = fbl::make_unique_checked<Sensor>(&ac,
                                                    isp_mmio,
                                                    isp_mmio_local,
-                                                   std::move(sensor_callbacks));
+                                                   camera_sensor);
     if (!ac.check()) {
         return nullptr;
     }

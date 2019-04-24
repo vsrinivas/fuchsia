@@ -14,23 +14,21 @@
 namespace board_test {
 
 namespace {
-
 static const clock_id_t clock_ids[] = {
-    { 1 },
-    { 3 },
-    { 5 },
-    { 7 },
+    {1},
+    {3},
+    {5},
+    {7},
 };
 
-static const pbus_metadata_t gpio_metadata[] = {
+static const pbus_metadata_t clock_metadata[] = {
     {
         .type = DEVICE_METADATA_CLOCK_IDS,
         .data_buffer = &clock_ids,
         .data_size = sizeof(clock_ids),
-    }
+    },
 };
-
-}
+} // namespace
 
 zx_status_t TestBoard::ClockInit() {
     pbus_dev_t clock_dev = {};
@@ -38,8 +36,8 @@ zx_status_t TestBoard::ClockInit() {
     clock_dev.vid = PDEV_VID_TEST;
     clock_dev.pid = PDEV_PID_PBUS_TEST;
     clock_dev.did = PDEV_DID_TEST_CLOCK;
-    clock_dev.metadata_list = gpio_metadata;
-    clock_dev.metadata_count = countof(gpio_metadata);
+    clock_dev.metadata_list = clock_metadata;
+    clock_dev.metadata_count = countof(clock_metadata);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
     if (status != ZX_OK) {

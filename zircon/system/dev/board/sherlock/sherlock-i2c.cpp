@@ -88,6 +88,14 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    // IMX227 Camera Sensor
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x36,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {
@@ -95,7 +103,7 @@ static const pbus_metadata_t i2c_metadata[] = {
         .type = DEVICE_METADATA_I2C_CHANNELS,
         .data_buffer = &i2c_channels,
         .data_size = sizeof(i2c_channels),
-    }
+    },
 };
 
 static pbus_dev_t i2c_dev = []() {

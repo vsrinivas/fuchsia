@@ -9,11 +9,10 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/mipicsi.h>
 #include <fbl/unique_ptr.h>
+#include <lib/mmio/mmio.h>
 
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zx/interrupt.h>
@@ -25,7 +24,7 @@ namespace camera {
 // This class provides the ZX_PROTOCOL_MIPICSI ops for all of it's
 // children.
 class AmlMipiDevice;
-using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable, ddk::GetProtocolable>;
+using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable>;
 
 class AmlMipiDevice : public DeviceType,
                       public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
@@ -33,10 +32,7 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMipiDevice);
 
     explicit AmlMipiDevice(zx_device_t* parent)
-        : DeviceType(parent), pdev_(parent), parent_protocol_(parent) {
-        mipi_csi_protocol_t self{&mipi_csi_protocol_ops_, this};
-        self_protocol_ = ddk::MipiCsiProtocolClient(&self);
-    }
+        : DeviceType(parent), pdev_(parent) {}
 
     static zx_status_t Create(zx_device_t* parent);
 
@@ -45,7 +41,6 @@ public:
     // Methods required by the ddk.
     void DdkRelease();
     void DdkUnbind();
-    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
     // Methods for ZX_PROTOCOL_MIPI_CSI.
     zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
@@ -55,7 +50,6 @@ public:
 private:
     zx_status_t InitBuffer(const mipi_adap_info_t* info, size_t size);
     zx_status_t InitPdev(zx_device_t* parent);
-    zx_status_t Bind(camera_sensor_t* sensor_info);
     uint32_t AdapGetDepth(const mipi_adap_info_t* info);
     int AdapterIrqHandler();
 
@@ -103,8 +97,6 @@ private:
     std::optional<ddk::MmioBuffer> hiu_mmio_;
 
     ddk::PDev pdev_;
-    ddk::MipiCsiProtocolClient self_protocol_;
-    ddk::IspImplProtocolClient parent_protocol_;
 
     zx::bti bti_;
     zx::interrupt adap_irq_;

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
-#include <fbl/unique_ptr.h>
-#include <hw/reg.h>
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
+#include "sherlock-gpios.h"
 #include "sherlock.h"
 
 namespace sherlock {
@@ -22,86 +22,6 @@ namespace {
 
 constexpr uint32_t kClk24MAltFunc = 7;
 constexpr uint32_t kClkGpioDriveStrength = 3;
-
-constexpr pbus_mmio_t mipi_mmios[] = {
-    // CSI PHY0
-    {
-        .base = T931_CSI_PHY0_BASE,
-        .length = T931_CSI_PHY0_LENGTH,
-    },
-    // Analog PHY
-    {
-        .base = T931_APHY_BASE,
-        .length = T931_APHY_LENGTH,
-    },
-    // CSI HOST0
-    {
-        .base = T931_CSI_HOST0_BASE,
-        .length = T931_CSI_HOST0_LENGTH,
-    },
-    // MIPI Adapter
-    {
-        .base = T931_MIPI_ADAPTER_BASE,
-        .length = T931_MIPI_ADAPTER_LENGTH,
-    },
-    // HIU for clocks.
-    {
-        .base = T931_HIU_BASE,
-        .length = T931_HIU_LENGTH,
-    },
-};
-
-constexpr camera_sensor_t isp_mipi[] = {
-    {
-        .vid = PDEV_VID_AMLOGIC,
-        .pid = PDEV_PID_AMLOGIC_T931,
-        .did = PDEV_DID_AMLOGIC_MIPI_CSI,
-    },
-};
-
-constexpr camera_sensor_t mipi_sensor[] = {
-    {
-        .vid = PDEV_VID_SONY,
-        .pid = PDEV_PID_SONY_IMX227,
-        .did = PDEV_DID_CAMERA_SENSOR,
-    },
-};
-
-constexpr pbus_bti_t mipi_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_CAMERA,
-    },
-};
-
-constexpr pbus_irq_t mipi_irqs[] = {
-    {
-        .irq = T931_MIPI_ADAPTER_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    }};
-
-constexpr pbus_metadata_t mipi_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &mipi_sensor,
-        .data_size = sizeof(camera_sensor_t),
-    },
-};
-
-constexpr pbus_metadata_t isp_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &isp_mipi,
-        .data_size = sizeof(isp_mipi),
-    },
-};
-
-constexpr pbus_i2c_channel_t sensor_i2c[] = {
-    {
-        .bus_id = SHERLOCK_I2C_3,
-        .address = 0x36,
-    },
-};
 
 constexpr pbus_bti_t isp_btis[] = {
     {
@@ -138,57 +58,6 @@ constexpr pbus_mmio_t isp_mmios[] = {
     },
 };
 
-constexpr pbus_gpio_t sensor_gpios[] = {
-    {
-        // vana-enable
-        .gpio = T931_GPIOA(6),
-    },
-    {
-        // vdig-enable
-        .gpio = T931_GPIOZ(12),
-    },
-    {
-        // camera sensor reset
-        .gpio = T931_GPIOZ(0),
-    },
-};
-
-static const pbus_clk_t sensor_clk_gates[] = {
-    {
-        .clk = G12B_CLK_CAM_INCK_24M,
-    },
-};
-
-static const pbus_dev_t mipi_children = []() {
-    // Sony IMX 227 Camera Sensor
-    pbus_dev_t dev;
-    dev.name = "imx227";
-    dev.i2c_channel_list = sensor_i2c;
-    dev.i2c_channel_count = countof(sensor_i2c);
-    dev.gpio_list = sensor_gpios;
-    dev.gpio_count = countof(sensor_gpios);
-    dev.clk_list = sensor_clk_gates;
-    dev.clk_count = countof(sensor_clk_gates);
-    return dev;
-}();
-
-static const pbus_dev_t isp_children = []() {
-    // MIPI CSI PHY ADAPTER
-    pbus_dev_t dev;
-    dev.name = "mipi-csi2";
-    dev.mmio_list = mipi_mmios;
-    dev.mmio_count = countof(mipi_mmios);
-    dev.metadata_list = mipi_metadata;
-    dev.metadata_count = countof(mipi_metadata);
-    dev.child_list = &mipi_children;
-    dev.child_count = 1;
-    dev.bti_list = mipi_btis;
-    dev.bti_count = countof(mipi_btis);
-    dev.irq_list = mipi_irqs;
-    dev.irq_count = countof(mipi_irqs);
-    return dev;
-}();
-
 // IRQ for ISP
 static const pbus_irq_t isp_irqs[] = {
     {
@@ -210,36 +79,175 @@ static pbus_dev_t isp_dev = []() {
     dev.bti_count = countof(isp_btis);
     dev.irq_list = isp_irqs;
     dev.irq_count = countof(isp_irqs);
-    dev.metadata_list = isp_metadata;
-    dev.metadata_count = countof(isp_metadata);
-    dev.child_list = &isp_children;
-    dev.child_count = 1;
+    return dev;
+}();
+
+// Composite binding rules for ARM ISP
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t camera_sensor_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SONY),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SONY_IMX227),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CAMERA_SENSOR),
+};
+static const device_component_part_t camera_sensor_component[] = {
+    {countof(root_match), root_match},
+    {countof(camera_sensor_match), camera_sensor_match},
+};
+static const device_component_t isp_components[] = {
+    {countof(camera_sensor_component), camera_sensor_component},
+};
+
+// Composite binding rules for IMX227 Sensor.
+
+static const zx_bind_inst_t i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),
+};
+static const zx_bind_inst_t gpio_reset_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_RESET),
+};
+static const zx_bind_inst_t gpio_vana_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VANA_ENABLE),
+};
+static const zx_bind_inst_t gpio_vdig_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VDIG_ENABLE),
+};
+static const zx_bind_inst_t clk_sensor_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_CAM_INCK_24M),
+};
+static const zx_bind_inst_t mipicsi_match[] = {
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MIPI_CSI),
+};
+static const device_component_part_t i2c_component[] = {
+    {countof(root_match), root_match},
+    {countof(i2c_match), i2c_match},
+};
+static const device_component_part_t gpio_reset_component[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_reset_match), gpio_reset_match},
+};
+static const device_component_part_t gpio_vana_component[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_vana_match), gpio_vana_match},
+};
+static const device_component_part_t gpio_vdig_component[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_vdig_match), gpio_vdig_match},
+};
+static const device_component_part_t clk_sensor_component[] = {
+    {countof(root_match), root_match},
+    {countof(clk_sensor_match), clk_sensor_match},
+};
+static const device_component_part_t mipicsi_component[] = {
+    {countof(root_match), root_match},
+    {countof(mipicsi_match), mipicsi_match},
+};
+static const device_component_t imx227_sensor_components[] = {
+    {countof(i2c_component), i2c_component},
+    {countof(gpio_vana_component), gpio_vana_component},
+    {countof(gpio_vdig_component), gpio_vdig_component},
+    {countof(gpio_reset_component), gpio_reset_component},
+    {countof(clk_sensor_component), clk_sensor_component},
+    {countof(mipicsi_component), mipicsi_component},
+};
+
+constexpr pbus_mmio_t mipi_mmios[] = {
+    // CSI PHY0
+    {
+        .base = T931_CSI_PHY0_BASE,
+        .length = T931_CSI_PHY0_LENGTH,
+    },
+    // Analog PHY
+    {
+        .base = T931_APHY_BASE,
+        .length = T931_APHY_LENGTH,
+    },
+    // CSI HOST0
+    {
+        .base = T931_CSI_HOST0_BASE,
+        .length = T931_CSI_HOST0_LENGTH,
+    },
+    // MIPI Adapter
+    {
+        .base = T931_MIPI_ADAPTER_BASE,
+        .length = T931_MIPI_ADAPTER_LENGTH,
+    },
+    // HIU for clocks.
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+};
+
+constexpr pbus_bti_t mipi_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_CAMERA,
+    },
+};
+
+constexpr pbus_irq_t mipi_irqs[] = {
+    {
+        .irq = T931_MIPI_ADAPTER_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+// Binding rules for MIPI Driver
+static const pbus_dev_t mipi_dev = []() {
+    // MIPI CSI PHY ADAPTER
+    pbus_dev_t dev;
+    dev.name = "mipi-csi2";
+    dev.vid = PDEV_VID_AMLOGIC;
+    dev.pid = PDEV_PID_AMLOGIC_T931;
+    dev.did = PDEV_DID_AMLOGIC_MIPI_CSI;
+    dev.mmio_list = mipi_mmios;
+    dev.mmio_count = countof(mipi_mmios);
+    dev.bti_list = mipi_btis;
+    dev.bti_count = countof(mipi_btis);
+    dev.irq_list = mipi_irqs;
+    dev.irq_count = countof(mipi_irqs);
     return dev;
 }();
 
 } // namespace
 
-// Camera Board Driver loads the following three drivers
-// with parent -> child -> child relationship
-// ISP
-//  |
-//  |
-//  -> MIPI
-//      |
-//      |
-//      -> IMX227
+// Refer to camera design document for driver
+// design and layout details.
 zx_status_t Sherlock::CameraInit() {
     // Set GPIO alternate functions.
     gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
     gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength);
 
-    zx_status_t status = pbus_.DeviceAdd(&isp_dev);
+    zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d\n", __func__, status);
         return status;
     }
 
-    return status;
+    // Add a composite device for camera sensor driver.
+    constexpr zx_device_prop_t sensor_props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
+    };
+
+    status = DdkAddComposite("imx227-sensor", sensor_props, countof(sensor_props),
+                             imx227_sensor_components, countof(imx227_sensor_components),
+                             UINT32_MAX);
+
+    // Add a composite device for ARM ISP
+    return pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
 }
 
 } // namespace sherlock

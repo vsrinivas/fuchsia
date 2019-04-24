@@ -12,7 +12,6 @@ driver("aml-mipicsi") {
     "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-ispimpl",
     "$zx/system/banjo/ddk-protocol-mipicsi",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",

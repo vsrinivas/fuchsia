@@ -4,7 +4,6 @@
 
 #include "modules/sensor.h"
 #include <atomic>
-#include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -28,7 +27,7 @@ public:
 
     static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio,
                                                 ddk::MmioView isp_mmio_local,
-                                                isp_callbacks_protocol_t sensor_callbacks,
+                                                ddk::CameraSensorProtocolClient camera_sensor,
                                                 sync_completion_t frame_processing_signal);
     ~StatsManager();
 

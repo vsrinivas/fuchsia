@@ -23,11 +23,11 @@ int StatsManager::FrameProcessingThread() {
 
 fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
                                                    ddk::MmioView isp_mmio_local,
-                                                   isp_callbacks_protocol_t sensor_callbacks,
+                                                   ddk::CameraSensorProtocolClient camera_sensor,
                                                    sync_completion_t frame_processing_signal) {
     // First initialize all the modules
     fbl::AllocChecker ac;
-    auto sensor = camera::Sensor::Create(isp_mmio, isp_mmio_local, sensor_callbacks);
+    auto sensor = camera::Sensor::Create(isp_mmio, isp_mmio_local, camera_sensor);
     if (sensor == nullptr) {
         zxlogf(ERROR, "%s: Unable to start Sensor Module \n", __func__);
         return nullptr;

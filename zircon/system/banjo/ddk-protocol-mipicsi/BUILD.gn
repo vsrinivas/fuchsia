@@ -9,6 +9,6 @@ banjo_library("ddk-protocol-mipicsi") {
     "mipicsi.banjo",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk-protocol-ispimpl",
+    "$zx/system/banjo/ddk-protocol-camerasensor",
   ]
 }

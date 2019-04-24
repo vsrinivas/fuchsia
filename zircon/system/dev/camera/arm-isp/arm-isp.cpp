@@ -50,6 +50,13 @@ constexpr uint32_t kDecompander0PongOffset = kDecompander0PingOffset + kPingConf
 constexpr uint32_t kMeteringSize = 0x8000;
 constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
 constexpr uint32_t kConfigSize = 0x1231C;
+
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_CAMERA_SENSOR,
+    COMPONENT_COUNT,
+};
+
 } // namespace
 
 void ArmIspDevice::IspHWReset(bool reset) {
@@ -233,7 +240,7 @@ zx_status_t ArmIspDevice::IspContextInit() {
 
     statsMgr_ = camera::StatsManager::Create(isp_mmio_.View(0),
                                              isp_mmio_local_,
-                                             sensor_callbacks_,
+                                             camera_sensor_,
                                              frame_processing_signal_);
     if (statsMgr_ == nullptr) {
         zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
@@ -345,13 +352,33 @@ zx_status_t ArmIspDevice::SetPort(uint8_t kMode) {
 }
 
 // static
-zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t sensor_callbacks) {
+zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
+    ddk::CompositeProtocolClient composite(parent);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s could not get composite protocoln", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    ddk::PDev pdev(parent);
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite.GetComponents(components, COMPONENT_COUNT, &actual);
+    if (actual != COMPONENT_COUNT) {
+        zxlogf(ERROR, "%s Could not get components\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ddk::PDev pdev(components[COMPONENT_PDEV]);
     if (!pdev.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
+
+    ddk::CameraSensorProtocolClient camera_sensor(components[COMPONENT_CAMERA_SENSOR]);
+    if (!camera_sensor.is_valid()) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_CAMERA_SENSOR not available\n", __FILE__);
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     std::optional<ddk::MmioBuffer> hiu_mmio;
     zx_status_t status = pdev.MapMmio(kHiu, &hiu_mmio);
     if (status != ZX_OK) {
@@ -423,7 +450,7 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t s
         local_mmio_buffer,
         std::move(isp_irq),
         std::move(bti),
-        sensor_callbacks));
+        components[COMPONENT_CAMERA_SENSOR]));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -521,4 +548,20 @@ void ArmIspDevice::DdkRelease() {
 void ArmIspDevice::ShutDown() {
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = ArmIspDevice::Create;
+    return ops;
+}();
+
 } // namespace camera
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(arm-isp, camera::driver_ops, "arm-isp", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_ARM),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_ISP),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_IV009),
+ZIRCON_DRIVER_END(arm-isp)
+

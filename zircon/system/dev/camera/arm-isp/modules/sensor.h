@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddktl/protocol/ispimpl.h>
+#include <ddktl/protocol/camerasensor.h>
 #include <fbl/unique_ptr.h>
 #include <lib/mmio/mmio.h>
 
@@ -19,14 +19,14 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Sensor);
     Sensor(ddk::MmioView isp_mmio,
            ddk::MmioView isp_mmio_local,
-           isp_callbacks_protocol_t sensor_callbacks)
+           ddk::CameraSensorProtocolClient camera_sensor)
         : isp_mmio_(isp_mmio),
           isp_mmio_local_(isp_mmio_local),
-          sensor_callbacks_(&sensor_callbacks) {}
+          camera_sensor_(camera_sensor) {}
 
     static fbl::unique_ptr<Sensor> Create(ddk::MmioView isp_mmio,
                                           ddk::MmioView isp_mmio_local,
-                                          isp_callbacks_protocol_t sensor_callbacks);
+                                          ddk::CameraSensorProtocolClient camera_sensor);
     zx_status_t Init();
 
     // Sensor APIs for Camera manager to use
@@ -49,7 +49,7 @@ private:
 
     ddk::MmioView isp_mmio_;
     ddk::MmioView isp_mmio_local_;
-    ddk::IspCallbacksProtocolClient sensor_callbacks_;
+    ddk::CameraSensorProtocolClient camera_sensor_;
 
     uint8_t current_sensor_mode_;
     sensor_mode_t sensor_modes_[kNumModes];

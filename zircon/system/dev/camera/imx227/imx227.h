@@ -6,10 +6,11 @@
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
 #include <ddktl/pdev.h>
+#include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/mipicsi.h>
 
 namespace camera {
@@ -48,37 +49,46 @@ class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 
 class Imx227Device : public DeviceType,
-                     public ddk::IspCallbacksProtocol<Imx227Device> {
+                     public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
 public:
-    // GPIO Indexes.
     enum {
-        VANA_ENABLE,
-        VDIG_ENABLE,
-        CAM_SENSOR_RST,
-        GPIO_COUNT,
+        COMPONENT_I2C,
+        COMPONENT_GPIO_VANA,
+        COMPONENT_GPIO_VDIG,
+        COMPONENT_GPIO_CAM_RST,
+        COMPONENT_CLK24,
+        COMPONENT_MIPICSI,
+        COMPONENT_COUNT,
     };
 
-    static zx_status_t Create(zx_device_t* parent);
-    Imx227Device(zx_device_t* device)
-        : DeviceType(device), pdev_(device), i2c_(device),
-          clk_(device), mipi_(device), ispimpl_(device) {}
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
+    Imx227Device(zx_device_t* device,
+                 zx_device_t* i2c,
+                 zx_device_t* gpio_vana,
+                 zx_device_t* gpio_vdig,
+                 zx_device_t* gpio_cam_rst,
+                 zx_device_t* clk24,
+                 zx_device_t* mipicsi)
+        : DeviceType(device), i2c_(i2c), gpio_vana_enable_(gpio_vana),
+          gpio_vdig_enable_(gpio_vdig), gpio_cam_rst_(gpio_cam_rst),
+          clk24_(clk24), mipi_(mipicsi) {}
 
     // Methods required by the ddk mixins.
     void DdkUnbind();
     void DdkRelease();
 
-    // Methods for callbacks.
-    zx_status_t IspCallbacksInit();
-    void IspCallbacksDeInit();
-    zx_status_t IspCallbacksSetMode(uint8_t mode);
-    void IspCallbacksStartStreaming();
-    void IspCallbacksStopStreaming();
-    int32_t IspCallbacksSetAnalogGain(int32_t gain);
-    int32_t IspCallbacksSetDigitalGain(int32_t gain);
-    void IspCallbacksSetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
-    zx_status_t IspCallbacksUpdate();
-    zx_status_t IspCallbacksGetInfo(sensor_info_t* out_info);
-    zx_status_t IspCallbacksGetSupportedModes(sensor_mode_t* out_modes_list,
+    // Methods for ZX_PROTOCOL_CAMERA_SENSOR.
+    zx_status_t CameraSensorInit();
+    void CameraSensorDeInit();
+    zx_status_t CameraSensorSetMode(uint8_t mode);
+    void CameraSensorStartStreaming();
+    void CameraSensorStopStreaming();
+    int32_t CameraSensorSetAnalogGain(int32_t gain);
+    int32_t CameraSensorSetDigitalGain(int32_t gain);
+    void CameraSensorSetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
+    zx_status_t CameraSensorUpdate();
+    zx_status_t CameraSensorGetInfo(sensor_info_t* out_info);
+    zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
                                               size_t modes_count,
                                               size_t* out_modes_actual);
 
@@ -87,12 +97,12 @@ private:
     sensor_context_t ctx_;
 
     // Protocols.
-    ddk::PDev pdev_;
     ddk::I2cChannel i2c_;
-    ddk::GpioProtocolClient gpios_[GPIO_COUNT];
-    ddk::ClockProtocolClient clk_;
+    ddk::GpioProtocolClient gpio_vana_enable_;
+    ddk::GpioProtocolClient gpio_vdig_enable_;
+    ddk::GpioProtocolClient gpio_cam_rst_;
+    ddk::ClockProtocolClient clk24_;
     ddk::MipiCsiProtocolClient mipi_;
-    ddk::IspImplProtocolClient ispimpl_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);

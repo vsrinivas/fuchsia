@@ -4,7 +4,6 @@
 
 driver("arm-isp") {
   sources = [
-    "arm-isp-impl.cpp",
     "arm-isp.cpp",
     "init_sequences.cpp",
     "modules/dma-format.cc",
@@ -13,10 +12,11 @@ driver("arm-isp") {
     "stats-mgr.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-camerasensor",
     "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-ispimpl",
     "$zx/system/banjo/ddk-protocol-mipicsi",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",

@@ -12,8 +12,8 @@
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
-#include "sherlock.h"
 #include "sherlock-gpios.h"
+#include "sherlock.h"
 
 namespace sherlock {
 
@@ -70,16 +70,20 @@ static const pbus_irq_t gpio_irqs[] = {
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
-    { T931_WIFI_HOST_WAKE },
+    {T931_WIFI_HOST_WAKE},
     // For display.
-    { GPIO_PANEL_DETECT },
-    { GPIO_LCD_RESET },
+    {GPIO_PANEL_DETECT},
+    {GPIO_LCD_RESET},
     // For touch screen.
-    { GPIO_TOUCH_INTERRUPT },
-    { GPIO_TOUCH_RESET },
+    {GPIO_TOUCH_INTERRUPT},
+    {GPIO_TOUCH_RESET},
     // For audio out.
-    { GPIO_AUDIO_SOC_FAULT_L },
-    { GPIO_SOC_AUDIO_EN },
+    {GPIO_AUDIO_SOC_FAULT_L},
+    {GPIO_SOC_AUDIO_EN},
+    // For Camera.
+    {GPIO_VANA_ENABLE},
+    {GPIO_VDIG_ENABLE},
+    {GPIO_CAM_RESET},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -87,10 +91,10 @@ static const pbus_metadata_t gpio_metadata[] = {
         .type = DEVICE_METADATA_GPIO_PINS,
         .data_buffer = &gpio_pins,
         .data_size = sizeof(gpio_pins),
-    }
+    },
 };
 
-static pbus_dev_t gpio_dev = [](){
+static pbus_dev_t gpio_dev = []() {
     pbus_dev_t dev;
     dev.name = "gpio";
     dev.vid = PDEV_VID_AMLOGIC;

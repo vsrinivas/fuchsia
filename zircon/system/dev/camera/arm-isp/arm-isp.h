@@ -14,8 +14,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <hw/reg.h>
@@ -44,17 +44,17 @@ public:
                           mmio_buffer_t local_mmio,
                           zx::interrupt isp_irq,
                           zx::bti bti,
-                          isp_callbacks_protocol_t sensor_callbacks)
+                          zx_device_t* camera_sensor)
         : IspDeviceType(parent), pdev_(parent),
           hiu_mmio_(std::move(hiu_mmio)), power_mmio_(std::move(power_mmio)),
           memory_pd_mmio_(std::move(memory_pd_mmio)), reset_mmio_(std::move(reset_mmio)),
           isp_mmio_(std::move(isp_mmio)), isp_mmio_local_(local_mmio, 0),
           isp_irq_(std::move(isp_irq)), bti_(std::move(bti)),
-          sensor_callbacks_(sensor_callbacks) {}
+          camera_sensor_(camera_sensor) {}
 
     ~ArmIspDevice();
 
-    static zx_status_t Create(zx_device_t* parent, isp_callbacks_protocol_t cbs);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Methods required by the ddk.
     void DdkRelease();
@@ -124,7 +124,7 @@ private:
     zx::bti bti_;
     std::atomic<bool> running_;
 
-    isp_callbacks_protocol_t sensor_callbacks_;
+    ddk::CameraSensorProtocolClient camera_sensor_;
 
     fbl::unique_ptr<camera::StatsManager> statsMgr_;
 

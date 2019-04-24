@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library ddk.protocol.ispimpl;
+library ddk.protocol.camerasensor;
 using zx;
 
 const uint8 WDR_MODE_LINEAR = 0x00000000;
@@ -88,8 +88,8 @@ struct SensorInfo {
     uint8 bayer;
 };
 
-[Layout = "ddk-interface"]
-protocol IspCallbacks {
+[Layout = "ddk-protocol"]
+protocol CameraSensor {
     // Initializes the Camera Sensor.
     Init() -> (zx.status s);
     // De-Initializes the Camera Sensor.
@@ -114,8 +114,3 @@ protocol IspCallbacks {
     GetSupportedModes() ->(zx.status s, vector<SensorMode> modes);
 };
 
-[Layout = "ddk-protocol"]
-protocol IspImpl {
-    RegisterCallbacks(IspCallbacks intf) -> (zx.status s);
-    DeRegisterCallbacks() -> (zx.status s);
-};
