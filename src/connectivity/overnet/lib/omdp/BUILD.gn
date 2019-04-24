@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":omdp_test",
+  ]
+}
+
+source_set("omdp") {
+  sources = [
+    "omdp.cc",
+    "omdp.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.omdp",
+    "//sdk/fidl/fuchsia.overnet.omdp",
+    "//src/connectivity/overnet/lib/environment:timer",
+    "//src/connectivity/overnet/lib/environment:trace",
+    "//src/connectivity/overnet/lib/protocol:fidl",
+    "//src/connectivity/overnet/lib/vocabulary:ip_addr",
+    "//src/connectivity/overnet/lib/vocabulary:optional",
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+  ]
+}
+
+source_set("omdp_test") {
+  testonly = true
+  sources = [
+    "omdp_test.cc",
+  ]
+  deps = [
+    ":omdp",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
+    "//src/connectivity/overnet/lib/testing:flags",
+    "//src/connectivity/overnet/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}

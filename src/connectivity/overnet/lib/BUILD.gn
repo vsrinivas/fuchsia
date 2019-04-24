@@ -29,6 +29,7 @@ test("overnet_unittests") {
     "environment:tests",
     "labels:tests",
     "links:tests",
+    "omdp:tests",
     "packet_protocol:tests",
     "protocol:tests",
     "routing:tests",

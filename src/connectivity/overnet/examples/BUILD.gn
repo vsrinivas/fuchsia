@@ -17,6 +17,8 @@ group("examples") {
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/overnet_echo_test", "")
   write_file("$root_out_dir/overnet_interface_passing_test", "")
+  write_file("$root_out_dir/overnet_echo_test_mdns", "")
+  write_file("$root_out_dir/overnet_echo_test_omdp", "")
 }
 
 test_package("overnet_examples_tests") {
@@ -49,6 +51,12 @@ test_package("overnet_examples_tests") {
   tests = [
     {
       name = "overnet_echo_test"
+    },
+    {
+      name = "overnet_echo_test_mdns"
+    },
+    {
+      name = "overnet_echo_test_omdp"
     },
     {
       name = "overnet_interface_passing_test"

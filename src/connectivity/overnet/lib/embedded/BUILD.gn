@@ -68,6 +68,21 @@ source_set("embedded") {
   ]
 }
 
+source_set("omdp_nub") {
+  sources = [
+    "omdp_nub.cc",
+    "omdp_nub.h",
+  ]
+  public_deps = [
+    ":embedded",
+    ":udp_nub",
+    "//src/connectivity/overnet/lib/omdp",
+    "//src/connectivity/overnet/lib/vocabulary:ip_addr",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
 source_set("udp_nub") {
   sources = [
     "udp_nub.cc",
