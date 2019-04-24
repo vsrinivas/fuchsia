@@ -242,8 +242,9 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
 
   if (process_info.exited) {
     if (termination_callback_) {
-      FXL_VLOG(1)
-          << "SendReturnCodeIfTerminated(): calling termination_callback_";
+      FXL_VLOG(1) << "SendReturnCodeIfTerminated(): calling "
+                     "termination_callback_, process return code: "
+                  << process_info.return_code;
       termination_callback_(process_info.return_code, TerminationReason::EXITED,
                             &binding_.events());
       termination_callback_ = nullptr;
