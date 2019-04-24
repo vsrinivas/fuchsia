@@ -123,7 +123,13 @@ standard_environments = [
         },
       ]
     }
-    configs = standard_fuchsia_configs + standard_fuchsia_user_configs
+    configs = standard_fuchsia_configs + standard_fuchsia_user_configs + [
+      {
+        types = [ "driver" ]
+        # All drivers use hidden visibility.
+        add = [ "$zx/public/gn/config:visibility_hidden" ]
+      }
+    ]
     implicit_deps = [
       "$zx/system/ulib/c",
       {
