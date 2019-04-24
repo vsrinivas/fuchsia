@@ -193,6 +193,11 @@ config("thread_safety_annotations") {
   defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
 }
 
+config("auto_var_init") {
+  # Automatically initialize variables with a pattern.
+  cflags = [ "-ftrivial-auto-var-init=pattern" ]
+}
+
 config("enable_zircon_asserts") {
   defines = [ "ZX_DEBUGLEVEL=2" ]
 }
