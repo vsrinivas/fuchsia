@@ -1,9 +1,10 @@
 # Fuchsia Tracing
 
-- [Quickstart](quick-start.md)
+- [Quickstart](quick-start/README.md)
 
 ## Collecting Traces
 
+- [Tracing Boot](tracing-boot.md)
 - [Tutorial](tutorial.md)
 - [Usage Guide](usage-guide.md)
 
@@ -18,4 +19,4 @@
 ## Internal Documentation
 
 - [Design](design.md)
-- [Trace Format](trace-format.md)
+- [Trace Format](trace-format/README.md)
