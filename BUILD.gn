@@ -68,7 +68,7 @@ group("default") {
   deps = [
     ":copy_host_tests",
     "//build/images:packages",
-    "//sdk:core",
+    "//sdk",
   ]
   if (base_package_labels != [] || cache_package_labels != []) {
     deps += [ "//build/images" ]

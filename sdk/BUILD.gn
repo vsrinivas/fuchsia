@@ -12,10 +12,16 @@ declare_args() {
   export_x64_sdk_images = false
 }
 
-# This default target is empty because there are multiple flavors of SDKs and
-# there is no "default" one. The empty target is still needed so that all the
-# other targets in this file are attached to the build graph.
+# This default target should contain all public or partner SDKs.
 group("sdk") {
+  testonly = true
+
+  public_deps = [
+    ":core",
+    ":ddk",
+    ":images",
+    ":zircon_sysroot",
+  ]
 }
 
 sdk_documentation("open_source") {

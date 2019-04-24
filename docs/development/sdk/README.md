@@ -99,8 +99,8 @@ allows for this kind of processing.
 
 ### Generating an SDK archive
 
-The various targets representing SDKs are always included in the build graph,
-but they are not built by default. In order to build the contents of an SDK,
+The various targets representing SDKs are always included in the build graph.
+In order to build the contents of an SDK,
 [build one of the following targets][fx-build-target]:
 - `sdk:core`
 - `sdk:images`
