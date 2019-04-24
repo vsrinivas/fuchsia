@@ -4,6 +4,8 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use {
+    crate::default_store::DefaultStore,
+    crate::json_codec::JsonCodec,
     crate::mutation::*,
     crate::setting_adapter::SettingAdapter,
     failure::Error,
@@ -18,7 +20,9 @@ use {
 };
 
 mod common;
+mod default_store;
 mod fidl_clone;
+mod json_codec;
 mod mutation;
 mod setting_adapter;
 mod setui_handler;
@@ -35,6 +39,7 @@ fn main() -> Result<(), Error> {
     // TODO(SU-210): Remove once other adapters are ready.
     handler.register_adapter(Box::new(SettingAdapter::new(
         SettingType::Unknown,
+        Box::new(DefaultStore::new("/data/unknown.dat".to_string(), Box::new(JsonCodec::new()))),
         Box::new(process_string_mutation),
         None,
     )));

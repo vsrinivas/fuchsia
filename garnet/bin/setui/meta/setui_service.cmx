@@ -3,6 +3,9 @@
         "data": "data/setui_service"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",

@@ -33,6 +33,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
   ]
 }
 

@@ -5,6 +5,7 @@
 use crate::common::*;
 use crate::fidl_clone::*;
 use fidl_fuchsia_setui::*;
+use fuchsia_syslog::fx_log_err;
 use std::sync::mpsc::Sender;
 use std::sync::Mutex;
 
@@ -17,20 +18,34 @@ pub struct SettingAdapter {
     latest_val: Option<SettingData>,
     senders: Mutex<Vec<Sender<SettingData>>>,
     mutation_process: Box<ProcessMutation>,
+    store: Mutex<BoxedStore>,
 }
 
 impl SettingAdapter {
     pub fn new(
         setting_type: SettingType,
+        store: BoxedStore,
         mutation_processor: Box<ProcessMutation>,
         default_value: Option<SettingData>,
     ) -> SettingAdapter {
-        return SettingAdapter {
+        let mut adapter = SettingAdapter {
             setting_type: setting_type,
             latest_val: default_value,
             senders: Mutex::new(vec![]),
             mutation_process: mutation_processor,
+            store: Mutex::new(store),
         };
+        adapter.initialize();
+
+        return adapter;
+    }
+
+    fn initialize(&mut self) {
+        if let Ok(store) = self.store.lock() {
+            if let Ok(Some(value)) = store.read() {
+                self.latest_val = Some(value);
+            }
+        }
     }
 }
 
@@ -45,6 +60,12 @@ impl Adapter for SettingAdapter {
         match result {
             Ok(Some(setting)) => {
                 self.latest_val = Some(setting.clone());
+
+                if let Ok(store) = self.store.lock() {
+                    if store.write(setting.clone()).is_err() {
+                        fx_log_err!("failed to write setting to file");
+                    }
+                }
 
                 if let Ok(mut senders) = self.senders.lock() {
                     while !senders.is_empty() {

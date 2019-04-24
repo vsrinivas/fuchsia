@@ -115,8 +115,27 @@ impl SetUIHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::Store;
     use crate::mutation::*;
     use crate::setting_adapter::SettingAdapter;
+
+    struct TestStore {}
+
+    impl TestStore {
+        fn new() -> TestStore {
+            TestStore {}
+        }
+    }
+
+    impl Store for TestStore {
+        fn write(&self, _data: SettingData) -> Result<(), Error> {
+            Ok(())
+        }
+
+        fn read(&self) -> Result<Option<SettingData>, Error> {
+            Ok(None)
+        }
+    }
 
     /// A basic test to exercise that basic functionality works. In this case, we
     /// mutate the unknown type, reserved for testing. We should always immediately
@@ -145,6 +164,7 @@ mod tests {
         let handler = SetUIHandler::new();
         handler.register_adapter(Box::new(SettingAdapter::new(
             SettingType::Unknown,
+            Box::new(TestStore::new()),
             Box::new(process_string_mutation),
             None,
         )));
