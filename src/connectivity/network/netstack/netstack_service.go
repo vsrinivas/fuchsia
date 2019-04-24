@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -32,15 +33,6 @@ import (
 type netstackImpl struct {
 	ns    *Netstack
 	getIO func() io.Directory
-}
-
-func toSubnets(addrs []tcpip.Address) []net.Subnet {
-	out := make([]net.Subnet, len(addrs))
-	for i := range addrs {
-		// TODO: prefix len?
-		out[i] = net.Subnet{Addr: fidlconv.ToNetIpAddress(addrs[i]), PrefixLen: 64}
-	}
-	return out
 }
 
 // interfaces2ListToInterfacesList converts a NetInterface2 list into a
@@ -100,6 +92,22 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		broadaddr[i] |= ^mask[i]
 	}
 
+	addresses, subnets := ifs.ns.getAddressesLocked(ifs.nicid)
+	ipv6addrs := make([]net.Subnet, 0, len(subnets))
+
+	// TODO(stijlist): remove N^2 loop by refactoring upstream to a
+	// map[tcpip.Address][]tcpip.Subnet
+	for _, subnet := range subnets {
+		for _, address := range addresses {
+			if address.Protocol == ipv6.ProtocolNumber && subnet.Contains(address.Address) {
+				ipv6addrs = append(ipv6addrs, net.Subnet{
+					Addr:      fidlconv.ToNetIpAddress(address.Address),
+					PrefixLen: uint8(subnet.Prefix()),
+				})
+			}
+		}
+	}
+
 	var flags uint32
 	if ifs.mu.state == link.StateStarted {
 		flags |= netstack.NetInterfaceFlagUp
@@ -118,7 +126,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
 		Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
-		Ipv6addrs: toSubnets(ifs.mu.nic.Ipv6addrs),
+		Ipv6addrs: ipv6addrs,
 	}, nil
 }
 

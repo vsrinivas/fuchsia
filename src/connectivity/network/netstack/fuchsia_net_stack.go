@@ -175,12 +175,13 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	}
 
 	var protocol tcpip.NetworkProtocolNumber
-	switch ifAddr.IpAddress.Which() {
+	switch typ := ifAddr.IpAddress.Which(); typ {
 	case net.IpAddressIpv4:
 		protocol = ipv4.ProtocolNumber
 	case net.IpAddressIpv6:
-		// TODO(tkilbourn): support IPv6 addresses (NET-1181)
-		return &stack.Error{Type: stack.ErrorTypeNotSupported}
+		protocol = ipv6.ProtocolNumber
+	default:
+		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
 	}
 
 	if err := ns.addInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
@@ -214,11 +215,13 @@ func equalSubnetAndRoute(subnet net.Subnet, tcpipRoute tcpip.Route) bool {
 // address bits are set beyond the prefix length.
 func validateSubnet(subnet net.Subnet) bool {
 	var ipBytes []uint8
-	switch subnet.Addr.Which() {
+	switch typ := subnet.Addr.Which(); typ {
 	case net.IpAddressIpv4:
 		ipBytes = subnet.Addr.Ipv4.Addr[:]
 	case net.IpAddressIpv6:
 		ipBytes = subnet.Addr.Ipv6.Addr[:]
+	default:
+		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
 	}
 	if int(subnet.PrefixLen) > len(ipBytes)*8 {
 		return false

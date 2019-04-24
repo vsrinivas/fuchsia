@@ -695,7 +695,6 @@ func (ns *Netstack) addEndpoint(
 			return nil, fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.mu.nic.Name, snaddr, lladdr, err)
 		}
 
-		ifs.mu.nic.Ipv6addrs = append(ifs.mu.nic.Ipv6addrs[:0], lladdr)
 		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, ifs.dhcpAcquired)
 
 		logger.Infof("NIC %s: link-local IPv6: %v", name, lladdr)

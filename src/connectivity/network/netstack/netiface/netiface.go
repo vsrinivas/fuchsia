@@ -17,5 +17,4 @@ type NIC struct {
 	Features      uint32
 	Metric        routes.Metric // used as a default for routes that use this NIC
 	DNSServers    []tcpip.Address
-	Ipv6addrs     []tcpip.Address
 }
