@@ -80,7 +80,7 @@ fit::promise<void> LogListener::CollectLogs() {
 
   // fit::promise does not have the notion of a timeout. So we post a delayed
   // task that will call the completer after the timeout and return an error.
-  async::PostDelayedTask(
+  const zx_status_t post_status = async::PostDelayedTask(
       async_get_default_dispatcher(),
       [this] {
         // Check that the fit::bridge was not already completed by Done() or
@@ -91,6 +91,11 @@ fit::promise<void> LogListener::CollectLogs() {
         }
       },
       kSystemLogCollectionTimeout);
+  if (post_status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "Failed to post delayed task, no timeout for log collection: "
+        << post_status << " (" << zx_status_get_string(post_status) << ")";
+  }
 
   return done_.consumer.promise_or(fit::error());
 }
