@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{directory_broker, io_util, model::tests::mocks::*, model::*},
+    crate::{directory_broker, io_util, log::*, model::tests::mocks::*, model::*},
     cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeSource, OfferSource, UseDecl},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -131,7 +131,7 @@ impl OutDir {
 
                     let _ = await!(pseudo_dir);
 
-                    panic!("the pseudo dir exited!");
+                    log_fatal!("the pseudo dir exited!");
                 },
             );
         })
@@ -206,7 +206,7 @@ async fn call_svc(
             if let fidl::Error::ClientRead(status) = err {
                 assert_eq!(status, zx::Status::PEER_CLOSED);
             } else {
-                panic!("unexpected error value: {}", err);
+                log_fatal!("unexpected error value: {}", err);
             }
         }
     }
@@ -220,13 +220,16 @@ pub fn install_hippo_dir() {
     let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
     let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
     if status != zx::sys::ZX_OK {
-        panic!("bad status returned for fdio_ns_get_installed: {}", zx::Status::from_raw(status));
+        log_fatal!(
+            "bad status returned for fdio_ns_get_installed: {}",
+            zx::Status::from_raw(status)
+        );
     }
     let cstr = CString::new("/hippo").unwrap();
     let status =
         unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), client_chan.into_raw()) };
     if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
-        panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
+        log_fatal!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
     }
     let mut out_dir = OutDir::new();
     out_dir.add_directory();

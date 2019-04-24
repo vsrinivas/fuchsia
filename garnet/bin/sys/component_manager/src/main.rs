@@ -10,6 +10,9 @@
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "128"]
 
+#[macro_use]
+mod log;
+
 mod directory_broker;
 mod elf_runner;
 mod fuchsia_boot_resolver;
@@ -26,8 +29,8 @@ use {
     fuchsia_boot_resolver::FuchsiaBootResolver,
     fuchsia_component::client::connect_to_service,
     fuchsia_pkg_resolver::FuchsiaPkgResolver,
-    fuchsia_syslog::{self, macros::*},
     futures::prelude::*,
+    log::*,
     model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
     std::env,
     std::process,
@@ -52,8 +55,7 @@ fn parse_args() -> Result<Opt, Error> {
 fn main() -> Result<(), Error> {
     let opt = parse_args()?;
 
-    fuchsia_syslog::init_with_tags(&["component_manager"]).expect("can't init logger");
-    fx_log_info!("Component manager is starting up...");
+    log_info!("Component manager is starting up...");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
@@ -89,7 +91,7 @@ async fn run_root(model: Arc<Model>) {
             await!(future::empty::<()>())
         }
         Err(error) => {
-            fx_log_err!("Failed to bind to root component: {:?}", error);
+            log_error!("Failed to bind to root component: {:?}", error);
             process::exit(1)
         }
     }

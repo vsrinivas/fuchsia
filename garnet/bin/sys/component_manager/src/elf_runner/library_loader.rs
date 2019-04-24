@@ -4,6 +4,7 @@
 
 use {
     crate::io_util,
+    crate::log::*,
     crate::ns_util::{self, PKG_PATH},
     failure::{err_msg, format_err, Error},
     fidl::endpoints::RequestStream,
@@ -36,7 +37,7 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
                         match await!(load_object(&ns_map, PathBuf::from(object_path))) {
                             Ok(b) => responder.send(zx::sys::ZX_OK, Some(b))?,
                             Err(e) => {
-                                println!("failed to load object: {}", e);
+                                log_warn!("failed to load object: {}", e);
                                 responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                             }
                         };
@@ -66,7 +67,7 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: Error| println!("couldn't run library loader service: {}", e)),
+            .unwrap_or_else(|e: Error| log_warn!("couldn't run library loader service: {}", e)),
     ); // TODO
 }
 

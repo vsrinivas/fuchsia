@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::log::*,
     crate::model::*,
     crate::ns_util::PKG_PATH,
     crate::{directory_broker, io_util},
     cm_rust::{self, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_syslog::macros::fx_log_err,
-    fuchsia_vfs_pseudo_fs as fvfs,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, FutureObj},
@@ -145,11 +144,11 @@ impl IncomingNamespace {
             let res = await!(route_directory(
                 &model,
                 &capability,
-                abs_moniker,
+                abs_moniker.clone(),
                 server_end_chan.into_zx_channel()
             ));
             if let Err(e) = res {
-                fx_log_err!("failed to route directory: {:?}", e);
+                log_error!("failed to route directory for component {}: {:?}", abs_moniker, e);
             }
         };
 
@@ -201,11 +200,15 @@ impl IncomingNamespace {
                     let res = await!(route_service(
                         &model,
                         &capability,
-                        abs_moniker,
+                        abs_moniker.clone(),
                         server_end.into_channel()
                     ));
                     if let Err(e) = res {
-                        fx_log_err!("failed to route service: {:?}", e);
+                        log_error!(
+                            "failed to route service for component {}: {:?}",
+                            abs_moniker,
+                            e
+                        );
                     }
                 },
             );
