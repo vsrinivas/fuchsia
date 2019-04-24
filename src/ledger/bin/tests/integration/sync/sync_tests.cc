@@ -14,6 +14,7 @@
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
+#include "src/ledger/bin/tests/integration/test_page_watcher.h"
 
 namespace ledger {
 namespace {
@@ -252,6 +253,49 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
 
   // Verify that the sync states of page2 eventually become idle.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
+}
+
+TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
+  auto instance1 = NewLedgerAppInstance();
+  auto instance2 = NewLedgerAppInstance();
+
+  auto page1 = instance1->GetTestPage();
+  auto page1_state_watcher = WatchPageSyncState(&page1);
+  PageId page_id;
+  auto loop_waiter = NewWaiter();
+  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
+  auto page2_state_watcher = WatchPageSyncState(&page2);
+
+  std::vector<uint8_t> key = convert::ToArray("Hello");
+  std::vector<uint8_t> big_value(2 * 65536 + 1);
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
+  CreateReferenceStatus create_reference_status;
+  ReferencePtr reference;
+  loop_waiter = NewWaiter();
+  page1->CreateReferenceFromBuffer(
+      std::move(vmo).ToTransport(),
+      callback::Capture(loop_waiter->GetCallback(), &create_reference_status,
+                        &reference));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
+  ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
+  page1->PutReference(key, *reference, Priority::LAZY);
+
+  loop_waiter = NewWaiter();
+  PageSnapshotPtr snapshot;
+  PageWatcherPtr watcher_ptr;
+  TestPageWatcher watcher(watcher_ptr.NewRequest(), loop_waiter->GetCallback());
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr));
+  ASSERT_TRUE(loop_waiter->RunUntilCalled());
+
+  EXPECT_EQ(1u, watcher.GetChangesSeen());
+  EXPECT_EQ(ResultState::COMPLETED, watcher.GetLastResultState());
+  auto change = &(watcher.GetLastPageChange());
+  EXPECT_EQ(1u, change->changed_entries.size());
+  EXPECT_EQ(nullptr, change->changed_entries[0].value);
 }
 
 INSTANTIATE_TEST_SUITE_P(

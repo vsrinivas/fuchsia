@@ -58,6 +58,8 @@ source_set("integration_lib") {
   sources = [
     "integration_test.cc",
     "integration_test.h",
+    "test_page_watcher.cc",
+    "test_page_watcher.h",
     "test_utils.cc",
     "test_utils.h",
   ]

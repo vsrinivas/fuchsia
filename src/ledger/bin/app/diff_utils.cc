@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "lib/fsl/vmo/sized_vmo.h"
 #include "peridot/lib/util/ptr.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
@@ -60,6 +61,27 @@ ValuePtr GetValueFromEntry(
   return value;
 }
 
+// Retrieves a value of an entry from storage. Returns null instead of the value
+// if the entry has LAZY priority and the value is not on the device.
+void GetOptionalValueFromReference(
+    storage::PageStorage* storage,
+    const storage::ObjectIdentifier& object_identifier, Priority priority,
+    fit::function<void(storage::Status, std::unique_ptr<fuchsia::mem::Buffer>)>
+        callback) {
+  PageUtils::ResolveObjectIdentifierAsBuffer(
+      storage, object_identifier, 0u, std::numeric_limits<int64_t>::max(),
+      storage::PageStorage::Location::LOCAL,
+      [priority, callback = std::move(callback)](storage::Status status,
+                                                 fsl::SizedVmo vmo) {
+        if ((status == storage::Status::INTERNAL_NOT_FOUND) &&
+            (priority == Priority::LAZY)) {
+          callback(storage::Status::OK, nullptr);
+          return;
+        }
+        callback(status, fidl::MakeOptional(std::move(vmo).ToTransport()));
+      });
+}
+
 // Returns true if the change is automatically mergeable, ie. is not
 // conflicting.
 bool IsMergeable(const storage::ThreeWayChange& change) {
@@ -86,9 +108,9 @@ void ComputePageChange(
     std::string next_token = "";
   };
 
-  auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<storage::Status, fsl::SizedVmo>>(
-          storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<storage::Status, std::unique_ptr<fuchsia::mem::Buffer>>>(
+      storage::Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp().get();
@@ -135,10 +157,8 @@ void ComputePageChange(
                          ? Priority::EAGER
                          : Priority::LAZY;
     context->page_change->changed_entries.push_back(std::move(entry));
-    PageUtils::ResolveObjectIdentifierAsBuffer(
-        storage, change.entry.object_identifier, 0u,
-        std::numeric_limits<int64_t>::max(),
-        storage::PageStorage::Location::LOCAL, waiter->NewCallback());
+    GetOptionalValueFromReference(storage, change.entry.object_identifier,
+                                  entry.priority, waiter->NewCallback());
     return true;
   };
 
@@ -168,7 +188,9 @@ void ComputePageChange(
     auto result_callback = [context = std::move(context),
                             callback = std::move(callback)](
                                storage::Status status,
-                               std::vector<fsl::SizedVmo> results) mutable {
+                               std::vector<
+                                   std::unique_ptr<fuchsia::mem::Buffer>>
+                                   results) mutable {
       if (status != storage::Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
@@ -179,9 +201,11 @@ void ComputePageChange(
       FXL_DCHECK(results.size() ==
                  context->page_change->changed_entries.size());
       for (size_t i = 0; i < results.size(); i++) {
-        FXL_DCHECK(results[i].vmo());
-        context->page_change->changed_entries.at(i).value =
-            fidl::MakeOptional(std::move(results[i]).ToTransport());
+        if (results[i]) {
+          FXL_DCHECK(results[i]->vmo);
+          context->page_change->changed_entries.at(i).value =
+              std::move(results[i]);
+        }
       }
       callback(storage::Status::OK,
                std::make_pair(std::move(context->page_change),
