@@ -15,9 +15,12 @@
 
 namespace devmgr {
 
-Device::Device(Coordinator* coord, fbl::RefPtr<Device> parent, uint32_t protocol_id)
-    : coordinator(coord), parent_(std::move(parent)), protocol_id_(protocol_id),
-      publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }) {}
+Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
+               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote)
+    : coordinator(coord), name_(std::move(name)), libname_(std::move(libname)),
+      args_(std::move(args)), parent_(std::move(parent)), protocol_id_(protocol_id),
+      publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }),
+      client_remote_(std::move(client_remote)) {}
 
 Device::~Device() {
     // Ideally we'd assert here that immortal devices are never destroyed, but
@@ -26,7 +29,7 @@ Device::~Device() {
     // holding a reference we shouldn't be able to hit that check, in which case
     // the flag is only used to modify the proxy library loading behavior.
 
-    log(DEVLC, "devcoordinator: destroy dev %p name='%s'\n", this, this->name.data());
+    log(DEVLC, "devcoordinator: destroy dev %p name='%s'\n", this, name_.data());
 
     devfs_unpublish(this);
 
@@ -34,7 +37,7 @@ Device::~Device() {
     set_host(nullptr);
 
     fbl::unique_ptr<Metadata> md;
-    while ((md = this->metadata.pop_front()) != nullptr) {
+    while ((md = metadata_.pop_front()) != nullptr) {
         if (md->has_path) {
             // return to published_metadata list
             coordinator->AppendPublishedMetadata(std::move(md));
@@ -61,7 +64,9 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         real_parent = parent;
     }
 
-    auto dev = fbl::MakeRefCounted<Device>(coordinator, real_parent, protocol_id);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
+                                           std::move(args), real_parent, protocol_id,
+                                           std::move(client_remote));
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -70,14 +75,10 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         return status;
     }
 
-    dev->name = std::move(name);
-    dev->libname = std::move(driver_path);
-    dev->args = std::move(args);
     dev->set_channel(std::move(rpc));
-    dev->client_remote = std::move(client_remote);
 
     // If we have bus device args we are, by definition, a bus device.
-    if (dev->args.size() > 0) {
+    if (dev->args_.size() > 0) {
         dev->flags |= DEV_CTX_MUST_ISOLATE;
     }
 
@@ -103,7 +104,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         dev->host_->devices().push_back(dev.get());
     }
     real_parent->children_.push_back(dev.get());
-    log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
+    log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(),
+        real_parent->name().data());
 
     *device = std::move(dev);
     return ZX_OK;
@@ -117,7 +119,9 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
                                        composite_props.size());
     memcpy(props.get(), composite_props.get(), props.size() * sizeof(props[0]));
 
-    auto dev = fbl::MakeRefCounted<Device>(coordinator, nullptr, ZX_PROTOCOL_COMPOSITE);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
+                                           fbl::String(), nullptr, ZX_PROTOCOL_COMPOSITE,
+                                           zx::channel());
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -127,7 +131,6 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
         return status;
     }
 
-    dev->name = composite.name();
     dev->set_channel(std::move(rpc));
     // We exist within our parent's device host
     dev->set_host(devhost);
@@ -147,43 +150,46 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
     dev->host_->AddRef();
     dev->host_->devices().push_back(dev.get());
 
-    log(DEVLC, "devcoordinator: composite dev created %p name='%s'\n", dev.get(), dev->name.data());
+    log(DEVLC, "devcoordinator: composite dev created %p name='%s'\n", dev.get(),
+        dev->name().data());
 
     *device = std::move(dev);
     return ZX_OK;
 }
 
 zx_status_t Device::CreateProxy() {
-    ZX_ASSERT(this->proxy == nullptr);
+    ZX_ASSERT(proxy_ == nullptr);
 
-    auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::WrapRefPtr(this), protocol_id_);
-    if (dev == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    dev->name = this->name;
-    dev->libname = this->libname;
+    fbl::String driver_path = libname_;
     // non-immortal devices, use foo.proxy.so for
     // their proxy devices instead of foo.so
     if (!(this->flags & DEV_CTX_IMMORTAL)) {
-        const char* begin = dev->libname.data();
+        const char* begin = driver_path.data();
         const char* end = strstr(begin, ".so");
-        fbl::StringPiece prefix(begin, end == nullptr ? dev->libname.size() : end - begin);
+        fbl::StringPiece prefix(begin, end == nullptr ? driver_path.size() : end - begin);
         fbl::AllocChecker ac;
-        dev->libname = fbl::String::Concat({prefix, ".proxy.so"}, &ac);
+        driver_path = fbl::String::Concat({prefix, ".proxy.so"}, &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
     }
 
+    auto dev = fbl::MakeRefCounted<Device>(this->coordinator, name_, std::move(driver_path),
+                                           fbl::String(), fbl::WrapRefPtr(this), protocol_id_,
+                                           zx::channel());
+    if (dev == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     dev->flags = DEV_CTX_PROXY;
-    this->proxy = std::move(dev);
-    log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, this->name.data());
+    proxy_ = std::move(dev);
+    log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, name_.data());
     return ZX_OK;
 }
 
 void Device::DetachFromParent() {
     if (this->flags & DEV_CTX_PROXY) {
-        parent_->proxy = nullptr;
+        parent_->proxy_ = nullptr;
     } else {
         parent_->children_.erase(*this);
     }
@@ -210,7 +216,7 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
         // We already have a pending suspend
         return ZX_ERR_UNAVAILABLE;
     }
-    log(DEVLC, "devcoordinator: suspend dev %p name='%s'\n", this, this->name.data());
+    log(DEVLC, "devcoordinator: suspend dev %p name='%s'\n", this, name_.data());
     zx_status_t status = dh_send_suspend(this, flags);
     if (status != ZX_OK) {
         return status;
@@ -245,7 +251,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
         if ((r = dev->HandleRead()) < 0) {
             if (r != ZX_ERR_STOP) {
                 log(ERROR, "devcoordinator: device %p name='%s' rpc status: %d\n", dev.get(),
-                    dev->name.data(), r);
+                    dev->name().data(), r);
             }
             // If this device isn't already dead (removed), remove it. RemoveDevice() may
             // have been called by the RPC handler, in particular for the RemoveDevice RPC.
@@ -259,7 +265,8 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
         return;
     }
     if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(), dev->name.data());
+        log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(),
+            dev->name().data());
         dev->coordinator->RemoveDevice(dev, true);
         // Do not start waiting again on this device's channel again
         return;
@@ -370,14 +377,14 @@ zx_status_t Device::HandleRead() {
                             &fidl_msg, &err_msg);
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: rpc: bind-driver '%s' received malformed reply: %s\n",
-                this->name.data(), err_msg);
+                name_.data(), err_msg);
             return ZX_ERR_IO;
         }
         auto resp =
             reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(
                     fidl_msg.bytes);
         if (resp->status != ZX_OK) {
-            log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", this->name.data(),
+            log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", name_.data(),
                 resp->status);
         }
         // TODO: try next driver, clear BOUND flag
@@ -388,27 +395,27 @@ zx_status_t Device::HandleRead() {
                             &fidl_msg, &err_msg);
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: rpc: suspend '%s' received malformed reply: %s\n",
-                this->name.data(), err_msg);
+                name_.data(), err_msg);
             return ZX_ERR_IO;
         }
         auto resp =
             reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(
                     fidl_msg.bytes);
         if (resp->status != ZX_OK) {
-            log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", this->name.data(),
+            log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", name_.data(),
                 resp->status);
         }
 
         if (!suspend_completion_) {
             log(ERROR, "devcoordinator: rpc: unexpected suspend reply for '%s' status %d\n",
-                this->name.data(), resp->status);
+                name_.data(), resp->status);
             return ZX_ERR_IO;
         }
-        log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, this->name.data());
+        log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, name_.data());
         CompleteSuspend(resp->status);
     } else {
         log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %08x\n",
-            this->name.data(), hdr->ordinal);
+            name_.data(), hdr->ordinal);
         zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
         return ZX_ERR_IO;
     }
@@ -493,11 +500,12 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
     auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     if (dev->coordinator->InSuspend()) {
-        log(ERROR, "devcoordinator: rpc: remove-device '%s' forbidden in suspend\n", dev->name.data());
+        log(ERROR, "devcoordinator: rpc: remove-device '%s' forbidden in suspend\n",
+            dev->name().data());
         return fuchsia_device_manager_CoordinatorRemoveDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
 
-    log(RPC_IN, "devcoordinator: rpc: remove-device '%s'\n", dev->name.data());
+    log(RPC_IN, "devcoordinator: rpc: remove-device '%s'\n", dev->name().data());
     // TODO(teisenbe): RemoveDevice and the reply func can return errors.  We should probably
     // act on it, but the existing code being migrated does not.
     dev->coordinator->RemoveDevice(dev, false);
@@ -510,10 +518,11 @@ static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn) {
     auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     if (dev->coordinator->InSuspend()) {
-        log(ERROR, "devcoordinator: rpc: make-visible '%s' forbidden in suspend\n", dev->name.data());
+        log(ERROR, "devcoordinator: rpc: make-visible '%s' forbidden in suspend\n",
+            dev->name().data());
         return fuchsia_device_manager_CoordinatorMakeVisible_reply(txn, ZX_ERR_BAD_STATE);
     }
-    log(RPC_IN, "devcoordinator: rpc: make-visible '%s'\n", dev->name.data());
+    log(RPC_IN, "devcoordinator: rpc: make-visible '%s'\n", dev->name().data());
     // TODO(teisenbe): MakeVisibile can return errors.  We should probably
     // act on it, but the existing code being migrated does not.
     dev->coordinator->MakeVisible(dev);
@@ -525,10 +534,10 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
     auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     if (dev->coordinator->InSuspend()) {
-        log(ERROR, "devcoordinator: rpc: bind-device '%s' forbidden in suspend\n", dev->name.data());
+        log(ERROR, "devcoordinator: rpc: bind-device '%s' forbidden in suspend\n", dev->name().data());
         return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
-    log(RPC_IN, "devcoordinator: rpc: bind-device '%s'\n", dev->name.data());
+    log(RPC_IN, "devcoordinator: rpc: bind-device '%s'\n", dev->name().data());
     zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
     return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, status);
 }

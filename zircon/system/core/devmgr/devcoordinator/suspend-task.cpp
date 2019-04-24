@@ -38,11 +38,11 @@ void SuspendTask::Run() {
 
     // Handle the device proxy, if it exists, after children since they might
     // depend on it.
-    if (device_->proxy != nullptr) {
-        switch (device_->proxy->state()) {
+    if (device_->proxy() != nullptr) {
+        switch (device_->proxy()->state()) {
         case Device::State::kSuspended: break;
         case Device::State::kActive: {
-            AddDependency(device_->proxy->RequestSuspendTask(flags_));
+            AddDependency(device_->proxy()->RequestSuspendTask(flags_));
             return;
         }
         }

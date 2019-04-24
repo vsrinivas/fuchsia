@@ -598,7 +598,7 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
         return ZX_ERR_INTERNAL;
     }
 
-    fbl::unique_ptr<Devnode> dnself = devfs_mknode(dev, dev->name);
+    fbl::unique_ptr<Devnode> dnself = devfs_mknode(dev, dev->name());
     if (dnself == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -619,7 +619,7 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
     dir = proto_dir(dev->protocol_id());
     if (dir != nullptr) {
         char tmp[32];
-        const char* name = dev->name.data();
+        const char* name = dev->name().data();
 
         if (dev->protocol_id() != ZX_PROTOCOL_CONSOLE) {
             for (unsigned n = 0; n < 1000; n++) {

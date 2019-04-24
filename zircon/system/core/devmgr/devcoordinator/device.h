@@ -56,31 +56,22 @@ class SuspendTask;
 // clang-format on
 
 struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHandler<Device> {
-    Device(Coordinator* coord, fbl::RefPtr<Device> parent, uint32_t protocol_id);
-    ~Device();
-
-    // Create a new device with the given parameters.  This sets up its
-    // relationship with its parent and devhost and adds its RPC channel to the
-    // coordinator's async loop.  This does not add the device to the
-    // coordinator's devices_ list, or trigger publishing
-    static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
-                              fbl::String name, fbl::String driver_path, fbl::String args,
-                              uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                              zx::channel rpc, bool invisible, zx::channel client_remote,
-                              fbl::RefPtr<Device>* device);
-    static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
-                                       const CompositeDevice& composite, zx::channel rpc,
-                                       fbl::RefPtr<Device>* device);
-    zx_status_t CreateProxy();
-
-    static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
     // Node for entry in device child list
     struct Node {
         static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
             return obj.node_;
+        }
+    };
+
+    struct DevhostNode {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+            return obj.devhost_node_;
+        }
+    };
+
+    struct AllDevicesNode {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+            return obj.all_devices_node_;
         }
     };
 
@@ -201,6 +192,31 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
         DeviceType* device_;
     };
 
+    Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
+           fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote);
+    ~Device();
+
+    // Create a new device with the given parameters.  This sets up its
+    // relationship with its parent and devhost and adds its RPC channel to the
+    // coordinator's async loop.  This does not add the device to the
+    // coordinator's devices_ list, or trigger publishing
+    static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
+                              fbl::String name, fbl::String driver_path, fbl::String args,
+                              uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
+                              zx::channel rpc, bool invisible, zx::channel client_remote,
+                              fbl::RefPtr<Device>* device);
+    static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
+                                       const CompositeDevice& composite, zx::channel rpc,
+                                       fbl::RefPtr<Device>* device);
+    zx_status_t CreateProxy();
+
+    static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
+                          async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
+    // We do not want to expose the list itself for mutation, even if the
+    // children are allowed to be mutated.  We manage this by making the
+    // iterator opaque.
     using NonConstChildListIterator =
             ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
     using ConstChildListIterator =
@@ -209,9 +225,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
             ChildListIteratorFactory<Device, NonConstChildListIterator>;
     using ConstChildListIteratorFactory =
             ChildListIteratorFactory<const Device, ConstChildListIterator>;
-    // We do not want to expose the list itself for mutation, even if the
-    // children are allowed to be mutated.  We manage this by making the
-    // iterator opaque.
     NonConstChildListIteratorFactory children() {
         return NonConstChildListIteratorFactory(this);
     }
@@ -229,51 +242,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     // given completion will be invoked.
     zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
 
-    // Run the completion for the outstanding suspend, if any.  This method is
-    // only exposed currently because RemoveDevice is on Coordinator instead of
-    // Device.
-    void CompleteSuspend(zx_status_t status);
-
-    Coordinator* coordinator;
-    uint32_t flags = 0;
-
-    fbl::String name;
-    fbl::String libname;
-    fbl::String args;
-    // The backoff between each driver retry. This grows exponentially.
-    zx::duration backoff = zx::msec(250);
-    // The number of retries left for the driver.
-    uint32_t retries = 4;
-    Devnode* self = nullptr;
-    Devnode* link = nullptr;
-    fbl::RefPtr<Device> proxy;
-
-    // For attaching as an open connection to the proxy device,
-    // or once the device becomes visible.
-    zx::channel client_remote;
-
-    // listnode for this device in its devhost's
-    // list-of-devices
-    fbl::DoublyLinkedListNodeState<Device*> dhnode;
-    struct DevhostNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-            return obj.dhnode;
-        }
-    };
-
-    // listnode for this device in the all devices list
-    fbl::DoublyLinkedListNodeState<Device*> anode;
-    struct AllDevicesNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-            return obj.anode;
-        }
-    };
-
     // Break the relationship between this device object and its parent
     void DetachFromParent();
-
-    // Metadata entries associated to this device.
-    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
 
     // Sets the properties of this device.  Returns an error if the properties
     // array contains more than one property from the BIND_TOPO_* range.
@@ -283,6 +253,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
 
     const fbl::RefPtr<Device>& parent() { return parent_; }
     fbl::RefPtr<const Device> parent() const { return parent_; }
+
+    const fbl::RefPtr<Device>& proxy() { return proxy_; }
+    fbl::RefPtr<const Device> proxy() const { return proxy_; }
 
     uint32_t protocol_id() const { return protocol_id_; }
 
@@ -318,6 +291,37 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     Devhost* host() const { return host_; }
     uint64_t local_id() const { return local_id_; }
 
+    const fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
+        return metadata_;
+    }
+    void AddMetadata(fbl::unique_ptr<Metadata> md) {
+        metadata_.push_front(std::move(md));
+    }
+
+    // Creates a new suspend task if necessary and returns a reference to it.
+    // If one is already in-progress, a reference to it is returned instead
+    fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
+    // Run the completion for the outstanding suspend, if any.  This method is
+    // only exposed currently because RemoveDevice is on Coordinator instead of
+    // Device.
+    void CompleteSuspend(zx_status_t status);
+
+    zx::channel take_client_remote() { return std::move(client_remote_); }
+
+    const fbl::String& name() const { return name_; }
+    const fbl::String& libname() const { return libname_; }
+    const fbl::String& args() const { return args_; }
+
+    Coordinator* coordinator;
+    uint32_t flags = 0;
+
+    // The backoff between each driver retry. This grows exponentially.
+    zx::duration backoff = zx::msec(250);
+    // The number of retries left for the driver.
+    uint32_t retries = 4;
+    Devnode* self = nullptr;
+    Devnode* link = nullptr;
+
     // TODO(teisenbe): We probably want more states.  For example, the DEAD flag
     // should probably move in to here.
     enum class State {
@@ -326,15 +330,17 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     };
 
     State state() const { return state_; }
-
-    // Creates a new suspend task if necessary and returns a reference to it.
-    // If one is already in-progress, a reference to it is returned instead
-    fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
 private:
     zx_status_t HandleRead();
 
+    const fbl::String name_;
+    const fbl::String libname_;
+    const fbl::String args_;
+
     fbl::RefPtr<Device> parent_;
     const uint32_t protocol_id_;
+
+    fbl::RefPtr<Device> proxy_;
 
     fbl::Array<const zx_device_prop_t> props_;
     // If the device has a topological property in |props|, this points to it.
@@ -349,6 +355,15 @@ private:
     // Composite devices are excluded because their multiple-parent nature
     // precludes using the same intrusive nodes as single-parent devices.
     fbl::DoublyLinkedList<Device*, Node> children_;
+
+    // Metadata entries associated to this device.
+    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata_;
+
+    // listnode for this device in the all devices list
+    fbl::DoublyLinkedListNodeState<Device*> all_devices_node_;
+
+    // listnode for this device in its devhost's list-of-devices
+    fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
 
     // - If this device is part of a composite device, this is inhabited by
     //   CompositeDeviceComponent* and it points to the component that matched it.
@@ -375,6 +390,10 @@ private:
     // completed.  It will likely mark |active_suspend_| as completed and clear
     // it.
     SuspendCompletion suspend_completion_;
+
+    // For attaching as an open connection to the proxy device,
+    // or once the device becomes visible.
+    zx::channel client_remote_;
 };
 
 } // namespace devmgr

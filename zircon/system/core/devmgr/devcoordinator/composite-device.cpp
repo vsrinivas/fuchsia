@@ -66,20 +66,20 @@ bool CompositeDevice::TryMatchComponents(const fbl::RefPtr<Device>& dev, size_t*
         if (itr->TryMatch(dev)) {
             log(ERROR,
                 "devcoordinator: ambiguous composite bind! composite='%s', dev1='%s', dev2='%s'\n",
-                name_.data(), itr->bound_device()->name.data(), dev->name.data());
+                name_.data(), itr->bound_device()->name().data(), dev->name().data());
             return false;
         }
     }
     for (auto itr = unbound_.begin(); itr != unbound_.end(); ++itr) {
         if (itr->TryMatch(dev)) {
             log(SPEW, "devcoordinator: found match for composite='%s', dev='%s'\n",
-                name_.data(), dev->name.data());
+                name_.data(), dev->name().data());
             *index_out = itr->index();
            return true;
         }
     }
     log(SPEW, "devcoordinator: no match for composite='%s', dev='%s'\n",
-        name_.data(), dev->name.data());
+        name_.data(), dev->name().data());
     return false;
 }
 
@@ -140,9 +140,9 @@ zx_status_t CompositeDevice::TryAssemble() {
 
         // We need to create it.  Double check that we haven't ended up in a state
         // where the proxies would need to be in different processes.
-        if (devhost != nullptr && component_dev->proxy != nullptr &&
-            component_dev->proxy->host() != nullptr &&
-            component_dev->proxy->host() != devhost) {
+        if (devhost != nullptr && component_dev->proxy() != nullptr &&
+            component_dev->proxy()->host() != nullptr &&
+            component_dev->proxy()->host() != devhost) {
             log(ERROR, "devcoordinator: cannot create composite, proxies in different processes\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -153,11 +153,11 @@ zx_status_t CompositeDevice::TryAssemble() {
         }
         // If we hadn't picked a devhost, use the one that was created just now.
         if (devhost == nullptr) {
-            devhost = component_dev->proxy->host();
+            devhost = component_dev->proxy()->host();
             ZX_ASSERT(devhost != nullptr);
         }
         // Stash the local ID after the proxy has been created
-        component_local_ids[component.index()] = component_dev->proxy->local_id();
+        component_local_ids[component.index()] = component_dev->proxy()->local_id();
     }
 
     zx::channel rpc_local, rpc_remote;

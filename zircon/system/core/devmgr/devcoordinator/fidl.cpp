@@ -29,7 +29,7 @@ zx_status_t dh_send_remove_device(const Device* dev) {
 
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy) {
-    size_t driver_path_size = dev->libname.size();
+    size_t driver_path_size = dev->libname().size();
     size_t args_size = strlen(args);
     uint32_t wr_num_bytes =
         static_cast<uint32_t>(sizeof(fuchsia_device_manager_DevhostControllerCreateDeviceRequest) +
@@ -49,7 +49,7 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
 
     req->driver_path.size = driver_path_size;
     req->driver_path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-    memcpy(driver_path_data, dev->libname.data(), driver_path_size);
+    memcpy(driver_path_data, dev->libname().data(), driver_path_size);
 
     req->driver = FIDL_HANDLE_PRESENT;
     req->parent_proxy = rpc_proxy.is_valid() ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;

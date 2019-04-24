@@ -429,7 +429,7 @@ protected:
             zx::channel local;
             zx_status_t status = zx::channel::create(0, &local, &platform_bus_.remote);
             ASSERT_EQ(ZX_OK, status);
-            status = coordinator_.AddDevice(coordinator_.sys_device()->proxy, std::move(local),
+            status = coordinator_.AddDevice(coordinator_.sys_device()->proxy(), std::move(local),
                                            nullptr /* props_data */, 0 /* props_count */,
                                            "platform-bus", 0, nullptr /* driver_path */,
                                            nullptr /* args */, false /* invisible */,

@@ -113,63 +113,22 @@ bool Coordinator::InSuspend() const {
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
-    root_device_ = fbl::MakeRefCounted<Device>(this, nullptr, ZX_PROTOCOL_ROOT);
-    misc_device_ = fbl::MakeRefCounted<Device>(this, root_device_, ZX_PROTOCOL_MISC_PARENT);
-    sys_device_ = fbl::MakeRefCounted<Device>(this, root_device_, 0);
-    test_device_ = fbl::MakeRefCounted<Device>(this, root_device_, ZX_PROTOCOL_TEST_PARENT);
+    root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
+                                               ZX_PROTOCOL_ROOT, zx::channel());
+    root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
-    fbl::AllocChecker ac;
-    {
-        root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        root_device_->name = fbl::String("root", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        root_device_->args = fbl::String("root,", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
+    misc_device_ = fbl::MakeRefCounted<Device>(this, "misc", fbl::String(), "misc,", root_device_,
+                                               ZX_PROTOCOL_MISC_PARENT,
+                                               zx::channel());
+    misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
-    {
-        misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        misc_device_->name = fbl::String("misc", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        misc_device_->args = fbl::String("misc,", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
+    sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_,
+                                              0, zx::channel());
+    sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
-    {
-        sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
-        sys_device_->name = fbl::String("sys", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        sys_device_->libname = fbl::String(sys_device_driver, &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        sys_device_->args = fbl::String("sys,", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
-
-    {
-        test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        test_device_->name = fbl::String("test", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        test_device_->args = fbl::String("test,", &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
+    test_device_ = fbl::MakeRefCounted<Device>(this, "test", fbl::String(), "test,", root_device_,
+                                               ZX_PROTOCOL_TEST_PARENT, zx::channel());
+    test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
     return ZX_OK;
 }
 
@@ -278,15 +237,15 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
         extra[0] = 0;
     }
     if (pid == 0) {
-        vmo->Printf("%*s[%s]%s\n", (int)(indent * 3), "", dev->name.data(), extra);
+        vmo->Printf("%*s[%s]%s\n", (int)(indent * 3), "", dev->name().data(), extra);
     } else {
         vmo->Printf("%*s%c%s%c pid=%zu%s %s\n", (int)(indent * 3), "",
-                    dev->flags & DEV_CTX_PROXY ? '<' : '[', dev->name.data(),
-                    dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, extra, dev->libname.data());
+                    dev->flags & DEV_CTX_PROXY ? '<' : '[', dev->name().data(),
+                    dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, extra, dev->libname().data());
     }
-    if (dev->proxy) {
+    if (dev->proxy()) {
         indent++;
-        DumpDevice(vmo, dev->proxy.get(), indent);
+        DumpDevice(vmo, dev->proxy().get(), indent);
     }
     for (const auto& child : dev->children()) {
         DumpDevice(vmo, &child, indent + 1);
@@ -302,8 +261,10 @@ void Coordinator::DumpState(VmoWriter* vmo) const {
 
 void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     if (dev->host()) {
-        vmo->Printf("Name [%s]%s%s%s\n", dev->name.data(), dev->libname.empty() ? "" : " Driver [",
-                    dev->libname.empty() ? "" : dev->libname.data(), dev->libname.empty() ? "" : "]");
+        vmo->Printf("Name [%s]%s%s%s\n", dev->name().data(),
+                    dev->libname().empty() ? "" : " Driver [",
+                    dev->libname().empty() ? "" : dev->libname().data(),
+                    dev->libname().empty() ? "" : "]");
         vmo->Printf("Flags   :%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
                     dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
                     dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
@@ -336,8 +297,8 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
         vmo->Printf("\n");
     }
 
-    if (dev->proxy) {
-        DumpDeviceProps(vmo, dev->proxy.get());
+    if (dev->proxy()) {
+        DumpDeviceProps(vmo, dev->proxy().get());
     }
     for (const auto& child : dev->children()) {
         DumpDeviceProps(vmo, &child);
@@ -401,7 +362,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 
         const char* name;
         if (itr->parent()) {
-            name = itr->name.data();
+            name = itr->name().data();
         } else {
             name = "dev";
         }
@@ -630,7 +591,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 
     // If we're creating a device that's using the component driver, inform the
     // component.
-    if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
+    if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
         CompositeDeviceComponent* component = parent->component();
         component->set_component_device(dev);
         status = component->composite()->TryAssemble();
@@ -642,7 +603,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 
     if (!invisible) {
         log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
-            dev->name.data(), dev->props().size(), dev->args.data(), dev->parent().get());
+            dev->name().data(), dev->props().size(), dev->args().data(), dev->parent().get());
         status = dev->SignalReadyForBind();
         if (status != ZX_OK) {
             return status;
@@ -676,17 +637,17 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     if (dev->flags & DEV_CTX_DEAD) {
         // This should not happen
         log(ERROR, "devcoordinator: cannot remove dev %p name='%s' twice!\n", dev.get(),
-            dev->name.data());
+            dev->name().data());
         return ZX_ERR_BAD_STATE;
     }
     if (dev->flags & DEV_CTX_IMMORTAL) {
         // This too should not happen
         log(ERROR, "devcoordinator: cannot remove dev %p name='%s' (immortal)\n", dev.get(),
-            dev->name.data());
+            dev->name().data());
         return ZX_ERR_BAD_STATE;
     }
 
-    log(DEVLC, "devcoordinator: remove %p name='%s' parent=%p\n", dev.get(), dev->name.data(),
+    log(DEVLC, "devcoordinator: remove %p name='%s' parent=%p\n", dev.get(), dev->name().data(),
         dev->parent().get());
     dev->flags |= DEV_CTX_DEAD;
 
@@ -698,8 +659,8 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // TODO(teisenbe): Should we mark it as failed if this is a forced removal?
     dev->CompleteSuspend(ZX_OK);
 
-    if (dev->proxy) {
-        zx_status_t r = dh_send_remove_device(dev->proxy.get());
+    if (dev->proxy()) {
+        zx_status_t r = dh_send_remove_device(dev->proxy().get());
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: failed to send message in dc_remove_device: %d\n", r);
         }
@@ -711,7 +672,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     }
 
     // Check if this device is a composite component device
-    if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
+    if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
         // If it is, then its parent will know about which one (since the parent
         // is the actual device matched by the component description).
         const auto& parent = dev->parent();
@@ -779,7 +740,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
                      !(parent->host()->flags() & Devhost::Flags::kDying))) {
 
                     log(DEVLC, "devcoordinator: bus device %p name='%s' is unbound\n", parent.get(),
-                        parent->name.data());
+                        parent->name().data());
 
                     if (parent->retries > 0) {
                         // Add device with an exponential backoff.
@@ -832,12 +793,12 @@ zx_status_t Coordinator::AddCompositeDevice(
         size_t index;
         if (new_device->TryMatchComponents(dev_ref, &index)) {
             log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
-                dev.name.data(), index, new_device->name().data());
+                dev.name().data(), index, new_device->name().data());
             status = new_device->BindComponent(index, dev_ref);
             if (status != ZX_OK) {
                 log(ERROR,
                     "devcoordinator: dev='%s' failed to bind component %zu of composite='%s': %s\n",
-                    dev.name.data(), index, new_device->name().data(),
+                    dev.name().data(), index, new_device->name().data(),
                     zx_status_get_string(status));
             }
         }
@@ -895,7 +856,7 @@ zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint
     // search dev and its parent devices for a match
     fbl::RefPtr<Device> test = dev;
     while (true) {
-        for (const auto& md : test->metadata) {
+        for (const auto& md : test->metadata()) {
             if (md.type == type) {
                 if (buffer != nullptr) {
                     if (md.length > buflen) {
@@ -970,7 +931,7 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
     md->type = type;
     md->length = length;
     memcpy(md->Data(), data, length);
-    dev->metadata.push_front(std::move(md));
+    dev->AddMetadata(std::move(md));
     return ZX_OK;
 }
 
@@ -989,7 +950,7 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
         fbl::RefPtr<Device> itr = dev;
         // Adding metadata to arbitrary paths is restricted to drivers running in the sys devhost.
         while (itr && itr != sys_device_) {
-            if (itr->proxy) {
+            if (itr->proxy()) {
                 // this device is in a child devhost
                 return ZX_ERR_ACCESS_DENIED;
             }
@@ -1129,9 +1090,9 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
         return r;
     }
 
-    if (dev->libname[0]) {
+    if (dev->libname().size() != 0) {
         zx::vmo vmo;
-        if ((r = dev->coordinator->LibnameToVmo(dev->libname, &vmo)) != ZX_OK) {
+        if ((r = dev->coordinator->LibnameToVmo(dev->libname(), &vmo)) != ZX_OK) {
             return r;
         }
 
@@ -1178,7 +1139,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
     ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY) && (dev->flags & DEV_CTX_MUST_ISOLATE));
 
     // proxy args are "processname,args"
-    const char* arg0 = dev->args.data();
+    const char* arg0 = dev->args().data();
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == nullptr) {
         return ZX_ERR_INTERNAL;
@@ -1190,13 +1151,13 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
     snprintf(devhostname, sizeof(devhostname), "devhost:%.*s", (int)arg0len, arg0);
 
     zx_status_t r;
-    if (dev->proxy == nullptr && (r = dev->CreateProxy()) != ZX_OK) {
+    if (dev->proxy() == nullptr && (r = dev->CreateProxy()) != ZX_OK) {
         log(ERROR, "devcoord: cannot create proxy device: %d\n", r);
         return r;
     }
 
     // if this device has no devhost, first instantiate it
-    if (dev->proxy->host() == nullptr) {
+    if (dev->proxy()->host() == nullptr) {
         zx::channel h0, h1;
         // the immortal root devices do not provide proxy rpc
         bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
@@ -1214,8 +1175,8 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
                 return r;
             }
         }
-        dev->proxy->set_host(target_devhost);
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host(), arg1, std::move(h1))) < 0) {
+        dev->proxy()->set_host(target_devhost);
+        if ((r = dh_create_device(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
             log(ERROR, "devcoordinator: dh_create_device: %d\n", r);
             return r;
         }
@@ -1229,8 +1190,9 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
                 log(ERROR, "devcoordinator: fdio_service_connect %s: %d\n", kItemsPath, r);
             }
         }
-        if (dev->client_remote.is_valid()) {
-            if ((r = devfs_connect(dev->proxy.get(), std::move(dev->client_remote))) != ZX_OK) {
+        zx::channel client_remote = dev->take_client_remote();
+        if (client_remote.is_valid()) {
+            if ((r = devfs_connect(dev->proxy().get(), std::move(client_remote))) != ZX_OK) {
                 log(ERROR, "devcoordinator: devfs_connnect: %d\n", r);
             }
         }
@@ -1258,7 +1220,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
         return r;
     }
 
-    r = dh_bind_driver(dev->proxy, drv->libname.c_str());
+    r = dh_bind_driver(dev->proxy(), drv->libname.c_str());
     // TODO(swetland): arrange to mark us unbound when the proxy (or its devhost) goes away
     if ((r == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
         dev->flags |= DEV_CTX_BOUND;
@@ -1269,10 +1231,13 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
 void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
     // If the device has a proxy, we actually want to wait for the proxy device to be
     // created and connect to that.
-    if (dev->client_remote.is_valid() && !(dev->flags & DEV_CTX_MUST_ISOLATE)) {
-        zx_status_t status = devfs_connect(dev.get(), std::move(dev->client_remote));
-        if (status != ZX_OK) {
-            log(ERROR, "devcoordinator: devfs_connnect: %d\n", status);
+    if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
+        zx::channel client_remote = dev->take_client_remote();
+        if (client_remote.is_valid()) {
+            zx_status_t status = devfs_connect(dev.get(), std::move(client_remote));
+            if (status != ZX_OK) {
+                log(ERROR, "devcoordinator: devfs_connnect: %d\n", status);
+            }
         }
     }
     // TODO(tesienbe): We probably should do something with the return value
@@ -1302,7 +1267,7 @@ static int suspend_timeout_thread(void* arg) {
 void Coordinator::Suspend(SuspendContext ctx) {
     // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
     // cannot go to suspend.
-    if (!sys_device_->proxy) {
+    if (!sys_device_->proxy()) {
         return;
     }
     if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
@@ -1490,11 +1455,12 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
         return ZX_ERR_NEXT;
     }
 
-    log(SPEW, "devcoordinator: drv='%s' bindable to dev='%s'\n", drv->name.data(), dev->name.data());
+    log(SPEW, "devcoordinator: drv='%s' bindable to dev='%s'\n", drv->name.data(),
+        dev->name().data());
     zx_status_t status = AttemptBind(drv, dev);
     if (status != ZX_OK) {
         log(ERROR, "devcoordinator: failed to bind drv='%s' to dev='%s': %s\n", drv->name.data(),
-            dev->name.data(), zx_status_get_string(status));
+            dev->name().data(), zx_status_get_string(status));
     }
     if (status == ZX_ERR_NEXT) {
         // Convert ERR_NEXT to avoid confusing the caller
@@ -1547,7 +1513,7 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
             size_t index;
             if (composite.TryMatchComponents(dev, &index)) {
                 log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
-                    dev->name.data(), index, composite.name().data());
+                    dev->name().data(), index, composite.name().data());
 
                 return composite.BindComponent(index, dev);
             }
