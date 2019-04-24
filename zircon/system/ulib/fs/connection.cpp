@@ -33,6 +33,10 @@ static_assert(fuchsia_io_OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE == (fuchsia_io_O
                                                                     fuchsia_io_OPEN_FLAG_DESCRIBE |
                                                                     fuchsia_io_OPEN_FLAG_NODE_REFERENCE),
               "OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE value mismatch");
+static_assert(PATH_MAX == fuchsia_io_MAX_PATH,
+              "POSIX PATH_MAX inconsistent with Fuchsia MAX_PATH");
+static_assert(NAME_MAX == fuchsia_io_MAX_FILENAME,
+              "POSIX NAME_MAX inconsistent with Fuchsia MAX_FILENAME");
 #endif
 
 namespace fs {

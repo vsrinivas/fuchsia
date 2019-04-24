@@ -27,12 +27,18 @@ bool TestDirectoryFilenameMax(void) {
 
     // TODO(smklein): This value may be filesystem-specific. Plumb it through
     // from the test driver.
-    int max_file_len = 255;
+    constexpr int max_file_len = 255;
     char path[PATH_MAX + 1];
 
-    // Unless the max_file_name is approaching PATH_MAX, this shouldn't be an
-    // issue.
-    assert(max_file_len + 3 /* '::' + '0' for 'too large' file */ < PATH_MAX);
+    // Unless the max_file_len is approaching half of PATH_MAX,
+    // this shouldn't be an issue.
+    static_assert(
+        (2 /* '::' */ + (max_file_len + 1) + 1 /* slash */ + max_file_len) < PATH_MAX);
+    // Large components should not crash vfs
+    snprintf(path, sizeof(path), "::%0*d/%0*d",
+             max_file_len + 1, 0xBEEF, max_file_len, 0xBEEF);
+    ASSERT_EQ(open(path, O_RDWR | O_CREAT | O_EXCL, 0644), -1);
+    ASSERT_EQ(errno, ENAMETOOLONG);
 
     // Largest possible file length
     snprintf(path, sizeof(path), "::%0*d", max_file_len, 0x1337);
@@ -44,6 +50,7 @@ bool TestDirectoryFilenameMax(void) {
     // Slightly too large file length
     snprintf(path, sizeof(path), "::%0*d", max_file_len + 1, 0xBEEF);
     ASSERT_EQ(open(path, O_RDWR | O_CREAT | O_EXCL, 0644), -1);
+    ASSERT_EQ(errno, ENAMETOOLONG);
 
     END_TEST;
 }

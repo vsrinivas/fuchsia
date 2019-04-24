@@ -486,6 +486,9 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn,
 
         // Path has at least one additional segment.
         fbl::StringPiece component(path.data(), next_path - path.data());
+        if (component.length() > NAME_MAX) {
+            return ZX_ERR_BAD_PATH;
+        }
         if ((r = LookupNode(std::move(vn), component, &vn)) != ZX_OK) {
             return r;
         }
