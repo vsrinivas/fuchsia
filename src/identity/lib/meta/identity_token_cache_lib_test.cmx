@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/identity_token_cache_lib_test"
-    }
-}

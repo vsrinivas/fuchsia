@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/token_cache_lib_test"
+    }
+}

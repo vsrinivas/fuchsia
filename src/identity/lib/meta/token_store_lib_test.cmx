@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/identity_token_store_lib_test"
+        "binary": "test/token_store_lib_test"
     },
     "sandbox": {
         "features": [

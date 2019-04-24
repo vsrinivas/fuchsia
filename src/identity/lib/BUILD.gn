@@ -29,11 +29,11 @@ test_package("identity_lib_unittests") {
 
   tests = [
     {
-      name = "identity_token_cache_lib_test"
+      name = "token_cache_lib_test"
       environments = basic_envs
     },
     {
-      name = "identity_token_store_lib_test"
+      name = "token_store_lib_test"
       environments = basic_envs
     },
     {

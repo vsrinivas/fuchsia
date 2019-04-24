@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error};
-use identity_token_cache::{CacheKey, CacheToken, KeyFor};
 use std::ops::Deref;
 use std::time::{Duration, SystemTime};
+use token_cache::{CacheKey, CacheToken, KeyFor};
 
 /// Representation of a single OAuth token including its expiry time.
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -4,8 +4,8 @@
 
 use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
-use identity_token_cache::AuthCacheError;
-use identity_token_store::AuthDbError;
+use token_cache::AuthCacheError;
+use token_store::AuthDbError;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// TokenManagerErrors.

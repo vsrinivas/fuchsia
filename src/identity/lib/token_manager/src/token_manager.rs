@@ -19,14 +19,14 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
-use identity_token_cache::{AuthCacheError, TokenCache};
-use identity_token_store::file::AuthDbFile;
-use identity_token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use log::{error, info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use token_cache::{AuthCacheError, TokenCache};
+use token_store::file::AuthDbFile;
+use token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
 /// The maximum number of entries to be stored in the `TokenCache`.
 const CACHE_SIZE: usize = 128;
