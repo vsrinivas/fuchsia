@@ -15,6 +15,7 @@ group("ledger") {
 group("all") {
   testonly = true
   public_deps = [
+    "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",
     "//peridot/packages/prod:cloud_provider_firestore",
     "//peridot/packages/prod:integration_testing",
@@ -23,6 +24,13 @@ group("all") {
     "//peridot/packages/prod:modular",
     "//peridot/packages/prod:module_resolver",
     "//peridot/packages/prod:sessionctl",
+  ]
+}
+
+group("basemgr_launcher") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/basemgr_launcher",
   ]
 }
 

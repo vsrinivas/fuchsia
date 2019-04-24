@@ -84,6 +84,7 @@ source_set("cpp") {
     "//garnet/tests/e2e_input_tests/*",
     "//peridot/bin/basemgr/*",
     "//peridot/bin/basemgr/cobalt/*",
+    "//peridot/bin/basemgr_launcher:basemgr_launcher_bin",
     "//peridot/bin/context_engine/*",
     "//peridot/bin/module_resolver/*",
     "//peridot/bin/sessionmgr/*",

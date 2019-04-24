@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/basemgr_launcher"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

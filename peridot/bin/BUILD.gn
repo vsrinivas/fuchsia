@@ -7,6 +7,7 @@ group("bin") {
   deps = [
     "agents",
     "basemgr",
+    "basemgr_launcher",
     "context_engine",
     "module_resolver",
     "sessionctl",

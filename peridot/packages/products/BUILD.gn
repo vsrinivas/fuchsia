@@ -14,6 +14,7 @@ group("framework") {
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:netconnector",
+    "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",
     "//peridot/packages/prod:cloud_provider_firestore",
     "//peridot/packages/prod:ledger",
