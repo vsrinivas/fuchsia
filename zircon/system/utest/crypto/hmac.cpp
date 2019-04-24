@@ -290,6 +290,9 @@ bool TestRfc4231_TC7(void) {
 } // clang-format on
 
 BEGIN_TEST_CASE(HmacTest)
+RUN_TEST(TestInit)
+RUN_TEST(TestUpdate)
+RUN_TEST(TestFinal)
 RUN_TEST(TestCreate)
 RUN_TEST(TestVerify)
 RUN_TEST(TestRfc4231_TC1)

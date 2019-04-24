@@ -168,6 +168,8 @@ zx_status_t HMAC::Final(Bytes* out) {
         xprintf_crypto_errors(&rc);
         return rc;
     }
+    ctx_.reset();
+
     if ((rc = out->Resize(out_len)) != ZX_OK ||
         (rc = out->Copy(tmp.get(), out_len)) != ZX_OK) {
         return rc;
