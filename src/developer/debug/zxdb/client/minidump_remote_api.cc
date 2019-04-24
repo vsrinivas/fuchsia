@@ -917,7 +917,18 @@ void MinidumpRemoteAPI::RemoveBreakpoint(
 void MinidumpRemoteAPI::SysInfo(
     const debug_ipc::SysInfoRequest& request,
     std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) {
-  ErrNoLive(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::SysInfoReply reply;
+  reply.version = minidump_->System()->OSVersionFull();
+  reply.num_cpus = minidump_->System()->CPUCount();
+  reply.memory_mb = 0;
+  reply.hw_breakpoint_count = 0;
+  reply.hw_watchpoint_count = 0;
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::ThreadStatus(

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/verbs.h"
-
 #include <iomanip>
 #include <sstream>
 
@@ -14,6 +12,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -87,11 +86,20 @@ void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info) {
   OutputBuffer out;
   out.Append(fxl::StringPrintf("Version: %s\n", sys_info.version.c_str()));
   out.Append(fxl::StringPrintf("Num CPUs: %u\n", sys_info.num_cpus));
-  out.Append(fxl::StringPrintf("Memory (MiB): %u\n", sys_info.memory_mb));
-  out.Append(fxl::StringPrintf("HW Breakpoints: %u\n",
-                               sys_info.hw_breakpoint_count));
-  out.Append(fxl::StringPrintf("HW Watchpoints: %u\n",
-                               sys_info.hw_watchpoint_count));
+
+  // We don't have total ram for minidumps. We can assume a 0 value is always
+  // invalid and just not print it.
+  out.Append("Memory (MiB): ");
+  if (sys_info.memory_mb) {
+    out.Append(fxl::StringPrintf("%u\n", sys_info.memory_mb));
+  } else {
+    out.Append(Syntax::kComment, "<Unknown>\n");
+  }
+
+  out.Append(
+      fxl::StringPrintf("HW Breakpoints: %u\n", sys_info.hw_breakpoint_count));
+  out.Append(
+      fxl::StringPrintf("HW Watchpoints: %u\n", sys_info.hw_watchpoint_count));
 
   Console::get()->Output(std::move(out));
 }

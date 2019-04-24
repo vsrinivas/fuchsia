@@ -512,4 +512,23 @@ TEST_F(MinidumpTest, ReadMemory) {
   EXPECT_EQ(1u, block.data[260440]);
 }
 
+TEST_F(MinidumpTest, SysInfo) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::SysInfoRequest request;
+  debug_ipc::SysInfoReply reply;
+
+  DoRequest(request, reply, err, &RemoteAPI::SysInfo);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  EXPECT_EQ(
+      "Zircon prerelease git-50fbb1100548dc716d72abd4024461a85f5c8eb8 x86_64",
+      reply.version);
+  EXPECT_EQ(4u, reply.num_cpus);
+  EXPECT_EQ(0u, reply.memory_mb);
+  EXPECT_EQ(0u, reply.hw_breakpoint_count);
+  EXPECT_EQ(0u, reply.hw_watchpoint_count);
+}
+
 }  // namespace zxdb
