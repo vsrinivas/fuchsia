@@ -182,18 +182,18 @@ file, much like C.
 Libraries are named containers of FIDL declarations.
 
 Each library has a name consisting of a single identifier (e.g., "objects"),
-or multiple identifiers separated by dots (e.g., "mozart.composition").
+or multiple identifiers separated by dots (e.g., "fuchsia.composition").
 Library names are used in [Qualified Identifiers](#qualified-identifiers).
 
 ```fidl
 // library identifier separated by dots
-library mozart.composition;
+library fuchsia.composition;
 
-// "using" to import library "mozart.buffers"
-using mozart.buffers;
+// "using" to import library "fuchsia.buffers"
+using fuchsia.buffers;
 
-// "using" to import library "mozart.geometry" and create a shortform called "geo"
-using mozart.geometry as geo;
+// "using" to import library "fuchsia.geometry" and create a shortform called "geo"
+using fuchsia.geometry as geo;
 
 ```
 
@@ -201,7 +201,7 @@ Libraries may declare that they use other libraries with a "using" declaration.
 This allows the library to refer to symbols defined in other libraries upon which
 they depend. Symbols which are imported this way may be accessed by:
 
-*   qualifying them with the fully qualified library name (as in _"mozart.geometry.Rect"_),
+*   qualifying them with the fully qualified library name (as in _"fuchsia.geometry.Rect"_),
 *   specifying just the library name (as in _"geometry.Rect"_), or,
 *   using a library alias (as in _"geo.Rect"_).
 

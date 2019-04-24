@@ -27,7 +27,7 @@ struct mat4 {
     array<float32>:16 matrix;
 };
 
-// TODO(MZ-238): use float32s instead of uint8.
+// TODO(SCN-238): use float32s instead of uint8.
 struct ColorRgba {
     uint8 red;
     uint8 green;

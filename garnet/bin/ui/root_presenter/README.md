@@ -1,4 +1,4 @@
-# Mozart Root Presenter
+# Root Presenter
 
 This directory contains the Root Presenter, a service which binds view trees
 to a renderer and provides input.

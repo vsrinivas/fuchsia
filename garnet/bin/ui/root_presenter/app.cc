@@ -7,10 +7,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <string>
@@ -157,8 +158,8 @@ void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;
-  std::unique_ptr<mozart::InputDeviceImpl> input_device =
-      std::make_unique<mozart::InputDeviceImpl>(
+  std::unique_ptr<ui_input::InputDeviceImpl> input_device =
+      std::make_unique<ui_input::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
           this);
 
@@ -169,7 +170,7 @@ void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
   devices_by_id_.emplace(device_id, std::move(input_device));
 }
 
-void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
@@ -181,7 +182,7 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
   devices_by_id_.erase(input_device->id());
 }
 
-void App::OnReport(mozart::InputDeviceImpl* input_device,
+void App::OnReport(ui_input::InputDeviceImpl* input_device,
                    fuchsia::ui::input::InputReport report) {
   TRACE_DURATION("input", "root_presenter_on_report", "id", report.trace_id);
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);

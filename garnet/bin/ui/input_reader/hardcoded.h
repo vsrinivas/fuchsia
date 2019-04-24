@@ -5,19 +5,19 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_HARDCODED_H_
 #define GARNET_BIN_UI_INPUT_READER_HARDCODED_H_
 
-#include "garnet/bin/ui/input_reader/hid_decoder.h"
-#include "garnet/bin/ui/input_reader/protocols.h"
-
-#include <array>
-#include <cstddef>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/paradise.h>
 
-namespace mozart {
+#include <array>
+#include <cstddef>
+
+#include "garnet/bin/ui/input_reader/hid_decoder.h"
+#include "garnet/bin/ui/input_reader/protocols.h"
+
+namespace ui_input {
 
 class Hardcoded {
  public:
@@ -167,6 +167,6 @@ class Hardcoded {
 
   Protocol protocol_;
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_HARDCODED_H_

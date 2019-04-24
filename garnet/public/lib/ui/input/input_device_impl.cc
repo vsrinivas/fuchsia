@@ -1,9 +1,8 @@
 #include <lib/ui/input/input_device_impl.h>
-
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
-namespace mozart {
+namespace ui_input {
 
 InputDeviceImpl::InputDeviceImpl(
     uint32_t id, fuchsia::ui::input::DeviceDescriptor descriptor,
@@ -29,4 +28,4 @@ void InputDeviceImpl::DispatchReport(fuchsia::ui::input::InputReport report) {
   listener_->OnReport(this, std::move(report));
 }
 
-}  // namespace mozart
+}  // namespace ui_input

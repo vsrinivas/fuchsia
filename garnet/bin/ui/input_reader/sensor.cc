@@ -8,12 +8,11 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
-
+#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <vector>
 
-#include <src/lib/fxl/logging.h>
+#include <vector>
 
 namespace {
 
@@ -52,7 +51,7 @@ bool IsZUsage(const hid::Usage& u) {
 
 }  // namespace
 
-namespace mozart {
+namespace ui_input {
 
 bool Sensor::ParseReportDescriptor(
     const hid::ReportDescriptor& report_descriptor,
@@ -85,7 +84,7 @@ bool Sensor::ParseReportDescriptor(
 
   } else {
     FXL_LOG(INFO) << "Sensor report descriptor: Sensor page not supported (0x"
-                   << std::hex << sensor_usage.usage << ")";
+                  << std::hex << sensor_usage.usage << ")";
     return false;
   }
 
@@ -113,7 +112,7 @@ bool Sensor::ParseReportDescriptor(
   if ((caps & Capabilities::SCALAR) &&
       (caps & (Capabilities::X | Capabilities::Y | Capabilities::Z))) {
     FXL_LOG(INFO) << "Sensor report descriptor: Sensor describes Axis and "
-                      "Scalar, must only describe one";
+                     "Scalar, must only describe one";
     return false;
   }
 
@@ -156,7 +155,7 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
 
   if (report_size_ != len) {
     FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_
-                   << "Recieved size " << len;
+                  << "Recieved size " << len;
     return false;
   }
 
@@ -205,4 +204,4 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

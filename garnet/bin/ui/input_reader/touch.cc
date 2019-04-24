@@ -8,14 +8,14 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
-
 #include <stdint.h>
 #include <stdio.h>
+
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
 
-namespace mozart {
+namespace ui_input {
 bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
   size_t touch_points = 0;
   TouchPointConfig configs[MAX_TOUCH_POINTS] = {};
@@ -70,9 +70,9 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
     }
     if (touch_points > MAX_TOUCH_POINTS) {
       FXL_LOG(INFO) << "Touch descriptor: Current touchscreen has "
-                     << touch_points
-                     << " touch points which is above hardcoded limit of "
-                     << MAX_TOUCH_POINTS;
+                    << touch_points
+                    << " touch points which is above hardcoded limit of "
+                    << MAX_TOUCH_POINTS;
       return false;
     }
     TouchPointConfig *config = &configs[touch_points - 1];
@@ -114,7 +114,7 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
           << "Touch descriptor: Touch point capabilities are different";
       for (size_t j = 0; j < touch_points; j++) {
         FXL_LOG(INFO) << "Touch descriptor: touch_point[" << j
-                       << "] = " << configs[i].capabilities;
+                      << "] = " << configs[i].capabilities;
       }
       return false;
     }
@@ -141,7 +141,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
 
   if (len != report_size_) {
     FXL_LOG(INFO) << "Touch HID Report is not correct size, (" << len
-                   << " != " << report_size_ << ")";
+                  << " != " << report_size_ << ")";
     return false;
   }
 
@@ -285,4 +285,4 @@ bool Touch::SetDescriptor(Touch::Descriptor *touch_desc) {
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

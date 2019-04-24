@@ -4,7 +4,7 @@
 
 #include "lib/ui/tests/mocks/mock_input_device.h"
 
-namespace mozart {
+namespace ui_input {
 namespace test {
 
 MockInputDevice::MockInputDevice(
@@ -25,4 +25,4 @@ void MockInputDevice::DispatchReport(fuchsia::ui::input::InputReport report) {
 }
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace ui_input

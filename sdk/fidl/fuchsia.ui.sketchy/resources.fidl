@@ -25,6 +25,7 @@ union ResourceArgs {
 // SetPath or Begin/Extend/FinishStroke) since it was created, or the last time
 // that Clear was called.
 //
+
 // Commands:
 // - ClearStroke
 // - SetStrokePath
@@ -39,6 +40,7 @@ struct Stroke {
 // A stroke-group is a container of strokes, which can be inserted into a Scenic
 // scene-graph by importing adding it as a child of an imported |fuchsia.ui.gfx.Node|.
 //
+
 // Commands:
 // - ClearGroup
 // - AddStroke
@@ -49,8 +51,9 @@ struct StrokeGroup {
 };
 
 // A pen handles user input to create a path for a stroke.
-// TODO(MZ-246): expose access to stroke-fitter parameters.
+// TODO(SCN-246): expose access to stroke-fitter parameters.
 //
+
 // Commands:
 // - BeginStroke
 // - ExtendStroke
@@ -61,6 +64,7 @@ struct Pen {
 
 // The classic Escher Sketcy Demo wobbly style that you know and love.
 //
+
 // Commands:
 // - SetPenStyle (as arg).
 // - SetStrokeStyle (as arg).
@@ -80,6 +84,7 @@ struct WobblyStyle {
 // proportionally to the arc-length of the stroke.  An example use-case is a
 // to visualize the frequency spectrum of an audio signal.
 //
+
 // Commands:
 // - SetPenStyle (as arg)
 // - SetStrokeStyle (as arg).

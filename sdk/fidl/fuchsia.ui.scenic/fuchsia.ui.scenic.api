@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.ui.scenic/commands.fidl": "6710eee1f3c859bdeb5fd4279bbdd48f",
   "fidl/fuchsia.ui.scenic/events.fidl": "0b2de80e3dfc14c02961196c6827f0d2",
-  "fidl/fuchsia.ui.scenic/scenic.fidl": "f9c45c35e2fc28ba86c66d2459482ba9",
-  "fidl/fuchsia.ui.scenic/session.fidl": "d616194dabfff804e9e368950607e581"
+  "fidl/fuchsia.ui.scenic/scenic.fidl": "a02fbcb8be1b00d385c9bebb1c3c43ee",
+  "fidl/fuchsia.ui.scenic/session.fidl": "e51c510b1327b1504063a8d98a08f832"
 }

@@ -81,7 +81,7 @@ class HitTester {
   // Returns true if the ray passes through the node's clipped content.
   // |ray| must be in the parent's local coordinate system.
   //
-  // TODO(MZ-207): The way this works only makes geometric sense if the ray
+  // TODO(SCN-207): The way this works only makes geometric sense if the ray
   // is parallel to the camera projection at the point being sampled.
   static bool IsRayWithinClippedContentOuter(Node* node,
                                              const escher::ray4& ray);

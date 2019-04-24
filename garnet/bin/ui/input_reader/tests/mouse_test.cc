@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid-parser/parser.h>
-#include <hid-parser/usages.h>
-#include <hid/paradise.h>
+#include "garnet/bin/ui/input_reader/mouse.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <gtest/gtest.h>
+#include <hid-parser/parser.h>
+#include <hid-parser/usages.h>
+#include <hid/paradise.h>
 #include <src/lib/fxl/time/time_point.h>
-
-#include "garnet/bin/ui/input_reader/mouse.h"
 
 namespace input {
 
@@ -56,13 +55,13 @@ TEST(MouseTest, BootMouse) {
       boot_mouse_desc, sizeof(boot_mouse_desc), &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
-  mozart::Mouse mouse = {};
-  mozart::Device::Descriptor device_descriptor = {};
+  ui_input::Mouse mouse = {};
+  ui_input::Device::Descriptor device_descriptor = {};
   bool success =
       mouse.ParseReportDescriptor(dev_desc->report[0], &device_descriptor);
   ASSERT_TRUE(success);
   EXPECT_EQ(device_descriptor.has_mouse, true);
-  EXPECT_EQ(device_descriptor.mouse_type, mozart::MouseDeviceType::HID);
+  EXPECT_EQ(device_descriptor.mouse_type, ui_input::MouseDeviceType::HID);
   EXPECT_EQ(device_descriptor.mouse_descriptor->buttons,
             fuchsia::ui::input::kMouseButtonPrimary |
                 fuchsia::ui::input::kMouseButtonSecondary |

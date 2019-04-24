@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_UI_SKETCHY_CANVAS_H_
 #define GARNET_BIN_UI_SKETCHY_CANVAS_H_
 
-#include <unordered_map>
-
 #include <fuchsia/ui/sketchy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+
+#include <unordered_map>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
@@ -64,7 +64,7 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
   // |id| ID that can be used by the Canvas client to refer to
   //     the imported node.
   // |token| Token that the Sketchy service will pass along
-  //     to the SceneManager to import the node.
+  //     to Scenic to import the node.
   bool ScenicImportNode(ResourceId id, zx::eventpair token);
 
   bool ApplyScenicAddChildCmd(fuchsia::ui::gfx::AddChildCmd add_child);

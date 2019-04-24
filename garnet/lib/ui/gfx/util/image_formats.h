@@ -6,11 +6,12 @@
 #define GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_
 
 #include <fuchsia/images/cpp/fidl.h>
+
 #include "lib/escher/util/image_utils.h"
 
 // Contains utilities for converting from various formats to BGRA_8, which is
 // what is needed to render.
-// TODO(MZ-547): Merge with existing image conversion libraries in media:
+// TODO(SCN-547): Merge with existing image conversion libraries in media:
 // bin/media/video/video_converter.h
 
 namespace scenic_impl {

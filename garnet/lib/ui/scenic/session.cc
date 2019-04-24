@@ -46,7 +46,7 @@ void Session::Present(uint64_t presentation_time,
   // calling into us during destruction.
   if (!valid_)
     return;
-  // TODO(MZ-469): Move Present logic into Session.
+  // TODO(SCN-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =

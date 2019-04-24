@@ -359,7 +359,7 @@ set of services, which the creator can either use directly or offer to other com
 
 Services can also be obtained by interface name from a [Namespace](#namespace), which lets the
 component that created the namespace pick the implementation of the interface. Long-running
-services, such as [Mozart](#mozart), are typically obtained through a [Namespace](#namespace),
+services, such as [Scenic](#scenic), are typically obtained through a [Namespace](#namespace),
 which lets many clients connect to a common implementation.
 
 #### **Story**

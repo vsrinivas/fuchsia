@@ -11,7 +11,7 @@
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "src/lib/fxl/logging.h"
 
-namespace mozart {
+namespace ui_input {
 
 namespace {
 
@@ -143,4 +143,4 @@ void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher,
   }
 }
 
-}  // namespace mozart
+}  // namespace ui_input

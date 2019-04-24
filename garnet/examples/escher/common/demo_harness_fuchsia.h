@@ -59,7 +59,7 @@ class DemoHarnessFuchsia : public DemoHarness,
   trace::TraceProvider trace_provider_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
-  mozart::InputReader input_reader_;
+  ui_input::InputReader input_reader_;
   fidl::BindingSet<fuchsia::ui::input::InputDevice,
                    std::unique_ptr<fuchsia::ui::input::InputDevice>>
       input_devices_;

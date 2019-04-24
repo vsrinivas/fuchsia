@@ -7,6 +7,7 @@
 
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/vmo.h>
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -39,7 +40,7 @@ class HostData : public std::enable_shared_from_this<HostData> {
 // session.  The memory is mapped read/write into this process and transferred
 // read-only to the scene manager.  The shared memory region is retained until
 // this object is destroyed.
-// TODO(MZ-268): Don't inherit from Memory, so that Memory can have a public
+// TODO(SCN-268): Don't inherit from Memory, so that Memory can have a public
 // move constructor.
 // TODO(MA-492): The memory is currently not transferred read-only, as we may
 // choose to map it as device-local memory on UMA platforms, and Vulkan requires
@@ -72,7 +73,7 @@ class HostMemory final : public Memory {
 // Represents an image resource backed by host-accessible shared memory bound to
 // a session.  The shared memory region is retained until this object is
 // destroyed.
-// TODO(MZ-268): Don't inherit from Image, so that Image can have a public move
+// TODO(SCN-268): Don't inherit from Image, so that Image can have a public move
 // constructor.
 class HostImage final : public Image {
  public:

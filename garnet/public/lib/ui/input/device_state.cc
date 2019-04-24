@@ -28,7 +28,7 @@ void PointerTraceHACK(trace_async_id_t id, float* fa, float* fb) {
 }
 }  // namespace
 
-namespace mozart {
+namespace ui_input {
 
 constexpr zx::duration kKeyRepeatSlow = zx::msec(250);
 constexpr zx::duration kKeyRepeatFast = zx::msec(75);
@@ -231,7 +231,7 @@ void MouseState::Update(fuchsia::ui::input::InputReport input_report,
   buttons_ = input_report.mouse->pressed_buttons;
 
   // TODO(jpoichet) Update once we have an API to capture mouse.
-  // TODO(MZ-385): Quantize the mouse value to the range [0, display_width -
+  // TODO(SCN-385): Quantize the mouse value to the range [0, display_width -
   // mouse_resolution]
   position_.x =
       std::max(0.0f, std::min(position_.x + input_report.mouse->rel_x,
@@ -600,4 +600,4 @@ void DeviceState::Update(fuchsia::ui::input::InputReport input_report,
   }
 }
 
-}  // namespace mozart
+}  // namespace ui_input

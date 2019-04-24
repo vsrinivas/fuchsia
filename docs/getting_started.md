@@ -229,7 +229,7 @@ Note: to select tabs, you may need to enter "console mode". See the next section
 
 QEMU does not support Vulkan and therefore cannot run our graphics stack.
 
-Most graphical components in Fuchsia use the [Mozart](/garnet/bin/ui/) system
+Most graphical components in Fuchsia use the [Scenic](/garnet/bin/ui/) system
 compositor. You can launch such components, commonly found in `/system/apps`,
 like this:
 
@@ -237,9 +237,9 @@ like this:
 launch spinning_square_view
 ```
 
-Source code for Mozart example apps is [here](/garnet/examples/ui).
+Source code for Scenic example apps is [here](/garnet/examples/ui).
 
-When you launch something that uses Mozart, uses hardware-accelerated graphics, or if you build
+When you launch something that uses Scenic, uses hardware-accelerated graphics, or if you build
 the [default](https://fuchsia.googlesource.com/topaz/+/master/packages) package (which will
 boot into the Fuchsia System UI), Fuchsia will enter "graphics mode", which will not display any
 of the text shells. In order to use the text shell, you will need to enter "console mode" by

@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
-#include <array>
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "garnet/lib/ui/util/glm_workaround.h"  // Must come first!
+
 #include <glm/ext.hpp>
+#include <array>
+
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
 namespace root_presenter {
@@ -111,7 +113,7 @@ float PerspectiveDemoMode::ComputeHalfFov(Presentation* presenter,
   // half angle camera, at the appropriate distance.
   constexpr float kMinHalfFov = .1f * kPi / 180.f;
 
-  // TODO(MZ-194): The maximum half fov is determined by the minimum camera
+  // TODO(SCN-194): The maximum half fov is determined by the minimum camera
   // distance. This distance matches the hard coded behavior from
   // escher::Camera::NewOrtho() and scenic::gfx::Layer::GetViewingVolume(). For
   // a 1600px height display, this works out to ~76 degrees.

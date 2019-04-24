@@ -3,19 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/sensor.h"
-#include "garnet/bin/ui/input_reader/tests/sensor_test_data.h"
 
 #include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <src/lib/fxl/time/time_point.h>
 
+#include "garnet/bin/ui/input_reader/tests/sensor_test_data.h"
+
 namespace input {
 
 namespace test {
 
 TEST(SensorTest, LightMeter) {
-  mozart::Sensor sensor;
+  ui_input::Sensor sensor;
   hid::DeviceDescriptor *hid_desc = nullptr;
 
   auto parse_res = hid::ParseReportDescriptor(
@@ -24,11 +25,11 @@ TEST(SensorTest, LightMeter) {
   ASSERT_NE(0UL, hid_desc->rep_count);
   ASSERT_NE(0UL, hid_desc->report[0].input_count);
 
-  mozart::Device::Descriptor descriptor = {};
+  ui_input::Device::Descriptor descriptor = {};
   auto success = sensor.ParseReportDescriptor(hid_desc->report[0], &descriptor);
   ASSERT_EQ(true, success);
 
-  ASSERT_EQ(mozart::Protocol::Sensor, descriptor.protocol);
+  ASSERT_EQ(ui_input::Protocol::Sensor, descriptor.protocol);
   ASSERT_EQ(true, descriptor.has_sensor);
   ASSERT_NE(nullptr, descriptor.sensor_descriptor);
   ASSERT_EQ(fuchsia::ui::input::SensorType::LIGHTMETER,
@@ -50,7 +51,7 @@ TEST(SensorTest, LightMeter) {
 }
 
 TEST(SensorTest, Accelerometer) {
-  mozart::Sensor sensor;
+  ui_input::Sensor sensor;
   hid::DeviceDescriptor *hid_desc = nullptr;
 
   auto parse_res = hid::ParseReportDescriptor(
@@ -59,11 +60,11 @@ TEST(SensorTest, Accelerometer) {
   ASSERT_NE(0UL, hid_desc->rep_count);
   ASSERT_NE(0UL, hid_desc->report[0].input_count);
 
-  mozart::Device::Descriptor descriptor = {};
+  ui_input::Device::Descriptor descriptor = {};
   auto success = sensor.ParseReportDescriptor(hid_desc->report[0], &descriptor);
   ASSERT_EQ(true, success);
 
-  ASSERT_EQ(mozart::Protocol::Sensor, descriptor.protocol);
+  ASSERT_EQ(ui_input::Protocol::Sensor, descriptor.protocol);
   ASSERT_EQ(true, descriptor.has_sensor);
   ASSERT_NE(nullptr, descriptor.sensor_descriptor);
   ASSERT_EQ(fuchsia::ui::input::SensorType::ACCELEROMETER,

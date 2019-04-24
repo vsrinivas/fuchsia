@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <set>
-
 #include <hid/boot.h>
 #include <hid/buttons.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
+
+#include <set>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/input_reader/tests/mock_device_watcher.h"
@@ -18,12 +18,12 @@
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
 
-namespace mozart {
+namespace ui_input {
 
 namespace {
 
-using MockInputDevice = mozart::test::MockInputDevice;
-using MockInputDeviceRegistry = mozart::test::MockInputDeviceRegistry;
+using MockInputDevice = ui_input::test::MockInputDevice;
+using MockInputDeviceRegistry = ui_input::test::MockInputDeviceRegistry;
 
 // This fixture sets up a |MockDeviceWatcher| so that tests can add mock
 // devices.
@@ -284,4 +284,4 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   EXPECT_EQ(0x1, last_report_.media_buttons->volume);
 }
 
-}  // namespace mozart
+}  // namespace ui_input

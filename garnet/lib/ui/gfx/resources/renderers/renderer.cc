@@ -144,7 +144,7 @@ std::vector<escher::Object> Renderer::Visitor::GenerateClipperDisplayList(
     if (node->IsKindOf<ShapeNode>()) {
       node->Accept(&clipper_visitor);
     } else {
-      // TODO(MZ-167): accept non-ShapeNode parts.  This might already work
+      // TODO(SCN-167): accept non-ShapeNode parts.  This might already work
       // (i.e. it might be as simple as saying
       // "part->Accept(&part_visitor)"), but this hasn't been tested.
       FXL_LOG(WARNING) << "Renderer::Visitor::VisitNode(): Clipping only "
@@ -183,7 +183,7 @@ void Renderer::Visitor::VisitAndMaybeClipNode(Node* r) {
   // also visible (i.e. have a non-null material) need to be drawn twice:
   // once as a clipper (with the material removed), and later as a clippee
   // (with the material intact).
-  // TODO(MZ-176): are there some constraints that we can put on allowable
+  // TODO(SCN-176): are there some constraints that we can put on allowable
   // elevations that would allow us to relax the draw-order constraint,
   // and thereby not render the objects twice?
   for (auto& obj : clippers) {

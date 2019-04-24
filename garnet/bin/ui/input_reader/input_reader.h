@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_
 #define GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_
 
-#include <map>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+
+#include <map>
 
 #include "garnet/bin/ui/input_reader/device_watcher.h"
 #include "src/lib/fxl/macros.h"
 
-namespace mozart {
+namespace ui_input {
 
 class InputInterpreter;
 
@@ -66,6 +66,6 @@ class InputReader {
   FXL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_

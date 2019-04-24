@@ -5,12 +5,12 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_DEVICE_H_
 #define GARNET_BIN_UI_INPUT_READER_DEVICE_H_
 
-#include "garnet/bin/ui/input_reader/protocols.h"
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
 
-namespace mozart {
+#include "garnet/bin/ui/input_reader/protocols.h"
+
+namespace ui_input {
 
 // This class represents a single HID input device. The purpose of a Device
 // is to parse raw report bytes into an InputReport form. The report bytes
@@ -61,6 +61,6 @@ class Device {
   virtual uint8_t ReportId() const = 0;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_DEVICE_H_

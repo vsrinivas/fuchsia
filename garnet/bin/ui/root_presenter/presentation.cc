@@ -4,13 +4,13 @@
 
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
-#include <cmath>
-#include <utility>
-
 #include <lib/component/cpp/connect.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
+#include <cmath>
+#include <utility>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
@@ -413,36 +413,36 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   return true;
 }
 
-void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
+void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
 
-  std::unique_ptr<mozart::DeviceState> state;
+  std::unique_ptr<ui_input::DeviceState> state;
   if (input_device->descriptor()->sensor) {
-    mozart::OnSensorEventCallback callback =
+    ui_input::OnSensorEventCallback callback =
         [this](uint32_t device_id, fuchsia::ui::input::InputReport event) {
           OnSensorEvent(device_id, std::move(event));
         };
-    state = std::make_unique<mozart::DeviceState>(
+    state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   } else if (input_device->descriptor()->media_buttons) {
-    mozart::OnMediaButtonsEventCallback callback =
+    ui_input::OnMediaButtonsEventCallback callback =
         [this](fuchsia::ui::input::InputReport report) {
           OnMediaButtonsEvent(std::move(report));
         };
-    state = std::make_unique<mozart::DeviceState>(
+    state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   } else {
-    mozart::OnEventCallback callback =
+    ui_input::OnEventCallback callback =
         [this](fuchsia::ui::input::InputEvent event) {
           OnEvent(std::move(event));
         };
-    state = std::make_unique<mozart::DeviceState>(
+    state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   }
 
-  mozart::DeviceState* state_ptr = state.get();
+  ui_input::DeviceState* state_ptr = state.get();
   auto device_pair = std::make_pair(input_device, std::move(state));
   state_ptr->OnRegistered();
   device_states_by_id_.emplace(input_device->id(), std::move(device_pair));
@@ -480,7 +480,7 @@ void Presentation::OnReport(uint32_t device_id,
   if (!display_model_initialized_)
     return;
 
-  mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
+  ui_input::DeviceState* state = device_states_by_id_[device_id].second.get();
   fuchsia::math::Size size;
   size.width = display_model_actual_.display_info().width_in_px;
   size.height = display_model_actual_.display_info().height_in_px;

@@ -4,8 +4,6 @@
 
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 
-#include <unistd.h>
-
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <hid/acer12.h>
@@ -17,6 +15,7 @@
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+#include <unistd.h>
 #include <zircon/status.h>
 
 namespace {
@@ -33,7 +32,7 @@ bool log_err(zx_status_t status, const std::string& what,
 
 }  // namespace
 
-namespace mozart {
+namespace ui_input {
 
 FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
     : caller_(std::move(fd)), name_(name) {}
@@ -171,4 +170,4 @@ zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
   return ZX_OK;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

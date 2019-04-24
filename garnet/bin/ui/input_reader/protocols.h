@@ -7,7 +7,7 @@
 
 #include <zircon/types.h>
 
-namespace mozart {
+namespace ui_input {
 enum class Protocol : uint32_t {
   Other,
   Keyboard,
@@ -63,6 +63,6 @@ enum class SensorDeviceType {
   PARADISE,
   AMBIENT_LIGHT,
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_PROTOCOLS_H_

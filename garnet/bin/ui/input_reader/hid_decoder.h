@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_
 #define GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_
 
+#include <lib/zx/event.h>
+
 #include <string>
 #include <vector>
-
-#include <lib/zx/event.h>
 
 #include "garnet/bin/ui/input_reader/mouse.h"
 #include "garnet/bin/ui/input_reader/touch.h"
 
-namespace mozart {
+namespace ui_input {
 
 // This interface wraps the file descriptor associated with a HID input
 // device and presents a simpler Read() interface. This is a transitional
@@ -71,6 +71,6 @@ class HidDecoder {
                            const std::vector<uint8_t>& report) = 0;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_HID_DECODER_H_

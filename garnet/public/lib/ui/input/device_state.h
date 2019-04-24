@@ -5,21 +5,20 @@
 #ifndef LIB_UI_INPUT_DEVICE_STATE_H_
 #define LIB_UI_INPUT_DEVICE_STATE_H_
 
+#include <fuchsia/math/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 
 #include <vector>
 
-#include <fuchsia/math/cpp/fidl.h>
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/fit/function.h>
-
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace mozart {
+namespace ui_input {
 
 using OnEventCallback =
     fit::function<void(fuchsia::ui::input::InputEvent event)>;
@@ -192,6 +191,6 @@ class DeviceState {
   MediaButtonState media_buttons_;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // LIB_UI_INPUT_DEVICE_STATE_H_

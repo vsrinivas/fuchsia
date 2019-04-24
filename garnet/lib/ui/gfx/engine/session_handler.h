@@ -19,8 +19,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-class SceneManagerImpl;
-
 // Implements the Session FIDL interface.  For now, does nothing but buffer
 // operations from Enqueue() before passing them all to |session_| when
 // Commit() is called.  Eventually, this class may do more work if performance

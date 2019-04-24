@@ -34,7 +34,7 @@ void ShadertoyStateForImagePipe::ClearFramebuffers() {
     fb.acquire_fence.reset();
     fb.release_fence.reset();
     if (fb.image_pipe_id) {
-      // TODO(MZ-242): The docs in image_pipe.fidl says that all release fences
+      // TODO(SCN-242): The docs in image_pipe.fidl says that all release fences
       // must "be signaled before freeing or modifying the underlying memory
       // object".  However, it seems convenient to allow clients to free the
       // object immediately; this shouldn't be a problem because the
@@ -135,13 +135,13 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   Renderer::Params params;
   params.iResolution = glm::vec3(width(), height(), 1);
   params.iTime = animation_time;
-  // TODO(MZ-241):  params.iTimeDelta = ??;
-  // TODO(MZ-241): params.iFrame = 0;
-  // TODO(MZ-241): params.iChannelTime = ??;
-  // TODO(MZ-241): params.iChannelResolution = ??;
+  // TODO(SCN-241):  params.iTimeDelta = ??;
+  // TODO(SCN-241): params.iFrame = 0;
+  // TODO(SCN-241): params.iChannelTime = ??;
+  // TODO(SCN-241): params.iChannelResolution = ??;
   params.iMouse = i_mouse();
-  // TODO(MZ-241): params.iDate = ??;
-  // TODO(MZ-241): params.iSampleRate = ??;
+  // TODO(SCN-241): params.iDate = ??;
+  // TODO(SCN-241): params.iSampleRate = ??;
 
   renderer()->DrawFrame(fb.framebuffer, pipeline(), params, channel0(),
                         channel1(), channel2(), channel3(),

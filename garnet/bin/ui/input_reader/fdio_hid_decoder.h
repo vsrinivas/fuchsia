@@ -5,12 +5,12 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_FDIO_HID_DECODER_H_
 #define GARNET_BIN_UI_INPUT_READER_FDIO_HID_DECODER_H_
 
-#include <string>
-#include <vector>
-
 #include <fbl/unique_fd.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fzl/fdio.h>
+
+#include <string>
+#include <vector>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/mouse.h"
@@ -24,7 +24,7 @@ namespace hid {
 struct ReportField;
 }
 
-namespace mozart {
+namespace ui_input {
 
 // This is the "real" FDIO implementation of |HidDecoder|.
 // FdioHidDecoder takes ownership of an fd that represents a single Hid device.
@@ -65,6 +65,6 @@ class FdioHidDecoder : public HidDecoder {
   uint32_t reports_read_ = 0;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_FDIO_HID_DECODER_H_

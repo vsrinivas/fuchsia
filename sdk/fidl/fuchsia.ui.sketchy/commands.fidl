@@ -65,6 +65,7 @@ struct CreateResourceCmd {
 // stroke is added to a stroke-group, the group will keep the it alive even
 // after the client releases the stroke.
 //
+
 // TODO: edge cases.  What about releasing a stroke that is currently being
 // drawn by Begin/Extend/FinishStrokeCmd?
 struct ReleaseResourceCmd {
@@ -106,7 +107,7 @@ struct ExtendStrokeCmd {
     // trajectory of the stroke.  Sketchy uses these to improve perceived latency
     // while the stroke is being drawn, but they have no impact on the finished
     // stroke.
-    // TODO: this may change to reflect however Mozart exposes predicted events.
+    // TODO: this may change to reflect however Scenic exposes predicted events.
     vector<Touch> predicted_touches;
 };
 

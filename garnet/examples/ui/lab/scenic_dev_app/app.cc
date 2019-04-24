@@ -3,23 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/lab/scenic_dev_app/app.h"
-#include "garnet/lib/ui/util/glm_workaround.h"
-
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include "garnet/lib/ui/util/glm_workaround.h"  // Must come first!
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <lib/component/cpp/connect.h>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/host_memory.h>
+#include <src/lib/fxl/logging.h>
 #include <string>
 
-#include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
-
-#include "src/lib/fxl/logging.h"
-
-#include "lib/ui/scenic/cpp/commands.h"
-#include "lib/ui/scenic/cpp/host_memory.h"
 
 using namespace scenic;
 
@@ -56,7 +53,6 @@ App::App(async::Loop* loop, const fxl::CommandLine& command_line)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop),
       shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
-  // Connect to the SceneManager service.
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {

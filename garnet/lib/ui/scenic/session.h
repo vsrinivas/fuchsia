@@ -5,12 +5,12 @@
 #ifndef GARNET_LIB_UI_SCENIC_SESSION_H_
 #define GARNET_LIB_UI_SCENIC_SESSION_H_
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include <array>
 #include <memory>
 #include <string>
-
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <lib/fit/function.h>
 
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/forward_declarations.h"
@@ -50,13 +50,13 @@ class Session final : public fuchsia::ui::scenic::Session,
                PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
-  // TODO(MZ-422): Remove this after it's removed from session.fidl.
+  // TODO(SCN-422): Remove this after it's removed from session.fidl.
   void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                ::fuchsia::ui::gfx::vec3 ray_direction,
                HitTestCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
-  // TODO(MZ-422): Remove this after it's removed from session.fidl.
+  // TODO(SCN-422): Remove this after it's removed from session.fidl.
   void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
                         ::fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestCallback callback) override;

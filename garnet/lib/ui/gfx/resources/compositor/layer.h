@@ -10,7 +10,6 @@
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/scene/viewing_volume.h"
 
@@ -25,7 +24,7 @@ using LayerPtr = fxl::RefPtr<Layer>;
 using RendererPtr = fxl::RefPtr<Renderer>;
 
 // A Layer can appear in a LayerStack, and be displayed by a Compositor.
-// TODO(MZ-249): Layers can currently only use a rendered scene as content, but
+// TODO(SCN-249): Layers can currently only use a rendered scene as content, but
 // should also be able to directly use an Image/ImagePipe.
 class Layer : public Resource {
  public:
@@ -62,7 +61,7 @@ class Layer : public Resource {
   uint32_t width() const { return static_cast<uint32_t>(size_.x); }
   uint32_t height() const { return static_cast<uint32_t>(size_.y); }
 
-  // TODO(MZ-250): support detecting and/or setting layer opacity.
+  // TODO(SCN-250): support detecting and/or setting layer opacity.
   bool opaque() const { return false; }
 
   // Performs a hit test into the scene of renderer, along the provided ray in

@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/ui/input_reader/stylus.h"
+
+#include <fuchsia/ui/input/cpp/fidl.h>
+#include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/paradise.h>
-
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <src/lib/fxl/time/time_point.h>
-
-#include "garnet/bin/ui/input_reader/stylus.h"
 
 namespace input {
 
@@ -64,8 +63,8 @@ TEST(StylusTest, Paradise) {
   auto desc = get_stylus_descriptor(dev_desc);
   ASSERT_NE(nullptr, desc);
 
-  mozart::Stylus stylus = {};
-  mozart::Device::Descriptor device_descriptor = {};
+  ui_input::Stylus stylus = {};
+  ui_input::Device::Descriptor device_descriptor = {};
   bool success = stylus.ParseReportDescriptor(*desc, &device_descriptor);
   ASSERT_TRUE(success);
   ASSERT_TRUE(device_descriptor.has_stylus);
@@ -116,8 +115,8 @@ TEST(StylusTest, Acer12) {
   auto desc = get_stylus_descriptor(dev_desc);
   ASSERT_NE(nullptr, desc);
 
-  mozart::Stylus stylus = {};
-  mozart::Device::Descriptor device_descriptor = {};
+  ui_input::Stylus stylus = {};
+  ui_input::Device::Descriptor device_descriptor = {};
   bool success = stylus.ParseReportDescriptor(*desc, &device_descriptor);
   ASSERT_TRUE(success);
   ASSERT_TRUE(device_descriptor.has_stylus);

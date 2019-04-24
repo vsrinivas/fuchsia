@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/ui/gfx/util/image_formats.h"
+
 #include "garnet/lib/ui/yuv/yuv.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/images/cpp/images.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -14,7 +15,7 @@ namespace image_formats {
 namespace {
 
 // Takes 4 bytes of YUY2 and writes 8 bytes of RGBA
-// TODO(MZ-547): do this better with a lookup table
+// TODO(SCN-547): do this better with a lookup table
 void Yuy2ToBgra(uint8_t* yuy2, uint8_t* bgra1, uint8_t* bgra2) {
   uint8_t y1 = yuy2[0];
   uint8_t u = yuy2[1];
@@ -77,8 +78,8 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
 
   // Convert 2 lines at a time, to avoid reading UV data twice.  I don't know if
   // avoiding reading UV twice really matters much since we're not skipping
-  // caches (such as with non-temporal reads), and I wouldn't be surprised if the
-  // bottleneck is often compute rather than memory.
+  // caches (such as with non-temporal reads), and I wouldn't be surprised if
+  // the bottleneck is often compute rather than memory.
   //
   // Writing two lines at a time might turn out to be counterproductive,
   // possibly depending on CPU write buffering details.
@@ -175,7 +176,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
         };
       }
       break;
-    // TODO(MZ-551): support vertical flipping
+    // TODO(SCN-551): support vertical flipping
     case fuchsia::images::PixelFormat::YUY2:
       if (image_info.transform == fuchsia::images::Transform::FLIP_HORIZONTAL) {
         return [](void* out, void* in, uint32_t width, uint32_t height) {

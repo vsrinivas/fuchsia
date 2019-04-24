@@ -4,10 +4,6 @@
 
 #include "garnet/examples/ui/lab/direct_input/app.h"
 
-#include <limits>
-#include <string>
-#include <utility>
-
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fit/function.h>
@@ -17,6 +13,10 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
+
+#include <limits>
+#include <string>
+#include <utility>
 
 namespace direct_input {
 
@@ -466,26 +466,26 @@ void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
 
   FXL_VLOG(2) << "DirectInput - RegisterDevice: " << device_id << " "
               << descriptor;
-  std::unique_ptr<mozart::InputDeviceImpl> input_device =
-      std::make_unique<mozart::InputDeviceImpl>(
+  std::unique_ptr<ui_input::InputDeviceImpl> input_device =
+      std::make_unique<ui_input::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
           this);
 
-  std::unique_ptr<mozart::DeviceState> state;
+  std::unique_ptr<ui_input::DeviceState> state;
   if (input_device->descriptor()->sensor) {
-    mozart::OnSensorEventCallback callback =
+    ui_input::OnSensorEventCallback callback =
         [this](uint32_t device_id, fuchsia::ui::input::InputReport event) {
           OnDeviceSensorEvent(device_id, std::move(event));
         };
-    state = std::make_unique<mozart::DeviceState>(
+    state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   } else {
     uint32_t compositor_id = compositor_->id();  // Input destination.
-    mozart::OnEventCallback callback =
+    ui_input::OnEventCallback callback =
         [this, compositor_id](fuchsia::ui::input::InputEvent event) {
           OnDeviceInputEvent(compositor_id, std::move(event));
         };
-    state = std::make_unique<mozart::DeviceState>(
+    state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   }
 
@@ -494,7 +494,7 @@ void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
   device_state_by_id_.emplace(device_id, std::move(state));
 }
 
-void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   const uint32_t device_id = input_device->id();
 
   if (device_by_id_.count(device_id) == 0)
@@ -507,7 +507,7 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
   device_by_id_.erase(device_id);
 }
 
-void App::OnReport(mozart::InputDeviceImpl* input_device,
+void App::OnReport(ui_input::InputDeviceImpl* input_device,
                    fuchsia::ui::input::InputReport report) {
   const uint32_t device_id = input_device->id();
 
@@ -516,7 +516,7 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
 
   FXL_VLOG(3) << "DirectInput - OnReport: " << device_id << " " << report;
 
-  mozart::DeviceState* state = device_state_by_id_[device_id].get();
+  ui_input::DeviceState* state = device_state_by_id_[device_id].get();
   fuchsia::math::Size size;
   size.width = width_in_px_;
   size.height = height_in_px_;

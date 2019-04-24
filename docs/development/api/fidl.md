@@ -132,7 +132,7 @@ with our current set of target languages and with potential future target
 languages.
 
 Prefer functional names (e.g., `fuchsia.media`) over product or code names
-(e.g., `fuchsia.amber` or `fuchsia.mozart`).  Product names are appropriate
+(e.g., `fuchsia.amber` or `fuchsia.scenic`).  Product names are appropriate
 when the product has some external existence beyond Fuchsia and when the
 protocol is specific to that product.  For example, `fuchsia.cobalt` is a
 better name for the Cobalt interface protocol than `fuchsia.metrics` because

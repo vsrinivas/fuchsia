@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 #include "lib/fsl/io/device_watcher.h"
 
-namespace mozart {
+namespace ui_input {
 
 FdioDeviceWatcher::FdioDeviceWatcher(std::string directory_path)
     : directory_path_(std::move(directory_path)) {}
@@ -30,4 +30,4 @@ void FdioDeviceWatcher::Watch(ExistsCallback callback) {
       });
 }
 
-}  // namespace mozart
+}  // namespace ui_input

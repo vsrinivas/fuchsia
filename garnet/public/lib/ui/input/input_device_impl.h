@@ -6,9 +6,10 @@
 #define LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding.h"
 
-namespace mozart {
+namespace ui_input {
 
 class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
  public:
@@ -38,6 +39,6 @@ class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
   Listener* listener_;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_

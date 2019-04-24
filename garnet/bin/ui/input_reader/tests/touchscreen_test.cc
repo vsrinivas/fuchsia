@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
-
-#include <gtest/gtest.h>
 #include <src/lib/fxl/time/time_point.h>
 
 #include "garnet/bin/ui/input_reader/tests/touchscreen_test_data.h"
@@ -17,7 +16,8 @@ namespace input {
 
 namespace {
 
-void ParseTouchscreen(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
+void ParseTouchscreen(const uint8_t *desc, size_t desc_len,
+                      ui_input::Touch *ts) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(desc, desc_len, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
@@ -48,19 +48,19 @@ void ParseTouchscreen(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
 namespace test {
 
 TEST(TouchscreenTest, Gechic1101) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   ParseTouchscreen(gechic1101_hid_descriptor, sizeof(gechic1101_hid_descriptor),
                    &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(10UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(2563000, ts_desc.x_max);
@@ -84,7 +84,7 @@ TEST(TouchscreenTest, Gechic1101) {
       0x01, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Constant Value
   };
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
@@ -99,20 +99,20 @@ TEST(TouchscreenTest, Gechic1101) {
 }
 
 TEST(TouchscreenTest, CoolTouch) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   ParseTouchscreen(cooltouch_10x_hid_descriptor,
                    sizeof(cooltouch_10x_hid_descriptor), &ts);
 
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(2771000, ts_desc.x_max);
@@ -130,7 +130,7 @@ TEST(TouchscreenTest, CoolTouch) {
       0x01,                          // Contact Count
   };
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
@@ -145,20 +145,20 @@ TEST(TouchscreenTest, CoolTouch) {
 }
 
 TEST(TouchscreenTest, WaveShare) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   ParseTouchscreen(waveshare_hid_descriptor, sizeof(waveshare_hid_descriptor),
                    &ts);
 
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(1UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(655350000, ts_desc.x_max);
@@ -176,7 +176,7 @@ TEST(TouchscreenTest, WaveShare) {
       0x01,        // Contact Count
   };
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
@@ -191,20 +191,20 @@ TEST(TouchscreenTest, WaveShare) {
 }
 
 TEST(TouchscreenTest, Gechic1303) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   ParseTouchscreen(gechic_1303_hid_descriptor,
                    sizeof(gechic_1303_hid_descriptor), &ts);
 
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(10UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(5090000, ts_desc.x_max);
@@ -227,7 +227,7 @@ TEST(TouchscreenTest, Gechic1303) {
       0x01,                          // Contact Count
   };
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
@@ -243,22 +243,22 @@ TEST(TouchscreenTest, Gechic1303) {
 }
 
 TEST(TouchscreenTest, ParadiseV1) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touch_v1_report_desc =
       get_paradise_touch_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v1_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(2592000, ts_desc.x_max);
@@ -277,7 +277,7 @@ TEST(TouchscreenTest, ParadiseV1) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v1_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(touch_v1_report), &report);
   EXPECT_EQ(true, success);
 
@@ -290,22 +290,22 @@ TEST(TouchscreenTest, ParadiseV1) {
 }
 
 TEST(TouchscreenTest, ParadiseV2) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touch_v2_report_desc =
       get_paradise_touch_v2_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v2_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(2592000, ts_desc.x_max);
@@ -324,7 +324,7 @@ TEST(TouchscreenTest, ParadiseV2) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v2_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(touch_v2_report), &report);
   EXPECT_EQ(true, success);
 
@@ -337,22 +337,22 @@ TEST(TouchscreenTest, ParadiseV2) {
 }
 
 TEST(TouchscreenTest, ParadiseV3) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touch_v3_report_desc =
       get_paradise_touch_v3_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v3_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::SCAN_TIME,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(2593000, ts_desc.x_max);
@@ -372,7 +372,7 @@ TEST(TouchscreenTest, ParadiseV3) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v3_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(touch_v3_report), &report);
   EXPECT_EQ(true, success);
 
@@ -385,20 +385,20 @@ TEST(TouchscreenTest, ParadiseV3) {
 }
 
 TEST(TouchscreenTest, Ft3x27) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   const uint8_t *ft3x27_report_desc;
   size_t desc_size = get_ft3x27_report_desc(&ft3x27_report_desc);
 
   ParseTouchscreen(ft3x27_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X |
-                mozart::Touch::Capabilities::Y |
-                mozart::Touch::Capabilities::CONTACT_COUNT,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y |
+                ui_input::Touch::Capabilities::CONTACT_COUNT,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(600, ts_desc.x_max);
@@ -415,7 +415,7 @@ TEST(TouchscreenTest, Ft3x27) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success = ts.ParseReport(report_data, sizeof(touch_report), &report);
   EXPECT_EQ(true, success);
 

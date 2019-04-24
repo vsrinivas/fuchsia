@@ -5,14 +5,14 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_TOUCHPAD_H_
 #define GARNET_BIN_UI_INPUT_READER_TOUCHPAD_H_
 
-#include "garnet/bin/ui/input_reader/device.h"
-#include "garnet/bin/ui/input_reader/touch.h"
+#include <hid-parser/parser.h>
 
 #include <cstddef>
 
-#include <hid-parser/parser.h>
+#include "garnet/bin/ui/input_reader/device.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
-namespace mozart {
+namespace ui_input {
 
 // This represents a HID touchpad device. It currently converts Touch
 // information into a Mouse InputReport.
@@ -47,6 +47,6 @@ class Touchpad : public Device {
   int32_t mouse_abs_x_ = -1;
   int32_t mouse_abs_y_ = -1;
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_TOUCHPAD_H_

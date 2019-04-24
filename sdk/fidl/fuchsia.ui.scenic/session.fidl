@@ -7,7 +7,7 @@ library fuchsia.ui.scenic;
 using fuchsia.images;
 using fuchsia.ui.gfx;
 
-// Client use Sessions to interact with a Mozart instance by enqueuing commands
+// Client use Sessions to interact with a Scenic instance by enqueuing commands
 // that create or modify resources.
 protocol Session {
     Enqueue(vector<Command> cmds);
@@ -61,19 +61,19 @@ protocol Session {
     //
     // SYNCHRONIZATION
     //
-    // |acquire_fences| are used by Mozart to wait until all of the session's
+    // |acquire_fences| are used by Scenic to wait until all of the session's
     // resources are ready to render (or to allow downstream components, such as
     // the Vulkan driver, to wait for these resources).
     //
     // For example, Fuchsia's Vulkan driver allows an zx::event to be obtained
-    // from a VkSemaphore.  This allows a Mozart client to submit a Vulkan command
+    // from a VkSemaphore.  This allows a Scenic client to submit a Vulkan command
     // buffer to generate images/meshes/etc., and instructing Vulkan to signal a
     // VkSemaphore when it is done.  By inserting the zx::event corresponding to
-    // this semaphore into |acquire_fences|, the client allows Mozart to submit work
+    // this semaphore into |acquire_fences|, the client allows Scenic to submit work
     // to the Vulkan driver without waiting on the CPU for the event to be
     // signalled.
     //
-    // |release_fences| is a list of events that will be signalled by Mozart when
+    // |release_fences| is a list of events that will be signalled by Scenic when
     // the updated session state has been fully committed: future frames will be
     // rendered using this state, and all frames generated using previous session
     // states have been fully-rendered and presented to the display.
@@ -91,7 +91,7 @@ protocol Session {
     //   6) call Present() with one acquire-fence (obtained from the VkSemaphore
     //      above) and one newly-created release-fence.
     //
-    // After the steps above, Mozart will use the committed session state to render
+    // After the steps above, Scenic will use the committed session state to render
     // frames whenever necessary.  When the client wants to display something
     // different than Image #1, it would do something similar to steps 4) to 6):
     //   7) set Node #5 to use Material #4.
@@ -103,7 +103,7 @@ protocol Session {
     // Finally, to continually draw new content, the client could repeat steps
     // 4) to 9), with one important difference: step 5) must wait on the event
     // signalled by step 9).  Otherwise, it might render into Image #1 while that
-    // image is still being used by Mozart to render a frame.  Similarly, step 8)
+    // image is still being used by Scenic to render a frame.  Similarly, step 8)
     // must wait on the event signalled by step 6).
     //
     // The scenario described above uses one acquire-fence and one release-fence,
@@ -117,7 +117,7 @@ protocol Session {
     // access to memory (and other external resources).  Any modification to
     // resources made via the Session API are automatically synchronized.
     //
-    // TODO(MZ-400): document invariants that apply to |presentation_info|.  Is it
+    // TODO(SCN-400): document invariants that apply to |presentation_info|.  Is it
     // strong enough to guarantee that receiving the response means that all
     // previously-enqueued Commands have been applied?  Or does it need to be stronger,
     // e.g. that all frames based on previous presentations are completely done,
@@ -127,7 +127,7 @@ protocol Session {
             vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
         -> (fuchsia.images.PresentationInfo presentation_info);
 
-    // TODO(MZ-422) Remove these methods from the FIDL; they should just be
+    // TODO(SCN-422) Remove these methods from the FIDL; they should just be
     // exposed to View Manager directly using a C++ interface.
     HitTest(uint32 node_id, fuchsia.ui.gfx.vec3 ray_origin, fuchsia.ui.gfx.vec3 ray_direction)
         -> (vector<fuchsia.ui.gfx.Hit>? hits);

@@ -50,8 +50,8 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
 }
 
 zx_time_t DefaultFrameScheduler::PredictRequiredFrameRenderTime() const {
-  // TODO(MZ-400): more sophisticated prediction.  This might require more info,
-  // e.g. about how many compositors will be rendering scenes, at what
+  // TODO(SCN-400): more sophisticated prediction.  This might require more
+  // info, e.g. about how many compositors will be rendering scenes, at what
   // resolutions, etc.
   constexpr zx_time_t kHardcodedPrediction = 8'000'000;  // 8ms
   return kHardcodedPrediction;
@@ -282,7 +282,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   }
 
   FXL_DCHECK(!outstanding_frames_.empty());
-  // TODO(MZ-400): how should we handle this case?  It is theoretically
+  // TODO(SCN-400): how should we handle this case?  It is theoretically
   // possible, but if if it happens then it means that the EventTimestamper is
   // receiving signals out-of-order and is therefore generating bogus data.
   FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
@@ -293,17 +293,17 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   } else {
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data.
-      // TODO(MZ-400): just pass the whole Frame to a listener.
-      zx_duration_t target_vs_actual =
-          timings.actual_presentation_time() - timings.target_presentation_time();
+      // TODO(SCN-400): just pass the whole Frame to a listener.
+      zx_duration_t target_vs_actual = timings.actual_presentation_time() -
+                                       timings.target_presentation_time();
 
       zx_time_t now = async_now(dispatcher_);
       FXL_DCHECK(now >= timings.actual_presentation_time());
       zx_duration_t elapsed_since_presentation =
           now - timings.actual_presentation_time();
 
-      TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
-                    timings.frame_number(), "presentation time",
+      TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS,
+                    "frame_number", timings.frame_number(), "presentation time",
                     timings.actual_presentation_time(), "target time missed by",
                     target_vs_actual, "elapsed time since presentation",
                     elapsed_since_presentation);

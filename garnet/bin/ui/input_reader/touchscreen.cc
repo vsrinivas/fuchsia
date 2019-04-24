@@ -8,14 +8,14 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
-
 #include <stdint.h>
 #include <stdio.h>
+
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
 
-namespace mozart {
+namespace ui_input {
 
 bool TouchScreen::ParseReportDescriptor(
     const hid::ReportDescriptor& report_descriptor,
@@ -72,4 +72,4 @@ bool TouchScreen::ParseReport(const uint8_t* data, size_t len,
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

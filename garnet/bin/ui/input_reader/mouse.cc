@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/mouse.h"
-#include "garnet/bin/ui/input_reader/device.h"
 
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
-
+#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <stdio.h>
+
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
+#include "garnet/bin/ui/input_reader/device.h"
 
-namespace mozart {
+namespace ui_input {
 
 bool Mouse::ParseReportDescriptor(
     const hid::ReportDescriptor& report_descriptor,
@@ -113,7 +113,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   Report mouse_report = {};
   if (len != report_size_) {
     FXL_LOG(INFO) << "Mouse HID Report is not correct size, (" << len
-                   << " != " << report_size_ << ")";
+                  << " != " << report_size_ << ")";
     return false;
   }
 
@@ -188,4 +188,4 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

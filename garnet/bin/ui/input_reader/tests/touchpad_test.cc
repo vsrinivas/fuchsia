@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/paradise.h>
-
-#include <gtest/gtest.h>
 #include <src/lib/fxl/time/time_point.h>
 
 #include "garnet/bin/ui/input_reader/touch.h"
@@ -15,7 +14,7 @@ namespace input {
 
 namespace {
 
-void ParseTouchpad(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
+void ParseTouchpad(const uint8_t *desc, size_t desc_len, ui_input::Touch *ts) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(desc, desc_len, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
@@ -46,21 +45,22 @@ void ParseTouchpad(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
 namespace test {
 
 TEST(TouchpadTest, ParadiseV1) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touchpad_v1_report_desc =
       get_paradise_touchpad_v1_report_desc(&desc_size);
 
   ParseTouchpad(paradise_touchpad_v1_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::BUTTON |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X | mozart::Touch::Capabilities::Y,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::BUTTON |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -82,7 +82,7 @@ TEST(TouchpadTest, ParadiseV1) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v1_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success =
       ts.ParseReport(report_data, sizeof(touchpad_v1_report), &report);
   EXPECT_EQ(true, success);
@@ -101,21 +101,22 @@ TEST(TouchpadTest, ParadiseV1) {
 }
 
 TEST(TouchpadTest, ParadiseV2) {
-  mozart::Touch ts;
+  ui_input::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touchpad_v2_report_desc =
       get_paradise_touchpad_v2_report_desc(&desc_size);
 
   ParseTouchpad(paradise_touchpad_v2_report_desc, desc_size, &ts);
-  mozart::Touch::Descriptor ts_desc;
+  ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
-                mozart::Touch::Capabilities::CONTACT_COUNT |
-                mozart::Touch::Capabilities::BUTTON |
-                mozart::Touch::Capabilities::TIP_SWITCH |
-                mozart::Touch::Capabilities::X | mozart::Touch::Capabilities::Y,
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
+                ui_input::Touch::Capabilities::CONTACT_COUNT |
+                ui_input::Touch::Capabilities::BUTTON |
+                ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X |
+                ui_input::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -137,7 +138,7 @@ TEST(TouchpadTest, ParadiseV2) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v2_report);
 
-  mozart::Touch::Report report;
+  ui_input::Touch::Report report;
   auto success =
       ts.ParseReport(report_data, sizeof(touchpad_v2_report), &report);
   EXPECT_EQ(true, success);

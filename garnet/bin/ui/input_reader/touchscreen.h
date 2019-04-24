@@ -5,14 +5,14 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_
 #define GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_
 
-#include "garnet/bin/ui/input_reader/device.h"
-#include "garnet/bin/ui/input_reader/touch.h"
+#include <hid-parser/parser.h>
 
 #include <cstddef>
 
-#include <hid-parser/parser.h>
+#include "garnet/bin/ui/input_reader/device.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
-namespace mozart {
+namespace ui_input {
 class TouchScreen : public Device {
  public:
   // |Device|
@@ -27,6 +27,6 @@ class TouchScreen : public Device {
  private:
   Touch touch_ = {};
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_

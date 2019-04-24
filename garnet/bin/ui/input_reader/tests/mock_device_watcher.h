@@ -8,7 +8,7 @@
 #include "garnet/bin/ui/input_reader/device_watcher.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace mozart {
+namespace ui_input {
 
 class MockDeviceWatcher : public DeviceWatcher {
  public:
@@ -26,6 +26,6 @@ class MockDeviceWatcher : public DeviceWatcher {
   fxl::WeakPtrFactory<MockDeviceWatcher> weak_ptr_factory_;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_TESTS_MOCK_DEVICE_WATCHER_H_

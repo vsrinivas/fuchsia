@@ -25,7 +25,7 @@ CanvasImpl::CanvasImpl(async::Loop* loop, scenic::Session* session,
 
 void CanvasImpl::Init(
     fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener> listener) {
-  // TODO(MZ-269): unimplemented.
+  // TODO(SCN-269): unimplemented.
   FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
@@ -41,13 +41,14 @@ void CanvasImpl::Present(uint64_t presentation_time, PresentCallback callback) {
   TRACE_DURATION("gfx", "CanvasImpl::Present");
   TRACE_FLOW_END("gfx", "PresentCanvas", canvas_present_count_);
   ++canvas_present_count_;
-  TRACE_FLOW_BEGIN("gfx", "RequestScenicPresent", request_scenic_present_count_);
+  TRACE_FLOW_BEGIN("gfx", "RequestScenicPresent",
+                   request_scenic_present_count_);
 
-  // TODO(MZ-269): Present() should behave the same way as Scenic. Specifically,
-  // Commands shouldn't be applied immediately. Instead a frame-request should
-  // be triggered and the Commands enqueue; when the corresponding frame is
-  // processed all Commands that are scheduled for the current frame's
-  // presentation time are applied.
+  // TODO(SCN-269): Present() should behave the same way as Scenic.
+  // Specifically, Commands shouldn't be applied immediately. Instead a
+  // frame-request should be triggered and the Commands enqueue; when the
+  // corresponding frame is processed all Commands that are scheduled for the
+  // current frame's presentation time are applied.
   for (auto it = commands_->begin(); it != commands_->end(); ++it) {
     if (!ApplyCommand(std::move(*it))) {
       loop_->Quit();

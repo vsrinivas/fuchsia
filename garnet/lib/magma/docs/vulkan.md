@@ -17,7 +17,7 @@ Vulkan Development
 
     a) The system compositor
 
-    See mozart documentation for details.
+    See Scenic documentation for details.
 
     b) Directly to the display
 

@@ -86,7 +86,7 @@ void Stroke::Extend(std::vector<glm::vec2> pts) const {
   extend_stroke.touches = std::move(touches);
   extend_stroke.predicted_touches.resize(0);
 
-  // TODO(MZ-269): Populate predicted touches.
+  // TODO(SCN-269): Populate predicted touches.
   ::fuchsia::ui::sketchy::Command command;
   command.set_extend_stroke(std::move(extend_stroke));
   EnqueueCmd(std::move(command));

@@ -6,11 +6,12 @@
 #define GARNET_BIN_UI_INPUT_READER_SENSOR_H_
 
 #include <hid-parser/parser.h>
+
 #include <cstddef>
 
 #include "garnet/bin/ui/input_reader/device.h"
 
-namespace mozart {
+namespace ui_input {
 
 class Sensor : public Device {
  public:
@@ -41,6 +42,6 @@ class Sensor : public Device {
   uint8_t report_id_ = 0;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_SENSOR_H_

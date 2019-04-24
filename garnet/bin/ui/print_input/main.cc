@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include <fuchsia/ui/input/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/device_state.h"
+#include "lib/ui/input/input_device_impl.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/device_state.h"
-#include "lib/ui/input/input_device_impl.h"
 
 namespace print_input {
 
 class App : public fuchsia::ui::input::InputDeviceRegistry,
-            public mozart::InputDeviceImpl::Listener {
+            public ui_input::InputDeviceImpl::Listener {
  public:
   App() : reader_(this, true) { reader_.Start(); }
   ~App() {}
 
-  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
     FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
 
     if (devices_.count(input_device->id()) != 0) {
@@ -32,7 +32,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
     }
   }
 
-  void OnReport(mozart::InputDeviceImpl* input_device,
+  void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) {
     FXL_VLOG(2) << "DispatchReport " << input_device->id() << " " << report;
     if (devices_.count(input_device->id()) == 0) {
@@ -44,7 +44,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
     size.width = 100.0;
     size.height = 100.0;
 
-    mozart::DeviceState* state = devices_[input_device->id()].second.get();
+    ui_input::DeviceState* state = devices_[input_device->id()].second.get();
 
     FXL_CHECK(state);
     state->Update(std::move(report), size);
@@ -60,19 +60,19 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
 
     FXL_CHECK(devices_.count(device_id) == 0);
 
-    std::unique_ptr<mozart::InputDeviceImpl> input_device =
-        std::make_unique<mozart::InputDeviceImpl>(
+    std::unique_ptr<ui_input::InputDeviceImpl> input_device =
+        std::make_unique<ui_input::InputDeviceImpl>(
             device_id, std::move(descriptor), std::move(input_device_request),
             this);
 
-    std::unique_ptr<mozart::DeviceState> state =
-        std::make_unique<mozart::DeviceState>(
+    std::unique_ptr<ui_input::DeviceState> state =
+        std::make_unique<ui_input::DeviceState>(
             input_device->id(), input_device->descriptor(),
-            mozart::OnEventCallback(
+            ui_input::OnEventCallback(
                 [this](fuchsia::ui::input::InputEvent event) {
                   OnEvent(std::move(event));
                 }));
-    mozart::DeviceState* state_ptr = state.get();
+    ui_input::DeviceState* state_ptr = state.get();
     auto device_pair =
         std::make_pair(std::move(input_device), std::move(state));
     devices_.emplace(device_id, std::move(device_pair));
@@ -82,10 +82,10 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   void OnEvent(fuchsia::ui::input::InputEvent event) { FXL_LOG(INFO) << event; }
 
   uint32_t next_device_token_ = 0;
-  mozart::InputReader reader_;
+  ui_input::InputReader reader_;
   std::unordered_map<uint32_t,
-                     std::pair<std::unique_ptr<mozart::InputDeviceImpl>,
-                               std::unique_ptr<mozart::DeviceState>>>
+                     std::pair<std::unique_ptr<ui_input::InputDeviceImpl>,
+                               std::unique_ptr<ui_input::DeviceState>>>
       devices_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

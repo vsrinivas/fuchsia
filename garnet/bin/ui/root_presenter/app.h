@@ -11,11 +11,12 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
+
 #include <limits>
 #include <memory>
 #include <vector>
@@ -33,14 +34,14 @@ namespace root_presenter {
 // and input routing is not fully supported (TODO).
 class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::input::InputDeviceRegistry,
-            public mozart::InputDeviceImpl::Listener {
+            public ui_input::InputDeviceImpl::Listener {
  public:
   explicit App(const fxl::CommandLine& command_line);
   ~App();
 
   // |InputDeviceImpl::Listener|
-  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) override;
-  void OnReport(mozart::InputDeviceImpl* input_device,
+  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
+  void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
@@ -74,7 +75,7 @@ class App : public fuchsia::ui::policy::Presenter,
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;
-  mozart::InputReader input_reader_;
+  ui_input::InputReader input_reader_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
@@ -97,7 +98,7 @@ class App : public fuchsia::ui::policy::Presenter,
   size_t active_presentation_idx_ = std::numeric_limits<size_t>::max();
 
   uint32_t next_device_token_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>>
       devices_by_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

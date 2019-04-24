@@ -5,14 +5,14 @@
 #ifndef GARNET_EXAMPLES_UI_LAB_DIRECT_INPUT_APP_H_
 #define GARNET_EXAMPLES_UI_LAB_DIRECT_INPUT_APP_H_
 
-#include <array>
-#include <memory>
-
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/eventpair.h>
+
+#include <array>
+#include <memory>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/component/cpp/startup_context.h"
@@ -30,7 +30,7 @@ namespace direct_input {
 //
 // The README.md file describes its operation.
 class App : public fuchsia::ui::input::InputDeviceRegistry,
-            public mozart::InputDeviceImpl::Listener {
+            public ui_input::InputDeviceImpl::Listener {
  public:
   App(async::Loop* loop);
   ~App();
@@ -40,11 +40,11 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
                       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
                           input_device) override;
 
-  // |mozart::InputDeviceImpl::Listener|
-  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) override;
+  // |ui_input::InputDeviceImpl::Listener|
+  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
 
-  // |mozart::InputDeviceImpl::Listener|
-  void OnReport(mozart::InputDeviceImpl* input_device,
+  // |ui_input::InputDeviceImpl::Listener|
+  void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
@@ -85,13 +85,13 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   async::Loop* const message_loop_;
 
   // Input fields
-  mozart::InputReader input_reader_;
+  ui_input::InputReader input_reader_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_device_registry_bindings_;
   uint32_t next_device_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>>
       device_by_id_;
-  std::unordered_map<uint32_t, std::unique_ptr<mozart::DeviceState>>
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::DeviceState>>
       device_state_by_id_;
 
   // DirectInput's Scene

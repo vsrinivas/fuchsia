@@ -1,4 +1,4 @@
-# Mozart
+# Fuchsia UI
 
 A collection of services and applications to support the graphical
 user interface.
@@ -8,12 +8,6 @@ user interface.
 Scenic's primary mission is to allow client apps to present graphical content on
 the screen.  This is achieved by providing controlled access to a shared scene
 graph.
-
-## View Manager
-
-A service which provides user interface capabilities to views (user
-interface components implemented by applications), mediates their
-interactions, and manages the state of the overall view hierarchy.
 
 ## Input Manager
 

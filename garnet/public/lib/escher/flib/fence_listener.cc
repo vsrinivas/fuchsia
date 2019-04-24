@@ -77,7 +77,7 @@ void FenceListener::OnFenceSignalled(zx_status_t status,
                       "error status code: "
                    << status;
 
-    // TODO(MZ-173): Close the session if there is an error, or if the fence
+    // TODO(SCN-173): Close the session if there is an error, or if the fence
     // is closed.
   }
 }

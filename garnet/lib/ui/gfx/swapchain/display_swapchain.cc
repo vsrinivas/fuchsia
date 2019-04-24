@@ -26,7 +26,7 @@ namespace {
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
-// TODO(MZ-400): Don't triple buffer.  This is done to avoid "tearing", but it
+// TODO(SCN-400): Don't triple buffer.  This is done to avoid "tearing", but it
 // wastes memory, and can result in the "permanent" addition of an extra Vsync
 // period of latency.  An alternative would be to use an acquire fence; this
 // saves memory, but can still result in the permanent extra latency.  Here's
@@ -441,7 +441,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   auto& frame_record = frames_[next_frame_index_] =
       NewFrameRecord(frame_timings);
 
-  // TODO(MZ-244): See below.  What to do if rendering fails?
+  // TODO(SCN-244): See below.  What to do if rendering fails?
   frame_record->render_finished_watch.Start();
 
   next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;

@@ -10,7 +10,7 @@
 
 namespace scenic_impl {
 
-// TODO(MZ-552): document.
+// TODO(SCN-552): document.
 class SketchySystem : public System {
  public:
   static constexpr TypeId kTypeId = kSketchy;
@@ -26,7 +26,7 @@ class SketchySystem : public System {
   gfx::GfxSystem* const gfx_system_;
 };
 
-// TODO(MZ-552): document.
+// TODO(SCN-552): document.
 class SketchyCommandDispatcher : public CommandDispatcher {
  public:
   SketchyCommandDispatcher(CommandDispatcherContext context,

@@ -67,7 +67,7 @@ class Stroke final : public Resource, public fxl::RefCountedThreadSafe<Stroke> {
   explicit Stroke(Canvas* canvas);
   void SetPath(const StrokePath& path) const;
   void Begin(glm::vec2 pt) const;
-  // TODO(MZ-269): Also pass in predicted points.
+  // TODO(SCN-269): Also pass in predicted points.
   void Extend(std::vector<glm::vec2> pts) const;
   void Finish() const;
 

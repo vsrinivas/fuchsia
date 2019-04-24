@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_SYSTEM_H_
 #define GARNET_LIB_UI_SCENIC_SYSTEM_H_
 
-// TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
+// TODO(SCN-453): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/inspect.h>
@@ -100,7 +100,7 @@ class System {
   FXL_DISALLOW_COPY_AND_ASSIGN(System);
 };
 
-// TODO(MZ-452): Remove when we get rid of Scenic.GetDisplayInfo().
+// TODO(SCN-452): Remove when we get rid of Scenic.GetDisplayInfo().
 class TempSystemDelegate : public System {
  public:
   explicit TempSystemDelegate(SystemContext context,

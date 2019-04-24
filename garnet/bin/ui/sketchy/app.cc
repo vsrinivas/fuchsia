@@ -21,7 +21,7 @@ App::App(async::Loop* loop, escher::EscherWeakPtr weak_escher)
     loop_->Quit();
   });
   scenic_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Sketchy service lost connection to Mozart.";
+    FXL_LOG(INFO) << "Sketchy service lost connection to Scenic.";
     loop_->Quit();
   });
 }

@@ -27,7 +27,7 @@ class StrokeManager {
   // efficient rendering, client should keep the growing stroke in a temporary
   // group, and move them to a stable group once done.
   bool BeginStroke(StrokePtr stroke, glm::vec2 pt);
-  // TODO(MZ-269): Also pass in predicted points.
+  // TODO(SCN-269): Also pass in predicted points.
   bool ExtendStroke(StrokePtr stroke, std::vector<glm::vec2> sampled_pts);
   bool FinishStroke(StrokePtr stroke);
 
@@ -40,7 +40,7 @@ class StrokeManager {
  private:
   std::map<StrokePtr, StrokeGroupPtr> stroke_to_group_map_;
   std::set<StrokeGroupPtr> dirty_stroke_groups_;
-  // TODO(MZ-269): Only have a tessellator per app.
+  // TODO(SCN-269): Only have a tessellator per app.
   StrokeTessellator stroke_tessellator_;
 };
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
+
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/gfx/tests/session_handler_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
@@ -474,7 +475,7 @@ TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   EXPECT_ERROR_COUNT(0);
 }
 
-// TODO(MZ-151): More tests.
+// TODO(SCN-151): More tests.
 // - Test that you can't add the same image twice.
 // - Test that you can't present an image that doesn't exist.
 // - Test what happens when an acquire fence is closed on the client end.

@@ -11,7 +11,7 @@
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace mozart {
+namespace ui_input {
 
 // Mocks HidDecoder and allows sending arbitrary ReportDescriptors and Reports
 // through |SendReportDescriptor| and |Send|.
@@ -82,6 +82,6 @@ class MockHidDecoder : public HidDecoder {
   fxl::WeakPtrFactory<MockHidDecoder> weak_ptr_factory_;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_TESTS_MOCK_HID_DECODER_H_

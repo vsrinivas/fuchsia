@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/stylus.h"
-#include "garnet/bin/ui/input_reader/device.h"
 
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
-
+#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <stdio.h>
+
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
+#include "garnet/bin/ui/input_reader/device.h"
 
-namespace mozart {
+namespace ui_input {
 
 bool Stylus::ParseReportDescriptor(
     const hid::ReportDescriptor& report_descriptor,
@@ -123,7 +123,7 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
 
   if (len != report_size_) {
     FXL_LOG(INFO) << "Stylus HID Report is not correct size, (" << len
-                   << " != " << report_size_ << ")";
+                  << " != " << report_size_ << ")";
     return false;
   }
 
@@ -208,4 +208,4 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

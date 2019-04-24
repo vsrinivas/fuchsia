@@ -3,11 +3,11 @@
   "fidl/fuchsia.ui.gfx/display_info.fidl": "487789dbc460e85bee1a1093b8e41c83",
   "fidl/fuchsia.ui.gfx/events.fidl": "0f5bdac88fd68d128a58b135581e3911",
   "fidl/fuchsia.ui.gfx/hit.fidl": "1325603f149baaa07e3d9c6b1bafcec7",
-  "fidl/fuchsia.ui.gfx/nodes.fidl": "87da3980758ae4aced5423a4655e0f73",
+  "fidl/fuchsia.ui.gfx/nodes.fidl": "d983262649e33110c2c024f63ee699e8",
   "fidl/fuchsia.ui.gfx/pose_buffer_provider.fidl": "4582584b23ff58d57767d85279634722",
   "fidl/fuchsia.ui.gfx/renderer.fidl": "ab707a12fa7bd2b3a8779412e6e26fde",
   "fidl/fuchsia.ui.gfx/resources.fidl": "01375ac2971c980340365b739f1ab37d",
   "fidl/fuchsia.ui.gfx/shapes.fidl": "e2d87bf731f70ca0052b6537c0a1b85e",
   "fidl/fuchsia.ui.gfx/tokens.fidl": "892a0d873970d904944afbb6fc2871b3",
-  "fidl/fuchsia.ui.gfx/types.fidl": "8d95d5e1c48e5994b85fd862bab58615"
+  "fidl/fuchsia.ui.gfx/types.fidl": "f8c29e282823d0448ccca62ae2670dc4"
 }

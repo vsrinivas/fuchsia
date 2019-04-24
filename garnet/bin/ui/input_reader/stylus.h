@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_STYLUS_H_
 #define GARNET_BIN_UI_INPUT_READER_STYLUS_H_
 
+#include <hid-parser/parser.h>
+
 #include <cstddef>
 
 #include "garnet/bin/ui/input_reader/device.h"
 
-#include <hid-parser/parser.h>
-
-namespace mozart {
+namespace ui_input {
 
 class Stylus : public Device {
  public:
@@ -49,6 +49,6 @@ class Stylus : public Device {
   size_t report_size_ = 0;
   uint8_t report_id_ = 0;
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_STYLUS_H_

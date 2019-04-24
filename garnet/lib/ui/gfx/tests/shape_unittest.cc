@@ -8,9 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "lib/ui/scenic/cpp/commands.h"
-
 #include "gtest/gtest.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -151,7 +150,7 @@ TEST_F(ShapeTest, Rectangle) {
       &distance));
 }
 
-// TODO(MZ-159): This test needs a rounded rect factory to run but it is
+// TODO(SCN-159): This test needs a rounded rect factory to run but it is
 // not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
   const ResourceId id = 1;

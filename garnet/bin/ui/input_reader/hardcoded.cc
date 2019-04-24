@@ -86,7 +86,7 @@ const size_t kAmbientLight = 2;
 
 }  // namespace
 
-namespace mozart {
+namespace ui_input {
 
 bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields,
                                        size_t count) {
@@ -1440,4 +1440,4 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
   }
 }
 
-}  // namespace mozart
+}  // namespace ui_input

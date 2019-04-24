@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 #define GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/acer12.h>
 #include <lib/zx/event.h>
 #include <zircon/types.h>
@@ -22,9 +23,7 @@
 #include "garnet/bin/ui/input_reader/touchpad.h"
 #include "garnet/bin/ui/input_reader/touchscreen.h"
 
-#include <fuchsia/ui/input/cpp/fidl.h>
-
-namespace mozart {
+namespace ui_input {
 
 // Each InputInterpreter instance observes and routes events coming in from one
 // file descriptor under /dev/class/input. Each file descriptor may multiplex
@@ -109,6 +108,6 @@ class InputInterpreter {
   Hardcoded hardcoded_ = {};
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_

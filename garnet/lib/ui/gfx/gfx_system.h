@@ -30,7 +30,7 @@ class GfxSystem : public TempSystemDelegate {
   CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
-  // TODO(MZ-452): Remove this when we externalize Displays.
+  // TODO(SCN-452): Remove this when we externalize Displays.
   void GetDisplayInfo(
       fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(
@@ -58,7 +58,7 @@ class GfxSystem : public TempSystemDelegate {
   fit::closure DelayedInitClosure();
   void Initialize();
 
-  // TODO(MZ-452): Remove this when we externalize Displays.
+  // TODO(SCN-452): Remove this when we externalize Displays.
   void GetDisplayInfoImmediately(
       fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback);
   void GetDisplayOwnershipEventImmediately(
@@ -82,7 +82,7 @@ class GfxSystem : public TempSystemDelegate {
                              int32_t messageCode, const char* pLayerPrefix,
                              const char* pMessage);
 
-  // TODO(MZ-452): Remove this when we externalize Displays.
+  // TODO(SCN-452): Remove this when we externalize Displays.
   bool initialized_ = false;
   std::vector<fit::closure> run_after_initialized_;
 

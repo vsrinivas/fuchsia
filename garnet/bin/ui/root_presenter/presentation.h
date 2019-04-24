@@ -64,7 +64,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   ~Presentation();
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
-  void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
+  void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
   // Used internally by Presenter. Allows overriding of renderer params.
@@ -221,8 +221,8 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   };
 
   std::map<uint32_t, CursorState> cursors_;
-  std::map<uint32_t, std::pair<mozart::InputDeviceImpl*,
-                               std::unique_ptr<mozart::DeviceState>>>
+  std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*,
+                               std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
 
   // A registry of listeners who want to be notified when their keyboard

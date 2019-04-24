@@ -6,12 +6,13 @@
 #define GARNET_BIN_UI_INPUT_READER_BUTTONS_H_
 
 #include <hid-parser/parser.h>
+
 #include <cstddef>
 
 #include "garnet/bin/ui/input_reader/device.h"
 #include "garnet/bin/ui/input_reader/touch.h"
 
-namespace mozart {
+namespace ui_input {
 class Buttons : public Device {
  public:
   // |Device|
@@ -36,6 +37,6 @@ class Buttons : public Device {
   size_t report_size_ = 0;
   uint8_t report_id_ = 0;
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_BUTTONS_H_

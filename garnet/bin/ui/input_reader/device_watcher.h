@@ -7,7 +7,7 @@
 
 #include <lib/fit/function.h>
 
-namespace mozart {
+namespace ui_input {
 
 class HidDecoder;
 
@@ -25,5 +25,5 @@ class DeviceWatcher {
   virtual void Watch(ExistsCallback callback) = 0;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 #endif  // GARNET_BIN_UI_INPUT_READER_DEVICE_WATCHER_H_

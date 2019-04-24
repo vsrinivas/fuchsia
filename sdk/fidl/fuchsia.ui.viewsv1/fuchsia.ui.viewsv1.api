@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.ui.viewsv1/view_containers.fidl": "4a2e93e648c4b34144a8c56dce10a3ab",
-  "fidl/fuchsia.ui.viewsv1/view_manager.fidl": "429a5b08d8559ee83773498c8f555928",
+  "fidl/fuchsia.ui.viewsv1/view_manager.fidl": "29c663bfc2a6d899dd689294df131432",
   "fidl/fuchsia.ui.viewsv1/view_properties.fidl": "1d7ab5621bf135075279113cad3feba9",
   "fidl/fuchsia.ui.viewsv1/view_provider.fidl": "8d4832f34b877218b368cba39a644c2b",
   "fidl/fuchsia.ui.viewsv1/view_snapshot.fidl": "8fb458e6a6722abb66f37cfda174f8e7",

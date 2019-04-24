@@ -5,17 +5,17 @@
 #ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
 #define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
 
-#include <memory>
-#include <unordered_map>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/ui/tests/mocks/mock_input_device.h"
+#include <memory>
+#include <unordered_map>
 
-namespace mozart {
+#include "lib/component/cpp/startup_context.h"
+#include "lib/ui/tests/mocks/mock_input_device.h"
+#include "src/lib/fxl/macros.h"
+
+namespace ui_input {
 namespace test {
 
 using OnDeviceCallback = fit::function<void(MockInputDevice*)>;
@@ -42,6 +42,6 @@ class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
 };
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_

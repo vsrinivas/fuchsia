@@ -13,7 +13,7 @@ namespace fsl {
 class DeviceWatcher;
 }
 
-namespace mozart {
+namespace ui_input {
 
 // This is the "real" FDIO implementation of |DeviceWatcher|, which uses
 // |fsl::DeviceWatcher|.
@@ -30,5 +30,5 @@ class FdioDeviceWatcher : public DeviceWatcher {
   std::unique_ptr<fsl::DeviceWatcher> watch_;
 };
 
-}  // namespace mozart
+}  // namespace ui_input
 #endif  // GARNET_BIN_UI_INPUT_READER_FDIO_DEVICE_WATCHER_H_

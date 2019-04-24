@@ -4,8 +4,8 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 namespace display_configuration {
@@ -56,31 +56,31 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
     }
   }
 
-  // TODO(MZ-16): Need to have a database of devices and a more robust way
+  // TODO(SCN-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
     FXL_LOG(INFO)
-        << "SceneManager: treating device as an Acer Switch 12 Alpha.";
+        << "RootPresenter: treating device as an Acer Switch 12 Alpha.";
     return 8.5f;
   } else if (width_in_px == 2400 && height_in_px == 1600) {
     // Assume that the device is a Google Pixelbook.
-    FXL_LOG(INFO) << "SceneManager: treating device as a Google Pixelbook.";
+    FXL_LOG(INFO) << "RootPresenter: treating device as a Google Pixelbook.";
     return 9.252f;
   } else if (width_in_px == 3840 && height_in_px == 2160) {
     // Assume the display is a 24in 4K monitor.
-    FXL_LOG(INFO) << "SceneManager: treating display as a 24in 4K monitor.";
+    FXL_LOG(INFO) << "RootPresenter: treating display as a 24in 4K monitor.";
     return 7.323761f;
   } else {
-    // TODO(MZ-384): Don't lie.
-    FXL_LOG(WARNING) << "SceneManager: unrecognized display.";
+    // TODO(SCN-384): Don't lie.
+    FXL_LOG(WARNING) << "RootPresenter: unrecognized display.";
     return 9.f;
   }
 }
 
 fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
     uint32_t width_in_px, uint32_t height_in_px) {
-  // TODO(MZ-16): Need to have a database of devices and a more robust way
+  // TODO(SCN-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   {
     std::string display_usage;
@@ -113,13 +113,13 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
     // Assume the display is a 24in 4K monitor.
     return fuchsia::ui::policy::DisplayUsage::kNear;
   } else {
-    // TODO(MZ-384): Don't lie.
+    // TODO(SCN-384): Don't lie.
     return fuchsia::ui::policy::DisplayUsage::kClose;
   }
 }
 
 void LogDisplayMetrics(const DisplayMetrics& metrics) {
-  FXL_DLOG(INFO) << "SceneManager: Display metrics: "
+  FXL_DLOG(INFO) << "RootPresenter: Display metrics: "
                  << "width_in_px=" << metrics.width_in_px()
                  << ", height_in_px=" << metrics.height_in_px()
                  << ", width_in_pp=" << metrics.width_in_pp()

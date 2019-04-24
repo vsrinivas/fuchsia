@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_TOUCH_H_
 #define GARNET_BIN_UI_INPUT_READER_TOUCH_H_
 
-#include <cstddef>
-
 #include <hid-parser/parser.h>
 
-namespace mozart {
+#include <cstddef>
+
+namespace ui_input {
 
 // This reprents a HID device that uses touch. It is a helper class that both
 // touchscreens and touchpads rely on.
@@ -100,6 +100,6 @@ class Touch {
   uint8_t report_id_;
   int32_t contact_id_max_;
 };
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // GARNET_BIN_UI_INPUT_READER_TOUCH_H_

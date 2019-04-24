@@ -4,7 +4,7 @@
 
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
 
-namespace mozart {
+namespace ui_input {
 namespace test {
 
 MockInputDeviceRegistry::MockInputDeviceRegistry(
@@ -33,4 +33,4 @@ void MockInputDeviceRegistry::RegisterDevice(
 }
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace ui_input

@@ -10,8 +10,8 @@
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/vk/buffer_factory.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace sketchy_service {
 
@@ -29,7 +29,7 @@ class SharedBufferPool final {
   // to |free_buffers_|.
   void ReturnBuffer(SharedBufferPtr buffer, zx::event release_fence);
 
-  // TODO(MZ-269): Implement CleanUp() to free up free_buffers_ a bit. It will
+  // TODO(SCN-269): Implement CleanUp() to free up free_buffers_ a bit. It will
   // be useful when we support removing strokes.
 
  private:

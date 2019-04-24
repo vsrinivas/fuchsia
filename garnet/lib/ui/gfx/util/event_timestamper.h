@@ -97,7 +97,7 @@ class EventTimestamper {
 
   // Posts this EventTimestamper as a task on the background thread; when the
   // task is run it will bump the thread priority.
-  // TODO(MZ-257): Avoid using a high-priority thread.  This would probably
+  // TODO(SCN-257): Avoid using a high-priority thread.  This would probably
   // entail not using a background thread at all, but instead relying on new
   // kernel functionality to add a timestamp to a port message and/or a signaled
   // event.  When addressing this, be sure to stop inheriting from async::Task.

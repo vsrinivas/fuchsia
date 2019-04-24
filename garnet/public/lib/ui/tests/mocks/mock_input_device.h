@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/macros.h"
 
-namespace mozart {
+namespace ui_input {
 namespace test {
 
 using OnReportCallback =
@@ -42,6 +42,6 @@ class MockInputDevice : public fuchsia::ui::input::InputDevice {
 };
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace ui_input
 
 #endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_

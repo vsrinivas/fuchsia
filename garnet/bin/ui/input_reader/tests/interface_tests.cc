@@ -6,10 +6,10 @@
 #include <hid/usages.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace input {
 namespace test {
@@ -35,8 +35,8 @@ TEST_F(InputInterfaceTest, RegisterKeyboardTest) {
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
-  mozart::test::MockInputDeviceRegistry registry(
-      [&on_register_count](mozart::test::MockInputDevice* input_device) {
+  ui_input::test::MockInputDeviceRegistry registry(
+      [&on_register_count](ui_input::test::MockInputDevice* input_device) {
         on_register_count++;
       },
       nullptr);
@@ -53,7 +53,7 @@ TEST_F(InputInterfaceTest, InputKeyboardTest) {
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;
-  mozart::test::MockInputDeviceRegistry registry(
+  ui_input::test::MockInputDeviceRegistry registry(
       nullptr, [&on_report_count](fuchsia::ui::input::InputReport report) {
         EXPECT_TRUE(report.keyboard);
         EXPECT_EQ(HID_USAGE_KEY_A, report.keyboard->pressed_keys.at(0));

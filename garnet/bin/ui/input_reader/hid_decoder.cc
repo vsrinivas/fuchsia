@@ -4,9 +4,9 @@
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
-namespace mozart {
+namespace ui_input {
 
 HidDecoder::HidDecoder() = default;
 HidDecoder::~HidDecoder() = default;
 
-}  // namespace mozart
+}  // namespace ui_input

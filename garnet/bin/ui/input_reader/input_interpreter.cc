@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "garnet/bin/ui/input_reader/device.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
@@ -20,6 +19,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "garnet/bin/ui/input_reader/device.h"
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
 
@@ -38,7 +38,7 @@ fuchsia::ui::input::InputReport CloneReport(
 
 }  // namespace
 
-namespace mozart {
+namespace ui_input {
 
 InputInterpreter::InputInterpreter(
     std::unique_ptr<HidDecoder> hid_decoder,
@@ -190,8 +190,7 @@ bool InputInterpreter::ParseHidFeatureReportDescriptor(
 
   if (collection == nullptr) {
     FXL_LOG(INFO) << "Can't process HID feature report descriptor for "
-                   << name()
-                   << "; Needed a valid Collection but didn't get one";
+                  << name() << "; Needed a valid Collection but didn't get one";
     return false;
   }
 
@@ -234,7 +233,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
 
   if (collection == nullptr) {
     FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
-                   << "; Needed a valid Collection but didn't get one";
+                  << "; Needed a valid Collection but didn't get one";
     return false;
   }
 
@@ -311,7 +310,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
   if (!input_device.device->ParseReportDescriptor(*input_desc,
                                                   &input_device.descriptor)) {
     FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
-                   << "; Failed to do generic device parsing";
+                  << "; Failed to do generic device parsing";
     return false;
   }
   devices_.push_back(std::move(input_device));
@@ -358,7 +357,7 @@ bool InputInterpreter::ParseProtocol() {
       hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
     FXL_LOG(INFO) << "hid-parser: error " << int(parse_res)
-                   << " parsing report descriptor for " << name();
+                  << " parsing report descriptor for " << name();
     return false;
   }
 
@@ -386,11 +385,11 @@ bool InputInterpreter::ParseProtocol() {
   // If we never parsed a single device correctly then fail.
   if (devices_.size() == 0) {
     FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
-                   << "; All parsing attempts failed.";
+                  << "; All parsing attempts failed.";
     return false;
   }
 
   return true;
 }
 
-}  // namespace mozart
+}  // namespace ui_input

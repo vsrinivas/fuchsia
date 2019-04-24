@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/tests/mock_hid_decoder.h"
-#include "garnet/bin/ui/input_reader/touch.h"
 
+#include "garnet/bin/ui/input_reader/touch.h"
 #include "src/lib/fxl/logging.h"
 
-namespace mozart {
+namespace ui_input {
 
 namespace {
 
@@ -96,4 +96,4 @@ void MockHidDecoder::ClearReport() {
   FXL_CHECK(event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
 }
 
-}  // namespace mozart
+}  // namespace ui_input

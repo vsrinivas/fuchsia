@@ -22,7 +22,7 @@ Layer::Layer(Session* session, ResourceId id)
 Layer::~Layer() = default;
 
 bool Layer::SetRenderer(RendererPtr renderer) {
-  // TODO(MZ-249): if layer content is already specified as an image, clear it
+  // TODO(SCN-249): if layer content is already specified as an image, clear it
   // before setting the renderer.  Or call it an error, and require the client
   // to explicitly clear it first.
   renderer_ = std::move(renderer);
@@ -65,7 +65,7 @@ bool Layer::IsDrawable() const {
     return false;
   }
 
-  // TODO(MZ-249): Layers can also have a material or image pipe.
+  // TODO(SCN-249): Layers can also have a material or image pipe.
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
 }
 

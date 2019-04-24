@@ -19,7 +19,7 @@ protocol ShadertoyFactory {
     // automatically handled by the Shadertoy; in this case, invocations of
     // Shadertoy.SetMouse() will be ignored.  Otherwise, the view will ignore
     // input events, and SetMouse() will behave normally.
-    // TODO(MZ-227): not implemented.
+    // TODO(SCN-227): not implemented.
     NewViewShadertoy(request<Shadertoy> toy, handle<eventpair> view_token,
                      bool handle_input_events);
 };

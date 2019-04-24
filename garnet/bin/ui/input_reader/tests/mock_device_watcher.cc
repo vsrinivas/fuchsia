@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
-namespace mozart {
+namespace ui_input {
 
 MockDeviceWatcher::MockDeviceWatcher() : weak_ptr_factory_(this) {}
 MockDeviceWatcher::~MockDeviceWatcher() = default;
@@ -23,4 +23,4 @@ void MockDeviceWatcher::AddDevice(std::unique_ptr<HidDecoder> hid_decoder) {
   callback_(std::move(hid_decoder));
 }
 
-}  // namespace mozart
+}  // namespace ui_input

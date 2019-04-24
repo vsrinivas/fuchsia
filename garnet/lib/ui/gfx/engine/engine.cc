@@ -329,7 +329,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   if (scenes.empty())
     return;
 
-  // TODO(MZ-216): Traversing the whole graph just to compute this is pretty
+  // TODO(SCN-216): Traversing the whole graph just to compute this is pretty
   // inefficient.  We should optimize this.
   fuchsia::ui::gfx::Metrics metrics;
   metrics.scale_x = 1.f;
@@ -340,7 +340,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
     UpdateMetrics(scene, metrics, &updated_nodes);
   }
 
-  // TODO(MZ-216): Deliver events to sessions in batches.
+  // TODO(SCN-216): Deliver events to sessions in batches.
   // We probably want delivery to happen somewhere else which can also
   // handle delivery of other kinds of events.  We should probably also
   // have some kind of backpointer from a session to its handler.
