@@ -123,6 +123,7 @@ fn decode_account(encoded: &Value) -> Result<SettingData, Error> {
 
 const LOGIN_MODE_NONE: u64 = 0;
 const LOGIN_MODE_GUEST_OVERRIDE: u64 = 1;
+const LOGIN_MODE_AUTH_PROVIDER: u64 = 2;
 
 fn encode_login_mode(mode: LoginOverride) -> Result<Value, Error> {
     match mode {
@@ -131,6 +132,9 @@ fn encode_login_mode(mode: LoginOverride) -> Result<Value, Error> {
         }
         LoginOverride::AutologinGuest => {
             return Ok(json!(LOGIN_MODE_GUEST_OVERRIDE));
+        }
+        LoginOverride::AuthProvider => {
+            return Ok(json!(LOGIN_MODE_AUTH_PROVIDER));
         }
     }
 }
@@ -144,6 +148,9 @@ fn decode_login_mode(value: &Value) -> Result<LoginOverride, Error> {
                 }
                 LOGIN_MODE_GUEST_OVERRIDE => {
                     return Ok(LoginOverride::AutologinGuest);
+                }
+                LOGIN_MODE_AUTH_PROVIDER => {
+                    return Ok(LoginOverride::AuthProvider);
                 }
                 _ => {
                     return Err(format_err!("not a decodable type"));

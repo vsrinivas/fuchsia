@@ -24,7 +24,7 @@ enum AccountOperation {
 /// Configuration for account mutations.
 table AccountMutation {
     1: AccountOperation operation;
-    2: LoginOverride login_overide;
+    2: LoginOverride login_override;
 };
 
 /// Operations supported by wireless settings.

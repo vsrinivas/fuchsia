@@ -32,6 +32,8 @@ enum LoginOverride {
     NONE = 0;
     /// Do not require an account and login always as guest.
     AUTOLOGIN_GUEST = 1;
+    /// Requires a provisioned account through auth provider.
+    AUTH_PROVIDER = 2;
 };
 
 table AccountSettings {

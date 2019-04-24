@@ -15,3 +15,19 @@ pub fn process_string_mutation(mutation: &Mutation) -> Result<Option<SettingData
         return Err(format_err!("invalid error"));
     }
 }
+
+pub fn process_account_mutation(mutation: &Mutation) -> Result<Option<SettingData>, Error> {
+    if let Mutation::AccountMutationValue(mutation_info) = mutation {
+        if let Some(operation) = mutation_info.operation {
+            if operation == AccountOperation::SetLoginOverride {
+                return Ok(Some(SettingData::Account(AccountSettings {
+                    mode: mutation_info.login_override,
+                })));
+            }
+        }
+
+        return Ok(None);
+    } else {
+        return Err(format_err!("invalid error"));
+    }
+}

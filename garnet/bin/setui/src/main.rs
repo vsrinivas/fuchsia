@@ -44,6 +44,13 @@ fn main() -> Result<(), Error> {
         None,
     )));
 
+    handler.register_adapter(Box::new(SettingAdapter::new(
+        SettingType::Account,
+        Box::new(DefaultStore::new("/data/account.dat".to_string(), Box::new(JsonCodec::new()))),
+        Box::new(process_account_mutation),
+        Some(SettingData::Account(AccountSettings { mode: None })),
+    )));
+
     fs.dir("public").add_fidl_service(move |stream: SetUiServiceRequestStream| {
         let handler_clone = handler.clone();
         fx_log_info!("Connecting to setui_service");

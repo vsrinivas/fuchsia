@@ -202,4 +202,47 @@ mod tests {
             }
         }
     }
+
+    /// A test to verify behavior of the account adapter.
+    #[test]
+    fn test_account() {
+        let mut adapter = SettingAdapter::new(
+            SettingType::Account,
+            Box::new(TestStore::new()),
+            Box::new(process_account_mutation),
+            Some(SettingData::Account(AccountSettings { mode: None })),
+        );
+
+        check_login_override(&adapter, None);
+
+        let override_update = Some(LoginOverride::AutologinGuest);
+
+        adapter.mutate(&Mutation::AccountMutationValue(AccountMutation {
+            operation: Some(AccountOperation::SetLoginOverride),
+            login_override: override_update,
+        }));
+
+        check_login_override(&adapter, override_update);
+    }
+
+    fn check_login_override(adapter: &Adapter, expected_override: Option<LoginOverride>) {
+        let (sender, receiver) = channel();
+
+        // Ensure initial account settings returned.
+        adapter.listen(sender, None);
+
+        let listen_result = receiver.recv();
+        assert!(listen_result.is_ok());
+
+        let data = listen_result.unwrap();
+
+        match data {
+            SettingData::Account(val) => {
+                assert_eq!(val.mode, expected_override);
+            }
+            _ => {
+                panic!("unexpected listen value");
+            }
+        }
+    }
 }
