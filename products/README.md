@@ -32,13 +32,6 @@ A system that software developers can use to get work done.
 
 Builds on [terminal](#terminal).
 
-## SDK Image
-
-Base system image to be used along the SDK with core system services,
-developer tools and a kitchen sink of available packages.
-
-Builds on [terminal](#terminal).
-
 ## Speaker
 
 A modular, ephemeral system for devices that have audio input and output. Lacks
