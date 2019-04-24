@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include <lib/zx/channel.h>
+#include <zircon/threads.h>
 #include <zxtest/zxtest.h>
 
 
@@ -55,66 +56,64 @@ TEST(HandleTransferTest, OverChannelThenRead) {
     }
 }
 
-struct ThreadArgs {
-    zx::channel a_client;
-    zx::channel a_remote;
-    zx::channel b_client;
-    zx::channel b_remote;
-    std::atomic<zx_status_t> fail_outgoing_a_0_on_b_1;
-    std::atomic<zx_status_t> fail_incoming_a_0_from_b_0;
-    std::atomic<uint64_t> num_handles;
-};
-
-int DoWork(void* arg) {
-    // sleep for 10ms
-    // this is race-prone, but until there's a way to wait for a thread to be
-    // blocked, there's no better way to determine that the other thread has
-    // entered handle_wait_one.
-    struct timespec t = {
-        .tv_sec = 0,
-        .tv_nsec = 10 * 1000 * 1000,
-    };
-    nanosleep(&t, nullptr);
-
-    ThreadArgs *test = reinterpret_cast<ThreadArgs*>(arg);
-
-    // Send a_0 through b_1 to b_0.
-    zx_handle_t a_client_raw = test->a_client.release();
-    test->fail_outgoing_a_0_on_b_1 = test->b_remote.write(0, nullptr, 0u, &a_client_raw, 1);
-
-    // Read from b_0 into handle_a_0_incoming, thus canceling any waits on a_0.
-    uint32_t num_handles = 1;
-    test->fail_incoming_a_0_from_b_0 = test->b_client.read(0,
-        nullptr, &a_client_raw, 0, num_handles, nullptr, &num_handles);
-    test->num_handles = num_handles;
-
-    return 0;
+// Wait, possibly forever, until |thread| has entered |state|.
+static zx_status_t wait_for_state(zx_handle_t thread, zx_thread_state_t state) {
+    while (true) {
+        zx_info_thread_t info;
+        zx_status_t status =
+            zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+        if (status != ZX_OK) {
+            return status;
+        }
+        if (info.state == state) {
+            return ZX_OK;
+        }
+        zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    }
 }
 
 // This tests canceling a wait when a handle is transferred.
-//   There are two channels:
-//       channel a with endpoints a_client and a_remote
-//   and
-//       channel b with endpoints b_client and b_remote
-//   A thread is created that sends a_client from b_remote to b_client.
-//   main() waits on a_client.
-//   The thread then reads from b_client which should cancel the wait in main().
+//
+// There are two channels, a and b. One thread waits on a[0]. The other thread sends a[0] through
+// channel b and sees that once it has been read out of b, the wait is canceled.
+//
 // See [ZX-103].
 TEST(HandleTransferTest, CancelsWait) {
-    ThreadArgs args;
-    ASSERT_OK(zx::channel::create(0, &args.a_client, &args.a_remote));
-    ASSERT_OK(zx::channel::create(0, &args.b_client, &args.b_remote));
+    auto wait_on_channel = [](void* arg) -> int {
+        zx_handle_t channel = *reinterpret_cast<zx_handle_t*>(arg);
+        zx_signals_t signals{};
+        return zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, &signals);
+    };
 
-    thrd_t thr;
-    int ret = thrd_create_with_name(&thr, DoWork, &args, "write thread");
-    ASSERT_EQ(ret, thrd_success, "failed to create write thread");
+    zx::channel a[2];
+    zx::channel b[2];
+    ASSERT_OK(zx::channel::create(0, &a[0], &a[1]));
+    ASSERT_OK(zx::channel::create(0, &b[0], &b[1]));
 
-    zx_signals_t signals = ZX_CHANNEL_PEER_CLOSED;
-    EXPECT_NE(args.a_client.wait_one(signals, zx::deadline_after(zx::sec(1)),
-              nullptr), ZX_ERR_TIMED_OUT);
-    EXPECT_OK(args.fail_outgoing_a_0_on_b_1.load());
-    EXPECT_OK(args.fail_incoming_a_0_from_b_0.load());
-    EXPECT_EQ(1u, args.num_handles.load());
+    // Start the thread.
+    thrd_t waiter_thread;
+    zx_handle_t handle = a[0].release();
+    ASSERT_EQ(thrd_success, thrd_create(&waiter_thread, wait_on_channel, &handle));
 
-    thrd_join(thr, nullptr);
+    // Wait for it to enter zx_object_wait_one.
+    zx_handle_t thread = thrd_get_zx_handle(waiter_thread);
+    ASSERT_OK(wait_for_state(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+
+    // Send a[0] through b.
+    ASSERT_OK(b[0].write(0, nullptr, 0, &handle, 1));
+    uint32_t num_handles = 0;
+
+    // See that it's still blocked.
+    zx_info_thread_t info;
+    ASSERT_OK(zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(ZX_THREAD_STATE_BLOCKED_WAIT_ONE, info.state);
+
+    // Pulling the handle out of b cancels the wait.
+    ASSERT_OK(b[1].read(0, nullptr, a[0].reset_and_get_address(), 0, 1, nullptr, &num_handles));
+    ASSERT_EQ(1, num_handles);
+
+    // Join the thread and see that it was canceled.
+    int result = ZX_ERR_INTERNAL;
+    ASSERT_EQ(thrd_success, thrd_join(waiter_thread, &result));
+    ASSERT_EQ(ZX_ERR_CANCELED, result);
 }
