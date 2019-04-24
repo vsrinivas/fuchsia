@@ -371,8 +371,7 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
   void Run() override {
     FlowToken flow{this, &snapshot_};
 
-    page_snapshot_ = page_client_->NewSnapshot(
-        /* on_error = */ [this] { Done(nullptr); });
+    page_snapshot_ = page_client_->NewSnapshot();
     page_snapshot_->Get(
         to_array(key_), [this, flow](fuchsia::ledger::Status status,
                                      fuchsia::mem::BufferPtr snapshot) {

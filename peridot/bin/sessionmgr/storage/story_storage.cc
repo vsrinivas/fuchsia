@@ -190,15 +190,7 @@ class ReadVmoCall
   void Run() override {
     FlowToken flow{this, &status_, &value_};
 
-    page_snapshot_ = page_client_->NewSnapshot([this, flow] {
-      // An error occurred getting the snapshot. Resetting page_snapshot_
-      // will ensure that the FlowToken it has captured below while waiting for
-      // a connected channel will be destroyed, and the operation will be
-      // complete.
-      status_ = fuchsia::ledger::Status::UNKNOWN_ERROR;
-      page_snapshot_ = fuchsia::ledger::PageSnapshotPtr();
-    });
-
+    page_snapshot_ = page_client_->NewSnapshot();
     page_snapshot_->Get(to_array(key_),
                         [this, flow](fuchsia::ledger::Status status,
                                      fuchsia::mem::BufferPtr value) {

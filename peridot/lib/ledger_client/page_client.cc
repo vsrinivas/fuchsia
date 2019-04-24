@@ -32,8 +32,7 @@ PageClient::~PageClient() {
   ledger_client_->DropPageClient(this);
 }
 
-fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
-    fit::function<void()> on_error) {
+fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot() {
   fuchsia::ledger::PageSnapshotPtr ptr;
   page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_),
                      nullptr /* page_watcher */);
