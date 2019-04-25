@@ -170,7 +170,7 @@ for file in ${FILES}; do
   if [[ ${file} =~ .*\.fidl ]]; then
     if [[ ! -x "${FIDL_BIN}" ]]; then
        printf "fidl-format not found: attempting to build it\n"
-       fx-command-run build-zircon -T
+       fx-command-run build system/fidl:tools
        break
      fi
   fi
