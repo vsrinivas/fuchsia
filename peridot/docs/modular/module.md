@@ -19,7 +19,7 @@ its incoming namespace:
     specific functionality, like adding other modules to its story and creating
     entities.
 
-A module is expected to provide two services to the modular framework in its
+A module is expected to provide three services to the modular framework in its
 outgoing namespace:
 
 *   `fuchsia.ui.app.ViewProvider` which is used to display the module's UI.
