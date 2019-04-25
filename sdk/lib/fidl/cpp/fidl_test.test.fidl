@@ -89,3 +89,9 @@ table XUnionInTable {
     2: SampleXUnion xu;
     3: string after;
 };
+
+table PrimitiveArrayInTable {
+    1: string before;
+    2: array<int32>:9 arr;
+    3: string after;
+};

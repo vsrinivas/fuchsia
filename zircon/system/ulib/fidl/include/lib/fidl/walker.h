@@ -636,10 +636,18 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             const fidl_type_t* element_type = frame->array_state.element;
-            Position position = frame->position + element_offset;
-            if (!Push(Frame(element_type, position))) {
-                visitor.OnError("recursion depth exceeded processing array");
-                FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+            if (element_type) {
+                Position position = frame->position + element_offset;
+                if (!Push(Frame(element_type, position))) {
+                    visitor.OnError("recursion depth exceeded processing array");
+                    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+                }
+            } else {
+                // If there is no element type pointer, the array contents
+                // do not need extra processing, but the array coding table
+                // is present to provide size information when linearizing
+                // envelopes. Just continue.
+                Pop();
             }
             continue;
         }
