@@ -339,7 +339,8 @@ group("all") {
     "//garnet/packages/tests:guest",
     "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
-    "//garnet/packages/tests:inspect_query_unittests",
+    # TODO(FLK-186): Reenable this test.
+    # "//garnet/packages/tests:inspect_query_unittests",
     "//garnet/packages/tests:inspect_unittests",
     "//garnet/packages/tests:iquery_golden_test",
     "//garnet/packages/tests:iquery_test",
