@@ -7,9 +7,9 @@ driver("msm8x53-power") {
     "msm8x53-power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/ddk",
@@ -32,9 +32,9 @@ test("msm8x53-power-test") {
     "msm8x53-power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/ddk",

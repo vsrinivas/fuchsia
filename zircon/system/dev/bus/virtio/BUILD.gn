@@ -20,9 +20,9 @@ driver("virtio") {
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk-protocol-display-controller",
-    "$zx/system/banjo/ddk-protocol-ethernet",
-    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-hardware-vsock:c",
     "$zx/system/ulib/hid",
@@ -37,8 +37,8 @@ source_set("common") {
     "scsi.cpp",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk-protocol-block",
-    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/scsi",
     "$zx/system/ulib/async:async-cpp",

@@ -6,7 +6,7 @@ library("simplehid") {
   sources = []
   public_deps = [
     # <lib/simplehid/simplehid.h> has #include <ddktl/protocol/hidbus.h>.
-    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/banjo/ddk.protocol.hidbus",
   ]
   deps = [
     "$zx/system/ulib/ddk",

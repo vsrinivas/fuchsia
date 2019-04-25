@@ -8,8 +8,8 @@ driver("lite-on") {
     "ltr-578als.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-hidbus",
-    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

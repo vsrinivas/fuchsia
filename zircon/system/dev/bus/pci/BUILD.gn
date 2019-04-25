@@ -27,8 +27,8 @@ source_set("user_pci") {
     "upstream_node.cpp",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk-protocol-pci",
-    "$zx/system/banjo/ddk-protocol-pciroot",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.pciroot",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -53,10 +53,10 @@ driver("bus-pci") {
       "kpci/kpci.c",
     ]
     deps = [
-      "$zx/system/banjo/ddk-protocol-pci",
-      "$zx/system/banjo/ddk-protocol-pciroot",
-      "$zx/system/banjo/ddk-protocol-platform-device",
-      "$zx/system/banjo/ddk-protocol-sysmem",
+      "$zx/system/banjo/ddk.protocol.pci",
+      "$zx/system/banjo/ddk.protocol.pciroot",
+      "$zx/system/banjo/ddk.protocol.platform.device",
+      "$zx/system/banjo/ddk.protocol.sysmem",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/zircon",
     ]
@@ -68,10 +68,10 @@ driver("bus-pci.proxy") {
     "kpci/proxy.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-pci",
-    "$zx/system/banjo/ddk-protocol-pciroot",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.pciroot",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

@@ -10,8 +10,8 @@ driver("display") {
     "image.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-display-controller",
-    "$zx/system/banjo/ddk-protocol-i2cimpl",
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-sysmem:c",

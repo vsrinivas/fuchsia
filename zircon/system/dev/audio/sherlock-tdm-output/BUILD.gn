@@ -9,11 +9,11 @@ driver("sherlock-tdm-output") {
     "tas5760.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-composite",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/audio/lib/codec-interface",
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/amlogic",

@@ -8,8 +8,8 @@ driver("goldfish") {
     "pipe-device.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-acpi",
-    "$zx/system/banjo/ddk-protocol-goldfish-pipe",
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.goldfish.pipe",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
     "$zx/system/ulib/ddk",

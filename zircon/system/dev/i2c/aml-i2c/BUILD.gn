@@ -7,10 +7,10 @@ driver("aml-i2c") {
     "aml-i2c.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-i2cimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

@@ -12,7 +12,7 @@ if (current_toolchain != default_toolchain) {
     ]
     deps = [
       ":fuchsia.device.mock.c",
-      "$zx/system/banjo/ddk-protocol-test",
+      "$zx/system/banjo/ddk.protocol.test",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/ddktl",
       "$zx/system/ulib/fbl",

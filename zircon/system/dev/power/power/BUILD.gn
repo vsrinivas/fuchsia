@@ -7,8 +7,8 @@ driver("power") {
     "power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-power",
-    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk.protocol.power",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

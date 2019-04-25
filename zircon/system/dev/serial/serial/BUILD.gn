@@ -7,8 +7,8 @@ driver("serial") {
     "serial.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-serial",
-    "$zx/system/banjo/ddk-protocol-serialimpl",
+    "$zx/system/banjo/ddk.protocol.serial",
+    "$zx/system/banjo/ddk.protocol.serialimpl",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

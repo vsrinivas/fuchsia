@@ -7,9 +7,9 @@ driver("aml-canvas") {
     "aml-canvas.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-amlogiccanvas",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.amlogiccanvas",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

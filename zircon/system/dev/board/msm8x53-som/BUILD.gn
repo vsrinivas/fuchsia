@@ -12,7 +12,7 @@ driver("msm8x53-som") {
     "msm8x53.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

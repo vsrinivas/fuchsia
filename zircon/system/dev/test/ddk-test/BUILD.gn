@@ -10,9 +10,9 @@ test_driver("ddk-test") {
     "usb-request-test.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-test",
-    "$zx/system/banjo/ddk-protocol-usb",
-    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/banjo/ddk.protocol.test",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",

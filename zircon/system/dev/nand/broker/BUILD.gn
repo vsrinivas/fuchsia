@@ -13,7 +13,7 @@ driver("nand-broker") {
     "broker.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-nand:c",
     "$zx/system/ulib/ddk",

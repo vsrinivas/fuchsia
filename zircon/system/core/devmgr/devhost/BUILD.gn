@@ -29,7 +29,7 @@ library("driver") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-composite",
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-io:c",

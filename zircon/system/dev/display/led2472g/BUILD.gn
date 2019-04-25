@@ -13,7 +13,7 @@ driver("vim-led2472g") {
     "led2472g.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

@@ -9,7 +9,7 @@ driver("realtek") {
     "realtek-stream.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",

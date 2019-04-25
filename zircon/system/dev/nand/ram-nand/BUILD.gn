@@ -9,7 +9,7 @@ driver("ram-nand") {
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -28,7 +28,7 @@ source_set("common") {
     "ram-nand.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -45,7 +45,7 @@ test("ram-nand-test") {
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",

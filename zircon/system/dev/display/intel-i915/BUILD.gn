@@ -17,11 +17,11 @@ driver("intel-i915") {
     "power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-display-controller",
-    "$zx/system/banjo/ddk-protocol-i2cimpl",
-    "$zx/system/banjo/ddk-protocol-intelgpucore",
-    "$zx/system/banjo/ddk-protocol-pci",
-    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.intelgpucore",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-backlight:c",
     "$zx/system/fidl/fuchsia-sysmem:c",

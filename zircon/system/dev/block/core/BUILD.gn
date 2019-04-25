@@ -11,9 +11,9 @@ driver("core") {
     "txn-group.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-block",
-    "$zx/system/banjo/ddk-protocol-block-partition",
-    "$zx/system/banjo/ddk-protocol-block-volume",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.block.partition",
+    "$zx/system/banjo/ddk.protocol.block.volume",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",

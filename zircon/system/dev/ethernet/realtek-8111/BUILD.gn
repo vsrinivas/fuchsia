@@ -9,8 +9,8 @@ driver("realtek-8111") {
     "rtl8111.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-ethernet",
-    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

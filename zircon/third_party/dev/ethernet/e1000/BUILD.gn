@@ -24,8 +24,8 @@ driver("e1000") {
     "fuchsia.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-ethernet",
-    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

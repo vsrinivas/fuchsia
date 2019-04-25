@@ -22,7 +22,7 @@ driver_module("ralink_driver") {
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/banjo/ddk.protocol.usb",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/bitmap",

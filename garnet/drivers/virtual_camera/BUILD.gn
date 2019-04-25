@@ -20,7 +20,8 @@ driver_module("virtual_camera_driver") {
     "//garnet/public/lib/media/timeline:timeline",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/lib/fidl/cpp",
-    "//zircon/public/banjo/ddk-protocol-usb",
+    "//src/lib/fxl",
+    "//zircon/public/banjo/ddk.protocol.usb",
     "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -32,7 +33,6 @@ driver_module("virtual_camera_driver") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//src/lib/fxl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

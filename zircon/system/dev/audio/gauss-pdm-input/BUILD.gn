@@ -12,7 +12,7 @@ driver("gauss-pdm-input") {
     "vmo_helper.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/fidl/fuchsia-hardware-audio:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",

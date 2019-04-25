@@ -9,8 +9,8 @@ driver("bt-hci-broadcom") {
     "bt-hci-broadcom.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-bt-hci",
-    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/banjo/ddk.protocol.bt.hci",
+    "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/fidl/fuchsia-hardware-bluetooth:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fidl",

@@ -26,7 +26,7 @@ driver_module("usb_video_driver") {
     "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/lib/fidl/cpp",
-    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/banjo/ddk.protocol.usb",
     "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

@@ -7,7 +7,7 @@ driver("test") {
     "test.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-test",
+    "$zx/system/banjo/ddk.protocol.test",
     "$zx/system/fidl/fuchsia-device-test:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

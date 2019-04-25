@@ -5,13 +5,13 @@
 library("scsi") {
   sdk_headers = [
     "scsi/scsilib.h",
-    "scsi/scsilib_controller.h"
+    "scsi/scsilib_controller.h",
   ]
   sources = [
-    "scsilib.cpp"
+    "scsilib.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
@@ -29,7 +29,7 @@ test("scsilib-disk-test") {
   ]
   deps = [
     ":scsi",
-    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/ddk",

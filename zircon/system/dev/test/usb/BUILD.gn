@@ -17,8 +17,8 @@ test("usb-unittest") {
     "usb-request-test.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-usb",
-    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/usb",

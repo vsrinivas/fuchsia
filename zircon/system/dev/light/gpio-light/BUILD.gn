@@ -7,9 +7,9 @@ driver("gpio-light") {
     "gpio-light.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/fidl/fuchsia-hardware-light:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

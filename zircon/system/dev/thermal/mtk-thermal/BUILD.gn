@@ -7,11 +7,11 @@ driver("mtk-thermal") {
     "mtk-thermal.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
@@ -34,11 +34,11 @@ test("mtk-thermal-test") {
     "mtk-thermal.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",

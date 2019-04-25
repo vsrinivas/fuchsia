@@ -8,7 +8,7 @@ driver("realtek-8211f") {
     "rtl8211f.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-ethernet-mac",
+    "$zx/system/banjo/ddk.protocol.ethernet.mac",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

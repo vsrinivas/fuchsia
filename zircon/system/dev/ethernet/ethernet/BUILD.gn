@@ -11,33 +11,30 @@ declare_args() {
 driver("ethernet") {
   # TODO(puneetha) This is used to temporarily enable building with the C driver
   # before cpp driver is stabilized
-  if(ethernet_c) {
+  if (ethernet_c) {
     sources = [
-      "ethernet.c"
+      "ethernet.c",
     ]
     deps = [
-      "$zx/system/banjo/ddk-protocol-ethernet",
+      "$zx/system/banjo/ddk.protocol.ethernet",
       "$zx/system/fidl/fuchsia-hardware-ethernet:c",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/zircon",
     ]
-  }
-  # cpp driver is default unless specified during fx set with
-  # --args="zircon_extra_args = { ethernet_c=true }"
-  else {
+  } else {
     sources = [
-      "ethernet.cpp"
+      "ethernet.cpp",
     ]
     deps = [
-      "$zx/system/banjo/ddk-protocol-ethernet",
+      "$zx/system/banjo/ddk.protocol.ethernet",
       "$zx/system/fidl/fuchsia-hardware-ethernet:c",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/ddktl",
       "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fzl",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fzl",
       "$zx/system/ulib/zircon",
     ]
   }

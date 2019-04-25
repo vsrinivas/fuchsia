@@ -11,8 +11,8 @@ driver("nandpart") {
     "nandpart.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-badblock",
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.badblock",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
@@ -37,7 +37,7 @@ test("nandpart-test") {
   include_dirs = [ "." ]
   defines = [ "TEST" ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

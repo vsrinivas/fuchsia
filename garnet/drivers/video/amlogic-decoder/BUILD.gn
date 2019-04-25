@@ -109,8 +109,8 @@ if (target_cpu == "arm64") {
       "local_codec_factory.h",
     ]
     public_deps = [
-      "//zircon/public/banjo/ddk-protocol-amlogiccanvas",
-      "//zircon/public/banjo/ddk-protocol-sysmem",
+      "//zircon/public/banjo/ddk.protocol.amlogiccanvas",
+      "//zircon/public/banjo/ddk.protocol.sysmem",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
       "//zircon/public/lib/ddk",

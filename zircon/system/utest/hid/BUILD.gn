@@ -29,7 +29,7 @@ test("hid-parse-size") {
     "hid-parse-test.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/driver",

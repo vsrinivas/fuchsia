@@ -10,9 +10,9 @@ driver("fx3") {  # TODO: test_driver?
     "fx3.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-usb",
-    "$zx/system/banjo/ddk-protocol-usb-composite",
-    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-usb-fwloader:c",
     "$zx/system/fidl/fuchsia-mem:c",

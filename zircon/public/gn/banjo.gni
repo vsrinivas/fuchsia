@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(mcgrathr): This is heavily based on banjo.gni though they don't
+# TODO(mcgrathr): This is heavily based on fidl.gni though they don't
 # share much code.  Try to converge these more in the future.
 
 import("$zx/public/gn/fidl/fidlc.gni")
@@ -93,10 +93,7 @@ template("banjo_library") {
 
   banjo_target = target_name
 
-  # TODO(mcgrathr): temporary until everything is renamed with . names
-  banjo_library_name = string_replace(banjo_target, "-", ".")
-
-  banjo_path = string_replace(banjo_library_name, ".", "/")
+  banjo_path = string_replace(banjo_target, ".", "/")
   banjo_name = string_replace(banjo_path, "ddk/protocol/", "")
 
   # Collect the dependencies on other Banjo libraries, and canonicalize them.
@@ -139,7 +136,7 @@ template("banjo_library") {
 
         # TODO(BLD-353): temporary hack
         assert(banjo_target ==
-               get_path_info(get_label_info(":$banjo_target", "dir"), "name"))
+               get_path_info(get_label_info(":$banjo_target", "dir"), "file"))
         legacy_barrier = []
         legacy_dirs = [ "banjo/$banjo_target" ]
         legacy_targets = [
@@ -147,9 +144,9 @@ template("banjo_library") {
             import = "//build/banjo/banjo.gni"
             target_name = banjo_target
 
-            # The ddk-protocol prefix is magic: without it, you're a
+            # The ddk.protocol. prefix is magic: without it, you're a
             # banjo_dummy() target; with it, you're a banjo() target.
-            if (string_replace(banjo_target, "ddk-protocol-", "") ==
+            if (string_replace(banjo_target, "ddk.protocol.", "") ==
                 banjo_target) {
               target_type = "banjo_dummy"
             } else {
@@ -157,7 +154,7 @@ template("banjo_library") {
             }
 
             # These all become the parameters to banjo() or banjo_dummy().
-            name = banjo_library_name
+            name = banjo_target
             sdk_category = "partner"
             sources = []
             foreach(file, invoker.sources) {
@@ -169,7 +166,7 @@ template("banjo_library") {
             if (defined(invoker.public_deps)) {
               foreach(label, invoker.public_deps) {
                 assert(get_label_info(label, "name") ==
-                           get_path_info(get_label_info(label, "dir"), "name"),
+                           get_path_info(get_label_info(label, "dir"), "file"),
                        "banjo_library(\"$banjo_target\") deps " +
                            get_label_info(label, "label_no_toolchain"))
                 deps +=

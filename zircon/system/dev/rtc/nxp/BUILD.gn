@@ -7,7 +7,7 @@ driver("nxp") {
     "pcf8563-rtc.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

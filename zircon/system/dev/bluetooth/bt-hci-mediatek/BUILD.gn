@@ -9,8 +9,8 @@ driver("bt-hci-mediatek") {
     "bt-hci-mediatek.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-bt-hci",
-    "$zx/system/banjo/ddk-protocol-sdio",
+    "$zx/system/banjo/ddk.protocol.bt.hci",
+    "$zx/system/banjo/ddk.protocol.sdio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -38,8 +38,8 @@ test("bt-hci-mediatek-test") {
     "bt-hci-mediatek.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-bt-hci",
-    "$zx/system/banjo/ddk-protocol-sdio",
+    "$zx/system/banjo/ddk.protocol.bt.hci",
+    "$zx/system/banjo/ddk.protocol.sdio",
     "$zx/system/dev/lib/mock-sdio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

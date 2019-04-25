@@ -29,8 +29,8 @@ driver_module("qmi_driver") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//zircon/public/banjo/ddk-protocol-ethernet",
-    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/banjo/ddk.protocol.ethernet",
+    "//zircon/public/banjo/ddk.protocol.usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fit",

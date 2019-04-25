@@ -7,10 +7,10 @@ driver("hi3660-gpio") {
     "hi3660-gpio.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/gpio/pl061",
     "$zx/system/dev/lib/hi3660",
     "$zx/system/ulib/ddk",

@@ -7,11 +7,11 @@ driver("usb-hub") {
     "usb-hub.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-usb",
-    "$zx/system/banjo/ddk-protocol-usb-bus",
-    "$zx/system/banjo/ddk-protocol-usb-composite",
-    "$zx/system/banjo/ddk-protocol-usb-hub",
-    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.bus",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/banjo/ddk.protocol.usb.hub",
+    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",

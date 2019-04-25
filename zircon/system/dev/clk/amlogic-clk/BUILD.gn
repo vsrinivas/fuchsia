@@ -7,9 +7,9 @@ driver("amlogic-clk") {
     "aml-clk.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clockimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-clock:c",

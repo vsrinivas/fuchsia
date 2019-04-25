@@ -61,13 +61,13 @@ driver("platform-bus-x86") {
   }
   configs += [ ":config" ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-acpi",
-    "$zx/system/banjo/ddk-protocol-hidbus",
-    "$zx/system/banjo/ddk-protocol-pciroot",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-scpi",
-    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.pciroot",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-hardware-power:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",

@@ -8,9 +8,9 @@ driver("qcom-gpio") {
     "qcom-gpio.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
@@ -28,9 +28,9 @@ test("qcom-gpio-test") {
     "qcom-gpio.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/ulib/bitmap",

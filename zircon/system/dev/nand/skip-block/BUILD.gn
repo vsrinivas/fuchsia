@@ -9,8 +9,8 @@ driver("skip-block") {
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk-protocol-badblock",
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.badblock",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",

@@ -16,7 +16,7 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/banjo/ddk-protocol-scpi",
+    "//zircon/public/banjo/ddk.protocol.scpi",
     "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/ddk",

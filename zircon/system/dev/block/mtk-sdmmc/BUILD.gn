@@ -7,11 +7,11 @@ driver("mtk-sdmmc") {
     "mtk-sdmmc.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-block",
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-sdmmc",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/ulib/ddk",
@@ -33,11 +33,11 @@ test("mtk-sdmmc-test") {
     "mtk-sdmmc.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-block",
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-sdmmc",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/ulib/ddk",

@@ -7,7 +7,7 @@ executable("banjo-dummy") {
     "main.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-bt-gattsvc",
+    "$zx/system/banjo/ddk.protocol.bt.gattsvc",
     "$zx/system/ulib/zircon",
   ]
 }

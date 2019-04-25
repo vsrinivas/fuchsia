@@ -17,9 +17,9 @@ driver("sysmem") {
     "usage_pixel_format_cost.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
@@ -46,9 +46,9 @@ test("sysmem-unittest") {
   ]
   include_dirs = [ "." ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async:async-cpp",

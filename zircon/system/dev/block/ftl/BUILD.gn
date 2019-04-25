@@ -24,10 +24,10 @@ source_set("common") {
     "oob_doubler.cpp",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk-protocol-badblock",
-    "$zx/system/banjo/ddk-protocol-block",
-    "$zx/system/banjo/ddk-protocol-block-partition",
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.badblock",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.block.partition",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",

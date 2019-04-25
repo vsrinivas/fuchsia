@@ -13,7 +13,7 @@ driver("tpm") {
     "tpm.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/explicit-memory",

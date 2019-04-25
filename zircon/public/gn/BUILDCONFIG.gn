@@ -449,7 +449,7 @@ template("library") {
             } else {
               if (get_path_info(get_label_info(dep, "dir"), "dir") ==
                   "$zx/system/banjo") {
-                dep = get_path_info(get_label_info(dep, "dir"), "name")
+                dep = get_path_info(get_label_info(dep, "dir"), "file")
                 deps += [ "//zircon/public/banjo/$dep" ]
               } else if (get_label_info(dep, "name") == "static" ||
                          get_label_info(dep, "name") == "shared") {

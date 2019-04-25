@@ -35,8 +35,8 @@ driver("test-board") {
     "test.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -50,10 +50,10 @@ driver("test-gpio") {
     "test/gpio.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -68,10 +68,10 @@ driver("test-power") {
     "test/power.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-power",
-    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.power",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -86,10 +86,10 @@ driver("test-clock") {
     "test/clock.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-clockimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -104,10 +104,10 @@ driver("test-i2c") {
     "test/i2c.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-i2cimpl",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -123,11 +123,11 @@ foreach(driver, simple_drivers) {
       "test/$driver.c",
     ]
     deps = [
-      "$zx/system/banjo/ddk-protocol-clock",
-      "$zx/system/banjo/ddk-protocol-composite",
-      "$zx/system/banjo/ddk-protocol-gpio",
-      "$zx/system/banjo/ddk-protocol-platform-device",
-      "$zx/system/banjo/ddk-protocol-power",
+      "$zx/system/banjo/ddk.protocol.clock",
+      "$zx/system/banjo/ddk.protocol.composite",
+      "$zx/system/banjo/ddk.protocol.gpio",
+      "$zx/system/banjo/ddk.protocol.platform.device",
+      "$zx/system/banjo/ddk.protocol.power",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",

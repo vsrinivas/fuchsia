@@ -7,9 +7,9 @@ driver("aml-thermal-s912") {
     "aml-thermal.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-composite",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",

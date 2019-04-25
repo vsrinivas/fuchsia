@@ -48,7 +48,7 @@ source_set("entry") {
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//zircon/public/banjo/ddk-protocol-platform-device",
+    "//zircon/public/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
@@ -120,7 +120,7 @@ source_set("test_entry_pdev") {
     "//garnet/lib/magma/src/sys_driver",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//zircon/public/banjo/ddk-protocol-platform-device",
+    "//zircon/public/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/zx",
   ]
 

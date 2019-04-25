@@ -9,9 +9,9 @@ driver("amlogic-pcie") {
     "aml-pcie.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/pci/designware",

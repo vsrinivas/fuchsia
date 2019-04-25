@@ -19,7 +19,7 @@ source_set("common") {
     "parent.cpp",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-nand:c",

@@ -35,8 +35,8 @@ driver("controller") {
     "utils.h",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-intelhda-codec",
-    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk.protocol.intelhda.codec",
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/fidl/fuchsia-hardware-intel-hda:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",

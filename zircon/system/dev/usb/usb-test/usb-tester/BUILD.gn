@@ -8,9 +8,9 @@ driver("usb-tester") {  # TODO: test_driver?
     "usb-tester.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-usb",
-    "$zx/system/banjo/ddk-protocol-usb-composite",
-    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-usb-tester:c",
     "$zx/system/ulib/ddktl",

@@ -16,8 +16,8 @@ test("nand-unittest") {
   include_dirs = [ ".." ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk-protocol-nand",
-    "$zx/system/banjo/ddk-protocol-rawnand",
+    "$zx/system/banjo/ddk.protocol.nand",
+    "$zx/system/banjo/ddk.protocol.rawnand",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/operation",
     "$zx/system/ulib/ddk",
@@ -38,9 +38,9 @@ source_set("common") {
     "../nand.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-nand",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-rawnand",
+    "$zx/system/banjo/ddk.protocol.nand",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.rawnand",
     "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",

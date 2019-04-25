@@ -16,16 +16,16 @@ library("ddktl") {
   ]
   public_deps = [
     # <ddktl/pdev.h> has #include <ddktl/protocol/clock.h>.
-    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk.protocol.clock",
 
     # <ddktl/pdev.h> has #include <ddktl/protocol/gpio.h>.
-    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk.protocol.gpio",
 
     # <ddktl/pdev.h> has #include <ddktl/protocol/power.h>.
-    "$zx/system/banjo/ddk-protocol-power",
+    "$zx/system/banjo/ddk.protocol.power",
 
     # <ddktl/pdev.h> has #include <ddktl/protocol/platform/device.h>.
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.platform.device",
 
     # <ddktl/device-internal.h> has #include <fbl/macros.h>.
     "$zx/system/ulib/fbl:headers",
@@ -38,10 +38,10 @@ library("ddktl") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-ethernet",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
-    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
@@ -59,8 +59,8 @@ test_driver("ddktl-test") {
     "test/ethernet-tests.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-ethernet",
-    "$zx/system/banjo/ddk-protocol-test",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.test",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

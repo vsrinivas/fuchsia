@@ -12,8 +12,8 @@ driver("intel-serialio") {
   ]
   include_dirs = [ "intel-serialio-include" ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-pci",
-    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]
