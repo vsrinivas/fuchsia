@@ -112,6 +112,11 @@ modular_config() target in the product's monolith packages.
     - When set to false, StoryShell instances are not warmed up as a startup
       latency optimization. This is used for testing.
     - **default**: `true`
+* `use_parent_runner_for_story_realm`: **boolean** *(optional)*
+    - When set to true, stories will share a runner provided by the parent
+      environment. When set to false, new runners will be started in the
+      environment for stories.
+    - **default**: `false`
 * `use_memfs_for_ledger`: **boolean** *(optional)*
     - Tells the sessionmgr whether it should host+pass a memfs-backed directory
       to the ledger for the user's repository, or to use /data/LEDGER.

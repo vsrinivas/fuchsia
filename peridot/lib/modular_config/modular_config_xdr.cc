@@ -287,6 +287,12 @@ void XdrSessionmgrConfig_v1(
   xdr->FieldWithDefault(modular_config::kComponentArgs,
                         data->mutable_component_args(), XdrComponentArgs,
                         has_component_args, std::move(default_component_args));
+
+  bool has_use_parent_runner_for_story_realm =
+      data->has_use_parent_runner_for_story_realm();
+  xdr->FieldWithDefault(modular_config::kUseParentRunnerForStoryRealm,
+                        data->mutable_use_parent_runner_for_story_realm(),
+                        has_use_parent_runner_for_story_realm, false);
 }
 
 }  // namespace modular

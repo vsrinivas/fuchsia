@@ -52,6 +52,8 @@ constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
 constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
+constexpr char kUseParentRunnerForStoryRealm[] =
+    "use_parent_runner_for_story_realm";
 
 // Shell constants
 constexpr char kDefaultBaseShellUrl[] =

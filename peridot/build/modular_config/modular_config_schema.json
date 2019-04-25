@@ -62,6 +62,7 @@
         },
         "enable_cobalt": { "type": "boolean", "default": true },
         "enable_story_shell_preload": { "type": "boolean", "default": true },
+        "use_parent_runner_for_story_realm": { "type": "boolean", "default": false },
         "use_memfs_for_ledger": { "type": "boolean", "default": false },
         "startup_agents": {
           "type": "array",

@@ -54,15 +54,15 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   fuchsia::modular::session::BasemgrConfig read_config;
   EXPECT_TRUE(XdrRead(read_json, &read_config, XdrBasemgrConfig));
 
-  EXPECT_EQ(true, read_config.enable_cobalt());
-  EXPECT_EQ(false, read_config.enable_presenter());
-  EXPECT_EQ(true, read_config.use_minfs());
-  EXPECT_EQ(false, read_config.use_session_shell_for_story_shell_factory());
-  EXPECT_EQ(false, read_config.test());
+  EXPECT_TRUE(read_config.enable_cobalt());
+  EXPECT_FALSE(read_config.enable_presenter());
+  EXPECT_TRUE(read_config.use_minfs());
+  EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
+  EXPECT_FALSE(read_config.test());
 
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
             read_config.base_shell().app_config().url());
-  EXPECT_EQ(false, read_config.base_shell().keep_alive_after_login());
+  EXPECT_FALSE(read_config.base_shell().keep_alive_after_login());
 
   ASSERT_EQ(1u, read_config.session_shell_map().size());
   EXPECT_EQ(
@@ -96,7 +96,8 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "use_memfs_for_ledger":false,
       "startup_agents":null,
       "session_agents":null,
-      "component_args":null})";
+      "component_args":null,
+      "use_parent_runner_for_story_realm": false})";
 
   // Remove whitespace for string comparison
   expected_json.erase(
@@ -113,6 +114,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_TRUE(read_config.enable_story_shell_preload());
   EXPECT_FALSE(read_config.use_memfs_for_ledger());
+  EXPECT_FALSE(read_config.use_parent_runner_for_story_realm());
 
   EXPECT_EQ(0u, read_config.startup_agents().size());
   EXPECT_EQ(0u, read_config.session_agents().size());
