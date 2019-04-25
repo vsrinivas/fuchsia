@@ -64,55 +64,55 @@ bool enumeration_test() {
 
     fbl::unique_fd fd;
     ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2-top",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2",
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:1/child-1/child-2-top/child-2",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   "sys/platform/11:01:1/child-1/child-2/child-4",
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-3-top",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "sys/platform/11:01:1/child-1/child-3-top/child-3",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "sys/platform/11:01:5/test-gpio/gpio-3/component",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "sys/platform/11:01:7/test-clock/clock-1/component",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "sys/platform/11:01:6/component",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "composite-dev/composite",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+                                   zx::time::infinite(), &fd),
               ZX_OK);
 
     const int dirfd = devmgr.devfs_root().get();
@@ -120,9 +120,9 @@ bool enumeration_test() {
     EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2-top", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2-top/child-2", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2/child-4", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top/child-3", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3/component", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1/component", &st, 0), 0);

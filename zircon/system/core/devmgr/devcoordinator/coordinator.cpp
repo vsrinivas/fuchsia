@@ -589,10 +589,14 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     }
     devices_.push_back(dev);
 
+    // Note that |dev->parent()| may not match |parent| here, so we should always
+    // use |dev->parent()|.  This case can happen if |parent| refers to a device
+    // proxy.
+
     // If we're creating a device that's using the component driver, inform the
     // component.
     if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
-        CompositeDeviceComponent* component = parent->component();
+        CompositeDeviceComponent* component = dev->parent()->component();
         component->set_component_device(dev);
         status = component->composite()->TryAssemble();
         if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {

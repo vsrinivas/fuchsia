@@ -114,6 +114,17 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
         BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 3),
     };
+    const zx_bind_inst_t child2_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
+        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
+    };
+    const zx_bind_inst_t child4_match[] = {
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
+        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_4),
+    };
     device_component_part_t gpio_component[] = {
         { fbl::count_of(root_match), root_match },
         { fbl::count_of(gpio_match), gpio_match },
@@ -130,11 +141,18 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         { fbl::count_of(root_match), root_match },
         { fbl::count_of(power_match), power_match },
     };
+    device_component_part_t child4_component[] = {
+        { fbl::count_of(root_match), root_match },
+        { fbl::count_of(child2_match), child2_match },
+        { fbl::count_of(child4_match), child4_match },
+    };
+
     device_component_t composite[] = {
         { fbl::count_of(gpio_component), gpio_component },
         { fbl::count_of(clock_component), clock_component },
         { fbl::count_of(i2c_component), i2c_component },
         { fbl::count_of(power_component), power_component },
+        { fbl::count_of(child4_component), child4_component },
     };
 
     const uint32_t test_metadata_value = 12345;
