@@ -11,7 +11,6 @@ group("display") {
     "dsi-mt",
     "dummy",
     "hikey-display",
-    "imx8m-display",
     "led2472g",
     "mt8167s-display",
     "simple",

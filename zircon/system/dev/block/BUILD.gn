@@ -12,7 +12,6 @@ group("block") {
     "fvm",
     "gpt",
     "hisi-ufs",
-    "imx-sdhci",
     "mbr",
     "msm8x53-sdhci",
     "mtk-sdmmc",
