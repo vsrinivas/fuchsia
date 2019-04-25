@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  output_name = "inspect_query_unittests"
+  testonly = true
+  sources = [
+    "discover_test.cc",
+    "fixture.h",
+    "location_test.cc",
+    "source_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/inspect/query",
+    "//garnet/public/lib/inspect/testing",
+  ]
+  public_deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("inspect_query_unittests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "inspect_query_unittests"
+      environments = basic_envs
+    },
+  ]
+}

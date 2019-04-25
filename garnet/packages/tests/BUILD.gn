@@ -331,6 +331,7 @@ group("all") {
     "//garnet/packages/tests:guest",
     "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
+    "//garnet/packages/tests:inspect_query_unittests",
     "//garnet/packages/tests:inspect_unittests",
     "//garnet/packages/tests:iquery_golden_test",
     "//garnet/packages/tests:iquery_test",
@@ -469,6 +470,13 @@ group("inspect_unittests") {
   testonly = true
   public_deps = [
     "//garnet/bin/inspect_unittests",
+  ]
+}
+
+group("inspect_query_unittests") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/inspect/query/tests:inspect_query_unittests",
   ]
 }
 

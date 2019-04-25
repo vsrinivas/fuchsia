@@ -4,6 +4,7 @@
 
 #include "garnet/bin/iquery/utils.h"
 
+#include <inttypes.h>
 #include <lib/fostr/hex_dump.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/string_printf.h>
@@ -11,7 +12,6 @@
 #include <third_party/cobalt/util/crypto_util/base64.h>
 
 #include <iostream>
-#include <inttypes.h>
 
 #include "garnet/bin/iquery/options.h"
 #include "lib/inspect/hierarchy.h"

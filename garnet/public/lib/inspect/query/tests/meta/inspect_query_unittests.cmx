@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/inspect_query_unittests"
+    }
+}
