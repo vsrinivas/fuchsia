@@ -74,8 +74,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
                  : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
-    // TODO(dalesat): Renderer VMO is full. What can we do about this?
-    FXL_LOG(FATAL) << "Ran out of memory for decoded audio.";
+    FXL_LOG(ERROR) << "Ran out of memory for decoded audio, dropping packet.";
+    return -1;
   }
 
   // Check that the allocator has met the common alignment requirements and
@@ -157,8 +157,9 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     // buffer for the interleaved frames, which we get from the stage.
     auto new_payload_buffer = AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
-      // TODO(dalesat): Renderer VMO is full. What can we do about this?
-      FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";
+      FXL_LOG(ERROR) << "Ran out of memory for decoded, interleaved audio, "
+                        "dropping packet.";
+      return nullptr;
     }
 
     lpcm_util_->Interleave(

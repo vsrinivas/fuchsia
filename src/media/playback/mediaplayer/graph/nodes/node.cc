@@ -293,7 +293,10 @@ void Node::Update() {
 
   for (auto& input : inputs_) {
     if (input.packet()) {
-      PutInputPacket(input.TakePacket(false), input.index());
+      PacketPtr packet = input.TakePacket(false);
+      if (packet) {
+        PutInputPacket(std::move(packet), input.index());
+      }
     }
   }
 

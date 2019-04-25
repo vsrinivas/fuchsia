@@ -145,12 +145,13 @@ void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
 
   int64_t start_time = zx::clock::get_monotonic().get();
 
-  // |TransformPacket| always returns true or produces an output packet or both,
-  // so we won't spin uselessly here.
+  // We depend on |TransformPacket| behaving properly here. Specifically, it
+  // should return true in just a few iterations. It will normally produce an
+  // output packet and/or return true. The only exception is when the output
+  // allocator is exhausted. 
   while (!done) {
     PacketPtr output;
     done = TransformPacket(input, new_input, &output);
-    FXL_DCHECK(done || output);
 
     new_input = false;
 

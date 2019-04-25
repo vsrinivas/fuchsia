@@ -50,6 +50,12 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
             expected_packets_info_iter_ == expected_packets_info_.end());
   }
 
+  // Sets a flag indicating whether this fake renderer should retain packets
+  // (true) or retire them in a timeline manner (false).
+  void SetRetainPackets(bool retain_packets) {
+    retain_packets_ = retain_packets;
+  }
+
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
 
@@ -122,6 +128,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   const int64_t min_lead_time_ns_ = ZX_MSEC(100);
   media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
   int64_t restart_media_time_ = fuchsia::media::NO_TIMESTAMP;
+  bool retain_packets_ = false;
 
   // Converts Reference time in ns units to presentation time in |pts_rate_|
   // units.

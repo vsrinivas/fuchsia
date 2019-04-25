@@ -178,7 +178,7 @@ void FakeAudioRenderer::SetGain(float gain_db) { gain_ = gain_db; }
 void FakeAudioRenderer::SetMute(bool muted) { mute_ = muted; }
 
 void FakeAudioRenderer::MaybeScheduleRetirement() {
-  if (!progressing() || packet_queue_.empty()) {
+  if (retain_packets_ || !progressing() || packet_queue_.empty()) {
     return;
   }
 

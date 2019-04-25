@@ -102,9 +102,13 @@ PacketPtr Input::TakePacket(bool request_another) {
   }
 
   if (!copy_destination_buffer) {
-    // TODO(dalesat): Mitigation?
     // We just drop the packet, so there will be a glitch.
     FXL_LOG(WARNING) << "Allocator starved copying payload.";
+
+    // We needed a packet and couldn't produce one, so we still need one.
+    state_.store(State::kNeedsPacket);
+    mate_->node()->NeedsUpdate();
+
     return nullptr;
   }
 

@@ -138,6 +138,31 @@ TEST_F(MediaPlayerTests, PlayWav) {
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
 
+// Play a synthetic WAV file from beginning to end, retaining packets. This
+// tests the ability of the player to handle the case in which the audio
+// renderer is holding on to packets for too long.
+TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
+  fake_audio_.renderer().SetRetainPackets(true);
+
+  fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
+  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader>
+      reader_request = fake_reader_ptr.NewRequest();
+  fake_reader_.Bind(std::move(reader_request));
+
+  // Need more than 1s of data.
+  fake_reader_.SetSize(256000);
+
+  fuchsia::media::playback::SourcePtr source;
+  player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
+  player_->SetSource(std::move(source));
+
+  commands_.Play();
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+}
+
 // Play an LPCM elementary stream using |ElementarySource|
 TEST_F(MediaPlayerTests, ElementarySource) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
@@ -229,7 +254,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  // TODO(FIDL-329): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -269,7 +294,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
   // currently can. The compiler has no way of knowing whether this is
   // legit.
-  // TODO(dalesat): Do this safely once FIDL-329 is fixed.
+  // TODO(FIDL-329): Do this safely once is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
@@ -385,6 +410,22 @@ TEST_F(MediaPlayerTests, PlayBear) {
        {2803062784, 944640, 0x19a30916a3375f4e}});
 
   CreateView();
+  commands_.SetFile(kBearFilePath);
+  commands_.Play();
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_TRUE(fake_scenic_.session().expected());
+}
+
+// Play a real A/V file from beginning to end, retaining audio packets. This
+// tests the ability of the player to handle the case in which the audio
+// renderer is holding on to packets for too long.
+TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
+  CreateView();
+  fake_audio_.renderer().SetRetainPackets(true);
+
   commands_.SetFile(kBearFilePath);
   commands_.Play();
   QuitOnEndOfStream();
