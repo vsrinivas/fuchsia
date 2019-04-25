@@ -272,6 +272,11 @@ package("ledger_benchmarks") {
     },
 
     {
+      path = rebase_path("put/put_memory.tspec")
+      dest = "put_memory.tspec"
+    },
+
+    {
       path = rebase_path("put/put_as_reference.tspec")
       dest = "put_as_reference.tspec"
     },

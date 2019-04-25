@@ -100,6 +100,8 @@ page.
     * `put_as_reference.tspec`: entries are put as references (CreateReference +
       PutReference)
     * `transaction.tspec`: changes are made in a transaction
+    * `put_memory.tspec`: how much memory is Ledger using after every insertion
+      in the basic case?
 * __Update entry__: How long does it take to update an existing value in Ledger
   (make several Put operations with the same key, but different values)?
     * `update_entry.tspec`: basic case

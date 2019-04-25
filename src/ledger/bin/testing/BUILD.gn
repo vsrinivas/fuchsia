@@ -27,6 +27,8 @@ source_set("lib") {
     "get_page_ensure_initialized.h",
     "ledger_matcher.cc",
     "ledger_matcher.h",
+    "ledger_memory_usage.cc",
+    "ledger_memory_usage.h",
     "page_data_generator.cc",
     "page_data_generator.h",
     "quit_on_error.cc",
@@ -61,7 +63,9 @@ source_set("lib") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [

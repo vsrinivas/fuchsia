@@ -1,0 +1,22 @@
+{
+  "test_suite_name": "fuchsia.ledger.put_entry",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx",
+  "args": [
+    "--entry-count=100", "--transaction-size=0", "--key-size=100",
+    "--value-size=1000", "--refs=off"
+  ],
+  "categories": ["benchmark", "ledger"],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "argument_value",
+      "output_test_name": "put_memory/memory",
+      "event_name": "ledger_memory_put",
+      "event_category": "benchmark",
+      "argument_name": "memory",
+      "argument_unit": "bytes",
+      "expected_sample_count": 100,
+      "split_first": true
+    }
+  ]
+}

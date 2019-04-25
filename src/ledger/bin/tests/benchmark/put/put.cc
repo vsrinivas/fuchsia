@@ -19,6 +19,7 @@
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
+#include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/page_data_generator.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
@@ -119,6 +120,7 @@ class PutBenchmark : public PageWatcher {
   // Whether all expected watch notifications have been received. Shut down
   // should be blocked until this is set to true.
   bool all_watcher_notifications_received_ = false;
+  LedgerMemoryEstimator memory_estimator_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };
@@ -167,6 +169,7 @@ void PutBenchmark::Run() {
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
+  FXL_CHECK(memory_estimator_.Init());
 
   GetPageEnsureInitialized(
       &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
@@ -266,6 +269,10 @@ void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
   }
   PutEntry(std::move(keys[i]), std::move(value),
            [this, i, key_number, keys = std::move(keys)]() mutable {
+             uint64_t memory;
+             FXL_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
+             TRACE_COUNTER("benchmark", "ledger_memory_put", i, "memory",
+                           TA_UINT64(memory));
              if (transaction_size_ > 0 &&
                  (i % transaction_size_ == transaction_size_ - 1 ||
                   i + 1 == entry_count_)) {
