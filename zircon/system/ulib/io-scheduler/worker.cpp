@@ -47,10 +47,13 @@ void Worker::WorkerLoop() {
     const size_t max_ops = 10;
     SchedulerClient* client = sched_->client();
     zx_status_t status;
-    for ( ; ; ) {
-        size_t actual_count = 0;
+    while (!cancelled_) {
+
+        // Fetch ops from the client.
+
+        size_t acquire_count = 0;
         StreamOp* op_list[max_ops];
-        status = client->Acquire(op_list, max_ops, &actual_count, true);
+        status = client->Acquire(op_list, max_ops, &acquire_count, true);
         if (status == ZX_ERR_CANCELED) {
             // Cancel received, no more ops to read. Drain the streams and exit.
             break;
@@ -60,12 +63,61 @@ void Worker::WorkerLoop() {
             client->Fatal();
             break;
         }
-        // Dummy issue loop. In the future, ops will be added to the scheduler.
-        for (size_t i = 0; i < actual_count; i++) {
-            UniqueOp ref(op_list[i]);
-            status = client->Issue(ref.get());
-            ZX_DEBUG_ASSERT(status == ZX_OK);   // Require synchronous completion, for now.
-            client->Release(ref.release());
+
+        // Containerize all ops for safety.
+        UniqueOp uop_list[max_ops];
+        for (size_t i = 0; i < acquire_count; i++) {
+            uop_list[i].set(op_list[i]);
+        }
+
+        // Enqueue ops in the scheduler's priority queue.
+
+        size_t num_ready = 0;
+        size_t num_error = 0;
+        sched_->Enqueue(uop_list, acquire_count, uop_list, &num_error, &num_ready);
+        // Any ops remaining in the list have encountered an error and should be released.
+        for (size_t i = 0; i < num_error; i++) {
+            client->Release(uop_list[i].release());
+        }
+
+        // Drain the priority queue.
+
+        for ( ; ; ) {
+
+            // Fetch an op.
+
+            UniqueOp op;
+            status = sched_->Dequeue(&op, false);
+            if (status == ZX_ERR_SHOULD_WAIT) {
+                // No more ops.
+                break;
+            } else if (status == ZX_ERR_CANCELED) {
+                // Shutdown initiated.
+                cancelled_ = true;
+                break;
+            } else if (status != ZX_OK) {
+                fprintf(stderr, "Dequeue() failed %d\n", status);
+                return;
+            }
+
+            // Execute it.
+
+            status = client->Issue(op.get());
+            if (status == ZX_OK) {
+                // Op completed successfully or encountered a synchronous error.
+                client->Release(op.release());
+            } else if (status == ZX_ERR_ASYNC) {
+                // Op queued for async completion. Released when completed.
+
+                // Todo: transfer op to pending list to await async completion.
+                // sched_->AddAsync(std::move(op));
+                ZX_DEBUG_ASSERT(false);
+            } else {
+                fprintf(stderr, "Unexpected return status from Issue() %d\n", status);
+                // Mark op as failed.
+                op->set_result(ZX_ERR_IO);
+                client->Release(op.release());
+            }
         }
     }
 }

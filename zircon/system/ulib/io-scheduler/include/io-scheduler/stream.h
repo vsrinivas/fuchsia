@@ -9,14 +9,19 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <zircon/types.h>
 
 #include <io-scheduler/stream-op.h>
 
 namespace ioscheduler {
 
+class Scheduler;
 class Stream;
 using StreamRef = fbl::RefPtr<Stream>;
 
+// Stream - a logical sequence of ops.
+// The Stream class is not thread safe, streams depend on the scheduler for synchronization.
+// Certain calls must be performed with the Scheduler's stream_lock_ held.
 class Stream : public fbl::RefCounted<Stream> {
 public:
     Stream(uint32_t id, uint32_t pri);
@@ -26,10 +31,23 @@ public:
     uint32_t Id() { return id_; }
     uint32_t Priority() { return priority_; }
 
-    // Functions requiring the Scheduler stream lock be held.
-    bool IsActive() { return active_; }
-    void SetActive(bool active) { active_ = active; }
     void Close();
+
+    // Functions requiring the Scheduler stream lock be held.
+    // ---------------------------------------------------------
+
+    // Insert an op into the tail of the stream (subject to reordering).
+    // On error op's error status is set and it is moved to |*op_err|.
+    zx_status_t Push(UniqueOp op, UniqueOp* op_err);
+
+    // Fetch an op from the head of the stream.
+    UniqueOp Pop();
+
+    // Does the stream contain any ops that are not yet issued?
+    bool IsEmpty() { return (num_acquired_ == 0); }
+
+    // ---------------------------------------------------------
+    // End functions requiring stream lock.
 
     // WAVL Tree support.
     using WAVLTreeNodeState = fbl::WAVLTreeNodeState<StreamRef>;
@@ -63,7 +81,9 @@ private:
     uint32_t id_;
     uint32_t priority_;
     bool open_ = true;      // Stream is open, can accept more ops.
-    bool active_ = false;   // Stream has ops and is being scheduled.
+
+    uint32_t num_acquired_ = 0; // Number of ops acquired and waiting for issue.
+    fbl::DoublyLinkedList<StreamOp*> acquired_list_;
 };
 
 

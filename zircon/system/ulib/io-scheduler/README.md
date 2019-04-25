@@ -10,7 +10,7 @@ The Fuchsia system architecture pushes subsystems that would be inside a traditi
 
 * **Client** - The code using this library. This document defines the API surface used by the client code.
 
-* **Op** - The library schedules operations, or `ops`. These are of type ``struct SchedulerOp``. An IO operation is a discrete unit of IO that is meaningful to that driver stack. Examples are: reading of a sequence of bytes, scatter-gather writing a set of buffers, or a flush of caches. An op may be completed synchronously or asynchronously. An op can be in the following states:
+* **Op** - The library schedules operations, or `ops`. These are of type ``class StreamOp``. An IO operation is a discrete unit of IO that is meaningful to that driver stack. Examples are: reading of a sequence of bytes, scatter-gather writing a set of buffers, or a flush of caches. An op may be completed synchronously or asynchronously. An op can be in the following states:
   * **Acquired** - an op arrives into the scheduler from a request source.
   * **Issued** - the op is transmitted to the client-provided execution callback for immediate execution. The execution may be synchronous or asynchronous.
   * **Completed** - The client has reported that the operation completed with either success or error.

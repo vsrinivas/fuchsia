@@ -33,6 +33,7 @@ private:
 
     Scheduler* sched_ = nullptr;
     uint32_t id_;
+    bool cancelled_ = false;        // Exit has been requested.
     bool thread_started_ = false;
     thrd_t thread_;
 };

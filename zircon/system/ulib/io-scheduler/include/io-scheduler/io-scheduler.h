@@ -10,6 +10,7 @@
 
 #include <fbl/condition_variable.h>
 #include <fbl/function.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <zircon/types.h>
@@ -48,7 +49,6 @@ constexpr uint32_t kMaxPriority = 31;
 // Suggested default priority for a stream.
 constexpr uint32_t kDefaultPriority = 8;
 
-
 // Callback interface from Scheduler to client. Callbacks are made from within
 // the Scheduler library to the client implementation. All callbacks are made
 // with no locks held and are allowed to block. Any callbacks may be invoked
@@ -68,7 +68,8 @@ public:
 
     // Acquire
     //   Read zero or more ops from the client for intake into the
-    // Scheduler.
+    // Scheduler. Every op obtained through Acquire will be returned to the client
+    // via the Release callback. The Scheduler will never attempt to free these pointers.
     // Args:
     //   sop_list - an empty array of op pointers to be filled.
     //   list_count - number of entries in sop_list
@@ -137,7 +138,7 @@ public:
     // before it can be used.
     // The Scheduler holds a pointer to |client| until Shutdown() has returned. It does not
     // manage the lifetime of this pointer and does not free it.
-    zx_status_t Init(SchedulerClient* client, uint32_t options);
+    zx_status_t Init(SchedulerClient* client, uint32_t options) __TA_EXCLUDES(stream_lock_);
 
     // Open a new stream with the requested ID and priority. It is safe to invoke
     // this function from a Scheduler callback context, except from Fatal().
@@ -148,21 +149,21 @@ public:
     // ZX_ERR_ALREADY_EXISTS if stream with same |id| is already open.
     // ZX_ERR_INVALID_ARGS if |priority| is out of range.
     // Other error status for internal errors.
-    zx_status_t StreamOpen(uint32_t id, uint32_t priority);
+    zx_status_t StreamOpen(uint32_t id, uint32_t priority) __TA_EXCLUDES(stream_lock_);
 
     // Close an open stream. All ops in the stream will be issued before the stream
     // is closed. New incoming ops to the closed stream will be released with
     // an error.
-    zx_status_t StreamClose(uint32_t id);
+    zx_status_t StreamClose(uint32_t id) __TA_EXCLUDES(stream_lock_);
 
     // Begin scheduler service. This creates the worker threads that will invoke
     // the callbacks in SchedulerCallbacks.
-    zx_status_t Serve();
+    zx_status_t Serve() __TA_EXCLUDES(stream_lock_);
 
     // End scheduler service. This function blocks until all outstanding ops in
     // all streams are completed and closes all streams. Shutdown should not be invoked from a
     // callback function. To reuse the scheduler, call Init() again.
-    void Shutdown();
+    void Shutdown() __TA_EXCLUDES(stream_lock_);
 
 
     // Client API - asynchronous calls.
@@ -172,28 +173,60 @@ public:
     // asynchronously, this function should be called. The status of the operation
     // should be set in |sop|’s result field. This function is non-blocking and
     // safe to call from an interrupt handler context.
-    void AsyncComplete(StreamOp* sop);
+    void AsyncComplete(StreamOp* sop) __TA_EXCLUDES(stream_lock_);
 
     // API invoked by worker threads.
     // --------------------------------
     SchedulerClient* client() { return client_; }
 
+    // Insert a list of ops into the scheduler queue.
+    //
+    // Ownership:
+    //    Ops are exclusively retained by the Scheduler if they were successfully enqueued. Ops that
+    // encounter enqueueing errors will be added to |out_list| for caller to release.
+    //
+    // |in_list| and |out_list| may point to the same buffer.
+    // |out_num_ready| is an optional parameter that returns how many ops are ready to be dequeued
+    //    in all streams.
+    zx_status_t Enqueue(UniqueOp* in_list, size_t in_count,
+                        UniqueOp* out_list, size_t* out_actual,
+                        size_t* out_num_ready = nullptr) __TA_EXCLUDES(stream_lock_);
+
+    // Remove an op from the scheduler queue.
+    //
+    // Ownership:
+    //    If successful, ownership of the op is transferred to the caller.
+    //
+    // If no ops are available:
+    //      returns ZX_ERR_CANCELED if shutdown has started.
+    //      returns ZX_ERR_SHOULD_WAIT if |wait| is false.
+    //      otherwise returns ZX_ERR_SHOULD_WAIT.
+    zx_status_t Dequeue(UniqueOp* op_out, bool wait) __TA_EXCLUDES(stream_lock_);
+
 private:
     using StreamIdMap = Stream::WAVLTreeSortById;
     using StreamList = Stream::ListUnsorted;
+
+    zx_status_t FindStreamLocked(uint32_t id, StreamRef* out) __TA_REQUIRES(stream_lock_);
 
     SchedulerClient* client_ = nullptr; // Client-supplied callback interface.
     uint32_t options_ = 0;              // Ordering options.
 
     fbl::Mutex stream_lock_;
+    // Set when shutdown has been called and workers should exit.
+    bool shutdown_initiated_ __TA_GUARDED(stream_lock_) = true;
     // Number of existing streams.
     uint32_t num_streams_ __TA_GUARDED(stream_lock_) = 0;
     // Number of streams that have ops that need to be issued or completed.
     uint32_t active_streams_ __TA_GUARDED(stream_lock_) = 0;
+    // Total number of acquired ops in all streams.
+    uint32_t acquired_ops_ __TA_GUARDED(stream_lock_) = 0;
     // Map of id to stream. Contains all streams.
     StreamIdMap stream_map_ __TA_GUARDED(stream_lock_);
     // List of streams that have ops ready to be scheduled.
     StreamList active_list_ __TA_GUARDED(stream_lock_);
+    // Event notifying worker threads that active streams are available.
+    fbl::ConditionVariable active_available_ __TA_GUARDED(stream_lock_);
 
     fbl::Vector<fbl::unique_ptr<Worker>> workers_;
 };
