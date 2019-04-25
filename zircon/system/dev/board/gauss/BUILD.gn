@@ -43,16 +43,3 @@ driver("gauss-i2c-test") {
     "$zx/system/ulib/zircon",
   ]
 }
-
-if (false) {  # TODO: ifeq (PLEASE_DISCUSS_WITH_SWETLAND,)
-  driver("gauss-led") {
-    sources = [
-      "gauss-led.c",
-    ]
-    deps = [
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/zircon",
-    ]
-  }
-}

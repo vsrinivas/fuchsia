@@ -59,22 +59,6 @@ static const pbus_dev_t i2c_test_dev = {
 };
 #endif
 
-static const pbus_i2c_channel_t led_i2c_channels[] = {
-    {
-        .bus_id = AML_I2C_A,
-        .address = 0x3f,
-    },
-};
-
-static const pbus_dev_t led_dev = {
-    .name = "led",
-    .vid = PDEV_VID_GOOGLE,
-    .pid = PDEV_PID_GAUSS,
-    .did = PDEV_DID_GAUSS_LED,
-    .i2c_channel_list = led_i2c_channels,
-    .i2c_channel_count = countof(led_i2c_channels),
-};
-
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
     mmio_buffer_release(&bus->usb_phy);
@@ -177,10 +161,6 @@ static int gauss_start_thread(void* arg) {
 
     if ((status = gauss_raw_nand_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_raw_nand_init failed: %d\n", status);
-    }
-
-    if ((status = pbus_device_add(&bus->pbus, &led_dev)) != ZX_OK) {
-        zxlogf(ERROR, "a113_i2c_init could not add i2c_led_dev: %d\n", status);
     }
 
     return ZX_OK;

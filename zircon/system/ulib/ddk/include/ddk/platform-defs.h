@@ -71,8 +71,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
 #define PDEV_DID_GAUSS_I2C_TEST     3
-#define PDEV_DID_GAUSS_LED          4
-#define PDEV_DID_ASTRO_GOODIXTOUCH  5
+#define PDEV_DID_ASTRO_GOODIXTOUCH  4
 
 // Khadas
 #define PDEV_VID_KHADAS             4
