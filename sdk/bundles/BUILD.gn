@@ -6,7 +6,13 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:iquery",
+    "//garnet/packages/prod:mdns-util",
+    "//garnet/packages/prod:media_audio",
+    "//garnet/packages/prod:media_codec",
+    "//garnet/packages/prod:mediaplayer",
+    "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/products:devtools",
