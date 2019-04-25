@@ -63,19 +63,7 @@ where
 
 impl TestHelper {
     pub fn begin_test(exec: &mut fasync::Executor, config: wlantap::WlantapPhyConfig) -> Self {
-        let mut retry = RetryWithBackoff::new(10.seconds());
-        let mut wlantap_result;
-        loop {
-            wlantap_result = Wlantap::open();
-            if wlantap_result.is_ok() {
-                break;
-            }
-            if !retry.sleep_unless_timed_out() {
-                wlantap_result.expect("Failed to open wlantapctl.");
-            }
-        }
-        // safe to unwrap here as verfied by `is_ok()`
-        let wlantap = wlantap_result.unwrap();
+        let wlantap = Wlantap::open().expect("Failed to open wlantapctl.");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
         let mut helper = TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream };

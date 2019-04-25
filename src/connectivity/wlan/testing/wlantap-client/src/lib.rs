@@ -5,16 +5,11 @@
 #![deny(warnings)]
 
 use {
-    byteorder::{NativeEndian, WriteBytesExt},
     failure::Error,
-    fdio::{fdio_sys, ioctl, make_ioctl},
-    fidl::encoding::Encoder,
-    fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, AsHandleRef},
+    fidl::endpoints,
+    fidl_fuchsia_wlan_tap as wlantap, fuchsia_zircon as zx,
     std::{
         fs::{File, OpenOptions},
-        mem,
-        os::raw,
         path::Path,
     },
 };
@@ -37,32 +32,14 @@ impl Wlantap {
         &self,
         mut config: wlantap::WlantapPhyConfig,
     ) -> Result<wlantap::WlantapPhyProxy, Error> {
-        let (encoded_config, handles) = (&mut vec![], &mut vec![]);
-        Encoder::encode(encoded_config, handles, &mut config)?;
+        let (ours, theirs) = endpoints::create_proxy()?;
 
-        let (local, remote) = zx::Channel::create()?;
+        let channel = fdio::clone_channel(&self.file)?;
+        let mut wlantap_ctl_proxy = wlantap::WlantapCtlSynchronousProxy::new(channel);
 
-        let mut ioctl_in = vec![];
-        ioctl_in.write_u32::<NativeEndian>(remote.raw_handle())?;
-        ioctl_in.append(encoded_config);
+        let status = wlantap_ctl_proxy.create_phy(&mut config, theirs, zx::Time::INFINITE)?;
 
-        // Safe because the length of the buffer is computed from the length of a vector,
-        // and ioctl() doesn't retain the buffer.
-        unsafe {
-            ioctl(
-                &self.file,
-                IOCTL_WLANTAP_CREATE_WLANPHY,
-                ioctl_in.as_ptr() as *const std::os::raw::c_void,
-                ioctl_in.len(),
-                std::ptr::null_mut(),
-                0,
-            )?;
-        }
-        // Release ownership of the remote handle
-        mem::forget(remote);
-        Ok(wlantap::WlantapPhyProxy::new(fasync::Channel::from_channel(local)?))
+        let () = zx::ok(status)?;
+        Ok(ours)
     }
 }
-
-const IOCTL_WLANTAP_CREATE_WLANPHY: raw::c_int =
-    make_ioctl(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANTAP, 0);

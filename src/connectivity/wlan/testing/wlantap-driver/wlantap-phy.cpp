@@ -450,12 +450,14 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
 };
 #undef DEV
 
-zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
-                      std::unique_ptr<wlantap::WlantapPhyConfig> config,
-                      async_dispatcher_t* loop) {
+zx_status_t CreatePhy(
+    zx_device_t* wlantapctl, zx::channel user_channel,
+    std::unique_ptr<wlantap::WlantapPhyConfig> phy_config_from_fidl,
+    async_dispatcher_t* loop) {
   zxlogf(INFO, "wlantap: creating phy\n");
-  auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
-                                          std::move(config), loop);
+  auto phy =
+      std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
+                                   std::move(phy_config_from_fidl), loop);
   static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                             .unbind = &WlantapPhy::DdkUnbind,
                                             .release = &WlantapPhy::DdkRelease};

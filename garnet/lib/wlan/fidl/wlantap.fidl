@@ -7,11 +7,20 @@ library fuchsia.wlan.tap;
 using fuchsia.wlan.device;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.common;
+using zx;
 
+/// Describes the capabilities of the fake wlantap-phy device to be created.
 struct WlantapPhyConfig {
     fuchsia.wlan.device.PhyInfo phy_info;
     string name;
     bool quiet;
+};
+
+/// Instruct the wlantap-ctl device to creates a fake wlantap-phy device based on the
+/// |WlantapPhyConfig| passed in. The newly created wlantap-phy device will use the channel to
+/// allow a |WlantapPhy| client to observe and control its behavior
+protocol WlantapCtl {
+    CreatePhy(WlantapPhyConfig config, request<WlantapPhy> proxy) -> (zx.status status);
 };
 
 // See wlan_rx_info_t
