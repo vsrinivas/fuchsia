@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/media/audio_core/mixer/test/audio_performance.h"
+
 #include <string>
 
-#include "garnet/bin/media/audio_core/mixer/test/audio_performance.h"
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
@@ -162,8 +163,8 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   }
 
   uint32_t dest_rate = 48000;
-  MixerPtr mixer = SelectMixer(sample_format, num_input_chans, source_rate,
-                               num_output_chans, dest_rate, sampler_type);
+  auto mixer = SelectMixer(sample_format, num_input_chans, source_rate,
+                           num_output_chans, dest_rate, sampler_type);
 
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size + 1;

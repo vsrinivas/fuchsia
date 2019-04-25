@@ -7,8 +7,8 @@
 #include "garnet/bin/media/audio_core/mixer/linear_sampler.h"
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 #include "garnet/bin/media/audio_core/mixer/point_sampler.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 
@@ -30,9 +30,9 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 // specified, or if Resampler::Default, the existing selection algorithm is
 // used. Note that requiring a specific resampler may cause Mixer::Select() to
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
-MixerPtr Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
-                       const fuchsia::media::AudioStreamType& dest_format,
-                       Resampler resampler) {
+std::unique_ptr<Mixer> Mixer::Select(
+    const fuchsia::media::AudioStreamType& src_format,
+    const fuchsia::media::AudioStreamType& dest_format, Resampler resampler) {
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:

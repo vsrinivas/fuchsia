@@ -13,8 +13,9 @@ namespace media::audio::mixer {
 
 class PointSampler : public Mixer {
  public:
-  static MixerPtr Select(const fuchsia::media::AudioStreamType& src_format,
-                         const fuchsia::media::AudioStreamType& dest_format);
+  static std::unique_ptr<Mixer> Select(
+      const fuchsia::media::AudioStreamType& src_format,
+      const fuchsia::media::AudioStreamType& dest_format);
 
  protected:
   PointSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)

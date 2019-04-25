@@ -15,8 +15,8 @@ using Resampler = ::media::audio::Mixer::Resampler;
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(float gain_db, double* level_db,
                                 double* sinad_db) {
-  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                               48000, 1, 48000, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000,
+                           1, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
   std::vector<float> accum(kFreqTestBufSize);
@@ -121,8 +121,8 @@ TEST(DynamicRange, 90Down) {
 
 // Test our mix level and noise floor, when rechannelizing mono into stereo.
 TEST(DynamicRange, MonoToStereo) {
-  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                               48000, 2, 48000, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000,
+                           2, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
   std::vector<float> accum(kFreqTestBufSize * 2);
@@ -166,8 +166,8 @@ TEST(DynamicRange, MonoToStereo) {
 
 // Test our mix level and noise floor, when rechannelizing stereo into mono.
 TEST(DynamicRange, StereoToMono) {
-  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
-                               48000, 1, 48000, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000,
+                           1, 48000, Resampler::SampleAndHold);
 
   std::vector<float> mono(kFreqTestBufSize);
   std::vector<float> source(kFreqTestBufSize * 2);
@@ -240,7 +240,7 @@ TEST(DynamicRange, StereoToMono) {
 // AudioRenderer (stream) gain, so it is pre-Sum.
 template <typename T>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
-  MixerPtr mixer;
+  std::unique_ptr<Mixer> mixer;
   double amplitude, expected_amplitude;
 
   // Why isn't expected_amplitude 1.0?  int16 and int8 have more negative values

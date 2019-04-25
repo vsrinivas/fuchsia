@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+
 #include <memory>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
@@ -14,8 +15,6 @@
 
 namespace media::audio {
 
-class Mixer;
-using MixerPtr = std::unique_ptr<Mixer>;
 struct Bookkeeping;
 
 class Mixer {
@@ -54,9 +53,10 @@ class Mixer {
   // For optimum system performance across changing conditions, callers should
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
-  static MixerPtr Select(const fuchsia::media::AudioStreamType& src_format,
-                         const fuchsia::media::AudioStreamType& dest_format,
-                         Resampler resampler_type = Resampler::Default);
+  static std::unique_ptr<Mixer> Select(
+      const fuchsia::media::AudioStreamType& src_format,
+      const fuchsia::media::AudioStreamType& dest_format,
+      Resampler resampler_type = Resampler::Default);
 
   //
   // Mix
@@ -240,7 +240,7 @@ struct Bookkeeping {
   Bookkeeping() = default;
   ~Bookkeeping() = default;
 
-  MixerPtr mixer;
+  std::unique_ptr<Mixer> mixer;
   Gain gain;
 
   uint32_t step_size = Mixer::FRAC_ONE;

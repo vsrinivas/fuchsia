@@ -448,15 +448,15 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(
 // Templates used to expand all of the different combinations of the possible
 // PointSampler Mixer configurations.
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
-static inline MixerPtr SelectPSM(
+static inline std::unique_ptr<Mixer> SelectPSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
-  return MixerPtr(
-      new PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>());
+  return std::make_unique<
+      PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>>();
 }
 
 template <size_t DestChanCount, typename SrcSampleType>
-static inline MixerPtr SelectPSM(
+static inline std::unique_ptr<Mixer> SelectPSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   switch (src_format.channels) {
@@ -472,7 +472,7 @@ static inline MixerPtr SelectPSM(
 }
 
 template <size_t DestChanCount>
-static inline MixerPtr SelectPSM(
+static inline std::unique_ptr<Mixer> SelectPSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   switch (src_format.sample_format) {
@@ -489,23 +489,26 @@ static inline MixerPtr SelectPSM(
   }
 }
 
-static inline MixerPtr SelectNxNPSM(
+static inline std::unique_ptr<Mixer> SelectNxNPSM(
     const fuchsia::media::AudioStreamType& src_format) {
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format.channels));
+      return std::make_unique<NxNPointSamplerImpl<uint8_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format.channels));
+      return std::make_unique<NxNPointSamplerImpl<int16_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return MixerPtr(new NxNPointSamplerImpl<int32_t>(src_format.channels));
+      return std::make_unique<NxNPointSamplerImpl<int32_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return MixerPtr(new NxNPointSamplerImpl<float>(src_format.channels));
+      return std::make_unique<NxNPointSamplerImpl<float>>(src_format.channels);
     default:
       return nullptr;
   }
 }
 
-MixerPtr PointSampler::Select(
+std::unique_ptr<Mixer> PointSampler::Select(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {

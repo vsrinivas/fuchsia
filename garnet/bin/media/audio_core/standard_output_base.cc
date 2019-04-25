@@ -157,7 +157,7 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
     mix_bookkeeping->mixer = Mixer::Select(packet_link.format_info().format(),
                                            *(output_producer_->format()));
   } else {
-    mix_bookkeeping->mixer = MixerPtr(new audio::mixer::NoOp());
+    mix_bookkeeping->mixer = std::make_unique<audio::mixer::NoOp>();
   }
 
   if (mix_bookkeeping->mixer == nullptr) {

@@ -669,15 +669,15 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
 // Templates used to expand all of the different combinations of the possible
 // LinearSampler Mixer configurations.
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
-static inline MixerPtr SelectLSM(
+static inline std::unique_ptr<Mixer> SelectLSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
-  return MixerPtr(
-      new LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>());
+  return std::make_unique<
+      LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>>();
 }
 
 template <size_t DestChanCount, typename SrcSampleType>
-static inline MixerPtr SelectLSM(
+static inline std::unique_ptr<Mixer> SelectLSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   switch (src_format.channels) {
@@ -693,7 +693,7 @@ static inline MixerPtr SelectLSM(
 }
 
 template <size_t DestChanCount>
-static inline MixerPtr SelectLSM(
+static inline std::unique_ptr<Mixer> SelectLSM(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   switch (src_format.sample_format) {
@@ -710,23 +710,26 @@ static inline MixerPtr SelectLSM(
   }
 }
 
-static inline MixerPtr SelectNxNLSM(
+static inline std::unique_ptr<Mixer> SelectNxNLSM(
     const fuchsia::media::AudioStreamType& src_format) {
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format.channels));
+      return std::make_unique<NxNLinearSamplerImpl<uint8_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return MixerPtr(new NxNLinearSamplerImpl<int16_t>(src_format.channels));
+      return std::make_unique<NxNLinearSamplerImpl<int16_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return MixerPtr(new NxNLinearSamplerImpl<int32_t>(src_format.channels));
+      return std::make_unique<NxNLinearSamplerImpl<int32_t>>(
+          src_format.channels);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return MixerPtr(new NxNLinearSamplerImpl<float>(src_format.channels));
+      return std::make_unique<NxNLinearSamplerImpl<float>>(src_format.channels);
     default:
       return nullptr;
   }
 }
 
-MixerPtr LinearSampler::Select(
+std::unique_ptr<Mixer> LinearSampler::Select(
     const fuchsia::media::AudioStreamType& src_format,
     const fuchsia::media::AudioStreamType& dest_format) {
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
