@@ -32,7 +32,11 @@ struct memfs_filesystem {
 zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher,
                                     memfs_filesystem_t** out_fs,
                                     zx_handle_t* out_root) {
-    return memfs_create_filesystem_with_page_limit(dispatcher, UINT64_MAX, out_fs, out_root);
+    uint64_t physmem_size = zx_system_get_physmem();
+    ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
+    size_t page_limit = physmem_size / PAGE_SIZE;
+
+    return memfs_create_filesystem_with_page_limit(dispatcher, page_limit, out_fs, out_root);
 }
 
 zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatcher,
@@ -66,7 +70,11 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
 }
 
 zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
-    return memfs_install_at_with_page_limit(dispatcher, UINT64_MAX, path);
+    uint64_t physmem_size = zx_system_get_physmem();
+    ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
+    size_t page_limit = physmem_size / PAGE_SIZE;
+
+    return memfs_install_at_with_page_limit(dispatcher, page_limit, path);
 }
 
 zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher,

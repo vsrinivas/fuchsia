@@ -134,7 +134,8 @@ bool TestFidlQueryFilesystem() {
         ASSERT_TRUE(QueryInfo("/fidltmp-basic", &info));
 
         // Query number of blocks
-        ASSERT_EQ(info.total_bytes, UINT64_MAX);
+        uint64_t physmem_size = zx_system_get_physmem();
+        ASSERT_EQ(info.total_bytes, physmem_size);
         ASSERT_EQ(info.used_bytes, 0);
 
         loop.Shutdown();
