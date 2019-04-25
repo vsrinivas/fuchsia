@@ -38,6 +38,7 @@ class Sandbox {
   using RootEnvironmentCreatedCallback =
       fit::function<void(ManagedEnvironment*)>;
   explicit Sandbox(SandboxArgs args);
+  ~Sandbox();
 
   void SetTerminationCallback(TerminationCallback callback) {
     termination_callback_ = std::move(callback);

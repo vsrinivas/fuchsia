@@ -56,6 +56,19 @@ Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
   });
 }
 
+Sandbox::~Sandbox() {
+  ASSERT_MAIN_DISPATCHER;
+  if (helper_loop_) {
+    helper_loop_->Quit();
+    helper_loop_->JoinThreads();
+    // Remove all pending process handlers before shutting
+    // down the loop to prevent error callbacks from
+    // being fired.
+    procs_.clear();
+    helper_loop_ = nullptr;
+  }
+}
+
 void Sandbox::Start(async_dispatcher_t* dispatcher) {
   main_dispatcher_ = dispatcher;
   setup_done_ = false;
