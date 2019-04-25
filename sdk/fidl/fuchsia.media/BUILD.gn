@@ -24,8 +24,6 @@ fidl("fuchsia.media") {
   public_deps = [
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.media.audio",
-    "//zircon/public/fidl/fuchsia-io",
-    "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/fidl/fuchsia-sysmem",
   ]
 }
