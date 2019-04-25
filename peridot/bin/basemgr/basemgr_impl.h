@@ -29,7 +29,6 @@
 #include "peridot/bin/basemgr/presentation_container.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
-#include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
@@ -160,10 +159,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // Holds the presentation service.
   std::unique_ptr<PresentationContainer> presentation_container_;
 
-  // Depending on kUseAccountManager, basemgr_impl.cc will use either
-  // |user_provider_impl_| or |session_user_provider_impl_| for session user
-  // management.
-  std::unique_ptr<UserProviderImpl> user_provider_impl_;
+  // Manages the session-user mappings.
   std::unique_ptr<SessionUserProviderImpl> session_user_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_bindings_;

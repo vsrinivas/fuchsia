@@ -14,7 +14,6 @@
 
 #include "peridot/bin/basemgr/session_context_impl.h"
 #include "peridot/bin/basemgr/session_provider.h"
-#include "peridot/bin/basemgr/user_provider_impl.h"
 
 namespace modular {
 

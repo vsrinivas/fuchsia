@@ -11,17 +11,6 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 declare_args() {
   # Whether basemgr should automatically login as a persistent guest user.
   auto_login_to_guest = false
-
-  # Whether basemgr and dev_base_shell should use account_manager for account
-  # creation. This is a temporary flag while modular transitions to use account
-  # manager.
-  use_account_manager = true
-}
-
-flatbuffer("users") {
-  sources = [
-    "users.fbs",
-  ]
 }
 
 executable_package("basemgr") {
@@ -120,12 +109,9 @@ source_set("lib") {
     "session_provider.h",
     "session_user_provider_impl.cc",
     "session_user_provider_impl.h",
-    "user_provider_impl.cc",
-    "user_provider_impl.h",
   ]
 
   deps = [
-    ":users",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/basemgr/session_shell_settings",
@@ -157,15 +143,8 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular.internal",
   ]
 
-  if (auto_login_to_guest && use_account_manager) {
-    public_configs = [
-      ":auto_login_to_guest",
-      ":use_account_manager",
-    ]
-  } else if (auto_login_to_guest) {
+  if (auto_login_to_guest) {
     public_configs = [ ":auto_login_to_guest" ]
-  } else if (use_account_manager) {
-    public_configs = [ ":use_account_manager" ]
   }
 }
 
@@ -198,10 +177,6 @@ source_set("dev_base_shell_source_set") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
-
-  if (use_account_manager) {
-    public_configs = [ ":use_account_manager" ]
-  }
 }
 
 executable("session_context_impl_unittest") {
@@ -225,8 +200,4 @@ executable("session_context_impl_unittest") {
 
 config("auto_login_to_guest") {
   defines = [ "AUTO_LOGIN_TO_GUEST" ]
-}
-
-config("use_account_manager") {
-  defines = [ "USE_ACCOUNT_MANAGER" ]
 }

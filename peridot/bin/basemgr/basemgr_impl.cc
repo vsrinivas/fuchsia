@@ -13,7 +13,6 @@
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
-#include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/bin/basemgr/wait_for_minfs.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
@@ -48,12 +47,6 @@ struct TypeConverter<fuchsia::modular::AppConfig,
 namespace modular {
 
 namespace {
-
-#ifdef USE_ACCOUNT_MANAGER
-constexpr bool kUseAccountManager = true;
-#else
-constexpr bool kUseAccountManager = false;
-#endif
 
 // TODO(MF-134): This key is duplicated in
 // topaz/lib/settings/lib/device_info.dart. Remove this key once factory reset
@@ -215,13 +208,6 @@ void BasemgrImpl::Start() {
 
   InitializeUserProvider();
 
-  // Show setup UI or proceed to auto-login into a session. If account manager
-  // is enabled, basemgr triggers ShowSetupOrLogin in the initialize callack
-  // from account manager.
-  if (!kUseAccountManager) {
-    ShowSetupOrLogin();
-  }
-
   ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
 }
 
@@ -235,40 +221,23 @@ void BasemgrImpl::InitializeUserProvider() {
   token_manager_factory_app_->services().ConnectToService(
       token_manager_factory_.NewRequest());
 
-  if (kUseAccountManager) {
-    session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
-        account_manager_.get(), token_manager_factory_.get(),
-        authentication_context_provider_binding_.NewBinding().Bind(),
-        /* on_initialize= */
-        [this] { ShowSetupOrLogin(); },
-        /* on_login= */
-        [this](fuchsia::modular::auth::AccountPtr account,
-               fuchsia::auth::TokenManagerPtr ledger_token_manager,
-               fuchsia::auth::TokenManagerPtr agent_token_manager) {
-          OnLogin(std::move(account), std::move(ledger_token_manager),
-                  std::move(agent_token_manager));
-        });
-  } else {
-    user_provider_impl_ = std::make_unique<UserProviderImpl>(
-        token_manager_factory_.get(),
-        authentication_context_provider_binding_.NewBinding().Bind(),
-        /* on_login= */
-        [this](fuchsia::modular::auth::AccountPtr account,
-               fuchsia::auth::TokenManagerPtr ledger_token_manager,
-               fuchsia::auth::TokenManagerPtr agent_token_manager) {
-          OnLogin(std::move(account), std::move(ledger_token_manager),
-                  std::move(agent_token_manager));
-        });
-  }
+  session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
+      account_manager_.get(), token_manager_factory_.get(),
+      authentication_context_provider_binding_.NewBinding().Bind(),
+      /* on_initialize= */
+      [this] { ShowSetupOrLogin(); },
+      /* on_login= */
+      [this](fuchsia::modular::auth::AccountPtr account,
+             fuchsia::auth::TokenManagerPtr ledger_token_manager,
+             fuchsia::auth::TokenManagerPtr agent_token_manager) {
+        OnLogin(std::move(account), std::move(ledger_token_manager),
+                std::move(agent_token_manager));
+      });
 }
 
 void BasemgrImpl::GetUserProvider(
     fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
-  if (kUseAccountManager) {
-    session_user_provider_impl_->Connect(std::move(request));
-  } else {
-    user_provider_impl_->Connect(std::move(request));
-  }
+  session_user_provider_impl_->Connect(std::move(request));
 }
 
 void BasemgrImpl::Shutdown() {
@@ -294,7 +263,6 @@ void BasemgrImpl::Shutdown() {
   session_provider_.Teardown(kSessionProviderTimeout, [this] {
     StopBaseShell()->Then([this] {
       FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
-      user_provider_impl_.reset();
       session_user_provider_impl_.reset();
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
 
@@ -411,30 +379,17 @@ void BasemgrImpl::ShowSetupOrLogin() {
     // Login as the first user, or show setup. This asssumes that:
     // 1) Basemgr has exclusive access to AccountManager.
     // 2) There are only 0 or 1 authenticated accounts ever.
-    if (kUseAccountManager) {
-      account_manager_->GetAccountIds(
-          [this](
-              std::vector<fuchsia::auth::account::LocalAccountId> account_ids) {
-            if (account_ids.empty()) {
-              StartBaseShell();
-            } else {
-              fuchsia::modular::UserLoginParams params;
-              params.account_id = std::to_string(account_ids.at(0).id);
-              session_user_provider_impl_->Login(std::move(params));
-            }
-          });
-    } else {
-      user_provider_impl_->PreviousUsers(
-          [this](std::vector<fuchsia::modular::auth::Account> accounts) {
-            if (accounts.empty()) {
-              StartBaseShell();
-            } else {
-              fuchsia::modular::UserLoginParams params;
-              params.account_id = accounts.at(0).id;
-              user_provider_impl_->Login(std::move(params));
-            }
-          });
-    }
+    account_manager_->GetAccountIds(
+        [this](
+            std::vector<fuchsia::auth::account::LocalAccountId> account_ids) {
+          if (account_ids.empty()) {
+            StartBaseShell();
+          } else {
+            fuchsia::modular::UserLoginParams params;
+            params.account_id = std::to_string(account_ids.at(0).id);
+            session_user_provider_impl_->Login(std::move(params));
+          }
+        });
   };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is
@@ -458,15 +413,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
                 }
               });
 
-          if (kUseAccountManager) {
-            session_user_provider_impl_->RemoveAllUsers([this] {
-              wlan_->ClearSavedNetworks([this] { StartBaseShell(); });
-            });
-          } else {
-            user_provider_impl_->RemoveAllUsers([this] {
-              wlan_->ClearSavedNetworks([this] { StartBaseShell(); });
-            });
-          }
+          session_user_provider_impl_->RemoveAllUsers([this] {
+            wlan_->ClearSavedNetworks([this] { StartBaseShell(); });
+          });
         } else {
           show_setup_or_login();
         }
@@ -479,19 +428,11 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 
 void BasemgrImpl::LoginAsGuest() {
   fuchsia::modular::UserLoginParams params;
-  if (kUseAccountManager) {
-    session_user_provider_impl_->Login(std::move(params));
-  } else {
-    user_provider_impl_->Login(std::move(params));
-  }
+  session_user_provider_impl_->Login(std::move(params));
 }
 
 void BasemgrImpl::LogoutUsers(fit::function<void()> callback) {
-  if (kUseAccountManager) {
-    session_user_provider_impl_->RemoveAllUsers(std::move(callback));
-  } else {
-    user_provider_impl_->RemoveAllUsers(std::move(callback));
-  }
+  session_user_provider_impl_->RemoveAllUsers(std::move(callback));
 }
 
 void BasemgrImpl::GetPresentation(

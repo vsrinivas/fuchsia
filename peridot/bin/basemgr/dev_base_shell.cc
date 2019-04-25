@@ -30,14 +30,6 @@
 
 namespace modular {
 
-namespace {
-#ifdef USE_ACCOUNT_MANAGER
-constexpr bool kUseAccountManager = true;
-#else
-constexpr bool kUseAccountManager = false;
-#endif
-}  // namespace
-
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
@@ -156,56 +148,22 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
         return;
       }
 
-      // If we are using account manager for authentication, we provision a new
-      // auth account with the expectation that basemgr is subscribed as an
-      // account listener.
-      if (kUseAccountManager) {
-        // Ignore settings_user and always create a Fuchsia account if there
-        // isn't one already.
-        account_manager_->GetAccountIds(
-            [this](
-                std::vector<fuchsia::auth::account::LocalAccountId> accounts) {
-              if (!accounts.empty()) {
-                return;
-              }
+      // We provision a new auth account with the expectation that basemgr is
+      // subscribed as an account listener.
+      account_manager_->GetAccountIds(
+          [this](std::vector<fuchsia::auth::account::LocalAccountId> accounts) {
+            if (!accounts.empty()) {
+              return;
+            }
 
-              account_manager_->ProvisionNewAccount(
-                  [](fuchsia::auth::account::Status,
-                     std::unique_ptr<fuchsia::auth::account::LocalAccountId>) {
-                    FXL_LOG(INFO) << "Provisioned new account. Translating "
-                                     "this account into a "
-                                     "fuchsia::modular::auth::Account.";
-                  });
-            });
-      } else {
-        user_provider_->PreviousUsers(
-            [this](std::vector<fuchsia::modular::auth::Account> accounts) {
-              FXL_LOG(INFO)
-                  << "Found " << accounts.size() << " users in the user "
-                  << "database";
-
-              // Add the user if not already added.
-              std::string account_id;
-              for (const auto& account : accounts) {
-                FXL_LOG(INFO) << "Found user " << account.display_name;
-                if (account.display_name.size() >= settings_.user.size() &&
-                    account.display_name.substr(0, settings_.user.size()) ==
-                        settings_.user) {
-                  account_id = account.id;
-                  break;
-                }
-              }
-
-              if (account_id.empty()) {
-                user_provider_->AddUser(
-                    fuchsia::modular::auth::IdentityProvider::DEV,
-                    [this](fuchsia::modular::auth::AccountPtr account,
-                           fidl::StringPtr status) { Login(account->id); });
-              } else {
-                Login(account_id);
-              }
-            });
-      }
+            account_manager_->ProvisionNewAccount(
+                [](fuchsia::auth::account::Status,
+                   std::unique_ptr<fuchsia::auth::account::LocalAccountId>) {
+                  FXL_LOG(INFO) << "Provisioned new account. Translating "
+                                   "this account into a "
+                                   "fuchsia::modular::auth::Account.";
+                });
+          });
     }
   }
 
@@ -220,7 +178,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);
-};
+};  // namespace modular
 
 }  // namespace modular
 
