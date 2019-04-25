@@ -74,8 +74,9 @@ This section covers Fuchsia-wide conventions and best practices.
 ## Tracing
 
  - [Tracing homepage](tracing/README.md)
- - [Tracing tutorial](tracing/tracing-tutorial.md)
- - [Tracing usage guide](tracing/tracing-usage-guide.md)
+ - [Tracing Quick-Start Guide](tracing/quick-start/README.md)
+ - [Tracing tutorial](tracing/tutorial.md)
+ - [Tracing usage guide](tracing/usage-guide.md)
  - [Trace based benchmarking](benchmarking/trace_based_benchmarking.md)
  - [Tracing booting Fuchsia](tracing/tracing-boot.md)
  - [CPU Performance Monitor](tracing/cpuperf-provider.md)
