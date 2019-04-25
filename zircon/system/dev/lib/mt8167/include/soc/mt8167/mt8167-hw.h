@@ -145,6 +145,3 @@
 
 #define MT8167_CLEO_GPIO_HUB_PWR_EN                         13
 #define MT8167_CLEO_GPIO_LCM_EN                             22
-
-#define MT8167_EAGLE_GPIO_MT6630_SYSRST                     20
-#define MT8167_EAGLE_GPIO_MT6630_PMU_EN                     48

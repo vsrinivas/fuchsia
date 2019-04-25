@@ -66,7 +66,6 @@ __BEGIN_CDECLS
 // 4 unused
 #define PDEV_PID_SHERLOCK           5
 #define PDEV_PID_CLEO               6
-#define PDEV_PID_EAGLE              7
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2

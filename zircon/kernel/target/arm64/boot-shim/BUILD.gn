@@ -165,9 +165,6 @@ boot_shim("imx8mmevk") {
 boot_shim("cleo") {
 }
 
-boot_shim("eagle") {
-}
-
 boot_shim("msm8x53-som") {
 }
 

@@ -13,7 +13,6 @@ driver("mt8167s_ref") {
     "mt8167-gpu.cpp",
     "mt8167-i2c.cpp",
     "mt8167-msdc0.cpp",
-    "mt8167-msdc1.cpp",
     "mt8167-msdc2.cpp",
     "mt8167-power.cpp",
     "mt8167-soc.cpp",
@@ -44,7 +43,6 @@ driver("mt8167s_ref") {
   ]
   data_deps = [
     "$zx/kernel/target/arm64/boot-shim:cleo",
-    "$zx/kernel/target/arm64/boot-shim:eagle",
     "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
   ]
 }

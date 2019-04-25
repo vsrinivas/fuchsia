@@ -95,15 +95,6 @@ zx_status_t Mt8167::Msdc0Init() {
         // For now, just give the paver a place to write Zircon-R,
         // even though the bootloader won't support it.
         { "vendor_a", GUID_ZIRCON_R_VALUE },
-
-        // Mappings for eagle partitions.
-        { "boot", GUID_ZIRCON_A_VALUE },
-        // For now, just give the paver a place to write Zircon-B,
-        // even though the bootloader won't support it.
-        { "vendor", GUID_ZIRCON_B_VALUE },
-        { "recovery", GUID_ZIRCON_R_VALUE },
-
-        // This works for all three boards.
         { "userdata", GUID_FVM_VALUE },
     };
     static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);

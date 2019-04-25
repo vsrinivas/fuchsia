@@ -93,9 +93,6 @@ public:
 };
 
 zx_status_t Mt8167::Msdc2Init() {
-    // MSDC2 is SD on Eagle, SDIO on others.
-    const bool is_sdio = board_info_.pid != PDEV_PID_EAGLE;
-
     static const pbus_mmio_t msdc2_mmios[] = {
         {
             .base = MT8167_MSDC2_BASE,
@@ -113,7 +110,7 @@ zx_status_t Mt8167::Msdc2Init() {
     static const MtkSdmmcConfig msdc2_config = {
         .fifo_depth = kFifoDepth,
         .src_clk_freq = kSrcClkFreq,
-        .is_sdio = is_sdio
+        .is_sdio = true
     };
 
     static const pbus_metadata_t msdc2_metadata[] = {
@@ -155,7 +152,7 @@ zx_status_t Mt8167::Msdc2Init() {
     }
 
     pbus_dev_t msdc2_dev = {};
-    msdc2_dev.name = is_sdio ? "sdio" : "sd";
+    msdc2_dev.name = "sdio";
     msdc2_dev.vid = PDEV_VID_MEDIATEK;
     msdc2_dev.did = PDEV_DID_MEDIATEK_MSDC2;
     msdc2_dev.mmio_list = msdc2_mmios;

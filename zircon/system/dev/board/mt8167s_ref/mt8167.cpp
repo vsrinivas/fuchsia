@@ -90,11 +90,7 @@ int Mt8167::Thread() {
     if (Msdc0Init() != ZX_OK) {
         zxlogf(ERROR, "Msdc0Init() failed\n");
     }
-    // SDIO on Eagle, not used on others
-    if (Msdc1Init() != ZX_OK) {
-        zxlogf(ERROR, "Msdc1Init() failed\n");
-    }
-    // SD on Eagle, SDIO on others
+    // SDIO
     if (Msdc2Init() != ZX_OK) {
         zxlogf(ERROR, "Msdc2Init() failed\n");
     }
@@ -160,12 +156,11 @@ static zx_driver_ops_t driver_ops = []() {
 
 } // namespace board_mt8167
 
-ZIRCON_DRIVER_BEGIN(mt8167, board_mt8167::driver_ops, "zircon", "0.1", 7)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+ZIRCON_DRIVER_BEGIN(mt8167, board_mt8167::driver_ops, "zircon", "0.1", 6)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_LABEL(0),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_CLEO),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_EAGLE),
-    ZIRCON_DRIVER_END(mt8167)
+ZIRCON_DRIVER_END(mt8167)
