@@ -10,7 +10,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
 #include <sstream>
@@ -512,10 +511,6 @@ void PlayerImpl::CreateView(fuchsia::ui::views::ViewToken view_token) {
   }
 
   video_renderer_->CreateView(std::move(view_token));
-}
-
-void PlayerImpl::CreateView2(zx::eventpair view_token) {
-  CreateView(scenic::ToViewToken(std::move(view_token)));
 }
 
 void PlayerImpl::BindGainControl(
