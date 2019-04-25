@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/standalone_app/app.h"
-#include "garnet/lib/ui/util/glm_workaround.h"  // Must come first!
+
+// clang-format off
+#include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <glm/gtc/type_ptr.hpp>

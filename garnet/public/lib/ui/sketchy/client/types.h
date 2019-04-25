@@ -5,9 +5,11 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_TYPES_H_
 #define LIB_UI_SKETCHY_CLIENT_TYPES_H_
 
-#include <fuchsia/ui/sketchy/cpp/fidl.h>
-
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
+
+#include <fuchsia/ui/sketchy/cpp/fidl.h>
 
 namespace sketchy_lib {
 

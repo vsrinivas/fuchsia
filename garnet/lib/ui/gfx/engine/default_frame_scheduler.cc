@@ -7,12 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -25,12 +25,12 @@ DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
-  inspect_frame_number_ =
-      inspect_object_.CreateUIntMetric("most_recent_frame_number", frame_number_);
+  inspect_frame_number_ = inspect_object_.CreateUIntMetric(
+      "most_recent_frame_number", frame_number_);
   inspect_last_successful_update_start_time_ = inspect_object_.CreateUIntMetric(
-        "inspect_last_successful_update_start_time_", 0);
+      "inspect_last_successful_update_start_time_", 0);
   inspect_last_successful_render_start_time_ = inspect_object_.CreateUIntMetric(
-        "inspect_last_successful_render_start_time_", 0);
+      "inspect_last_successful_render_start_time_", 0);
 }
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}

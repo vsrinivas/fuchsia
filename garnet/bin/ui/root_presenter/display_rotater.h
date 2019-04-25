@@ -5,12 +5,16 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
-#include <fuchsia/ui/input/cpp/fidl.h>
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
+
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <glm/ext.hpp>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <src/lib/fxl/macros.h>
+
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 

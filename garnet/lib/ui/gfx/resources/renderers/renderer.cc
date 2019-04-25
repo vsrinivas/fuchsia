@@ -4,11 +4,10 @@
 
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 
+#include <lib/escher/renderer/renderer.h>
+#include <lib/escher/scene/model.h>
+#include <lib/escher/scene/stage.h>
 #include <trace/event.h>
-
-#include "lib/escher/renderer/renderer.h"
-#include "lib/escher/scene/model.h"
-#include "lib/escher/scene/stage.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/camera.h"

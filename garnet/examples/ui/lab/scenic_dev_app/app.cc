@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/lab/scenic_dev_app/app.h"
-#include "garnet/lib/ui/util/glm_workaround.h"  // Must come first!
+
+// clang-format off
+#include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
-#include <lib/zx/time.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <lib/async/cpp/task.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/host_memory.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
 #include <string>
 

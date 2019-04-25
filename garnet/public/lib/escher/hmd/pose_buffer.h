@@ -6,8 +6,9 @@
 #define LIB_ESCHER_HMD_POSE_BUFFER_H_
 
 #include "lib/escher/vk/buffer.h"
-
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>

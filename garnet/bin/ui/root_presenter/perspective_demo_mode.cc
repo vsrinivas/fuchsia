@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
-#include "garnet/lib/ui/util/glm_workaround.h"  // Must come first!
 
-#include <glm/ext.hpp>
+// clang-format off
+#include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
+
 #include <array>
+#include <glm/ext.hpp>
 
 #include "garnet/bin/ui/root_presenter/presentation.h"
 

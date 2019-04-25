@@ -5,14 +5,16 @@
 #ifndef LIB_ESCHER_GEOMETRY_TYPES_H_
 #define LIB_ESCHER_GEOMETRY_TYPES_H_
 
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
+#include <src/lib/fxl/logging.h>
 
 #include "lib/escher/util/debug_print.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

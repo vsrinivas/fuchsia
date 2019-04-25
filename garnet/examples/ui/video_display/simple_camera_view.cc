@@ -4,12 +4,13 @@
 
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
-#include <lib/ui/scenic/cpp/commands.h>
-#include <src/lib/fxl/log_level.h>
-
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
 
+#include <lib/ui/scenic/cpp/commands.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <src/lib/fxl/log_level.h>
 
 namespace video_display {
 

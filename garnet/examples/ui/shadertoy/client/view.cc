@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/shadertoy/client/view.h"
+
+// clang-format off
 #include "garnet/lib/ui/util/glm_workaround.h"
+// clag-format on
 
 #include <glm/gtc/type_ptr.hpp>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
-#include "lib/ui/scenic/cpp/commands.h"
-#include "src/lib/fxl/logging.h"
 
 namespace shadertoy_client {
 

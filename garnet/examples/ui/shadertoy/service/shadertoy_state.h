@@ -5,17 +5,19 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
+// clang-format off
+#include "garnet/lib/ui/util/glm_workaround.h"
+// clang-format on
+
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
-
 #include <lib/zx/eventpair.h>
+#include <src/lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
-#include "garnet/lib/ui/util/glm_workaround.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/stopwatch.h"
-#include "src/lib/fxl/memory/ref_counted.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace shadertoy {
 
