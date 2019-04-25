@@ -491,6 +491,7 @@ config("no_undefined_symbols") {
 
 config("visibility_hidden") {
   cflags = [ "-fvisibility=hidden" ]
+  cflags_cc = [ "-fvisibility-inlines-hidden" ]
 }
 
 config("machine") {
