@@ -93,15 +93,6 @@ standard_fuchsia_configs = [
   "$zx/public/gn/config:werror",
 ]
 
-# Additional configs apply to normal userland Fuchsia code.
-standard_fuchsia_user_configs = [
-  "$zx/public/gn/config:user",
-  {
-    shlib = false
-    add = [ "$zx/public/gn/config:user_executable" ]
-  },
-]
-
 # See environment().  These are the environments that are
 # vanilla bases to make derived environments from.
 standard_environments = [
@@ -123,14 +114,19 @@ standard_environments = [
         },
       ]
     }
-    configs = standard_fuchsia_configs + standard_fuchsia_user_configs + [
-                {
-                  types = [ "driver" ]
-
-                  # All drivers use hidden visibility.
-                  add = [ "$zx/public/gn/config:visibility_hidden" ]
-                },
-              ]
+    configs = standard_fuchsia_configs
+    configs += [
+      "$zx/public/gn/config:user",
+      {
+        shlib = false
+        add = [ "$zx/public/gn/config:user_executable" ]
+      },
+      {
+        # All drivers use hidden visibility.
+        types = [ "driver" ]
+        add = [ "$zx/public/gn/config:visibility_hidden" ]
+      },
+    ]
     implicit_deps = [
       "$zx/system/ulib/c",
       {
