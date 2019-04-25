@@ -77,6 +77,13 @@ struct BufferCollectionConstraints {
     /// accounted for in min_buffer_count_for_camping.
     uint32 min_buffer_count_for_shared_slack;
 
+    // A particularly-picky participant may unfortunately need to demand a tight
+    // range of buffer_count, or even a specific buffer_count.  This field
+    // should remain 0 unless a participant really must set this field to
+    // constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
+    // participant should still fill out the min_buffer_count_for_* fields
+    // above.
+    uint32 min_buffer_count;
     // 0 is treated as 0xFFFFFFFF.
     uint32 max_buffer_count;
 

@@ -104,6 +104,9 @@ private:
     bool CheckSanitizeBufferCollectionConstraints(
         fuchsia_sysmem_BufferCollectionConstraints* constraints);
 
+    bool CheckSanitizeBufferMemoryConstraints(
+        fuchsia_sysmem_BufferMemoryConstraints* constraints);
+
     bool CheckSanitizeImageFormatConstraints(
         fuchsia_sysmem_ImageFormatConstraints* constraints);
 

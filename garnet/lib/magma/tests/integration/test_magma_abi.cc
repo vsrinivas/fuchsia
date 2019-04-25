@@ -285,18 +285,19 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK,
                   magma_buffer_collection_import(connection, ZX_HANDLE_INVALID, &collection));
 
-        magma_buffer_format_constraints_t buffer_constraints;
+        magma_buffer_format_constraints_t buffer_constraints{};
 
         buffer_constraints.count = 1;
         buffer_constraints.usage = 0;
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
+        buffer_constraints.cpu_domain_supported = true;
         magma_sysmem_buffer_constraints_t constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
                   magma_buffer_constraints_create(connection, &buffer_constraints, &constraints));
 
         // Create a set of basic 512x512 RGBA image constraints.
-        magma_image_format_constraints_t image_constraints;
+        magma_image_format_constraints_t image_constraints{};
         image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
         image_constraints.has_format_modifier = false;
         image_constraints.format_modifier = 0;

@@ -31,18 +31,19 @@ public:
         std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
 
-        magma_buffer_format_constraints_t buffer_constraints;
-
+        magma_buffer_format_constraints_t buffer_constraints{};
         buffer_constraints.count = 1;
         buffer_constraints.usage = 0;
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
+        buffer_constraints.cpu_domain_supported = true;
+
         std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
                   connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
 
         // Create a set of basic 512x512 RGBA image constraints.
-        magma_image_format_constraints_t image_constraints;
+        magma_image_format_constraints_t image_constraints{};
         image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
         image_constraints.has_format_modifier = false;
         image_constraints.format_modifier = 0;
@@ -84,18 +85,19 @@ public:
         std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
 
-        magma_buffer_format_constraints_t buffer_constraints;
-
+        magma_buffer_format_constraints_t buffer_constraints{};
         buffer_constraints.count = 1;
         buffer_constraints.usage = 0;
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
+        buffer_constraints.cpu_domain_supported = true;
+
         std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
                   connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
 
         // Create Intel X-tiling
-        magma_image_format_constraints_t image_constraints;
+        magma_image_format_constraints_t image_constraints{};
         image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
         image_constraints.has_format_modifier = true;
         image_constraints.format_modifier = MAGMA_FORMAT_MODIFIER_INTEL_X_TILED;

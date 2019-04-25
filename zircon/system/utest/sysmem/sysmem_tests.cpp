@@ -315,6 +315,66 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     END_TEST;
 }
 
+extern "C" bool test_sysmem_min_buffer_count(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                              token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints->min_buffer_count_for_camping = 3;
+    constraints->min_buffer_count = 5;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 64 * 1024,
+        .max_size_bytes = 128 * 1024,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .secure_permitted = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+    };
+    ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+
+    ASSERT_EQ(buffer_collection_info->buffer_count, 5, "");
+
+    END_TEST;
+}
+
 extern "C" bool test_sysmem_no_token(void) {
     BEGIN_TEST;
 
@@ -831,6 +891,7 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_service_connection)
     RUN_TEST(test_sysmem_token_one_participant_no_image_constraints)
     RUN_TEST(test_sysmem_token_one_participant_with_image_constraints)
+    RUN_TEST(test_sysmem_min_buffer_count)
     RUN_TEST(test_sysmem_no_token)
     RUN_TEST(test_sysmem_multiple_participants)
     RUN_TEST(test_sysmem_constraints_retained_beyond_clean_close)
