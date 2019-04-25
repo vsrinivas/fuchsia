@@ -206,6 +206,7 @@ named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate test;
     use test::{black_box, Bencher};
 
     #[bench]

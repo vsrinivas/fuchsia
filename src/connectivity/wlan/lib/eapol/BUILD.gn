@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("eapol") {
+  with_unit_tests = true
   edition = "2018"
   deps = [
     "//third_party/rust_crates:bitfield",
@@ -12,5 +15,20 @@ rustc_library("eapol") {
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:nom",
+  ]
+}
+
+package("eapol-tests") {
+  testonly = true
+
+  deps = [
+    ":eapol",
+  ]
+
+  tests = [
+      {
+          name = "eapol_lib_test"
+          environments = basic_envs
+      }
   ]
 }
