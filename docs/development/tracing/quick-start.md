@@ -37,13 +37,15 @@ After Fuchsia comes up, you can run the `traceutil` program in another Linux
 shell:
 
 ```shell
-linux-shell-2$ fx traceutil record --buffer-size=64 --spawn /boot/bin/sh -c "'\
-               sleep 2 ;\
-               i=0 ;\
-               while [ \$i -lt 10 ] ;\
-                  do /bin/du /boot ;\
-                  i=\$(( \$i + 1 )) ;\
-               done'"
+linux-shell-2$ fx traceutil record --buffer-size=64 \
+    --categories=all --spawn \
+    /boot/bin/sh -c "'\
+        sleep 2 ;\
+        i=0 ;\
+        while [ \$i -lt 10 ] ;\
+        do /bin/du /boot ;\
+            i=\$(( \$i + 1 )) ;\
+        done'"
 ```
 
 > Note that the extra quoting and backslashes are required because the command
@@ -58,6 +60,7 @@ This invokes the `traceutil` utility with the following command line options:
 * `record` &mdash; instructs the `trace` utility to begin recording.
 * `--buffer=size=64` &mdash; specifies the buffer size, in megabytes, for the
   recording buffer.
+* `--categories=all` &mdash; specifies the collection of all trace categories.
 * `--spawn` &mdash; instructs the `trace` utility to launch the program with
   **fdio_spawn()**.
 
