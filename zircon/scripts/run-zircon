@@ -304,7 +304,8 @@ if [[ $NET == 2 ]]; then
         TAP_IFS=$(ip tuntap show 2>/dev/null)
         if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
           echo "To use qemu with networking on Linux, configure tun/tap:"
-          echo "sudo ip tuntap add dev $IFNAME mode tap user $USER"
+          echo
+          echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
           echo "sudo ifconfig $IFNAME up"
           exit 1
         fi
