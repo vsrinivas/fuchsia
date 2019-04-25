@@ -29,11 +29,46 @@ class SandboxArgs {
   config::Config config;
 };
 
+class SandboxResult {
+ public:
+  enum Status {
+    SUCCESS,
+    NETWORK_CONFIG_FAILED,
+    SERVICE_EXITED,
+    ENVIRONMENT_CONFIG_FAILED,
+    TEST_FAILED,
+    SETUP_FAILED,
+    COMPONENT_FAILURE,
+    EMPTY_TEST_SET,
+    TIMEOUT,
+    INTERNAL_ERROR,
+    UNSPECIFIED
+  };
+
+  SandboxResult() : status_(SUCCESS) {}
+  explicit SandboxResult(Status status) : status_(status) {}
+
+  SandboxResult(Status status, std::string description)
+      : status_(status), description_(std::move(description)) {}
+
+  bool is_success() const { return status_ == Status::SUCCESS; }
+
+  Status status() const { return status_; }
+
+  const std::string& description() const { return description_; }
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const SandboxResult& result);
+
+ private:
+  Status status_;
+  std::string description_;
+};
+
 class Sandbox {
  public:
   using TerminationReason = fuchsia::sys::TerminationReason;
-  using TerminationCallback =
-      fit::function<void(int64_t code, TerminationReason reason)>;
+  using TerminationCallback = fit::function<void(SandboxResult)>;
   using ServicesCreatedCallback = fit::function<void()>;
   using RootEnvironmentCreatedCallback =
       fit::function<void(ManagedEnvironment*)>;
@@ -62,12 +97,16 @@ class Sandbox {
       fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>>;
   using ConfiguringEnvironmentLauncher =
       std::shared_ptr<fidl::SynchronousInterfacePtr<fuchsia::sys::Launcher>>;
+  using Promise = fit::promise<void, SandboxResult>;
+  using PromiseResult = fit::result<void, SandboxResult>;
 
   void StartEnvironments();
-  void Terminate(TerminationReason reason);
-  void Terminate(int64_t exit_code, TerminationReason reason);
-  void PostTerminate(TerminationReason reason);
-  void PostTerminate(int64_t exit_code, TerminationReason reason);
+  void Terminate(SandboxResult result);
+  void Terminate(SandboxResult::Status status,
+                 std::string description = std::string());
+  void PostTerminate(SandboxResult result);
+  void PostTerminate(SandboxResult::Status status,
+                     std::string description = std::string());
 
   void EnableTestObservation();
   void RegisterTest(size_t ticket);
@@ -78,26 +117,25 @@ class Sandbox {
                      const std::string& url,
                      const std::vector<std::string>& arguments, bool is_test);
 
-  fit::promise<> LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
-                             const std::string& url,
-                             const std::vector<std::string>& arguments);
+  Promise LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
+                      const std::string& url,
+                      const std::vector<std::string>& arguments);
 
-  fit::promise<> StartChildEnvironment(ConfiguringEnvironmentPtr parent,
-                                       const config::Environment* config);
-  fit::promise<> StartEnvironmentInner(ConfiguringEnvironmentPtr environment,
-                                       const config::Environment* config);
-  fit::promise<> StartEnvironmentSetup(const config::Environment* config,
+  Promise StartChildEnvironment(ConfiguringEnvironmentPtr parent,
+                                const config::Environment* config);
+  Promise StartEnvironmentInner(ConfiguringEnvironmentPtr environment,
+                                const config::Environment* config);
+  Promise StartEnvironmentSetup(const config::Environment* config,
+                                ConfiguringEnvironmentLauncher launcher);
+  Promise StartEnvironmentAppsAndTests(const config::Environment* config,
                                        ConfiguringEnvironmentLauncher launcher);
-  fit::promise<> StartEnvironmentAppsAndTests(
-      const config::Environment* config,
-      ConfiguringEnvironmentLauncher launcher);
 
   bool CreateEnvironmentOptions(const config::Environment& config,
                                 ManagedEnvironment::Options* options);
   void ConfigureRootEnvironment();
-  fit::promise<> ConfigureEnvironment(ConfiguringEnvironmentPtr env,
-                                      const config::Environment* config,
-                                      bool root = false);
+  Promise ConfigureEnvironment(ConfiguringEnvironmentPtr env,
+                               const config::Environment* config,
+                               bool root = false);
   bool ConfigureNetworks();
 
   async_dispatcher_t* main_dispatcher_;

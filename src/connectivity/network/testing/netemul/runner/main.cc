@@ -57,14 +57,10 @@ int main(int argc, const char** argv) {
     }
 
     Sandbox sandbox(std::move(args));
-    sandbox.SetTerminationCallback([](int64_t exit_code,
-                                      Sandbox::TerminationReason reason) {
-      FXL_LOG(INFO) << "Sandbox terminated with (" << exit_code << ") reason: "
-                    << sys::HumanReadableTerminationReason(reason);
-      if (reason != Sandbox::TerminationReason::EXITED) {
-        exit_code = 1;
-      }
-      zx_process_exit(exit_code);
+    sandbox.SetTerminationCallback([](SandboxResult result) {
+      FXL_LOG(INFO) << "Sandbox terminated with status: " << result;
+      int64_t exit = result.is_success() ? 0 : 1;
+      zx_process_exit(exit);
     });
 
     sandbox.Start(loop.dispatcher());

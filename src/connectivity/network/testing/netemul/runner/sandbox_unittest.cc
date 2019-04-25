@@ -34,11 +34,10 @@ class SandboxTest : public ::gtest::RealLoopFixture {
  protected:
   using TerminationReason = Sandbox::TerminationReason;
 
-  void RunSandbox(bool expect_success, TerminationReason expect_reason) {
+  void RunSandbox(SandboxResult::Status expect) {
     Sandbox sandbox(std::move(sandbox_args_));
     bool done = false;
-    int64_t o_exit_code;
-    TerminationReason o_term_reason;
+    SandboxResult o_result;
 
     sandbox.SetServicesCreatedCallback([this, &sandbox]() {
       if (connect_to_network_) {
@@ -49,13 +48,9 @@ class SandboxTest : public ::gtest::RealLoopFixture {
       }
     });
 
-    sandbox.SetTerminationCallback([&done, &o_exit_code, &o_term_reason](
-                                       int64_t exit_code,
-                                       TerminationReason reason) {
-      FXL_LOG(INFO) << "Sandbox terminated with (" << exit_code << ") reason: "
-                    << sys::HumanReadableTerminationReason(reason);
-      o_exit_code = exit_code;
-      o_term_reason = reason;
+    sandbox.SetTerminationCallback([&done, &o_result](SandboxResult result) {
+      FXL_LOG(INFO) << "Sandbox terminated with status: " << result;
+      o_result = std::move(result);
       done = true;
     });
 
@@ -70,17 +65,19 @@ class SandboxTest : public ::gtest::RealLoopFixture {
     // last chance to read any events pending.
     RunLoopUntilIdle();
 
-    EXPECT_EQ(o_exit_code == 0, expect_success);
-    EXPECT_EQ(o_term_reason, expect_reason);
+    // If we're expecting unspecified status, we will just check for expected
+    // failure. That's for failure cases that can have races on different
+    // failure points.
+    if (expect == SandboxResult::Status::UNSPECIFIED) {
+      EXPECT_FALSE(o_result.is_success());
+    } else {
+      EXPECT_EQ(o_result.status(), expect);
+    }
   }
 
-  void RunSandboxSuccess() { RunSandbox(true, TerminationReason::EXITED); }
+  void RunSandboxSuccess() { RunSandbox(SandboxResult::SUCCESS); }
 
-  void RunSandboxInternalError() {
-    RunSandbox(false, TerminationReason::INTERNAL_ERROR);
-  }
-
-  void RunSandboxFailure() { RunSandbox(false, TerminationReason::EXITED); }
+  void RunSandboxFailure() { RunSandbox(SandboxResult::TEST_FAILED); }
 
   void SetCmx(const std::string& cmx) {
     ASSERT_TRUE(sandbox_args_.ParseFromString(cmx));
@@ -294,7 +291,7 @@ TEST_F(SandboxTest, FailedSetupCausesFailure) {
   }
   )");
   EnableEventCollection();
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::SETUP_FAILED);
   // root proc should not have run, so events should be empty
   EXPECT_TRUE(events().empty());
 }
@@ -481,7 +478,7 @@ TEST_F(SandboxTest, DuplicateNetworkNameFails) {
     ]
   }
   )");
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::NETWORK_CONFIG_FAILED);
 }
 
 TEST_F(SandboxTest, DuplicateEndpointNameFails) {
@@ -503,7 +500,7 @@ TEST_F(SandboxTest, DuplicateEndpointNameFails) {
     ]
   }
   )");
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::NETWORK_CONFIG_FAILED);
 }
 
 TEST_F(SandboxTest, ValidNetworkSetup) {
@@ -649,7 +646,7 @@ TEST_F(SandboxTest, NoTestsIsFailedtest) {
     }
   }
   )");
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::EMPTY_TEST_SET);
 }
 
 TEST_F(SandboxTest, DisabledTestSucceeds) {
@@ -676,7 +673,7 @@ TEST_F(SandboxTest, NonexistentPackageUrl) {
    }
 }
 )");
-  RunSandbox(false, TerminationReason::PACKAGE_NOT_FOUND);
+  RunSandbox(SandboxResult::Status::COMPONENT_FAILURE);
 }
 
 TEST_F(SandboxTest, TimeoutFires) {
@@ -691,7 +688,7 @@ TEST_F(SandboxTest, TimeoutFires) {
 )");
   // expect that we'll fail due to the timeout of 1s < 10s of wait in the dummy
   // proc:
-  RunSandbox(false, TerminationReason::EXITED);
+  RunSandbox(SandboxResult::Status::TIMEOUT);
 }
 
 TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
@@ -722,7 +719,7 @@ TEST_F(SandboxTest, BadServiceCausesFailure) {
    }
 }
 )");
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::SERVICE_EXITED);
 }
 
 TEST_F(SandboxTest, ServiceExittingCausesFailure) {
@@ -742,7 +739,7 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
    }
 }
 )");
-  RunSandboxInternalError();
+  RunSandbox(SandboxResult::Status::SERVICE_EXITED);
 }
 
 TEST_F(SandboxTest, DestructorRunsCleanly) {
@@ -764,9 +761,7 @@ TEST_F(SandboxTest, DestructorRunsCleanly) {
 )");
   auto sandbox = std::make_unique<Sandbox>(TakeArgs());
   sandbox->SetTerminationCallback(
-      [](int64_t exit_code, TerminationReason reason) {
-        FAIL() << "Shouldn't exit";
-      });
+      [](SandboxResult result) { FAIL() << "Shouldn't exit"; });
   sandbox->Start(dispatcher());
   // Give enough time for the process to actually open the file:
   RunLoopWithTimeout(zx::msec(15));
@@ -790,7 +785,11 @@ TEST_F(SandboxTest, EnvironmentsWithSameNameFail) {
       ]
    }
 })");
-  RunSandboxInternalError();
+  // Failures for environment with same name can come
+  // from different sources and is racy, to prevent
+  // test flakiness we just check that it'll fail cleanly,
+  // and not expect a specific return code.
+  RunSandbox(SandboxResult::Status::UNSPECIFIED);
 }
 
 }  // namespace testing
