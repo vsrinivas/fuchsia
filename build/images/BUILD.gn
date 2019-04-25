@@ -44,6 +44,10 @@ declare_args() {
   vbmeta_r_partition = ""
   active_partition = ""
   signed_image = false
+
+  # Whether to include images necessary to run Fuchsia in QEMU in build
+  # archives.
+  add_qemu_to_build_archives = false
 }
 
 assert(
@@ -498,6 +502,7 @@ images += [
     json = {
       name = "qemu-kernel"
       type = "kernel"
+      archive = add_qemu_to_build_archives
     }
     sdk = "qemu-kernel.bin"
     deps = []
@@ -884,6 +889,7 @@ images += [
     json = {
       name = "storage-full"
       type = "blk"
+      archive = add_qemu_to_build_archives
     }
     sdk = "fvm.blk"
     public = [
