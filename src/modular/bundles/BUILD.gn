@@ -13,6 +13,7 @@ group("bundles") {
 group("tools") {
   testonly = true
   public_deps = [
+    "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:sessionctl",
   ]
 }
