@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_RAW_AST_H_
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -220,13 +221,13 @@ public:
     TypeConstructor(SourceElement const& element,
                     std::unique_ptr<CompoundIdentifier> identifier,
                     std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-                    std::unique_ptr<types::HandleSubtype> maybe_handle_subtype,
+                    std::optional<types::HandleSubtype> handle_subtype,
                     std::unique_ptr<Constant> maybe_size,
                     types::Nullability nullability)
         : SourceElement(element.start_, element.end_),
           identifier(std::move(identifier)),
           maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-          maybe_handle_subtype(std::move(maybe_handle_subtype)),
+          handle_subtype(handle_subtype),
           maybe_size(std::move(maybe_size)),
           nullability(nullability) {}
 
@@ -234,7 +235,7 @@ public:
 
     std::unique_ptr<CompoundIdentifier> identifier;
     std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
-    std::unique_ptr<types::HandleSubtype> maybe_handle_subtype;
+    std::optional<types::HandleSubtype> handle_subtype;
     std::unique_ptr<Constant> maybe_size;
     types::Nullability nullability;
 };

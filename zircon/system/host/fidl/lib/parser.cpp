@@ -69,12 +69,12 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
 }
 
 bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
-                                 std::unique_ptr<types::HandleSubtype>* out_handle_subtype) {
+                                 std::optional<types::HandleSubtype>* out_handle_subtype) {
     auto lookup = handle_subtype_table_.find(identifier->location().data());
     if (lookup == handle_subtype_table_.end()) {
         return false;
     }
-    *out_handle_subtype = std::make_unique<types::HandleSubtype>(lookup->second);
+    *out_handle_subtype = lookup->second;
     return true;
 }
 
@@ -354,7 +354,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     if (!Ok())
         return Fail();
     std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
-    std::unique_ptr<types::HandleSubtype> maybe_handle_subtype;
+    std::optional<types::HandleSubtype> handle_subtype;
     if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
         if (!Ok())
             return Fail();
@@ -364,7 +364,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
             auto identifier = ParseIdentifier(true);
             if (!Ok())
                 return Fail();
-            if (!LookupHandleSubtype(identifier.get(), &maybe_handle_subtype))
+            if (!LookupHandleSubtype(identifier.get(), &handle_subtype))
                 return Fail();
         } else {
             maybe_arg_type_ctor = ParseTypeConstructor();
@@ -394,7 +394,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
         scope.GetSourceElement(),
         std::move(identifier),
         std::move(maybe_arg_type_ctor),
-        std::move(maybe_handle_subtype),
+        handle_subtype,
         std::move(maybe_size),
         nullability);
 }

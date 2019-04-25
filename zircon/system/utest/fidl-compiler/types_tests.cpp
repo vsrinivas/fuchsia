@@ -18,7 +18,7 @@ namespace flat {
         ASSERT_TRUE(typespace.Create(                                  \
             the_type_name,                                             \
             nullptr /* maybe_arg_type */,                              \
-            nullptr /* maybe_handle_subtype */,                        \
+            std::optional<types::HandleSubtype>(),                     \
             nullptr /* maybe_size */,                                  \
             types::Nullability::kNonnullable,                          \
             &the_type));                                               \

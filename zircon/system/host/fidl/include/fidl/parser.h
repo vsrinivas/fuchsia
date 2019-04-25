@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_PARSER_H_
 
 #include <memory>
+#include <optional>
 
 #include "error_reporter.h"
 #include "lexer.h"
@@ -168,7 +169,7 @@ private:
     }
 
     bool LookupHandleSubtype(const raw::Identifier* identifier,
-                             std::unique_ptr<types::HandleSubtype>* out_handle_subtype);
+                             std::optional<types::HandleSubtype>* out_handle_subtype);
 
     decltype(nullptr) Fail();
     decltype(nullptr) Fail(StringView message);

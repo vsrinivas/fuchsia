@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <optional>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -651,16 +652,16 @@ struct RequestHandleType : public Type {
 
 struct TypeConstructor {
     TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-               std::unique_ptr<types::HandleSubtype> maybe_handle_subtype,
+               std::optional<types::HandleSubtype> handle_subtype,
                std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
         : name(std::move(name)), maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-          maybe_handle_subtype(std::move(maybe_handle_subtype)),
+          handle_subtype(handle_subtype),
           maybe_size(std::move(maybe_size)), nullability(nullability) {}
 
     // Set during construction.
     const Name name;
     const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
-    const std::unique_ptr<types::HandleSubtype> maybe_handle_subtype;
+    const std::optional<types::HandleSubtype> handle_subtype;
     const std::unique_ptr<Constant> maybe_size;
     const types::Nullability nullability;
 
@@ -898,7 +899,7 @@ public:
 
     virtual bool Create(const SourceLocation* maybe_location,
                         const Type* arg_type,
-                        const types::HandleSubtype* handle_subtype,
+                        const std::optional<types::HandleSubtype>& handle_subtype,
                         const Size* size,
                         types::Nullability nullability,
                         std::unique_ptr<Type>* out_type) const = 0;
@@ -940,7 +941,7 @@ public:
 
     bool Create(const flat::Name& name,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 const Type** out_type);
@@ -957,7 +958,7 @@ private:
 
     bool CreateNotOwned(const flat::Name& name,
                         const Type* arg_type,
-                        const types::HandleSubtype* handle_subtype,
+                        const std::optional<types::HandleSubtype>& handle_subtype,
                         const Size* size,
                         types::Nullability nullability,
                         std::unique_ptr<Type>* out_type);

@@ -32,7 +32,6 @@ if (defined(zx)) {
       "lib/virtual_source_file.cpp",
     ]
     public_deps = [
-      # <fidl/flat_ast.h> has #include <lib/fit/function.h>.
       "$zx/system/ulib/fit:headers",
     ]
     deps = [

@@ -378,7 +378,7 @@ bool IsSimple(const Type* type, const FieldShape& fieldshape) {
 
 bool Typespace::Create(const flat::Name& name,
                        const Type* arg_type,
-                       const types::HandleSubtype* handle_subtype,
+                       const std::optional<types::HandleSubtype>& handle_subtype,
                        const Size* size,
                        types::Nullability nullability,
                        const Type** out_type) {
@@ -392,7 +392,7 @@ bool Typespace::Create(const flat::Name& name,
 
 bool Typespace::CreateNotOwned(const flat::Name& name,
                        const Type* arg_type,
-                       const types::HandleSubtype* handle_subtype,
+                       const std::optional<types::HandleSubtype>& handle_subtype,
                        const Size* size,
                        types::Nullability nullability,
                        std::unique_ptr<Type>* out_type) {
@@ -447,10 +447,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (maybe_arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
         if (maybe_size != nullptr)
@@ -474,10 +476,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (maybe_arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
         if (size == nullptr)
@@ -499,10 +503,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
         if (size == nullptr)
@@ -522,10 +528,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
         if (size == nullptr)
@@ -546,10 +554,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
         if (size == nullptr)
@@ -570,7 +580,7 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
-                const types::HandleSubtype* maybe_handle_subtype,
+                const std::optional<types::HandleSubtype>& handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
@@ -579,11 +589,11 @@ public:
         if (maybe_size != nullptr)
             return CannotHaveSize(maybe_location);
 
-        auto handle_subtype = types::HandleSubtype::kHandle;
-        if (maybe_handle_subtype != nullptr)
-            handle_subtype = *maybe_handle_subtype;
-
-        *out_type = std::make_unique<HandleType>(handle_subtype, nullability);
+        *out_type = std::make_unique<HandleType>(
+            handle_subtype.has_value() ?
+                handle_subtype.value() :
+                types::HandleSubtype::kHandle,
+            nullability);
         return true;
     }
 };
@@ -595,10 +605,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
         if (arg_type->kind != Type::Kind::kIdentifier)
@@ -628,10 +640,12 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* arg_type,
-                const types::HandleSubtype* handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype.has_value());
+
         if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kInterface) {
             if (type_decl_->compiling) {
                 type_decl_->recursive = true;
@@ -687,7 +701,7 @@ public:
 
     bool Create(const SourceLocation* maybe_location,
                 const Type* maybe_arg_type,
-                const types::HandleSubtype* no_handle_subtype,
+                const std::optional<types::HandleSubtype>& no_handle_subtype,
                 const Size* maybe_size,
                 types::Nullability maybe_nullability,
                 std::unique_ptr<Type>* out_type) const {
@@ -732,7 +746,7 @@ public:
         }
 
         return typespace_->CreateNotOwned(partial_type_ctor_->name, arg_type,
-                                          nullptr /* handle_subtype */,
+                                          std::optional<types::HandleSubtype>(),
                                           size, nullability, out_type);
     }
 
@@ -1421,7 +1435,7 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
     *out_type_ctor = std::make_unique<TypeConstructor>(
         std::move(name),
         std::move(maybe_arg_type_ctor),
-        std::move(raw_type_ctor->maybe_handle_subtype),
+        raw_type_ctor->handle_subtype,
         std::move(maybe_size),
         raw_type_ctor->nullability);
     return true;
@@ -1495,7 +1509,7 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
         type_ctor = std::make_unique<TypeConstructor>(
             Name(nullptr, "uint32"),
             nullptr /* maybe_arg_type */,
-            nullptr /* maybe_handle_subtype */,
+            std::optional<types::HandleSubtype>(),
             nullptr /* maybe_size */,
             types::Nullability::kNonnullable);
     }
@@ -1552,7 +1566,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         type_ctor = std::make_unique<TypeConstructor>(
             Name(nullptr, "uint32"),
             nullptr /* maybe_arg_type */,
-            nullptr /* maybe_handle_subtype */,
+            std::optional<types::HandleSubtype>(),
             nullptr /* maybe_size */,
             types::Nullability::kNonnullable);
     }
@@ -1682,7 +1696,7 @@ std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl
     return std::make_unique<TypeConstructor>(
         Name(decl->name.library(), decl->name.name_part()),
         nullptr /* maybe_arg_type */,
-        nullptr /* maybe_handle_subtype */,
+        std::optional<types::HandleSubtype>(),
         nullptr /* maybe_size */,
         nullability);
 }
@@ -3131,7 +3145,7 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
             return Fail(type_ctor->name.maybe_location(), "unable to parse size bound");
         size = static_cast<const Size*>(&type_ctor->maybe_size->Value());
     }
-    if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->maybe_handle_subtype.get(),
+    if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype,
                             size, type_ctor->nullability,
                             &type_ctor->type))
         return false;
