@@ -137,7 +137,7 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
         printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
         printf("\ttimers: %lu\n", percpu.stats.timers);
 #if WITH_FAIR_SCHEDULER
-        printf("\ttotal weight: %d\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
+        printf("\ttotal weight: %" PRIi64 "\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
         printf("\trunnable tasks: %zu\n", percpu.fair_runqueue.GetRunnableTasks());
 #endif
     }

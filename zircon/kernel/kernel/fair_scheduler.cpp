@@ -64,19 +64,33 @@ using ffl::Round;
 
 namespace {
 
-// Converts from kernel priority value in the range [0, 31] to weight.
+// Conversion table entry. Scales the integer argument to a fixed-point weight
+// in the interval (0.0, 1.0].
+struct WeightTableEntry {
+    constexpr WeightTableEntry(int64_t value)
+        : value{FromRatio<int64_t>(value, SchedWeight::Format::Power)} {}
+    constexpr operator SchedWeight() const { return value; }
+    const SchedWeight value;
+};
+
+// Table of fixed-point constants converting from kernel priority to fair
+// scheduler weight.
+constexpr WeightTableEntry kPriorityToWeightTable[] = {
+    121, 149, 182, 223, 273, 335, 410, 503,
+    616, 754, 924, 1132, 1386, 1698, 2080, 2549,
+    3122, 3825, 4685, 5739, 7030, 8612, 10550, 12924,
+    15832, 19394, 23757, 29103, 35651, 43672, 53499, 65536};
+
+// Converts from kernel priority value in the interval [0, 31] to weight in the
+// interval (0.0, 1.0]. See the definition of SchedWeight for an explanation of
+// the weight distribution.
 constexpr SchedWeight PriorityToWeight(int priority) {
-    return FromRatio(priority + 1, NUM_PRIORITIES);
+    return kPriorityToWeightTable[priority];
 }
 
 // The minimum possible weight and its reciprocal.
 constexpr SchedWeight kMinWeight = PriorityToWeight(LOWEST_PRIORITY);
 constexpr SchedWeight kReciprocalMinWeight = 1 / kMinWeight;
-
-// Converts from weight to kernel priority value in the range [0, 31].
-constexpr int WeightToPriority(SchedWeight weight) {
-    return Round<int>(kReciprocalMinWeight * weight) - 1;
-}
 
 // Utility operator to make expressions more succinct that update thread times
 // and durations of basic types using the fixed-point counterparts.
@@ -168,10 +182,10 @@ FairScheduler* FairScheduler::Get(cpu_num_t cpu) {
     return &percpu::Get(cpu).fair_runqueue;
 }
 
-void FairScheduler::InitializeThread(thread_t* thread, SchedWeight weight) {
-    new (&thread->fair_task_state) FairTaskState{weight};
-    thread->base_priority = WeightToPriority(weight);
-    thread->effec_priority = WeightToPriority(weight);
+void FairScheduler::InitializeThread(thread_t* thread, int priority) {
+    new (&thread->fair_task_state) FairTaskState{PriorityToWeight(priority)};
+    thread->base_priority = priority;
+    thread->effec_priority = priority;
     thread->inherited_priority = -1;
     thread->priority_boost = 0;
 }
@@ -322,7 +336,7 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
     // Adjust the rate of the current thread when demand changes. Changes in
     // demand could be due to threads entering or leaving the run queue, or due
     // to weights changing in the current or enqueued threads.
-    if (weight_total_ > 0 && weight_total_ != scheduled_weight_total_) {
+    if (weight_total_ > SchedWeight{0} && weight_total_ != scheduled_weight_total_) {
         LOCAL_KTRACE_DURATION trace_adjust_rate{"adjust_rate"_stringref};
         scheduled_weight_total_ = weight_total_;
 
@@ -333,7 +347,7 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
         // Update the preemption timer if necessary.
         if (timeslice_changed && timeslice_remaining) {
             const SchedTime absolute_deadline_ns =
-                current_thread->last_started_running + time_slice_ns;
+                start_of_current_time_slice_ns_ + time_slice_ns;
             timer_preempt_reset(absolute_deadline_ns.raw_value());
         }
 
@@ -464,9 +478,15 @@ SchedDuration FairScheduler::CalculateTimeslice(thread_t* thread) {
     FairTaskState* const state = &thread->fair_task_state;
 
     // Calculate the relative portion of the scheduling period.
-    const Fixed<int64_t, 5> time_slice_grans = scheduling_period_grans_ *
-                                               state->weight_ / weight_total_;
-    const SchedDuration time_slice_ns = time_slice_grans.Ceiling() *
+    const SchedWeight proportional_time_slice_grans = scheduling_period_grans_ *
+                                                      state->weight_ / weight_total_;
+
+    // Ensure that the time slice is at least the minimum granularity.
+    const int64_t time_slice_grans = Round<int64_t>(proportional_time_slice_grans);
+    const int64_t minimum_time_slice_grans = time_slice_grans > 0 ? time_slice_grans : 1;
+
+    // Calcluate the time slice in nanoseconds.
+    const SchedDuration time_slice_ns = minimum_time_slice_grans *
                                         minimum_granularity_ns_;
 
     trace.End(state->weight_.raw_value(), weight_total_.raw_value());
@@ -482,7 +502,6 @@ void FairScheduler::NextThreadTimeslice(thread_t* thread) {
 
     FairTaskState* const state = &thread->fair_task_state;
     state->time_slice_ns_ = CalculateTimeslice(thread);
-    DEBUG_ASSERT(state->time_slice_ns_ >= minimum_granularity_ns_);
 
     SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%ld\n",
                   thread->name,
@@ -510,8 +529,8 @@ void FairScheduler::UpdateThreadTimeline(thread_t* thread, Placement placement) 
 
     const SchedDuration scheduling_period_ns = scheduling_period_grans_ *
                                                minimum_granularity_ns_;
-    const SchedDuration delta_norm = scheduling_period_ns /
-                                     (kReciprocalMinWeight * state->weight_);
+    const SchedWeight rate = kReciprocalMinWeight * state->weight_;
+    const SchedDuration delta_norm = scheduling_period_ns / rate;
     state->virtual_finish_time_ = state->virtual_start_time_ + delta_norm;
 
     DEBUG_ASSERT_MSG(state->virtual_start_time_ < state->virtual_finish_time_,
@@ -916,18 +935,15 @@ void FairScheduler::UpdateWeightCommon(thread_t* thread,
     }
 }
 
-void FairScheduler::ChangeWeight(thread_t* thread, SchedWeight weight,
+void FairScheduler::ChangeWeight(thread_t* thread, int priority,
                                  cpu_mask_t* cpus_to_reschedule_mask) {
     LOCAL_KTRACE_DURATION trace{"sched_change_weight"_stringref};
 
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d "
-                  "current_weight=%d new_weight=%d\n",
+    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n",
                   thread->name, ToString(thread->state),
                   thread->base_priority, thread->effec_priority,
-                  thread->inherited_priority,
-                  WeightToPriority(thread->fair_task_state.weight()),
-                  WeightToPriority(weight));
+                  thread->inherited_priority);
 
     if (thread_is_idle(thread) || thread->state == THREAD_DEATH) {
         return;
@@ -938,20 +954,20 @@ void FairScheduler::ChangeWeight(thread_t* thread, SchedWeight weight,
     // deadline scheduler is available and remove this conversion once the
     // kernel uses the abstraction throughout.
     const int original_priority = thread->effec_priority;
-    thread->base_priority = WeightToPriority(weight);
+    thread->base_priority = priority;
     thread->priority_boost = 0;
 
     // Adjust the effective priority for inheritance, if necessary.
     if (thread->inherited_priority > thread->base_priority) {
         thread->effec_priority = thread->inherited_priority;
-        weight = PriorityToWeight(thread->effec_priority);
     } else {
         thread->effec_priority = thread->base_priority;
     }
 
     // Perform the state-specific updates if the effective priority changed.
     if (thread->effec_priority != original_priority) {
-        UpdateWeightCommon(thread, original_priority, weight,
+        UpdateWeightCommon(thread, original_priority,
+                           PriorityToWeight(thread->effec_priority),
                            cpus_to_reschedule_mask,
                            PropagatePI::Yes);
     }
@@ -959,20 +975,16 @@ void FairScheduler::ChangeWeight(thread_t* thread, SchedWeight weight,
     trace.End(original_priority, thread->effec_priority);
 }
 
-void FairScheduler::InheritWeight(thread_t* thread, SchedWeight weight,
+void FairScheduler::InheritWeight(thread_t* thread, int priority,
                                   cpu_mask_t* cpus_to_reschedule_mask) {
     LOCAL_KTRACE_DURATION trace{"sched_inherit_weight"_stringref};
 
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d "
-                  "current_weight=%d new_weight=%d\n",
+    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n",
                   thread->name, ToString(thread->state),
                   thread->base_priority, thread->effec_priority,
-                  thread->inherited_priority,
-                  WeightToPriority(thread->fair_task_state.weight()),
-                  WeightToPriority(weight));
+                  thread->inherited_priority);
 
-    const int priority = WeightToPriority(weight);
     const int original_priority = thread->effec_priority;
     thread->inherited_priority = priority;
     thread->priority_boost = 0;
@@ -981,12 +993,12 @@ void FairScheduler::InheritWeight(thread_t* thread, SchedWeight weight,
         thread->effec_priority = thread->inherited_priority;
     } else {
         thread->effec_priority = thread->base_priority;
-        weight = PriorityToWeight(thread->effec_priority);
     }
 
     // Perform the state-specific updates if the effective priority changed.
     if (thread->effec_priority != original_priority) {
-        UpdateWeightCommon(thread, original_priority, weight,
+        UpdateWeightCommon(thread, original_priority,
+                           PriorityToWeight(thread->effec_priority),
                            cpus_to_reschedule_mask,
                            PropagatePI::No);
     }
@@ -1002,7 +1014,7 @@ void FairScheduler::TimerTick(SchedTime now) {
 // Temporary compatibility with the thread layer.
 
 void sched_init_thread(thread_t* thread, int priority) {
-    FairScheduler::InitializeThread(thread, PriorityToWeight(priority));
+    FairScheduler::InitializeThread(thread, priority);
 }
 
 void sched_block() {
@@ -1048,8 +1060,7 @@ void sched_migrate(thread_t* thread) {
 void sched_inherit_priority(thread_t* thread, int priority,
                             bool* local_reschedule,
                             cpu_mask_t* cpus_to_reschedule_mask) {
-    FairScheduler::InheritWeight(thread, PriorityToWeight(priority),
-                                 cpus_to_reschedule_mask);
+    FairScheduler::InheritWeight(thread, priority, cpus_to_reschedule_mask);
 
     const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
     if (*cpus_to_reschedule_mask & current_cpu_mask) {
@@ -1059,8 +1070,7 @@ void sched_inherit_priority(thread_t* thread, int priority,
 
 void sched_change_priority(thread_t* thread, int priority) {
     cpu_mask_t cpus_to_reschedule_mask = 0;
-    FairScheduler::ChangeWeight(thread, PriorityToWeight(priority),
-                                &cpus_to_reschedule_mask);
+    FairScheduler::ChangeWeight(thread, priority, &cpus_to_reschedule_mask);
 
     const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
     if (cpus_to_reschedule_mask & current_cpu_mask) {

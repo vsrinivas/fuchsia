@@ -34,10 +34,12 @@ public:
     static constexpr SchedDuration kDefaultMinimumGranularity = SchedUs(750);
 
     // Default target latency for a scheduling period.
-    static constexpr SchedDuration kDefaultTargetLatency = SchedMs(6);
+    static constexpr SchedDuration kDefaultTargetLatency = SchedMs(16);
 
     // Default peak latency for a scheduling period.
-    static constexpr SchedDuration kDefaultPeakLatency = SchedMs(10);
+    static constexpr SchedDuration kDefaultPeakLatency = SchedMs(24);
+
+    static_assert(kDefaultPeakLatency >= kDefaultTargetLatency);
 
     FairScheduler() = default;
     ~FairScheduler() = default;
@@ -80,7 +82,7 @@ private:
     friend void sched_preempt_timer_tick(zx_time_t now);
 
     // Static scheduler methods called by the wrapper API above.
-    static void InitializeThread(thread_t* thread, SchedWeight weight);
+    static void InitializeThread(thread_t* thread, int priority);
     static void Block() TA_REQ(thread_lock);
     static void Yield() TA_REQ(thread_lock);
     static void Preempt() TA_REQ(thread_lock);
@@ -91,9 +93,9 @@ private:
     static void UnblockIdle(thread_t* idle_thread) TA_REQ(thread_lock);
     static void Migrate(thread_t* thread) TA_REQ(thread_lock);
     static void MigrateUnpinnedThreads(cpu_num_t current_cpu) TA_REQ(thread_lock);
-    static void ChangeWeight(thread_t* thread, SchedWeight weight,
+    static void ChangeWeight(thread_t* thread, int priority,
                              cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
-    static void InheritWeight(thread_t* thread, SchedWeight weight,
+    static void InheritWeight(thread_t* thread, int priority,
                               cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
     static void TimerTick(SchedTime now);
 
@@ -128,7 +130,6 @@ private:
                                    SchedWeight weight,
                                    cpu_mask_t* cpus_to_reschedule_mask,
                                    PropagatePI propagate) TA_REQ(thread_lock);
-
 
     // Common logic for reschedule API.
     void RescheduleCommon(SchedTime now) TA_REQ(thread_lock);

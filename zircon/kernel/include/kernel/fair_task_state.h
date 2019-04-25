@@ -17,16 +17,21 @@
 // Forward declaration.
 typedef struct thread thread_t;
 
-// Fixed-point task weight/priority. The 5bit fractional component supports 32
-// priority levels (1/32 through 32/32), while the 26bit integer component
-// supports sums of ~64M threads with weight 1.0.
+// Fixed-point task weight.
 //
-// Weights should not be negative however, the value is signed for consistency
+// The 16bit fractional component accommodates the exponential curve defining
+// the priority-to-weight relation:
+//
+//      Weight = 1.225^(Priority - 31)
+//
+// This yields roughly 10% bandwidth difference between adjacent priorities.
+//
+// Weights should not be negative, however, the value is signed for consistency
 // with zx_time_t (SchedTime) and zx_duration_t (SchedDuration), which are the
 // primary types used in conjunction with SchedWeight. This is to make it less
 // likely that expressions involving weights are accidentally promoted to
 // unsigned.
-using SchedWeight = ffl::Fixed<int32_t, 5>;
+using SchedWeight = ffl::Fixed<int64_t, 16>;
 
 // Fixed-point types wrapping time and duration types to make time expressions
 // cleaner in the scheduler code.
