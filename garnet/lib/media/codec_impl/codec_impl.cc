@@ -2612,9 +2612,6 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(
 
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
       output_constraints;
-  uint64_t next_output_format_details_version_ordinal =
-      next_output_format_details_version_ordinal_;
-  fuchsia::media::StreamOutputConfig output_config;
   {  // scope unlock
     ScopedUnlock unlock(lock);
 
@@ -2627,22 +2624,6 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(
         current_stream_lifetime_ordinal,
         new_output_buffer_constraints_version_ordinal,
         buffer_constraints_action_required);
-
-    // Temporarily still generate config also by converting from constraints and
-    // getting format also - this only works for now because core codecs happen
-    // to be able to provide format this early because they can only generate 1
-    // for now etc - but for now it can work during the transition.
-    fuchsia::media::StreamOutputFormat output_format = CoreCodecGetOutputFormat(
-        current_stream_lifetime_ordinal,
-        next_output_format_details_version_ordinal);
-    output_config.set_stream_lifetime_ordinal(
-        output_constraints->stream_lifetime_ordinal());
-    output_config.set_buffer_constraints_action_required(
-        output_constraints->buffer_constraints_action_required());
-    output_config.set_buffer_constraints(
-        fidl::Clone(output_constraints->buffer_constraints()));
-    output_config.set_format_details(
-        fidl::Clone(output_format.format_details()));
   }  // ~unlock
 
   // We only call GenerateAndSendNewOutputConstraints() from contexts that won't be
@@ -2673,13 +2654,10 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(
   // as we want output_constraints_ to remain valid (at least for debugging
   // reasons for now).
   PostToSharedFidl(
-      [this, output_constraints = fidl::Clone(*output_constraints_),
-       output_config = std::move(output_config)]() mutable {
+      [this, output_constraints = fidl::Clone(*output_constraints_)]() mutable {
         // See "is_bound_checks" comment up top.
         if (binding_.is_bound()) {
           binding_.events().OnOutputConstraints(std::move(output_constraints));
-          // DEPRECATED - keep sending this temporarily.
-          binding_.events().OnOutputConfig(std::move(output_config));
         }
       });
 }
@@ -3747,9 +3725,7 @@ CodecImpl::CoreCodecBuildNewOutputConstraints(
 fuchsia::media::StreamOutputFormat CodecImpl::CoreCodecGetOutputFormat(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_format_details_version_ordinal) {
-  // TODO(dustingreen): Remove the 2nd part of this assert condition along with
-  // removal of SetOutputBufferSettings() and OnOutputConfig() messages.
-  ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread() || thrd_current() == stream_control_thread_);
+  ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
   fuchsia::media::StreamOutputFormat format =
       codec_adapter_->CoreCodecGetOutputFormat(stream_lifetime_ordinal, new_output_format_details_version_ordinal);
   ZX_DEBUG_ASSERT(format.has_stream_lifetime_ordinal());
