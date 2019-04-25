@@ -14,6 +14,7 @@
 #include <memory>
 #include <set>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include <lib/fit/function.h>
@@ -55,24 +56,27 @@ struct Name {
     Name() {}
 
     Name(const Library* library, const SourceLocation name)
-        : library_(library),
-          name_from_source_(std::make_unique<SourceLocation>(name)) {}
+        : library_(library), name_(name) {}
 
     Name(const Library* library, const std::string& name)
-        : library_(library),
-          anonymous_name_(std::make_unique<std::string>(name)) {}
+        : library_(library), name_(name) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
     const Library* library() const { return library_; }
     const SourceLocation* maybe_location() const {
-        return name_from_source_.get();
+        if (std::holds_alternative<AnonymousName>(name_)) {
+            return nullptr;
+        }
+        return &std::get<SourceLocation>(name_);
     }
     const StringView name_part() const {
-        if (!name_from_source_)
-            return *anonymous_name_.get();
-        return name_from_source_->data();
+        if (std::holds_alternative<AnonymousName>(name_)) {
+            return std::get<AnonymousName>(name_);
+        } else {
+            return std::get<SourceLocation>(name_).data();
+        }
     }
 
     bool operator==(const Name& other) const {
@@ -95,9 +99,10 @@ struct Name {
     }
 
 private:
+    using AnonymousName = std::string;
+
     const Library* library_ = nullptr;
-    std::unique_ptr<SourceLocation> name_from_source_;
-    std::unique_ptr<std::string> anonymous_name_;
+    std::variant<SourceLocation, AnonymousName> name_;
 };
 
 struct ConstantValue {
