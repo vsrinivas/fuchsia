@@ -28,7 +28,6 @@ enum {
     COMPONENT_CLOCK,
     COMPONENT_I2C,
     COMPONENT_POWER,
-    COMPONENT_CHILD4,
     COMPONENT_COUNT,
 };
 
@@ -152,7 +151,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     clock_protocol_t clock;
     i2c_protocol_t i2c;
     power_protocol_t power;
-    clock_protocol_t child4;
 
     status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
@@ -177,11 +175,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     status = device_get_protocol(components[COMPONENT_POWER], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
-        return status;
-    }
-    status = device_get_protocol(components[COMPONENT_CHILD4], ZX_PROTOCOL_CLOCK, &child4);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
         return status;
     }
 

@@ -7,7 +7,6 @@ testonly = true
 simple_drivers = [
   "child-1",
   "child-2",
-  "child-2.proxy",
   "child-3",
   "parent",
   "composite",

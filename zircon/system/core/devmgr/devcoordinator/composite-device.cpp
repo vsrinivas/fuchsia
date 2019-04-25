@@ -127,14 +127,8 @@ zx_status_t CompositeDevice::TryAssemble() {
     // Create all of the proxies for the component devices, in the same process
     for (auto& component : bound_) {
         const auto& component_dev = component.component_device();
-        auto bound_dev = component.bound_device();
+        const auto& bound_dev = component.bound_device();
         coordinator = component_dev->coordinator;
-
-        // If the device we're bound to is proxied, we care about its proxy
-        // rather than it, since that's the side that we communicate with.
-        if (bound_dev->proxy()) {
-            bound_dev = bound_dev->proxy();
-        }
 
         // Check if we need to use the proxy.  If not, share a reference straight
         // to the target device rather than the instance of the component device

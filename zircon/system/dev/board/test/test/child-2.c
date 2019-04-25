@@ -22,18 +22,8 @@ static void test_release(void* ctx) {
     free(ctx);
 }
 
-static zx_status_t test_rxrpc(void* ctx, zx_handle_t channel) {
-    if (channel == ZX_HANDLE_INVALID) {
-        return ZX_OK;
-    }
-    // This won't actually get called, since the other half doesn't send
-    // messages at the moment
-    __builtin_trap();
-};
-
 static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
-    .rxrpc = test_rxrpc,
     .release = test_release,
 };
 
@@ -72,21 +62,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_device_prop_t child_props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_4 },
-    };
-
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-4",
+        .name = "child-2",
         .ctx = test,
         .ops = &test_device_protocol,
-        .props = child_props,
-        .prop_count = countof(child_props),
-        .flags = DEVICE_ADD_MUST_ISOLATE,
-        .proxy_args = ",",
     };
 
     status = device_add(parent, &args, &test->zxdev);
