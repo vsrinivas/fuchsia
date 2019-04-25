@@ -11,7 +11,8 @@ use chrono::DateTime;
 use failure::Fail;
 use log::{info, warn};
 use std::any::Any;
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -19,6 +20,10 @@ use std::time::{Duration, SystemTime};
 /// Constant offset for the cache expiry. Tokens will only be returned from
 /// the cache if they have at least this much life remaining.
 const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
+
+/// Number of invalid entries tolerated in the expiry queue before invalid
+/// entries are purged.  This is expressed as a fraction of the cache capacity.
+const INVALID_ENTRY_FLUSH_THRESHOLD: f32 = 0.5;
 
 /// An enumeration of the possible failure modes for operations on a `TokenCache`.
 #[derive(Debug, PartialEq, Eq, Fail)]
@@ -81,21 +86,98 @@ pub trait CacheToken: Any + Send + Sync {
     fn expiry_time(&self) -> &SystemTime;
 }
 
+/// An entry in the `TokenCache` expiry queue.
+struct ExpiryQueueEntry {
+    /// Cache entry this entry tracks.
+    cache_key: Arc<CacheKey>,
+    /// Time at which the referenced token expires.
+    expiry_time: SystemTime,
+}
+
+impl ExpiryQueueEntry {
+    /// Construct a new `ExpiryQueueEntry`.
+    fn new(cache_key: Arc<CacheKey>, expiry_time: SystemTime) -> ExpiryQueueEntry {
+        ExpiryQueueEntry { cache_key: cache_key, expiry_time: expiry_time }
+    }
+}
+
+impl Ord for ExpiryQueueEntry {
+    fn cmp(&self, other: &ExpiryQueueEntry) -> Ordering {
+        self.expiry_time.cmp(&other.expiry_time).reverse()
+    }
+}
+
+impl PartialOrd for ExpiryQueueEntry {
+    fn partial_cmp(&self, other: &ExpiryQueueEntry) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for ExpiryQueueEntry {
+    fn eq(&self, other: &ExpiryQueueEntry) -> bool {
+        self.expiry_time == other.expiry_time
+    }
+}
+
+impl Eq for ExpiryQueueEntry {}
+
+/// A wrapper struct around a `CacheToken` that allows it to be used for
+/// dynamic dispatch as both `CacheToken` and `Any` trait objects.
+/// This approach becomes unnecessary if casting to and from a supertrait
+/// (&CacheToken <-> &Any) becomes possible.  Upcasting is tracked as a
+/// requirement in RFC issue https://github.com/rust-lang/rfcs/issues/349.
+/// An alternative is to store Arc<CacheToken + Any> if multiple-trait trait
+/// objects are added (https://github.com/rust-lang/rfcs/issues/2035)
+struct TokenReference {
+    /// token stored as `CacheToken` trait object
+    cache_token: Arc<CacheToken>,
+    /// token stored as `Any` trait object
+    any: Arc<Any + Send + Sync>,
+}
+
+impl TokenReference {
+    /// Create a new `TokenReference`
+    fn new<T: CacheToken>(token: Arc<T>) -> TokenReference {
+        TokenReference {
+            cache_token: Arc::clone(&token) as Arc<CacheToken>,
+            any: token as Arc<Any + Send + Sync>,
+        }
+    }
+
+    /// Borrow as a `CacheToken` trait object.
+    fn as_cache_token(&self) -> &Arc<CacheToken> {
+        &self.cache_token
+    }
+
+    /// Borrow as an `Any` trait object.
+    fn as_any(&self) -> &Arc<Any + Send + Sync> {
+        &self.any
+    }
+}
+
 /// A cache of recently used authentication tokens. All tokens contain an
 /// expiry time and are removed when this time is reached.
 pub struct TokenCache {
-    // TODO(satsukiu): Define and enforce a max size on the number of cache
-    // entries
     /// A mapping holding cached tokens of arbitrary types.
-    token_map: HashMap<Box<CacheKey>, Arc<Any + Send + Sync>>,
+    token_map: HashMap<Arc<CacheKey>, TokenReference>,
+    /// A priority queue used to evict expired tokens.
+    expiry_queue: BinaryHeap<ExpiryQueueEntry>,
+    /// Maximum number of tokens the cache will hold.
+    capacity: usize,
     /// `SystemTime` of the last cache operation.  Used to validate time progression.
     last_time: SystemTime,
 }
 
 impl TokenCache {
-    /// Creates a new `TokenCache` with the specified initial size.
-    pub fn new(size: usize) -> TokenCache {
-        TokenCache { token_map: HashMap::with_capacity(size), last_time: SystemTime::now() }
+    /// Creates a new `TokenCache` with the specified capacity.
+    pub fn new(capacity: usize) -> TokenCache {
+        let expiry_queue_capacity = capacity + Self::num_tolerated_invalid_entries(capacity);
+        TokenCache {
+            token_map: HashMap::with_capacity(capacity),
+            expiry_queue: BinaryHeap::with_capacity(expiry_queue_capacity),
+            capacity: capacity,
+            last_time: SystemTime::now(),
+        }
     }
 
     /// Sanity check that system time has not jumped backwards since last time this method was
@@ -112,6 +194,7 @@ impl TokenCache {
                 self.token_map.len(),
             );
             self.token_map.clear();
+            self.expiry_queue.clear();
         }
         self.last_time = current_time;
     }
@@ -123,20 +206,14 @@ impl TokenCache {
         V: CacheToken,
     {
         self.validate_time_progression();
-        let uncast_token = self.token_map.get(key as &CacheKey)?;
+        self.evict_expired();
 
-        let downcast_token = if let Ok(downcast_token) = uncast_token.clone().downcast::<V>() {
-            downcast_token
+        let uncast_token = self.token_map.get(key as &CacheKey)?.as_any();
+        if let Ok(downcast_token) = Arc::clone(uncast_token).downcast::<V>() {
+            Some(downcast_token)
         } else {
             warn!("Error downcasting token in cache.");
-            return None;
-        };
-
-        if Self::is_token_expired(downcast_token.as_ref()) {
-            self.token_map.remove(key as &CacheKey);
             None
-        } else {
-            Some(downcast_token)
         }
     }
 
@@ -147,25 +224,35 @@ impl TokenCache {
         V: CacheToken,
     {
         self.validate_time_progression();
-        self.token_map.insert(Box::new(key), token);
+        self.evict_expired();
+        if self.token_map.len() == self.capacity && !self.token_map.contains_key(&key as &CacheKey)
+        {
+            self.evict_random();
+        }
+
+        let arc_key = Arc::new(key) as Arc<CacheKey>;
+        self.expiry_queue.push(ExpiryQueueEntry::new(Arc::clone(&arc_key), *token.expiry_time()));
+        self.token_map.insert(arc_key, TokenReference::new(token));
+
+        self.flush_invalid();
     }
 
     /// Deletes all the tokens associated with the given auth_provider_type and
-    /// user_profile_id.  Returns an error if no matching keys are found.
+    /// user_profile_id.  Returns an error if no matching, unexpired tokens are found.
     pub fn delete_matching(
         &mut self,
         auth_provider_type: &str,
         user_profile_id: &str,
     ) -> Result<(), AuthCacheError> {
         self.validate_time_progression();
-        // TODO(satsukiu): evict expired tokens first.  This gives consistent behavior when
-        // the only matching tokens are expired.
+        self.evict_expired();
 
         let entries_before_delete = self.token_map.len();
         self.token_map.retain(|key, _| {
             key.auth_provider_type() != auth_provider_type
                 || key.user_profile_id() != user_profile_id
         });
+        self.flush_invalid();
 
         let entries_after_delete = self.token_map.len();
         if entries_after_delete < entries_before_delete {
@@ -179,10 +266,66 @@ impl TokenCache {
         }
     }
 
-    /// Returns true if the given token is expired.
-    fn is_token_expired(token: &CacheToken) -> bool {
+    /// Evicts all expired tokens from the cache.  Invalid entries in the expiry
+    /// queue are silently discarded.
+    fn evict_expired(&mut self) {
         let current_time = SystemTime::now();
-        current_time > (*token.expiry_time() - PADDING_FOR_TOKEN_EXPIRY)
+        while let Some(expiry_entry) = pop_if(&mut self.expiry_queue, |entry| {
+            current_time > (entry.expiry_time - PADDING_FOR_TOKEN_EXPIRY)
+        }) {
+            let ExpiryQueueEntry { cache_key, expiry_time } = expiry_entry;
+            match self.token_map.get(&cache_key) {
+                Some(token) if *token.as_cache_token().expiry_time() == expiry_time => {
+                    self.token_map.remove(&cache_key);
+                }
+                _ => (), // silently discard if key doesn't exist or expiry has been updated
+            }
+        }
+    }
+
+    /// Evicts a random token from the cache.
+    fn evict_random(&mut self) {
+        // TODO(satsukiu): Use a method to get a key that is actually random.
+        match self.token_map.keys().next().map(|arc| arc.clone()) {
+            Some(random_key) => {
+                self.token_map.remove(&random_key);
+            }
+            None => warn!("Tried to evict random token from empty cache."),
+        };
+    }
+
+    /// Flushes invalid entries from the eviction queue if there are excessive
+    /// numbers of invalid entries.  Entries are invalid if the corresponding
+    /// token has been updated with a new expiration time or the token has been
+    /// removed from the cache.
+    fn flush_invalid(&mut self) {
+        let num_invalid_entries = self.expiry_queue.len() - self.token_map.len();
+        if num_invalid_entries >= Self::num_tolerated_invalid_entries(self.capacity) {
+            // This rebuilds the queue, which has the same end result as
+            // filtering out invalid entries but is much slower.
+            // TODO(satsukiu): flush out invalid entries inplace in the queue.
+            self.expiry_queue.clear();
+            self.expiry_queue.extend(self.token_map.iter().map(|(key, token)| {
+                ExpiryQueueEntry::new(Arc::clone(key), *token.as_cache_token().expiry_time())
+            }));
+        }
+    }
+
+    /// Defines the number of invalid entries allowed in the expiry queue.
+    fn num_tolerated_invalid_entries(capacity: usize) -> usize {
+        ((capacity as f32) * INVALID_ENTRY_FLUSH_THRESHOLD) as usize
+    }
+}
+
+/// Pop and return top element in a heap if it passes some condition.
+fn pop_if<T, F>(heap: &mut BinaryHeap<T>, condition: F) -> Option<T>
+where
+    T: Ord,
+    F: FnOnce(&T) -> bool,
+{
+    match condition(heap.peek()?) {
+        true => heap.pop(),
+        false => None,
     }
 }
 
@@ -190,7 +333,7 @@ impl TokenCache {
 mod tests {
     use super::*;
 
-    const CACHE_SIZE: usize = 3;
+    const CACHE_SIZE: usize = 10;
 
     const TEST_AUTH_PROVIDER: &str = "test_auth_provider";
     const TEST_USER_ID: &str = "test_auth_provider/profiles/user";
@@ -330,6 +473,24 @@ mod tests {
     }
 
     #[test]
+    fn test_get_and_put_duplicate_key() {
+        let mut token_cache = TokenCache::new(CACHE_SIZE);
+        let key = build_test_key("", "key");
+        let original_token = build_test_token(LONG_EXPIRY, "original");
+        token_cache.put(key.clone(), original_token.clone());
+        assert_eq!(token_cache.get(&key), Some(original_token));
+
+        // Verify most recently inserted token is returned.
+        let duplicate_token = build_test_token(LONG_EXPIRY, "duplicate");
+        token_cache.put(key.clone(), duplicate_token.clone());
+        assert_eq!(token_cache.get(&key), Some(duplicate_token));
+
+        // Verify no token returned if most recently inserted is expired.
+        token_cache.put(key.clone(), build_test_token(ALREADY_EXPIRED, "expired"));
+        assert!(token_cache.get(&key).is_none());
+    }
+
+    #[test]
     fn test_get_and_put_multiple_token_types() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
@@ -390,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_expired_tokens() {
+    fn test_expired_tokens_evicted() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
         // Insert one entry that's already expired and one that hasn't.
@@ -405,4 +566,65 @@ mod tests {
         assert_eq!(token_cache.get(&key), Some(token));
         assert_eq!(token_cache.get(&expired_key), None);
     }
+
+    #[test]
+    fn test_cache_put_at_capacity() {
+        let mut token_cache = TokenCache::new(CACHE_SIZE);
+        // Populate cache to capacity
+        let original_keys: Vec<TestKey> =
+            (0..CACHE_SIZE).map(|key_num| build_test_key(&key_num.to_string(), "")).collect();
+        for key in original_keys.iter() {
+            token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, ""));
+        }
+
+        // Add one token past capacity
+        let new_key = build_test_key("extra", "");
+        token_cache.put(new_key.clone(), build_test_token(LONG_EXPIRY, ""));
+
+        // New token should be present, one random original token should be evicted.
+        assert!(token_cache.get(&new_key).is_some());
+        assert_eq!(original_keys.iter().filter(|key| token_cache.get(*key).is_none()).count(), 1);
+        assert_eq!(token_cache.token_map.len(), CACHE_SIZE);
+
+        // Adding a duplicate key when cache is at capacity shouldn't evict anything.
+        let mut token_cache = TokenCache::new(CACHE_SIZE);
+        for key in original_keys.iter() {
+            token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, ""));
+        }
+        let dup_key = original_keys.iter().next().unwrap().clone();
+        token_cache.put(dup_key, build_test_token(LONG_EXPIRY, "duplicate"));
+        assert!(original_keys.iter().all(|key| token_cache.get(key).is_some()));
+        assert_eq!(token_cache.token_map.len(), CACHE_SIZE);
+    }
+
+    #[test]
+    fn test_cache_enforces_maximum_size() {
+        let keys: Vec<TestKey> =
+            (0..CACHE_SIZE).map(|key_num| build_test_key(&key_num.to_string(), "")).collect();
+
+        // Verify cache after forcing eviction queue flush by replacing every key.
+        let mut token_cache = TokenCache::new(CACHE_SIZE);
+        for key in keys.iter() {
+            token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, "original"));
+        }
+        for key in keys.iter() {
+            token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, "overwrite"));
+        }
+        assert_eq!(token_cache.token_map.len(), CACHE_SIZE);
+        assert!(keys.iter().all(|key| token_cache.get(key).is_some()));
+
+        // Verify cache contains only CACHE_SIZE entries after trying to overfill cache.
+        let mut token_cache = TokenCache::new(CACHE_SIZE);
+        let too_many_keys: Vec<TestKey> =
+            (0..CACHE_SIZE * 2).map(|key_num| build_test_key(&key_num.to_string(), "")).collect();
+        for key in too_many_keys.iter() {
+            token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, ""));
+        }
+        assert_eq!(token_cache.token_map.len(), CACHE_SIZE);
+        assert_eq!(
+            too_many_keys.iter().filter(|key| token_cache.get(*key).is_some()).count(),
+            CACHE_SIZE
+        );
+    }
+
 }
