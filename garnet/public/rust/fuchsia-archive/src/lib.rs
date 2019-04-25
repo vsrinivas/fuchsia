@@ -14,10 +14,9 @@
 //!
 //! use failure::Error;
 //! use fuchsia_archive::write;
-//! use std::collections::HashMap;
-//! use std::fs::create_dir_all;
-//! use std::fs::File;
-//! use std::io::{Cursor, Write};
+//! use std::collections::BTreeMap;
+//! use std::fs;
+//! use std::io::{Cursor, Read, Write};
 //! use tempfile::TempDir;
 //!
 //! fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
@@ -25,30 +24,28 @@
 //!     for file_name in file_names {
 //!         let file_path = tmp_dir.path().join(file_name);
 //!         let parent_dir = file_path.parent().unwrap();
-//!         create_dir_all(&parent_dir)?;
+//!         fs::create_dir_all(&parent_dir)?;
 //!         let file_path = tmp_dir.path().join(file_name);
-//!         let mut tmp_file = File::create(&file_path)?;
+//!         let mut tmp_file = fs::File::create(&file_path)?;
 //!         writeln!(tmp_file, "{}", file_name)?;
 //!     }
 //!     Ok(tmp_dir)
 //! }
 //!
-//! let files = ["b", "a", "dir/c"];
-//! let test_dir = create_test_files(&files).unwrap();
-//! let mut inputs: HashMap<String, String> = HashMap::new();
-//! for file_name in files.iter() {
+//! let file_names = ["b", "a", "dir/c"];
+//! let test_dir = create_test_files(&file_names).unwrap();
+//! let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
+//! for file_name in file_names.iter() {
 //!     let path = test_dir
 //!         .path()
 //!         .join(file_name)
 //!         .to_string_lossy()
 //!         .to_string();
-//!     inputs.insert(file_name.to_string(), path);
+//!     let file = fs::File::open(path).unwrap();
+//!     path_content_map.insert(file_name, (file.metadata().unwrap().len(), Box::new(file)));
 //! }
 //! let mut target = Cursor::new(Vec::new());
-//! write(
-//!     &mut target,
-//!     &mut inputs.iter().map(|(a, b)| (a.as_str(), b.as_str())),
-//! ).unwrap();
+//! write(&mut target, path_content_map).unwrap();
 //!
 //! ```
 
@@ -56,8 +53,6 @@ use bincode::{deserialize_from, serialize_into};
 use failure::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::fs;
-use std::fs::File;
 use std::io::{copy, Read, Seek, SeekFrom, Write};
 use std::mem;
 use std::str;
@@ -113,38 +108,38 @@ where
 }
 
 /// Write a FAR-formatted archive to the target.
-pub fn write<T>(target: &mut T, inputs: &mut Iterator<Item = (&str, &str)>) -> Result<(), Error>
-where
-    T: Write,
-{
-    let input_map: BTreeMap<&str, &str> = inputs.collect();
+///
+/// # Arguments
+///
+/// * `target` - receives the serialized bytes of the archive
+/// * `path_content_map` - map from archive relative path to (size, contents)
+pub fn write(
+    target: &mut impl Write,
+    path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)>,
+) -> Result<(), Error> {
     let mut path_data: Vec<u8> = vec![];
-    let mut entries = vec![];
-    for (destination_name, source_name) in &input_map {
-        let metadata = fs::metadata(source_name)?;
+    let mut directory_entries = vec![];
+    for (destination_name, (size, _)) in &path_content_map {
         if destination_name.len() > u16::max_value() as usize {
             return Err(format_err!("Destination name is too long"));
         }
-        entries.push(DirectoryEntry {
+        directory_entries.push(DirectoryEntry {
             name_offset: path_data.len() as u32,
             name_length: destination_name.len() as u16,
             reserved: 0,
             data_offset: 0,
-            data_length: metadata.len(),
+            data_length: *size,
             reserved2: 0,
         });
         path_data.extend_from_slice(destination_name.as_bytes());
     }
 
-    let index = Index {
-        magic: MAGIC_INDEX_VALUE,
-        length: 2 * INDEX_ENTRY_LEN as u64,
-    };
+    let index = Index { magic: MAGIC_INDEX_VALUE, length: 2 * INDEX_ENTRY_LEN as u64 };
 
     let dir_index = IndexEntry {
         chunk_type: DIR_CHUNK as u64,
         offset: INDEX_LEN + INDEX_ENTRY_LEN * 2,
-        length: entries.len() as u64 * DIRECTORY_ENTRY_LEN,
+        length: directory_entries.len() as u64 * DIRECTORY_ENTRY_LEN,
     };
 
     let name_index = IndexEntry {
@@ -161,7 +156,7 @@ where
 
     let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
 
-    for entry in &mut entries {
+    for entry in &mut directory_entries {
         entry.data_offset = content_offset;
         content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
         serialize_into(&mut *target, &entry)?;
@@ -175,10 +170,19 @@ where
     let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
     write_zeros(target, padding_count as usize)?;
 
-    for (entry_index, source_name) in input_map.values().enumerate() {
-        let mut f = File::open(source_name)?;
-        copy(&mut f, target)?;
-        let pos = entries[entry_index].data_offset + entries[entry_index].data_length;
+    for (entry_index, (archive_path, (_, mut contents))) in path_content_map.into_iter().enumerate()
+    {
+        let bytes_read = copy(&mut contents, target)?;
+        if bytes_read != directory_entries[entry_index].data_length {
+            return Err(format_err!(
+                "File at archive path '{}' had expected size {} but Reader supplied {} bytes.",
+                archive_path,
+                directory_entries[entry_index].data_length,
+                bytes_read
+            ));
+        }
+        let pos =
+            directory_entries[entry_index].data_offset + directory_entries[entry_index].data_length;
         let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
         write_zeros(target, padding_count as usize)?;
     }
@@ -226,10 +230,7 @@ where
             directory_entries.insert(file_name, entry);
         }
 
-        Ok(Reader {
-            source,
-            directory_entries,
-        })
+        Ok(Reader { source, directory_entries })
     }
 
     /// Return a list of the items in the archive
@@ -249,7 +250,9 @@ where
     }
 
     fn read_index_entries(
-        source: &mut T, count: u64, index: &Index,
+        source: &mut T,
+        count: u64,
+        index: &Index,
     ) -> Result<(Option<IndexEntry>, Option<IndexEntry>), Error> {
         let mut dir_index: Option<IndexEntry> = None;
         let mut dir_name_index: Option<IndexEntry> = None;
@@ -363,27 +366,10 @@ mod tests {
         INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
     };
     use bincode::{deserialize_from, serialize_into};
-    use failure::Error;
     use itertools::assert_equal;
-    use std::collections::HashMap;
-    use std::fs::create_dir_all;
-    use std::fs::File;
-    use std::io::{Cursor, Seek, SeekFrom, Write};
+    use std::collections::BTreeMap;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
     use std::str;
-    use tempfile::TempDir;
-
-    fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
-        let tmp_dir = TempDir::new()?;
-        for file_name in file_names {
-            let file_path = tmp_dir.path().join(file_name);
-            let parent_dir = file_path.parent().unwrap();
-            create_dir_all(&parent_dir)?;
-            let file_path = tmp_dir.path().join(file_name);
-            let mut tmp_file = File::create(&file_path)?;
-            writeln!(tmp_file, "{}", file_name)?;
-        }
-        Ok(tmp_dir)
-    }
 
     fn example_archive() -> Vec<u8> {
         let mut b: Vec<u8> = vec![0; 16384];
@@ -434,30 +420,20 @@ mod tests {
     }
 
     fn empty_archive() -> Vec<u8> {
-        vec![
-            0xc8, 0xbf, 0xb, 0x48, 0xad, 0xab, 0xc5, 0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        ]
+        vec![0xc8, 0xbf, 0xb, 0x48, 0xad, 0xab, 0xc5, 0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
     }
 
     #[test]
     fn test_write() {
-        let files = ["b", "a", "dir/c"];
-        let test_dir = create_test_files(&files).unwrap();
-        let mut inputs: HashMap<String, String> = HashMap::new();
-        for file_name in files.iter() {
-            let path = test_dir
-                .path()
-                .join(file_name)
-                .to_string_lossy()
-                .to_string();
-            inputs.insert(file_name.to_string(), path);
-        }
+        let a_contents = "a\n".as_bytes();
+        let b_contents = "b\n".as_bytes();
+        let dirc_contents = "dir/c\n".as_bytes();
+        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
+        path_content_map.insert("a", (a_contents.len() as u64, Box::new(a_contents)));
+        path_content_map.insert("b", (b_contents.len() as u64, Box::new(b_contents)));
+        path_content_map.insert("dir/c", (dirc_contents.len() as u64, Box::new(dirc_contents)));
         let mut target = Cursor::new(Vec::new());
-        write(
-            &mut target,
-            &mut inputs.iter().map(|(a, b)| (a.as_str(), b.as_str())),
-        )
-        .unwrap();
+        write(&mut target, path_content_map).unwrap();
         assert!(target.get_ref()[0..8] == MAGIC_INDEX_VALUE);
         let example_archive = example_archive();
         let target_ref = target.get_ref();
@@ -468,10 +444,7 @@ mod tests {
     #[test]
     fn test_serialize_index() {
         let mut target = Cursor::new(Vec::new());
-        let index = Index {
-            magic: MAGIC_INDEX_VALUE,
-            length: 2 * INDEX_ENTRY_LEN as u64,
-        };
+        let index = Index { magic: MAGIC_INDEX_VALUE, length: 2 * INDEX_ENTRY_LEN as u64 };
         serialize_into(&mut target, &index).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();
@@ -483,11 +456,7 @@ mod tests {
     #[test]
     fn test_serialize_index_entry() {
         let mut target = Cursor::new(Vec::new());
-        let index_entry = IndexEntry {
-            chunk_type: DIR_CHUNK as u64,
-            offset: 999,
-            length: 444,
-        };
+        let index_entry = IndexEntry { chunk_type: DIR_CHUNK as u64, offset: 999, length: 444 };
         serialize_into(&mut target, &index_entry).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_ENTRY_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();
@@ -591,20 +560,13 @@ mod tests {
 
         for one_name in ["frobulate", "dir/enhunts"].iter() {
             let entry_reader = reader.open(one_name);
-            assert!(
-                entry_reader.is_err(),
-                "Expected error for archive path \"{}\"",
-                one_name
-            );
+            assert!(entry_reader.is_err(), "Expected error for archive path \"{}\"", one_name);
         }
 
         for one_name in ["a", "b", "dir/c"].iter() {
             let mut entry_reader = reader.open(one_name).unwrap();
             let expected_error = entry_reader.read_at(99);
-            assert!(
-                expected_error.is_err(),
-                "Expected error for offset that exceeds length"
-            );
+            assert!(expected_error.is_err(), "Expected error for offset that exceeds length");
             let content = entry_reader.read_at(0).unwrap();
             let content_str = str::from_utf8(&content).unwrap();
             let expected = format!("{}\n", one_name);
