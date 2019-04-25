@@ -35,7 +35,5 @@ constexpr auto kScopes = {
     // Used by components outside this repository.
     "https://www.googleapis.com/auth/assistant",
     // Used by components outside this repository.
-    "https://www.googleapis.com/auth/youtube.readonly",
-    // Used by software update
-    "https://www.googleapis.com/auth/devstorage.read_write"};
+    "https://www.googleapis.com/auth/youtube.readonly"};
 }  // namespace google_auth_provider
