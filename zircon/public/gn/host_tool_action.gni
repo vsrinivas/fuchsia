@@ -26,6 +26,7 @@ template("host_tool_redirect") {
     environment_label = "$zx/public/gn/toolchain:host"
     cpu = host_cpu
     os = host_os
+    direct = true
     deps = [
       invoker.tool,
     ]

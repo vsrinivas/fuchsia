@@ -241,6 +241,7 @@ template("fidl_library") {
         # TODO(BLD-353): temporary hack
         if (fidl_target ==
             get_path_info(get_label_info(":$fidl_target", "dir"), "name")) {
+          legacy_barrier = []
           legacy_dirs = [ "fidl/$fidl_target" ]
           legacy_targets = [
             {

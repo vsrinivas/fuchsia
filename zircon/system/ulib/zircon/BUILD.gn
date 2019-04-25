@@ -102,6 +102,10 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     metadata = {
       legacy_sysroot = [
         {
+          vdso =
+              rebase_path("$target_out_dir/libzircon.so.debug", root_build_dir)
+        },
+        {
           include_dirs = rebase_path([
                                        "include",
                                        root_gen_dir,
@@ -143,6 +147,7 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
       # is special-cased so no //zircon/public/lib/zircon gets made, but
       # //build/config/fuchsia:compiler_sysroot can look up the metadata to
       # find the right lib_dirs.
+      legacy_barrier = []
       legacy_targets = [
         {
           target_name = "zircon"

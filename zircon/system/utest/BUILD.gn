@@ -232,6 +232,7 @@ foreach(host, standard_build_hosts) {
     environment_label = "$zx/public/gn/toolchain:host"
     cpu = host.cpu
     os = host.os
+    direct = true
     deps = [
       ":host-tests",
     ]

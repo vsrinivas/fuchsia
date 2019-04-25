@@ -91,6 +91,8 @@ config("compiler_sysroot") {
       sysroot_libc = entry.libc
     } else if (defined(entry.crt1)) {
       sysroot_crt1 = entry.crt1
+    } else if (defined(entry.vdso)) {
+      sysroot_vdso = entry.vdso
     }
   }
 
@@ -107,17 +109,6 @@ config("compiler_sysroot") {
   }
   asmflags = cflags
 
-  # Things use libs = [ "zircon" ] and expect the vDSO headers in the sysroot.
-  # TODO(BLD-353): Clean them up with deps = [ "//zircon/public/lib/zircon" ].
-  foreach(target, zircon_legacy_targets) {
-    if (target.target_name == "zircon") {
-      _libs = target.libs
-      libzircon = _libs[0]
-      assert(_libs == [ libzircon ])
-      lib_dirs = [ get_path_info("$zircon_root_build_dir/$libzircon", "dir") ]
-    }
-  }
-
   # Point the linker at a little directory we populate below.  Plain -L
   # switches (via lib_dirs) would be sufficient for the implicit -lc and -lm
   # from the compiler driver.  But Scrt1.o is found only in the sysroot.
@@ -132,15 +123,18 @@ config("compiler_sysroot") {
   # code only changes when touching core Zircon library sources.
   libc = rebase_path(sysroot_libc, "", zircon_root_build_dir)
   crt1 = rebase_path(sysroot_crt1, "", zircon_root_build_dir)
+  vdso = rebase_path(sysroot_vdso, "", zircon_root_build_dir)
   inputs = [
     libc,
     crt1,
+    vdso,
   ]
   write_file("$target_gen_dir/lib/Scrt1.o", [ "INPUT(${crt1})" ])
   write_file("$target_gen_dir/lib/libc.so", [ "INPUT(${libc})" ])
   write_file("$target_gen_dir/lib/libdl.so", [ "/* dummy */" ])
   write_file("$target_gen_dir/lib/libm.so", [ "/* dummy */" ])
   write_file("$target_gen_dir/lib/libpthread.so", [ "/* dummy */" ])
+  write_file("$target_gen_dir/lib/libzircon.so", [ "INPUT(${vdso})" ])
 }
 
 config("compiler_target") {
@@ -173,10 +167,15 @@ config("fdio_config") {
   # TODO(pylaligand): find a better way to let executables link in fdio.
   # Ideally their dependencies should be set up in such a way that it would get
   # inherited from them.
-  api_file = "$zircon_root_build_dir/legacy-fdio-$current_cpu.json"
-  libs = rebase_path(read_file(api_file, "json"), ".", zircon_root_build_dir)
-  assert(libs != [], "$api_file empty?")
-  assert(libs == [ libs[0] ], "$api_file has multiple entries?")
+  foreach(target, zircon_legacy_targets) {
+    if (target.target_name == "fdio") {
+      libs = rebase_path(target.libs, "", zircon_root_build_dir)
+    }
+  }
+
+  # TODO(mcgrathr): //build/go/go_build.gni depends on this because it
+  # uses -L... -lfdio rather than passing the file directly.
+  assert(libs == [ libs[0] ], "fdio libs has multiple elements?")
   link_file = libs[0]
   if (get_path_info(link_file, "file") != "libfdio.so") {
     link_file = rebase_path(link_file)

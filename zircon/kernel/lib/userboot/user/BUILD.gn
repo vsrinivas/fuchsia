@@ -157,6 +157,7 @@ if (current_toolchain == default_toolchain) {
   # In any other toolchain, just redirect to the proper toolchain.
   environment_redirect("userboot") {
     environment_label = ":userboot"
+    direct = true
     deps = [
       ":userboot",
     ]

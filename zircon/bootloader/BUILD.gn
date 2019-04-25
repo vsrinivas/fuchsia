@@ -81,6 +81,7 @@ if (current_toolchain == default_toolchain) {
   # In any other toolchain, just redirect to the proper toolchain.
   environment_redirect("bootloader") {
     environment_label = ":efi"
+    direct = true
     deps = [
       ":bootloader",
     ]

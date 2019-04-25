@@ -26,7 +26,7 @@ foreach(image, zircon_images) {
   if (image.type == "manifest") {
     if (image.name == "legacy-image-$target_cpu") {
       zircon_boot_manifests = [ "$zircon_root_build_dir/${image.path}" ]
-    } else if (image.name == "asan-libs" && image.cpu == target_cpu) {
+    } else if (image.name == "legacy-aux-$target_cpu") {
       zircon_aux_manifests = [ "$zircon_root_build_dir/${image.path}" ]
     }
   }

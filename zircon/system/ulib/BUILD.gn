@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
 
 assert(current_toolchain != default_toolchain)
@@ -17,11 +16,16 @@ group("ulib") {
   deps = [
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/broadcom",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/operation",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-net-stack:c",
     "$zx/third_party/ulib",
     "async",
+    "async:async-cpp",
+    "async:async-default",
     "async-loop",
+    "async-loop:async-loop-cpp",
     "async-testutils",
     "audio-driver-proto",
     "audio-proto-utils",
@@ -34,6 +38,7 @@ group("ulib") {
     "bootdata",
     "bootfs",
     "c",
+    "c:crt1",
     "chromeos-disk-setup",
     "cmdline",
     "cobalt-client",
@@ -53,7 +58,10 @@ group("ulib") {
     "fbl",
     "fdio",
     "fidl",
+    "fidl:fidl-llcpp",
+    "fidl:fidl_base",
     "fidl-async",
+    "fidl-async:fidl-async-cpp",
     "fidl-utils",
     "fit",
     "framebuffer",
@@ -85,6 +93,7 @@ group("ulib") {
     "log-writer-textfile",
     "logger",
     "memfs",
+    "memfs:memfs-cpp",
     "minfs",
     "mini-process",
     "pci",
@@ -92,6 +101,7 @@ group("ulib") {
     "port",
     "pretty",
     "process-launcher",
+    "ramdevice-client",
     "region-alloc",
     "rtc",
     "runtests-utils",
@@ -101,6 +111,7 @@ group("ulib") {
     "svc",
     "sync",
     "syslog",
+    "sysmem-connector",
     "task-utils",
     "tee-client-api",
     "test-utils",
@@ -109,6 +120,7 @@ group("ulib") {
     "trace:trace-with-static-engine",
     "trace-engine",
     "trace-engine:trace-engine-headers-for-reader",
+    "trace-engine:trace-engine-static",
     "trace-provider",
     "trace-provider:trace-provider-fdio-connect",
     "trace-provider:trace-provider-with-static-engine",

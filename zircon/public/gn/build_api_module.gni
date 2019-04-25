@@ -46,14 +46,18 @@ template("build_api_module") {
       forward_variables_from(invoker,
                              [
                                "contents",
-                               "deps",
                                "data_keys",
-                               "walk_keys",
+                               "deps",
                                "testonly",
+                               "visibility",
+                               "walk_keys",
                              ])
       output_conversion = "json"
       metadata = {
         build_api_modules = [ target_name ]
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*", [ "build_api_modules" ])
+        }
       }
     }
   } else {

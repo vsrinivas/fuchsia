@@ -5,7 +5,6 @@
 import("$zx/public/gn/host_tool_action.gni")
 import("$zx/public/gn/manifest.gni")
 import("$zx/public/gn/resource.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 # Define inputs to a dependent zbi() target.
 #

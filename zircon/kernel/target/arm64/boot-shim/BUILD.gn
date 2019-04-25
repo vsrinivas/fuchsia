@@ -135,10 +135,16 @@ template("boot_shim") {
           },
         ]
       }
+
+      # Use the same variant for the extraction that will have built the shim.
+      variant_target = {
+        match = "executable"
+      }
     }
   } else {
     environment_redirect(board) {
       environment_label = "$zx/kernel/arch/arm64:physmem"
+      direct = true
       deps = [
         ":$board",
       ]

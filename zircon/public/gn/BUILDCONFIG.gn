@@ -401,6 +401,7 @@ template("library") {
     }
 
     legacy_metadata = {
+      legacy_barrier = []
       legacy_dirs = [ "lib/$_library_name" ]
       legacy_targets = [
         {
@@ -476,6 +477,7 @@ template("library") {
     }
   } else if (!is_host && !is_kernel && (static || shared)) {
     legacy_metadata = {
+      legacy_barrier = []
     }
   }
 
@@ -526,18 +528,10 @@ template("library") {
                              "*",
                              _library_params + [
                                    "data_deps",
-                                   "metadata",  # TODO(BLD-353): see below
                                    "install_path",
                                    "public_deps",
                                    "visibility",
                                  ])
-      metadata = {
-        # TODO(BLD-353): temporary hacks
-        forward_variables_from(legacy_metadata, "*")
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*")
-        }
-      }
       if (!defined(deps)) {
         deps = []
       }
@@ -575,6 +569,9 @@ template("library") {
         deps = [
           ":${_library_name}._sources",
         ]
+
+        # TODO(BLD-353): temporary hacks
+        metadata = legacy_metadata
       }
     }
     if (shared) {
@@ -625,6 +622,12 @@ template("library") {
             manifest_inputs = [ "$target_out_dir/lib${output_name}.so" ]
             manifest_lines = [ "${install_path}=" +
                                rebase_path(manifest_inputs[0], root_build_dir) ]
+          }
+
+          # TODO(BLD-353): temporary hacks
+          forward_variables_from(legacy_metadata, "*")
+          if (defined(invoker.metadata)) {
+            forward_variables_from(invoker.metadata, [ "legacy_sysroot" ])
           }
         }
       }
@@ -781,6 +784,10 @@ template("library") {
 #         Optional: Never select a variant with any of these tags.
 #         Type: list(string)
 #         Default: []
+#       variant_suffix_target
+#         Optional: Define $target_name.$variant targets.
+#         Type: bool
+#         Default: true
 #
 #   See executable() or loadable_module() for other parameters.
 #   They will be forwarded to the underlying ${target.type} target.
@@ -792,6 +799,7 @@ template("_variant_target") {
     variant_metadata = {
     }
     exclude_variant_tags = []
+    variant_suffix_target = true
     forward_variables_from(invoker.target, "*")
     if (!defined(match)) {
       match = type
@@ -939,24 +947,27 @@ template("_variant_target") {
     # "foobin.$variant" so that multiple variants can exist side by side in
     # the same install directory.
 
-    variant_target_name = main_target_name + toolchain.variant_suffix
-
-    # To get this ease of use, a lot more goes on under the covers.  Firstly,
-    # each toolchain in the environment must define a "$target_name.$variant"
-    # target for each *other* variant that just redirects to that toolchain.
     extra_visibility = []
-    foreach(other, toolchain.other_variants) {
-      other_target_name = main_target_name + other.suffix
-      extra_visibility += [ ":other_target_name" ]
-      group(other_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-        public_deps = [
-          ":$other_target_name(${other.label})",
-        ]
+
+    if (target.variant_suffix_target) {
+      variant_target_name = main_target_name + toolchain.variant_suffix
+
+      # To get this ease of use, a lot more goes on under the covers.  Firstly,
+      # each toolchain in the environment must define a "$target_name.$variant"
+      # target for each *other* variant that just redirects to that toolchain.
+      foreach(other, toolchain.other_variants) {
+        other_target_name = main_target_name + other.suffix
+        extra_visibility += [ ":other_target_name" ]
+        group(other_target_name) {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          public_deps = [
+            ":$other_target_name(${other.label})",
+          ]
+        }
       }
     }
 
@@ -1066,15 +1077,17 @@ template("_variant_target") {
     # the main toolchain just redirect to the shlib toolchain.
     if (defined(target.shlib) && target.shlib && defined(toolchain.shlib) &&
         current_toolchain != toolchain.shlib) {
-      group(variant_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-        public_deps = [
-          ":$variant_target_name(${toolchain.shlib})",
-        ]
+      if (target.variant_suffix_target) {
+        group(variant_target_name) {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          public_deps = [
+            ":$variant_target_name(${toolchain.shlib})",
+          ]
+        }
       }
 
       not_needed(invoker, "*")
@@ -1083,26 +1096,29 @@ template("_variant_target") {
                    "output_name",
                  ])
     } else {
-      # The variant-suffixed target redirects to the builder target but also
-      # adds the metadata--different metadata than the main target above.
-      extra_visibility += [ ":$variant_target_name" ]
-      group(variant_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-        public_deps = [
-          ":$builder_target_name",
-        ]
-        metadata = {
-          if (defined(invoker.metadata)) {
-            forward_variables_from(invoker.metadata, "*")
-            assert(!defined(manifest_inputs) && !defined(manifest_lines),
-                   "the `manifest_inputs` and `manifest_lines` metadata keys" +
-                       " are reserved for standard templates; use resource()")
+      if (target.variant_suffix_target) {
+        # The variant-suffixed target redirects to the builder target but also
+        # adds the metadata--different metadata than the main target above.
+        extra_visibility += [ ":$variant_target_name" ]
+        group(variant_target_name) {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          public_deps = [
+            ":$builder_target_name",
+          ]
+          metadata = {
+            if (defined(invoker.metadata)) {
+              forward_variables_from(invoker.metadata, "*")
+              assert(
+                  !defined(manifest_inputs) && !defined(manifest_lines),
+                  "the `manifest_inputs` and `manifest_lines` metadata keys" +
+                      " are reserved for standard templates; use resource()")
+            }
+            forward_variables_from(target.variant_metadata, "*")
           }
-          forward_variables_from(target.variant_metadata, "*")
         }
       }
 
@@ -1421,6 +1437,7 @@ template("host_tool") {
 
         # TODO(BLD-353): Temporary hacks for integrating with the legacy
         # Fuchsia GN build.
+        legacy_barrier = []
         legacy_dirs = [ "tool/$target_name" ]
         legacy_targets = [
           {

@@ -140,6 +140,7 @@ template("banjo_library") {
         # TODO(BLD-353): temporary hack
         assert(banjo_target ==
                get_path_info(get_label_info(":$banjo_target", "dir"), "name"))
+        legacy_barrier = []
         legacy_dirs = [ "banjo/$banjo_target" ]
         legacy_targets = [
           {

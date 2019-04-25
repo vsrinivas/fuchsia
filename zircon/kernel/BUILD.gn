@@ -409,6 +409,7 @@ if (current_toolchain == default_toolchain) {
   # Redirect to the kernel toolchain.
   environment_redirect("kernel") {
     environment_label = ":kernel"
+    direct = true
     deps = [
       ":kernel",
     ]

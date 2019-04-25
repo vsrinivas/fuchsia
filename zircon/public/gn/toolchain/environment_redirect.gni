@@ -13,6 +13,47 @@ import("$zx/public/gn/toolchain/environment.gni")
 # selects an appropriate toolchain for those dependencies based on the other
 # parameters described below.
 #
+# A complexity arises when redirecting to a different environment, cpu, or os.
+# The information necessary to determine what variant will be selected is only
+# available inside a toolchain context that is *some* variant of the same
+# (environment, cpu, os) tuple.  Because of this, environment_redirect() has
+# to first redirect to *some* extant variant of the right environment, cpu,
+# and os and only from there can it then redirect to the correct variant.  To
+# do this, it must redirect to the selfsame environment_redirect() in that
+# other toolchain so that the instantiation in that toolchain can run the code
+# to redirect to the correct variant.  An unfortunate side effect of this is
+# that the entire BUILD.gn file containing the environment_redirect() target
+# will then be instantiated in that other environment.  This can become
+# problematic because not every BUILD.gn file expects to be instantiated in
+# every different environment.  In fact, there are sometimes very good reasons
+# for a BUILD.gn file to have an assert() that it's not instantiated in the
+# "wrong" toolchain.
+#
+# There are two opposing cases with regard to this subtlety:
+#
+# 1. $deps leads to library() or other "non-terminal" targets.
+#    Hence it's crucial to actually select the "right" variant.
+#    There is no way to avoid the "self-reference in other toolchain".
+#    We call this "indirect mode" because it bounces to itself in another
+#    toolchain before going to $deps.
+#
+# 2. $deps leads only to "terminal" targets like executable() or host_tool().
+#    (Intermediate group() targets leading to those are not a problem.)
+#    Since each of those targets does its own variant selection, it doesn't
+#    really matter which variant toolchain environment_redirect() redirects to.
+#    If we know this is the case, then there is no need for the "self-reference
+#    in other toolchain".  This lets us avoid instantiating the invoker's
+#    build file in the target environment, which might be a problem.
+#    We call this "direct mode" because it goes directly to $deps in
+#    another toolchain.
+#
+# There is no way environment_redirect() can figure out which of these cases
+# the $deps fall into.  So the invoker must indicate.  The $direct parameter
+# requests "direct mode", so that the invoker need not worry about their
+# BUILD.gn file being instantiated in the target toolchain.  The default is
+# "indirect mode", which is more "safe" in the sense that it will never go to
+# $deps in the wrong variant.
+#
 # Parameters
 #
 #   cpu
@@ -30,25 +71,35 @@ import("$zx/public/gn/toolchain/environment.gni")
 #     toolchains defined by that environment() invocation.
 #     Default: ${toolchain.environment_label}
 #
-#   exclude_variant_tags
-#     Optional: Never select a variant that has one of these tags.
-#     Type: list(string)
-#
 #   deps
 #     Required: These must be labels without toolchain suffix.  The
 #     environment_redirect() target redirects its dependents to instead depend
 #     on this list of labels, but in the toolchain selected by the other
 #     parameters.
+#     Type: list(label_no_toolchain)
+#
+#   direct
+#     Optional: $deps reaches only "terminal" targets that do their own variant
+#     selection.  See discussion above.
+#     Type: bool
+#     Default: false
 #
 #   shlib
 #     Optional: Go directly to the environment's ${toolchain.shlib} toolchain.
+#     Type: bool
 #     Default: false
+#
+#   exclude_variant_tags
+#     Optional: Never select a variant that has one of these tags.
+#     This has no effect if $variant is set.
+#     Type: list(string)
 #
 #   variant
 #     Optional: Specific variant toolchain to select.  If omitted, one will be
 #     chosen from $default_variants with the expectation that the
 #     environment() named by $environment_label used a `.variants` list
 #     including $default_variants (as is preset).
+#     Type: string
 #
 template("environment_redirect") {
   forward_variables_from(invoker,
@@ -99,7 +150,8 @@ template("environment_redirect") {
     }
   }
 
-  foreach(label, invoker.deps) {
+  redirect_deps = invoker.deps
+  foreach(label, redirect_deps) {
     # The original string should not contain a "(toolchain)" suffix.
     # We can't easily tell if it does, but we can tell if it has any
     # suffix other than the expansion of "($current_toolchain)".
@@ -114,8 +166,10 @@ template("environment_redirect") {
                             current_cpu != cpu || current_os != os)) {
     # If the caller didn't request a specific variant, then use the default
     # most likely to be selected for an arbitrary target in the selected
-    # environment.  That will dispatch to the correct variant for each
-    # particular target.  **NOTE:** environment() has special-case code
+    # environment.  Then redirect to this target in that toolchain, which
+    # will have enough information to use _variant_target() below to do
+    # the final redirect.
+    # **NOTE:** environment() has special-case code
     # based on this logic; see the comments there that mention redirects.
     foreach(default, variants + default_variants) {
       if (!defined(variant)) {
@@ -128,8 +182,13 @@ template("environment_redirect") {
             }
           }
           if (default != "") {
-            default = {
-              variant = default
+            if (get_path_info(default, "file") == default) {
+              # Ignore "variant/output_name" shorthand selectors.
+              default = {
+                variant = default
+              }
+            } else {
+              default = ""
             }
           }
         }
@@ -140,9 +199,18 @@ template("environment_redirect") {
              default.environment + [ base_environment ] -
              [ base_environment ] != default.environment)) {
           variant = default.variant
+          if (!defined(invoker.direct) || !invoker.direct) {
+            redirect_deps = []
+            redirect_deps = [ ":$target_name" ]
+          }
+          if (defined(invoker.exclude_variant_tags)) {
+            not_needed(invoker, [ "exclude_variant_tags" ])
+          }
         }
       }
     }
+  } else if (defined(invoker.direct)) {
+    not_needed(invoker, [ "direct" ])
   }
 
   if (defined(variant)) {
@@ -166,18 +234,18 @@ template("environment_redirect") {
       forward_variables_from(invoker,
                              [
                                "assert_no_deps",
+                               "metadata",
                                "visibility",
                                "testonly",
                              ])
+      if (defined(visibility)) {
+        visibility += [ ":$target_name" ]
+      }
       public_deps = []
-      foreach(label, invoker.deps) {
+      foreach(label, redirect_deps) {
         label = get_label_info(label, "label_no_toolchain")
         public_deps += [ "$label($toolchain_name)" ]
       }
-    }
-
-    if (defined(invoker.exclude_variant_tags)) {
-      not_needed(invoker, [ "exclude_variant_tags" ])
     }
   } else {
     # This does variant selection as if it were an executable called "",
@@ -186,13 +254,18 @@ template("environment_redirect") {
       forward_variables_from(invoker,
                              [
                                "assert_no_deps",
+                               "metadata",
                                "visibility",
                                "testonly",
                              ])
+      if (defined(visibility)) {
+        visibility += [ ":$target_name" ]
+      }
       target = {
         type = "group"
         match = "executable"
         output_name = ""
+        variant_suffix_target = false
         forward_variables_from(invoker,
                                [
                                  "exclude_variant_tags",
