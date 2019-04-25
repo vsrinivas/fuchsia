@@ -73,6 +73,7 @@ This section covers Fuchsia-wide conventions and best practices.
 
 ## Tracing
 
+ - [Tracing homepage](tracing/README.md)
  - [Tracing tutorial](tracing/tracing-tutorial.md)
  - [Tracing usage guide](tracing/tracing-usage-guide.md)
  - [Trace based benchmarking](benchmarking/trace_based_benchmarking.md)

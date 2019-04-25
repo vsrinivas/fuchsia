@@ -8,7 +8,7 @@ The variants defined so far enable things like
 [LTO](https://llvm.org/docs/LinkTimeOptimization.html).
 
 The GN build argument
-[`select_variant`](/garnet/docs/gen/build_arguments.md#select_variant)
+[`select_variant`](/docs/gen/build_arguments.md#select_variant)
 controls which components are built in which variants.  It applies
 automatically to every `executable`, `loadable_module`, or `driver_module`
 target in GN files.  It's a flexible mechanism in which you give a list of
@@ -49,10 +49,10 @@ select_variant = [ "host_asan", "asan/cat", "asan/ledger" ]
 
 The GN code supports much more flexible matching rules than just the binary
 name, but there are no shorthands for those. See the
-[`select_variant`](/garnet/docs/gen/build_arguments.md#select_variant)
+[`select_variant`](/docs/gen/build_arguments.md#select_variant)
 build argument documentation for more details.
 
 To see the list of variants available and learn more about how to define
 new ones, see the
-[`known_variants`](/garnet/docs/gen/build_arguments.md#known_variants)
+[`known_variants`](/docs/gen/build_arguments.md#known_variants)
 build argument.
