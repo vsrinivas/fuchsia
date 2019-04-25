@@ -8,6 +8,8 @@ source_set("query") {
     "discover.h",
     "location.cc",
     "location.h",
+    "read.cc",
+    "read.h",
     "source.cc",
     "source.h",
   ]
