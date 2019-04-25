@@ -10,6 +10,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include <io-scheduler/stream-op.h>
+
 namespace ioscheduler {
 
 class Stream;

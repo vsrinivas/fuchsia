@@ -49,7 +49,7 @@ void Worker::WorkerLoop() {
     zx_status_t status;
     for ( ; ; ) {
         size_t actual_count = 0;
-        SchedulerOp* op_list[max_ops];
+        StreamOp* op_list[max_ops];
         status = client->Acquire(op_list, max_ops, &actual_count, true);
         if (status == ZX_ERR_CANCELED) {
             // Cancel received, no more ops to read. Drain the streams and exit.
@@ -62,9 +62,10 @@ void Worker::WorkerLoop() {
         }
         // Dummy issue loop. In the future, ops will be added to the scheduler.
         for (size_t i = 0; i < actual_count; i++) {
-            status = client->Issue(op_list[i]);
+            UniqueOp ref(op_list[i]);
+            status = client->Issue(ref.get());
             ZX_DEBUG_ASSERT(status == ZX_OK);   // Require synchronous completion, for now.
-            client->Release(op_list[i]);
+            client->Release(ref.release());
         }
     }
 }

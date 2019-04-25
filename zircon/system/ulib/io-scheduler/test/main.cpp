@@ -17,9 +17,9 @@
 namespace {
 
 using IoScheduler = ioscheduler::Scheduler;
-using SchedOp = ioscheduler::SchedulerOp;
+using SchedOp = ioscheduler::StreamOp;
 
-// Wrapper around SchedulerOp.
+// Wrapper around StreamOp.
 class TestOp : public fbl::DoublyLinkedListable<fbl::RefPtr<TestOp>>,
                public fbl::RefCounted<TestOp> {
 public:

@@ -19,6 +19,7 @@ test("io-scheduler-test") {
   output_name = "iosched"
   sources = [
     "test/main.cpp",
+    "test/unique-op.cpp",
   ]
   deps = [
     "$zx/system/ulib/fbl",

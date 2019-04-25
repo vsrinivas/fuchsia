@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <io-scheduler/stream.h>
+#include <io-scheduler/stream-op.h>
 #include <io-scheduler/worker.h>
 
 namespace ioscheduler {
@@ -47,65 +48,6 @@ constexpr uint32_t kMaxPriority = 31;
 // Suggested default priority for a stream.
 constexpr uint32_t kDefaultPriority = 8;
 
-// Operation classes.
-// These are used to determine respective ordering restrictions of the ops in a stream.
-enum class OpClass : uint32_t {
-    // Operations that can optionally be reordered.
-
-    kOpClassUnknown = 0, // Always reordered.
-    kOpClassRead    = 1, // Read ordering.
-    kOpClassWrite   = 2, // Write order.
-    kOpClassDiscard = 3, // Write order.
-    kOpClassRename  = 4, // Read and Write order.
-    kOpClassSync    = 5, // Write order.
-    kOpClassCommand = 6, // Read and Write order.
-
-    // Operations that cannot be reordered.
-
-    kOpClassOrderedUnknown = 32, // Always ordered.
-
-    // Barrier operations.
-
-    // Prevent reads from being reordered ahead of this barrier op. No read
-    // after this barrier can be issued until this operation has completed.
-    kOpClassReadBarrier          = 64,
-
-    // Prevent writes from being reordered after this barrier op. This
-    // operation completes after all previous writes in the stream have been
-    // issued.
-    kOpClassWriteBarrier         = 65,
-
-    // Prevent writes from being reordered after this barrier op. This
-    // instruction completes after all previous writes in the stream have been
-    // completed.
-    kOpClassWriteCompleteBarrier = 66,
-
-    // Combined effects of kOpClassReadBarrier and kOpClassWriteBarrier.
-    kOpClassFullBarrier          = 67,
-
-    // Combined effects of kOpClassReadBarrier and kOpClassWriteCompleteBarrier.
-    kOpClassFullCompleteBarrier  = 68,
-
-};
-
-constexpr uint32_t kOpFlagComplete =    (1u << 0);
-constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
-
-constexpr uint32_t kOpGroupNone = 0;
-
-// Reserved 64-bit words for internal use.
-constexpr size_t kOpReservedQuads = 12;
-
-struct SchedulerOp {
-    uint32_t op_class;      // Type of operation.
-    uint32_t flags;         // Flags. Should be zero.
-    uint32_t stream_id;     // Stream into which this op is queued.
-    uint32_t group_id;      // Group of operations.
-    uint32_t group_members; // Number of members in the group.
-    zx_status_t result;     // Status code of the released operation.
-    void* cookie;           // User-defined per-op cookie.
-    uint64_t _reserved[kOpReservedQuads]; // Reserved, do not use.
-};
 
 // Callback interface from Scheduler to client. Callbacks are made from within
 // the Scheduler library to the client implementation. All callbacks are made
@@ -122,7 +64,7 @@ public:
     // Returns:
     //   true if it is safe to reorder |second| ahead of |first|.
     //   false otherwise.
-    virtual bool CanReorder(SchedulerOp* first, SchedulerOp* second) = 0;
+    virtual bool CanReorder(StreamOp* first, StreamOp* second) = 0;
 
     // Acquire
     //   Read zero or more ops from the client for intake into the
@@ -137,7 +79,7 @@ public:
     //   ZX_ERR_CANCELED if op source has been closed.
     //   ZX_ERR_SHOULD_WAIT if ops are currently unavailable and |wait| is
     //     false.
-    virtual zx_status_t Acquire(SchedulerOp** sop_list, size_t list_count, size_t* actual_count,
+    virtual zx_status_t Acquire(StreamOp** sop_list, size_t list_count, size_t* actual_count,
                                 bool wait) = 0;
 
     // Issue
@@ -156,7 +98,7 @@ public:
     // AsyncComplete() API.
     //   Other error status describing the internal failure that has caused
     // the issue to fail.
-    virtual zx_status_t Issue(SchedulerOp* sop) = 0;
+    virtual zx_status_t Issue(StreamOp* sop) = 0;
 
     // Release
     //   Yield ownership of the operation. The completion status of the op
@@ -165,7 +107,7 @@ public:
     // reused.
     // Args:
     //   sop - op to be released.
-    virtual void Release(SchedulerOp* sop) = 0;
+    virtual void Release(StreamOp* sop) = 0;
 
     // CancelAcquire
     //   Cancels any pending blocking calls to Acquire. No further reading of
@@ -230,7 +172,7 @@ public:
     // asynchronously, this function should be called. The status of the operation
     // should be set in |sop|’s result field. This function is non-blocking and
     // safe to call from an interrupt handler context.
-    void AsyncComplete(SchedulerOp* sop);
+    void AsyncComplete(StreamOp* sop);
 
     // API invoked by worker threads.
     // --------------------------------

@@ -105,7 +105,7 @@ zx_status_t Scheduler::Serve() {
     return ZX_OK;
 }
 
-void Scheduler::AsyncComplete(SchedulerOp* sop) {
+void Scheduler::AsyncComplete(StreamOp* sop) {
 
 }
 
