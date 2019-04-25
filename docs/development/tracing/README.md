@@ -9,7 +9,7 @@
 
 ## Visualing Traces
 
-- [Chrome Trace Viewer](chrome-trace-viewer.md)
+- (external) [Chrome Trace Viewer](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool)
 
 ## Individual Trace Providers
 
