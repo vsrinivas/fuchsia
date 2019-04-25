@@ -80,8 +80,8 @@ func (echo *echoImpl) EchoStructNoRetVal(value compatibility.Struct, forwardURL 
 			for {
 				value, err := echoInterface.ExpectEchoEvent()
 				if err != nil {
-					log.Printf("ExpectEchoEvent failed: %s", err)
-					continue
+					log.Fatalf("ExpectEchoEvent failed: %s while communicating with %s", err, forwardURL)
+					return
 				}
 				for _, key := range echoService.BindingKeys() {
 					if pxy, ok := echoService.EventProxyFor(key); ok {

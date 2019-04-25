@@ -8,6 +8,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
+#include <src/lib/fxl/logging.h>
+#include <zircon/types.h>
 #include <cstdlib>
 #include <string>
 
@@ -30,6 +32,12 @@ class EchoServerApp : public Echo {
                   EchoStructCallback callback) override {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
       app.echo()->EchoStruct(std::move(value), "",
@@ -38,7 +46,7 @@ class EchoServerApp : public Echo {
                                callback(std::move(resp));
                                loop_->Quit();
                              });
-      while (!called_back) {
+      while (!called_back && !failed) {
         loop_->Run();
       }
       loop_->ResetQuit();
@@ -51,6 +59,10 @@ class EchoServerApp : public Echo {
                           std::string forward_to_server) override {
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
+      app->echo().set_error_handler([this, &forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app->Start(forward_to_server);
       app->echo().events().EchoEvent = [this](Struct resp) {
         this->HandleEchoEvent(std::move(resp));

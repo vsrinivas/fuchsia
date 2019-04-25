@@ -38,6 +38,7 @@ executable("compatibility_test_server_cpp_bin") {
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

@@ -933,9 +933,17 @@ void ForAllServers(TestBody body) {
       std::cerr << proxy_url << " <-> " << server_url << std::endl;
       async::Loop loop(&kAsyncLoopConfigAttachToThread);
       fidl::test::compatibility::EchoClientApp proxy;
+      bool test_completed = false;
+      proxy.echo().set_error_handler([&proxy_url, &loop, &test_completed](zx_status_t status) {
+        if (!test_completed) {
+          loop.Quit();
+          FAIL() << "Connection to " << proxy_url << " failed unexpectedly: " << status;
+        }
+      });
       proxy.Start(proxy_url);
 
       body(loop, proxy.echo(), server_url);
+      test_completed = true;
     }
   }
 }
