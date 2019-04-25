@@ -29,7 +29,7 @@ use crate::server::sl4f::{serve, Sl4f};
 use crate::server::sl4f_executor::run_fidl_loop;
 
 // Config, flexible for any ip/port combination
-const SERVER_IP: &str = "0.0.0.0";
+const SERVER_IP: &str = "[::]";
 const SERVER_PORT: &str = "80";
 
 // HTTP Server using Rouille
