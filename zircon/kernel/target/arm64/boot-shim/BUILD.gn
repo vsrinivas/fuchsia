@@ -83,7 +83,7 @@ template("boot_shim") {
       outputs = [
         "$target_out_dir/$shim_name.pure-stamp",
       ]
-      script = "$zx/scripts/gen-kaslr-fixups.sh"
+      script = "$zx/kernel/gen-kaslr-fixups.sh"
       utils = [
         "readelf",
         "objdump",

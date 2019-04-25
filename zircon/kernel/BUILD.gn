@@ -307,7 +307,7 @@ if (current_toolchain == default_toolchain) {
     depfile = "${outputs[0]}.d"
 
     # TODO(mcgrathr): Move the script to this dir as it's private to this use.
-    script = "$zx/scripts/gen-kaslr-fixups.sh"
+    script = "gen-kaslr-fixups.sh"
     utils = [
       "readelf",
       "objdump",

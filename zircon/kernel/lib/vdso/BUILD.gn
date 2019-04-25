@@ -61,8 +61,7 @@ config("vdso-valid-sysret") {
 action("gen-vdso-valid-sysret") {
   visibility = [ ":*" ]
 
-  # TODO(mcgrathr): Move the script to this dir.
-  script = "$zx/scripts/gen-vdso-valid-sysret.sh"
+  script = "gen-vdso-valid-sysret.sh"
   sources = [
     "$target_gen_dir/vdso-code.h",
   ]

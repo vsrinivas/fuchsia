@@ -53,8 +53,7 @@ template("rodso_code_header") {
            "rodso_code_header() outputs must have exactly one element")
     depfile = "${outputs[0]}.d"
 
-    # TODO(mcgrathr): Move the script to this dir.
-    script = "$zx/scripts/gen-rodso-code.sh"
+    script = "$zx/kernel/lib/vdso/gen-rodso-code.sh"
     utils = [
       "nm",
       "readelf",

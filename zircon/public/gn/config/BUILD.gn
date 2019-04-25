@@ -559,9 +559,8 @@ config("static-libc++") {
 
 config("rodso") {
   if (is_gcc) {
-    # TODO(mcgrathr): Move the file to this dir?
     inputs = [
-      "$zx/scripts/rodso.ld",
+      "rodso.ld",
     ]
     ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
   }
