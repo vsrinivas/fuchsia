@@ -285,7 +285,7 @@ typedef struct {
 #define PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH (1u << 0)
 } perfmon_ioctl_properties_t;
 
-// The type of the |rate| field of perfmon_config_t.
+// The type of the |rate| field of perfmon_ioctl_config_t.
 typedef uint32_t perfmon_rate_t;
 
 // Passed to STAGE_CONFIG to select the data to be collected.
@@ -330,7 +330,7 @@ typedef struct {
 // This is only available when the underlying system supports it.
 // TODO(dje): Provide knob to specify how many branches.
 #define PERFMON_CONFIG_FLAG_LAST_BRANCH (1u << 4)
-} perfmon_config_t;
+} perfmon_ioctl_config_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -384,19 +384,19 @@ IOCTL_WRAPPER_OUT(ioctl_perfmon_get_alloc, IOCTL_PERFMON_GET_ALLOC,
 // Must be called with data collection off and after ALLOC.
 // Note: This doesn't actually configure the h/w, this just stages
 // the values for subsequent use by START.
-// Input: perfmon_config_t
+// Input: perfmon_ioctl_config_t
 #define IOCTL_PERFMON_STAGE_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 4)
 IOCTL_WRAPPER_IN(ioctl_perfmon_stage_config, IOCTL_PERFMON_STAGE_CONFIG,
-                 perfmon_config_t)
+                 perfmon_ioctl_config_t)
 
 // Fetch performance monitor specification for a cpu.
 // Must be called with data collection off and after STAGE_CONFIG.
-// Output: perfmon_config_t
+// Output: perfmon_ioctl_config_t
 #define IOCTL_PERFMON_GET_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 5)
 IOCTL_WRAPPER_OUT(ioctl_perfmon_get_config, IOCTL_PERFMON_GET_CONFIG,
-                  perfmon_config_t)
+                  perfmon_ioctl_config_t)
 
 typedef struct {
     uint32_t descriptor;

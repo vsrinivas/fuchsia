@@ -110,10 +110,10 @@ class Importer {
 
   uint64_t ImportRecords(perfmon::DeviceReader& reader,
                          const perfmon::Properties& props,
-                         const perfmon_config_t& config);
+                         const perfmon_ioctl_config_t& config);
 
   void ImportSampleRecord(trace_cpu_number_t cpu,
-                          const perfmon_config_t& config,
+                          const perfmon_ioctl_config_t& config,
                           const perfmon::SampleRecord& record,
                           trace_ticks_t previous_time,
                           trace_ticks_t current_time, uint64_t ticks_per_second,
@@ -126,11 +126,11 @@ class Importer {
                         uint64_t ticks_per_second, uint64_t value);
 
   void EmitLastBranchRecord(trace_cpu_number_t cpu,
-                            const perfmon_config_t& config,
+                            const perfmon_ioctl_config_t& config,
                             const perfmon::SampleRecord& record,
                             trace_ticks_t time);
 
-  void EmitTallyCounts(const perfmon_config_t& config,
+  void EmitTallyCounts(const perfmon_ioctl_config_t& config,
                        const EventTracker* event_data);
 
   void EmitTallyRecord(trace_cpu_number_t cpu, perfmon_event_id_t event_id,

@@ -107,7 +107,7 @@ std::string GetDefaultModelName();
 
 // Return the number of events in |config|.
 // This function is thread-safe.
-size_t GetConfigEventCount(const perfmon_config_t& config);
+size_t GetConfigEventCount(const perfmon_ioctl_config_t& config);
 
 }  // namespace perfmon
 

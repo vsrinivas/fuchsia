@@ -185,7 +185,7 @@ void ModelEventManager::DumpGroup(const char* name,
   }
 }
 
-size_t GetConfigEventCount(const perfmon_config_t& config) {
+size_t GetConfigEventCount(const perfmon_ioctl_config_t& config) {
   size_t count;
 
   for (count = 0; count < PERFMON_MAX_EVENTS; ++count) {

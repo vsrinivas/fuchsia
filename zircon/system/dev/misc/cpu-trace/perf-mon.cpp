@@ -290,8 +290,8 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     // can't be used.
     per_trace->configured = false;
 
-    perfmon_config_t ioctl_config;
-    perfmon_config_t* icfg = &ioctl_config;
+    perfmon_ioctl_config_t ioctl_config;
+    perfmon_ioctl_config_t* icfg = &ioctl_config;
     if (cmdlen != sizeof(*icfg)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -397,7 +397,7 @@ zx_status_t PerfmonDevice::PmuGetConfig(void* reply, size_t replymax,
         return ZX_ERR_BAD_STATE;
     }
 
-    const perfmon_config_t* config = &per_trace->ioctl_config;
+    const perfmon_ioctl_config_t* config = &per_trace->ioctl_config;
     if (replymax < sizeof(*config)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }

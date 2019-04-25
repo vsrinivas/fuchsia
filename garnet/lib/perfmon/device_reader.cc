@@ -56,7 +56,7 @@ bool DeviceReader::GetProperties(Properties* props) {
   return true;
 }
 
-bool DeviceReader::GetConfig(perfmon_config_t* config) {
+bool DeviceReader::GetConfig(perfmon_ioctl_config_t* config) {
   auto status = ioctl_perfmon_get_config(fd_, config);
   if (status < 0)
     FXL_LOG(ERROR) << "ioctl_perfmon_get_config failed: " << status;

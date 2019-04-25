@@ -182,10 +182,10 @@ bool TraceConfig::Changed(const TraceConfig& old) const {
   return false;
 }
 
-bool TraceConfig::TranslateToDeviceConfig(perfmon_config_t* out_config) const {
+bool TraceConfig::TranslateToDeviceConfig(perfmon_ioctl_config_t* out_config) const {
   FXL_CHECK(model_event_manager_);
 
-  perfmon_config_t* cfg = out_config;
+  perfmon_ioctl_config_t* cfg = out_config;
   memset(cfg, 0, sizeof(*cfg));
 
   unsigned ctr = 0;

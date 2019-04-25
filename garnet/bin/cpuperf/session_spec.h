@@ -40,7 +40,7 @@ struct SessionSpec {
   std::string model_name;
 
   // Configuration for collecting cpu performance data.
-  perfmon_config_t perfmon_config{};
+  perfmon_ioctl_config_t perfmon_config{};
 
   // The size of the trace buffer to use, in MB.
   uint32_t buffer_size_in_mb{kDefaultBufferSizeInMb};

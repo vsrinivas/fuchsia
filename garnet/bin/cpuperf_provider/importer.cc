@@ -74,7 +74,7 @@ bool Importer::Import(perfmon::DeviceReader& reader) {
     return false;
   }
 
-  perfmon_config_t config;
+  perfmon_ioctl_config_t config;
   if (!reader.GetConfig(&config)) {
     FXL_LOG(ERROR) << "Error reading CPU performance config";
     return false;
@@ -90,7 +90,7 @@ bool Importer::Import(perfmon::DeviceReader& reader) {
 
 uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
                                  const perfmon::Properties& props,
-                                 const perfmon_config_t& config) {
+                                 const perfmon_ioctl_config_t& config) {
   EventTracker event_data(start_time_);
   uint32_t record_count = 0;
   // Only print these warnings once, and then again at the end with
@@ -223,7 +223,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
 }
 
 void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
-                                  const perfmon_config_t& config,
+                                  const perfmon_ioctl_config_t& config,
                                   const perfmon::SampleRecord& record,
                                   trace_ticks_t previous_time,
                                   trace_ticks_t current_time,
@@ -334,7 +334,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 }
 
 void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
-                                    const perfmon_config_t& config,
+                                    const perfmon_ioctl_config_t& config,
                                     const perfmon::SampleRecord& record,
                                     trace_ticks_t time) {
   // Use the cpu's name as the blob's name.
@@ -369,7 +369,7 @@ void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
 // currently no other way to communicate the start time of the trace in a
 // json output file, and thus there would otherwise be no way for the
 // report printer to know the duration over which the count was collected.
-void Importer::EmitTallyCounts(const perfmon_config_t& config,
+void Importer::EmitTallyCounts(const perfmon_ioctl_config_t& config,
                                const EventTracker* event_data) {
   unsigned num_cpus = zx_system_get_num_cpus();
 

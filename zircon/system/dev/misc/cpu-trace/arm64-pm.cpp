@@ -108,7 +108,7 @@ void PerfmonDevice::InitializeStagingState(StagingState* ss) {
          : ~0ul);
 }
 
-zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_config_t* icfg,
+zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                             StagingState* ss,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
@@ -147,7 +147,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_config_t* icfg,
+zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t* icfg,
                                                    StagingState* ss,
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
@@ -208,7 +208,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_config_t* icfg,
+zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
                                            StagingState* ss,
                                            unsigned input_index,
                                            PmuConfig* ocfg) {

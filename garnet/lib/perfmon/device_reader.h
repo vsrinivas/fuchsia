@@ -26,7 +26,7 @@ class DeviceReader final : public Reader {
 
   bool GetProperties(Properties* props);
 
-  bool GetConfig(perfmon_config_t* config);
+  bool GetConfig(perfmon_ioctl_config_t* config);
 
  private:
   // |fd| is borrowed.

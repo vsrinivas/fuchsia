@@ -57,7 +57,7 @@ Returns 0 on success or a negative error code.
 ### *ioctl_perfmon_stage_config*
 
 ```
-ssize_t ioctl_perfmon_stage_config(int fd, const perfmon_config_t* config);
+ssize_t ioctl_perfmon_stage_config(int fd, const perfmon_ioctl_config_t* config);
 ```
 
 Configure data collection. |*config| specifies the events to collect
@@ -69,7 +69,7 @@ Returns 0 on success or a negative error code.
 ### *ioctl_perfmon_get_config*
 
 ```
-ssize_t ioctl_perfmon_get_config(int fd, perfmon_config_t* config);
+ssize_t ioctl_perfmon_get_config(int fd, perfmon_ioctl_config_t* config);
 ```
 
 Fetch the configuration passed in to a preceding call to

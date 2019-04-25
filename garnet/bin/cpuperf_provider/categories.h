@@ -102,7 +102,7 @@ class TraceConfig final {
   bool Changed(const TraceConfig& old) const;
 
   // Translate our representation of the configuration to the device's.
-  bool TranslateToDeviceConfig(perfmon_config_t* out_config) const;
+  bool TranslateToDeviceConfig(perfmon_ioctl_config_t* out_config) const;
 
   // Return a string representation of the config for error reporting.
   std::string ToString() const;

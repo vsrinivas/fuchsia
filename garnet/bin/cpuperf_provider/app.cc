@@ -120,7 +120,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
   FXL_DCHECK(!context_);
   FXL_DCHECK(!controller_);
 
-  perfmon_config_t device_config;
+  perfmon_ioctl_config_t device_config;
   if (!trace_config.TranslateToDeviceConfig(&device_config)) {
     FXL_LOG(ERROR) << "Error converting trace config to device config";
     return;

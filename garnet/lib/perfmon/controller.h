@@ -39,7 +39,7 @@ class Controller {
   static bool GetProperties(Properties* props);
 
   static bool Create(uint32_t buffer_size_in_pages,
-                     const perfmon_config_t& config,
+                     const perfmon_ioctl_config_t& config,
                      std::unique_ptr<Controller>* out_controller);
 
   ~Controller();
@@ -58,9 +58,9 @@ class Controller {
 
  private:
   static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages,
-                    const perfmon_config_t& config);
+                    const perfmon_ioctl_config_t& config);
   Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
-             uint32_t buffer_size, const perfmon_config_t& config);
+             uint32_t buffer_size, const perfmon_ioctl_config_t& config);
   bool Stage();
   void Free();
   void Reset();
@@ -71,7 +71,7 @@ class Controller {
   uint32_t num_traces_;
   // This is the actual buffer size we use, in pages.
   const uint32_t buffer_size_in_pages_;
-  const perfmon_config_t config_;
+  const perfmon_ioctl_config_t config_;
   bool started_ = false;
 };
 

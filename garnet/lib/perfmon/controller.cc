@@ -20,7 +20,7 @@ namespace perfmon {
 
 const char kPerfMonDev[] = "/dev/sys/cpu-trace/perfmon";
 
-static Controller::Mode GetMode(const perfmon_config_t& config) {
+static Controller::Mode GetMode(const perfmon_ioctl_config_t& config) {
   for (size_t i = 0; i < countof(config.rate); ++i) {
     // If any event is doing sampling, then we're in "sample mode".
     if (config.rate[i] != 0) {
@@ -83,7 +83,7 @@ bool Controller::GetProperties(Properties* props) {
 
 bool Controller::Alloc(int fd, uint32_t num_traces,
                        uint32_t buffer_size_in_pages,
-                       const perfmon_config_t& config) {
+                       const perfmon_ioctl_config_t& config) {
   ioctl_perfmon_alloc_t alloc;
   alloc.num_buffers = num_traces;
   alloc.buffer_size_in_pages = buffer_size_in_pages;
@@ -118,7 +118,7 @@ bool Controller::Alloc(int fd, uint32_t num_traces,
 }
 
 bool Controller::Create(uint32_t buffer_size_in_pages,
-                        const perfmon_config_t& config,
+                        const perfmon_ioctl_config_t& config,
                         std::unique_ptr<Controller>* out_controller) {
   int raw_fd = open(kPerfMonDev, O_WRONLY);
   if (raw_fd < 0) {
@@ -151,7 +151,7 @@ bool Controller::Create(uint32_t buffer_size_in_pages,
 
 Controller::Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
                        uint32_t buffer_size_in_pages,
-                       const perfmon_config_t& config)
+                       const perfmon_ioctl_config_t& config)
     : fd_(std::move(fd)),
       mode_(mode),
       num_traces_(num_traces),

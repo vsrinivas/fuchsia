@@ -69,7 +69,7 @@ struct PmuPerTraceState {
     bool configured;
 
     // The trace configuration as given to us via the ioctl.
-    perfmon_config_t ioctl_config;
+    perfmon_ioctl_config_t ioctl_config;
 
     // The internalized form of |ioctl_config| that we pass to the kernel.
     PmuConfig config;
@@ -152,15 +152,15 @@ class PerfmonDevice : public DeviceType {
     // Initialize |ss| in preparation for processing the PMU configuration.
     void InitializeStagingState(StagingState* ss);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageFixedConfig(const perfmon_config_t* icfg,
+    zx_status_t StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                  StagingState* ss, unsigned input_index,
                                  PmuConfig* ocfg);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageProgrammableConfig(const perfmon_config_t* icfg,
+    zx_status_t StageProgrammableConfig(const perfmon_ioctl_config_t* icfg,
                                         StagingState* ss, unsigned input_index,
                                         PmuConfig* ocfg);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageMiscConfig(const perfmon_config_t* icfg,
+    zx_status_t StageMiscConfig(const perfmon_ioctl_config_t* icfg,
                                 StagingState* ss, unsigned input_index,
                                 PmuConfig* ocfg);
     // Verify the result. This is where the architecture can do any last
