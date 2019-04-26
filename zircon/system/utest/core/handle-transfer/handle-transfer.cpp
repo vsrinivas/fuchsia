@@ -7,9 +7,11 @@
 #include <time.h>
 
 #include <lib/zx/channel.h>
+#include <lib/zx/thread.h>
 #include <zircon/threads.h>
 #include <zxtest/zxtest.h>
 
+namespace {
 
 // This example tests transferring channel handles through channels. To do so, it:
 //   Creates two channels, a and b.
@@ -38,7 +40,7 @@ TEST(HandleTransferTest, OverChannelThenRead) {
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 1u;
     ASSERT_OK(b_remote.read(0u, nullptr, &a_remote_raw,
-              num_bytes, num_handles, &num_bytes, &num_handles));
+                            num_bytes, num_handles, &num_bytes, &num_handles));
     ASSERT_EQ(num_handles, 1);
     a_remote.reset(a_remote_raw);
     ASSERT_TRUE(a_remote.is_valid());
@@ -50,25 +52,27 @@ TEST(HandleTransferTest, OverChannelThenRead) {
         num_bytes = 1u;
         num_handles = 0u;
         ASSERT_OK(a_remote.read(0u, &incoming_byte, nullptr, num_bytes,
-                  num_handles, nullptr, &num_handles));
+                                num_handles, nullptr, &num_handles));
         ASSERT_EQ(num_handles, 0);
         ASSERT_EQ(kMessage[i], incoming_byte);
     }
 }
 
+constexpr zx::duration kPollingInterval = zx::msec(1);
+
 // Wait, possibly forever, until |thread| has entered |state|.
-static zx_status_t wait_for_state(zx_handle_t thread, zx_thread_state_t state) {
+zx_status_t WaitForState(const zx::unowned_thread& thread, zx_thread_state_t state) {
     while (true) {
         zx_info_thread_t info;
         zx_status_t status =
-            zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+            thread->get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
         if (status != ZX_OK) {
             return status;
         }
         if (info.state == state) {
             return ZX_OK;
         }
-        zx::nanosleep(zx::deadline_after(zx::msec(1)));
+        zx::nanosleep(zx::deadline_after(kPollingInterval));
     }
 }
 
@@ -80,9 +84,9 @@ static zx_status_t wait_for_state(zx_handle_t thread, zx_thread_state_t state) {
 // See [ZX-103].
 TEST(HandleTransferTest, CancelsWait) {
     auto wait_on_channel = [](void* arg) -> int {
-        zx_handle_t channel = *reinterpret_cast<zx_handle_t*>(arg);
-        zx_signals_t signals{};
-        return zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, &signals);
+        zx::unowned_channel channel(*reinterpret_cast<zx_handle_t*>(arg));
+        zx_signals_t signals = {};
+        return channel->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals);
     };
 
     zx::channel a[2];
@@ -92,20 +96,21 @@ TEST(HandleTransferTest, CancelsWait) {
 
     // Start the thread.
     thrd_t waiter_thread;
-    zx_handle_t handle = a[0].release();
+    zx_handle_t handle = a[0].get();
     ASSERT_EQ(thrd_success, thrd_create(&waiter_thread, wait_on_channel, &handle));
 
     // Wait for it to enter zx_object_wait_one.
-    zx_handle_t thread = thrd_get_zx_handle(waiter_thread);
-    ASSERT_OK(wait_for_state(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+    zx::unowned_thread thread(thrd_get_zx_handle(waiter_thread));
+    ASSERT_OK(WaitForState(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
 
     // Send a[0] through b.
+    handle = a[0].release();
     ASSERT_OK(b[0].write(0, nullptr, 0, &handle, 1));
     uint32_t num_handles = 0;
 
     // See that it's still blocked.
     zx_info_thread_t info;
-    ASSERT_OK(zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_OK(thread->get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr));
     ASSERT_EQ(ZX_THREAD_STATE_BLOCKED_WAIT_ONE, info.state);
 
     // Pulling the handle out of b cancels the wait.
@@ -117,3 +122,5 @@ TEST(HandleTransferTest, CancelsWait) {
     ASSERT_EQ(thrd_success, thrd_join(waiter_thread, &result));
     ASSERT_EQ(ZX_ERR_CANCELED, result);
 }
+
+} // namespace
