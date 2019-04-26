@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"fuchsia.googlesource.com/far"
@@ -63,6 +65,8 @@ func Run(cfg *build.Config, args []string) error {
 
 	clean := fs.Bool("C", false, "\"clean\" the repository. only new publications remain.")
 
+	depfilePath := fs.String("depfile", "", "Path to a depfile to write to")
+
 	// NOTE(raggi): encryption as implemented is not intended to be a generally used
 	// feature, as such this flag is deliberately not included in the usage line
 	encryptionKey := fs.String("e", "", "Path to AES private key for blob encryption")
@@ -95,6 +99,10 @@ func Run(cfg *build.Config, args []string) error {
 	if len(filePaths) == 0 {
 		return fmt.Errorf("no file path supplied")
 	}
+
+	// deps collects a list of all inputs to the publish process to be written to
+	// depfilePath if requested.
+	var deps []string
 
 	// Make sure the the paths to publish actually exist.
 	for _, k := range filePaths {
@@ -135,10 +143,10 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if *encryptionKey != "" {
-		println("will encrypt")
 		if err := repo.EncryptWith(*encryptionKey); err != nil {
 			return err
 		}
+		deps = append(deps, *encryptionKey)
 	}
 
 	switch {
@@ -147,6 +155,7 @@ func Run(cfg *build.Config, args []string) error {
 			return fmt.Errorf("too many file paths supplied")
 		}
 
+		deps = append(deps, filePaths[0])
 		f, err := os.Open(filePaths[0])
 		if err != nil {
 			return fmt.Errorf("open %s: %s", filePaths[0], err)
@@ -206,7 +215,9 @@ func Run(cfg *build.Config, args []string) error {
 			return fmt.Errorf("too many file paths supplied")
 		}
 
+		deps = append(deps, filePaths[0])
 		if err := eachEntry(filePaths[0], func(name, src string) error {
+			deps = append(deps, src)
 			f, err := os.Open(src)
 			if err != nil {
 				return err
@@ -230,7 +241,9 @@ func Run(cfg *build.Config, args []string) error {
 			return fmt.Errorf("too many file paths supplied")
 		}
 
+		deps = append(deps, filePaths[0])
 		if err := eachEntry(filePaths[0], func(merkle, src string) error {
+			deps = append(deps, src)
 			f, err := os.Open(src)
 			if err != nil {
 				return err
@@ -246,6 +259,24 @@ func Run(cfg *build.Config, args []string) error {
 
 	default:
 		panic("unhandled mode")
+	}
+
+	if *depfilePath != "" {
+		timestampPath := filepath.Join(config.RepoDir, "repository", "timestamp.json")
+		for i, str := range deps {
+			// It is not clear if this is appropriate input for the depfile, which is
+			// underspecified - it's a "make format file". For the most part this should
+			// not affect Fuchsia builds, as we do not use "interesting" characters in
+			// our file names, but if ever we did, this could cause issues. It is at
+			// least better to try to quote the strings as it is more likely we may see
+			// filenames or paths containing whitespace than likely less consistent cases
+			// such as handling invalid or mixed encoding issues.
+			deps[i] = strconv.Quote(str)
+		}
+		depString := strings.Join(deps, " ")
+		if err := ioutil.WriteFile(*depfilePath, []byte(fmt.Sprintf("%s: %s\n", timestampPath, depString)), 0644); err != nil {
+			return err
+		}
 	}
 
 	return nil

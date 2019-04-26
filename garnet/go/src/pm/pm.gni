@@ -56,23 +56,28 @@ template("pm_publish") {
       ":root_manifest",
     ]
 
+    depfile = "${target_gen_dir}/${target_name}.d"
+
     assert(inputs == [ inputs[0] ],
            "pm_publish(\"$target_name\") requires exactly one input")
 
     outputs = [
+      # Note: the first output is the one that appears in the depfile.
+      "$amber_repository_dir/repository/timestamp.json",
       "$amber_repository_dir/repository/snapshot.json",
       "$amber_repository_dir/repository/targets.json",
-      "$amber_repository_dir/repository/timestamp.json",
     ]
 
     args = [
       "publish",
+      "-depfile",
+      rebase_path(depfile, root_build_dir),
       "-C",
       "-r",
       rebase_path(amber_repository_dir, root_build_dir),
       "-ps",
       "-f",
-      rebase_path(inputs[0]),
+      rebase_path(inputs[0], root_build_dir),
       "-vt",
     ]
   }
