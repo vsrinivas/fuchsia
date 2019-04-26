@@ -55,9 +55,10 @@ test_package("overnet_examples_tests") {
     {
       name = "overnet_echo_test_mdns"
     },
-    {
-      name = "overnet_echo_test_omdp"
-    },
+# TODO(FLK-196) Re-enable when fixed.
+#    {
+#      name = "overnet_echo_test_omdp"
+#    },
     {
       name = "overnet_interface_passing_test"
     },
