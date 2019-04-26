@@ -143,7 +143,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
-// Verify that we download eager values in full, even if parts of these values
+// Verifies that we download eager values in full, even if parts of these values
 // were already present on disk.
 //
 // In this test, we connect to the page concurrently. The first connection
@@ -162,12 +162,12 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
-  auto page2_state_watcher = WatchPageSyncState(&page2);
-  // Wait until the sync on the second device is idle and record the number of
-  // state updates.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
-  int page2_initial_state_change_count =
-      page2_state_watcher->state_change_count;
+
+  PageSnapshotPtr snapshot;
+  PageWatcherPtr watcher_ptr;
+  TestPageWatcher page2_watcher(watcher_ptr.NewRequest(), []() {});
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr));
 
   rng::TestRandom rng(0);
   DataGenerator generator = DataGenerator(&rng);
@@ -187,19 +187,10 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
   page1->PutReference(key, *reference, Priority::LAZY);
 
-  // Wait until page1 finishes uploading the changes.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
+  EXPECT_TRUE(RunLoopUntil(
+      [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 1; }));
+  snapshot = std::move(*page2_watcher.GetLastSnapshot());
 
-  EXPECT_TRUE(
-      RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
-        return page2_state_watcher->state_change_count >
-                   page2_initial_state_change_count &&
-               page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-      }));
-
-  PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr);
   Status status;
   fuchsia::mem::BufferPtr buffer;
   loop_waiter = NewWaiter();
@@ -222,20 +213,9 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   // Change priority to eager, re-upload.
   page1->PutReference(key, *reference, Priority::EAGER);
 
-  page2_initial_state_change_count = page2_state_watcher->state_change_count;
-  // Wait until page1 finishes uploading the changes.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
-
-  EXPECT_TRUE(
-      RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
-        return page2_state_watcher->state_change_count >
-                   page2_initial_state_change_count &&
-               page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-      }));
-
-  loop_waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr);
+  EXPECT_TRUE(RunLoopUntil(
+      [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 2; }));
+  snapshot = std::move(*page2_watcher.GetLastSnapshot());
 
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();
@@ -250,11 +230,10 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   std::vector<uint8_t> buffer_data;
   ASSERT_TRUE(fsl::VectorFromVmo(*buffer, &buffer_data));
   ASSERT_EQ(buffer_data, big_value);
-
-  // Verify that the sync states of page2 eventually become idle.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
+// Verifies that a PageWatcher correctly delivers notifications about the
+// change in case of a lazy value not already present on disk.
 TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
