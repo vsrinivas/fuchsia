@@ -22,12 +22,10 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-ARGS=()
 TEST_NAMES=()
 function main {
   while [[ -n "$1" ]]; do
     case "$1" in
-      -v) ARGS+=("-v");;
       -z) ZIRCON=1 ;;
       # break at bare double dash
       # allow passing args to runtests
@@ -42,20 +40,23 @@ function main {
   if [[ $ZIRCON -eq 1 ]]; then
     host_test_dir="${ZIRCON_BUILDROOT}/host_tests"
     fx-command-run build-zircon "-v"
+    runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests")
+
+    if [[ -n "$TEST_NAMES" ]]; then
+      # Comma-separated list of host test names to filter by.
+      IFS="," runtests_cmd+=("-t" "${TEST_NAMES[@]}")
+    fi
+    # remaining arguments after -- are passed to test runner
+    "${runtests_cmd[@]}" "${host_test_dir}" -- "$@"
   else
-    host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"
-    fx-command-run build :copy_host_tests
+    "${FUCHSIA_DIR}/tools/devshell/contrib/exec-host-tests"\
+      "--manifest" "${FUCHSIA_BUILD_DIR}/tests.json"\
+      "--names" "${TEST_NAMES[@]}"\
+      "--build-dir" "${FUCHSIA_BUILD_DIR}"\
+      "--ninja" "${FUCHSIA_DIR}/buildtools/ninja"\
+      "--"\
+      "$@"
   fi
-
-  runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests" "${ARGS[@]}")
-
-  if [[ -n "$TEST_NAMES" ]]; then
-    # Comma-separated list of host test names to filter by.
-    IFS="," runtests_cmd+=("-t" "${TEST_NAMES[*]}")
-  fi
-
-  # remaining arguments after -- are passed to test runner
-  "${runtests_cmd[@]}" "${host_test_dir}" -- "$@"
 }
 
 main "$@"

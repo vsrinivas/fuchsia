@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+
+# Colors and helpers for terminal pretty-printing.
+BOLD_BLACK = '\033[1;30m'
+BOLD_RED = '\033[1;31m'
+NO_COLOR = '\033[0m'
+def info_print(s):
+  print '\n%s%s%s' % (BOLD_BLACK, s, NO_COLOR)
+def error_print(s):
+  print '\n%s%s%s' % (BOLD_RED, s, NO_COLOR)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=('Executes a test in the GN graph'))
+    parser.add_argument('--manifest',
+                        help='The path to the manifest of tests',
+                        required=True)
+    parser.add_argument('--names',
+                        help='The names of the tests to execute',
+                        nargs='*',
+                        required=True)
+    parser.add_argument('test_args',
+                        help='Arguments to pass to the tests on execution',
+                        nargs='*')
+    parser.add_argument('--build-dir',
+                        help='The path to the root build directory',
+                        required=True)
+    parser.add_argument('--ninja',
+                        help='The path to the ninja binary',
+                        required=True)
+    args = parser.parse_args()
+
+    if not args.names:
+      error_print('no tests provided')
+      return 1
+
+    with open(args.manifest, 'r') as f:
+      entries = json.load(f)
+
+    tests = []
+    unmatched = set(args.names)
+    for entry in entries:
+      test = entry['test']
+      path = test['location']
+      if test['os'] == 'fuchsia':
+        continue
+      name = os.path.basename(path)
+      if name not in args.names:
+        continue
+      tests.append(test)
+      unmatched.remove(name)
+
+    if unmatched:
+      error_print(
+          'could not find tests with the following names:\n' +
+          '\n'.join(unmatched))
+      return 1
+
+    # test['location'] gives the path to the test relative build directory,
+    # which is a valid ninja target.
+    subprocess.call(
+        [args.ninja, '-C', args.build_dir] +
+        [test['location'] for test in tests])
+
+    failed = []
+    for test in tests:
+      target = test['name']
+      info_print('<< running %s >>' % target)
+      ret = subprocess.call(
+          [os.path.join(args.build_dir, test['location'])] + args.test_args)
+      if ret != 0:
+        failed.append(target)
+
+    num_tests = len(tests)
+    if not num_tests:
+      error_print('no tests found with names %s' % ', '.join(args.names))
+      return 1
+
+    if failed:
+      error_print(
+          '%d of %d test%s failed:' % (
+              len(failed), num_tests, 's' if num_tests > 1 else ''
+          ) +
+          '\n'.join(failed))
+    else:
+      info_print('%d of %d test%s passed' % (
+          num_tests, num_tests, 's' if num_tests > 1 else ''))
+
+if __name__ == '__main__':
+    sys.exit(main())
