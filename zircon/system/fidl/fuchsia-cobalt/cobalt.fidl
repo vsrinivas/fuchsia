@@ -501,24 +501,32 @@ struct CountEvent {
     int64 count;
 };
 
+// Used to log an event that has no extra fields. Using this struct with
+// LogCobaltEvent() is equivalent to invoking LogEvent().
+struct Event {
+};
+
 // The variadic part of a CobaltEvent.
 union EventPayload {
-    // A Count event.
+    // This maps to a call to LogEvent().
+    Event event;
+
+    // This maps to a call to LogEventCount().
     CountEvent event_count;
 
-    // An ElapsedTime event.
+    // This maps to a call to LogElapsedTime().
     int64 elapsed_micros;
 
-    // A FrameRate event.
+    // This maps to a call to LogFrameRate().
     float32 fps;
 
-    // A MemoryUsage event.
+    // This maps to a call to LogMemoryUsage().
     int64 memory_bytes_used;
 
-    // A logged string event.
+    // This maps to a call to LogString().
     string:256 string_event;
 
-    // An IntHistogram event.
+    // This maps to a call to LogIntHistogram().
     vector<HistogramBucket> int_histogram;
 };
 

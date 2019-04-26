@@ -58,6 +58,7 @@ class CobaltEventBuilder {
   fuchsia::cobalt::CobaltEvent as_string_event(std::string string_event);
   fuchsia::cobalt::CobaltEvent as_int_histogram(
       std::vector<fuchsia::cobalt::HistogramBucket> int_histogram);
+  fuchsia::cobalt::CobaltEvent as_event();
 
  private:
   fuchsia::cobalt::CobaltEvent event_;

@@ -63,6 +63,8 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger);
 
 bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
+bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
+
 // Tests of local aggregation.
 //
 // Each of these tests assumes that the EventAggregator has been updated with

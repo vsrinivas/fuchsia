@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
+
 #include <map>
 #include <string>
-
-#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
 #include "src/lib/fxl/logging.h"
 
@@ -233,6 +233,32 @@ bool CobaltTestAppLogger::LogIntHistogramAndSend(
     bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     if (!LogIntHistogram(metric_id, index, component, histogram_map)) {
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogCobaltEvent(std::move(event), &status);
+
+  FXL_VLOG(1) << "LogCobaltEvent() => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogCobaltEvent() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
+}
+
+bool CobaltTestAppLogger::LogCobaltEventAndSend(
+    fuchsia::cobalt::CobaltEvent event, bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    fuchsia::cobalt::CobaltEvent e;
+    e.Clone(&event);
+    if (!LogCobaltEvent(std::move(e))) {
       return false;
     }
   }

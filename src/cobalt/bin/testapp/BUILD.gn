@@ -45,6 +45,7 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl",
     "//third_party/cobalt/config:cobalt_registry_proto",
     "//third_party/cobalt/config:id",

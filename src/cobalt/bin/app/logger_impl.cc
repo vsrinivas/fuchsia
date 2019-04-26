@@ -172,6 +172,15 @@ void LoggerImpl::LogCobaltEvent(
     fuchsia::cobalt::CobaltEvent event,
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
   switch (event.payload.Which()) {
+    case EventPayload::Tag::kEvent:
+      if (event.event_codes.size() != 1) {
+        callback(Status::INVALID_ARGUMENTS);
+      } else {
+        callback(ToCobaltStatus(
+            logger_.LogEvent(event.metric_id, event.event_codes[0])));
+      }
+      return;
+
     case EventPayload::Tag::kEventCount:
       callback(ToCobaltStatus(logger_.LogEventCount(
           event.metric_id, event.event_codes, event.component,

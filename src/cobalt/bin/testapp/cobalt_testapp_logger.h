@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_LOGGER_H_
 #define GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_LOGGER_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
+
 #include <map>
 #include <string>
-
-#include <fuchsia/cobalt/cpp/fidl.h>
 
 namespace cobalt {
 namespace testapp {
@@ -104,6 +104,15 @@ class CobaltTestAppLogger {
                               const std::string& component,
                               const std::map<uint32_t, uint64_t>& histogram_map,
                               bool use_request_send_soon);
+
+  // Synchronously invokes LogCobaltEvent() using the given parameters.
+  bool LogCobaltEvent(fuchsia::cobalt::CobaltEvent event);
+
+  // Synchronously invokes LogCobaltEvent()
+  // |num_observations_per_batch_| times using the given parameters. Then
+  // invokes CheckForSuccessfulSend().
+  bool LogCobaltEventAndSend(fuchsia::cobalt::CobaltEvent event,
+                             bool use_request_send_soon);
 
   // Synchronously invokes LogCustomEvent() for an event with
   // two string parts using the given parameters.

@@ -8,6 +8,7 @@ namespace cobalt {
 
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::CountEvent;
+using fuchsia::cobalt::Event;
 using fuchsia::cobalt::HistogramBucket;
 
 CobaltEventBuilder::CobaltEventBuilder(uint32_t metric_id) {
@@ -88,4 +89,11 @@ CobaltEvent CobaltEventBuilder::as_int_histogram(
 
   return std::move(event_);
 }
+
+CobaltEvent CobaltEventBuilder::as_event() {
+  event_.payload.set_event(Event());
+
+  return std::move(event_);
+}
+
 }  // namespace cobalt

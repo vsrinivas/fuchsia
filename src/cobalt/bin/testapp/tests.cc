@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/cobalt/bin/testapp/tests.h"
+
 #include "src/cobalt/bin/testapp/cobalt_metrics.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
+#include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "third_party/cobalt/config/metric_definition.pb.h"
 #include "third_party/cobalt/util/datetime_util.h"
 
@@ -364,6 +366,82 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
 
   FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
   return success;
+}
+
+bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestLogCobaltEvent";
+  bool use_request_send_soon = true;
+
+  if (logger->LogCobaltEvent(
+          CobaltEventBuilder(metrics::kErrorOccurredMetricId).as_event())) {
+    // A LogEvent with no event codes is invalid.
+    FXL_LOG(INFO) << "TestLogCobaltEvent: FAIL";
+    return false;
+  }
+
+  if (logger->LogCobaltEvent(CobaltEventBuilder(metrics::kErrorOccurredMetricId)
+                                 .with_event_code(0)
+                                 .with_event_code(0)
+                                 .as_event())) {
+    // A LogEvent with more than 1 event code is invalid.
+    FXL_LOG(INFO) << "TestLogCobaltEvent: FAIL";
+    return false;
+  }
+
+  for (uint32_t index : kErrorOccurredIndicesToUse) {
+    if (!logger->LogCobaltEvent(
+            CobaltEventBuilder(metrics::kErrorOccurredMetricId)
+                .with_event_code(index)
+                .as_event())) {
+      FXL_LOG(INFO) << "TestLogCobaltEvent: FAIL";
+      return false;
+    }
+  }
+
+  if (!SendAndCheckSuccess("TestLogCobaltEvent", use_request_send_soon,
+                           logger)) {
+    return false;
+  }
+
+  for (uint32_t index : kFileSystemCacheMissesIndices) {
+    for (std::string name : kFileSystemCacheMissesComponentNames) {
+      if (!logger->LogCobaltEvent(
+              CobaltEventBuilder(metrics::kFileSystemCacheMissesMetricId)
+                  .with_event_code(index)
+                  .with_component(name)
+                  .as_count_event(0, kFileSystemCacheMissesCountMax - index))) {
+        FXL_LOG(INFO) << "TestLogCobaltEvent: FAIL";
+        return false;
+      }
+    }
+  }
+
+  if (!SendAndCheckSuccess("TestLogCobaltEvent", use_request_send_soon,
+                           logger)) {
+    return false;
+  }
+
+  for (uint32_t index : kUpdateDurationIndices) {
+    for (std::string name : kUpdateDurationComponentNames) {
+      for (int64_t value : kUpdateDurationValues) {
+        if (!logger->LogCobaltEvent(
+                CobaltEventBuilder(metrics::kUpdateDurationMetricId)
+                    .with_event_code(index)
+                    .with_component(name)
+                    .as_elapsed_time(value))) {
+          FXL_LOG(INFO) << "LogElapsedTime(" << metrics::kUpdateDurationMetricId
+                        << ", " << index << ", " << name << ", " << value
+                        << ")";
+          FXL_LOG(INFO) << "TestLogCobaltEvent: FAIL";
+          return false;
+        }
+      }
+    }
+  }
+
+  return SendAndCheckSuccess("TestLogCobaltEvent", use_request_send_soon,
+                             logger);
 }
 
 ////////////////////// Tests using local aggregation ///////////////////////
