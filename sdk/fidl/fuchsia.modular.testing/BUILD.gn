@@ -5,6 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.modular.testing") {
+  testonly = true
+
+  sdk_category = "partner"
+
   sources = [
     "test_harness.fidl",
   ]

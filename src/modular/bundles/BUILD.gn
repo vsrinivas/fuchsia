@@ -15,6 +15,7 @@ group("tools") {
   public_deps = [
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:sessionctl",
+    ":testing"
   ]
 }
 
@@ -25,5 +26,21 @@ group("framework") {
     "//peridot/packages/prod:maxwell",
     "//peridot/packages/prod:modular",
     "//peridot/packages/prod:module_resolver",
+  ]
+}
+
+# Packages used for authoring and running integration tests.
+group("testing") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/tests:modular_test_harness"
+  ]
+}
+
+# Packages which contain tests.
+group("tests") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/tests:modular_test_harness"
   ]
 }

@@ -207,3 +207,20 @@ sdk("core") {
     "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
 }
+
+# This SDK has runtime dependencies on the following fuchsia packages:
+#  * environment_delegating_runner
+#  * modular_test_harness
+sdk("modular_testing") {
+  testonly = true
+
+  id = sdk_id
+
+  api = "modular_testing.api"
+
+  category = "partner"
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
+  ]
+}

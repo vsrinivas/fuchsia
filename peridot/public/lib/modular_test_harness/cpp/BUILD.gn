@@ -2,13 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cpp") {
-  testonly = true
-
-  public_deps = [
-    ":test_harness_fixture",
-  ]
-}
+import("//build/package.gni")
+import("//build/cpp/sdk_source_set.gni")
 
 group("unittests") {
   testonly = true
@@ -17,10 +12,15 @@ group("unittests") {
     ":test_harness_impl_unittest",
   ]
 }
-
 # This library has a run-time dependency on the `modular_test_harness` package.
-source_set("test_harness_fixture") {
+sdk_source_set("test_harness_fixture") {
   testonly = true
+
+  category = "partner"
+  sdk_name = "modular_testing_cpp"
+  include_base = "//sdk"
+
+  public_configs = [ "//sdk/config" ]
 
   sources = [
     "test_harness_fixture.h",
@@ -31,6 +31,41 @@ source_set("test_harness_fixture") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+  ]
+}
+
+executable("test_harness_fixture_test_bin") {
+  testonly = true
+  sources = ["test_harness_fixture_test.cc"]
+  deps = [
+    ":test_harness_fixture",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("test_harness_fixture_test") {
+  testonly = true
+
+  tests = [
+    {
+      name = "test_harness_fixture_test_bin"
+      environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/test_harness_fixture_test.cmx"
+      dest = "test_harness_fixture_test.cmx"
+    },
+  ]
+
+  deps = [
+    ":test_harness_fixture_test_bin",
   ]
 }
 

@@ -6,14 +6,14 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_FIXTURE_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <sdk/lib/sys/cpp/service_directory.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 namespace modular {
 namespace testing {
 
 // A gtest fixture for tests that require an instance of the modular runtime.
-// This fixture requires the `modular_test_harness` package to be available.
+// This fixture depends on the `modular_test_harness` fuchsia package.
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
  protected:
   TestHarnessFixture();

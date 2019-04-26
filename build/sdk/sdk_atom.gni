@@ -176,6 +176,8 @@ template("sdk_atom") {
     # TODO(DX-497): instead, make sure that all atoms generate their metadata
     # file in the right location.
     copy(meta_copy_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
       sources = [
         meta_content.source,
       ]
