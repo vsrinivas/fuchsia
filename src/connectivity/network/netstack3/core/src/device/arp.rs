@@ -452,24 +452,24 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
-    fn receive_arp_response(
+    fn send_arp_packet(
         ctx: &mut Context<DummyEventDispatcher>,
         device_id: u64,
-        local_ipv4: Ipv4Addr,
-        remote_ipv4: Ipv4Addr,
-        local_mac: Mac,
-        remote_mac: Mac,
+        op: ArpOp,
+        sender_ipv4: Ipv4Addr,
+        target_ipv4: Ipv4Addr,
+        sender_mac: Mac,
+        target_mac: Mac,
     ) {
-        let mut buf =
-            ArpPacketBuilder::new(ArpOp::Request, remote_mac, remote_ipv4, local_mac, local_ipv4)
-                .serialize_outer()
-                .unwrap();
+        let mut buf = ArpPacketBuilder::new(op, sender_mac, sender_ipv4, target_mac, target_ipv4)
+            .serialize_outer()
+            .unwrap();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
 
         receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
-            ctx, device_id, remote_mac, local_mac, buf,
+            ctx, device_id, sender_mac, target_mac, buf,
         );
     }
 
@@ -549,13 +549,14 @@ mod tests {
         }
         assert_eq!(arp_request_num, NUM_ARP_REQUESTS);
 
-        receive_arp_response(
+        send_arp_packet(
             &mut ctx,
             device_id,
-            TEST_LOCAL_IPV4,
+            ArpOp::Response,
             TEST_REMOTE_IPV4,
-            TEST_LOCAL_MAC,
+            TEST_LOCAL_IPV4,
             TEST_REMOTE_MAC,
+            TEST_LOCAL_MAC,
         );
 
         // Once an arp response is received, the arp timer event will be cancelled.
@@ -641,13 +642,14 @@ mod tests {
         let device_id = dev_id.id();
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
-        receive_arp_response(
+        send_arp_packet(
             &mut ctx,
             device_id,
-            TEST_LOCAL_IPV4,
+            ArpOp::Request,
             TEST_REMOTE_IPV4,
-            TEST_LOCAL_MAC,
+            TEST_LOCAL_IPV4,
             TEST_REMOTE_MAC,
+            TEST_LOCAL_MAC,
         );
 
         assert_eq!(
