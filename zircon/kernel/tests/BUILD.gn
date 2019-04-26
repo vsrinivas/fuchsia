@@ -11,6 +11,7 @@ source_set("tests") {
     "brwlock_tests.cpp",
     "cache_tests.cpp",
     "clock_tests.cpp",
+    "dpc_tests.cpp",
     "fibo.cpp",
     "lock_dep_tests.cpp",
     "mem_tests.cpp",
