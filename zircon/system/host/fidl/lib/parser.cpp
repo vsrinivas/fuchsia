@@ -1067,6 +1067,7 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
     ASTScope scope(this);
+    bool done_with_library_imports = false;
     std::vector<std::unique_ptr<raw::Using>> using_list;
     std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
     std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
@@ -1090,27 +1091,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
         return Fail();
 
-    auto parse_using = [&using_list, this]() {
-        switch (Peek().combined()) {
-        default:
-            return Done;
-
-        case CASE_IDENTIFIER(Token::Subkind::kUsing):
-            using_list.emplace_back(ParseUsing());
-            return More;
-        }
-    };
-
-    while (parse_using() == More) {
-        if (!Ok())
-            return Fail();
-        ConsumeToken(OfKind(Token::Kind::kSemicolon));
-        if (!Ok())
-            return Fail();
-    }
-
     auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
                               &interface_declaration_list, &struct_declaration_list,
+                              &done_with_library_imports, &using_list,
                               &table_declaration_list, &union_declaration_list, &xunion_declaration_list, this]() {
         ASTScope scope(this);
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
@@ -1122,29 +1105,50 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             return Done;
 
         case CASE_IDENTIFIER(Token::Subkind::kBits):
+            done_with_library_imports = true;
             bits_declaration_list.emplace_back(ParseBitsDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kConst):
+            done_with_library_imports = true;
             const_declaration_list.emplace_back(ParseConstDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
+            done_with_library_imports = true;
             enum_declaration_list.emplace_back(ParseEnumDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kProtocol):
+            done_with_library_imports = true;
             interface_declaration_list.emplace_back(
                 ParseProtocolDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kStruct):
+            done_with_library_imports = true;
             struct_declaration_list.emplace_back(ParseStructDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kTable):
+            done_with_library_imports = true;
             table_declaration_list.emplace_back(ParseTableDeclaration(std::move(attributes), scope));
             return More;
+
+        case CASE_IDENTIFIER(Token::Subkind::kUsing): {
+            auto using_decl = ParseUsing();
+            if (using_decl->maybe_type_ctor) {
+                done_with_library_imports = true;
+            } else if (done_with_library_imports) {
+                // TODO(FIDL-582): Give one week warning, then turn this into
+                // an error.
+                error_reporter_->ReportWarning(
+                    using_decl->location(),
+                    "library imports must be grouped at top-of-file");
+            }
+            using_list.emplace_back(std::move(using_decl));
+            return More;
+        }
 
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
             union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes), scope));

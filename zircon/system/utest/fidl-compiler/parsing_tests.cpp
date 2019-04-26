@@ -289,6 +289,31 @@ struct Empty {
     END_TEST;
 }
 
+bool warn_on_type_alias_before_imports() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+)FIDL", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library(R"FIDL(
+library example;
+
+using foo = int16;
+using dependent;
+)FIDL");
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    const auto& warnings = library.warnings();
+    ASSERT_EQ(warnings.size(), 1);
+    ASSERT_STR_STR(warnings[0].data(), "library imports must be grouped at top-of-file");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(parsing_tests)
@@ -301,4 +326,5 @@ RUN_TEST(bad_char_slash_test)
 RUN_TEST(bad_identifier_test)
 RUN_TEST(invalid_character_test)
 RUN_TEST(empty_struct_test)
+RUN_TEST(warn_on_type_alias_before_imports)
 END_TEST_CASE(parsing_tests)
