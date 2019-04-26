@@ -45,7 +45,9 @@ class LogListener : public fuchsia::logger::LogListener {
 
   std::string logs_;
 
-  fit::bridge<void, void> done_;
+  // We use a shared_ptr to share the bridge between this and the async loop on
+  // which we post the delayed task to timeout.
+  std::shared_ptr<fit::bridge<void, void>> done_;
 };
 
 }  // namespace feedback

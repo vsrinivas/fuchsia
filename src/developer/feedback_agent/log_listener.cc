@@ -62,19 +62,23 @@ LogListener::LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
     : services_(services), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs() {
+  done_ = std::make_shared<fit::bridge<void, void>>();
+
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "LogListener error: " << status << " ("
                    << zx_status_get_string(status) << ")";
-    done_.completer.complete_error();
+    done_->completer.complete_error();
+    done_.reset();
   });
 
   fuchsia::logger::LogPtr logger = services_->Connect<fuchsia::logger::Log>();
   logger.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "Lost connection to Log service: " << status << " ("
                    << zx_status_get_string(status) << ")";
-    done_.completer.complete_error();
+    done_->completer.complete_error();
+    done_.reset();
   });
   logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
 
@@ -82,12 +86,12 @@ fit::promise<void> LogListener::CollectLogs() {
   // task that will call the completer after the timeout and return an error.
   const zx_status_t post_status = async::PostDelayedTask(
       async_get_default_dispatcher(),
-      [this] {
+      [done = done_] {
         // Check that the fit::bridge was not already completed by Done() or
         // another error.
-        if (done_.completer) {
+        if (done->completer) {
           FX_LOGS(ERROR) << "System log collection timed out";
-          done_.completer.complete_error();
+          done->completer.complete_error();
         }
       },
       kSystemLogCollectionTimeout);
@@ -97,7 +101,7 @@ fit::promise<void> LogListener::CollectLogs() {
         << post_status << " (" << zx_status_get_string(post_status) << ")";
   }
 
-  return done_.consumer.promise_or(fit::error());
+  return done_->consumer.promise_or(fit::error());
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
@@ -134,7 +138,10 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
       SeverityToString(message.severity).c_str(), message.msg.c_str());
 }
 
-void LogListener::Done() { done_.completer.complete_ok(); }
+void LogListener::Done() {
+  done_->completer.complete_ok();
+  done_.reset();
+}
 
 }  // namespace feedback
 }  // namespace fuchsia
