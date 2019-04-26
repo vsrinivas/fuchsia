@@ -105,6 +105,16 @@ FsManager::FsManager(zx::event fshost_event)
     ZX_ASSERT(global_root_ == nullptr);
 }
 
+// In the event that we haven't been explicitly signalled, tear ourself down.
+FsManager::~FsManager() {
+    if (global_shutdown_.has_handler()) {
+        event_.signal(0, FSHOST_SIGNAL_EXIT);
+        auto deadline = zx::deadline_after(zx::sec(2));
+        zx_signals_t pending;
+        event_.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending);
+    }
+}
+
 zx_status_t FsManager::Create(zx::event fshost_event, fbl::unique_ptr<FsManager>* out) {
     auto fs_manager = fbl::unique_ptr<FsManager>(new FsManager(std::move(fshost_event)));
     zx_status_t status = fs_manager->Initialize();

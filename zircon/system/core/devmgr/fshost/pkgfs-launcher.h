@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "block-watcher.h"
+#include "filesystem-mounter.h"
 
 namespace devmgr {
 

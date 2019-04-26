@@ -27,6 +27,8 @@ class FsManager {
 public:
     static zx_status_t Create(zx::event fshost_event, fbl::unique_ptr<FsManager>* out);
 
+    ~FsManager();
+
     // Signals that "/system" has been mounted.
     void FuchsiaStart() const { event_.signal(0, FSHOST_SIGNAL_READY); }
 
