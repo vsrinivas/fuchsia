@@ -88,7 +88,4 @@ private:
     fshost::Registry registry_;
 };
 
-// Monitors "/dev/class/block" for new devices indefinitely.
-void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, bool netboot);
-
 } // namespace devmgr

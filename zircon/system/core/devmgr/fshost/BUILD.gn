@@ -32,6 +32,7 @@ executable("fshost") {
   sources = [
     "block-watcher.cpp",
     "main.cpp",
+    "pkgfs-launcher.cpp",
   ]
   deps = [
     ":common",

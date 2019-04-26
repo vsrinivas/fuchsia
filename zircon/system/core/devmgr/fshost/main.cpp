@@ -22,6 +22,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include "block-watcher.h"
 #include "fs-manager.h"
 
 namespace devmgr {
