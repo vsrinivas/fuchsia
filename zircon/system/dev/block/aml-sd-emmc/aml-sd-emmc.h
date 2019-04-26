@@ -54,7 +54,7 @@ public:
     void SdmmcHwReset();
     zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
-    zx_status_t SdmmcGetInBandInterrupt(zx::interrupt* out_irq);
+    zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
 private:
     void DumpRegs() const;

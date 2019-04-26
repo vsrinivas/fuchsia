@@ -23,7 +23,8 @@ class SdioControllerDevice;
 using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::Unbindable>;
 
 class SdioControllerDevice : public SdioControllerDeviceType,
-                             public fbl::RefCounted<SdioControllerDevice> {
+                             public fbl::RefCounted<SdioControllerDevice>,
+                             public ddk::InBandInterruptProtocol<SdioControllerDevice> {
 public:
     // SDIO cards support one common function and up to seven I/O functions. This struct is used to
     // keep track of each function's state as they can be configured independently.
@@ -59,6 +60,8 @@ public:
     virtual zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                                      uint8_t* out_read_byte);
     zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
+
+    void InBandInterruptCallback();
 
 protected:
     virtual SdmmcDevice& sdmmc() { return sdmmc_; }
@@ -110,6 +113,7 @@ private:
     SdmmcDevice sdmmc_ TA_GUARDED(lock_);
     std::atomic<bool> dead_ = false;
     fbl::Array<fbl::RefPtr<SdioFunctionDevice>> devices_;
+    zx::interrupt sdio_irq_;
 };
 
 }  // namespace sdmmc

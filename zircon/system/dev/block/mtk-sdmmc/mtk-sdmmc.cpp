@@ -780,27 +780,13 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
     return req_status;
 }
 
-zx_status_t MtkSdmmc::SdmmcGetInBandInterrupt(zx::interrupt* out_irq) {
+zx_status_t
+MtkSdmmc::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
     if (!config_.is_sdio) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (sdio_irq_.is_valid()) {
-        zxlogf(ERROR, "%s: Interrupt already exists\n", __FILE__);
-        return ZX_ERR_ALREADY_EXISTS;
-    }
-
-    zx_status_t status = zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irq_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to create interrupt\n", __FILE__);
-        return status;
-    }
-
-    if ((status = sdio_irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to duplicate interrupt\n", __FILE__);
-        return status;
-    }
-
+    interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
     return ZX_OK;
 }
 
@@ -854,8 +840,8 @@ int MtkSdmmc::IrqThread() {
         fbl::AutoLock mutex_al(&mutex_);
 
         if (msdc_int.sdio_irq()) {
-            if (sdio_irq_.is_valid()) {
-                sdio_irq_.trigger(0, timestamp);
+            if (interrupt_cb_.is_valid()) {
+                interrupt_cb_.Callback();
             }
 
             msdc_int.set_sdio_irq(0);

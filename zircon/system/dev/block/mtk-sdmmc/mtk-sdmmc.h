@@ -69,7 +69,7 @@ public:
     void SdmmcHwReset();
     zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
-    zx_status_t SdmmcGetInBandInterrupt(zx::interrupt* out_irq);
+    zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
     // Visible for testing.
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
@@ -129,7 +129,6 @@ private:
     zx::bti bti_;
     const sdmmc_host_info_t info_;
     zx::interrupt irq_;
-    zx::interrupt sdio_irq_;
     thrd_t irq_thread_;
     io_buffer_t gpdma_buf_;
     io_buffer_t bdma_buf_;
@@ -138,6 +137,7 @@ private:
     const ddk::GpioProtocolClient reset_gpio_;
     const ddk::GpioProtocolClient power_en_gpio_;
     const board_mt8167::MtkSdmmcConfig config_;
+    ddk::InBandInterruptProtocolClient interrupt_cb_;
 };
 
 // TuneWindow keeps track of the results of a series of tuning tests. It is expected that either

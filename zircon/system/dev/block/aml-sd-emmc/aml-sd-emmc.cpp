@@ -316,7 +316,8 @@ zx_status_t AmlSdEmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bw) {
     return ZX_OK;
 }
 
-zx_status_t AmlSdEmmc::SdmmcGetInBandInterrupt(zx::interrupt* out_irq) {
+zx_status_t
+AmlSdEmmc::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

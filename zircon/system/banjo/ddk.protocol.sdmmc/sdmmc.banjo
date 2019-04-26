@@ -87,6 +87,11 @@ struct SdmmcHostInfo {
     uint64 prefs;
 };
 
+[Layout = "ddk-interface"]
+protocol InBandInterrupt {
+    Callback() -> ();
+};
+
 [Layout = "ddk-protocol"]
 protocol Sdmmc {
     /// Get host info.
@@ -105,5 +110,5 @@ protocol Sdmmc {
     PerformTuning(uint32 cmd_idx) -> (zx.status s);
     /// Issue a request.
     Request(SdmmcReq? req) -> (zx.status s);
-    GetInBandInterrupt() -> (zx.status s, handle<interrupt> irq);
+    RegisterInBandInterrupt(InBandInterrupt? interrupt_cb) -> (zx.status s);
 };

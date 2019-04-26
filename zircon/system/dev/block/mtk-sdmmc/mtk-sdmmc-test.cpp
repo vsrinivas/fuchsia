@@ -4,7 +4,10 @@
 
 #include "mtk-sdmmc.h"
 
+#include <atomic>
+
 #include <fbl/auto_call.h>
+#include <fbl/condition_variable.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -16,9 +19,9 @@ constexpr size_t kRegisterCount = 139;
 
 namespace sdmmc {
 
-class MtkSdmmcTest : public MtkSdmmc {
+class MtkSdmmcTest : public MtkSdmmc, public ddk::InBandInterruptProtocol<MtkSdmmcTest> {
 public:
-    MtkSdmmcTest(ddk_mock::MockMmioRegRegion& registers)
+    MtkSdmmcTest(ddk_mock::MockMmioRegRegion& registers, bool is_sdio = false)
         : MtkSdmmc(nullptr,
                    ddk::MmioBuffer(registers.GetMmioBuffer()),
                    zx::bti(ZX_HANDLE_INVALID),
@@ -29,10 +32,10 @@ public:
                    board_mt8167::MtkSdmmcConfig{
                        .fifo_depth = 128,
                        .src_clk_freq = 200000000,
-                       .is_sdio = false
-                   }) {}
+                       .is_sdio = is_sdio
+                   }), interrupt_count_(0), callbacks_received_(0) {}
 
-    MtkSdmmcTest(zx_device_t* parent, ddk_mock::MockMmioRegRegion& registers)
+    MtkSdmmcTest(zx_device_t* parent, ddk_mock::MockMmioRegRegion& registers, bool is_sdio = false)
         : MtkSdmmc(parent,
                    ddk::MmioBuffer(registers.GetMmioBuffer()),
                    zx::bti(ZX_HANDLE_INVALID),
@@ -43,19 +46,44 @@ public:
                    board_mt8167::MtkSdmmcConfig{
                        .fifo_depth = 128,
                        .src_clk_freq = 200000000,
-                       .is_sdio = false
-                   }) {}
+                       .is_sdio = is_sdio
+                   }), interrupt_count_(0), callbacks_received_(0) {}
+
+    zx_status_t RegisterInBandInterrupt() {
+        in_band_interrupt_protocol_t callback{&in_band_interrupt_protocol_ops_, this};
+        return MtkSdmmc::SdmmcRegisterInBandInterrupt(&callback);
+    }
+
+    void TriggerInterrupts(uint32_t count) {
+        fbl::AutoLock mutex_al(&mutex_);
+        interrupt_count_ += count;
+    }
+
+    void WaitForCallbacks(uint32_t count) {
+        for (uint32_t i = 0; i < count; i += callbacks_received_.exchange(0)) {
+            sync_completion_wait(&callback_completion_, ZX_TIME_INFINITE);
+            sync_completion_reset(&callback_completion_);
+        }
+    }
 
     void StopIrqThread() {
         thread_stop_ = true;
         JoinIrqThread();
     }
 
+    void InBandInterruptCallback() {
+        callbacks_received_++;
+        sync_completion_signal(&callback_completion_);
+    }
+
 protected:
     zx_status_t WaitForInterrupt(zx::time* timestamp) override {
         while (!thread_stop_) {
             fbl::AutoLock mutex_al(&mutex_);
-            if (req_ != nullptr) {
+            if (interrupt_count_ > 0) {
+                interrupt_count_--;
+                return ZX_OK;
+            } else if (req_ != nullptr) {
                 return ZX_OK;
             }
         }
@@ -72,6 +100,10 @@ private:
         .max_transfer_size_non_dma = 0,
         .prefs = 0
     };
+
+    sync_completion_t callback_completion_;
+    uint32_t interrupt_count_ TA_GUARDED(mutex_);
+    std::atomic<uint32_t> callbacks_received_;
 };
 
 template <class T>
@@ -521,6 +553,32 @@ TEST(SdmmcTest, Protocol) {
     EXPECT_NOT_NULL(ops->hw_reset);
     EXPECT_NOT_NULL(ops->perform_tuning);
     EXPECT_NOT_NULL(ops->request);
+}
+
+TEST(SdmmcTest, IrqCallbackCalled) {
+    ddk_mock::MockMmioReg reg_array[kRegisterCount];
+    ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
+    MtkSdmmcTest sdmmc(mock_regs, true);
+
+    ASSERT_OK(sdmmc.RegisterInBandInterrupt());
+
+    auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+
+    GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
+    sdmmc.Init();
+    mock_regs.VerifyAll();
+
+    GetMockReg<MsdcInt>(mock_regs)
+        .ExpectRead(MsdcInt().set_sdio_irq(1).reg_value())
+        .ExpectRead(MsdcInt().set_sdio_irq(0).reg_value())
+        .ExpectRead(MsdcInt().set_sdio_irq(1).reg_value())
+        .ExpectRead(MsdcInt().set_sdio_irq(0).reg_value())
+        .ExpectRead(MsdcInt().set_sdio_irq(1).reg_value());
+
+    sdmmc.TriggerInterrupts(5);
+    sdmmc.WaitForCallbacks(3);
+
+    mock_regs.VerifyAll();
 }
 
 }  // namespace sdmmc

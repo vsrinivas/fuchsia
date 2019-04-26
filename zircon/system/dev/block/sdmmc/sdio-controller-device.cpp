@@ -555,7 +555,27 @@ zx_status_t SdioControllerDevice::SdioDoRwByteLocked(bool write, uint8_t fn_idx,
 
 zx_status_t SdioControllerDevice::SdioGetInBandIntr(zx::interrupt* out_irq) {
     fbl::AutoLock lock(&lock_);
-    return sdmmc_.host().GetInBandInterrupt(out_irq);
+
+    if (sdio_irq_.is_valid()) {
+        return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    zx_status_t st = zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irq_);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    if ((st = sdio_irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
+        return st;
+    }
+
+    return sdmmc_.host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
+}
+
+void SdioControllerDevice::InBandInterruptCallback() {
+    if (sdio_irq_.is_valid()) {
+        sdio_irq_.trigger(0, zx::clock::get_monotonic());
+    }
 }
 
 zx_status_t SdioControllerDevice::SdioReset() {

@@ -8,4 +8,7 @@ banjo_library("ddk.protocol.sdio") {
   sources = [
     "sdio.banjo",
   ]
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.sdmmc",
+  ]
 }
