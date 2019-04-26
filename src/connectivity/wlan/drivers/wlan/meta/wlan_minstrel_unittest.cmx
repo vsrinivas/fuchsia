@@ -1,5 +1,5 @@
 {
-  "program": {
-      "binary": "test/wlan_minstrel_unittest"
-  }
+    "program": {
+        "binary": "test/wlan_minstrel_unittest"
+    }
 }
