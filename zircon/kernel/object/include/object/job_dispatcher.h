@@ -176,6 +176,8 @@ private:
     bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
     void RemoveChildJob(JobDispatcher* job);
 
+    State GetState() const;
+
     // Remove this job from its parent's job list and the global job tree,
     // either when the job was killed or its last reference was dropped.
     // It's safe to call this multiple times.

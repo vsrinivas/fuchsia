@@ -253,6 +253,11 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
         FinishDeadTransitionUnlocked();
 }
 
+JobDispatcher::State JobDispatcher::GetState() const {
+    Guard<fbl::Mutex> guard{get_lock()};
+    return state_;
+}
+
 void JobDispatcher::RemoveFromJobTreesUnlocked() {
     canary_.Assert();
 
@@ -274,16 +279,22 @@ bool JobDispatcher::IsReadyForDeadTransitionLocked() {
 void JobDispatcher::FinishDeadTransitionUnlocked() {
     canary_.Assert();
 
-    RemoveFromJobTreesUnlocked();
+    // Make sure we're killing from the bottom of the tree up or else parent
+    // jobs could die before their children.
+    //
+    // In particular, this means we have to finish dying before leaving the job
+    // trees, since the last child leaving the tree can trigger its parent to
+    // finish dying.
+    DEBUG_ASSERT(!parent_ || (parent_->GetState() != State::DEAD));
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+        state_ = State::DEAD;
+        exceptionate_.Shutdown();
+        debug_exceptionate_.Shutdown();
+        UpdateStateLocked(0u, ZX_TASK_TERMINATED);
+    }
 
-    // Wait to assert the TERMINATED signal until we're removed from the
-    // job trees to make sure anyone pending on this signal sees a
-    // consistent and fully cleaned-up state.
-    Guard<fbl::Mutex> guard{get_lock()};
-    state_ = State::DEAD;
-    exceptionate_.Shutdown();
-    debug_exceptionate_.Shutdown();
-    UpdateStateLocked(0u, ZX_TASK_TERMINATED);
+    RemoveFromJobTreesUnlocked();
 }
 
 void JobDispatcher::UpdateSignalsDecrementLocked() {
