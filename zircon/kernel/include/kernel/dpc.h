@@ -13,6 +13,11 @@
 
 __BEGIN_CDECLS
 
+// Deferred Procedure Calls - queue callback to invoke on the current CPU in thread context.
+// DPCs are executed with interrupts enabled; DPCs do not ever migrate CPUs while executing.
+// A DPC may not execute on the original current CPU if it is hotunplugged/offlined.
+// DPCs may block, though this may starve other queued work.
+
 #define DPC_THREAD_PRIORITY HIGH_PRIORITY
 
 struct dpc;
@@ -37,10 +42,14 @@ void dpc_init_for_cpu(void);
 
 // queue an already filled out dpc, optionally reschedule immediately to run the dpc thread.
 // the deferred procedure runs in a dedicated thread that runs at DPC_THREAD_PRIORITY
+// dpc_queue will not block; it may wait briefly for a spinlock.
 zx_status_t dpc_queue(dpc_t* dpc, bool reschedule);
 
 // queue a dpc, but must be holding the thread lock
 // does not force a reschedule
+// dpc_queue_thread_locked will not block; it may wait briefly for a spinlock.
+// |dpc| may be deallocated once the function starts executing.
+// |dpc.func| may requeue the DPC if needed.
 zx_status_t dpc_queue_thread_locked(dpc_t* dpc) TA_REQ(thread_lock);
 
 // Begins the DPC shutdown process for |cpu|.
