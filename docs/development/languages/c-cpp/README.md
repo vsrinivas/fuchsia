@@ -7,5 +7,4 @@
 - [Library restrictions](library_restrictions.md)
 - [Testing FAQ](testing_faq.md)
 - [Syslog](syslog.md)
-- [Perftest micro-benchmark library](
-/zircon/system/ulib/perftest/README.md)
+- [Perftest micro-benchmark library](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md)
