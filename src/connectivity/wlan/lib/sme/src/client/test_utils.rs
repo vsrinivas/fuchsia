@@ -100,20 +100,29 @@ pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
     let started = Arc::new(AtomicBool::new(false));
     let start_failure = Arc::new(Mutex::new(None));
     let sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
+    let on_eapol_frame_cb = Arc::new(Mutex::new(None));
     let supplicant = MockSupplicant {
         started: started.clone(),
         start_failure: start_failure.clone(),
         on_eapol_frame: sink.clone(),
+        on_eapol_frame_cb: on_eapol_frame_cb.clone(),
     };
-    let mock = MockSupplicantController { started, start_failure, mock_on_eapol_frame: sink };
+    let mock = MockSupplicantController {
+        started,
+        start_failure,
+        mock_on_eapol_frame: sink,
+        on_eapol_frame_cb,
+    };
     (supplicant, mock)
 }
 
-#[derive(Debug)]
+type Cb = Fn() + Send + 'static;
+
 pub struct MockSupplicant {
     started: Arc<AtomicBool>,
     start_failure: Arc<Mutex<Option<failure::Error>>>,
     on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+    on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
 }
 
 impl Supplicant for MockSupplicant {
@@ -136,6 +145,9 @@ impl Supplicant for MockSupplicant {
         update_sink: &mut UpdateSink,
         _frame: &eapol::Frame,
     ) -> Result<(), failure::Error> {
+        if let Some(cb) = self.on_eapol_frame_cb.lock().unwrap().as_mut() {
+            cb();
+        }
         self.on_eapol_frame
             .lock()
             .unwrap()
@@ -147,10 +159,17 @@ impl Supplicant for MockSupplicant {
     }
 }
 
+impl std::fmt::Debug for MockSupplicant {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "MockSupplicant cannot be formatted")
+    }
+}
+
 pub struct MockSupplicantController {
     started: Arc<AtomicBool>,
     start_failure: Arc<Mutex<Option<failure::Error>>>,
     mock_on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+    on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
 }
 
 impl MockSupplicantController {
@@ -164,6 +183,13 @@ impl MockSupplicantController {
 
     pub fn set_on_eapol_frame_results(&self, updates: UpdateSink) {
         *self.mock_on_eapol_frame.lock().unwrap() = Ok(updates);
+    }
+
+    pub fn set_on_eapol_frame_callback<F>(&self, cb: F)
+    where
+        F: Fn() + Send + 'static,
+    {
+        *self.on_eapol_frame_cb.lock().unwrap() = Some(Box::new(cb));
     }
 
     pub fn set_on_eapol_frame_failure(&self, error: failure::Error) {

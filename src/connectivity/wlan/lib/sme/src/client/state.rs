@@ -257,74 +257,86 @@ impl State {
                 MlmeEvent::SignalReport { ind } => {
                     State::Associated { bss, last_rssi: Some(ind.rssi_dbm), link_state, radio_cfg }
                 }
-                MlmeEvent::EapolInd { ref ind } if bss.rsn.is_some() => match link_state {
-                    LinkState::EstablishingRsna {
-                        responder,
-                        mut rsna,
-                        rsna_timeout,
-                        mut resp_timeout,
-                    } => match process_eapol_ind(context, &mut rsna, &ind) {
-                        RsnaStatus::Established => {
-                            context.mlme_sink.send(MlmeRequest::SetCtrlPort(
-                                fidl_mlme::SetControlledPortRequest {
-                                    peer_sta_address: bss.bssid.clone(),
-                                    state: fidl_mlme::ControlledPortState::Open,
-                                },
-                            ));
-                            context
-                                .info_sink
-                                .send(InfoEvent::RsnaEstablished { att_id: context.att_id });
-                            report_connect_finished(
-                                responder,
-                                &context,
-                                ConnectResult::Success,
-                                None,
-                            );
-                            state_change_msg.replace("RSNA established".to_string());
+                MlmeEvent::EapolInd { ref ind } if bss.rsn.is_some() => {
+                    // Reject EAPOL frames from other BSS.
+                    if ind.src_addr != bss.bssid {
+                        let eapol_pdu = &ind.data[..];
+                        inspect_log!(context.inspect.rsn_events, {
+                            rx_eapol_frame: InspectBytes(&eapol_pdu),
+                            status: "rejected (foreign BSS)",
+                        });
+                        return State::Associated { bss, last_rssi, link_state, radio_cfg };
+                    }
+
+                    match link_state {
+                        LinkState::EstablishingRsna {
+                            responder,
+                            mut rsna,
+                            rsna_timeout,
+                            mut resp_timeout,
+                        } => match process_eapol_ind(context, &mut rsna, &ind) {
+                            RsnaStatus::Established => {
+                                context.mlme_sink.send(MlmeRequest::SetCtrlPort(
+                                    fidl_mlme::SetControlledPortRequest {
+                                        peer_sta_address: bss.bssid.clone(),
+                                        state: fidl_mlme::ControlledPortState::Open,
+                                    },
+                                ));
+                                context
+                                    .info_sink
+                                    .send(InfoEvent::RsnaEstablished { att_id: context.att_id });
+                                report_connect_finished(
+                                    responder,
+                                    &context,
+                                    ConnectResult::Success,
+                                    None,
+                                );
+                                state_change_msg.replace("RSNA established".to_string());
+                                let link_state = LinkState::LinkUp(Some(rsna));
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
+                            }
+                            RsnaStatus::Failed(result) => {
+                                report_connect_finished(responder, &context, result, None);
+                                send_deauthenticate_request(bss, &context.mlme_sink);
+                                state_change_msg.replace("RSNA failed".to_string());
+                                State::Idle
+                            }
+                            RsnaStatus::Unchanged => {
+                                let link_state = LinkState::EstablishingRsna {
+                                    responder,
+                                    rsna,
+                                    rsna_timeout,
+                                    resp_timeout,
+                                };
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
+                            }
+                            RsnaStatus::Progressed { new_resp_timeout } => {
+                                cancel(&mut resp_timeout);
+                                if let Some(id) = new_resp_timeout {
+                                    resp_timeout.replace(id);
+                                }
+                                let link_state = LinkState::EstablishingRsna {
+                                    responder,
+                                    rsna,
+                                    rsna_timeout,
+                                    resp_timeout,
+                                };
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
+                            }
+                        },
+                        LinkState::LinkUp(Some(mut rsna)) => {
+                            match process_eapol_ind(context, &mut rsna, &ind) {
+                                RsnaStatus::Unchanged => {}
+                                // Once re-keying is supported, the RSNA can fail in LinkUp as well
+                                // and cause deauthentication.
+                                s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
+                            };
                             let link_state = LinkState::LinkUp(Some(rsna));
                             State::Associated { bss, last_rssi, link_state, radio_cfg }
                         }
-                        RsnaStatus::Failed(result) => {
-                            report_connect_finished(responder, &context, result, None);
-                            send_deauthenticate_request(bss, &context.mlme_sink);
-                            state_change_msg.replace("RSNA failed".to_string());
-                            State::Idle
-                        }
-                        RsnaStatus::Unchanged => {
-                            let link_state = LinkState::EstablishingRsna {
-                                responder,
-                                rsna,
-                                rsna_timeout,
-                                resp_timeout,
-                            };
-                            State::Associated { bss, last_rssi, link_state, radio_cfg }
-                        }
-                        RsnaStatus::Progressed { new_resp_timeout } => {
-                            cancel(&mut resp_timeout);
-                            if let Some(id) = new_resp_timeout {
-                                resp_timeout.replace(id);
-                            }
-                            let link_state = LinkState::EstablishingRsna {
-                                responder,
-                                rsna,
-                                rsna_timeout,
-                                resp_timeout,
-                            };
-                            State::Associated { bss, last_rssi, link_state, radio_cfg }
-                        }
-                    },
-                    LinkState::LinkUp(Some(mut rsna)) => {
-                        match process_eapol_ind(context, &mut rsna, &ind) {
-                            RsnaStatus::Unchanged => {}
-                            // Once re-keying is supported, the RSNA can fail in LinkUp as well
-                            // and cause deauthentication.
-                            s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
-                        };
-                        let link_state = LinkState::LinkUp(Some(rsna));
-                        State::Associated { bss, last_rssi, link_state, radio_cfg }
+                        _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
                     }
-                    _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
-                },
+                }
                 _ => State::Associated { bss, last_rssi, link_state, radio_cfg },
             },
         };
@@ -588,7 +600,7 @@ fn process_eapol_ind(
             SecAssocUpdate::Key(key) => {
                 inspect_log!(context.inspect.rsn_events, derived_key: key.name());
                 send_keys(&context.mlme_sink, bssid, key)
-            },
+            }
             // Received a status update.
             // TODO(hahnr): Rework this part.
             // As of now, we depend on the fact that the status is always the last update.
@@ -607,7 +619,7 @@ fn process_eapol_ind(
                         return RsnaStatus::Failed(ConnectResult::BadCredentials);
                     }
                 }
-            },
+            }
         }
     }
 
@@ -1050,6 +1062,29 @@ mod tests {
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
         expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
+    }
+
+    #[test]
+    fn reject_foreign_eapol_frames() {
+        let mut h = TestHelper::new();
+        let (supplicant, mock) = mock_supplicant();
+        let state = link_up_state_protected(supplicant);
+        mock.set_on_eapol_frame_callback(|| {
+            panic!("eapol frame should not have been processed");
+        });
+
+        // Send an EapolInd from foreign BSS.
+        let eapol_ind = create_eapol_ind([1; 6], test_utils::eapol_key_frame_bytes());
+        let state = state.on_mlme_event(eapol_ind, &mut h.context);
+
+        // Verify state did not change.
+        match state {
+            State::Associated { link_state, .. } => match link_state {
+                LinkState::LinkUp(Some(_)) => (), // expected path
+                _ => panic!("expected unchanged link state"),
+            },
+            _ => panic!("not associated anymore"),
+        }
     }
 
     #[test]
@@ -1521,6 +1556,21 @@ mod tests {
             bss,
             last_rssi: None,
             link_state: LinkState::LinkUp(None),
+            radio_cfg: RadioConfig::default(),
+        }
+    }
+
+    fn link_up_state_protected(supplicant: MockSupplicant) -> State {
+        let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
+        let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsna = Rsna {
+            negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
+            supplicant: Box::new(supplicant),
+        };
+        State::Associated {
+            bss: Box::new(bss),
+            last_rssi: None,
+            link_state: LinkState::LinkUp(Some(rsna)),
             radio_cfg: RadioConfig::default(),
         }
     }
