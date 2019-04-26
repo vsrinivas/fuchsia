@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -63,6 +64,65 @@ func TestPublishArchive(t *testing.T) {
 
 	if inputPaths[0] != archivePath {
 		t.Errorf("depfile inputs: %#v != %#v", inputPaths[0], archivePath)
+	}
+}
+
+func TestPublishListOfPackages(t *testing.T) {
+	build.BuildTestPackage(cfg)
+
+	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
+
+	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
+
+	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	repoDir, err := ioutil.TempDir("", "pm-publish-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	if err := Run(cfg, []string{"-repo", repoDir, "-depfile", depfilePath, "-lp", "-f", packagesListPath}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasTestPackage(t, repoDir)
+
+	outName, inputPaths := readDepfile(depfilePath)
+	if ex := filepath.Join(repoDir, "repository", "timestamp.json"); ex != outName {
+		t.Errorf("depfile output: got %q, want %q", outName, ex)
+	}
+
+	if inputPaths[0] != packagesListPath {
+		t.Errorf("depfile inputs: %q != %q", inputPaths[0], packagesListPath)
+	}
+	if inputPaths[1] != outputManifestPath {
+		t.Errorf("depfile inputs: %q != %q", inputPaths[1], outputManifestPath)
+	}
+
+	inputPaths = inputPaths[2:]
+	sort.Strings(inputPaths)
+
+	blobs, err := cfg.BlobInfo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inputPaths) != len(blobs) {
+		t.Errorf("deps entries: %#v != %#v", inputPaths, blobs)
+	}
+	sourcePaths := []string{}
+	for _, blob := range blobs {
+		sourcePaths = append(sourcePaths, blob.SourcePath)
+	}
+	sort.Strings(sourcePaths)
+
+	for i := range sourcePaths {
+		if inputPaths[i] != sourcePaths[i] {
+			t.Errorf("deps entry: %q != %q", inputPaths[i], sourcePaths[i])
+		}
 	}
 }
 
