@@ -26,148 +26,12 @@ namespace wlantap = ::fuchsia::wlan::tap;
 
 namespace {
 
-template <typename T>
-zx_status_t EncodeFidlMessage(uint32_t ordinal, T* message,
-                              fidl::Encoder* encoder) {
-  encoder->Reset(ordinal);
-  encoder->Alloc(fidl::CodingTraits<T>::encoded_size);
-  message->Encode(encoder, sizeof(fidl_message_header_t));
-  auto encoded = encoder->GetMessage();
-  const char* err = nullptr;
-  zx_status_t status = fidl_validate(
-      T::FidlType, encoded.bytes().data() + sizeof(fidl_message_header_t),
-      encoded.bytes().actual() - sizeof(fidl_message_header_t), 0, &err);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: FIDL validation failed: %s (%d)\n", __func__, err,
-           status);
-    return status;
-  }
-  return ZX_OK;
-}
-
-template <typename T>
-zx_status_t SendFidlMessage(uint32_t ordinal, T* message,
-                            fidl::Encoder* encoder,
-                            const zx::channel& channel) {
-  zx_status_t status = EncodeFidlMessage(ordinal, message, encoder);
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto m = encoder->GetMessage();
-  status = channel.write(0, m.bytes().data(), m.bytes().actual(), nullptr, 0);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: write to channel failed: %d\n", __func__, status);
-    return status;
-  }
-  return ZX_OK;
-}
-
 template <typename T, size_t N>
 ::std::array<T, N> ToFidlArray(const T (&c_array)[N]) {
   ::std::array<T, N> ret;
   std::copy_n(&c_array[0], N, ret.begin());
   return ret;
 }
-
-struct EventSender {
-  explicit EventSender(const zx::channel& channel)
-      : encoder_(0), channel_(channel.get()) {}
-
-  void Shutdown() { channel_ = ZX_HANDLE_INVALID; }
-
-  void SendTxEvent(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
-    tx_args_.wlanmac_id = wlanmac_id;
-    ConvertTxInfo(pkt->info, &tx_args_.packet.info);
-    auto& data = tx_args_.packet.data;
-    data.clear();
-    auto head = static_cast<const uint8_t*>(pkt->packet_head.data_buffer);
-    std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
-    if (pkt->packet_tail != nullptr) {
-      auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data_buffer);
-      std::copy_n(tail + pkt->tail_offset,
-                  pkt->packet_tail->data_size - pkt->tail_offset,
-                  std::back_inserter(data));
-    }
-    Send(EventOrdinal::Tx, &tx_args_);
-  }
-
-  void SendSetChannelEvent(uint16_t wlanmac_id, wlan_channel_t* channel) {
-    wlantap::SetChannelArgs args = {
-        .wlanmac_id = wlanmac_id,
-        .chan = {.primary = channel->primary,
-                 .cbw = static_cast<wlan_common::CBW>(channel->cbw),
-                 .secondary80 = channel->secondary80}};
-    Send(EventOrdinal::SetChannel, &args);
-  }
-
-  void SendConfigureBssEvent(uint16_t wlanmac_id, wlan_bss_config_t* config) {
-    wlantap::ConfigureBssArgs args = {
-        .wlanmac_id = wlanmac_id,
-        .config = {.bss_type = config->bss_type,
-                   .bssid = ToFidlArray(config->bssid),
-                   .remote = config->remote}};
-    Send(EventOrdinal::ConfigureBss, &args);
-  }
-
-  void SendSetKeyEvent(uint16_t wlanmac_id, wlan_key_config_t* config) {
-    set_key_args_.wlanmac_id = wlanmac_id;
-    set_key_args_.config.protection = config->protection;
-    set_key_args_.config.cipher_oui = ToFidlArray(config->cipher_oui);
-    set_key_args_.config.cipher_type = config->cipher_type;
-    set_key_args_.config.key_type = config->key_type;
-    set_key_args_.config.peer_addr = ToFidlArray(config->peer_addr);
-    set_key_args_.config.key_idx = config->key_idx;
-    auto& key = set_key_args_.config.key;
-    key.clear();
-    key.reserve(config->key_len);
-    std::copy_n(config->key, config->key_len, std::back_inserter(key));
-    Send(EventOrdinal::SetKey, &set_key_args_);
-  }
-
-  void SendWlanmacStartEvent(uint16_t wlanmac_id) {
-    wlantap::WlanmacStartArgs args = {.wlanmac_id = wlanmac_id};
-    Send(EventOrdinal::WlanmacStart, &args);
-  }
-
- private:
-  enum class EventOrdinal : uint32_t {
-    Tx = fuchsia_wlan_tap_WlantapPhyTxOrdinal,
-    SetChannel = fuchsia_wlan_tap_WlantapPhySetChannelOrdinal,
-    ConfigureBss = fuchsia_wlan_tap_WlantapPhyConfigureBssOrdinal,
-    // TODO: ConfigureBeacon
-    SetKey = fuchsia_wlan_tap_WlantapPhySetKeyOrdinal,
-    WlanmacStart = fuchsia_wlan_tap_WlantapPhyWlanmacStartOrdinal
-  };
-
-  template <typename T>
-  void Send(EventOrdinal ordinal, T* message) {
-    if (channel_ == ZX_HANDLE_INVALID) {
-      return;
-    }
-    zx_status_t status =
-        SendFidlMessage(static_cast<uint32_t>(ordinal), message, &encoder_,
-                        *zx::unowned<zx::channel>(channel_));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to send FIDL message: %d\n", __func__, status);
-    }
-  }
-
-  static void ConvertTxInfo(const wlan_tx_info_t& in,
-                            wlantap::WlanTxInfo* out) {
-    out->tx_flags = in.tx_flags;
-    out->valid_fields = in.valid_fields;
-    out->phy = in.phy;
-    out->cbw = in.cbw;
-    out->mcs = in.mcs;
-    out->tx_vector_idx = in.tx_vector_idx;
-  }
-
-  fidl::Encoder encoder_;
-  zx_handle_t channel_;
-  // Messages that require memory allocation
-  wlantap::TxArgs tx_args_;
-  wlantap::SetKeyArgs set_key_args_;
-};
 
 template <typename T, size_t MAX_COUNT>
 class DevicePool {
@@ -213,24 +77,68 @@ class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
+wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id,
+                                 wlan_key_config_t* config) {
+  auto set_key_args = wlantap::SetKeyArgs{
+      .wlanmac_id = wlanmac_id,
+      .config =
+          wlantap::WlanKeyConfig{
+              .protection = config->protection,
+              .cipher_oui = ToFidlArray(config->cipher_oui),
+              .cipher_type = config->cipher_type,
+              .key_type = config->key_type,
+              .peer_addr = ToFidlArray(config->peer_addr),
+              .key_idx = config->key_idx,
+          },
+  };
+  auto& key = set_key_args.config.key;
+  key.clear();
+  key.reserve(config->key_len);
+  std::copy_n(config->key, config->key_len, std::back_inserter(key));
+  return set_key_args;
+}
+
+wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
+  auto tx_args = wlantap::TxArgs{
+      .wlanmac_id = wlanmac_id,
+      .packet =
+          wlantap::WlanTxPacket{
+              .info =
+                  wlantap::WlanTxInfo{
+                      .tx_flags = pkt->info.tx_flags,
+                      .valid_fields = pkt->info.valid_fields,
+                      .phy = pkt->info.phy,
+                      .cbw = pkt->info.cbw,
+                      .mcs = pkt->info.mcs,
+                      .tx_vector_idx = pkt->info.tx_vector_idx,
+                  }},
+  };
+  auto& data = tx_args.packet.data;
+  data.clear();
+  auto head = static_cast<const uint8_t*>(pkt->packet_head.data_buffer);
+  std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
+  if (pkt->packet_tail != nullptr) {
+    auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data_buffer);
+    std::copy_n(tail + pkt->tail_offset,
+                pkt->packet_tail->data_size - pkt->tail_offset,
+                std::back_inserter(data));
+  }
+  return tx_args;
+}
+
 struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   WlantapPhy(zx_device_t* device, zx::channel user_channel,
              std::unique_ptr<wlantap::WlantapPhyConfig> phy_config,
              async_dispatcher_t* loop)
       : phy_config_(std::move(phy_config)),
         loop_(loop),
-        user_channel_binding_(this, std::move(user_channel), loop),
-        event_sender_(user_channel_binding_.channel()) {
-    user_channel_binding_.set_error_handler([this](zx_status_t status) {
+        user_binding_(this, std::move(user_channel), loop) {
+    user_binding_.set_error_handler([this](zx_status_t status) {
       zxlogf(INFO,
              "wlantap phy: unbinding device because the channel was closed\n");
       if (report_tx_status_count_) {
         zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu\n",
                report_tx_status_count_);
-      }
-      {
-        std::lock_guard<std::mutex> guard(user_channel_lock_);
-        user_channel_binding_.set_error_handler(nullptr);
       }
       // Remove the device if the client closed the channel
       Unbind();
@@ -256,11 +164,12 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   }
 
   void Unbind() {
-    {
-      std::lock_guard<std::mutex> guard(user_channel_lock_);
-      event_sender_.Shutdown();
-      user_channel_binding_.Unbind();
+    std::lock_guard<std::mutex> guard(lock_);
+    if (user_binding_.is_bound()) {
+      user_binding_.Unbind();
     }
+    user_binding_.set_error_handler(nullptr);
+
     // Flush any remaining tasks in the event loop before destroying the
     // interfaces
     ::async::PostTask(loop_, [this] {
@@ -368,8 +277,11 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   virtual void WlantapMacStart(uint16_t wlanmac_id) override {
     zxlogf(INFO, "wlantap phy: WlantapMacStart id=%u\n", wlanmac_id);
-    std::lock_guard<std::mutex> guard(user_channel_lock_);
-    event_sender_.SendWlanmacStartEvent(wlanmac_id);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      return;
+    }
+    user_binding_.events().WlanmacStart({.wlanmac_id = wlanmac_id});
     zxlogf(INFO, "wlantap phy: WlantapMacStart done\n");
   }
 
@@ -384,8 +296,11 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
              "wlantap phy: WlantapMacQueueTx id=%u, tx_report_count=%zu\n",
              wlanmac_id, report_tx_status_count_);
     }
-    std::lock_guard<std::mutex> guard(user_channel_lock_);
-    event_sender_.SendTxEvent(wlanmac_id, pkt);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      return;
+    }
+    user_binding_.events().Tx(ToTxArgs(wlanmac_id, pkt));
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "wlantap phy: WlantapMacQueueTx done, tx_report_count=%zu\n",
              report_tx_status_count_);
@@ -397,8 +312,15 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     if (!phy_config_->quiet) {
       zxlogf(INFO, "wlantap phy: WlantapMacSetChannel id=%u\n", wlanmac_id);
     }
-    std::lock_guard<std::mutex> guard(user_channel_lock_);
-    event_sender_.SendSetChannelEvent(wlanmac_id, channel);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      return;
+    }
+    user_binding_.events().SetChannel(
+        {.wlanmac_id = wlanmac_id,
+         .chan = {.primary = channel->primary,
+                  .cbw = static_cast<wlan_common::CBW>(channel->cbw),
+                  .secondary80 = channel->secondary80}});
     if (!phy_config_->quiet) {
       zxlogf(INFO, "wlantap phy: WlantapMacSetChannel done\n");
     }
@@ -407,16 +329,26 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   virtual void WlantapMacConfigureBss(uint16_t wlanmac_id,
                                       wlan_bss_config_t* config) override {
     zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss id=%u\n", wlanmac_id);
-    std::lock_guard<std::mutex> guard(user_channel_lock_);
-    event_sender_.SendConfigureBssEvent(wlanmac_id, config);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      return;
+    }
+    user_binding_.events().ConfigureBss(
+        {.wlanmac_id = wlanmac_id,
+         .config = {.bss_type = config->bss_type,
+                    .bssid = ToFidlArray(config->bssid),
+                    .remote = config->remote}});
     zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss done\n");
   }
 
   virtual void WlantapMacSetKey(uint16_t wlanmac_id,
                                 wlan_key_config_t* key_config) override {
     zxlogf(INFO, "wlantap phy: WlantapMacSetKey id=%u\n", wlanmac_id);
-    std::lock_guard<std::mutex> guard(user_channel_lock_);
-    event_sender_.SendSetKeyEvent(wlanmac_id, key_config);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      return;
+    }
+    user_binding_.events().SetKey(ToSetKeyArgs(wlanmac_id, key_config));
     zxlogf(INFO, "wlantap phy: WlantapMacSetKey done\n");
   }
 
@@ -426,10 +358,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   std::mutex wlanmac_lock_;
   DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_
       __TA_GUARDED(wlanmac_lock_);
-  std::mutex user_channel_lock_;
-  fidl::Binding<wlantap::WlantapPhy> user_channel_binding_
-      __TA_GUARDED(user_channel_lock_);
-  EventSender event_sender_ __TA_GUARDED(user_channel_lock_);
+  std::mutex lock_;
+  fidl::Binding<wlantap::WlantapPhy> user_binding_ __TA_GUARDED(lock_);
   size_t report_tx_status_count_ = 0;
 };
 
