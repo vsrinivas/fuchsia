@@ -578,7 +578,10 @@ RUN_TEST(kill_test)
 RUN_TEST(kill_job_no_child_test)
 RUN_TEST(kill_job_removes_from_tree)
 RUN_TEST(close_job_removes_from_tree)
-RUN_TEST(kill_job_chain)
+
+// FLK-189 - Test disable because of flakiness.
+// RUN_TEST(kill_job_chain)
+
 RUN_TEST(set_job_oom_kill_bit)
 RUN_TEST(wait_test)
 RUN_TEST(info_task_stats_fails)
