@@ -176,6 +176,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   // TODO(SCN-1091): this is a very conservative approach that may result in
   // excessive rendering.
 
+  // TODO(SCN-1337) Remove the render_pending_ check, and pipeline frames within
+  // a VSYNC interval.
   if (currently_rendering_) {
     render_pending_ = true;
     return;
@@ -189,12 +191,13 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
         << "DefaultFrameScheduler: calling RenderFrame presentation_time="
         << presentation_time << " frame_number=" << frame_number_;
   }
-
   TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS,
                 "Expected presentation time", presentation_time, "frame_number",
                 frame_number_);
 
-  delegate_.session_updater->NewFrame();
+  // Ratchet the Present callbacks to signal that all outstanding Present()
+  // calls until this point are applied to the next Scenic frame.
+  delegate_.session_updater->RatchetPresentCallbacks();
 
   auto frame_timings =
       fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time);
@@ -261,7 +264,7 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
   }
 
   auto update_results = delegate_.session_updater->UpdateSessions(
-      std::move(sessions_to_update), presentation_time);
+      std::move(sessions_to_update), presentation_time, frame_number_);
 
   // Push updates that didn't have their fences ready back onto the queue to be
   // retried next frame.
@@ -292,8 +295,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
                   timings.frame_number());
   } else {
     if (TRACE_CATEGORY_ENABLED("gfx")) {
-      // Log trace data.
-      // TODO(SCN-400): just pass the whole Frame to a listener.
+      // Log trace data..
       zx_duration_t target_vs_actual = timings.actual_presentation_time() -
                                        timings.target_presentation_time();
 

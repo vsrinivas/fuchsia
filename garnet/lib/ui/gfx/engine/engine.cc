@@ -61,7 +61,6 @@ Engine::Engine(sys::ComponentContext* component_context,
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
       has_vulkan_(escher_ && escher_->vk_device()),
-      command_context_(CreateCommandContext(/* frame number */ 0)),
       inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
@@ -87,7 +86,6 @@ Engine::Engine(
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
       has_vulkan_(escher_ && escher_->vk_device()),
-      command_context_(CreateCommandContext(/* frame number */ 0)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
@@ -144,17 +142,17 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(
   };
 }
 
-CommandContext Engine::CreateCommandContext(uint64_t frame_number_for_tracing) {
-  return CommandContext(has_vulkan() ? escher::BatchGpuUploader::New(
-                                           escher_, frame_number_for_tracing)
-                                     : nullptr);
+CommandContext Engine::CreateCommandContext(uint64_t trace_id) {
+  return CommandContext(has_vulkan()
+                            ? escher::BatchGpuUploader::New(escher_, trace_id)
+                            : nullptr);
 }
 
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
 SessionUpdater::UpdateResults Engine::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update,
-    zx_time_t presentation_time) {
+    zx_time_t presentation_time, uint64_t trace_id) {
   SessionUpdater::UpdateResults update_results;
   for (auto session_id : sessions_to_update) {
     auto session_handler = session_manager_->FindSessionHandler(session_id);
@@ -169,8 +167,12 @@ SessionUpdater::UpdateResults Engine::UpdateSessions(
 
     auto session = session_handler->session();
 
+    if (!command_context_) {
+      command_context_ =
+          std::make_optional<CommandContext>(CreateCommandContext(trace_id));
+    }
     auto apply_results = session->ApplyScheduledUpdates(
-        &command_context_, presentation_time, needs_render_count_);
+        &(command_context_.value()), presentation_time, needs_render_count_);
 
     // If update fails, kill the entire client session.
     if (!apply_results.success) {
@@ -201,7 +203,7 @@ SessionUpdater::UpdateResults Engine::UpdateSessions(
   return update_results;
 }
 
-void Engine::NewFrame() {
+void Engine::RatchetPresentCallbacks() {
   while (!callbacks_this_frame_.empty()) {
     pending_callbacks_.push(std::move(callbacks_this_frame_.front()));
     callbacks_this_frame_.pop();
@@ -234,8 +236,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   }
 
   // Flush work to the gpu.
-  command_context_.Flush();
-  command_context_ = CreateCommandContext(frame_number + 1);
+  command_context_->Flush();
+  command_context_.reset();
 
   UpdateAndDeliverMetrics(presentation_time);
 

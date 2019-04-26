@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/test_loop_fixture.h>
+
 #include "garnet/lib/ui/gfx/tests/frame_scheduler_test.h"
 
 namespace scenic_impl {
@@ -63,7 +64,9 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 0u);
 
   scheduler->ScheduleUpdateForSession(Now().get(), /* session id */ 1);
 
@@ -75,12 +78,15 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 0u);
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame index */ 0);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 1u);
 
   // Wait for a very long time.
   RunLoopFor(zx::sec(10));
@@ -88,6 +94,7 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   // No further render calls should have been made.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 1u);
 }
 
 TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
@@ -171,7 +178,9 @@ TEST_F(FrameSchedulerTest,
   auto scheduler = CreateDefaultFrameScheduler();
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 0u);
 
   SessionId session_id = 1;
 
@@ -183,9 +192,11 @@ TEST_F(FrameSchedulerTest,
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 0u);
 
   // Schedule another update for now.
   scheduler->ScheduleUpdateForSession(now, session_id);
@@ -194,16 +205,22 @@ TEST_F(FrameSchedulerTest,
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 0u);
 
   // End previous frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame index */ 0);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 1u);
 
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
 
-  // Second render should have occured.
+  // Second render should have occurred.
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
+  mock_renderer_->EndFrame(/* frame index */ 0);
+  EXPECT_EQ(mock_updater_->signal_previous_frames_presented_call_count(), 2u);
 }
 
 TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {

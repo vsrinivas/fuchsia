@@ -14,7 +14,7 @@ namespace escher {
 
 /* static */
 std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(
-    EscherWeakPtr weak_escher, int64_t frame_trace_number) {
+    EscherWeakPtr weak_escher, uint64_t frame_trace_number) {
   if (!weak_escher) {
     // This class is not functional without a valid escher.
     FXL_LOG(WARNING) << "Error, creating a BatchGpuUploader without an escher.";
@@ -131,7 +131,7 @@ CommandBufferPtr BatchGpuUploader::Reader::TakeCommandsAndShutdown() {
 }
 
 BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher,
-                                   int64_t frame_trace_number)
+                                   uint64_t frame_trace_number)
     : escher_(std::move(weak_escher)), frame_trace_number_(frame_trace_number) {
   FXL_DCHECK(escher_);
 }

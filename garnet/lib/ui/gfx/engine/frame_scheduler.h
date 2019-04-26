@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 
-#include <unordered_set>
-
-#include "garnet/lib/ui/gfx/id.h"
-
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <unordered_set>
+
+#include "garnet/lib/ui/gfx/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -44,15 +44,17 @@ class SessionUpdater {
   // false otherwise.
   virtual UpdateResults UpdateSessions(
       std::unordered_set<SessionId> sessions_to_update,
-      zx_time_t presentation_time) = 0;
+      zx_time_t presentation_time, uint64_t trace_id) = 0;
 
-  // Signals the start of a new frame.
-  virtual void NewFrame() = 0;
+  // Creates a ratchet point for the updater. All present calls that were
+  // updated before this point will be signaled with the next call to
+  // SignalSuccessfulPresentCallbacks().
+  virtual void RatchetPresentCallbacks() = 0;
 
-  // Signal that all updates before the current frame have been presented. The
-  // signaled callbacks are every successful present between the last time
+  // Signal that all updates before the last ratchet point have been presented.
+  // The signaled callbacks are every successful present between the last time
   // SignalSuccessfulPresentCallbacks was called and the most recent call to
-  // NewFrame().
+  // RatchetPresentCallbacks().
   virtual void SignalSuccessfulPresentCallbacks(
       fuchsia::images::PresentationInfo) = 0;
 };

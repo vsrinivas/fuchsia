@@ -12,7 +12,7 @@ namespace test {
 
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update,
-    zx_time_t presentation_time) {
+    zx_time_t presentation_time, uint64_t trace_id) {
   ++update_sessions_call_count_;
   return update_sessions_return_value_;
 }

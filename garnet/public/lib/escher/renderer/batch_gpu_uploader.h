@@ -28,9 +28,9 @@ namespace escher {
 class BatchGpuUploader {
  public:
   static std::unique_ptr<BatchGpuUploader> New(EscherWeakPtr weak_escher,
-                                               int64_t frame_trace_number = 0);
+                                               uint64_t frame_trace_number = 0);
 
-  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number = 0);
+  BatchGpuUploader(EscherWeakPtr weak_escher, uint64_t frame_trace_number = 0);
   ~BatchGpuUploader();
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this
@@ -136,7 +136,7 @@ class BatchGpuUploader {
   EscherWeakPtr escher_;
   bool is_initialized_ = false;
   // The trace number for the frame. Cached to support lazy frame creation.
-  const int64_t frame_trace_number_;
+  const uint64_t frame_trace_number_;
   // Lazily created when the first Reader or Writer is acquired.
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;

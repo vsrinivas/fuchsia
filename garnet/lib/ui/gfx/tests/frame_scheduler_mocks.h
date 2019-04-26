@@ -59,9 +59,9 @@ class MockSessionUpdater : public SessionUpdater {
 
   SessionUpdater::UpdateResults UpdateSessions(
       std::unordered_set<SessionId> sessions_to_update,
-      zx_time_t presentation_time) override;
+      zx_time_t presentation_time, uint64_t trace_id = 0) override;
 
-  void NewFrame() override { ++new_frame_call_count_; }
+  void RatchetPresentCallbacks() override { ++ratchet_present_call_count_; }
 
   void SignalSuccessfulPresentCallbacks(
       fuchsia::images::PresentationInfo) override {
@@ -75,7 +75,7 @@ class MockSessionUpdater : public SessionUpdater {
 
   uint32_t update_sessions_call_count() { return update_sessions_call_count_; }
 
-  uint32_t new_frame_call_count() { return new_frame_call_count_; }
+  uint32_t ratchet_present_call_count() { return ratchet_present_call_count_; }
 
   uint32_t signal_previous_frames_presented_call_count() {
     return signal_previous_frames_presented_call_count_;
@@ -91,7 +91,7 @@ class MockSessionUpdater : public SessionUpdater {
 
   uint32_t update_sessions_call_count_ = 0;
   uint32_t signal_previous_frames_presented_call_count_ = 0;
-  uint32_t new_frame_call_count_ = 0;
+  uint32_t ratchet_present_call_count_ = 0;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };
