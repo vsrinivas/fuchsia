@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
-
-#include <set>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -14,19 +11,28 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/waiter.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/time.h>
+
+#include <set>
+
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::ProjectProfile;
+using fuchsia::cobalt::ReleaseStage;
 using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                           ProjectProfile profile)
-    : dispatcher_(dispatcher), profile_(std::move(profile)) {}
+BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(
+    async_dispatcher_t* dispatcher, std::string project_name,
+    fuchsia::cobalt::ReleaseStage release_stage, ProjectProfile profile)
+    : dispatcher_(dispatcher),
+      project_name_(std::move(project_name)),
+      release_stage_(release_stage),
+      profile_(std::move(profile)) {}
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
@@ -141,25 +147,42 @@ ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
 
 void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
   auto logger_factory = ConnectToLoggerFactory();
-
   if (!logger_factory) {
     return;
   }
 
-  logger_factory->CreateLogger(
-      CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
-        if (status == Status::OK) {
-          if (logger_) {
-            logger_.set_error_handler(
-                [this](zx_status_t status) { OnConnectionError(); });
-            SendEvents();
+  if (project_name_.empty()) {
+    logger_factory->CreateLogger(
+        CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
+          if (status == Status::OK) {
+            if (logger_) {
+              logger_.set_error_handler(
+                  [this](zx_status_t status) { OnConnectionError(); });
+              SendEvents();
+            } else {
+              OnConnectionError();
+            }
           } else {
-            OnConnectionError();
+            FXL_LOG(ERROR) << "CreateLogger() failed.";
           }
-        } else {
-          FXL_LOG(ERROR) << "CreateLogger() received invalid arguments";
-        }
-      });
+        });
+  } else {
+    logger_factory->CreateLoggerFromProjectName(
+        project_name_, release_stage_, logger_.NewRequest(),
+        [this](Status status) {
+          if (status == Status::OK) {
+            if (logger_) {
+              logger_.set_error_handler(
+                  [this](zx_status_t status) { OnConnectionError(); });
+              SendEvents();
+            } else {
+              OnConnectionError();
+            }
+          } else {
+            FXL_LOG(ERROR) << "CreateLoggerFromProjectName() failed";
+          }
+        });
+  }
 }
 
 void BaseCobaltLoggerImpl::OnTransitFail() {
@@ -257,15 +280,27 @@ void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event,
   }
 }
 
+fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
+  return context_->svc()->Connect<LoggerFactory>();
+}
+
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    sys::ComponentContext* context,
                                    ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, std::move(profile)), context_(context) {
+    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA,
+                           std::move(profile)),
+      context_(context) {
   ConnectToCobaltApplication();
 }
 
-fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
-  return context_->svc()->Connect<LoggerFactory>();
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                   sys::ComponentContext* context,
+                                   std::string project_name,
+                                   fuchsia::cobalt::ReleaseStage release_stage)
+    : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), release_stage,
+                           ProjectProfile()),
+      context_(context) {
+  ConnectToCobaltApplication();
 }
 
 }  // namespace cobalt

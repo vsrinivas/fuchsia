@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fsl/vmo/file.h>
 #include <src/lib/fxl/logging.h>
+
+#include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
 using fuchsia::cobalt::ProjectProfile;
 
@@ -26,8 +27,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
   ProjectProfile profile;
   profile.config = std::move(config_vmo).ToTransport();
   profile.release_stage = release_stage;
-  return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
-                                            std::move(profile));
+  return NewCobaltLogger(dispatcher, context, std::move(profile));
 }
 
 std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
@@ -35,6 +35,13 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
                                               ProjectProfile profile) {
   return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
                                             std::move(profile));
+}
+
+std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage) {
+  return std::make_unique<CobaltLoggerImpl>(
+      dispatcher, context, std::move(project_name), release_stage);
 }
 
 }  // namespace cobalt

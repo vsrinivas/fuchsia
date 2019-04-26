@@ -318,7 +318,7 @@ class CobaltLogger {
 // |context| A pointer to the StartupContext that provides access to the
 // environment of the component using this CobaltLogger.
 //
-// |config_path| The path to the configuration file for the Cobalt project
+// |registry_path| The path to the registry file for the Cobalt project
 // associated with the new Logger. This is a binary file containing the compiled
 // definitions of the metrics and reports defined for the project. Usually this
 // file is generated via the |cobalt_config| target in your BUILD file and
@@ -329,9 +329,15 @@ class CobaltLogger {
 // project associated with the new Logger. This determines which of the defined
 // metrics are permitted to be collected. The default value of GA (Generally
 // Available) permits only metrics tagged as GA.
+//
+// Use this version of NewCobaltLogger*() when the version of the Cobalt
+// registry that was bundled with the Cobalt service itself may not contain the
+// latest versions of the metric and report definitions to be used by the
+// returned CobaltLogger. This method allows the caller to provide updated
+// versions of those definitions.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    const std::string& config_path,
+    const std::string& registry_path,
     fuchsia::cobalt::ReleaseStage release_stage =
         fuchsia::cobalt::ReleaseStage::GA);
 
@@ -343,11 +349,45 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // |context| A pointer to the StartupContext that provides access to the
 // environment of the component using this CobaltLogger.
 //
-// |profile| The ProjectProfile struct that contains the configuration for this
+// |profile| A ProjectProfile that contains (among other data) a VMO containing
+// the compiled metric and report definitions to be used by the returned
 // CobaltLogger.
+//
+// Use this version of NewCobaltLogger*() when the version of the Cobalt
+// registry that was bundled with the Cobalt service itself may not contain the
+// latest versions of the metric and report definitions to be used by the
+// returned CobaltLogger. This method allows the caller to provide updated
+// versions of those definitions.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     fuchsia::cobalt::ProjectProfile profile);
+
+// Returns a CobaltLogger initialized with the provided parameters.
+//
+// |dispatcher| A pointer to an async_dispatcher_t to be used for all
+// asynchronous operations.
+//
+// |context| A pointer to the StartupContext that provides access to the
+// environment of the component using this CobaltLogger.
+//
+// |project_name| The name of the Cobalt project to be associated with the
+// returned CobaltLogger.
+//
+// |release_stage| Optional specification of the current release stage of the
+// project associated with the new Logger. This determines which of the defined
+// metrics are permitted to be collected. The default value of GA (Generally
+// Available) permits only metrics tagged as GA.
+//
+// Use this version of NewCobaltLogger*() when the version of the Cobalt
+// registry that was bundled with the Cobalt service itself contains the latest
+// versions of the metric and report definitions to be used by the returned
+// CobaltLogger. The |project_name| should be the name of one of the projects in
+// that bundled registry.
+std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+    std::string project_name,
+    fuchsia::cobalt::ReleaseStage release_stage =
+        fuchsia::cobalt::ReleaseStage::GA);
 
 }  // namespace cobalt
 
