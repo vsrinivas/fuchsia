@@ -56,6 +56,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/lib/async-default",
   ]
@@ -66,7 +67,6 @@ source_set("src") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/files",
-    "//src/lib/fxl",
     "//third_party/libpng",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/fidl/fuchsia-sysinfo",

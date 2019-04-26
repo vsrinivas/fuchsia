@@ -15,6 +15,8 @@
 
 #include <vector>
 
+#include "src/lib/fxl/functional/cancelable_callback.h"
+
 namespace fuchsia {
 namespace feedback {
 
@@ -40,6 +42,9 @@ class LogListener : public fuchsia::logger::LogListener {
   void Log(fuchsia::logger::LogMessage log) override;
   void Done() override;
 
+  // Resets |done_| and |done_after_timeout_|.
+  void Reset();
+
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
 
@@ -48,6 +53,10 @@ class LogListener : public fuchsia::logger::LogListener {
   // We use a shared_ptr to share the bridge between this and the async loop on
   // which we post the delayed task to timeout.
   std::shared_ptr<fit::bridge<void, void>> done_;
+
+  // We wrap the delayed task we post on the async loop to timeout in a
+  // CancelableClosure so we can cancel it if we are done another way.
+  fxl::CancelableClosure done_after_timeout_;
 };
 
 }  // namespace feedback

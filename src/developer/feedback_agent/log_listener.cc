@@ -70,7 +70,7 @@ fit::promise<void> LogListener::CollectLogs() {
     FX_LOGS(ERROR) << "LogListener error: " << status << " ("
                    << zx_status_get_string(status) << ")";
     done_->completer.complete_error();
-    done_.reset();
+    Reset();
   });
 
   fuchsia::logger::LogPtr logger = services_->Connect<fuchsia::logger::Log>();
@@ -78,22 +78,26 @@ fit::promise<void> LogListener::CollectLogs() {
     FX_LOGS(ERROR) << "Lost connection to Log service: " << status << " ("
                    << zx_status_get_string(status) << ")";
     done_->completer.complete_error();
-    done_.reset();
+    Reset();
   });
   logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
 
   // fit::promise does not have the notion of a timeout. So we post a delayed
   // task that will call the completer after the timeout and return an error.
+  //
+  // We wrap the delayed task in a CancelableClosure so we can cancel it when
+  // the fit::bridge is completed by Done() or another error.
+  done_after_timeout_.Reset([done = done_] {
+    // Check that the fit::bridge was not already completed by Done() or
+    // another error.
+    if (done->completer) {
+      FX_LOGS(ERROR) << "System log collection timed out";
+      done->completer.complete_error();
+    }
+  });
   const zx_status_t post_status = async::PostDelayedTask(
       async_get_default_dispatcher(),
-      [done = done_] {
-        // Check that the fit::bridge was not already completed by Done() or
-        // another error.
-        if (done->completer) {
-          FX_LOGS(ERROR) << "System log collection timed out";
-          done->completer.complete_error();
-        }
-      },
+      [cb = done_after_timeout_.callback()] { cb(); },
       kSystemLogCollectionTimeout);
   if (post_status != ZX_OK) {
     FX_LOGS(ERROR)
@@ -140,7 +144,12 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 
 void LogListener::Done() {
   done_->completer.complete_ok();
+  Reset();
+}
+
+void LogListener::Reset() {
   done_.reset();
+  done_after_timeout_.Cancel();
 }
 
 }  // namespace feedback
