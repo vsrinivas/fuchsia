@@ -54,9 +54,9 @@ struct CollectorOptions {
     // time we need to wait for a response.
     zx::duration initial_response_deadline = zx::duration(0);
 
-    // The Id of the cobalt project to use. This is a registered project in Cobalt's metric
-    // registry. If this value is -1, then |load_config| must be set.
-    int64_t project_id = -1;
+    // The name used to register the project with cobalt. This will be used to route the metrics
+    // to the right project.
+    fbl::String project_name;
 #endif
     // This is set internally by factory functions.
     uint32_t release_stage = 0;

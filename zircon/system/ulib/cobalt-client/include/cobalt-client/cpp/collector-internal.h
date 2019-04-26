@@ -38,9 +38,8 @@ struct CobaltOptions {
     // Performs a connection to a service at a given path.
     fbl::Function<zx_status_t(const char* service_path, zx::channel service)> service_connect;
 
-    // The Id of the cobalt project to use. This is a registered project in Cobalt's metric
-    // registry. If this value is -1, then config reader must be set.
-    int64_t project_id = -1;
+    // Used to acquire a logger instance.
+    fbl::String project_name;
 
     // Which release stage to use for persisting metrics.
     ReleaseStage release_stage;

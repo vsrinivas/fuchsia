@@ -50,14 +50,12 @@ namespace {
 // Time between each Cobalt flush.
 constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 
-constexpr int64_t kFsProjectId = 107;
-
 cobalt_client::CollectorOptions MakeCollectorOptions() {
     cobalt_client::CollectorOptions options =
         cobalt_client::CollectorOptions::GeneralAvailability();
 #ifdef __Fuchsia__
-    // Filesystems project id.
-    options.project_id = kFsProjectId;
+    // Filesystems project name as defined in cobalt-analytics projects.yaml.
+    options.project_name = "local_storage";
     options.initial_response_deadline = zx::usec(0);
     options.response_deadline = zx::nsec(0);
 #endif // __Fuchsia__
@@ -332,9 +330,8 @@ zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
         return status;
     }
     fuchsia_hardware_block_VmoID vmoid;
-    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(BlockDevice()->get(),
-                                                                  xfer_vmo.release(), &status,
-                                                                  &vmoid);
+    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(
+        BlockDevice()->get(), xfer_vmo.release(), &status, &vmoid);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -365,8 +362,8 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     uint64_t offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
     uint64_t length = 1;
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(),
-                                                                       offset, length, &status);
+    zx_status_t io_status =
+        fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(), offset, length, &status);
     if (io_status != ZX_OK) {
         status = io_status;
     }
@@ -376,8 +373,7 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     }
 
     const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
-    uint64_t inodes64 =
-        (info_.ino_slices + static_cast<uint32_t>(length)) * kInodesPerSlice;
+    uint64_t inodes64 = (info_.ino_slices + static_cast<uint32_t>(length)) * kInodesPerSlice;
     ZX_DEBUG_ASSERT(inodes64 <= std::numeric_limits<uint32_t>::max());
     uint32_t inodes = static_cast<uint32_t>(inodes64);
     uint32_t inoblks = (inodes + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;
@@ -436,8 +432,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
     }
 
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(),
-                                                                       offset, length, &status);
+    zx_status_t io_status =
+        fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(), offset, length, &status);
     if (io_status != ZX_OK) {
         status = io_status;
     }
@@ -538,8 +534,8 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
             kCobaltFlushTimer);
     }
 
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(fs->BlockDevice()->get(), &status,
-                                                                &fs->block_info_);
+    zx_status_t io_status =
+        fuchsia_hardware_block_BlockGetInfo(fs->BlockDevice()->get(), &status, &fs->block_info_);
     if (io_status != ZX_OK) {
         return io_status;
     }
