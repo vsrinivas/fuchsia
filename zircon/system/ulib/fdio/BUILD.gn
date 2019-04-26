@@ -42,6 +42,7 @@ library("fdio") {
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-ldsvc:c",
     "$zx/system/fidl/fuchsia-net:c",
     "$zx/system/fidl/fuchsia-process:c",
