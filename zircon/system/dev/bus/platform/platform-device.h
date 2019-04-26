@@ -58,34 +58,28 @@ private:
     zx_status_t Init(const pbus_dev_t* pdev);
 
     // Handlers for RPCs from PlatformProxy.
-    zx_status_t RpcGetMmio(const DeviceResources* dr, uint32_t index, zx_paddr_t* out_paddr,
-                           size_t* out_length, zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetInterrupt(const DeviceResources* dr, uint32_t index, uint32_t* out_irq,
-                                uint32_t* out_mode, zx_handle_t* out_handle,
-                                uint32_t* out_handle_count);
-    zx_status_t RpcGetBti(const DeviceResources* dr, uint32_t index, zx_handle_t* out_handle,
-                          uint32_t* out_handle_count);
-    zx_status_t RpcGetSmc(const DeviceResources* dr, uint32_t index,
-                          zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info);
-    zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
-    zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,
-                               uint8_t* buf, uint32_t buf_size, uint32_t* actual);
-    zx_status_t RpcGpioConfigIn(const DeviceResources* dr, uint32_t index, uint32_t flags);
-    zx_status_t RpcGpioConfigOut(const DeviceResources* dr, uint32_t index, uint8_t initial_value);
-    zx_status_t RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index, uint64_t function);
-    zx_status_t RpcGpioRead(const DeviceResources* dr, uint32_t index, uint8_t* out_value);
-    zx_status_t RpcGpioWrite(const DeviceResources* dr, uint32_t index, uint8_t value);
-    zx_status_t RpcGpioGetInterrupt(const DeviceResources* dr, uint32_t index, uint32_t flags,
-                                    zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGpioReleaseInterrupt(const DeviceResources* dr, uint32_t index);
-    zx_status_t RpcGpioSetPolarity(const DeviceResources* dr, uint32_t index, uint32_t flags);
-    zx_status_t RpcI2cTransact(const DeviceResources* dr, uint32_t txid, rpc_i2c_req_t* req,
-                               zx_handle_t channel);
-    zx_status_t RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,
-                                         size_t* out_size);
-    zx_status_t RpcClockEnable(const DeviceResources* dr, uint32_t index);
-    zx_status_t RpcClockDisable(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t* out_length,
+                           zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
+                                zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGetBti(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGetSmc(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
+    zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
+    zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
+                               uint32_t* actual);
+    zx_status_t RpcGpioConfigIn(uint32_t index, uint32_t flags);
+    zx_status_t RpcGpioConfigOut(uint32_t index, uint8_t initial_value);
+    zx_status_t RpcGpioSetAltFunction(uint32_t index, uint64_t function);
+    zx_status_t RpcGpioRead(uint32_t index, uint8_t* out_value);
+    zx_status_t RpcGpioWrite(uint32_t index, uint8_t value);
+    zx_status_t RpcGpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle,
+                                    uint32_t* out_handle_count);
+    zx_status_t RpcGpioReleaseInterrupt(uint32_t index);
+    zx_status_t RpcGpioSetPolarity(uint32_t index, uint32_t flags);
+    zx_status_t RpcI2cTransact(uint32_t txid, rpc_i2c_req_t* req, zx_handle_t channel);
+    zx_status_t RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size);
+    zx_status_t RpcClockEnable(uint32_t index);
+    zx_status_t RpcClockDisable(uint32_t index);
     zx_status_t RpcSysmemConnect(zx::channel allocator2_request);
     zx_status_t RpcCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
                                 uint8_t* out_canvas_idx);
@@ -97,12 +91,8 @@ private:
     const uint32_t pid_;
     const uint32_t did_;
 
-    // Tree of platform bus resources for this device and its children.
-    DeviceResources resource_tree_;
-
-    // Flattened list of DeviceResources, indexed by device ID.
-    // device_index_[0] returns the DeviceResources for this top level device.
-    fbl::Vector<const DeviceResources*> device_index_;
+    // Platform bus resources for this device
+    DeviceResources resources_;
 };
 
 } // namespace platform_bus

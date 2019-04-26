@@ -82,10 +82,6 @@ struct PbusDev {
     vector<PbusSmc> smc;
     vector<PbusMetadata> metadata;
     vector<PbusBootMetadata> boot_metadata;
-    /// List of this device's child devices.
-    /// This is only used in cases where children of a platform device also need to access
-    /// platform bus resources.
-    vector<PbusDev> child;
 };
 
 /// Subset of pdev_board_info_t to be set by the board driver.

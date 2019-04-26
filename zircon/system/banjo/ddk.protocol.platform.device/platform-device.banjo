@@ -50,6 +50,5 @@ protocol PDev {
     GetSmc(uint32 index) -> (zx.status s, handle<resource> smc);
     GetDeviceInfo() -> (zx.status s, PdevDeviceInfo info);
     GetBoardInfo() -> (zx.status s, PdevBoardInfo info);
-    DeviceAdd(uint32 index, ddk.driver.DeviceAddArgs args) -> (zx.status s, ddk.driver.ZxDevice? device);
     GetProtocol(uint32 proto_id, uint32 index) -> (zx.status s, vector<voidptr> out_protocol);
 };

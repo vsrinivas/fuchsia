@@ -24,14 +24,12 @@ enum {
     PDEV_GET_SMC,
     PDEV_GET_DEVICE_INFO,
     PDEV_GET_BOARD_INFO,
-    PDEV_DEVICE_ADD,
     PDEV_GET_METADATA,
 };
 
 /// Header for RPC requests.
 struct platform_proxy_req_t {
     uint32_t txid;
-    uint32_t device_id;
     uint32_t proto_id;
     uint32_t op;
 };
@@ -56,7 +54,6 @@ struct rpc_pdev_rsp_t {
     uint32_t mode;
     pdev_device_info_t device_info;
     pdev_board_info_t board_info;
-    uint32_t device_id;
     uint32_t metadata_type;
     uint32_t metadata_length;
 };

@@ -14,6 +14,11 @@
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
 
+// Disabled until these drivers are converted to use composite device model.
+#define ENABLE_DISPLAY 0
+
+#if ENABLE_DISPLAY
+
 static const pbus_mmio_t dsi_mmios[] = {
     {
         .base = MMIO_DSI_BASE,
@@ -57,6 +62,49 @@ static const pbus_bti_t display_btis[] = {
         .bti_id = BTI_DSI,
     },
 };
+
+static const pbus_dev_t hi_display_dev[] = {
+    {
+        .name = "hi-display",
+        .gpio_list = display_gpios,
+        .gpio_count = countof(display_gpios),
+        .i2c_channel_list = display_i2c_channel_list,
+        .i2c_channel_count = countof(display_i2c_channel_list),
+        .bti_list = display_btis,
+        .bti_count = countof(display_btis),
+    },
+};
+
+static const display_driver_t display_driver_info[] = {
+    {
+        .vid = PDEV_VID_96BOARDS,
+        .pid = PDEV_PID_HIKEY960,
+        .did = PDEV_DID_HI_DISPLAY,
+    },
+};
+
+static const pbus_metadata_t display_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &display_driver_info,
+        .data_size = sizeof(display_driver_t),
+    },
+};
+
+static pbus_dev_t dsi_dev = {
+    .name = "dw-dsi",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_DW_DSI,
+    .metadata_list = display_metadata,
+    .metadata_count = countof(display_metadata),
+    .mmio_list = dsi_mmios,
+    .mmio_count = countof(dsi_mmios),
+    .child_list = hi_display_dev,
+    .child_count = countof(hi_display_dev),
+};
+
+#endif // ENABLE_DISPLAY
 
 static const pbus_mmio_t ufs_mmios[] = {
     {
@@ -193,47 +241,6 @@ static const pbus_dev_t i2c_test_dev = {
 };
 #endif
 
-static const pbus_dev_t hi_display_dev[] = {
-    {
-        .name = "hi-display",
-        .gpio_list = display_gpios,
-        .gpio_count = countof(display_gpios),
-        .i2c_channel_list = display_i2c_channel_list,
-        .i2c_channel_count = countof(display_i2c_channel_list),
-        .bti_list = display_btis,
-        .bti_count = countof(display_btis),
-    },
-};
-
-static const display_driver_t display_driver_info[] = {
-    {
-        .vid = PDEV_VID_96BOARDS,
-        .pid = PDEV_PID_HIKEY960,
-        .did = PDEV_DID_HI_DISPLAY,
-    },
-};
-
-static const pbus_metadata_t display_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &display_driver_info,
-        .data_size = sizeof(display_driver_t),
-    },
-};
-
-static pbus_dev_t dsi_dev = {
-    .name = "dw-dsi",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_DW_DSI,
-    .metadata_list = display_metadata,
-    .metadata_count = countof(display_metadata),
-    .mmio_list = dsi_mmios,
-    .mmio_count = countof(dsi_mmios),
-    .child_list = hi_display_dev,
-    .child_count = countof(hi_display_dev),
-};
-
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     zx_status_t status;
 
@@ -267,9 +274,11 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     }
 #endif
 
+#if ENABLE_DISPLAY
     if ((status = pbus_device_add(&hikey->pbus, &dsi_dev)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d\n", status);
     }
+#endif
 
     return ZX_OK;
 }

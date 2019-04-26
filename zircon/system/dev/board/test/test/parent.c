@@ -66,7 +66,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
 
     zx_device_prop_t child_props[] = {
-        { BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV },
         { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
         { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
         { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_1 },
@@ -81,9 +80,9 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         .prop_count = countof(child_props),
     };
 
-    status = pdev_device_add(&pdev, 0, &child_args, &test->zxdev);
+    status = device_add(parent, &child_args, &test->zxdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
+        zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
         free(test);
         return status;
     }

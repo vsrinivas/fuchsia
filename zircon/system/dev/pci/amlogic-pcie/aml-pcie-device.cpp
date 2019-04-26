@@ -284,11 +284,15 @@ zx_status_t AmlPcieDevice::Init() {
 
     pci_dev_args.ctx = (void*)this;
 
+    dev_ = nullptr;
+/* FIXME this needs to be rewritten to use composite devices
     st = pdev_device_add(&pdev_, 0, &pci_dev_args, &dev_);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: pdev_device_add failed, st = %d\n", st);
         return st;
     }
+*/
+    st = ZX_ERR_NOT_SUPPORTED;
 
     return st;
 }

@@ -16,6 +16,11 @@
 
 #include "gauss.h"
 
+// Disabled until these drivers are converted to use composite device model.
+#define ENABLE_PCIE 0
+
+#if ENABLE_PCIE
+
 // Note: These are all constants for the PCIe A controller
 //       PCIe B is not currently supported.
 static const pbus_mmio_t dw_pcie_mmios[] = {
@@ -151,13 +156,16 @@ static const pbus_dev_t pcie_dev = {
     .child_list = pcie_dev_children,
     .child_count = countof(pcie_dev_children),
 };
+#endif // ENABLE_PCIE
 
 zx_status_t gauss_pcie_init(gauss_bus_t* bus) {
+#if ENABLE_PCIE
     zx_status_t st = pbus_device_add(&bus->pbus, &pcie_dev);
     if (st != ZX_OK) {
         zxlogf(ERROR, "gauss_clk_init: pbus_device_add failed, st = %d\n", st);
         return st;
     }
+#endif
 
     return ZX_OK;
 }

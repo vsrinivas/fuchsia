@@ -47,7 +47,6 @@ driver("platform-bus") {
 
 driver("platform-bus.proxy") {
   sources = [
-    "platform-proxy-device.cpp",
     "platform-proxy.cpp",
   ]
   deps = [

@@ -41,7 +41,7 @@ zx_status_t CompositeDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent,
 
 CompositeDevice::CompositeDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev)
     : CompositeDeviceType(parent), bus_(bus), vid_(pdev->vid), pid_(pdev->pid),
-      did_(pdev->did), resources_(ROOT_DEVICE_ID) {
+      did_(pdev->did), resources_() {
     strlcpy(name_, pdev->name, sizeof(name_));
 }
 

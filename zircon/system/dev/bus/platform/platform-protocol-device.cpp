@@ -41,7 +41,7 @@ zx_status_t ProtocolDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, 
 
 ProtocolDevice::ProtocolDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev)
     : ProtocolDeviceType(parent), bus_(bus), vid_(pdev->vid), pid_(pdev->pid),
-      did_(pdev->did), resources_(ROOT_DEVICE_ID) {
+      did_(pdev->did), resources_() {
     strlcpy(name_, pdev->name, sizeof(name_));
 }
 
