@@ -3,28 +3,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 #include <inttypes.h>
 
+#include <lib/zx/time.h>
+#include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
+
+namespace {
+
 // Calculation of elapsed time using ticks.
-static bool elapsed_time_using_ticks(void) {
-    BEGIN_TEST;
+TEST(TicksTest, ElapsedTimeUsingTicks) {
+    zx::ticks ticks_per_second = zx::ticks::per_second();
+    ASSERT_GT(ticks_per_second, zx::ticks(0), "Invalid ticks per second");
 
-    zx_ticks_t per_second = zx_ticks_per_second();
-    ASSERT_GT(per_second, 0u, "Invalid ticks per second");
-    unittest_printf("Ticks per second: %" PRIu64 "\n", per_second);
+    zx::ticks start = zx::ticks::now();
+    zx::ticks end = zx::ticks::now();
+    ASSERT_GE(end, start, "Ticks went backwards");
 
-    zx_ticks_t x = zx_ticks_get();
-    zx_ticks_t y = zx_ticks_get();
-    ASSERT_GE(y, x, "Ticks went backwards");
-
-    double seconds = (double)(y - x) / (double)per_second;
-    ASSERT_GE(seconds, 0u, "Time went backwards");
-
-    END_TEST;
+    double seconds =  static_cast<double>((end - start).get()) /
+                          static_cast<double>(ticks_per_second.get());
+    ASSERT_GE(seconds, 0, "Time went backwards");
 }
 
-BEGIN_TEST_CASE(ticks_tests)
-RUN_TEST(elapsed_time_using_ticks)
-END_TEST_CASE(ticks_tests)
+} // namespace
