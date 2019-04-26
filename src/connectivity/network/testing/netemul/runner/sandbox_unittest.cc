@@ -694,14 +694,15 @@ TEST_F(SandboxTest, TimeoutFires) {
 TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
   SetCmx(R"(
 {
-   "timeout" : 5,
+   "timeout" : 60,
    "environment" : {
       "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
    }
 }
 )");
   // if a test succeeds, even though we have a timeout, we should succeed
-  // normally:
+  // normally. We're using a large timeout here to prevent stalls in
+  // CQ bots to cause a false negative.
   RunSandboxSuccess();
 }
 
