@@ -39,5 +39,6 @@ group("dev") {
     "test",
     "thermal",
     "usb",
+    "virtual_camera",
   ]
 }

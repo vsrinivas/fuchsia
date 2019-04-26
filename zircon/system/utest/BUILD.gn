@@ -169,6 +169,7 @@ if (current_cpu != "") {
       "vdso",
       "vdso-base",
       "vdso-variant",
+      "virtual_camera",
       "vmo",
       "zbi",
       "zxcrypt",

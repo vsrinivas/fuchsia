@@ -66,11 +66,13 @@ __BEGIN_CDECLS
 // 4 unused
 #define PDEV_PID_SHERLOCK           5
 #define PDEV_PID_CLEO               6
+#define PDEV_PID_EAGLE              7
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
 #define PDEV_DID_GAUSS_I2C_TEST     3
-#define PDEV_DID_ASTRO_GOODIXTOUCH  4
+#define PDEV_DID_GAUSS_LED          4
+#define PDEV_DID_ASTRO_GOODIXTOUCH  5
 
 // Khadas
 #define PDEV_VID_KHADAS             4
@@ -127,7 +129,13 @@ __BEGIN_CDECLS
 
 // NXP
 #define PDEV_VID_NXP                9
-#define PDEV_DID_PCF8563_RTC        1
+#define PDEV_PID_IMX8MMEVK          1
+
+#define PDEV_DID_IMX_GPIO           1
+#define PDEV_DID_IMX_DISPLAY        2
+#define PDEV_DID_IMX_SDHCI          3
+#define PDEV_DID_IMX_I2C            4
+#define PDEV_DID_PCF8563_RTC        5
 
 // AMS
 #define PDEV_VID_AMS                10
@@ -177,6 +185,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_INTEGRATION_TEST   2
 #define PDEV_PID_USB_VBUS_TEST      3
 #define PDEV_PID_HIDCTL_TEST        4
+#define PDEV_PID_VCAMERA_TEST       5
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2
@@ -187,6 +196,8 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_CLOCK         7
 #define PDEV_DID_TEST_I2C           8
 #define PDEV_DID_TEST_POWER         9
+#define PDEV_DID_TEST_CHILD_4       10
+#define PDEV_DID_TEST_VCAMERA       11
 
 // ARM
 #define PDEV_VID_ARM                18
