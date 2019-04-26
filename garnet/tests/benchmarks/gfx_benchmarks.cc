@@ -49,17 +49,13 @@ void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner) {
     //
     {"fuchsia.scenic.image_grid_cpp_noclipping_noshadows", kImageGridCppCommand, "--unshadowed --clipping_disabled"},
     {"fuchsia.scenic.image_grid_cpp_noshadows", kImageGridCppCommand, "--unshadowed --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_ssdo", kImageGridCppCommand, "--screen_space_shadows --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_shadow_map", kImageGridCppCommand, "--shadow_map --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_moment_shadow_map", kImageGridCppCommand, "--moment_shadow_map --clipping_enabled"},
+    {"fuchsia.scenic.image_grid_cpp_stencil_shadow_volume", kImageGridCppCommand, "--stencil_shadow_volume --clipping_enabled"},
     //
     // image_grid_cpp x3
     //
     {"fuchsia.scenic.image_grid_cpp_x3_noclipping_noshadows", kImageGridCppX3Command, "--unshadowed --clipping_disabled"},
     {"fuchsia.scenic.image_grid_cpp_x3_noshadows", kImageGridCppX3Command, "--unshadowed --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_x3_ssdo", kImageGridCppX3Command, "--screen_space_shadows --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_x3_shadow_map", kImageGridCppX3Command, "--shadow_map --clipping_enabled"},
-    {"fuchsia.scenic.image_grid_cpp_x3_moment_shadow_map", kImageGridCppX3Command, "--moment_shadow_map --clipping_enabled"},
+    {"fuchsia.scenic.image_grid_cpp_x3_stencil_shadow_volume", kImageGridCppX3Command, "--stencil_shadow_volume --clipping_enabled"},
   };
   // clang-format on
 

@@ -24,9 +24,7 @@ Options:
 Flags for renderer_params:
 
 --unshadowed
---screen_space_shadows
---shadow_map
---moment_shadow_map
+--stencil_shadow_volume
 
 --clipping_enabled
 --clipping_disabled
@@ -35,7 +33,7 @@ See renderer_params.cc for more arguments.
 
 
 
-example: trace_from_host.sh trace_clipping_shadows --clipping_enabled --screen_space_shadows
+example: trace_from_host.sh trace_clipping_shadows --clipping_enabled --stencil_shadow_volume
 
 USAGE
 exit;

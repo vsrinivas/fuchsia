@@ -35,18 +35,12 @@ fuchsia::ui::gfx::ShadowTechnique GetShadowTechniqueFromCommandLine(
   if (command_line.GetOptionValue("shadow_type", &shadow_type)) {
     if (shadow_type == "UNSHADOWED") {
       return ShadowTechnique::UNSHADOWED;
-    } else if (shadow_type == "SCREEN_SPACE") {
-      return ShadowTechnique::SCREEN_SPACE;
-    } else if (shadow_type == "SHADOW_MAP") {
-      return ShadowTechnique::SHADOW_MAP;
-    } else if (shadow_type == "MOMENT_SHADOW_MAP") {
-      return ShadowTechnique::MOMENT_SHADOW_MAP;
     } else if (shadow_type == "STENCIL_SHADOW_VOLUME") {
       return ShadowTechnique::STENCIL_SHADOW_VOLUME;
     } else {
-      FXL_LOG(INFO) << "Unknown shadow type: " << shadow_type
-                    << ".  Valid choices are: UNSHADOWED, SCREEN_SPACE, "
-                       "SHADOW_MAP, MOMENT_SHADOW_MAP, STENCIL_SHADOW_VOLUME.";
+      FXL_LOG(WARNING) << "Unknown/unsupported shadow type: " << shadow_type
+                       << ".  Valid choices are: UNSHADOWED, "
+                          "STENCIL_SHADOW_VOLUME.  Using UNSHADOWED instead";
     }
   }
   return ShadowTechnique::UNSHADOWED;
