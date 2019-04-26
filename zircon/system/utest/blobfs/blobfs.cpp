@@ -272,7 +272,7 @@ bool BlobfsTest::Init(FsTestState state) {
         caller.reset();
 
         snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", device_path_);
-        ASSERT_EQ(wait_for_device(fvm_path_, ZX_SEC(3)), ZX_OK,
+        ASSERT_EQ(wait_for_device(fvm_path_, zx::sec(10).get()), ZX_OK,
                   "[FAILED]: FVM driver never appeared");
 
         // Open "fvm" driver.

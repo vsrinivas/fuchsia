@@ -20,6 +20,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 
@@ -51,8 +52,8 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     block_impl_protocol_t bp;
     size_t block_op_size = 0;
     if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK, &bp) != ZX_OK) {
-        printf("fvm: ERROR: block device '%s': does not support block protocol\n",
-               device_get_name(dev));
+        fprintf(stderr, "fvm: ERROR: block device '%s': does not support block protocol\n",
+                device_get_name(dev));
         return ZX_ERR_NOT_SUPPORTED;
     }
     bp.ops->query(bp.ctx, &block_info, &block_op_size);
@@ -61,6 +62,8 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
 
     zx_status_t status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
+        fprintf(stderr, "fvm: ERROR: block device '%s': failed to DdkAdd: %s\n",
+                device_get_name(dev), zx_status_get_string(status));
         return status;
     }
 
@@ -68,6 +71,8 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     int rc =
         thrd_create_with_name(&vpm->initialization_thread_, FvmLoadThread, vpm.get(), "fvm-init");
     if (rc < 0) {
+        fprintf(stderr, "fvm: ERROR: block device '%s': Could not load initialization thread\n",
+                device_get_name(dev));
         // See comment in Load()
         if (!vpm->device_remove_.exchange(true)) {
             vpm->DdkRemove();
