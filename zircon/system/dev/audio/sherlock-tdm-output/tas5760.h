@@ -6,7 +6,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <ddktl/pdev.h>
+#include <ddktl/i2c-channel.h>
 #include <fbl/unique_ptr.h>
 #include <lib/codec-interface/codec-interface.h>
 

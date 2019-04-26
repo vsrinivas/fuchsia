@@ -8,7 +8,6 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/platform/device.h>
@@ -39,27 +38,6 @@ public:
 
     void GetProtocol(gpio_protocol_t* proto) {
         proto->ops = &gpio_protocol_ops_;
-        proto->ctx = this;
-    }
-
-private:
-    uint32_t index_;
-    PlatformProxy* proxy_;
-};
-
-class ProxyI2c : public ddk::I2cProtocol<ProxyI2c> {
-public:
-    explicit ProxyI2c(uint32_t index, PlatformProxy* proxy)
-        : index_(index), proxy_(proxy) {}
-
-    // I2C protocol implementation.
-    void I2cTransact(const i2c_op_t* ops, size_t cnt, i2c_transact_callback transact_cb,
-                     void* cookie);
-    zx_status_t I2cGetMaxTransferSize(size_t* out_size);
-    zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
-
-    void GetProtocol(i2c_protocol_t* proto) {
-        proto->ops = &i2c_protocol_ops_;
         proto->ctx = this;
     }
 
@@ -187,7 +165,6 @@ private:
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyGpio> gpios_;
-    fbl::Vector<ProxyI2c> i2cs_;
     fbl::Vector<ProxyClock> clocks_;
     ProxySysmem sysmem_;
     ProxyAmlogicCanvas canvas_;

@@ -13,7 +13,6 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <hw/reg.h>
@@ -62,7 +61,6 @@ typedef struct {
 
 typedef struct {
     pdev_protocol_t pdev;
-    i2c_impl_protocol_t i2c;
     zx_device_t* zxdev;
     aml_i2c_dev_t* i2c_devs;
     size_t dev_count;
@@ -365,12 +363,6 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    pbus_protocol_t pbus;
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_bind: ZX_PROTOCOL_PBUS not available\n");
-        goto fail;
-    }
-
     pdev_device_info_t info;
     status = pdev_get_device_info(&i2c->pdev, &info);
     if (status != ZX_OK) {
@@ -412,10 +404,6 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "aml_i2c_bind: device_add failed\n");
         goto fail;
     }
-
-    i2c->i2c.ops = &i2c_ops;
-    i2c->i2c.ctx = i2c;
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c->i2c, sizeof(i2c->i2c));
 
     return ZX_OK;
 

@@ -8,7 +8,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/i2cimpl.h>
@@ -29,7 +28,6 @@ public:
         : DeviceType(parent) {}
 
     zx_status_t Create(std::unique_ptr<TestI2cDevice>* out);
-    zx_status_t Init();
 
     uint32_t I2cImplGetBusCount();
     zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
@@ -41,25 +39,6 @@ public:
     void DdkRelease();
 
 };
-
-zx_status_t TestI2cDevice::Init() {
-    pbus_protocol_t pbus;
-    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
-        return status;
-    }
-    i2c_impl_protocol_t i2c_proto = {
-        .ops = &i2c_impl_protocol_ops_,
-        .ctx = this,
-    };
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pbus_register_protocol failed %d\n", __func__, status);
-        return status;
-    }
-    return ZX_OK;
-}
 
 zx_status_t TestI2cDevice::Create(zx_device_t* parent) {
     auto dev = std::make_unique<TestI2cDevice>(parent);
@@ -80,9 +59,9 @@ zx_status_t TestI2cDevice::Create(zx_device_t* parent) {
         return status;
     }
     // devmgr is now in charge of dev.
-    auto ptr = dev.release();
+    __UNUSED auto ptr = dev.release();
 
-    return ptr->Init();
+    return ZX_OK;
 }
 
 void TestI2cDevice::DdkUnbind() {}

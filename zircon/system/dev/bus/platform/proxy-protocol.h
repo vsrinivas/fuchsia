@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 
 namespace platform_bus {
@@ -67,12 +66,6 @@ struct rpc_pdev_metadata_rsp_t {
     uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 };
 
-// Maximum I2C transfer is I2C_MAX_TRANSFER_SIZE minus size of largest header.
-static constexpr uint32_t I2C_MAX_TRANSFER_SIZE =
-    (PROXY_MAX_TRANSFER_SIZE - (sizeof(rpc_pdev_req_t) > sizeof(rpc_pdev_rsp_t)
-                                    ? sizeof(rpc_pdev_req_t)
-                                    : sizeof(rpc_pdev_rsp_t)));
-
 // ZX_PROTOCOL_GPIO proxy support.
 enum {
     GPIO_CONFIG_IN,
@@ -98,33 +91,6 @@ struct rpc_gpio_rsp_t {
     platform_proxy_rsp_t header;
     uint8_t value;
 };
-
-// ZX_PROTOCOL_I2C proxy support.
-enum {
-    I2C_GET_MAX_TRANSFER,
-    I2C_TRANSACT,
-};
-
-struct rpc_i2c_req_t {
-    platform_proxy_req_t header;
-    uint32_t index;
-    i2c_transact_callback transact_cb;
-    void* cookie;
-    size_t cnt;
-};
-
-struct rpc_i2c_rsp_t {
-    platform_proxy_rsp_t header;
-    size_t max_transfer;
-    i2c_transact_callback transact_cb;
-    void* cookie;
-};
-
-typedef struct {
-    size_t length;
-    bool is_read;
-    bool stop;
-} __PACKED i2c_rpc_op_t;
 
 // ZX_PROTOCOL_CLOCK proxy support.
 enum {

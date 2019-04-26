@@ -101,9 +101,9 @@ static const pbus_dev_t i2c_dev = {
 };
 
 zx_status_t gauss_i2c_init(gauss_bus_t* bus) {
-    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "gauss_i2c_init: pbus_protocol_device_add failed: %d\n", status);
+        zxlogf(ERROR, "gauss_i2c_init: pbus_device_add failed: %d\n", status);
         return status;
     }
 

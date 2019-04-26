@@ -10,7 +10,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 
 #include <fbl/alloc_checker.h>
@@ -275,21 +274,6 @@ zx_status_t Mt8167I2c::Bind() {
 
 zx_status_t Mt8167I2c::Init() {
     auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
-
-    pbus_protocol_t pbus;
-    if (device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus) != ZX_OK) {
-        zxlogf(ERROR, "%s ZX_PROTOCOL_PLATFORM_BUS not available\n", __FUNCTION__);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    i2c_impl_protocol_t i2c_proto = {
-        .ops = &i2c_impl_protocol_ops_,
-        .ctx = this,
-    };
-    auto status = pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
 
 #ifdef TEST_USB_REGS_READ
     auto thunk =

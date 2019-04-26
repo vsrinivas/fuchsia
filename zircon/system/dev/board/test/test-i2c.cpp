@@ -69,9 +69,9 @@ zx_status_t TestBoard::I2cInit() {
     i2c_dev.metadata_list = i2c_metadata;
     i2c_dev.metadata_count = countof(i2c_metadata);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
 

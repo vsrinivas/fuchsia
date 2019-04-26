@@ -30,7 +30,6 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev) {
     if (!CopyResources(pdev->mmio_count, pdev->mmio_list, &mmios_) ||
         !CopyResources(pdev->irq_count, pdev->irq_list, &irqs_) ||
         !CopyResources(pdev->gpio_count, pdev->gpio_list, &gpios_) ||
-        !CopyResources(pdev->i2c_channel_count, pdev->i2c_channel_list, &i2c_channels_) ||
         !CopyResources(pdev->clk_count, pdev->clk_list, &clks_) ||
         !CopyResources(pdev->bti_count, pdev->bti_list, &btis_) ||
         !CopyResources(pdev->smc_count, pdev->smc_list, &smcs_) ||

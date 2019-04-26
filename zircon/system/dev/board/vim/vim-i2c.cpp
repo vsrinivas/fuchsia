@@ -116,9 +116,9 @@ zx_status_t Vim::I2cInit() {
     gpio_impl_.SetAltFunction(S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
     gpio_impl_.SetAltFunction(S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "I2cInit: pbus_protocol_device_add failed: %d\n", status);
+        zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d\n", status);
         return status;
     }
 

@@ -113,109 +113,6 @@ zx_status_t ProxyGpio::GpioWrite(uint8_t value) {
     return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ProxyI2c::I2cGetMaxTransferSize(size_t* out_size) {
-    rpc_i2c_req_t req = {};
-    rpc_i2c_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_I2C;
-    req.header.op = I2C_GET_MAX_TRANSFER;
-    req.index = index_;
-
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-    if (status == ZX_OK) {
-        *out_size = resp.max_transfer;
-    }
-    return status;
-}
-
-zx_status_t ProxyI2c::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-void ProxyI2c::I2cTransact(const i2c_op_t* ops, size_t cnt, i2c_transact_callback transact_cb,
-                              void* cookie) {
-    size_t writes_length = 0;
-    size_t reads_length = 0;
-    for (size_t i = 0; i < cnt; ++i) {
-        if (ops[i].is_read) {
-            reads_length += ops[i].data_size;
-        } else {
-            writes_length += ops[i].data_size;
-        }
-    }
-    if (!writes_length && !reads_length) {
-        transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
-        return;
-    }
-
-    size_t req_length = sizeof(rpc_i2c_req_t) + cnt * sizeof(i2c_rpc_op_t) + writes_length;
-    if (req_length >= PROXY_MAX_TRANSFER_SIZE) {
-        return transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
-    }
-    uint8_t req_buffer[PROXY_MAX_TRANSFER_SIZE];
-    auto req = reinterpret_cast<rpc_i2c_req_t*>(req_buffer);
-    req->header.proto_id = ZX_PROTOCOL_I2C;
-    req->header.op = I2C_TRANSACT;
-    req->index = index_;
-    req->cnt = cnt;
-    req->transact_cb = transact_cb;
-    req->cookie = cookie;
-
-    auto rpc_ops = reinterpret_cast<i2c_rpc_op_t*>(req + 1);
-    ZX_ASSERT(cnt < I2C_MAX_RW_OPS);
-    for (size_t i = 0; i < cnt; ++i) {
-        rpc_ops[i].length = ops[i].data_size;
-        rpc_ops[i].is_read = ops[i].is_read;
-        rpc_ops[i].stop = ops[i].stop;
-    }
-    uint8_t* p_writes = reinterpret_cast<uint8_t*>(rpc_ops) + cnt * sizeof(i2c_rpc_op_t);
-    for (size_t i = 0; i < cnt; ++i) {
-        if (!ops[i].is_read) {
-            memcpy(p_writes, ops[i].data_buffer, ops[i].data_size);
-            p_writes += ops[i].data_size;
-        }
-    }
-
-    const size_t resp_length = sizeof(rpc_i2c_rsp_t) + reads_length;
-    if (resp_length >= PROXY_MAX_TRANSFER_SIZE) {
-        transact_cb(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
-        return;
-    }
-    uint8_t resp_buffer[PROXY_MAX_TRANSFER_SIZE];
-    rpc_i2c_rsp_t* rsp = reinterpret_cast<rpc_i2c_rsp_t*>(resp_buffer);
-    size_t actual;
-    auto status = proxy_->Rpc(&req->header, static_cast<uint32_t>(req_length),
-                              &rsp->header, static_cast<uint32_t>(resp_length), nullptr, 0, nullptr,
-                              0, &actual);
-    if (status != ZX_OK) {
-        transact_cb(cookie, status, nullptr, 0);
-        return;
-    }
-
-    // TODO(voydanoff) This proxying code actually implements i2c_transact synchronously
-    // due to the fact that it is unsafe to respond asynchronously on the devmgr rxrpc channel.
-    // In the future we may want to redo the plumbing to allow this to be truly asynchronous.
-
-    if (actual != resp_length) {
-        status = ZX_ERR_INTERNAL;
-    } else {
-        status = rsp->header.status;
-    }
-    i2c_op_t read_ops[I2C_MAX_RW_OPS];
-    size_t read_ops_cnt = 0;
-    uint8_t* p_reads = reinterpret_cast<uint8_t*>(rsp + 1);
-    for (size_t i = 0; i < cnt; ++i) {
-        if (ops[i].is_read) {
-            read_ops[read_ops_cnt] = ops[i];
-            read_ops[read_ops_cnt].data_buffer = p_reads;
-            read_ops_cnt++;
-            p_reads += ops[i].data_size;
-        }
-    }
-    transact_cb(rsp->cookie, status, read_ops, read_ops_cnt);
-
-    return;
-}
-
 zx_status_t ProxyClock::ClockEnable() {
     rpc_clk_req_t req = {};
     platform_proxy_rsp_t resp = {};
@@ -297,19 +194,6 @@ zx_status_t PlatformProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
         // Return zeroth GPIO resource.
         auto* proto = static_cast<gpio_protocol_t*>(out);
         gpios_[0].GetProtocol(proto);
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_I2C: {
-        auto count = i2cs_.size();
-        if (count == 0) {
-            return ZX_ERR_NOT_SUPPORTED;
-        } else if (count > 1) {
-            zxlogf(ERROR, "%s: device has more than one I2C channel\n", __func__);
-            return ZX_ERR_BAD_STATE;
-        }
-        // Return zeroth I2C resource.
-        auto* proto = static_cast<i2c_protocol_t*>(out);
-        i2cs_[0].GetProtocol(proto);
         return ZX_OK;
     }
     case ZX_PROTOCOL_CLOCK: {
@@ -457,15 +341,6 @@ zx_status_t PlatformProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, vo
         }
         auto* proto = static_cast<gpio_protocol_t*>(out_protocol);
         gpios_[index].GetProtocol(proto);
-        return ZX_OK;
-    }
-
-    if (proto_id == ZX_PROTOCOL_I2C) {
-        if (index >= i2cs_.size()) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
-        auto* proto = static_cast<i2c_protocol_t*>(out_protocol);
-        i2cs_[index].GetProtocol(proto);
         return ZX_OK;
     }
 
@@ -626,14 +501,6 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
     for (uint32_t i = 0; i < info.gpio_count; i++) {
         ProxyGpio gpio(i, this);
         gpios_.push_back(std::move(gpio), &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-    }
-
-    for (uint32_t i = 0; i < info.i2c_channel_count; i++) {
-        ProxyI2c i2c(i, this);
-        i2cs_.push_back(std::move(i2c), &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

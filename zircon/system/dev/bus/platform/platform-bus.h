@@ -10,7 +10,6 @@
 #include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/powerimpl.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/sysmem.h>
@@ -31,7 +30,6 @@
 
 #include "platform-device.h"
 #include "platform-protocol-device.h"
-#include "platform-i2c.h"
 #include "proxy-protocol.h"
 
 namespace platform_bus {
@@ -71,10 +69,6 @@ public:
     // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource GetResource() const { return zx::unowned_resource(get_root_resource()); }
 
-    // Used by PlatformDevice to queue I2C transactions on an I2C bus.
-    zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, const pbus_i2c_channel_t* channel,
-                            zx_handle_t channel_handle);
-
     zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length);
     zx_status_t GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out);
 
@@ -82,7 +76,6 @@ public:
     inline ddk::AmlogicCanvasProtocolClient* canvas() { return &*canvas_; }
     inline ddk::ClockImplProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
-    inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
     inline ddk::PowerImplProtocolClient* power() { return &*power_; }
     inline ddk::SysmemProtocolClient* sysmem() { return &*sysmem_; }
 
@@ -97,8 +90,6 @@ private:
 
     zx_status_t Init();
 
-    zx_status_t I2cInit(const i2c_impl_protocol_t* i2c);
-
     zx::channel items_svc_;
     pdev_board_info_t board_info_;
 
@@ -107,7 +98,6 @@ private:
     std::optional<ddk::ClockImplProtocolClient> clk_;
     std::optional<ddk::GpioImplProtocolClient> gpio_;
     std::optional<ddk::IommuProtocolClient> iommu_;
-    std::optional<ddk::I2cImplProtocolClient> i2c_;
     std::optional<ddk::PowerImplProtocolClient> power_;
     std::optional<ddk::SysmemProtocolClient> sysmem_;
 
@@ -115,9 +105,6 @@ private:
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
     // Protects proto_completion_.
     fbl::Mutex proto_completion_mutex_;
-
-    // List of I2C buses.
-    fbl::Vector<fbl::unique_ptr<PlatformI2cBus>> i2c_buses_;
 
     // Dummy IOMMU.
     zx::iommu iommu_handle_;

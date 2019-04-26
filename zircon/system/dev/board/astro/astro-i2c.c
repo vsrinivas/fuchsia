@@ -113,9 +113,9 @@ zx_status_t aml_i2c_init(aml_bus_t* bus) {
     gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(14), 2);
     gpio_impl_set_alt_function(&bus->gpio, S905D2_GPIOA(15), 2);
 
-    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_i2c_init: pbus_protocol_device_add failed: %d\n", status);
+        zxlogf(ERROR, "aml_i2c_init: pbus_device_add failed: %d\n", status);
         return status;
     }
 

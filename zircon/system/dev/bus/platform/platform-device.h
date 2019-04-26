@@ -76,8 +76,6 @@ private:
                                     uint32_t* out_handle_count);
     zx_status_t RpcGpioReleaseInterrupt(uint32_t index);
     zx_status_t RpcGpioSetPolarity(uint32_t index, uint32_t flags);
-    zx_status_t RpcI2cTransact(uint32_t txid, rpc_i2c_req_t* req, zx_handle_t channel);
-    zx_status_t RpcI2cGetMaxTransferSize(uint32_t index, size_t* out_size);
     zx_status_t RpcClockEnable(uint32_t index);
     zx_status_t RpcClockDisable(uint32_t index);
     zx_status_t RpcSysmemConnect(zx::channel allocator2_request);

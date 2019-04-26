@@ -15,7 +15,6 @@ void PDev::ShowInfo() {
         zxlogf(INFO, "mmio count          = %d\n", info.mmio_count);
         zxlogf(INFO, "irq count           = %d\n", info.irq_count);
         zxlogf(INFO, "gpio count          = %d\n", info.gpio_count);
-        zxlogf(INFO, "i2c channel count   = %d\n", info.i2c_channel_count);
         zxlogf(INFO, "clk count           = %d\n", info.clk_count);
         zxlogf(INFO, "bti count           = %d\n", info.bti_count);
     }
@@ -30,16 +29,6 @@ zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
     }
     return MmioBuffer::Create(pdev_mmio.offset, pdev_mmio.size, zx::vmo(pdev_mmio.vmo),
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
-}
-
-I2cChannel PDev::GetI2c(uint32_t index) {
-    i2c_protocol_t i2c;
-    size_t actual;
-    zx_status_t res = GetProtocol(ZX_PROTOCOL_I2C, index, &i2c, sizeof(i2c), &actual);
-    if (res != ZX_OK || actual != sizeof(i2c)) {
-        return {};
-    }
-    return I2cChannel(&i2c);
 }
 
 GpioProtocolClient PDev::GetGpio(uint32_t index) {

@@ -152,9 +152,9 @@ zx_status_t Mt8167::I2cInit() {
         i2c_dev.metadata_count = countof(cleo_i2c_metadata);
     }
 
-    status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
 

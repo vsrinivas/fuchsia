@@ -134,9 +134,9 @@ zx_status_t Sherlock::I2cInit() {
     gpio_impl_.SetAltFunction(T931_GPIOA(14), 2);
     gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_I2C_IMPL, &i2c_dev);
+    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
         return status;
     }
 

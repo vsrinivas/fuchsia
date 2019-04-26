@@ -27,11 +27,6 @@ struct PbusGpio {
     uint32 gpio;
 };
 
-struct PbusI2cChannel {
-    uint32 bus_id;
-    uint16 address;
-};
-
 struct PbusClk {
     uint32 clk;
 };
@@ -76,7 +71,6 @@ struct PbusDev {
     vector<PbusMmio> mmio;
     vector<PbusIrq> irq;
     vector<PbusGpio> gpio;
-    vector<PbusI2cChannel> i2c_channel;
     vector<PbusClk> clk;
     vector<PbusBti> bti;
     vector<PbusSmc> smc;

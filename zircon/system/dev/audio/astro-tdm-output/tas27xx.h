@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/debug.h>
-#include <ddktl/pdev.h>
+#include <ddktl/i2c-channel.h>
 #include <fbl/unique_ptr.h>
 
 namespace audio {

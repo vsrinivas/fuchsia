@@ -14,7 +14,6 @@ struct PdevDeviceInfo {
     uint32 mmio_count;
     uint32 irq_count;
     uint32 gpio_count;
-    uint32 i2c_channel_count;
     uint32 clk_count;
     uint32 bti_count;
     uint32 smc_count;
