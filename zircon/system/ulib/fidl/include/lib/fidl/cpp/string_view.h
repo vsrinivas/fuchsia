@@ -9,37 +9,32 @@
 
 namespace fidl {
 
-class StringView : public fidl_string_t {
+class StringView final : private fidl_string_t {
 public:
     StringView() : fidl_string_t{} {}
-    StringView(uint64_t size, char* data) : fidl_string_t{size, data} {}
+    StringView(uint64_t size, const char* data)
+        : fidl_string_t{size, const_cast<char*>(data)} {}
 
     uint64_t size() const { return fidl_string_t::size; }
     void set_size(uint64_t size) { fidl_string_t::size = size; }
 
     const char* data() const { return fidl_string_t::data; }
-    void set_data(char* data) { fidl_string_t::data = data; }
-
-    char* mutable_data() const { return fidl_string_t::data; }
+    void set_data(const char* data) {
+        fidl_string_t::data = const_cast<char*>(data);
+    }
 
     bool is_null() const { return fidl_string_t::data == nullptr; }
     bool empty() const { return fidl_string_t::size == 0; }
 
     const char& at(size_t offset) const { return data()[offset]; }
-    char& at(size_t offset) { return mutable_data()[offset]; }
 
     const char& operator[](size_t offset) const { return at(offset); }
-    char& operator[](size_t offset) { return at(offset); }
 
-    char* begin() { return mutable_data(); }
     const char* begin() const { return data(); }
     const char* cbegin() const { return data(); }
 
-    char* end() { return mutable_data() + size(); }
     const char* end() const { return data() + size(); }
     const char* cend() const { return data() + size(); }
-
-    fidl_string_t* impl() { return this; }
 };
 
 } // namespace fidl

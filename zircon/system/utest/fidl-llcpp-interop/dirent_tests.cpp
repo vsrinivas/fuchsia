@@ -35,17 +35,17 @@ static_assert(gen::SMALL_DIR_VECTOR_SIZE == 3);
 gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
     gen::DirEnt {
         .is_dir = false,
-        .name = fidl::StringView { 2, const_cast<char*>("ab") },
+        .name = fidl::StringView { 2, "ab" },
         .some_flags = 0,
     },
     gen::DirEnt {
         .is_dir = true,
-        .name = fidl::StringView { 3, const_cast<char*>("cde") },
+        .name = fidl::StringView { 3, "cde" },
         .some_flags = 1,
     },
     gen::DirEnt {
         .is_dir = false,
-        .name = fidl::StringView { 4, const_cast<char*>("fghi") },
+        .name = fidl::StringView { 4, "fghi" },
         .some_flags = 2,
     },
 };

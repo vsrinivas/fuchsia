@@ -125,11 +125,10 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(forward_to_server);
-      char empty[1] = {};
       auto result = app.EchoStruct(
           ::fidl::BytePart(&request_buffer[0],
                            static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), ::fidl::StringView{0, empty},
+          std::move(value), ::fidl::StringView{0, ""},
           ::fidl::BytePart(&response_buffer[0],
                            static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status == ZX_OK,
@@ -151,9 +150,8 @@ class EchoConnection final : public Echo::Interface {
     } else {
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(forward_to_server);
-      char empty[1] = {};
       auto result = app.EchoStructNoRetVal(
-          std::move(value), ::fidl::StringView{0, empty},
+          std::move(value), ::fidl::StringView{0, ""},
           ::fidl::BytePart(&response_buffer[0],
                            static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status == ZX_OK,

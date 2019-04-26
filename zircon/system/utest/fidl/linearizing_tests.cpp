@@ -214,11 +214,11 @@ bool linearize_vector_of_string() {
     std::unique_ptr<uint8_t[]> buffer(new uint8_t[buf_size]);
 
     fidl::StringView strings[3] = {};
-    strings[0].set_data(const_cast<char*>(str1));
+    strings[0].set_data(str1);
     strings[0].set_size(sizeof(str1));
-    strings[1].set_data(const_cast<char*>(str2));
+    strings[1].set_data(str2);
     strings[1].set_size(sizeof(str2));
-    strings[2].set_data(const_cast<char*>(str3));
+    strings[2].set_data(str3);
     strings[2].set_size(sizeof(str3));
 
     VectorOfStringRequest message;
