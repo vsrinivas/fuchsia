@@ -6,6 +6,9 @@
         "dev": [
             "class/input"
         ],
+        "features" : [
+            "config-data"
+        ],
         "services": [
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic"
