@@ -29,7 +29,7 @@ var roles = []string{"timestamp", "targets", "snapshot"}
 type ErrFileAddFailed string
 
 func (e ErrFileAddFailed) Error() string {
-	return fmt.Sprintf("amber: file couldn't be added: %s", string(e))
+	return fmt.Sprintf("file couldn't be added: %s", string(e))
 }
 
 func NewAddErr(m string, e error) ErrFileAddFailed {
@@ -264,27 +264,32 @@ func (r *Repo) CommitUpdates(dateVersioning bool) error {
 	return r.commitUpdates()
 }
 
-func (r *Repo) PublishManifest(path string) error {
+// PublishManifest publishes the package and blobs identified in the package
+// output manifest at the given path, returning all input files involved, or an
+// error.
+func (r *Repo) PublishManifest(path string) ([]string, error) {
+	deps := []string{path}
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
 	var packageManifest build.PackageManifest
 	if err := json.NewDecoder(f).Decode(&packageManifest); err != nil {
-		return err
+		return nil, err
 	}
 	if packageManifest.Version != "1" {
-		return fmt.Errorf("unknown version %q, can't publish", packageManifest.Version)
+		return nil, fmt.Errorf("unknown version %q, can't publish", packageManifest.Version)
 	}
 
 	for _, blob := range packageManifest.Blobs {
+		deps = append(deps, blob.SourcePath)
 		if blob.Path == "meta/" {
 			p := packageManifest.Package
 			name := p.Name + "/" + p.Version
 			f, err := os.Open(blob.SourcePath)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			err = r.AddPackage(name, f, blob.Merkle.String())
 			f.Close()
@@ -292,28 +297,28 @@ func (r *Repo) PublishManifest(path string) error {
 			if !r.HasBlob(blob.Merkle.String()) {
 				f, err := os.Open(blob.SourcePath)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				_, _, err = r.AddBlob(blob.Merkle.String(), f)
 				f.Close()
 			}
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return deps, nil
 }
 
 func (r *Repo) commitUpdates() error {
 	if err := r.SnapshotWithExpires(tuf.CompressionTypeNone, time.Now().AddDate(0, 0, 30)); err != nil {
-		return NewAddErr("problem snapshotting repository", err)
+		return fmt.Errorf("snapshot: %s", err)
 	}
 	if err := r.TimestampWithExpires(time.Now().AddDate(0, 0, 30)); err != nil {
-		return NewAddErr("problem timestamping repository", err)
+		return fmt.Errorf("timestamp: %s", err)
 	}
 	if err := r.Commit(); err != nil {
-		return NewAddErr("problem committing repository changes", err)
+		return fmt.Errorf("commit: %s", err)
 	}
 
 	return r.fixupRootConsistentSnapshot()

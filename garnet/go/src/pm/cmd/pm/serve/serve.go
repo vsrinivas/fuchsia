@@ -123,7 +123,7 @@ func Run(cfg *build.Config, args []string) error {
 				case *publishList:
 					publishAll()
 				default:
-					if err := repo.PublishManifest(event.Name); err != nil {
+					if _, err := repo.PublishManifest(event.Name); err != nil {
 						log.Printf("publishing %q: %s", event.Name, err)
 						continue
 					}

@@ -24,10 +24,12 @@ go_library("pm_lib") {
 test_packages = [
   "build",
   "cmd/pm/genkey",
+  "cmd/pm/publish",
   "keys",
   "repo",
 ]
 
+test_labels = []
 foreach(pkg, test_packages) {
   pkg_ = string_replace(pkg, "/", "_")
   name = "pm_${pkg_}_test"
@@ -36,6 +38,15 @@ foreach(pkg, test_packages) {
     deps = [
       ":pm_lib",
     ]
+  }
+
+  test_labels += [":$name"]
+}
+
+group("host_tests") {
+  public_deps = []
+  foreach(label, test_labels) {
+    public_deps += [ label + "($host_toolchain)" ]
   }
 }
 

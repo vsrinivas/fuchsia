@@ -24,11 +24,10 @@ import (
 )
 
 const (
-	usage = `Usage: %s publish (-a|-bs|-ps) -C -f file [-repo <repository directory>]
-		Pass any one of the mode flags (-a|-bs|-ps), and at least one file to pubish.
+	usage = `Usage: %s publish [-a|-lp] -C -f <file> [-repo <repository directory>]
+		Pass any one of the mode flags [-a|-lp], and at least one file to pubish.
 `
-	serverBase = "amber-files"
-	metaFar    = "meta.far"
+	metaFar = "meta.far"
 )
 
 type RepeatedArg []string
@@ -42,19 +41,12 @@ func (r *RepeatedArg) String() string {
 	return strings.Join(*r, " ")
 }
 
-type manifestEntry struct {
-	localPath  string
-	remotePath string
-}
-
 func Run(cfg *build.Config, args []string) error {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	fs := flag.NewFlagSet("publish", flag.ExitOnError)
 
-	listOfPackageManifestsMode := fs.Bool("lp", false, "(mode) Publish a list of packages (and blobs) by package output manifest")
 	archiveMode := fs.Bool("a", false, "(mode) Publish an archived package.")
-	packageSetMode := fs.Bool("ps", false, "(mode) Publish a set of packages from a manifest.")
-	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
-	modeFlags := []*bool{listOfPackageManifestsMode, archiveMode, packageSetMode, blobSetMode}
+	listOfPackageManifestsMode := fs.Bool("lp", false, "(mode) Publish a list of packages (and blobs) by package output manifest")
+	modeFlags := []*bool{archiveMode, listOfPackageManifestsMode}
 
 	config := &repo.Config{}
 	config.Vars(fs)
@@ -90,11 +82,8 @@ func Run(cfg *build.Config, args []string) error {
 		}
 	}
 
-	if numModes > 1 {
-		return fmt.Errorf("only one mode flag may be passed")
-	}
-	if numModes == 0 {
-		return fmt.Errorf("at least one mode flag must be passed")
+	if numModes != 1 {
+		return fmt.Errorf("exactly one mode flag must be given")
 	}
 
 	if len(filePaths) == 0 {
@@ -108,7 +97,7 @@ func Run(cfg *build.Config, args []string) error {
 	// Make sure the the paths to publish actually exist.
 	for _, k := range filePaths {
 		if _, err := os.Stat(k); err != nil {
-			return fmt.Errorf("file path %q is not valid: %s", k, err)
+			return fmt.Errorf("%q: %s", k, err)
 		}
 	}
 
@@ -128,8 +117,26 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}
 
-	if *verbose {
-		fmt.Printf("initialized repo %s\n", config.RepoDir)
+	if err := repo.Init(); err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	} else {
+		// If the repository was just initialized then we have more init to do
+		if err := repo.GenKeys(); err != nil {
+			return err
+		}
+
+		if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+			return err
+		}
+
+		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+			return err
+		}
+		if *verbose {
+			fmt.Printf("initialized repo %s\n", config.RepoDir)
+		}
 	}
 
 	if *clean {
@@ -166,13 +173,14 @@ func Run(cfg *build.Config, args []string) error {
 
 		for scanner.Scan() {
 			pkgManifestPath := scanner.Text()
-			deps = append(deps, pkgManifestPath)
 			if *verbose {
 				fmt.Printf("publishing: %s\n", pkgManifestPath)
 			}
-			if err := repo.PublishManifest(pkgManifestPath); err != nil {
+			pkgdeps, err := repo.PublishManifest(pkgManifestPath)
+			if err != nil {
 				return err
 			}
+			deps = append(deps, pkgdeps...)
 		}
 		if err := scanner.Err(); err != nil {
 			return err
@@ -242,53 +250,6 @@ func Run(cfg *build.Config, args []string) error {
 		}
 		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
-		}
-
-	case *packageSetMode:
-		if len(filePaths) != 1 {
-			return fmt.Errorf("too many file paths supplied")
-		}
-
-		deps = append(deps, filePaths[0])
-		if err := eachEntry(filePaths[0], func(name, src string) error {
-			deps = append(deps, src)
-			f, err := os.Open(src)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			if err := repo.AddPackage(name, f, ""); err != nil {
-				return fmt.Errorf("failed to add package %q from %q: %s", name, src, err)
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
-			log.Fatalf("error committing repository updates: %s", err)
-		}
-
-	case *blobSetMode:
-
-		if len(filePaths) != 1 {
-			return fmt.Errorf("too many file paths supplied")
-		}
-
-		deps = append(deps, filePaths[0])
-		if err := eachEntry(filePaths[0], func(merkle, src string) error {
-			deps = append(deps, src)
-			f, err := os.Open(src)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			if _, _, err := repo.AddBlob(merkle, f); err != nil {
-				return fmt.Errorf("failed to add blob %q from %q: %s", merkle, src, err)
-			}
-			return nil
-		}); err != nil {
-			return err
 		}
 
 	default:

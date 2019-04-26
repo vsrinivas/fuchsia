@@ -54,7 +54,7 @@ func TestConfig() *Config {
 		ManifestPath: filepath.Join(d, "manifest"),
 		KeyPath:      filepath.Join(d, "key"),
 		TempDir:      filepath.Join(d, "tmp"),
-		PkgName:      filepath.Join(d, "pkg"),
+		PkgName:      "testpackage",
 		PkgVersion:   "0",
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
@@ -134,4 +134,79 @@ func (c *Config) Package() (pkg.Package, error) {
 		}
 	}
 	return p, nil
+}
+
+func (c *Config) BlobInfo() ([]PackageBlobInfo, error) {
+
+	manifest, err := c.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []PackageBlobInfo
+
+	// Include a meta FAR entry first. If blobs.sizes becomes the new root
+	// blob for a package, targets need to know which unnamed blob is the
+	// meta FAR.
+	{
+		merkleBytes, err := ioutil.ReadFile(c.MetaFARMerkle())
+		if err != nil {
+			return nil, err
+		}
+		merkle, err := DecodeMerkleRoot(merkleBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		info, err := os.Stat(c.MetaFAR())
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, PackageBlobInfo{
+			SourcePath: c.MetaFAR(),
+			Path:       "meta/",
+			Merkle:     merkle,
+			Size:       uint64(info.Size()),
+		})
+	}
+
+	contentsPath := filepath.Join(c.OutputDir, "meta", "contents")
+	contents, err := LoadMetaContents(contentsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for path, merkle := range contents {
+		info, err := os.Stat(manifest.Paths[path])
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, PackageBlobInfo{
+			SourcePath: manifest.Paths[path],
+			Path:       path,
+			Merkle:     merkle,
+			Size:       uint64(info.Size()),
+		})
+	}
+
+	return result, nil
+}
+
+func (c *Config) OutputManifest() (*PackageManifest, error) {
+
+	p, err := c.Package()
+	if err != nil {
+		return nil, err
+	}
+	blobs, err := c.BlobInfo()
+	if err != nil {
+		return nil, err
+	}
+	return &PackageManifest{
+		Version: "1",
+		Package: p,
+		Blobs:   blobs,
+	}, err
 }

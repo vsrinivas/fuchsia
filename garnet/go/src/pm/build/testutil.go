@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/pkg"
@@ -76,6 +77,35 @@ func TestPackage(cfg *Config) {
 	}
 
 	if err := mfst.Close(); err != nil {
+		panic(err)
+	}
+}
+
+func BuildTestPackage(cfg *Config) {
+	TestPackage(cfg)
+
+	if err := Update(cfg); err != nil {
+		panic(err)
+	}
+	if err := Sign(cfg); err != nil {
+		panic(err)
+	}
+	if _, err := Seal(cfg); err != nil {
+		panic(err)
+	}
+
+	outputManifest, err := cfg.OutputManifest()
+	if err != nil {
+		panic(err)
+	}
+
+	outputManifestPath := path.Join(cfg.OutputDir, "package_manifest.json")
+
+	content, err := json.Marshal(outputManifest)
+	if err != nil {
+		panic(err)
+	}
+	if err := ioutil.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
 		panic(err)
 	}
 }

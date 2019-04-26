@@ -73,7 +73,7 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("the -blobsfile option requires the use of the -m manifest option")
 	}
 
-	blobs, err := buildPackageBlobInfo(cfg)
+	blobs, err := cfg.BlobInfo()
 	if err != nil {
 		return err
 	}
@@ -99,16 +99,10 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if *pkgManifestPath != "" {
-		p, err := cfg.Package()
+		pkgManifest, err := cfg.OutputManifest()
 		if err != nil {
 			return err
 		}
-		pkgManifest := build.PackageManifest{
-			Version: "1",
-			Package: p,
-			Blobs:   blobs,
-		}
-
 		content, err := json.Marshal(pkgManifest)
 		if err != nil {
 			return err
@@ -159,61 +153,4 @@ func buildDepfile(cfg *build.Config) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func buildPackageBlobInfo(cfg *build.Config) ([]build.PackageBlobInfo, error) {
-	manifest, err := cfg.Manifest()
-	if err != nil {
-		return nil, err
-	}
-
-	var result []build.PackageBlobInfo
-
-	// Include a meta FAR entry first. If blobs.sizes becomes the new root
-	// blob for a package, targets need to know which unnamed blob is the
-	// meta FAR.
-	{
-		merkleBytes, err := ioutil.ReadFile(cfg.MetaFARMerkle())
-		if err != nil {
-			return nil, err
-		}
-		merkle, err := build.DecodeMerkleRoot(merkleBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		info, err := os.Stat(cfg.MetaFAR())
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, build.PackageBlobInfo{
-			SourcePath: cfg.MetaFAR(),
-			Path:       "meta/",
-			Merkle:     merkle,
-			Size:       uint64(info.Size()),
-		})
-	}
-
-	contentsPath := filepath.Join(cfg.OutputDir, "meta", "contents")
-	contents, err := build.LoadMetaContents(contentsPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for path, merkle := range contents {
-		info, err := os.Stat(manifest.Paths[path])
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, build.PackageBlobInfo{
-			SourcePath: manifest.Paths[path],
-			Path:       path,
-			Merkle:     merkle,
-			Size:       uint64(info.Size()),
-		})
-	}
-
-	return result, nil
 }
