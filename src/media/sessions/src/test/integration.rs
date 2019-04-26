@@ -601,11 +601,6 @@ async fn service_broadcasts_events() {
 
     test_session
         .control_handle
-        .send_on_playback_status_changed(default_playback_status())
-        .expect("updating playback status");
-
-    test_session
-        .control_handle
         .send_on_playback_capabilities_changed(expected_playback_capabilities())
         .expect("updating playback capabilities");
 
@@ -614,6 +609,15 @@ async fn service_broadcasts_events() {
         .control_handle
         .send_on_media_images_changed(&mut images_to_send.iter_mut())
         .expect("updating media images");
+
+    // We send this last because channels are ordered, so waiting for the active
+    // session change event is how from our test we can be sure that the service
+    // has ingested all the events we published. (Short of creating a test-only
+    // FIDL interface to account for them all directly.)
+    test_session
+        .control_handle
+        .send_on_playback_status_changed(default_playback_status())
+        .expect("updating playback status");
 
     // Ensure we wait for the service to accept the session.
     await!(test_service.expect_active_session(Some(
@@ -652,7 +656,7 @@ async fn service_broadcasts_events() {
                 .unwrap_or(false));
         };
 
-        // Expect we get both of our published events; accept any order.
+        // Expect we get all of our published events; accept any order.
         check_event(await!(event_stream.try_next()).expect("taking next Session event"));
         check_event(await!(event_stream.try_next()).expect("taking next Session event"));
         check_event(await!(event_stream.try_next()).expect("taking next Session event"));
@@ -764,7 +768,6 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
     let mut test_service = TestService::new().expect("making test service");
     await!(test_service.expect_active_session(None));
     await!(test_service.expect_session_list(vec![]));
-    test_service.notify_events_handled();
 
     // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
     // send us, and consume all but the last of them.
@@ -807,11 +810,11 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
     let mut test_service = TestService::new().expect("making test service");
     await!(test_service.expect_active_session(None));
     await!(test_service.expect_session_list(vec![]));
-    test_service.notify_events_handled();
 
     // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
-    // send us, and consume all but the last of them.
-    let count = MAX_EVENTS_SENT_WITHOUT_ACK + 1;
+    // send us, and consume all but the last of them. The first event generated
+    // was the `None` sent on connection.
+    let count = MAX_EVENTS_SENT_WITHOUT_ACK;
     let mut test_sessions = Vec::new();
     let mut expected_sessions = Vec::new();
     for i in 0..count {
@@ -831,7 +834,7 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
             clone_session_entry(&entry).expect(&format!("cloning test session entry {}.", i)),
         );
 
-        if i < MAX_EVENTS_SENT_WITHOUT_ACK {
+        if i < MAX_EVENTS_SENT_WITHOUT_ACK - 1 {
             await!(test_service.expect_update_events(
                 Some(
                     session_id.as_handle_ref().get_koid().expect("taking new active session koid")
