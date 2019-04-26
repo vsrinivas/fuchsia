@@ -250,6 +250,12 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
         'arch': {}
     }
 
+    # Schema version.
+    if manifest_one['schema_version'] != manifest_two['schema_version']:
+        print('Error: mismatching schema version')
+        return False
+    manifest['schema_version'] = manifest_one['schema_version']
+
     # Host architecture.
     host_archs = set()
     if _has_host_content(parts_one):
