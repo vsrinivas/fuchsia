@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.SocketProvider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/http_client_integration_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
