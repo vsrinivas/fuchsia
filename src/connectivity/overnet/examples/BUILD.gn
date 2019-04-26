@@ -48,20 +48,20 @@ test_package("overnet_examples_tests") {
     },
   ]
 
-  tests = [
-    {
-      name = "overnet_echo_test"
-    },
-    {
-      name = "overnet_echo_test_mdns"
-    },
 # TODO(FLK-196) Re-enable when fixed.
+  tests = [
+#    {
+#      name = "overnet_echo_test"
+#    },
+#    {
+#      name = "overnet_echo_test_mdns"
+#    },
 #    {
 #      name = "overnet_echo_test_omdp"
 #    },
-    {
-      name = "overnet_interface_passing_test"
-    },
+#    {
+#      name = "overnet_interface_passing_test"
+#    },
   ]
 }
 
