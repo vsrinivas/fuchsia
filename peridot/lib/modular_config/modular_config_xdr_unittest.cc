@@ -31,7 +31,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
     "use_minfs":true,
     "use_session_shell_for_story_shell_factory":false,
     "base_shell":{
-      "url":"fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+      "url":"fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
       "keep_alive_after_login":false
     },
     "session_shells":[
@@ -60,8 +60,10 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
   EXPECT_FALSE(read_config.test());
 
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
-            read_config.base_shell().app_config().url());
+  EXPECT_EQ(
+      "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
+      "auto_login_base_shell.cmx",
+      read_config.base_shell().app_config().url());
   EXPECT_FALSE(read_config.base_shell().keep_alive_after_login());
 
   ASSERT_EQ(1u, read_config.session_shell_map().size());

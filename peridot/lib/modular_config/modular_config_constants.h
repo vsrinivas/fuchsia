@@ -56,9 +56,10 @@ constexpr char kUseParentRunnerForStoryRealm[] =
     "use_parent_runner_for_story_realm";
 
 // Shell constants
-constexpr char kDefaultBaseShellUrl[] =
-    "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx";
-constexpr char kDefaultSessionShellUrl[] =
+inline constexpr char kDefaultBaseShellUrl[] =
+    "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
+    "auto_login_base_shell.cmx";
+inline constexpr char kDefaultSessionShellUrl[] =
     "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
     "ermine_session_shell.cmx";
 constexpr char kDefaultStoryShellUrl[] =

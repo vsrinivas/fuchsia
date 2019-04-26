@@ -34,6 +34,20 @@ group("basemgr_launcher") {
   ]
 }
 
+group("auto_login_base_shell") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/basemgr:auto_login_base_shell",
+  ]
+}
+
+group("dev_base_shell") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/basemgr:dev_base_shell",
+  ]
+}
+
 group("sessionctl") {
   testonly = true
   public_deps = [
@@ -62,6 +76,7 @@ group("integration_testing") {
     "//peridot/bin/sessionmgr:dev_session_shell",
     "//peridot/bin/sessionmgr/story_runner:dev_story_shell",
     "//peridot/bin/test_driver:test_driver_module",
+    "//peridot/packages/prod:dev_base_shell",
     "//peridot/packages/prod:modular",
   ]
 }
@@ -86,8 +101,8 @@ group("modular") {
   testonly = true
   public_deps = [
     "//peridot/bin/basemgr",
-    "//peridot/bin/basemgr:dev_base_shell",
     "//peridot/bin/sessionmgr",
+    "//peridot/packages/prod:auto_login_base_shell",
     "//peridot/cloud/go/src/remote_module_resolver:host",
   ]
 }

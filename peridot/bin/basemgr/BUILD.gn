@@ -156,12 +156,6 @@ executable_package("dev_base_shell") {
     },
   ]
 
-  deps = [
-    ":dev_base_shell_source_set",
-  ]
-}
-
-source_set("dev_base_shell_source_set") {
   sources = [
     "dev_base_shell.cc",
   ]
@@ -171,6 +165,83 @@ source_set("dev_base_shell_source_set") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("auto_login_base_shell_bin") {
+  testonly = true
+
+  sources = [
+    "auto_login_base_shell.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("auto_login_base_shell_test") {
+  testonly = true
+
+  output_name = "auto_login_base_shell_test"
+
+  sources = ["auto_login_base_shell_test.cc"]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//peridot/public/lib/modular_test_harness/cpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("auto_login_base_shell") {
+  testonly = true
+
+  binaries = [
+    {
+      name = "auto_login_base_shell_bin"
+    },
+  ]
+
+  tests = [
+    {
+      name = "auto_login_base_shell_test"
+      environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/auto_login_base_shell.cmx"
+      dest = "auto_login_base_shell.cmx"
+    },
+    {
+      path = "meta/auto_login_base_shell_test.cmx"
+      dest = "auto_login_base_shell_test.cmx"
+    },
+  ]
+
+  deps = [
+    ":auto_login_base_shell_bin",
+    ":auto_login_base_shell_test",
+    "//garnet/public/lib/callback",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.viewsv1token",

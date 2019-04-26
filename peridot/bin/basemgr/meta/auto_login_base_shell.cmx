@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/auto_login_base_shell_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.auth.account.AccountManager"
+        ]
+    }
+}
