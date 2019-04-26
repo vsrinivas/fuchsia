@@ -42,6 +42,15 @@ group("zxdb") {
   ]
 }
 
+group("fidl_tools") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/fidl",
+    "//tools/fidlgen_llcpp_zircon",
+    "//garnet/packages/tools:gidl",
+  ]
+}
+
 group("all") {
   testonly = true
   public_deps = [
@@ -51,9 +60,8 @@ group("all") {
     "//garnet/packages/tools:crashpad_database_util",
     "//garnet/packages/tools:cs",
     "//garnet/packages/tools:curl",
-    "//garnet/go/src/fidl",
+    "//garnet/packages/tools:fidl_tools",
     "//garnet/packages/tools:fidlmerge",
-    "//garnet/packages/tools:gidl",
     "//garnet/packages/tools:iperf",
     "//garnet/packages/tools:magma",
     "//garnet/packages/tools:make-efi",

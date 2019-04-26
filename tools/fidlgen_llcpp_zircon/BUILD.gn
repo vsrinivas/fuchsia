@@ -1,0 +1,45 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/compiled_action.gni")
+import("//build/config/fuchsia/zircon.gni")
+
+executable("fidlgen_llcpp_zircon") {
+  sources = [
+    "llcpp_codegen.cc",
+    "llcpp_codegen.h",
+    "main.cc",
+  ]
+  deps = [ "//third_party/rapidjson" ]
+  data_deps = [ "//garnet/go/src/fidl" ]
+}
+
+compiled_action("validate") {
+  tool = ":fidlgen_llcpp_zircon"
+  args = [
+    "validate",
+    rebase_path(zircon_root_build_dir, root_build_dir),
+    rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.stamp", root_build_dir),
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.d", root_build_dir)
+  ]
+  depfile = "$target_gen_dir/fidlgen_llcpp_zircon_validated.d"
+  inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
+  outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_validated.stamp" ]
+}
+
+compiled_action("update") {
+  tool = ":fidlgen_llcpp_zircon"
+  args = [
+    "update",
+    rebase_path(zircon_root_build_dir, root_build_dir),
+    rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.stamp", root_build_dir),
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.d", root_build_dir)
+  ]
+  depfile = "$target_gen_dir/fidlgen_llcpp_zircon_updated.d"
+  inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
+  outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_updated.stamp" ]
+}
