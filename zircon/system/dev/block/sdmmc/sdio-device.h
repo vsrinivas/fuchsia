@@ -26,8 +26,19 @@ class SdioDevice : public SdioDeviceType,
                    public ddk::SdioProtocol<SdioDevice, ddk::base_protocol>,
                    public fbl::RefCounted<SdioDevice> {
 public:
+    // SDIO cards support one common function and up to seven I/O functions. This struct is used to
+    // keep track of each function's state as they can be configured independently.
+    // Visible for testing.
+    struct SdioFunction {
+        sdio_func_hw_info_t hw_info;
+        uint16_t cur_blk_size;
+        bool enabled;
+        bool intr_enabled;
+    };
+
     SdioDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
         : SdioDeviceType(parent), sdmmc_(sdmmc) {}
+    virtual ~SdioDevice() = default;
 
     static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                               fbl::RefPtr<SdioDevice>* out_dev);
@@ -46,24 +57,21 @@ public:
     zx_status_t SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt);
     zx_status_t SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size);
     zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn);
-    zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
-                             uint8_t* out_read_byte);
+    virtual zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+                                     uint8_t* out_read_byte);
     zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
+
+protected:
+    virtual SdmmcDevice& sdmmc() { return sdmmc_; }
+
+    SdioFunction funcs_[SDIO_MAX_FUNCS];
+    sdio_device_hw_info_t hw_info_;
 
 private:
     struct SdioFuncTuple {
         uint8_t tuple_code;
         uint8_t tuple_body_size;
         uint8_t tuple_body[UINT8_MAX];
-    };
-
-    // SDIO cards support one common function and up to seven I/O functions. This struct is used to
-    // keep track of each function's state as they can be configured independently.
-    struct SdioFunction {
-        sdio_func_hw_info_t hw_info;
-        uint16_t cur_blk_size;
-        bool enabled;
-        bool intr_enabled;
     };
 
     zx_status_t SdioReset();
@@ -94,8 +102,6 @@ private:
     zx_status_t WriteData16(uint8_t fn_idx, uint32_t addr, uint16_t word);
 
     SdmmcDevice sdmmc_;
-    sdio_device_hw_info_t hw_info_;
-    SdioFunction funcs_[SDIO_MAX_FUNCS];
     std::atomic<bool> dead_ = false;
 };
 

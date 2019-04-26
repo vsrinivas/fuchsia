@@ -43,7 +43,7 @@ zx_status_t SdmmcDevice::SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries,
 
 // SD/MMC shared ops
 
-zx_status_t SdmmcDevice::SdmmcGoIdle() const {
+zx_status_t SdmmcDevice::SdmmcGoIdle() {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_GO_IDLE_STATE;
     req.arg = 0;
@@ -52,7 +52,7 @@ zx_status_t SdmmcDevice::SdmmcGoIdle() const {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) const {
+zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_SEND_STATUS;
     req.arg = RcaArg();
@@ -65,7 +65,7 @@ zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) const {
     return st;
 }
 
-zx_status_t SdmmcDevice::SdmmcStopTransmission() const {
+zx_status_t SdmmcDevice::SdmmcStopTransmission() {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_STOP_TRANSMISSION;
     req.arg = 0;
@@ -76,7 +76,7 @@ zx_status_t SdmmcDevice::SdmmcStopTransmission() const {
 
 // SD ops
 
-zx_status_t SdmmcDevice::SdSendAppCmd() const {
+zx_status_t SdmmcDevice::SdSendAppCmd() {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_APP_CMD;
     req.arg = RcaArg();
@@ -85,7 +85,7 @@ zx_status_t SdmmcDevice::SdSendAppCmd() const {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) const {
+zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) {
     zx_status_t st = SdSendAppCmd();
     if (st != ZX_OK) {
         return st;
@@ -104,7 +104,7 @@ zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) const {
     return ZX_OK;
 }
 
-zx_status_t SdmmcDevice::SdSendIfCond() const {
+zx_status_t SdmmcDevice::SdSendIfCond() {
     // TODO what is this parameter?
     uint32_t arg = 0x1aa;
     sdmmc_req_t req = {};
@@ -148,7 +148,7 @@ zx_status_t SdmmcDevice::SdSendRelativeAddr(uint16_t* card_status) {
     return st;
 }
 
-zx_status_t SdmmcDevice::SdSelectCard() const {
+zx_status_t SdmmcDevice::SdSelectCard() {
     sdmmc_req_t req = {};
     req.cmd_idx = SD_SELECT_CARD;
     req.arg = RcaArg();
@@ -157,7 +157,7 @@ zx_status_t SdmmcDevice::SdSelectCard() const {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::SdSendScr(uint8_t scr[8]) const {
+zx_status_t SdmmcDevice::SdSendScr(uint8_t scr[8]) {
     zx_status_t st = SdSendAppCmd();
     if (st != ZX_OK) {
         return st;
@@ -176,7 +176,7 @@ zx_status_t SdmmcDevice::SdSendScr(uint8_t scr[8]) const {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) const {
+zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) {
     if (width != SDMMC_BUS_WIDTH_ONE && width != SDMMC_BUS_WIDTH_FOUR) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -224,7 +224,7 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
 
 // SDIO specific ops
 
-zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) const {
+zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) {
     zx_status_t st = ZX_OK;
     sdmmc_req_t req = {};
     req.cmd_idx = SDIO_SEND_OP_COND;
@@ -248,7 +248,7 @@ zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) const {
 }
 
 zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t reg_addr,
-                                        uint8_t write_byte, uint8_t* read_byte) const {
+                                        uint8_t write_byte, uint8_t* read_byte) {
     uint32_t cmd_arg = 0;
     if (write) {
         cmd_arg |= SDIO_IO_RW_DIRECT_RW_FLAG;
@@ -289,7 +289,7 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
 zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn_idx,
                                           uint32_t reg_addr, bool incr, uint32_t blk_count,
                                           uint32_t blk_size, bool use_dma, uint8_t* buf,
-                                          zx_handle_t dma_vmo, uint64_t buf_offset) const {
+                                          zx_handle_t dma_vmo, uint64_t buf_offset) {
     uint32_t cmd_arg = 0;
     if (write) {
         cmd_arg |= SDIO_IO_RW_EXTD_RW_FLAG;
@@ -343,7 +343,7 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
 
 // MMC ops
 
-zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) const {
+zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
     // Request sector addressing if not probing
     uint32_t arg = (ocr == 0) ? ocr : ((1 << 30) | ocr);
     sdmmc_req_t req = {};
@@ -367,7 +367,7 @@ zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) const {
     return st;
 }
 
-zx_status_t SdmmcDevice::MmcAllSendCid(uint32_t cid[4]) const {
+zx_status_t SdmmcDevice::MmcAllSendCid(uint32_t cid[4]) {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_ALL_SEND_CID;
     req.arg = 0;
@@ -393,7 +393,7 @@ zx_status_t SdmmcDevice::MmcSetRelativeAddr(uint16_t rca) {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::MmcSendCsd(uint32_t csd[4]) const {
+zx_status_t SdmmcDevice::MmcSendCsd(uint32_t csd[4]) {
     sdmmc_req_t req = {};
     req.cmd_idx = SDMMC_SEND_CSD;
     req.arg = RcaArg();
@@ -409,7 +409,7 @@ zx_status_t SdmmcDevice::MmcSendCsd(uint32_t csd[4]) const {
     return st;
 }
 
-zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) const {
+zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) {
     // EXT_CSD is send in a data stage
     sdmmc_req_t req = {};
     req.cmd_idx = MMC_SEND_EXT_CSD;
@@ -428,7 +428,7 @@ zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) const {
     return st;
 }
 
-zx_status_t SdmmcDevice::MmcSelectCard() const {
+zx_status_t SdmmcDevice::MmcSelectCard() {
     sdmmc_req_t req = {};
     req.cmd_idx = MMC_SELECT_CARD;
     req.arg = RcaArg();
@@ -437,7 +437,7 @@ zx_status_t SdmmcDevice::MmcSelectCard() const {
     return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::MmcSwitch(uint8_t index, uint8_t value) const {
+zx_status_t SdmmcDevice::MmcSwitch(uint8_t index, uint8_t value) {
     // Send the MMC_SWITCH command
     uint32_t arg = (3 << 24) |  // write byte
                    (index << 16) | (value << 8);

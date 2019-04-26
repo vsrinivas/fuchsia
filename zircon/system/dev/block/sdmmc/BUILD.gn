@@ -33,3 +33,28 @@ driver("sdmmc") {
     "$zx/system/ulib/trace:headers",
   ]
 }
+
+test("sdmmc-test") {
+  output_name = "sdmmc-test"
+  sources = [
+    "sdio-device.cpp",
+    "sdio-device-test.cpp",
+    "sdmmc-device.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sdio",
+    "$zx/system/banjo/ddk.protocol.sdmmc",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/operation",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
