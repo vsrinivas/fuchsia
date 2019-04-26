@@ -7,6 +7,7 @@
 #include <lib/async/task.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <src/lib/fxl/strings/string_printf.h>
+#include <zircon/status.h>
 
 #include <random>
 
@@ -26,21 +27,18 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
         parent_env_(std::move(environment)),
         parent_env_ctlr_(std::move(env_controller)),
         parent_(parent) {
-    binding_.set_error_handler([this](zx_status_t err) {
-      environments_.clear();
-      parent_->BindingClosed(this);
-    });
+    binding_.set_error_handler([this](zx_status_t err) { BindingClosed(); });
 
     parent_env_ctlr_.set_error_handler([this](zx_status_t err) {
-      FXL_LOG(ERROR) << "Lost connection to parent environment";
-      environments_.clear();
-      parent_->BindingClosed(this);
+      FXL_LOG(ERROR) << "Lost connection to parent environment controller: "
+                     << zx_status_get_string(err);
+      BindingClosed();
     });
 
     parent_env_.set_error_handler([this](zx_status_t err) {
-      FXL_LOG(ERROR) << "Lost connection to parent environment";
-      environments_.clear();
-      parent_->BindingClosed(this);
+      FXL_LOG(ERROR) << "Lost connection to parent environment: "
+                     << zx_status_get_string(err);
+      BindingClosed();
     });
 
     parent_env_ctlr_.events().OnCreated = [this,
@@ -95,6 +93,20 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
       shared_env_ = std::make_shared<SandboxEnv>();
     }
     return shared_env_;
+  }
+
+  void BindingClosed() {
+    // can only be called from within the dispatcher loop
+    ZX_ASSERT(loop_->dispatcher() == async_get_default_dispatcher());
+    // we don't care about environment anymore.
+    // unbinding will prevent the error handlers from firing
+    // when we destroy the dispatcher.
+    parent_env_.Unbind();
+    parent_env_ctlr_.Unbind();
+    // get rid of child environments and shared services:
+    environments_.clear();
+    shared_env_ = nullptr;
+    parent_->BindingClosed(this);
   }
 
   std::unique_ptr<async::Loop> loop_;
