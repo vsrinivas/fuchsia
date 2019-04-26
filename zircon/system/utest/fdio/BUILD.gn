@@ -4,6 +4,7 @@
 
 test("fdio") {
   sources = [
+    "fdio_atexit.cpp",
     "fdio_fd.cpp",
     "fdio_handle_fd.c",
     "fdio_open_max.c",
@@ -18,5 +19,22 @@ test("fdio") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+  ]
+
+  data_deps = [
+    ":accept-child",
+  ]
+}
+
+executable("accept-child") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "fdio_atexit_test_accept_child.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
   ]
 }

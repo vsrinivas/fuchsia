@@ -737,7 +737,7 @@ void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
     mtx_lock(&fdio_lock);
     for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
         fdio_t* io = fdio_fdtab[fd];
-        if (io) {
+        if (!fdio_is_reserved_or_null(io)) {
             fdio_fdtab[fd] = NULL;
             fdio_dupcount_release(io);
             if (fdio_get_dupcount(io) == 0) {
