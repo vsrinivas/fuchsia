@@ -27,7 +27,7 @@
 namespace devmgr {
 namespace {
 
-void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_root) {
+void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel pkgfs_root) {
     auto deadline = zx::deadline_after(zx::sec(5));
     zx_signals_t observed;
     zx_status_t status =
@@ -60,20 +60,20 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
         // non-fatal.
         printf("fshost: failed to install /bin (could not open shell-commands)\n");
     }
-    if (watcher->InstallFs("/pkgfs", std::move(pkgfs_root)) != ZX_OK) {
+    if (filesystems->InstallFs("/pkgfs", std::move(pkgfs_root)) != ZX_OK) {
         printf("fshost: failed to install /pkgfs\n");
         return;
     }
-    if (watcher->InstallFs("/system", std::move(system_channel)) != ZX_OK) {
+    if (filesystems->InstallFs("/system", std::move(system_channel)) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
     }
     // as above, failure of /bin export is non-fatal.
-    if (watcher->InstallFs("/bin", std::move(bin_chan)) != ZX_OK) {
+    if (filesystems->InstallFs("/bin", std::move(bin_chan)) != ZX_OK) {
         printf("fshost: failed to install /bin\n");
     }
     // start the appmgr
-    watcher->FuchsiaStart();
+    filesystems->FuchsiaStart();
 }
 
 // Launching pkgfs uses its own loader service and command lookup to run out of
@@ -165,7 +165,7 @@ zx_status_t pkgfs_ldsvc_start(fbl::unique_fd fs_blob_fd, zx::channel* ldsvc) {
     return status;
 }
 
-bool pkgfs_launch(BlockWatcher* watcher) {
+bool pkgfs_launch(FilesystemMounter* filesystems) {
     const char* cmd = getenv("zircon.system.pkgfs.cmd");
     if (cmd == nullptr) {
         return false;
@@ -222,14 +222,14 @@ bool pkgfs_launch(BlockWatcher* watcher) {
         return false;
     }
 
-    pkgfs_finish(watcher, std::move(proc), std::move(h0));
+    pkgfs_finish(filesystems, std::move(proc), std::move(h0));
     return true;
 }
 
 } // namespace
 
-void LaunchBlobInit(BlockWatcher* watcher) {
-    pkgfs_launch(watcher);
+void LaunchBlobInit(FilesystemMounter* filesystems) {
+    pkgfs_launch(filesystems);
 }
 
 } // namespace devmgr

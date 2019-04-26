@@ -206,13 +206,13 @@ int main(int argc, char** argv) {
     // Setup the devmgr loader service.
     devmgr::setup_loader_service(std::move(devmgr_loader));
 
-    // If there is a ramdisk, setup the ramctl watcher.
+    // If there is a ramdisk, setup the ramctl filesystems.
     zx::vmo ramdisk_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
     if (ramdisk_vmo.is_valid()) {
         thrd_t t;
-        int err = thrd_create_with_name(&t, &devmgr::RamctlWatcher, &ramdisk_vmo, "ramctl-watcher");
+        int err = thrd_create_with_name(&t, &devmgr::RamctlWatcher, &ramdisk_vmo, "ramctl-filesystems");
         if (err != thrd_success) {
-            printf("fshost: failed to start ramctl-watcher: %d\n", err);
+            printf("fshost: failed to start ramctl-filesystems: %d\n", err);
         }
         thrd_detach(t);
     }
@@ -224,6 +224,6 @@ int main(int argc, char** argv) {
         // to the devmgr. Otherwise the devmgr will segfault.
         zx::nanosleep(zx::time::infinite());
     }
-    printf("fshost: terminating (block device watcher finished?)\n");
+    printf("fshost: terminating (block device filesystems finished?)\n");
     return 0;
 }

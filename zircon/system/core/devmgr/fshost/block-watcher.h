@@ -15,9 +15,9 @@
 
 namespace devmgr {
 
-class BlockWatcher {
+class FilesystemMounter {
 public:
-    BlockWatcher(std::unique_ptr<FsManager> fshost, bool netboot)
+    FilesystemMounter(std::unique_ptr<FsManager> fshost, bool netboot)
         : fshost_(std::move(fshost)), netboot_(netboot) {}
 
     void FuchsiaStart() const { fshost_->FuchsiaStart(); }

@@ -68,7 +68,7 @@ zx_status_t LaunchFAT(int argc, const char** argv, zx_handle_t* hnd, uint32_t* i
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t MountMinfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
+zx_status_t MountMinfs(FilesystemMounter* filesystems, fbl::unique_fd fd, mount_options_t* options) {
     fuchsia_hardware_block_partition_GUID type_guid;
     {
         fzl::UnownedFdioCaller disk_connection(fd.get());
@@ -85,9 +85,9 @@ zx_status_t MountMinfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t
     if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
         return ZX_ERR_NOT_SUPPORTED;
     } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
-        return watcher->MountData(std::move(fd), options);
+        return filesystems->MountData(std::move(fd), options);
     } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
-        return watcher->MountInstall(std::move(fd), options);
+        return filesystems->MountInstall(std::move(fd), options);
     }
     printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
     return ZX_ERR_INVALID_ARGS;
@@ -150,7 +150,7 @@ zx_status_t FormatMinfs(const fbl::unique_fd& block_device,
 }
 
 zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cookie) {
-    auto watcher = static_cast<BlockWatcher*>(cookie);
+    auto filesystems = static_cast<FilesystemMounter*>(cookie);
 
     if (event != WATCH_EVENT_ADD_FILE) {
         return ZX_OK;
@@ -206,7 +206,7 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
             return ZX_OK;
         }
         case DISK_FORMAT_ZXCRYPT: {
-            if (!watcher->Netbooting()) {
+            if (!filesystems->Netbooting()) {
                 printf("fshost: %s: zxcrypt?\n", device_path);
                 // Bind and unseal the driver from a separate thread, since we
                 // have to wait for a number of devices to do I/O and settle,
@@ -242,11 +242,11 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
 
     // If we're in netbooting mode, then only bind drivers for partition
     // containers and the install partition, not regular filesystems.
-    if (watcher->Netbooting()) {
+    if (filesystems->Netbooting()) {
         if (gpt_is_install_guid(guid.value, GPT_GUID_LEN)) {
             printf("fshost: mounting install partition\n");
             mount_options_t options = default_mount_options;
-            MountMinfs(watcher, std::move(fd), &options);
+            MountMinfs(filesystems, std::move(fd), &options);
             return ZX_OK;
         }
 
@@ -262,32 +262,32 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
         }
         fsck_options_t fsck_options = default_fsck_options;
         fsck_options.apply_journal = true;
-        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS, &fsck_options) != ZX_OK) {
+        if (filesystems->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS, &fsck_options) != ZX_OK) {
             return ZX_OK;
         }
 
         mount_options_t options = default_mount_options;
         options.enable_journal = true;
         options.collect_metrics = true;
-        zx_status_t status = watcher->MountBlob(std::move(fd), &options);
+        zx_status_t status = filesystems->MountBlob(std::move(fd), &options);
         if (status != ZX_OK) {
             printf("fshost: Failed to mount blobfs partition %s at %s: %s.\n", device_path,
                    PATH_BLOB, zx_status_get_string(status));
         } else {
-            LaunchBlobInit(watcher);
+            LaunchBlobInit(filesystems);
         }
         return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
         printf("fshost: mounting minfs\n");
         fsck_options_t fsck_options = default_fsck_options;
-        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS, &fsck_options) != ZX_OK) {
+        if (filesystems->CheckFilesystem(device_path, DISK_FORMAT_MINFS, &fsck_options) != ZX_OK) {
             if (FormatMinfs(fd, info) != ZX_OK) {
                 return ZX_OK;
             }
         }
         mount_options_t options = default_mount_options;
-        MountMinfs(watcher, std::move(fd), &options);
+        MountMinfs(filesystems, std::move(fd), &options);
         return ZX_OK;
     }
     case DISK_FORMAT_FAT: {
@@ -314,7 +314,7 @@ zx_status_t BlockDeviceAdded(int dirfd, int event, const char* name, void* cooki
 
 } // namespace
 
-zx_status_t BlockWatcher::MountData(fbl::unique_fd fd, mount_options_t* options) {
+zx_status_t FilesystemMounter::MountData(fbl::unique_fd fd, mount_options_t* options) {
     if (data_mounted_) {
         return ZX_ERR_ALREADY_BOUND;
     }
@@ -330,7 +330,7 @@ zx_status_t BlockWatcher::MountData(fbl::unique_fd fd, mount_options_t* options)
     return status;
 }
 
-zx_status_t BlockWatcher::MountInstall(fbl::unique_fd fd, mount_options_t* options) {
+zx_status_t FilesystemMounter::MountInstall(fbl::unique_fd fd, mount_options_t* options) {
     if (install_mounted_) {
         return ZX_ERR_ALREADY_BOUND;
     }
@@ -345,7 +345,7 @@ zx_status_t BlockWatcher::MountInstall(fbl::unique_fd fd, mount_options_t* optio
     return status;
 }
 
-zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options) {
+zx_status_t FilesystemMounter::MountBlob(fbl::unique_fd fd, mount_options_t* options) {
     if (blob_mounted_) {
         return ZX_ERR_ALREADY_BOUND;
     }
@@ -359,7 +359,7 @@ zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options)
     return status;
 }
 
-zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t df,
+zx_status_t FilesystemMounter::CheckFilesystem(const char* device_path, disk_format_t df,
                                           const fsck_options_t* options) const {
     if (!getenv_bool("zircon.system.filesystem-check", false)) {
         return ZX_OK;
@@ -437,11 +437,11 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
 }
 
 void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, bool netboot) {
-    BlockWatcher watcher(std::move(fshost), netboot);
+    FilesystemMounter filesystems(std::move(fshost), netboot);
 
     fbl::unique_fd dirfd(open("/dev/class/block", O_DIRECTORY | O_RDONLY));
     if (dirfd) {
-        fdio_watch_directory(dirfd.get(), BlockDeviceAdded, ZX_TIME_INFINITE, &watcher);
+        fdio_watch_directory(dirfd.get(), BlockDeviceAdded, ZX_TIME_INFINITE, &filesystems);
     }
 }
 
