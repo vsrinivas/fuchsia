@@ -22,7 +22,7 @@ public:
     SdmmcDevice(const SdmmcDevice& other)
         : host_(other.host_), host_info_(other.host_info_), rca_(other.rca_) {}
 
-    const ddk::SdmmcProtocolClient& host() const { return host_; }
+    virtual const ddk::SdmmcProtocolClient& host() const { return host_; }
     const sdmmc_host_info_t& host_info() const { return host_info_; }
 
     bool UseDma() const {

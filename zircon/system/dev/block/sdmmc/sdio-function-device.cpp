@@ -94,8 +94,8 @@ zx_status_t SdioFunctionDevice::SdioDoRwByte(bool write, uint8_t fn_idx, uint32_
     return sdio_parent_->SdioDoRwByte(write, fn_idx, addr, write_byte, out_read_byte);
 }
 
-zx_status_t SdioFunctionDevice::SdioGetInBandIntr(zx::interrupt* out_irq) {
-    return sdio_parent_->SdioGetInBandIntr(out_irq);
+zx_status_t SdioFunctionDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
+    return sdio_parent_->SdioGetInBandIntr(fn_idx, out_irq);
 }
 
 }  // namespace sdmmc

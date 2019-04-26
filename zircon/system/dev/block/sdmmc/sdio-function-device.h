@@ -43,7 +43,7 @@ public:
     zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn);
     zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                              uint8_t* out_read_byte);
-    zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
+    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq);
 
 private:
     std::atomic<bool> dead_;

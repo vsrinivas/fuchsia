@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/sync/completion.h>
 #include <zircon/thread_annotations.h>
 
 #include "sdio-function-device.h"
@@ -59,9 +60,13 @@ public:
     zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn);
     virtual zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                                      uint8_t* out_read_byte);
-    zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
+    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq);
 
     void InBandInterruptCallback();
+
+    // Visible for testing.
+    zx_status_t StartSdioIrqThread();
+    void StopSdioIrqThread();
 
 protected:
     virtual SdmmcDevice& sdmmc() { return sdmmc_; }
@@ -110,10 +115,15 @@ private:
     zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                                    uint8_t* out_read_byte) TA_REQ(lock_);
 
+    int SdioIrqThread();
+
+    thrd_t irq_thread_ = 0;
+    sync_completion_t irq_signal_;
+
     SdmmcDevice sdmmc_ TA_GUARDED(lock_);
     std::atomic<bool> dead_ = false;
     fbl::Array<fbl::RefPtr<SdioFunctionDevice>> devices_;
-    zx::interrupt sdio_irq_;
+    zx::interrupt sdio_irqs_[SDIO_MAX_FUNCS];
 };
 
 }  // namespace sdmmc

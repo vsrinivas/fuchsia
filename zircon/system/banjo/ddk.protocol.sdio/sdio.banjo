@@ -80,5 +80,5 @@ protocol Sdio {
     GetBlockSize(uint8 fn_idx) -> (zx.status s, uint16 cur_blk_size);
     DoRwTxn(uint8 fn_idx, SdioRwTxn? txn) -> (zx.status s);
     DoRwByte(bool write, uint8 fn_idx, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
-    GetInBandIntr() -> (zx.status s, handle<interrupt> irq);
+    GetInBandIntr(uint8 fn_idx) -> (zx.status s, handle<interrupt> irq);
 };

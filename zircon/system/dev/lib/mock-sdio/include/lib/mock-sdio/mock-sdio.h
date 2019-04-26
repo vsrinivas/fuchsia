@@ -111,8 +111,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectGetInBandIntr(const zx::interrupt& interrupt) {
-        ExpectGetInBandIntrHelper(interrupt);
+    MockSdio& ExpectGetInBandIntr(uint8_t fn_idx, const zx::interrupt& interrupt) {
+        ExpectGetInBandIntrHelper(fn_idx, interrupt);
         return *this;
     }
 
@@ -163,8 +163,8 @@ public:
         return ZX_OK;
     }
 
-    zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq) {
-        GetInBandIntrHelper(out_irq);
+    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
+        GetInBandIntrHelper(fn_idx, out_irq);
         return ZX_OK;
     }
 
@@ -178,9 +178,10 @@ private:
         bool exact;
     };
 
-    void ExpectGetInBandIntrHelper(const zx::interrupt& interrupt) {
-        ASSERT_FALSE(interrupt_.is_valid(), "Interrupt has already been set");
-        EXPECT_OK(interrupt.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt_),
+    void ExpectGetInBandIntrHelper(uint8_t fn_idx, const zx::interrupt& interrupt) {
+        ASSERT_LT(fn_idx, countof(interrupts_));
+        ASSERT_FALSE(interrupts_[fn_idx].is_valid(), "Interrupt has already been set");
+        EXPECT_OK(interrupt.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupts_[fn_idx]),
                   "Failed to duplicate interrupt");
     }
 
@@ -234,15 +235,16 @@ private:
         DoRwHelper(fn_idx, addr, false, write, write ? &write_byte : out_read_byte, 1);
     }
 
-    void GetInBandIntrHelper(zx::interrupt* out_irq) {
-        ASSERT_TRUE(interrupt_.is_valid(), "No interrupt has been set");
+    void GetInBandIntrHelper(uint8_t fn_idx, zx::interrupt* out_irq) {
+        ASSERT_LT(fn_idx, SDIO_MAX_FUNCS);
+        ASSERT_TRUE(interrupts_[fn_idx].is_valid(), "No interrupt has been set");
         ASSERT_NOT_NULL(out_irq, "Out interrupt is null");
 
-        *out_irq = std::move(interrupt_);
+        *out_irq = std::move(interrupts_[fn_idx]);
     }
 
     const sdio_protocol_t proto_;
-    zx::interrupt interrupt_;
+    zx::interrupt interrupts_[SDIO_MAX_FUNCS];
     fbl::Vector<SdioRwExpectation> expectations_;
     size_t expectations_index_ = 0;
 };

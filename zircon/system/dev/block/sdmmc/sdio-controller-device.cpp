@@ -166,8 +166,22 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     return ZX_OK;
 }
 
+zx_status_t SdioControllerDevice::StartSdioIrqThread() {
+    auto thread_func = [](void* ctx) -> int {
+        return reinterpret_cast<SdioControllerDevice*>(ctx)->SdioIrqThread();
+    };
+
+    int rc = thrd_create_with_name(&irq_thread_, thread_func, this, "sdio-controller-worker");
+    return thrd_status_to_zx_status(rc);
+}
+
 zx_status_t SdioControllerDevice::AddDevice() {
     fbl::AutoLock lock(&lock_);
+
+    zx_status_t st = StartSdioIrqThread();
+    if (st != ZX_OK) {
+        return st;
+    }
 
     fbl::AllocChecker ac;
     devices_.reset(new (&ac) fbl::RefPtr<SdioFunctionDevice>[hw_info_.num_funcs - 1],
@@ -177,7 +191,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t st = DdkAdd("sdmmc-sdio", DEVICE_ADD_NON_BINDABLE);
+    st = DdkAdd("sdmmc-sdio", DEVICE_ADD_NON_BINDABLE);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
         return st;
@@ -222,8 +236,17 @@ void SdioControllerDevice::DdkUnbind() {
     DdkRemove();
 }
 
-void SdioControllerDevice::DdkRelease() {
+void SdioControllerDevice::StopSdioIrqThread() {
     dead_ = true;
+
+    if (irq_thread_) {
+        sync_completion_signal(&irq_signal_);
+        thrd_join(irq_thread_, nullptr);
+    }
+}
+
+void SdioControllerDevice::DdkRelease() {
+    StopSdioIrqThread();
     __UNUSED bool dummy = Release();
 }
 
@@ -553,29 +576,58 @@ zx_status_t SdioControllerDevice::SdioDoRwByteLocked(bool write, uint8_t fn_idx,
     return sdmmc().SdioIoRwDirect(write, fn_idx, addr, write_byte, out_read_byte);
 }
 
-zx_status_t SdioControllerDevice::SdioGetInBandIntr(zx::interrupt* out_irq) {
+zx_status_t SdioControllerDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
+    if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     fbl::AutoLock lock(&lock_);
 
-    if (sdio_irq_.is_valid()) {
+    if (sdio_irqs_[fn_idx].is_valid()) {
         return ZX_ERR_ALREADY_EXISTS;
     }
 
-    zx_status_t st = zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irq_);
+    zx_status_t st =
+        zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irqs_[fn_idx]);
     if (st != ZX_OK) {
         return st;
     }
 
-    if ((st = sdio_irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
+    if ((st = sdio_irqs_[fn_idx].duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
         return st;
     }
 
-    return sdmmc_.host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
+    return sdmmc().host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
 }
 
 void SdioControllerDevice::InBandInterruptCallback() {
-    if (sdio_irq_.is_valid()) {
-        sdio_irq_.trigger(0, zx::clock::get_monotonic());
+    sync_completion_signal(&irq_signal_);
+}
+
+int SdioControllerDevice::SdioIrqThread() {
+    for (;;) {
+        sync_completion_wait(&irq_signal_, ZX_TIME_INFINITE);
+        sync_completion_reset(&irq_signal_);
+
+        if (dead_) {
+            return thrd_success;
+        }
+
+        uint8_t intr_byte;
+        zx_status_t st = SdioDoRwByte(false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0, &intr_byte);
+        if (st != ZX_OK) {
+            zxlogf(ERROR, "sdio_irq: Failed reading intr pending reg. status: %d\n", st);
+            return thrd_error;
+        }
+
+        for (uint8_t i = 1; SdioFnIdxValid(i); i++) {
+            if ((intr_byte & (1 << i)) && sdio_irqs_[i].is_valid()) {
+                sdio_irqs_[i].trigger(0, zx::clock::get_monotonic());
+            }
+        }
     }
+
+    return thrd_success;
 }
 
 zx_status_t SdioControllerDevice::SdioReset() {

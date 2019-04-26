@@ -176,7 +176,7 @@ zx_status_t BtHciMediatek::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t BtHciMediatek::Init(const zx::vmo& fw_vmo, size_t fw_size) {
-    zx_status_t status = sdio_.GetInBandIntr(&sdio_int_);
+    zx_status_t status = sdio_.GetInBandIntr(kFunctionNumber, &sdio_int_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to get SDIO interrupt\n", __FILE__);
         return status;

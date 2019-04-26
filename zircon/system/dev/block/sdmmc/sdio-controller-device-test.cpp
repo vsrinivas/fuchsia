@@ -103,13 +103,95 @@ public:
         }
     }
 
+    // Registers an interrupt with the SDIO controller for the given function. The interrupt is
+    // managed by this object.
+    zx_status_t RegisterInterrupt(uint8_t fn_idx) {
+        zx_status_t status = ZX_OK;
+
+        if (interrupts_[fn_idx].is_valid()) {
+            return status;
+        } else if (!port_.is_valid()) {
+            if ((status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_)) != ZX_OK) {
+                return status;
+            }
+        }
+
+        if ((status = SdioGetInBandIntr(fn_idx, &interrupts_[fn_idx])) != ZX_OK) {
+            return status;
+        }
+
+        return interrupts_[fn_idx].bind(port_, fn_idx, 0);
+    }
+
+    // Wait for count interrupts to be received for any combination of functions. Upon return the
+    // bits in mask represent the different functions which had interrupts triggered.
+    zx_status_t WaitForInterrupts(uint32_t count, uint8_t* mask) {
+        *mask = 0;
+
+        for (uint32_t i = 0; i < count; i++) {
+            zx_port_packet_t packet;
+            zx_status_t status = port_.wait(zx::time::infinite(), &packet);
+            if (status != ZX_OK) {
+                return status;
+            }
+
+            *mask |= static_cast<uint8_t>(1 << packet.key);
+            interrupts_[packet.key].ack();
+        }
+
+        return ZX_OK;
+    }
+
 private:
     SdmmcDevice& sdmmc() override { return *mock_sdmmc_; }
 
     MockSdmmcDevice* mock_sdmmc_;
     mock_function::MockFunction<std::tuple<zx_status_t, uint8_t>, bool, uint8_t, uint32_t, uint8_t>
         mock_sdio_do_rw_byte_;
+    zx::port port_;
+    zx::interrupt interrupts_[SDIO_MAX_FUNCS];
 };
+
+TEST(SdioControllerDeviceTest, MultiplexInterrupts) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    ASSERT_OK(dut.StartSdioIrqThread());
+
+    ASSERT_OK(dut.RegisterInterrupt(1));
+    ASSERT_OK(dut.RegisterInterrupt(2));
+    ASSERT_OK(dut.RegisterInterrupt(4));
+    ASSERT_OK(dut.RegisterInterrupt(7));
+
+    dut.mock_SdioDoRwByte()
+        .ExpectCall({ZX_OK, 0b0000'0010}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b1111'1110}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b1010'0010}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0011'0110}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0);
+
+    uint8_t mask;
+
+    dut.InBandInterruptCallback();
+    EXPECT_OK(dut.WaitForInterrupts(1, &mask));
+    EXPECT_EQ(mask, 0b0000'0010);
+
+    dut.InBandInterruptCallback();
+    EXPECT_OK(dut.WaitForInterrupts(4, &mask));
+    EXPECT_EQ(mask, 0b1001'0110);
+
+    dut.InBandInterruptCallback();
+    EXPECT_OK(dut.WaitForInterrupts(2, &mask));
+    EXPECT_EQ(mask, 0b1000'0010);
+
+    dut.InBandInterruptCallback();
+    EXPECT_OK(dut.WaitForInterrupts(3, &mask));
+    EXPECT_EQ(mask, 0b0001'0110);
+
+    dut.StopSdioIrqThread();
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
 
 TEST(SdioControllerDeviceTest, SdioDoRwTxn) {
     MockSdmmcDevice mock_sdmmc({
