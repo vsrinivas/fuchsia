@@ -41,11 +41,9 @@ rustc_library("qmi-protocol") {
 group("tests") {
   testonly = true
 
-  if (host_toolchain == current_toolchain) {
-    data_deps = [
-      ":qmi_host_tests",
-    ]
-  }
+  data_deps = [
+    ":qmigen_unittests($host_toolchain)",
+  ]
 }
 
 if (host_toolchain == current_toolchain) {
@@ -80,21 +78,5 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:pretty_assertions",
     ]
     source_root = "tests/codegen_tests.rs"
-  }
-
-  copy("qmi_host_tests") {
-    testonly = true
-
-    sources = [
-      "$root_out_dir/qmigen_unittests_lib_test",
-    ]
-
-    outputs = [
-      "$root_out_dir/qmi_host_tests",
-    ]
-
-    public_deps = [
-      ":qmigen_unittests($host_toolchain)",
-    ]
   }
 }

@@ -41,26 +41,6 @@ source_set("cmc_test_schemas") {
   ]
 }
 
-# TODO(IN-819): Delete this copy target once host tests are no longer run out
-# of a single directory.
-if (host_toolchain == current_toolchain) {
-  copy("cmc_host_tests") {
-    testonly = true
-
-    sources = [
-      "$root_out_dir/cmc_bin_test",
-    ]
-
-    outputs = [
-      "$root_out_dir/cmc_host_tests",
-    ]
-
-    public_deps = [
-      ":cmc($host_toolchain)",
-    ]
-  }
-}
-
 rustc_binary("cmc_integration_test_bin") {
   name = "cmc_integration_test"
   edition = "2018"

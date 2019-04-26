@@ -13,20 +13,9 @@ copy("copy_goldens") {
   ]
 }
 
-# TODO(IN-819): Delete once fidlgen tests are no longer being run out of
-# $root_build_dir/host_tests/.
-copy("copy_goldens_deprecated") {
-  sources = read_file("goldens.txt", "list lines")
-
-  outputs = [
-    "$root_build_dir/host_tests/test_data/fidlgen/{{source_file_part}}",
-  ]
-}
-
 group("goldens") {
   deps = [
     ":copy_goldens",
-    ":copy_goldens_deprecated",
   ]
   metadata = {
     test_runtime_deps = get_target_outputs(":copy_goldens")

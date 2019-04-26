@@ -57,22 +57,6 @@ if (host_toolchain == current_toolchain) {
     ]
     source_root = "test/tests.rs"
   }
-
-  copy("banjo_host_tests") {
-    testonly = true
-
-    sources = [
-      "$root_out_dir/banjo_unittests_lib_test",
-    ]
-
-    outputs = [
-      "$root_out_dir/banjo_host_tests",
-    ]
-
-    public_deps = [
-      ":banjo_unittests($host_toolchain)",
-    ]
-  }
 }
 
 group("banjo") {

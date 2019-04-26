@@ -84,17 +84,6 @@ if (current_toolchain == host_toolchain) {
       test_runtime_deps = outputs
     }
   }
-
-  # TODO(IN-819): Delete once zxdb_tests is no longer being run out of
-  # $root_build_dir/host_tests/.
-  copy("copy_test_file_deprecated") {
-    sources = [
-      "testdata/small_test_file.elf",
-    ]
-    outputs = [
-      "$root_build_dir/host_tests/test_data/debug_ipc/small_test_file.elf",
-    ]
-  }
 }
 
 # Unit tests for this directory. These are intended to be referenced by unit
@@ -112,7 +101,6 @@ source_set("tests") {
   if (current_toolchain == host_toolchain) {
     data_deps = [
       ":copy_test_file",
-      ":copy_test_file_deprecated",
     ]
   }
   deps = [

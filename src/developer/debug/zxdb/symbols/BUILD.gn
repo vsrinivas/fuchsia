@@ -171,27 +171,6 @@ copy("copy_test_so") {
   ]
 }
 
-# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
-# $root_build_dir/host_tests/.
-if (current_toolchain == default_toolchain) {
-  copy("copy_test_so_deprecated") {
-    sources = [
-      "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
-      "test_data/libsymbol_test_so.targetso",
-    ]
-
-    # Use a ".targetso" extension because this isn't a library that can actually
-    # loaded on the host platform.
-    outputs = [
-      "$root_build_dir/host_tests/test_data/zxdb/{{source_name_part}}.targetso",
-    ]
-
-    deps = [
-      "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
-    ]
-  }
-}
-
 source_set("tests") {
   testonly = true
 
@@ -232,7 +211,6 @@ source_set("tests") {
 
   data_deps = [
     ":copy_test_so",
-    ":copy_test_so_deprecated($default_toolchain)",
   ]
 
   metadata = {

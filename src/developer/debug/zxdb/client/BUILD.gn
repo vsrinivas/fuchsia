@@ -178,19 +178,6 @@ copy("copy_test_data") {
   ]
 }
 
-# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
-# $root_build_dir/host_tests/.
-copy("copy_test_data_deprecated") {
-  sources = [
-    "test_example_minidump.dmp",
-    "test_example_minidump_with_aspace.dmp",
-  ]
-
-  outputs = [
-    "$root_build_dir/host_tests/test_data/zxdb/{{source_file_part}}",
-  ]
-}
-
 source_set("tests") {
   testonly = true
   sources = [
@@ -223,7 +210,6 @@ source_set("tests") {
 
   data_deps = [
     ":copy_test_data",
-    ":copy_test_data_deprecated",
   ]
 
   metadata = {

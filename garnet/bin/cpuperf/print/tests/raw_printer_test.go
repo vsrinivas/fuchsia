@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -26,22 +25,7 @@ func TestRawPrinter(t *testing.T) {
 		t.Fatal(err)
 	}
 	outDir := filepath.Dir(testPath)
-
-	// TODO(IN-819): a required dance, so long as we are running tests out
-	// of $root_build_dir/host_tests, given how the cpuperf_print tool is
-	// symlinked when built with a variant (e.g., host_asan). When this is
-	// no longer the case, we may set
-	// printerProgramPath := path.Join(outDir, printerProgram)
-	rootBuildDir := filepath.Dir(outDir)
-	var hostBuildDir string
-	switch runtime.GOARCH {
-	case "amd64":
-		hostBuildDir = path.Join(rootBuildDir, "host_x64")
-	case "arm64":
-		hostBuildDir = path.Join(rootBuildDir, "host_arm64")
-	}
-	printerProgramPath := path.Join(hostBuildDir, printerProgram)
-
+	printerProgramPath := path.Join(outDir, printerProgram)
 	testDataDir := path.Join(outDir, "test_data", "cpuperf")
 	sessionSpecPath := path.Join(testDataDir, sessionFilename)
 	expectedOutputPath := path.Join(testDataDir, expectedOutputFilename)

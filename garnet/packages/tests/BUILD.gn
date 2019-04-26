@@ -114,7 +114,7 @@ group("scenic") {
 group("cmc") {
   testonly = true
   public_deps = [
-    "//garnet/bin/cmc:cmc_host_tests($host_toolchain)",
+    "//garnet/bin/cmc:cmc($host_toolchain)",
   ]
 }
 
@@ -733,7 +733,7 @@ group("cobalt_client") {
 group("banjo") {
   testonly = true
   public_deps = [
-    "//tools/banjo/banjo:banjo_host_tests($host_toolchain)",
+    "//tools/banjo/banjo:banjo_unittests($host_toolchain)",
   ]
 }
 
@@ -847,7 +847,7 @@ group("logger") {
 group("telephony") {
   testonly = true
   public_deps = [
-    "//src/connectivity/telephony/lib/qmi-protocol:qmi_host_tests($host_toolchain)",
+    "//src/connectivity/telephony/lib/qmi-protocol:tests",
   ]
 }
 

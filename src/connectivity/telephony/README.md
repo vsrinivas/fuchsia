@@ -59,9 +59,9 @@ $ ril-ctl -d /dev/class/qmi-transport/000
 ### Running Tests
 #### Host Side Tests
 A large chunk of the logic of interacting with QMI based modems is generated at compile time.
-Tests for this live in `qmi_host_tests`. You can run them on your _host_ system with:
+Tests for this live in `qmigen_unittests_lib_test`. You can run them on your _host_ system with:
 ```
-$ fx run-host-tests qmi_host_tests
+$ fx run-host-tests qmigen_unittests_lib_test
 ```
 
 #### Unit Tets

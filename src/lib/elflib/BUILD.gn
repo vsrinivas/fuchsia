@@ -39,21 +39,6 @@ copy("copy_example_elf") {
   }
 }
 
-# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
-# $root_build_dir/host_tests/.
-if (current_toolchain == default_toolchain) {
-  copy("copy_example_elf_deprecated") {
-    sources = [
-      "test_data/stripped_example.elf",
-      "test_data/unstripped_example.elf",
-    ]
-
-    outputs = [
-      "$root_build_dir/host_tests/test_data/elflib/{{source_file_part}}",
-    ]
-  }
-}
-
 test("elflib_tests") {
   sources = [
     "elflib_unittest.cc",
@@ -67,6 +52,5 @@ test("elflib_tests") {
 
   data_deps = [
     ":copy_example_elf",
-    ":copy_example_elf_deprecated($default_toolchain)",
   ]
 }

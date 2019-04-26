@@ -37,11 +37,6 @@ test("overnet_unittests") {
     "testing:tests",
     "vocabulary:tests",
   ]
-
-  # TODO(ctiller): remove after IN-819 is fixed
-  if (is_linux || is_mac) {
-    deps += [ ":hackhackhack_broken_fostr_on_host" ]
-  }
 }
 
 test_package("overnet_tests") {
@@ -55,33 +50,6 @@ test_package("overnet_tests") {
       environments = basic_envs
     },
   ]
-}
-
-# TODO(ctiller): remove after IN-819 is fixed
-if (is_linux) {
-  copy("hackhackhack_broken_fostr_on_host") {
-    deps = [
-      "//garnet/public/lib/fostr:fostr_shared",
-    ]
-    sources = [
-      "$root_out_dir/libfostr_shared.so",
-    ]
-    outputs = [
-      "$root_build_dir/host_tests/libfostr_shared.so",
-    ]
-  }
-} else if (is_mac) {
-  copy("hackhackhack_broken_fostr_on_host") {
-    deps = [
-      "//garnet/public/lib/fostr:fostr_shared",
-    ]
-    sources = [
-      "$root_out_dir/libfostr_shared.dylib",
-    ]
-    outputs = [
-      "$root_build_dir/host_tests/libfostr_shared.dylib",
-    ]
-  }
 }
 
 fuzz_package("overnet_fuzzers") {
