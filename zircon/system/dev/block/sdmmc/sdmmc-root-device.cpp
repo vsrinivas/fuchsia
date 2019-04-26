@@ -8,10 +8,8 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/threads.h>
-
-#include "sdio-device.h"
-#include "sdmmc-block-device.h"
 
 namespace sdmmc {
 
@@ -80,7 +78,7 @@ int SdmmcRootDevice::WorkerThread() {
         return thrd_error;
     }
 
-    if ((st = SdioDevice::Create(zxdev(), sdmmc, &sdio_dev_)) != ZX_OK) {
+    if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev_)) != ZX_OK) {
         zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
         if (!dead_) {
             DdkRemove();

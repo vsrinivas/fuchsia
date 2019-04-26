@@ -15,7 +15,6 @@
 #include <fbl/condition_variable.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <lib/operation/block.h>
 #include <zircon/thread_annotations.h>
 

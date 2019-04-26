@@ -10,7 +10,7 @@ const uint8 SDIO_FN_0 = 0;
 const uint8 SDIO_FN_1 = 1;
 const uint8 SDIO_FN_2 = 2;
 /// Including func 0
-const uint8 SDIO_MAX_FUNCS = 9;
+const uint8 SDIO_MAX_FUNCS = 8;
 
 struct SdioFuncHwInfo {
     uint32 manufacturer_id;

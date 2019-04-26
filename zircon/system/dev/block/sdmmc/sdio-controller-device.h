@@ -8,23 +8,22 @@
 
 #include <ddk/protocol/sdio.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/sdio.h>
-#include <ddktl/protocol/sdmmc.h>
+#include <fbl/array.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
 
+#include "sdio-function-device.h"
 #include "sdmmc-device.h"
 
 namespace sdmmc {
 
-class SdioDevice;
-using SdioDeviceType = ddk::Device<SdioDevice, ddk::Unbindable>;
+class SdioControllerDevice;
+using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::Unbindable>;
 
-class SdioDevice : public SdioDeviceType,
-                   public ddk::SdioProtocol<SdioDevice, ddk::base_protocol>,
-                   public fbl::RefCounted<SdioDevice> {
+class SdioControllerDevice : public SdioControllerDeviceType,
+                             public fbl::RefCounted<SdioControllerDevice> {
 public:
     // SDIO cards support one common function and up to seven I/O functions. This struct is used to
     // keep track of each function's state as they can be configured independently.
@@ -36,12 +35,12 @@ public:
         bool intr_enabled;
     };
 
-    SdioDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
-        : SdioDeviceType(parent), sdmmc_(sdmmc) {}
-    virtual ~SdioDevice() = default;
+    SdioControllerDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
+        : SdioControllerDeviceType(parent), sdmmc_(sdmmc) {}
+    virtual ~SdioControllerDevice() = default;
 
     static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
-                              fbl::RefPtr<SdioDevice>* out_dev);
+                              fbl::RefPtr<SdioControllerDevice>* out_dev);
 
     void DdkUnbind();
     void DdkRelease();
@@ -64,8 +63,9 @@ public:
 protected:
     virtual SdmmcDevice& sdmmc() { return sdmmc_; }
 
-    SdioFunction funcs_[SDIO_MAX_FUNCS];
-    sdio_device_hw_info_t hw_info_;
+    fbl::Mutex lock_;
+    SdioFunction funcs_[SDIO_MAX_FUNCS] TA_GUARDED(lock_);
+    sdio_device_hw_info_t hw_info_ TA_GUARDED(lock_);
 
 private:
     struct SdioFuncTuple {
@@ -74,35 +74,42 @@ private:
         uint8_t tuple_body[UINT8_MAX];
     };
 
-    zx_status_t SdioReset();
+    zx_status_t SdioReset() TA_REQ(lock_);
     // Reads the card common control registers (CCCR) to enumerate the card's capabilities.
-    zx_status_t ProcessCccr();
+    zx_status_t ProcessCccr() TA_REQ(lock_);
     // Reads the card information structure (CIS) for the given function to get the manufacturer
     // identification and function extensions tuples.
-    zx_status_t ProcessCis(uint8_t fn_idx);
+    zx_status_t ProcessCis(uint8_t fn_idx) TA_REQ(lock_);
     // Parses a tuple read from the CIS.
-    zx_status_t ParseFnTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
+    zx_status_t ParseFnTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
     // Parses the manufacturer ID tuple and saves it in the given function's struct.
-    zx_status_t ParseMfidTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
+    zx_status_t ParseMfidTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
     // Parses the function extensions tuple and saves it in the given function's struct.
-    zx_status_t ParseFuncExtTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
+    zx_status_t ParseFuncExtTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
     // Reads the I/O function code and saves it in the given function's struct.
-    zx_status_t ProcessFbr(uint8_t fn_idx);
+    zx_status_t ProcessFbr(uint8_t fn_idx) TA_REQ(lock_);
     // Popluates the given function's struct by calling the methods above. Also enables the
     // function and sets its default block size.
-    zx_status_t InitFunc(uint8_t fn_idx);
+    zx_status_t InitFunc(uint8_t fn_idx) TA_REQ(lock_);
 
-    zx_status_t SwitchFreq(uint32_t new_freq);
-    zx_status_t TrySwitchHs();
-    zx_status_t TrySwitchUhs();
-    zx_status_t Enable4BitBus();
-    zx_status_t SwitchBusWidth(uint32_t bw);
+    zx_status_t SwitchFreq(uint32_t new_freq) TA_REQ(lock_);
+    zx_status_t TrySwitchHs() TA_REQ(lock_);
+    zx_status_t TrySwitchUhs() TA_REQ(lock_);
+    zx_status_t Enable4BitBus() TA_REQ(lock_);
+    zx_status_t SwitchBusWidth(uint32_t bw) TA_REQ(lock_);
 
-    zx_status_t ReadData16(uint8_t fn_idx, uint32_t addr, uint16_t* word);
-    zx_status_t WriteData16(uint8_t fn_idx, uint32_t addr, uint16_t word);
+    zx_status_t ReadData16(uint8_t fn_idx, uint32_t addr, uint16_t* word) TA_REQ(lock_);
+    zx_status_t WriteData16(uint8_t fn_idx, uint32_t addr, uint16_t word) TA_REQ(lock_);
 
-    SdmmcDevice sdmmc_;
+    zx_status_t SdioEnableFnLocked(uint8_t fn_idx) TA_REQ(lock_);
+    zx_status_t SdioUpdateBlockSizeLocked(uint8_t fn_idx, uint16_t blk_sz, bool deflt)
+        TA_REQ(lock_);
+    zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+                                   uint8_t* out_read_byte) TA_REQ(lock_);
+
+    SdmmcDevice sdmmc_ TA_GUARDED(lock_);
     std::atomic<bool> dead_ = false;
+    fbl::Array<fbl::RefPtr<SdioFunctionDevice>> devices_;
 };
 
 }  // namespace sdmmc

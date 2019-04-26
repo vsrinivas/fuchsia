@@ -120,6 +120,7 @@ __BEGIN_CDECLS
 // SDIO binding variables at 0x09XX
 #define BIND_SDIO_VID 0x0900
 #define BIND_SDIO_PID 0x0901
+#define BIND_SDIO_FUNCTION 0x0902
 
 // I2C binding variables at 0x0A0X
 #define BIND_I2C_CLASS      0x0A00

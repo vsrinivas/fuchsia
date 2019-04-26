@@ -6,7 +6,8 @@ driver("sdmmc") {
   sources = [
     "mmc.cpp",
     "sd.cpp",
-    "sdio-device.cpp",
+    "sdio-controller-device.cpp",
+    "sdio-function-device.cpp",
     "sdmmc-block-device.cpp",
     "sdmmc-device.cpp",
     "sdmmc-root-device.cpp",
@@ -37,8 +38,9 @@ driver("sdmmc") {
 test("sdmmc-test") {
   output_name = "sdmmc-test"
   sources = [
-    "sdio-device.cpp",
-    "sdio-device-test.cpp",
+    "sdio-controller-device.cpp",
+    "sdio-controller-device-test.cpp",
+    "sdio-function-device.cpp",
     "sdmmc-device.cpp",
   ]
   deps = [

@@ -110,6 +110,9 @@ constexpr zx_bind_inst_t root_match[] = {
 constexpr zx_bind_inst_t sdio_match[]  = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
     BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    // The specific function number doesn't matter as long as we bind to one and only one of the
+    // created SDIO devices. The numbers start at 1, so just bind to the first device.
+    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),
     BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
     BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
 };

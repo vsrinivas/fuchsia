@@ -12,7 +12,7 @@
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/ref_ptr.h>
 
-#include "sdio-device.h"
+#include "sdio-controller-device.h"
 #include "sdmmc-block-device.h"
 
 namespace sdmmc {
@@ -42,7 +42,7 @@ private:
     std::atomic<bool> dead_ = false;
 
     fbl::RefPtr<SdmmcBlockDevice> block_dev_;
-    fbl::RefPtr<SdioDevice> sdio_dev_;
+    fbl::RefPtr<SdioControllerDevice> sdio_dev_;
 };
 
 }  // namespace sdmmc

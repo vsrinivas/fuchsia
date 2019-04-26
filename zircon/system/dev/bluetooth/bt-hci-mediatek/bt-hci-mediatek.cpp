@@ -1108,7 +1108,8 @@ static zx_driver_ops_t bt_hci_mediatek_driver_ops = []() {
     return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(bt_hci_mediatek, bt_hci_mediatek_driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(bt_hci_mediatek, bt_hci_mediatek_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_SDIO_VID, 0x037a),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x7668),
+    BI_ABORT_IF(NE, BIND_SDIO_PID, 0x7668),
+    BI_MATCH_IF(EQ, BIND_SDIO_FUNCTION, kFunctionNumber),
 ZIRCON_DRIVER_END(bt_hci_mediatek)

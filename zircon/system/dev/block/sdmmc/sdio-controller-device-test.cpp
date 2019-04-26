@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sdio-device.h"
+#include "sdio-controller-device.h"
 
+#include <fbl/auto_lock.h>
 #include <hw/sdio.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zxtest/zxtest.h>
@@ -12,14 +13,75 @@
 
 namespace sdmmc {
 
-class SdioDeviceTest : public SdioDevice {
+class Bind : public fake_ddk::Bind {
 public:
-    SdioDeviceTest(MockSdmmcDevice* mock_sdmmc, const sdio_device_hw_info_t& hw_info)
-        : SdioDevice(fake_ddk::kFakeParent, SdmmcDevice({}, {})), mock_sdmmc_(mock_sdmmc) {
+    int total_children() const { return total_children_; }
+
+    zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                          zx_device_t** out) override {
+        if (parent == fake_ddk::kFakeParent) {
+            *out = fake_ddk::kFakeDevice;
+            add_called_ = true;
+        } else if (parent == fake_ddk::kFakeDevice) {
+            *out = kFakeChild;
+            children_++;
+            total_children_++;
+        } else {
+            *out = kUnknownDevice;
+            bad_parent_ = false;
+        }
+
+        return ZX_OK;
+    }
+
+    zx_status_t DeviceRemove(zx_device_t* device) override {
+        if (device == fake_ddk::kFakeDevice) {
+            remove_called_ = true;
+        } else if (device == kFakeChild) {
+            // Check that all children are removed before the parent is removed.
+            if (!remove_called_) {
+                children_--;
+            }
+        } else {
+            bad_device_ = true;
+        }
+
+        return ZX_OK;
+    }
+
+    void Ok() {
+        EXPECT_EQ(children_, 0);
+        EXPECT_TRUE(add_called_);
+        EXPECT_TRUE(remove_called_);
+        EXPECT_FALSE(bad_parent_);
+        EXPECT_FALSE(bad_device_);
+    }
+
+private:
+    zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
+    zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
+
+    int total_children_ = 0;
+    int children_ = 0;
+
+    bool bad_parent_ = false;
+    bool bad_device_ = false;
+    bool add_called_ = false;
+    bool remove_called_ = false;
+};
+
+class SdioControllerDeviceTest : public SdioControllerDevice {
+public:
+    SdioControllerDeviceTest(MockSdmmcDevice* mock_sdmmc, const sdio_device_hw_info_t& hw_info)
+        : SdioControllerDevice(fake_ddk::kFakeParent, SdmmcDevice({}, {})),
+          mock_sdmmc_(mock_sdmmc) {
         hw_info_ = hw_info;
     }
 
-    void SetSdioFunctionInfo(uint8_t fn_idx, const SdioFunction& info) { funcs_[fn_idx] = info; }
+    void SetSdioFunctionInfo(uint8_t fn_idx, const SdioFunction& info) {
+        fbl::AutoLock lock(&lock_);
+        funcs_[fn_idx] = info;
+    }
 
     auto& mock_SdioDoRwByte() { return mock_sdio_do_rw_byte_; }
 
@@ -36,7 +98,8 @@ public:
 
             return std::get<0>(ret);
         } else {
-            return SdioDevice::SdioDoRwByte(write, fn_idx, addr, write_byte, out_read_byte);
+            return SdioControllerDevice::SdioDoRwByte(write, fn_idx, addr, write_byte,
+                                                      out_read_byte);
         }
     }
 
@@ -48,14 +111,14 @@ private:
         mock_sdio_do_rw_byte_;
 };
 
-TEST(SdioDeviceTest, SdioDoRwTxn) {
+TEST(SdioControllerDeviceTest, SdioDoRwTxn) {
     MockSdmmcDevice mock_sdmmc({
         .caps = 0,
         .max_transfer_size = 16,
         .max_transfer_size_non_dma = 16,
         .prefs = 0
     });
-    SdioDeviceTest dut(&mock_sdmmc, {});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
     dut.SetSdioFunctionInfo(3, {
         .hw_info = {},
         .cur_blk_size = 8,
@@ -107,14 +170,14 @@ TEST(SdioDeviceTest, SdioDoRwTxn) {
     mock_sdmmc.VerifyAll();
 }
 
-TEST(SdioDeviceTest, SdioDoRwTxnMultiBlock) {
+TEST(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
     MockSdmmcDevice mock_sdmmc({
         .caps = 0,
         .max_transfer_size = 32,
         .max_transfer_size_non_dma = 32,
         .prefs = 0
     });
-    SdioDeviceTest dut(&mock_sdmmc, {
+    SdioControllerDeviceTest dut(&mock_sdmmc, {
         .num_funcs = 0,
         .sdio_vsn = 0,
         .cccr_vsn = 0,
@@ -165,6 +228,23 @@ TEST(SdioDeviceTest, SdioDoRwTxnMultiBlock) {
 
     dut.VerifyAll();
     mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, DdkLifecycle) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {
+        .num_funcs = 5,
+        .sdio_vsn = 0,
+        .cccr_vsn = 0,
+        .caps = 0
+    });
+
+    Bind ddk;
+    EXPECT_OK(dut.AddDevice());
+    dut.DdkUnbind();
+
+    ddk.Ok();
+    EXPECT_EQ(ddk.total_children(), 4);
 }
 
 }  // namespace sdmmc
