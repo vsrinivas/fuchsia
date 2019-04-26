@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sys.h>
+#include <ftl_private.h>
 #include <kprivate/fsprivate.h>
-
-#include <string.h>
 
 // Lookup for number of bits in half byte.
 const ui8 NumberOnes[] = {

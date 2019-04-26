@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "kernel.h"
+#include <ftl_private.h>
 #include "fsprivate.h"
 
 #include <lib/backtrace-request/backtrace-request.h>
@@ -38,5 +39,6 @@ int FtlInit(void) {
     FileSysSem = semCreate("fsys sem", 1, OS_FIFO);
     if (FileSysSem == NULL)
         return -1;
+
     return 0;
 }

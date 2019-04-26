@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <ftl_private.h>
 #include <sys.h>
 #include <kprivate/ndm.h>
 
@@ -131,7 +132,6 @@ struct ndm {
     ui32 pgs_per_blk;  // number of pages in a block
     ui32 page_size;    // page size in bytes
     ui8 eb_size;       // spare area size in bytes
-    ui8 dev_type;      // NAND device type
 };
 
 //

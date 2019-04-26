@@ -165,11 +165,10 @@ static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
         if (rc == -2) {
             FsError2(NDM_EIO, EIO);
             return rc;
-        }
 
         // Else bad block caused write failure, output block number and
         // return bad block indication.
-        else {
+        } else {
             PfAssert(rc == -1);
 #if NDM_DEBUG
             printf("wr_ctrl_page: bad block for #%u at page #%u\n", cpc, cpn);
@@ -688,8 +687,7 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
     if (reason == WR_MAPPING) {
         ndm->last_wr_pbn = bn;
         ndm->last_wr_vbn = vbn;
-    } else // reason == RD_MAPPING
-    {
+    } else { // reason == RD_MAPPING
         ndm->last_rd_pbn = bn;
         ndm->last_rd_vbn = vbn;
     }
@@ -701,15 +699,15 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
 //  write_page: Write a page to flash for FTL
 //
 //      Inputs: ndm = pointer to NDM control block
-//              pn = virtual page number
+//              vpn = virtual page number
 //              buf = pointer to main page buffer array
 //              spare = pointer to spare page buffer array
 //              action = NDM_NONE, NDM_ECC, or NDM_ECC_VAL
 //
 //     Returns: 0 on success, -2 on fatal error
 //
-static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action) {
-    ui32 vbn, bn, pn;
+static int write_page(NDM ndm, uint32_t vpn, const ui8* buf, ui8* spare, int action) {
+    uint32_t vbn, bn, pn;
     int rc;
 
     // Compute the virtual block number and check for error.
@@ -730,7 +728,7 @@ static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action
         pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
 
         // Call TargetNDM driver to write the page.
-        rc = ndm->write_page(pn, data, spare, action, ndm->dev);
+        rc = ndm->write_page(pn, buf, spare, action, ndm->dev);
 
         // Return 0 if successful.
         if (rc == 0)
@@ -751,136 +749,17 @@ static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action
     }
 } //lint !e818
 
-//   ftl_wr_pg: FTL driver function - write page (data + spare)
-//
-//      Inputs: vpn = virtual page number
-//              data = pointer to buffer containing data to write
-//              spare = pointer to buffer containing spare bytes
-//              ndm_ptr = NDM control block handle
-//
-//     Returns: 0 on success, -2 on fatal error
-//
-static int ftl_wr_pg(ui32 vpn, const void* data, void* spare, void* ndm_ptr) {
-    int action, status;
-    NDM ndm = ndm_ptr;
-
-    // If volume block, just ECC, else request validity checks too.
-    if (RD32_LE(&((ui8*)spare)[5]) == (ui32)-1)
-        action = NDM_ECC;
-    else
-        action = NDM_ECC_VAL;
-
-    // Grab exclusive access to TargetNDM internals.
-    semPend(ndm->sem, WAIT_FOREVER);
-
-    // Write page to flash for FTL.
-    status = write_page(ndm, vpn, data, spare, action);
-
-    // Release exclusive access to NDM and return status.
-    semPostBin(ndm->sem);
-    return status;
-} //lint !e818
-
-// ftl_rd_spare: FTL driver function - read/decode page spare area
-//
-//      Inputs: vpn = virtual page number
-//              spare = buffer to read sparea area into
-//              ndm_ptr = NDM control block handle
-//
-//     Returns: 0 on success, -1 on ECC error, -2 on fatal error, 1 if
-//              block page belongs to needs to be recycled
-//
-static int ftl_rd_spare(ui32 vpn, void* spare, void* ndm_ptr) {
-    ui32 vbn, bn, pn;
-    NDM ndm = ndm_ptr;
-    int status;
-
-    // Compute virtual block number. Return -2 if out-of-range.
-    vbn = vpn / ndm->pgs_per_blk;
-    if (vbn >= ndm->num_vblks) {
-        FsError2(NDM_ASSERT, EINVAL);
-        return -2;
-    }
-
-    // Grab exclusive access to TargetNDM internals.
-    semPend(ndm->sem, WAIT_FOREVER);
-
-    // Get physical block number from virtual one. Return -2 if error.
-    bn = get_pbn(ndm, vbn, RD_MAPPING);
-    if (bn == (ui32)-1) {
-        semPostBin(ndm->sem);
-        return -2;
-    }
-
-    // Compute physical page number.
-    pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
-
-    // Read and decode spare. Call FsError2() if error.
-    status = ndm->read_decode_spare(pn, spare, ndm->dev);
-    if (status < 0)
-        FsError2(NDM_EIO, EIO);
-
-    // Release exclusive access to NDM and return status.
-    semPostBin(ndm->sem);
-    return status;
-}
-
-// ftl_check_pg: FTL driver function - determine status of a page
-//
-//      Inputs: vpn = virtual page number
-//              data = buffer that will hold page data
-//              spare = buffer that will hold page spare
-//              ndm_ptr = NDM control block handle
-//
-//     Returns: -1 if error, else NDM_PAGE_ERASED (0), NDM_PAGE_VALID
-//              (1), or NDM_PAGE_INVALID (2)
-//
-static int ftl_check_pg(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
-    NDM ndm = ndm_ptr;
-    ui32 vbn, bn, pn;
-    int status;
-
-    // Compute the virtual block number.
-    vbn = vpn / ndm->pgs_per_blk;
-    if (vbn >= ndm->num_vblks)
-        return FsError2(NDM_ASSERT, EINVAL);
-
-    // Grab exclusive access to TargetNDM internals.
-    semPend(ndm->sem, WAIT_FOREVER);
-
-    // Get the physical block number from virtual block number.
-    bn = get_pbn(ndm, vbn, RD_MAPPING);
-    if (bn == (ui32)-1) {
-        semPostBin(ndm->sem);
-        return -1;
-    }
-
-    // Compute physical page number.
-    pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
-
-    // Call the NDM driver to determine page status.
-    if (ndm->check_page(pn, data, spare, &status, ndm->dev)) {
-        semPostBin(ndm->sem);
-        return FsError2(NDM_EIO, EIO);
-    }
-
-    // Release exclusive access to NDM and return success.
-    semPostBin(ndm->sem);
-    return status;
-}
-
 //   read_page:  FTL driver function - read page (data only)
 //
 //      Inputs: vpn = virtual page number
 //              buf = pointer to buffer to copy data to
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: 0 on success, -1 on uncorrectable ECC error, -2 on
 //              permanent fatal error, 1 if block page belongs to
 //              needs to be recycled
 //
-static int read_page(ui32 vpn, void* buf, void* ndm_ptr) {
-    NDM ndm = ndm_ptr;
+static int read_page(ui32 vpn, void* buf, NDM ndm) {
     ui32 vbn, bn, pn;
     int status;
 
@@ -920,20 +799,136 @@ static int read_page(ui32 vpn, void* buf, void* ndm_ptr) {
     return status;
 }
 
-// ftl_xfr_page: FTL driver function - transfer a page
+// Global Function Definitions
+
+//   ndmWritePage: FTL driver function - write page (data + spare)
+//
+//      Inputs: vpn = virtual page number
+//              data = pointer to buffer containing data to write
+//              spare = pointer to buffer containing spare bytes
+//              ndm = NDM control block handle
+//
+//     Returns: 0 on success, -2 on fatal error
+//
+int ndmWritePage(uint32_t vpn, const ui8* data, ui8* spare, NDM ndm) {
+    int action, status;
+
+    // If volume block, just ECC, else request validity checks too.
+    if (RD32_LE(&spare[5]) == (ui32)-1)
+        action = NDM_ECC;
+    else
+        action = NDM_ECC_VAL;
+
+    // Grab exclusive access to TargetNDM internals.
+    semPend(ndm->sem, WAIT_FOREVER);
+
+    // Write page to flash for FTL.
+    status = write_page(ndm, vpn, data, spare, action);
+
+    // Release exclusive access to NDM and return status.
+    semPostBin(ndm->sem);
+    return status;
+} //lint !e818
+
+// ndmReadSpare: FTL driver function - read/decode page spare area
+//
+//      Inputs: vpn = virtual page number
+//              spare = buffer to read sparea area into
+//              ndm = NDM control block handle
+//
+//     Returns: 0 on success, -1 on ECC error, -2 on fatal error, 1 if
+//              block page belongs to needs to be recycled
+//
+int ndmReadSpare(uint32_t vpn, ui8* spare, NDM ndm) {
+    uint32_t vbn, bn, pn;
+    int status;
+
+    // Compute virtual block number. Return -2 if out-of-range.
+    vbn = vpn / ndm->pgs_per_blk;
+    if (vbn >= ndm->num_vblks) {
+        FsError2(NDM_ASSERT, EINVAL);
+        return -2;
+    }
+
+    // Grab exclusive access to TargetNDM internals.
+    semPend(ndm->sem, WAIT_FOREVER);
+
+    // Get physical block number from virtual one. Return -2 if error.
+    bn = get_pbn(ndm, vbn, RD_MAPPING);
+    if (bn == (ui32)-1) {
+        semPostBin(ndm->sem);
+        return -2;
+    }
+
+    // Compute physical page number.
+    pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
+
+    // Read and decode spare. Call FsError2() if error.
+    status = ndm->read_decode_spare(pn, spare, ndm->dev);
+    if (status < 0)
+        FsError2(NDM_EIO, EIO);
+
+    // Release exclusive access to NDM and return status.
+    semPostBin(ndm->sem);
+    return status;
+}
+
+// ndmCheckPage: FTL driver function - determine status of a page
+//
+//      Inputs: vpn = virtual page number
+//              data = buffer that will hold page data
+//              spare = buffer that will hold page spare
+//              ndm = NDM control block handle
+//
+//     Returns: -1 if error, else NDM_PAGE_ERASED (0), NDM_PAGE_VALID
+//              (1), or NDM_PAGE_INVALID (2)
+//
+int ndmCheckPage(uint32_t vpn, ui8* data, ui8* spare, NDM ndm) {
+    uint32_t vbn, bn, pn;
+    int status;
+
+    // Compute the virtual block number.
+    vbn = vpn / ndm->pgs_per_blk;
+    if (vbn >= ndm->num_vblks)
+        return FsError2(NDM_ASSERT, EINVAL);
+
+    // Grab exclusive access to TargetNDM internals.
+    semPend(ndm->sem, WAIT_FOREVER);
+
+    // Get the physical block number from virtual block number.
+    bn = get_pbn(ndm, vbn, RD_MAPPING);
+    if (bn == (ui32)-1) {
+        semPostBin(ndm->sem);
+        return -1;
+    }
+
+    // Compute physical page number.
+    pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
+
+    // Call the NDM driver to determine page status.
+    if (ndm->check_page(pn, data, spare, &status, ndm->dev)) {
+        semPostBin(ndm->sem);
+        return FsError2(NDM_EIO, EIO);
+    }
+
+    // Release exclusive access to NDM and return success.
+    semPostBin(ndm->sem);
+    return status;
+}
+
+// ndmTransferPage: FTL driver function - transfer a page
 //
 //      Inputs: old_vpn = old virtual page number
 //              new_vpn = new virtual page number
 //              buf = temporary buffer for swapping main page data
 //              spare = buffer holding new page's spare data
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: 0 on success, -2 on fatal error, 1 on ECC decode error
 //
-static int ftl_xfr_page(ui32 old_vpn, ui32 new_vpn, ui8* buf, ui8* spare, void* ndm_ptr) {
-    ui32 old_vbn, new_vbn, old_bn, new_bn, old_pn, new_pn;
+int ndmTransferPage(uint32_t old_vpn, uint32_t new_vpn, ui8* buf, ui8* spare, NDM ndm) {
+    uint32_t old_vbn, new_vbn, old_bn, new_bn, old_pn, new_pn;
     int status, action;
-    NDM ndm = ndm_ptr;
 
     // Grab exclusive access to TargetNDM internals.
     semPend(ndm->sem, WAIT_FOREVER);
@@ -1004,22 +999,18 @@ static int ftl_xfr_page(ui32 old_vpn, ui32 new_vpn, ui8* buf, ui8* spare, void* 
 } //lint !e818
 
 #if INC_FTL_NDM_MLC
-// pair_offset: FTL driver function (MLC NAND) - pair offset
+// ndmPairOffset: FTL driver function (MLC NAND) - pair offset
 //
 //      Inputs: page_offset = page offset within block
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: Pair page offset within block if any, page offset
 //              otherwise
 //
-static ui32 pair_offset(ui32 page_offset, void* ndm_ptr) {
-    NDM ndm = ndm_ptr;
-
+uint32_t ndmPairOffset(uint32_t page_offset, CNDM ndm) {
     return ndm->pair_offset(page_offset, ndm->dev);
 }
 #endif // INC_FTL_NDM_MLC
-
-// Global Function Definitions
 
 // ndmMarkBadBlock: Mark virtual block bad and do bad block recovery
 //
@@ -1296,12 +1287,12 @@ ui32 ndmGetNumVBlocks(CNDM ndm) {
 //
 //      Inputs: ndm = pointer to NDM control block
 //              part_num = NDM partition number
-//              ftl = pointer to FTL config structure
+//              ftl_cfg = pointer to FTL config structure
 //              xfs = XFS volume information
 //
 //     Returns: 0 on success, -1 on error
 //
-int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
+int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl_cfg, XfsVol* xfs) {
     NDMPartition* part;
 
     // Check partition number.
@@ -1313,32 +1304,17 @@ int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
     if (part->first_block + part->num_blocks > ndm->num_vblks)
         return FsError2(NDM_CFG_ERR, ENOSPC);
 
-    // Set the fields dependent on flash geometry.
-    ftl->page_size = ndm->page_size;
-    ftl->eb_size = ndm->eb_size;
-    ftl->block_size = ndm->block_size;
-
-    // Set up the non-customizable part of the FTL/XFS drivers.
-    ftl->ndm = ndm;
-    ftl->start_page = part->first_block * ndm->pgs_per_blk;
-    ftl->num_blocks = part->num_blocks;
-    ftl->type = ndm->dev_type;
+    // Assign the NDM-supplied configuration.
+    ftl_cfg->page_size = ndm->page_size;
+    ftl_cfg->eb_size = ndm->eb_size;
+    ftl_cfg->block_size = ndm->block_size;
+    ftl_cfg->ndm = ndm;
+    ftl_cfg->start_page = part->first_block * ndm->pgs_per_blk;
+    ftl_cfg->num_blocks = part->num_blocks;
     xfs->name = part->name;
 
-    // Provide the TargetNDM lower-level interface to TargetFTL-NDM.
-    ftl->erase_block = ndmEraseBlock;
-    ftl->write_data_and_spare = ftl_wr_pg;
-    ftl->write_pages = ndmWritePages;
-    ftl->read_spare = ftl_rd_spare;
-    ftl->read_pages = ndmReadPages;
-    ftl->page_check = ftl_check_pg;
-    ftl->transfer_page = ftl_xfr_page;
-#if INC_FTL_NDM_MLC
-    ftl->pair_offset = pair_offset;
-#endif
-
     // Add an FTL to this partition. Return status.
-    return FtlnAddVol(ftl, xfs);
+    return FtlnAddVol(ftl_cfg, xfs);
 }
 
 // ndmReadPages: FTL driver function - read multiple consecutive
@@ -1346,20 +1322,19 @@ int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
 //
 //      Inputs: vpn = starting virtual page number
 //              count = number of consecutive virtual pages to read
-//              data = pointer to buffer to copy main page data to
+//              buf = pointer to buffer to copy main page data to
 //              spare = points to array of page spare data sets
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: -2 on fatal error, -1 on error, 0 on success, 1 if
 //              block needs to be recycled
 //
-int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
-    NDM ndm = ndm_ptr;
+int ndmReadPages(uint32_t vpn, uint32_t count, ui8* buf, ui8* spare, NDM ndm) {
     int status;
 
     // If NDM driver supplies read_pages(), use it.
     if (ndm->read_pages) {
-        ui32 vbn, bn, pn;
+        uint32_t vbn, bn, pn;
 
         // Compute the virtual block number based on virtual page number.
         vbn = vpn / ndm->pgs_per_blk;
@@ -1382,7 +1357,7 @@ int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
         pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
 
         // Read pages.
-        status = ndm->read_pages(pn, count, data, spare, ndm->dev);
+        status = ndm->read_pages(pn, count, buf, spare, ndm->dev);
 
         // Release exclusive access to NDM and return status.
         semPostBin(ndm->sem);
@@ -1391,14 +1366,13 @@ int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
 
     // Else loop over all pages, reading one at a time.
     else {
-        ui32 i;
+        uint32_t i;
         int rd_status;
-        ui8* buf = data;
 
         // Loop over virtual pages.
         for (status = 0, i = 0; i < count; ++i, ++vpn, buf += ndm->page_size) {
             // Issue current page read request.
-            rd_status = read_page(vpn, buf, ndm_ptr);
+            rd_status = read_page(vpn, buf, ndm);
 
             // If error, return.
             if (rd_status < 0)
@@ -1421,13 +1395,12 @@ int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
 //              count = number of consecutive virtual pages to write
 //              data = points to array of page main data sets
 //              spare = points to array of page spare data sets
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: -1 on error, 0 on success
 //
-int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm_ptr) {
+int ndmWritePages(uint32_t vpn, uint32_t count, const ui8* data, ui8* spare, NDM ndm) {
     int action, rc = 0;
-    NDM ndm = ndm_ptr;
 
     // Ensure all writes are to the same virtual block.
     PfAssert(count);
@@ -1444,7 +1417,7 @@ int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm
 
     // If NDM driver supplies write_pages(), use it.
     if (ndm->write_pages) {
-        ui32 vbn;
+        uint32_t vbn;
 
         // Compute the virtual block number based on virtual page number.
         vbn = vpn / ndm->pgs_per_blk;
@@ -1455,11 +1428,11 @@ int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm
 
         // Writing to flash until success or failure other than bad block.
         for (;;) {
-            ui32 bn, pn;
+            uint32_t bn, pn;
 
             // Get the physical block number from virtual one.
             bn = get_pbn(ndm, vbn, WR_MAPPING);
-            if (bn == (ui32)-1) {
+            if (bn == (uint32_t)-1) {
                 rc = -1;
                 break;
             }
@@ -1489,7 +1462,7 @@ int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm
 
     // Else loop over all pages, writing one at a time.
     else {
-        ui32 past = vpn + count;
+        uint32_t past = vpn + count;
         const ui8* curr_data = data;
         ui8* curr_spare = spare;
 
@@ -1634,12 +1607,11 @@ int ndmWritePartition(NDM ndm, const NDMPartition* part, ui32 part_num, const ch
 // ndmEraseBlock: Erase a block
 //
 //      Inputs: vpn = base virtual page for block to be erased
-//              ndm_ptr = NDM control block handle
+//              ndm = NDM control block handle
 //
 //     Returns: 0 on success, -1 on fatal error
 //
-int ndmEraseBlock(ui32 vpn, void* ndm_ptr) {
-    NDM ndm = ndm_ptr;
+int ndmEraseBlock(ui32 vpn, NDM ndm) {
     ui32 vbn, bn, pn;
     int status;
 

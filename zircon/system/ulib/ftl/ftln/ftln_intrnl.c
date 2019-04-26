@@ -250,13 +250,13 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
     // If page data in buffer, write it. Returns 0 or -2.
     if (buf) {
         ++ftl->stats.write_page;
-        rc = ftl->write_page(ftl->start_pn + ppn, buf, ftl->spare_buf, ftl->ndm);
+        rc = ndmWritePage(ftl->start_pn + ppn, buf, ftl->spare_buf, ftl->ndm);
 
     // Else invoke page transfer routine. Returns 0, -2, or 1.
     } else {
         ++ftl->stats.transfer_page;
-        rc = ftl->xfer_page(ftl->start_pn + old_ppn, ftl->start_pn + ppn, ftl->main_buf,
-                            ftl->spare_buf, ftl->ndm);
+        rc = ndmTransferPage(ftl->start_pn + old_ppn, ftl->start_pn + ppn,
+                             ftl->main_buf, ftl->spare_buf, ftl->ndm);
     }
 
     // Return -1 for any error. Any write error is fatal.
@@ -566,7 +566,7 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
 
         // Read page's spare area.
         ++ftl->stats.read_spare;
-        rc = ftl->read_spare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm);
+        rc = ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm);
 
         // Return -1 if fatal error, skip page if ECC error on spare read.
         if (rc) {
@@ -670,8 +670,8 @@ static int flush_pending_writes(FTLN ftl, StagedWr* staged) {
 
     // Issue driver multi-page write request. Return -1 if error.
     ftl->stats.write_page += staged->cnt;
-    if (ftl->write_pages(ftl->start_pn + staged->ppn0, staged->cnt, staged->buf,
-                         ftl->spare_buf, ftl->ndm)) {
+    if (ndmWritePages(ftl->start_pn + staged->ppn0, staged->cnt, staged->buf,
+                      ftl->spare_buf, ftl->ndm)) {
         return FtlnFatErr(ftl);
     }
 
@@ -886,7 +886,7 @@ int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
 
         // Read page's spare area. Return -1 if fatal I/O error.
         ++ftl->stats.read_spare;
-        rc = ftl->read_spare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm);
+        rc = ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm);
         if (rc == -2)
             return FtlnFatErr(ftl);
 
@@ -1178,13 +1178,13 @@ int FtlnMapWr(void* vol, ui32 mpn, void* buf) {
     // If page data in buffer, invoke write_page().
     if (buf) {
         ++ftl->stats.write_page;
-        status = ftl->write_page(ftl->start_pn + pn, buf, ftl->spare_buf, ftl->ndm);
+        status = ndmWritePage(ftl->start_pn + pn, buf, ftl->spare_buf, ftl->ndm);
 
     // Else source data is in flash. Invoke page transfer routine.
     } else {
         ++ftl->stats.transfer_page;
-        status = ftl->xfer_page(ftl->start_pn + old_pn, ftl->start_pn + pn, ftl->main_buf,
-                                ftl->spare_buf, ftl->ndm);
+        status = ndmTransferPage(ftl->start_pn + old_pn, ftl->start_pn + pn,
+                                 ftl->main_buf, ftl->spare_buf, ftl->ndm);
     }
 
     // I/O or ECC decode error is fatal.

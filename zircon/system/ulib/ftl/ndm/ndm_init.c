@@ -1153,10 +1153,9 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
     if (FLAG_IS_SET(dvr->flags, FSF_TRANSFER_PAGE)) {
         ndm->dev_ndm = ndm->dev;
         ndm->xfr_page = dvr->transfer_page;
-    }
 
     // Else use internal read-page/write-page substitute.
-    else {
+    } else {
         ndm->dev_ndm = ndm;
         ndm->xfr_page = ndm_xfr_page;
     }
@@ -1166,9 +1165,6 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
         ndm->read_pages = dvr->read_pages;
         ndm->write_pages = dvr->write_pages;
     }
-
-    // Set the device type.
-    ndm->dev_type = dvr->type;
 
     // Initialize the NDM.
     if (init_ndm(ndm))

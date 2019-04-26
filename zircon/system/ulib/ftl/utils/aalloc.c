@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <sys.h>
 #include <bsp.h>
+#include <ftl_private.h>
 
 #ifndef CACHE_LINE_SIZE
-#error bsp.h must define CACHE_LINE_SIZE
+#error CACHE_LINE_SIZE is undefined
 #endif
 
 // Free allocated memory and clear pointer to it.

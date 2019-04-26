@@ -27,8 +27,8 @@ static int flush_pending_reads(FTLN ftl, StagedRd* staged) {
 
     // Issue pending reads.
     ftl->stats.read_page += staged->run_cnt;
-    status = ftl->read_pages(ftl->start_pn + staged->ppn0, staged->run_cnt, staged->buf,
-                             ftl->spare_buf, ftl->ndm);
+    status = ndmReadPages(ftl->start_pn + staged->ppn0, staged->run_cnt, staged->buf,
+                          ftl->spare_buf, ftl->ndm);
 
     // Adjust data buffer pointer.
     staged->buf += staged->run_cnt * ftl->page_size;
@@ -183,7 +183,7 @@ int FtlnRdPage(FTLN ftl, ui32 ppn, void* rd_buf) {
 
     // Read page from flash. If error, set errno/fatal flag/return -1.
     ++ftl->stats.read_page;
-    status = ftl->read_pages(ftl->start_pn + ppn, 1, rd_buf, ftl->spare_buf, ftl->ndm);
+    status = ndmReadPages(ftl->start_pn + ppn, 1, rd_buf, ftl->spare_buf, ftl->ndm);
     if (status < 0)
         return FtlnFatErr(ftl);
 

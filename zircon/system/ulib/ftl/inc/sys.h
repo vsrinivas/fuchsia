@@ -8,37 +8,8 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdlib.h>
-#include <time.h>
 #include <targetos.h>
-
-/***********************************************************************/
-/* Symbol Definitions                                                  */
-/***********************************************************************/
-#define VERBOSE 1
-
-/***********************************************************************/
-/* Definitions related to reading/writing NVRAM memory.                */
-/***********************************************************************/
-int NvRead(const char* name, void* data, int type);
-int NvReadBin(const char* name, void* data, int len);
-int NvReadStr(const char* name, void* data, int maxlen);
-int NvWrite(const char* name, const void* data, int type);
-int NvWriteBin(const char* name, const void* data, int len);
-int NvReadBinSize(const char* name);
-#define NV_BYTE 0
-#define NV_SHORT 1
-#define NV_LONG 2
-#define NV_STRING 3
-#define NV_IP_ADDR 4
-#define NV_ETH_ADDR 5
-#define NV_ERR_LOG 6
-#define NV_IP6_ADDR 7
-#define NV_BINARY 8
-int NvDelete(const char* name, int type);
-void NvSave(void);
 
 void free_clear(void* alloc_ptr_addr);
 

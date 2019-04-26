@@ -91,7 +91,7 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
 
     // Call driver validity check. Return -1 if error.
     ++ftl->stats.page_check;
-    status = ftl->page_check(apn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
+    status = ndmCheckPage(apn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
     if (status < 0)
         return FtlnFatErr(ftl);
 
@@ -140,23 +140,17 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
 
                     // Process each elist page, from last to first.
                     for (;;) {
-                        //---------------------------------------------------------
                         // Verify and apply elist page. Return if page invalid.
-                        //---------------------------------------------------------
                         status = proc_elist(ftl);
                         if (status != NDM_PAGE_VALID)
                             return status;
 
-                        //---------------------------------------------------------
                         // If first (perhaps only) page was processed, finished!
-                        //---------------------------------------------------------
                         if (apn == ap0)
                             break;
 
-                        //---------------------------------------------------------
                         // Move to next written page in backwards direction. If
                         // MLC flash, move to page whose pair has higher offset.
-                        //---------------------------------------------------------
 #if INC_FTL_NDM_SLC
                         --apn;
 #else
@@ -170,29 +164,21 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
                         }
 #endif
 
-                        //---------------------------------------------------------
                         // Call driver to read/check next page. Return -1 if error.
-                        //---------------------------------------------------------
                         ++ftl->stats.page_check;
-                        status = ftl->page_check(apn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
+                        status = ndmCheckPage(apn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
                         if (status < 0)
                             return FtlnFatErr(ftl);
 
-                        //---------------------------------------------------------
                         // If page is erased or invalid, return its status.
-                        //---------------------------------------------------------
                         if (status != NDM_PAGE_VALID)
                             return status;
 
-                        //---------------------------------------------------------
                         // Verify the metadata version is correct.
-                        //---------------------------------------------------------
                         if (RD32_LE(&ppns[0]) != FTLN_META_VER1)
                             return NDM_PAGE_INVALID;
 
-                        //---------------------------------------------------------
                         // Verify the metadata type is correct.
-                        //---------------------------------------------------------
                         if (RD32_LE(&ppns[1]) != ERASED_LIST)
                             return NDM_PAGE_INVALID;
                     }
@@ -294,7 +280,7 @@ static int build_map(FTLN ftl) {
             else {
                 // Read page's spare area.
                 ++ftl->stats.read_spare;
-                status = ftl->read_spare(pn, ftl->spare_buf, ftl->ndm);
+                status = ndmReadSpare(pn, ftl->spare_buf, ftl->ndm);
 
                 // Return if fatal error.
                 if (status == -2) {
@@ -309,11 +295,11 @@ static int build_map(FTLN ftl) {
 
             // If first page, retrieve block count. Otherwise compare with
             // block count of block's already-checked-valid first page.
-            if (po == 0)
+            if (po == 0) {
                 bc = GET_SA_BC(ftl->spare_buf);
-            else if (bc != GET_SA_BC(ftl->spare_buf)) {
+            } else if (bc != GET_SA_BC(ftl->spare_buf)) {
 #if FTLN_DEBUG > 1
-                printf("build_ma: b = %u, po = %u, i_bc = %u vs 0_bc = %u\n", b, po,
+                printf("build_map: b = %u, po = %u, i_bc = %u vs 0_bc = %u\n", b, po,
                        GET_SA_BC(ftl->spare_buf), bc);
 #endif
 
@@ -332,7 +318,7 @@ static int build_map(FTLN ftl) {
             mpn = GET_SA_VPN(ftl->spare_buf);
             if (mpn > ftl->num_map_pgs) {
 #if FTLN_DEBUG > 1
-                printf("build_ma: b = %u, po = %u, mpn = %u, max = %u\n", b, po, mpn,
+                printf("build_map: b = %u, po = %u, mpn = %u, max = %u\n", b, po, mpn,
                        ftl->num_map_pgs);
 #endif
 
@@ -361,7 +347,7 @@ static int build_map(FTLN ftl) {
                     INC_USED(ftl->bdata[b]);
                 }
 #if FTLN_DEBUG > 1
-                printf("build_ma: mpn = %u, old_pn = %d, new_pn = %u\n", mpn, ftl->mpns[mpn],
+                printf("build_map: mpn = %u, old_pn = %d, new_pn = %u\n", mpn, ftl->mpns[mpn],
                        b * ftl->pgs_per_blk + po);
 #endif
 
@@ -533,7 +519,7 @@ static int format_status(FTLN ftl) {
 
         // Read spare area for first page. Return -1 if fatal error.
         ++ftl->stats.read_spare;
-        rc = ftl->read_spare(pn, ftl->spare_buf, ftl->ndm);
+        rc = ndmReadSpare(pn, ftl->spare_buf, ftl->ndm);
         if (rc == -2)
             return FtlnFatErr(ftl);
 
@@ -565,7 +551,7 @@ static int format_status(FTLN ftl) {
 
                         // Read spare area for higher page. Return -1 if fatal error.
                         ++ftl->stats.read_spare;
-                        rc = ftl->read_spare(pn + n, ftl->spare_buf, ftl->ndm);
+                        rc = ndmReadSpare(pn + n, ftl->spare_buf, ftl->ndm);
                         if (rc == -2)
                             return FtlnFatErr(ftl);
 
@@ -602,7 +588,7 @@ static int format_status(FTLN ftl) {
 #endif
             // Call driver validity check. Return -1 if error.
             ++ftl->stats.page_check;
-            rc = ftl->page_check(pn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
+            rc = ndmCheckPage(pn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
             if (rc < 0)
                 return FtlnFatErr(ftl);
 
@@ -624,7 +610,7 @@ static int format_status(FTLN ftl) {
 
                 // Read spare data. Return if fatal error. Skip if ECC error.
                 ++ftl->stats.read_spare;
-                rc = ftl->read_spare(pn + n, ftl->spare_buf, ftl->ndm);
+                rc = ndmReadSpare(pn + n, ftl->spare_buf, ftl->ndm);
                 if (rc == -2)
                     return FtlnFatErr(ftl);
                 if (rc)
@@ -642,7 +628,7 @@ static int format_status(FTLN ftl) {
 #endif
                     // Read and check the copy-end page. Return -1 if error.
                     ++ftl->stats.page_check;
-                    rc = ftl->page_check(pn + n, ftl->main_buf, ftl->spare_buf, ftl->ndm);
+                    rc = ndmCheckPage(pn + n, ftl->main_buf, ftl->spare_buf, ftl->ndm);
                     if (rc < 0)
                         return FtlnFatErr(ftl);
 
@@ -819,7 +805,7 @@ static int copy_end_mark(CFTLN ftl, ui32 b) {
     SET_SA_WC(0, ftl->spare_buf);
 
     // Write page that marks the end of a volume resume copy block.
-    return ftl->write_page(pn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
+    return ndmWritePage(pn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
 }
 
 // resume_copy: Copy one volume block
@@ -842,7 +828,7 @@ static int resume_copy(FTLN ftl, ui32 src_b, ui32 dst_b, ui32 bc) {
     for (po = 0; po <= ftl->resume_po; ++po) {
         // Read source page's spare area.
         ++ftl->stats.read_spare;
-        rc = ftl->read_spare(src_pg0 + po, ftl->spare_buf, ftl->ndm);
+        rc = ndmReadSpare(src_pg0 + po, ftl->spare_buf, ftl->ndm);
 
         // Return -1 if fatal error, skip page if ECC error on spare read.
         if (rc) {
@@ -865,8 +851,10 @@ static int resume_copy(FTLN ftl, ui32 src_b, ui32 dst_b, ui32 bc) {
 
         // Invoke page transfer routine. If error, return -1.
         ++ftl->stats.transfer_page;
-        if (ftl->xfer_page(src_pg0 + po, dst_pg0 + po, ftl->main_buf, ftl->spare_buf, ftl->ndm))
+        if (ndmTransferPage(src_pg0 + po, dst_pg0 + po, ftl->main_buf,
+                            ftl->spare_buf, ftl->ndm)) {
             return FtlnFatErr(ftl);
+        }
     }
 
     // Return success.
@@ -1133,31 +1121,31 @@ static int rd_map_pg(void* vol, ui32 mpn, void* buf, int* unmapped) {
 
 // FtlnAddVol: Create a new FTL volume
 //
-//      Inputs: ftl_dvr = pointer to FTL NDM driver control block
+//      Inputs: ftl_cfg = pointer to FTL configuration structure
 //              xfs = pointer to FTL interface structure
 //
 //     Returns: -1 if error, 0 for success.
 //
-int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
+int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
     ui32 n, vol_blks;
     ui8* buf;
     FTLN ftl;
 
     // If number of blocks less than 7, FTL-NDM cannot work.
-    if (ftl_dvr->num_blocks < 7) {
+    if (ftl_cfg->num_blocks < 7) {
         FsError2(FTL_CFG_ERR, EINVAL);
         return -1;
     }
 
     // Ensure FTL flags are valid.
-    if (ftl_dvr->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)) {
+    if (ftl_cfg->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)) {
         FsError2(FTL_CFG_ERR, EINVAL);
         return -1;
     }
 
 #if CACHE_LINE_SIZE
     // Ensure driver page size is a multiple of the CPU cache line size.
-    if (ftl_dvr->page_size % CACHE_LINE_SIZE) {
+    if (ftl_cfg->page_size % CACHE_LINE_SIZE) {
         FsError2(FTL_CFG_ERR, EINVAL);
         return -1;
     }
@@ -1165,8 +1153,8 @@ int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
 
     // Ensure physical page size is a multiple of FAT sector size and
     // not bigger than the device block size.
-    if (ftl_dvr->page_size % FAT_SECT_SZ || ftl_dvr->page_size == 0 ||
-        ftl_dvr->page_size > ftl_dvr->block_size) {
+    if (ftl_cfg->page_size % FAT_SECT_SZ || ftl_cfg->page_size == 0 ||
+        ftl_cfg->page_size > ftl_cfg->block_size) {
         FsError2(FTL_CFG_ERR, EINVAL);
         return -1;
     }
@@ -1181,17 +1169,16 @@ int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
     Ftln = ftl;
 #endif
 
-    // Set all FTL driver dependent variables.
-    ftl->num_blks = ftl_dvr->num_blocks;
-    ftl->page_size = ftl_dvr->page_size;
-    ftl->eb_size = ftl_dvr->eb_size;
-    ftl->block_size = ftl_dvr->block_size;
+    // Initialize the FTL control block.
+    ftl->num_blks = ftl_cfg->num_blocks;
+    ftl->page_size = ftl_cfg->page_size;
+    ftl->eb_size = ftl_cfg->eb_size;
+    ftl->block_size = ftl_cfg->block_size;
     ftl->pgs_per_blk = ftl->block_size / ftl->page_size;
     ftl->num_pages = ftl->pgs_per_blk * ftl->num_blks;
-    ftl->start_pn = ftl_dvr->start_page;
-    ftl->ndm = ftl_dvr->ndm;
-    ftl->type = ftl_dvr->type;
-    ftl->flags = ftl_dvr->flags;
+    ftl->start_pn = ftl_cfg->start_page;
+    ftl->ndm = ftl_cfg->ndm;
+    ftl->flags = ftl_cfg->flags;
     strcpy(ftl->vol_name, xfs->name);
 
     // Ensure pages per block doesn't exceed alloted metadata field width.
@@ -1205,18 +1192,6 @@ int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
         FsError2(FTL_CFG_ERR, EINVAL);
         goto FtlnAddV_err;
     }
-#endif
-
-    // Copy the NDM interface functions.
-    ftl->write_page = ftl_dvr->write_data_and_spare;
-    ftl->write_pages = ftl_dvr->write_pages;
-    ftl->read_spare = ftl_dvr->read_spare;
-    ftl->read_pages = ftl_dvr->read_pages;
-    ftl->page_check = ftl_dvr->page_check;
-    ftl->xfer_page = ftl_dvr->transfer_page;
-    ftl->erase_block = ftl_dvr->erase_block;
-#if INC_FTL_NDM_MLC
-    ftl->pair_offset = ftl_dvr->pair_offset;
 #endif
 
     // Compute how many volume pages are mapped by a single map page.
@@ -1283,8 +1258,8 @@ int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
     // 2%. Increasing number of map pages makes recycles more efficient
     // because the ratio of used to dirty pages is lower in map blocks.
     ftl->num_vpages = vol_blks * ftl->pgs_per_blk;
-    n = ftl_dvr->extra_free;
-    if (FLAG_IS_CLR(ftl_dvr->flags, FSF_EXTRA_FREE) || n < 2 || n > 50)
+    n = ftl_cfg->extra_free;
+    if (FLAG_IS_CLR(ftl_cfg->flags, FSF_EXTRA_FREE) || n < 2 || n > 50)
         n = 2;
     n = (n * ftl->num_vpages) / 100;
     if (n == 0)
@@ -1340,25 +1315,25 @@ int FtlnAddVol(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
 
     // For SLC devices, adjust driver cached MPNs if too big or zero.
 #if INC_FTL_NDM_SLC
-    if (ftl->num_map_pgs < ftl_dvr->cached_map_pages || ftl_dvr->cached_map_pages == 0)
-        ftl_dvr->cached_map_pages = ftl->num_map_pgs;
+    if (ftl->num_map_pgs < ftl_cfg->cached_map_pages || ftl_cfg->cached_map_pages == 0)
+        ftl_cfg->cached_map_pages = ftl->num_map_pgs;
 
 #else
 
     // For MLC devices, cache all map pages so that no map write occurs
     // due to cache preemption.
-    ftl_dvr->cached_map_pages = ftl->num_map_pgs;
+    ftl_cfg->cached_map_pages = ftl->num_map_pgs;
 #endif
 
     // Allocate map page cache for new volume.
-    ftl->map_cache = ftlmcNew(ftl, ftl_dvr->cached_map_pages, FtlnMapWr, rd_map_pg, ftl->page_size);
+    ftl->map_cache = ftlmcNew(ftl, ftl_cfg->cached_map_pages, FtlnMapWr, rd_map_pg, ftl->page_size);
     if (ftl->map_cache == NULL)
         goto FtlnAddV_err;
 
     // Set block read wear limit.
-    if (FLAG_IS_SET(ftl_dvr->flags, FSF_READ_WEAR_LIMIT))
-        ftl->max_rc = ftl_dvr->read_wear_limit;
-    else {
+    if (FLAG_IS_SET(ftl_cfg->flags, FSF_READ_WEAR_LIMIT)) {
+        ftl->max_rc = ftl_cfg->read_wear_limit;
+    } else {
 #if INC_FTL_NDM_SLC
         ftl->max_rc = SLC_NAND_RC_LIMIT;
 #else

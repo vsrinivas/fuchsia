@@ -6,7 +6,7 @@
 
 #include <zircon/assert.h>
 
-#include "kprivate/fsdriver.h"
+#include <ftl_private.h>
 #include "kprivate/fsprivate.h"
 #include "kprivate/ndm.h"
 #include "posix.h"

@@ -25,8 +25,6 @@ void semDelete(SEM* semp);
 void semPostBin(SEM sem);
 int semPend(SEM sem, int wait_opt);
 
-#define ENOMEM 12 // out of memory
-
 #ifdef __cplusplus
 }
 #endif

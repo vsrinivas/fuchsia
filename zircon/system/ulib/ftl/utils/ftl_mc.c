@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <sys.h>
-#include "ftl_mc.h"
+
+#include <ftl_private.h>
+#include <ftl_mc.h>
 #include <fsprivate.h>
 
 // Configuration

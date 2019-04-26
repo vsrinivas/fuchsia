@@ -61,46 +61,18 @@ void AssertError(int line, const char* file);
 /* Type Definitions                                                    */
 /***********************************************************************/
 
-// XFS structure holding all driver information
-typedef struct XfsVol {
-    // Driver functions
-    int (*write_pages)(const void* buf, ui32 frst_pg, int cnt, void* vol);
-    int (*read_pages)(void* buf, ui32 frst_pg, int cnt, void* vol);
-    int (*report)(void* vol, ui32 msg, ...);
-
-    const char* name;       // volume name
-    ui32 flags;             // option flags
-    ui32 num_pages;         // number of pages in volume
-    ui32 page_size;         // page size in bytes
-    void* vol;              // driver's volume pointer
-    void* ftl_volume;       // ftl layer (block device) volume
-} XfsVol;
-
 // FTL NDM structure holding all driver information
 typedef struct {
-    ui32 block_size;       // size of a block in bytes
-    ui32 num_blocks;       // total number of blocks
-    ui32 page_size;        // flash page data size in bytes
-    ui32 eb_size;          // flash page spare size in bytes
-    ui32 start_page;       // volume first page on flash
-    ui32 cached_map_pages; // number of map pages to be cached
-    ui32 extra_free;      // volume percentage left unused
-    ui32 read_wear_limit; // device read-wear limit
-    void* ndm;            // driver's NDM pointer
-    ui32 flags;           // option flags
-    ui32 type;            // device type
-
-    // Driver functions:
-    int (*write_data_and_spare)(ui32 pn, const void* data, void* spare, void* ndm);
-    int (*write_pages)(ui32 start_pn, ui32 count, const void* data, void* spare, void* ndm);
-    int (*read_spare)(ui32 pn, void* spare, void* ndm);
-    int (*read_pages)(ui32 start_pn, ui32 count, void* data, void* spare, void* ndm);
-    int (*page_check)(ui32 pn, ui8* data, ui8* spare, void* ndm);
-    int (*transfer_page)(ui32 old_pn, ui32 new_pn, ui8* data, ui8* spare, void* ndm);
-    int (*erase_block)(ui32 pn, void* ndm);
-#if INC_FTL_NDM_MLC
-    ui32 (*pair_offset)(ui32 page_offset, void* ndm);
-#endif
+    ui32 block_size;        // size of a block in bytes
+    ui32 num_blocks;        // total number of blocks
+    ui32 page_size;         // flash page data size in bytes
+    ui32 eb_size;           // flash page spare size in bytes
+    ui32 start_page;        // volume first page on flash
+    ui32 cached_map_pages;  // number of map pages to be cached
+    ui32 extra_free;        // volume percentage left unused
+    ui32 read_wear_limit;   // device read-wear limit
+    void* ndm;              // driver's NDM pointer
+    ui32 flags;             // option flags
 } FtlNdmVol;
 
 // FS Report Events

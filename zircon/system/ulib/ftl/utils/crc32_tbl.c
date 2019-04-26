@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys.h>
+#include <ftl_private.h>
 
 // CRC Lookup Table.
 const ui32 Crc32Tbl[256] = {

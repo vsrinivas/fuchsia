@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ftlnp.h"
+#include <stdarg.h>
+#include <string.h>
 
-#include <strings.h>
+#include "ftlnp.h"
 
 // Local Function Definitions
 
@@ -386,7 +387,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
             // Set TargetFTL-NDM driver call counts and reset internal ones.
             buf->xfs.drvr_stats.ftl.ndm = ftl->stats;
-            bzero(&ftl->stats, sizeof(ftl_ndm_stats));
+            memset(&ftl->stats, 0, sizeof(ftl_ndm_stats));
 
             // Return success.
             return 0;
@@ -462,7 +463,7 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
 
     // Call driver to erase block. Return -1 if error.
     ++ftl->stats.erase_block;
-    if (ftl->erase_block(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm))
+    if (ndmEraseBlock(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm))
         return FtlnFatErr(ftl);
 
     // Increment block wear count and possibly adjust highest.
@@ -622,7 +623,7 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
 #if FTLN_DEBUG
     // Read page spare area and assert VPNs match.
     ++ftl->stats.read_spare;
-    PfAssert(ftl->read_spare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0);
+    PfAssert(ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0);
     PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
 #endif
 } //lint !e818

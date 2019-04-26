@@ -68,7 +68,7 @@ typedef struct {
     ui32 is_block_bad;    // number of is_block_bad() calls
 } NdmDvrStats;
 
-// Driver Interface Structure
+// TargetNDM Configuration Structure
 typedef struct {
     ui32 num_blocks;     // total number of blocks on device
     ui32 max_bad_blocks; // maximum number of bad blocks
@@ -103,10 +103,6 @@ typedef struct {
 #endif
 } NDMDrvr;
 
-// NDM Control Block
-typedef struct ndm* NDM;
-typedef const struct ndm* CNDM;
-
 /***********************************************************************/
 /* Functions Prototypes                                                */
 /***********************************************************************/
@@ -127,11 +123,6 @@ void ndmDeletePartitionTable(NDM ndm);
 int ndmSavePartitionTable(NDM ndm);
 int ndmDelVols(CNDM ndm);
 int ndmDelVol(CNDM ndm, ui32 part_num);
-
-// User Volume API
-int ndmEraseBlock(ui32 pn, void* ndm_ptr);
-int ndmReadPages(ui32 start_pn, ui32 count, void* data, void* spare, void* ndm_ptr);
-int ndmWritePages(ui32 start_pn, ui32 count, const void* data, void* spare, void* ndm_ptr);
 
 // FTL Volume API
 int ndmAddVolFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);

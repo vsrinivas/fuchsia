@@ -5,6 +5,7 @@
 #include <lib/ftl/volume.h>
 #include <zircon/assert.h>
 
+#include <ftl_private.h>
 #include "kprivate/ndm.h"
 #include "posix.h"
 
