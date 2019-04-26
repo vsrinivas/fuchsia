@@ -104,7 +104,9 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is writable again.
-    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
+    ///
+    /// Returns `true` if the CLOSED signal has been received.
+    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
         self.handle.poll_write(lw)
     }
 
@@ -113,7 +115,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     ///
     /// Returns the number of elements processed.
     pub fn try_write(&self, entries: &[W], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        ready!(self.poll_write(lw)?);
+        let clear_closed = ready!(self.poll_write(lw)?);
         let elem_size = ::std::mem::size_of::<W>();
         let elembuf = unsafe {
             ::std::slice::from_raw_parts(entries.as_ptr() as *const u8, elem_size * entries.len())
@@ -121,7 +123,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
         match self.as_ref().write(elem_size, elembuf) {
             Err(e) => {
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_write(lw)?;
+                    self.handle.need_write(lw, clear_closed)?;
                     Poll::Pending
                 } else {
                     Poll::Ready(Err(e))
@@ -137,14 +139,16 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is readable again.
-    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
+    ///
+    /// Returns `true` if the CLOSED signal has been received.
+    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
         self.handle.poll_read(lw)
     }
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     pub fn try_read(&self, lw: &Waker) -> Poll<Result<Option<R>, zx::Status>> {
-        ready!(self.poll_read(lw)?);
+        let clear_closed = ready!(self.handle.poll_read(lw)?);
         let mut element = unsafe { ::std::mem::uninitialized() };
         let elembuf = unsafe {
             ::std::slice::from_raw_parts_mut(
@@ -158,7 +162,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
                 // Ensure `drop` isn't called on uninitialized memory.
                 ::std::mem::forget(element);
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_read(lw)?;
+                    self.handle.need_read(lw, clear_closed)?;
                     return Poll::Pending;
                 }
                 if e == zx::Status::PEER_CLOSED {

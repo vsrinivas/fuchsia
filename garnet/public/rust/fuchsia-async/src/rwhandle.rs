@@ -7,49 +7,39 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::task::{AtomicWaker, Waker, Poll},
     std::sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicU32, Ordering},
         Arc,
     },
 };
 
-const READABLE: usize = 0b001;
-const WRITABLE: usize = 0b010;
-const CLOSED: usize = 0b100;
+const OBJECT_PEER_CLOSED: zx::Signals = zx::Signals::OBJECT_PEER_CLOSED;
+const OBJECT_READABLE: zx::Signals = zx::Signals::OBJECT_READABLE;
+const OBJECT_WRITABLE: zx::Signals = zx::Signals::OBJECT_WRITABLE;
 
 struct RWPacketReceiver {
-    signals: AtomicUsize,
+    signals: AtomicU32,
     read_task: AtomicWaker,
     write_task: AtomicWaker,
 }
 
 impl PacketReceiver for RWPacketReceiver {
     fn receive_packet(&self, packet: zx::Packet) {
-        let observed = if let zx::PacketContents::SignalOne(p) = packet.contents() {
+        let new = if let zx::PacketContents::SignalOne(p) = packet.contents() {
             p.observed()
         } else {
             return;
         };
 
-        let new =
-            0 | (if observed.contains(zx::Signals::OBJECT_READABLE) {
-                READABLE
-            } else {
-                0
-            }) | (if observed.contains(zx::Signals::OBJECT_WRITABLE) {
-                WRITABLE
-            } else {
-                0
-            }) | (if observed.contains(zx::Signals::OBJECT_PEER_CLOSED) {
-                CLOSED
-            } else {
-                0
-            });
+        let old = zx::Signals::from_bits_truncate(
+            self.signals.fetch_or(new.bits(), Ordering::SeqCst)
+        );
 
-        let old = self.signals.fetch_or(new, Ordering::SeqCst);
-
-        let became_readable = ((new & READABLE) != 0) && ((old & READABLE) == 0);
-        let became_writable = ((new & WRITABLE) != 0) && ((old & WRITABLE) == 0);
-        let became_closed = ((new & CLOSED) != 0) && ((old & CLOSED) == 0);
+        let became_readable = new.contains(OBJECT_READABLE)
+            && !old.contains(OBJECT_READABLE);
+        let became_writable = new.contains(OBJECT_WRITABLE)
+            && !old.contains(OBJECT_WRITABLE);
+        let became_closed = new.contains(OBJECT_PEER_CLOSED)
+            && !old.contains(OBJECT_PEER_CLOSED);
 
         if became_readable || became_closed {
             self.read_task.wake();
@@ -75,6 +65,7 @@ where
     pub fn new(handle: T) -> Result<Self, zx::Status> {
         let ehandle = EHandle::local();
 
+        let initial_signals = OBJECT_READABLE | OBJECT_WRITABLE;
         let receiver = ehandle.register_receiver(Arc::new(RWPacketReceiver {
             // Optimistically assume that the handle is readable and writable.
             // Reads and writes will be attempted before queueing a packet.
@@ -82,7 +73,7 @@ where
             // they're accessed after being created, provided they start off as
             // readable or writable. In return, there will be an extra wasted
             // syscall per read/write if the handle is not readable or writable.
-            signals: AtomicUsize::new(READABLE | WRITABLE),
+            signals: AtomicU32::new(initial_signals.bits()),
             read_task: AtomicWaker::new(),
             write_task: AtomicWaker::new(),
         }));
@@ -90,7 +81,7 @@ where
         let rwhandle = RWHandle { handle, receiver };
 
         // Make sure we get notifications when the handle closes.
-        rwhandle.schedule_packet(zx::Signals::OBJECT_PEER_CLOSED)?;
+        rwhandle.schedule_packet(OBJECT_PEER_CLOSED)?;
 
         Ok(rwhandle)
     }
@@ -112,31 +103,44 @@ where
 
     /// Tests to see if the channel received a OBJECT_PEER_CLOSED signal
     pub fn is_closed(&self) -> bool {
-        (self.receiver().signals.load(Ordering::Relaxed) & CLOSED) != 0
+        let signals = zx::Signals::from_bits_truncate(
+            self.receiver().signals.load(Ordering::Relaxed)
+        );
+        signals.contains(OBJECT_PEER_CLOSED)
     }
 
-    /// Tests to see if this resource is ready to be read from.
-    /// If it is not, it arranges for the current task to receive a notification
-    /// when a "readable" signal arrives.
-    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
-            Poll::Ready(Ok(()))
+    /// Tests if the resource currently has either the provided `signal`
+    /// or the OBJECT_PEER_CLOSED signal set.
+    ///
+    /// Returns `true` if the CLOSED signal was set.
+    fn poll_signal_or_closed(&self, lw: &Waker, signal: zx::Signals) -> Poll<Result<bool, zx::Status>> {
+        let signals = zx::Signals::from_bits_truncate(self.receiver().signals.load(Ordering::SeqCst));
+        let was_closed = signals.contains(OBJECT_PEER_CLOSED);
+        let was_signal = signals.contains(signal);
+        if was_closed || was_signal {
+            Poll::Ready(Ok(was_closed))
         } else {
-            self.need_read(lw)?;
+            self.need_signal(lw, signal, was_closed)?;
             Poll::Pending
         }
     }
 
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
-    /// when a "writable" signal arrives.
-    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
-            Poll::Ready(Ok(()))
-        } else {
-            self.need_write(lw)?;
-            Poll::Pending
-        }
+    /// when a "readable" signal arrives. Returns `true` if the CLOSED
+    /// signal was set, in which case it should be reset if a successive
+    /// read shows that the object was not closed.
+    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(lw, OBJECT_READABLE)
+    }
+
+    /// Tests to see if this resource is ready to be written to.
+    /// If it is not, it arranges for the current task to receive a notification
+    /// when a "writable" signal arrives. Returns `true` if the CLOSED
+    /// signal was set, in which case it should be reset if a successive
+    /// write shows that the object was not closed.
+    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(lw, OBJECT_WRITABLE)
     }
 
     fn receiver(&self) -> &RWPacketReceiver {
@@ -144,19 +148,37 @@ where
     }
 
     /// Arranges for the current task to receive a notification when a
-    /// "readable" signal arrives.
-    pub fn need_read(&self, lw: &Waker) -> Result<(), zx::Status> {
-        self.receiver().read_task.register(lw);
-        let old = self
-            .receiver()
-            .signals
-            .fetch_and(!READABLE, Ordering::SeqCst);
-        // We only need to schedule a new packet if one isn't already scheduled.
-        // If READABLE was already false, a packet was already scheduled.
-        if (old & READABLE) != 0 {
-            self.schedule_packet(zx::Signals::OBJECT_READABLE)?;
+    /// given signal arrives.
+    ///
+    /// `clear_closed` indicates that we previously mistakenly thought
+    /// the channel was closed due to a false signal, and we should
+    /// now reset the CLOSED bit. This value should often be passed in directly
+    /// from the output of `poll_XXX`.
+    fn need_signal(&self, lw: &Waker, signal: zx::Signals, clear_closed: bool)
+        -> Result<(), zx::Status>
+    {
+        if signal.contains(OBJECT_WRITABLE) {
+            self.receiver().write_task.register(lw);
         }
-        if (old & CLOSED) != 0 {
+        if signal.contains(OBJECT_READABLE) {
+            self.receiver().read_task.register(lw);
+        }
+        let mut clear_signals = signal;
+        if clear_closed { clear_signals |= OBJECT_PEER_CLOSED; }
+        let old = zx::Signals::from_bits_truncate(
+            self.receiver().signals.fetch_and(!clear_signals.bits(), Ordering::SeqCst)
+        );
+        // We only need to schedule a new packet if one isn't already scheduled.
+        // If the bits were already false, a packet was already scheduled.
+        let was_signal = old.contains(signal);
+        let was_closed = old.contains(OBJECT_PEER_CLOSED);
+        if was_closed || was_signal {
+            let mut signals_to_schedule = zx::Signals::empty();
+            if was_signal { signals_to_schedule |= signal; }
+            if clear_closed && was_closed { signals_to_schedule |= OBJECT_PEER_CLOSED };
+            self.schedule_packet(signals_to_schedule)?;
+        }
+        if was_closed && !clear_closed {
             // We just missed a channel close-- go around again.
             lw.wake();
         }
@@ -164,23 +186,20 @@ where
     }
 
     /// Arranges for the current task to receive a notification when a
+    /// "readable" signal arrives.
+    ///
+    /// `clear_closed` indicates that we previously mistakenly thought
+    /// the channel was closed due to a false signal, and we should
+    /// now reset the CLOSED bit. This value should often be passed in directly
+    /// from the output of `poll_read`.
+    pub fn need_read(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(lw, OBJECT_READABLE, clear_closed)
+    }
+
+    /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self, lw: &Waker) -> Result<(), zx::Status> {
-        self.receiver().write_task.register(lw);
-        let old = self
-            .receiver()
-            .signals
-            .fetch_and(!WRITABLE, Ordering::SeqCst);
-        // We only need to schedule a new packet if one isn't already scheduled.
-        // If WRITABLE was already false, a packet was already scheduled.
-        if (old & WRITABLE) != 0 {
-            self.schedule_packet(zx::Signals::OBJECT_WRITABLE)?;
-        }
-        if (old & CLOSED) != 0 {
-            // We just missed a channel close-- go around again.
-            lw.wake();
-        }
-        Ok(())
+    pub fn need_write(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(lw, OBJECT_WRITABLE, clear_closed)
     }
 
     fn schedule_packet(&self, signals: zx::Signals) -> Result<(), zx::Status> {

@@ -43,16 +43,6 @@ impl Channel {
         self.0.is_closed()
     }
 
-    /// Test whether this socket is ready to be read or not.
-    ///
-    /// If the socket is *not* readable then the current task is scheduled to
-    /// get a notification when the socket does become readable. That is, this
-    /// is only suitable for calling in a `Future::poll` method and will
-    /// automatically handle ensuring a retry once the socket is readable again.
-    fn poll_read(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        self.0.poll_read(lw)
-    }
-
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     ///
@@ -64,11 +54,11 @@ impl Channel {
         handles: &mut Vec<zx::Handle>,
         waker: &Waker,
     ) -> Poll<Result<(), zx::Status>> {
-        try_ready!(self.poll_read(waker));
+        let clear_closed = try_ready!(self.0.poll_read(waker));
 
         let res = self.0.get_ref().read_split(bytes, handles);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.0.need_read(waker)?;
+            self.0.need_read(waker, clear_closed)?;
             return Poll::Pending;
         }
         Poll::Ready(res)
@@ -131,6 +121,7 @@ mod tests {
     use crate::Executor;
     use fuchsia_zircon::{self as zx, MessageBuf};
     use pin_utils::pin_mut;
+    use std::mem;
 
     #[test]
     fn can_receive() {
@@ -154,5 +145,24 @@ mod tests {
             .expect("failed to write message");
 
         assert!(exec.run_until_stalled(&mut receiver).is_ready());
+    }
+
+    #[test]
+    fn key_reuse() {
+        let mut exec = Executor::new().unwrap();
+        let (tx0, rx0) = zx::Channel::create().unwrap();
+        let (_tx1, rx1) = zx::Channel::create().unwrap();
+        let f_rx0 = Channel::from_channel(rx0).unwrap();
+        mem::drop(tx0);
+        mem::drop(f_rx0);
+        let f_rx1 = Channel::from_channel(rx1).unwrap();
+        // f_rx0 and f_rx1 use the same key.
+        let receiver = async move {
+            let mut buffer = MessageBuf::new();
+            await!(f_rx1.recv_msg(&mut buffer)).expect("failed to receive message");
+        };
+        pin_mut!(receiver);
+
+        assert!(exec.run_until_stalled(&mut receiver).is_pending());
     }
 }

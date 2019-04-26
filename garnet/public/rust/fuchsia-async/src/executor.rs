@@ -65,6 +65,9 @@ where
 /// Upon registration, users will receive a `ReceiverRegistration`
 /// which provides `key` and `port` methods. These methods can be used to wait on
 /// asynchronous signals.
+///
+/// Note that `PacketReceiver`s may receive false notifications intended for a
+/// previous receiver, and should handle these gracefully.
 pub trait PacketReceiver: Send + Sync + 'static {
     /// Receive a packet when one arrives.
     fn receive_packet(&self, packet: zx::Packet);
