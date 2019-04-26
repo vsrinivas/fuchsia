@@ -157,6 +157,9 @@ impl OutputWorker {
         let mut output_events = va_output.take_event_stream();
         self.va_output = Some(va_output);
 
+        // Monotonic time of last OnPositionNotify
+        let mut last_notify = zx::Time::from_nanos(0);
+
         loop {
             select! {
                 rx_msg = rx.next() => {
@@ -191,6 +194,16 @@ impl OutputWorker {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
                         Some(OutputEvent::OnPositionNotify { ring_position, clock_time }) => {
+                            // Log if we have been delayed more than 150ms.  This is highly abnormal and
+                            // is indicative of possible glitching in the captured audio.
+                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            if last_notify > zx::Time::from_nanos(0) {
+                                if now - last_notify > zx::Duration::from_millis(150) {
+                                    fx_log_info!("Output position not updated for 150ms.  Expect glitches.");
+                                }
+                            }
+                            last_notify = now;
+
                             self.on_position_notify(ring_position, clock_time, self.capturing)?;
                         },
                         Some(evt) => {
@@ -479,6 +492,9 @@ impl InputWorker {
         let mut input_events = va_input.take_event_stream();
         self.va_input = Some(va_input);
 
+        // Monotonic time of last OnPositionNotify
+        let mut last_notify = zx::Time::from_nanos(0);
+
         loop {
             select! {
                 rx_msg = rx.next() => {
@@ -509,6 +525,16 @@ impl InputWorker {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
                         Some(InputEvent::OnPositionNotify { ring_position, clock_time }) => {
+                            // Log if we have been delayed more than 150ms.  This is highly abnormal and
+                            // is indicative of possible glitching in the injection.
+                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            if last_notify > zx::Time::from_nanos(0) {
+                                if now - last_notify > zx::Duration::from_millis(150) {
+                                    fx_log_info!("Input position not updated for 150ms.  Expect glitches.");
+                                }
+                            }
+                            last_notify = now;
+
                             let mut active = await!(active.lock());
                             self.on_position_notify(ring_position, clock_time, *active)?;
                             if self.zeros_written >= self.work_space as usize {
