@@ -63,8 +63,9 @@ func reportAverageEventTimes(model benchmarking.Model, testSuite string, testRes
 		Label       string
 	}
 
-	// TODO(SCN-1268): The following events are based on PaperRenderer, as we transition
-	// to PaperRenderer2 is rolled out they need to be updated to reflect this.
+	// TODO(SCN-1268): The following events are based on the old/deleted
+	// PaperRenderer; now that we are transitioning to the new version (formerly
+	// known as PaperRenderer2) they need to be updated to reflect this.
 
 	// TODO(PT-102): Events that appear to happen simultaneously are lumped together in
 	// the same trace event as primary and secondary events. Because of this some

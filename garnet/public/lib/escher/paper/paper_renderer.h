@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ESCHER_PAPER_PAPER_RENDERER2_H_
-#define LIB_ESCHER_PAPER_PAPER_RENDERER2_H_
+#ifndef LIB_ESCHER_PAPER_PAPER_RENDERER_H_
+#define LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 
 #include "lib/escher/paper/paper_readme.h"
 
@@ -20,7 +20,7 @@
 
 namespace escher {
 
-// |PaperRenderer2| provides a convenient and flexible interface for rendering
+// |PaperRenderer| provides a convenient and flexible interface for rendering
 // shapes in a 3D space, as required by Scenic.  Clients achieve this primarily
 // by passing instances of |PaperDrawable| to the |Draw()| method, using either
 // pre-existing drawable types or their own subclasses.  For convenience, other
@@ -38,7 +38,7 @@ namespace escher {
 //
 // Implementation details follow...
 //
-// |PaperRenderer2| is responsible for coordinating its sub-components:
+// |PaperRenderer| is responsible for coordinating its sub-components:
 //   - |PaperDrawCallFactory|
 //   - |PaperShapeCache|
 //   - |PaperRenderQueue|
@@ -63,12 +63,12 @@ namespace escher {
 // controlled by two parameters passed to the queue:
 //   - |PaperRenderQueueFlags|, to control iteration over draw calls.
 //   - |PaperRenderQueueContext|, used by draw calls to emit Vulkan commands.
-class PaperRenderer2 final : public Renderer {
+class PaperRenderer final : public Renderer {
  public:
-  static PaperRenderer2Ptr New(
+  static PaperRendererPtr New(
       EscherWeakPtr escher, const PaperRendererConfig& config = {
                                 .shadow_type = PaperRendererShadowType::kNone});
-  ~PaperRenderer2() override;
+  ~PaperRenderer() override;
 
   // Set configuration parameters which affect how the renderer will render
   // subsequent frames.
@@ -136,9 +136,9 @@ class PaperRenderer2 final : public Renderer {
   void DrawLegacyObject(const Object& obj, PaperDrawableFlags flags = {});
 
  private:
-  explicit PaperRenderer2(EscherWeakPtr escher,
+  explicit PaperRenderer(EscherWeakPtr escher,
                           const PaperRendererConfig& config);
-  PaperRenderer2(const PaperRenderer2&) = delete;
+  PaperRenderer(const PaperRenderer&) = delete;
 
   // Store relevant info from cameras passed to BeginFrame().
   struct CameraData {
@@ -211,4 +211,4 @@ class PaperRenderer2 final : public Renderer {
 
 }  // namespace escher
 
-#endif  // LIB_ESCHER_PAPER_PAPER_RENDERER2_H_
+#endif  // LIB_ESCHER_PAPER_PAPER_RENDERER_H_

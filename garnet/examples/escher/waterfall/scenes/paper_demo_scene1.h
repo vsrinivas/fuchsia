@@ -24,12 +24,12 @@ class PaperDemoScene1 : public Scene {
   // Illegal, use the PaperScene version instead.
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderer2* renderer) override;
+                        escher::PaperRenderer* renderer) override;
 
   void Init(escher::PaperScene* scene) override;
   void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
               escher::PaperScene* scene,
-              escher::PaperRenderer2* renderer) override;
+              escher::PaperRenderer* renderer) override;
 
  private:
   struct AnimatedState {

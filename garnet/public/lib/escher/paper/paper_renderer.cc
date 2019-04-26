@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer.h"
 
 #include <glm/gtc/matrix_access.hpp>
 
@@ -27,12 +27,12 @@
 
 namespace escher {
 
-PaperRenderer2Ptr PaperRenderer2::New(EscherWeakPtr escher,
+PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher,
                                       const PaperRendererConfig& config) {
-  return fxl::AdoptRef(new PaperRenderer2(std::move(escher), config));
+  return fxl::AdoptRef(new PaperRenderer(std::move(escher), config));
 }
 
-PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
+PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
                                const PaperRendererConfig& config)
     : Renderer(weak_escher),
       config_(config),
@@ -89,9 +89,9 @@ PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
   msaa_buffers_.resize(config.num_depth_buffers);
 }
 
-PaperRenderer2::~PaperRenderer2() { escher()->Cleanup(); }
+PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 
-PaperRenderer2::FrameData::FrameData(
+PaperRenderer::FrameData::FrameData(
     const FramePtr& frame_in, const PaperScenePtr& scene_in,
     const ImagePtr& output_image_in,
     std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
@@ -164,9 +164,9 @@ PaperRenderer2::FrameData::FrameData(
   }
 }
 
-PaperRenderer2::FrameData::~FrameData() = default;
+PaperRenderer::FrameData::~FrameData() = default;
 
-void PaperRenderer2::SetConfig(const PaperRendererConfig& config) {
+void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
   FXL_DCHECK(!frame_data_) << "Illegal call to SetConfig() during a frame.";
   FXL_DCHECK(SupportsShadowType(config.shadow_type))
       << "Unsupported shadow type: " << config.shadow_type;
@@ -175,7 +175,7 @@ void PaperRenderer2::SetConfig(const PaperRendererConfig& config) {
              config.msaa_sample_count == 4);
 
   if (config.msaa_sample_count != config_.msaa_sample_count) {
-    FXL_VLOG(1) << "PaperRenderer2: MSAA sample count set to: "
+    FXL_VLOG(1) << "PaperRenderer: MSAA sample count set to: "
                 << config.msaa_sample_count
                 << " (was: " << config_.msaa_sample_count << ")";
     depth_buffers_.clear();
@@ -183,7 +183,7 @@ void PaperRenderer2::SetConfig(const PaperRendererConfig& config) {
   }
 
   if (config.num_depth_buffers != config_.num_depth_buffers) {
-    FXL_VLOG(1) << "PaperRenderer2: num_depth_buffers set to: "
+    FXL_VLOG(1) << "PaperRenderer: num_depth_buffers set to: "
                 << config.num_depth_buffers
                 << " (was: " << config_.num_depth_buffers << ")";
   }
@@ -198,17 +198,17 @@ void PaperRenderer2::SetConfig(const PaperRendererConfig& config) {
   shape_cache_.SetConfig(config_);
 }
 
-bool PaperRenderer2::SupportsShadowType(
+bool PaperRenderer::SupportsShadowType(
     PaperRendererShadowType shadow_type) const {
   return shadow_type == PaperRendererShadowType::kNone ||
          shadow_type == PaperRendererShadowType::kShadowVolume;
 }
 
-void PaperRenderer2::BeginFrame(const FramePtr& frame,
+void PaperRenderer::BeginFrame(const FramePtr& frame,
                                 const PaperScenePtr& scene,
                                 const std::vector<Camera>& cameras,
                                 const ImagePtr& output_image) {
-  TRACE_DURATION("gfx", "PaperRenderer2::BeginFrame");
+  TRACE_DURATION("gfx", "PaperRenderer::BeginFrame");
   FXL_DCHECK(!frame_data_ && !cameras.empty());
 
   frame_data_ = std::make_unique<FrameData>(
@@ -246,8 +246,8 @@ void PaperRenderer2::BeginFrame(const FramePtr& frame,
   }
 }
 
-void PaperRenderer2::EndFrame() {
-  TRACE_DURATION("gfx", "PaperRenderer2::EndFrame");
+void PaperRenderer::EndFrame() {
+  TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
   FXL_DCHECK(frame_data_);
 
   frame_data_->gpu_uploader->Submit();
@@ -278,7 +278,7 @@ void PaperRenderer2::EndFrame() {
   draw_call_factory_.EndFrame();
 }
 
-void PaperRenderer2::BindSceneAndCameraUniforms(uint32_t camera_index) {
+void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
   auto* cmd_buf = frame_data_->frame->cmds();
   for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
     binding.Bind(cmd_buf);
@@ -286,9 +286,9 @@ void PaperRenderer2::BindSceneAndCameraUniforms(uint32_t camera_index) {
   frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
 }
 
-void PaperRenderer2::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
+void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
                           mat4* matrix) {
-  TRACE_DURATION("gfx", "PaperRenderer2::Draw");
+  TRACE_DURATION("gfx", "PaperRenderer::Draw");
 
   // For restoring state afterward.
   size_t transform_stack_size = transform_stack_.size();
@@ -304,9 +304,9 @@ void PaperRenderer2::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
   transform_stack_.Clear({transform_stack_size, num_clip_planes});
 }
 
-void PaperRenderer2::DrawCircle(float radius, const PaperMaterialPtr& material,
+void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
                                 PaperDrawableFlags flags, mat4* matrix) {
-  TRACE_DURATION("gfx", "PaperRenderer2::DrawCircle");
+  TRACE_DURATION("gfx", "PaperRenderer::DrawCircle");
 
   if (!material)
     return;
@@ -323,10 +323,10 @@ void PaperRenderer2::DrawCircle(float radius, const PaperMaterialPtr& material,
   }
 }
 
-void PaperRenderer2::DrawRect(vec2 min, vec2 max,
+void PaperRenderer::DrawRect(vec2 min, vec2 max,
                               const PaperMaterialPtr& material,
                               PaperDrawableFlags flags, mat4* matrix) {
-  TRACE_DURATION("gfx", "PaperRenderer2::DrawRect");
+  TRACE_DURATION("gfx", "PaperRenderer::DrawRect");
 
   if (!material)
     return;
@@ -340,10 +340,10 @@ void PaperRenderer2::DrawRect(vec2 min, vec2 max,
   }
 }
 
-void PaperRenderer2::DrawRoundedRect(const RoundedRectSpec& spec,
+void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec,
                                      const PaperMaterialPtr& material,
                                      PaperDrawableFlags flags, mat4* matrix) {
-  TRACE_DURATION("gfx", "PaperRenderer2::DrawRoundedRect");
+  TRACE_DURATION("gfx", "PaperRenderer::DrawRoundedRect");
 
   if (!material)
     return;
@@ -357,7 +357,7 @@ void PaperRenderer2::DrawRoundedRect(const RoundedRectSpec& spec,
   }
 }
 
-void PaperRenderer2::DrawLegacyObject(const Object& obj,
+void PaperRenderer::DrawLegacyObject(const Object& obj,
                                       PaperDrawableFlags flags) {
   FXL_DCHECK(frame_data_);
 
@@ -365,7 +365,7 @@ void PaperRenderer2::DrawLegacyObject(const Object& obj,
   Draw(&drawable, flags);
 }
 
-void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp,
+void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp,
                                         ResourceRecycler* recycler,
                                         const FrameData& frame_data,
                                         uint32_t camera_index) {
@@ -429,8 +429,8 @@ void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp,
 // - still use the lights, allowing a BRDF, distance-based-falloff etc.
 // The right answer is probably to separate the shadow algorithm from the
 // lighting model.
-void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
-  TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForNoShadows");
+void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
+  TRACE_DURATION("gfx", "PaperRenderer::GenerateCommandsForNoShadows");
 
   const FramePtr& frame = frame_data_->frame;
   CommandBuffer* cmd_buf = frame->cmds();
@@ -464,8 +464,8 @@ void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
   frame->AddTimestamp("finished no-shadows render pass");
 }
 
-void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
-  TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForShadowVolumes");
+void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
+  TRACE_DURATION("gfx", "PaperRenderer::GenerateCommandsForShadowVolumes");
 
   const uint32_t width = frame_data_->output_image->width();
   const uint32_t height = frame_data_->output_image->height();
@@ -604,7 +604,7 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   frame->AddTimestamp("finished shadow_volume render pass");
 }
 
-std::pair<TexturePtr, TexturePtr> PaperRenderer2::ObtainDepthAndMsaaTextures(
+std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(
     const FramePtr& frame, const ImageInfo& info) {
   FXL_DCHECK(!depth_buffers_.empty());
 
@@ -622,7 +622,7 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer2::ObtainDepthAndMsaaTextures(
     // Need to generate a new depth buffer.
     {
       TRACE_DURATION("gfx",
-                     "PaperRenderer2::ObtainDepthAndMsaaTextures (new depth)");
+                     "PaperRenderer::ObtainDepthAndMsaaTextures (new depth)");
       depth_texture = escher()->NewAttachmentTexture(
           vk::Format::eD24UnormS8Uint, info.width, info.height,
           config_.msaa_sample_count, vk::Filter::eLinear);
@@ -632,7 +632,7 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer2::ObtainDepthAndMsaaTextures(
       msaa_texture = nullptr;
     } else {
       TRACE_DURATION("gfx",
-                     "PaperRenderer2::ObtainDepthAndMsaaTextures (new msaa)");
+                     "PaperRenderer::ObtainDepthAndMsaaTextures (new msaa)");
       // TODO(SCN-634): use lazy memory allocation and transient attachments
       // when available.
       msaa_texture = escher()->NewAttachmentTexture(

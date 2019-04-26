@@ -24,7 +24,7 @@ void Scene::Init(escher::PaperScene* scene) {
 
 void Scene::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
                    escher::PaperScene* scene,
-                   escher::PaperRenderer2* renderer) {
+                   escher::PaperRenderer* renderer) {
   const auto& box = scene->bounding_box;
   FXL_DCHECK(!box.is_empty());
 

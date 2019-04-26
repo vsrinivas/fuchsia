@@ -9,7 +9,7 @@
 
 namespace escher {
 
-// These flags modify how |PaperDrawables| are rendered by |PaperRenderer2|.
+// These flags modify how |PaperDrawables| are rendered by |PaperRenderer|.
 // They become part of the |PaperDrawCalls| generated from the |PaperDrawable|
 // by |PaperDrawCallFactory|.
 enum class PaperDrawableFlagBits : uint8_t {

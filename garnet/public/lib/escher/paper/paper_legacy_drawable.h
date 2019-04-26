@@ -10,8 +10,8 @@
 
 namespace escher {
 
-// Wrapper which allows PaperRenderer2 to draw legacy escher::Objects.
-// NOTE: see PaperRenderer2::DrawLegacyObject(), which spares clients the
+// Wrapper which allows PaperRenderer to draw legacy escher::Objects.
+// NOTE: see PaperRenderer::DrawLegacyObject(), which spares clients the
 // inconvenience of explicitly wrapping each object in a PaperLegacyDrawable.
 class PaperLegacyDrawable : public PaperDrawable {
  public:

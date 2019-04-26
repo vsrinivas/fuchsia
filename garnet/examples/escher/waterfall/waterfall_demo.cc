@@ -43,7 +43,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
        "shaders/paper/vert/main_shadow_volume_extrude.vert",
        "shaders/paper/vert/vertex_attributes.vert"});
 
-  renderer_ = escher::PaperRenderer2::New(GetEscherWeakPtr());
+  renderer_ = escher::PaperRenderer::New(GetEscherWeakPtr());
 
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
   renderer_config_.msaa_sample_count = 2;
@@ -224,7 +224,7 @@ static std::vector<escher::Camera> GenerateCameras(
     } break;
     // Stereo/Perspective from tilted viewpoint (from corner).  This also
     // demonstrates the ability to provide the view-projection matrix in a
-    // buffer instead of having the PaperRenderer2 upload the vp-matrix itself.
+    // buffer instead of having the PaperRenderer upload the vp-matrix itself.
     // This is typically used with a "pose buffer" in HMD applications.
     // NOTE: the camera's transform must be fairly close to what will be read
     // from the pose buffer, because the camera's position is used for z-sorting
@@ -252,7 +252,7 @@ static std::vector<escher::Camera> GenerateCameras(
 
       // Both cameras use the same buffer, but index into it using a different
       // eye index.  NOTE: if you comment these lines out, there will be no
-      // visible difference, because PaperRenderer2 will compute/upload the same
+      // visible difference, because PaperRenderer will compute/upload the same
       // project * transform matrix.  What would happen if you swap the kLeft
       // and kRight?
       left_camera.SetLatchedPoseBuffer(latched_pose_buffer,

@@ -16,7 +16,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/fs/hack_filesystem.h"
-#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer.h"
 #include "lib/escher/util/stopwatch.h"
 #include "src/lib/fxl/logging.h"
 
@@ -49,7 +49,7 @@ class WaterfallDemo : public Demo {
   double ComputeFps();
 
   escher::PaperRendererConfig renderer_config_;
-  escher::PaperRenderer2Ptr renderer_;
+  escher::PaperRendererPtr renderer_;
 
   escher::PaperScenePtr paper_scene_;
 

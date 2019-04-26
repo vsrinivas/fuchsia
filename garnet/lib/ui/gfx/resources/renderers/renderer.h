@@ -28,10 +28,6 @@ class Renderer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Any swapchain that uses PaperRenderer must be a multiple of this many
-  // pixels.
-  static const uint32_t kRequiredSwapchainPixelMultiple;
-
   Renderer(Session* session, ResourceId id);
   ~Renderer();
 

@@ -40,7 +40,7 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       // We use two depth buffers so that we can render multiple Layers without
       // introducing a GPU stall.
-      paper_renderer2_(escher::PaperRenderer2::New(
+      paper_renderer_(escher::PaperRenderer::New(
           escher_, {.shadow_type = escher::PaperRendererShadowType::kNone,
                     .num_depth_buffers = 2})),
       pose_buffer_latching_shader_(
@@ -62,10 +62,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame,
   // layer.
   // TODO(SCN-1254): the efficiency of this GPU compositing could be
   // improved on tile-based GPUs by generating each layer in a subpass and
-  // compositing it into |output_image| in another subpass.  This is currently
-  // infeasible because we're rendering some layers with PaperRenderer and
-  // others with PaperRenderer2; it will be much easier once PaperRenderer is
-  // deleted.
+  // compositing it into |output_image| in another subpass.
   std::vector<escher::Object> overlay_objects;
   if (layers.size() > 1) {
     overlay_objects.reserve(layers.size() - 1);
@@ -148,7 +145,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
   }
 
   // TODO(SCN-1273): add pixel tests for various shadow modes (particularly
-  // those implemented by PaperRenderer2).
+  // those implemented by PaperRenderer).
   escher::PaperRendererShadowType shadow_type =
       GetPaperRendererShadowType(layer->renderer()->shadow_technique());
   switch (shadow_type) {
@@ -162,7 +159,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
       shadow_type = escher::PaperRendererShadowType::kNone;
   }
 
-  DrawLayerWithPaperRenderer2(frame, target_presentation_time, layer,
+  DrawLayerWithPaperRenderer(frame, target_presentation_time, layer,
                               shadow_type, output_image, overlay_model);
 }
 
@@ -204,11 +201,11 @@ EngineRenderer::GenerateEscherCamerasForPaperRenderer(
   }
 }
 
-void EngineRenderer::DrawLayerWithPaperRenderer2(
+void EngineRenderer::DrawLayerWithPaperRenderer(
     const escher::FramePtr& frame, zx_time_t target_presentation_time,
     Layer* layer, const escher::PaperRendererShadowType shadow_type,
     const escher::ImagePtr& output_image, const escher::Model& overlay_model) {
-  TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer2");
+  TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
 
   frame->command_buffer()->TransitionImageLayout(
       output_image, vk::ImageLayout::eUndefined,
@@ -218,7 +215,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer2(
   auto camera = renderer->camera();
   auto& scene = camera->scene();
 
-  paper_renderer2_->SetConfig(escher::PaperRendererConfig{
+  paper_renderer_->SetConfig(escher::PaperRendererConfig{
       .shadow_type = shadow_type,
       .debug = renderer->enable_debugging(),
   });
@@ -246,7 +243,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer2(
     });
   }
 
-  paper_renderer2_->BeginFrame(
+  paper_renderer_->BeginFrame(
       frame, paper_scene,
       GenerateEscherCamerasForPaperRenderer(
           frame, camera, layer->GetViewingVolume(), target_presentation_time),
@@ -255,7 +252,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer2(
   // TODO(SCN-1256): scene-visitation should generate cameras, collect
   // lights, etc.
   escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
-  EngineRendererVisitor visitor(paper_renderer2_.get(), &gpu_uploader);
+  EngineRendererVisitor visitor(paper_renderer_.get(), &gpu_uploader);
   visitor.Visit(camera->scene().get());
 
   gpu_uploader.Submit();
@@ -263,7 +260,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer2(
   // TODO(SCN-1270): support for multiple layers.
   FXL_DCHECK(overlay_model.objects().empty());
 
-  paper_renderer2_->EndFrame();
+  paper_renderer_->EndFrame();
 }
 
 escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width,

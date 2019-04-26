@@ -85,7 +85,7 @@ Presentation::Presentation(
   // only one of them to be active at a time.  This logic is implicit in
   // EngineRenderer, since no shadow-mode supports both directional and point
   // lights (either one or the other).  When directional light support is added
-  // to PaperRenderer2, the code here will result in over-brightening, and will
+  // to PaperRenderer, the code here will result in over-brightening, and will
   // need to be adjusted at that time.
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);

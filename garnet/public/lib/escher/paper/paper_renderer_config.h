@@ -11,7 +11,7 @@
 
 namespace escher {
 
-// A list of shadow types which may be supported by |PaperRenderer2|.  Some
+// A list of shadow types which may be supported by |PaperRenderer|.  Some
 // shadow techniques will not be supported on some target devices.
 enum class PaperRendererShadowType {
   kNone = 0,
@@ -25,7 +25,7 @@ enum class PaperRendererShadowType {
 };
 ESCHER_DEBUG_PRINTABLE(PaperRendererShadowType);
 
-// Allows clients to configure the behavior of a |PaperRenderer2| by calling
+// Allows clients to configure the behavior of a |PaperRenderer| by calling
 // |SetConfig()| at any time except in the middle of a frame.
 struct PaperRendererConfig {
   // Choose a shadow algorithm.

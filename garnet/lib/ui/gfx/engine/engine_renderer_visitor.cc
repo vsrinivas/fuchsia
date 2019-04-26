@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
 
-#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer.h"
 #include "src/lib/fxl/logging.h"
 
 #include "garnet/lib/ui/gfx/resources/camera.h"
@@ -27,7 +27,7 @@ namespace scenic_impl {
 namespace gfx {
 
 EngineRendererVisitor::EngineRendererVisitor(
-    escher::PaperRenderer2* renderer, escher::BatchGpuUploader* gpu_uploader)
+    escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader)
     : renderer_(renderer), gpu_uploader_(gpu_uploader) {}
 
 void EngineRendererVisitor::Visit(Memory* r) { FXL_CHECK(false); }

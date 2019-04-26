@@ -18,7 +18,7 @@ namespace escher {
 //
 // NOTE: this is a placeholder; we may want to be more elaborate here.  Should
 // this provide virtual methods?  Or should it become dumber: a non-reffable
-// struct that is copied into PaperRenderer2::FrameData.
+// struct that is copied into PaperRenderer::FrameData.
 class PaperScene : public Reffable {
  public:
   BoundingBox bounding_box;

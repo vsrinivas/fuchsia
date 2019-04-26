@@ -18,7 +18,7 @@ struct RoundedRectSpec;
 
 // |PaperDrawCallFactory| is responsible for generating |PaperDrawCalls| and
 // enqueuing them on a |PaperRenderQueue|.  It is hidden from clients of
-// |PaperRenderer2|, except for those who implement their own subclasses of
+// |PaperRenderer|, except for those who implement their own subclasses of
 // |PaperDrawable|.
 class PaperDrawCallFactory final {
  public:
@@ -65,7 +65,7 @@ class PaperDrawCallFactory final {
   };
 
  private:
-  friend class PaperRenderer2;
+  friend class PaperRenderer;
   friend class PaperTester;
 
   // Called by |PaperRenderer::SetConfig()|.
@@ -74,7 +74,7 @@ class PaperDrawCallFactory final {
   // shader variations.
   void SetConfig(const PaperRendererConfig& config);
 
-  // Called by |PaperRenderer2::BeginFrame()|.  Returns a vector of
+  // Called by |PaperRenderer::BeginFrame()|.  Returns a vector of
   // UniformBindings; PaperRenderer should bind these before directing the
   // PaperRenderQueue to emit commands into a CommandBuffer.
   //
@@ -83,7 +83,7 @@ class PaperDrawCallFactory final {
   // |scene| and |camera| are used to generate the |UniformBindings| that are
   // returned from this method, which contain camera and lighting parameters
   // that are shared between multiple draw calls.  This data is opaque to
-  // |PaperRenderer2|; the precise format is specific to the configuration set
+  // |PaperRenderer|; the precise format is specific to the configuration set
   // by |SetConfig()|.
   //
   // |transform_stack| is used to obtain the model-to-world matrix that is part

@@ -24,7 +24,7 @@ struct RoundedRectSpec;
 // as a way to get access to both |num_indices| and |num_shadow_volume_indices|.
 // This allows us to use the same mesh for two different purposes ("regular"
 // geometry and extruded shadow volume geometry).
-// NOTE: messy-ish but OK for now because encapsulated in |PaperRenderer2|.
+// NOTE: messy-ish but OK for now because encapsulated in |PaperRenderer|.
 struct PaperShapeCacheEntry {
   uint64_t last_touched_frame = 0;
   MeshPtr mesh;
@@ -48,7 +48,7 @@ class PaperShapeCache {
   // look up the mesh, a hash is computed from the shape parameters along with
   // the list of clip planes.  If the mesh is not found, a new mesh is generated
   // from the shape parameters, clipped by the list of planes, and
-  // post-processed in whatever way is required by the current |PaperRenderer2|
+  // post-processed in whatever way is required by the current |PaperRenderer|
   // configuration (e.g. perhaps adding a vertex attribute to allow
   // shadow-volume extrusion in the vertex shader).
   const PaperShapeCacheEntry& GetRoundedRectMesh(const RoundedRectSpec& spec,

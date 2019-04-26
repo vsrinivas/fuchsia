@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 
 #include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer.h"
 #include "lib/escher/paper/paper_renderer_config.h"
 
 namespace scenic_impl {
@@ -15,8 +15,7 @@ namespace gfx {
 class Layer;
 class Camera;
 
-// EngineRenderer knows how to render Scenic layers using escher::PaperRenderer
-// and PaperRenderer2.
+// EngineRenderer knows how to render Scenic layers using escher::PaperRenderer.
 class EngineRenderer {
  public:
   explicit EngineRenderer(escher::EscherWeakPtr weak_escher);
@@ -35,7 +34,7 @@ class EngineRenderer {
                  const escher::ImagePtr& output_image,
                  const escher::Model& overlay_model);
 
-  void DrawLayerWithPaperRenderer2(const escher::FramePtr& frame,
+  void DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
                                    zx_time_t target_presentation_time,
                                    Layer* layer,
                                    escher::PaperRendererShadowType shadow_type,
@@ -49,7 +48,7 @@ class EngineRenderer {
       escher::ViewingVolume viewing_volume, zx_time_t target_presentation_time);
 
   const escher::EscherWeakPtr escher_;
-  escher::PaperRenderer2Ptr paper_renderer2_;
+  escher::PaperRendererPtr paper_renderer_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader>
       pose_buffer_latching_shader_;
 };

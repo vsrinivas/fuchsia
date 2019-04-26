@@ -40,7 +40,7 @@ void PaperDemoScene1::Init(escher::Stage* stage) {
 escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
                                        uint64_t frame_count,
                                        escher::Stage* stage,
-                                       escher::PaperRenderer2* renderer) {
+                                       escher::PaperRenderer* renderer) {
   FXL_DCHECK(false) << "Use PaperScene* version instead.";
   return nullptr;
 }
@@ -100,7 +100,7 @@ PaperDemoScene1::~PaperDemoScene1() {}
 
 void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
                              uint64_t frame_count, escher::PaperScene* scene,
-                             escher::PaperRenderer2* renderer) {
+                             escher::PaperRenderer* renderer) {
   const float current_time_sec = stopwatch.GetElapsedSeconds();
   const float screen_width = scene->bounding_box.width();
   const float screen_height = scene->bounding_box.height();

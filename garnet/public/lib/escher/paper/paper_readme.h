@@ -18,21 +18,21 @@
 
 namespace escher {
 
-// PaperRenderer2 knows how to render PaperDrawables to an output framebuffer.
+// PaperRenderer knows how to render PaperDrawables to an output framebuffer.
 // Clients configure the renderer's behavior by setting a config object.
-class PaperRenderer2;
+class PaperRenderer;
 struct PaperRendererConfig;
 
 // PaperDrawable is a pure virtual interface with a single DrawInScene() method
-// that is invoked by PaperRenderer2::Draw().  Clients may use pre-existing
+// that is invoked by PaperRenderer::Draw().  Clients may use pre-existing
 // implementations of PaperDrawable, or roll their own.
 //
 // Currently, PaperLegacyDrawable is the only standard implementation of
-// PaperDrawable.  It allows PaperRenderer2 to draw "legacy" escher::Objects.
+// PaperDrawable.  It allows PaperRenderer to draw "legacy" escher::Objects.
 class PaperDrawable;
 class PaperLegacyDrawable;
 
-// PaperTransformStack is a helper class to be used along with PaperRenderer2
+// PaperTransformStack is a helper class to be used along with PaperRenderer
 // when rendering hierarchical scenes.  It maintains a stack where each item has
 // two fields:
 //   - a 4x4 model-to-world transform matrix
@@ -47,21 +47,21 @@ class PaperScene;
 using PaperMaterial = Material;
 
 // RefPtr forward declarations.
-using PaperRenderer2Ptr = fxl::RefPtr<PaperRenderer2>;
+using PaperRendererPtr = fxl::RefPtr<PaperRenderer>;
 using PaperScenePtr = fxl::RefPtr<PaperScene>;
 using PaperMaterialPtr = MaterialPtr;
 
-// The following types are not relevant to clients who use PaperRenderer2 only
+// The following types are not relevant to clients who use PaperRenderer only
 // with existing subclasses of PaperDrawable, only to clients who implement
 // their own subclasses.
 
 // PaperDrawCallFactory generates PaperDrawCalls and enqueues them into a
 // PaperRenderQueue.  The number of draw-calls and the precise details of each
 // depend on the factory's configuration (e.g. the current shadow algorithm),
-// which is controlled by PaperRenderer2 that owns the factory.
+// which is controlled by PaperRenderer that owns the factory.
 class PaperDrawCallFactory;
 
-// The following types are implementation details of PaperRenderer2, which are
+// The following types are implementation details of PaperRenderer, which are
 // invisible to clients.
 
 // PaperDrawCall encapsulates a RenderQueueItem along with flags that specify
@@ -71,7 +71,7 @@ struct PaperDrawCall;
 // PaperRenderQueue accepts enqueued PaperDrawCalls from PaperDrawCallFactory,
 // adding each encapsulated RenderQueueItem to the proper internal RenderQueue.
 //
-// PaperRenderer2 first calls Sort() to sort these RenderQueueItems, then calls
+// PaperRenderer first calls Sort() to sort these RenderQueueItems, then calls
 // GenerateCommands() to generate Vulkan commands from them.  The latter accepts
 // a PaperRenderQueueContext (a subclass of RenderQueueContext); this is passed
 // to each RenderQueueItem, and affects the resulting Vulkan commands.

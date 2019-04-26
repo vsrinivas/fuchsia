@@ -31,7 +31,7 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     auto escher = test::GetEscher();
     EXPECT_TRUE(escher->Cleanup());
 
-    // TODO(ES-183): remove PaperRenderer2 shader dependency.
+    // TODO(ES-183): remove PaperRenderer shader dependency.
     auto factory = escher->shader_program_factory();
     bool success = factory->filesystem()->InitializeWithRealFiles({
         "shaders/model_renderer/default_position.vert",
@@ -73,7 +73,7 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
 VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
-  // TODO(ES-183): remove PaperRenderer2 shader dependency.
+  // TODO(ES-183): remove PaperRenderer shader dependency.
   ShaderVariantArgs variant1({{"NO_SHADOW_LIGHTING_PASS", "1"},
                               {"USE_ATTRIBUTE_UV", "1"},
                               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});
@@ -103,7 +103,7 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
 VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
-  // TODO(ES-183): remove PaperRenderer2 shader dependency.
+  // TODO(ES-183): remove PaperRenderer shader dependency.
   ShaderVariantArgs variant({{"NO_SHADOW_LIGHTING_PASS", "1"},
                              {"USE_ATTRIBUTE_UV", "1"},
                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});

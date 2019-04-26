@@ -39,7 +39,7 @@ DemoScene::~DemoScene() {}
 
 escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
                                  uint64_t frame_count, escher::Stage* stage,
-                                 escher::PaperRenderer2* renderer) {
+                                 escher::PaperRenderer* renderer) {
   stage->set_clear_color(vec3(0.f, 0.f, 0.f));
   float current_time_sec = stopwatch.GetElapsedSeconds();
   float t = sin(current_time_sec);

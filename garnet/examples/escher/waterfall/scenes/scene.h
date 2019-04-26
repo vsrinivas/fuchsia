@@ -7,7 +7,7 @@
 
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_renderer2.h"
+#include "lib/escher/paper/paper_renderer.h"
 
 namespace escher {
 class Stopwatch;
@@ -41,13 +41,13 @@ class Scene {
   // TODO(ES-155): deprecated, use PaperScene instead.
   virtual escher::Model* Update(const escher::Stopwatch& stopwatch,
                                 uint64_t frame_count, escher::Stage* stage,
-                                escher::PaperRenderer2* renderer = nullptr) = 0;
+                                escher::PaperRenderer* renderer = nullptr) = 0;
 
   // Default implementation delegates to the escher::Stage version.
   // TODO(ES-155): make this pure virtual when Init(Stage*) dies.
   virtual void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
                       escher::PaperScene* scene,
-                      escher::PaperRenderer2* renderer);
+                      escher::PaperRenderer* renderer);
 
   // Optionally returns a |Model| for the specified time, frame_count, and
   // screen dimensions.  The returned Model only needs to be valid for the
