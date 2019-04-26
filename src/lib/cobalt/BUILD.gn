@@ -30,11 +30,16 @@ package("cobalt_lib_tests") {
   deps = [
     ":unittests",
     "//src/lib/cobalt/cpp:test_metrics_registry",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
   ]
 
   tests = [
     {
       name = "cobalt_lib_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_cobalt_lib_test"
       environments = basic_envs
     },
   ]
