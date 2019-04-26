@@ -78,7 +78,7 @@ void FrameSink::PutFrame(
   zx_time_t present_time;
   if (last_requested_present_time_ == ZX_TIME_INFINITE_PAST) {
     // Tell Scenic to show the first frame around now-ish.
-    present_time = zx_clock_get_monotonic() + ZX_SEC(1);
+    present_time = zx_clock_get_monotonic() + ZX_SEC(3);
   } else {
     auto delta = ZX_USEC(1000000 / frames_per_second_);
     FXL_CHECK(delta > 0);

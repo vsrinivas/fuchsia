@@ -69,6 +69,15 @@ constexpr uint32_t kFlushThroughBytes = 16384;
 constexpr uint32_t kEndOfStreamWidth = 42;
 constexpr uint32_t kEndOfStreamHeight = 52;
 
+// A client using the min shouldn't necessarily expect performance to be
+// acceptable when running higher bit-rates.
+//
+// TODO(MTWN-249): Set this to ~8k or so.  For now, we boost the
+// per-packet buffer size to avoid sysmem picking the min buffer size.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
+// This is an arbitrary cap for now.
+constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
+
 // Zero-initialized, so it shouldn't take up space on-disk.
 const uint8_t kFlushThroughZeroes[kFlushThroughBytes] = {};
 
@@ -140,8 +149,144 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     CodecPort port,
     const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
-  ZX_ASSERT_MSG(false, "not yet implemented");
-  return fuchsia::sysmem::BufferCollectionConstraints();
+  fuchsia::sysmem::BufferCollectionConstraints result;
+
+  // For now, we didn't report support for single_buffer_mode, and CodecImpl
+  // will have failed the codec already by this point if the client tried to
+  // use single_buffer_mode.
+  //
+  // TODO(dustingreen): Support single_buffer_mode on input (only).
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() || !partial_settings.single_buffer_mode());
+  // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
+  // have the token here.
+  ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
+
+  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
+  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
+  uint32_t packet_count =
+      partial_settings.packet_count_for_server() +
+      partial_settings.packet_count_for_client();
+
+  // For now this is true - when we plumb more flexible buffer count range this
+  // will change to account for a range.
+  ZX_DEBUG_ASSERT(port != kOutputPort || packet_count == packet_count_total_);
+
+  // TODO(MTWN-250): plumb/permit range of buffer count from further down,
+  // instead of single number frame_count, and set this to the actual
+  // stream-required # of reference frames + # that can concurrently decode.
+  // For the moment we demand that buffer_count equals packet_count equals
+  // packet_count_for_server() + packet_count_for_client(), which is too
+  // inflexible.  Also, we rely on the server setting exactly and only
+  // min_buffer_count_for_camping to packet_count_for_server() and the client
+  // setting exactly and only min_buffer_count_for_camping to
+  // packet_count_for_client().
+  result.min_buffer_count_for_camping =
+      partial_settings.packet_count_for_server();
+  // Some slack is nice overall, but avoid having each participant ask for
+  // dedicated slack.  Using sysmem the client will ask for it's own buffers for
+  // camping and any slack, so the codec doesn't need to ask for any extra on
+  // behalf of the client.
+  ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
+  ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
+  result.max_buffer_count = packet_count;
+
+  uint32_t per_packet_buffer_bytes_min;
+  uint32_t per_packet_buffer_bytes_max;
+  if (port == kInputPort) {
+    per_packet_buffer_bytes_min = kInputPerPacketBufferBytesMin;
+    per_packet_buffer_bytes_max = kInputPerPacketBufferBytesMax;
+  } else {
+    ZX_DEBUG_ASSERT(port == kOutputPort);
+    // NV12, based on min stride.
+    per_packet_buffer_bytes_min = stride_ * height_ * 3 / 2;
+    // At least for now, don't cap the per-packet buffer size for output.  The
+    // HW only cares about the portion we set up for output anyway, and the
+    // client has no way to force output to occur into portions of the output
+    // buffer beyond what's implied by the max supported image dimensions.
+    per_packet_buffer_bytes_max = 0xFFFFFFFF;
+  }
+
+  result.has_buffer_memory_constraints = true;
+  result.buffer_memory_constraints.min_size_bytes = per_packet_buffer_bytes_min;
+  result.buffer_memory_constraints.max_size_bytes = per_packet_buffer_bytes_max;
+  // amlogic requires physically contiguous on both input and output
+  result.buffer_memory_constraints.physically_contiguous_required = true;
+  result.buffer_memory_constraints.secure_required = false;
+  // This isn't expected to fully work at first, but allow getting as far as we
+  // can.
+  result.buffer_memory_constraints.secure_permitted = true;
+
+  if (port == kOutputPort) {
+    result.image_format_constraints_count = 1;
+    fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+        result.image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
+    // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
+    // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
+    // only other potential possibility here.
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type =
+        fuchsia::sysmem::ColorSpaceType::REC709;
+
+    // The non-"required_" fields indicate the decoder's ability to potentially
+    // output frames at various dimensions as coded in the stream.  Aside from
+    // the current stream being somewhere in these bounds, these have nothing to
+    // do with the current stream in particular.
+    image_constraints.min_coded_width = 16;
+    image_constraints.max_coded_width = 3840;
+    image_constraints.min_coded_height = 16;
+    // This intentionally isn't the height of a 4k frame.  See
+    // max_coded_width_times_coded_height.  We intentionally constrain the max
+    // dimension in width or height to the width of a 4k frame.  While the HW
+    // might be able to go bigger than that as long as the other dimension is
+    // smaller to compensate, we don't really need to enable any larger than
+    // 4k's width in either dimension, so we don't.
+    image_constraints.max_coded_height = 3840;
+    image_constraints.min_bytes_per_row = 16;
+    // no hard-coded max stride, at least for now
+    image_constraints.max_bytes_per_row = 0xFFFFFFFF;
+    image_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 16;
+    image_constraints.coded_height_divisor = 16;
+    image_constraints.bytes_per_row_divisor = 16;
+    // TODO(dustingreen): Since this is a producer that will always produce at
+    // offset 0 of a physical page, we don't really care if this field is
+    // consistent with any constraints re. what the HW can do.
+    image_constraints.start_offset_divisor = 1;
+    // Odd display dimensions are permitted, but these don't imply odd NV12
+    // dimensions - those are constrainted by coded_width_divisor and
+    // coded_height_divisor which are both 16.
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+
+    // The decoder is producing frames and the decoder has no choice but to
+    // produce frames at their coded size.  The decoder wants to potentially be
+    // able to support a stream with dynamic resolution, potentially including
+    // dimensions both less than and greater than the dimensions that led to the
+    // current need to allocate a BufferCollection.  For this reason, the
+    // required_ fields are set to the exact current dimensions, and the
+    // permitted (non-required_) fields is set to the full potential range that
+    // the decoder could potentially output.  If an initiator wants to require a
+    // larger range of dimensions that includes the required range indicated
+    // here (via a-priori knowledge of the potential stream dimensions), an
+    // initiator is free to do so.
+    image_constraints.required_min_coded_width = width_;
+    image_constraints.required_max_coded_width = width_;
+    image_constraints.required_min_coded_height = height_;
+    image_constraints.required_max_coded_height = height_;
+  } else {
+    ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
+  }
+
+  // We don't have to fill out usage - CodecImpl takes care of that.
+  ZX_DEBUG_ASSERT(!result.usage.cpu);
+  ZX_DEBUG_ASSERT(!result.usage.display);
+  ZX_DEBUG_ASSERT(!result.usage.vulkan);
+  ZX_DEBUG_ASSERT(!result.usage.video);
+
+  return result;
 }
 
 void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(

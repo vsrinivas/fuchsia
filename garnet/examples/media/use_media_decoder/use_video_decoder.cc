@@ -205,9 +205,11 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
 }
 void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
                     size_t input_size) {
-  auto queue_access_unit = [&codec_client, &input_bytes](uint8_t* bytes,
-                                                         size_t byte_count,
-                                                         uint32_t frame_pts) {
+  uint64_t input_frame_pts_counter = 0;
+  auto queue_access_unit =
+      [&codec_client, &input_bytes, &input_frame_pts_counter](
+          uint8_t* bytes,
+          size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet =
         codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
@@ -222,7 +224,7 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
     packet->set_start_offset(0);
     packet->set_valid_length_bytes(byte_count);
 
-    packet->set_timestamp_ish(frame_pts);
+    packet->set_timestamp_ish(input_frame_pts_counter++);
 
     packet->set_start_access_unit(true);
     packet->set_known_end_access_unit(true);
@@ -236,9 +238,12 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
     IvfFrameHeader* frame_header = (IvfFrameHeader*)&input_bytes[i];
     if (i + sizeof(IvfFrameHeader) + frame_header->size_bytes > input_size)
       Exit("Frame truncated.");
+    // We don't use frame_header->presentation_timestamp, because we want to
+    // send through frame index in timestamp_ish field instead, for consistency
+    // with .h264 files which don't have timestamps in them, and so tests can
+    // assume frame index as timestamp_ish on output.
     queue_access_unit(&input_bytes[i + sizeof(IvfFrameHeader)],
-                      frame_header->size_bytes,
-                      frame_header->presentation_timestamp);
+                      frame_header->size_bytes);
     i += sizeof(IvfFrameHeader) + frame_header->size_bytes;
   }
 
@@ -789,8 +794,8 @@ void use_vp9_decoder(async::Loop* main_loop,
                      const std::string& output_file,
                      uint8_t md_out[SHA256_DIGEST_LENGTH],
                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                     FrameSink* frame_sink) {
+                     uint32_t* fourcc, FrameSink* frame_sink) {
   use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kVp9,
-                    input_file, output_file, md_out, timestamps_out, nullptr,
+                    input_file, output_file, md_out, timestamps_out, fourcc,
                     frame_sink);
 }

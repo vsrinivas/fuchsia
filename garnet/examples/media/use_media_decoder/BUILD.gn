@@ -8,6 +8,7 @@ source_set("use_media_decoder_source_set") {
   testonly = true
 
   sources = [
+    "test/use_video_decoder_test.cc",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
     "use_video_decoder.cc",
@@ -17,15 +18,14 @@ source_set("use_media_decoder_source_set") {
   ]
 
   public_deps = [
+    "//garnet/lib/media/codec_impl:fourcc",
+    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//third_party/boringssl:crypto",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl:fourcc",
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/lib/media/test:codec_client",
     "//garnet/lib/media/test:frame_sink",
@@ -33,6 +33,11 @@ source_set("use_media_decoder_source_set") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/lib/media/codec_impl:fourcc",
+    "//garnet/public/lib/component/cpp/testing",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 
@@ -45,8 +50,6 @@ executable("use_media_decoder") {
   deps = [
     ":use_media_decoder_source_set",
     "//garnet/lib/media/test:frame_sink",
-    "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -62,11 +65,6 @@ executable("use_aac_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -83,9 +81,19 @@ test("use_h264_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
-    "//garnet/lib/media/codec_impl:fourcc",
-    "//garnet/lib/media/test:frame_sink",
-    "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test("use_vp9_decoder_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_test"
+
+  sources = [
+    "test/use_vp9_decoder_test.cc",
+  ]
+
+  deps = [
+    ":use_media_decoder_source_set",
   ]
 }

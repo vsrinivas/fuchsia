@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
                    input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
       use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
-                      output_file, md, nullptr, frame_sink);
+                      output_file, md, nullptr, nullptr, frame_sink);
     };
   } else {
     usage(command_line.argv0().c_str());

@@ -187,11 +187,12 @@ package("use_h264_decoder_test") {
 
   tests = [
     {
-      # Should pass when run manually on VIM2, fails otherwise.
+      # Should pass when run VIM2, astro, or QEMU.
       name = "use_h264_decoder_test"
 
       environments = [
         vim2_env,
+        astro_env,
         qemu_env,
       ]
     },
@@ -202,6 +203,47 @@ package("use_h264_decoder_test") {
       path = rebase_path(
               "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
+    },
+  ]
+}
+
+package("use_vp9_decoder_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_vp9_decoder_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_vp9_decoder_test.cmx")
+      dest = "use_vp9_decoder_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Soon, this should pass when run on VIM2 or astro, and fail otherwise.
+      #
+      # However, at the moment VP9 HW decode is not enabled, so this will fail
+      # everywhere for now.  That's why this package is not included in tests
+      # yet.
+      #
+      # TODO(MTWN-224): Fix the above comment when VP9 HW decode is enabled.
+      name = "use_vp9_decoder_test"
+
+      environments = [
+        vim2_env,
+        astro_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+      dest = "bear-vp9.ivf"
     },
   ]
 }

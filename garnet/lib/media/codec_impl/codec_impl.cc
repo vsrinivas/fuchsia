@@ -429,6 +429,7 @@ void CodecImpl::SetInputBufferSettingsCommon(
 void CodecImpl::SetOutputBufferSettings(
     fuchsia::media::StreamBufferSettings output_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  VLOGF("CodecImpl::SetOutputBufferSettings\n");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     SetOutputBufferSettingsCommon(lock, &output_settings, nullptr);
@@ -495,6 +496,7 @@ void CodecImpl::AddOutputBufferInternal(bool is_client, fuchsia::media::StreamBu
 void CodecImpl::SetOutputBufferPartialSettings(
   fuchsia::media::StreamBufferPartialSettings output_partial_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  VLOGF("CodecImpl::SetOutputBufferPartialSettings\n");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!sysmem_) {
@@ -2065,7 +2067,17 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
 
         // A core codec can take action here to finish configuring buffers if
         // it's able, or can delay configuring buffers until
-        // CoreCodecStartStream() if that works better for the core codec.
+        // CoreCodecStartStream() or
+        // CoreCodecMidStreamOutputBufferReConfigFinish() if that works better
+        // for the core codec.
+        //
+        // In any case, during a mid-stream output constraints change, the core
+        // codec must not call any onCoreCodecOutput* methods until the core
+        // codec sees CoreCodecStopStream() (after stopping the stream, in
+        // preparation for the next stream), or
+        // CoreCodecMidStreamOutputBufferReConfigFinish().
+        //
+        // In other words, this call does /not/ imply un-pausing output.
         CoreCodecConfigureBuffers(port, all_packets_[port]);
 
         // All output packets need to start with the core codec.  This is
@@ -2664,11 +2676,14 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(
 
 void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stream: %lu\n",
+        stream_lifetime_ordinal);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
       // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took
       // care of it.
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stale stream\n");
       return;
     }
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
@@ -2697,6 +2712,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     }
 
     if (IsStoppingLocked()) {
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange IsStoppingLocked()\n");
       return;
     }
 
@@ -2705,6 +2721,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
       // core_codec_meh_output_buffer_constraints_version_ordinal_ is still set
       // such that the client will be forced to re-configure output buffers at
       // the start of the new stream.
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange future_discarded()\n");
       return;
     }
 
