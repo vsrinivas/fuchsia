@@ -55,18 +55,14 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
     *num_queries = 0;
   }
   do {
-    Status status;
+    IterationStatus status;
     std::vector<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
-    (*snapshot)->GetEntries(
+    (*snapshot)->GetEntriesNew(
         start.Clone(), std::move(token),
         callback::Capture(waiter->GetCallback(), &status, &entries, &token));
     if (!waiter->RunUntilCalled()) {
       ADD_FAILURE() << "|GetEntries| failed to call back.";
-      return {};
-    }
-    if (status != Status::OK && status != Status::PARTIAL_RESULT) {
-      ADD_FAILURE() << "Actual status: " << fidl::ToUnderlying(status);
       return {};
     }
     if (num_queries) {

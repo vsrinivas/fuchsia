@@ -259,11 +259,11 @@ void FetchBenchmark::FetchValues(PageSnapshotPtr snapshot, size_t i) {
   PageSnapshot* snapshot_ptr = snapshot.get();
 
   TRACE_ASYNC_BEGIN("benchmark", "Fetch", i);
-  snapshot_ptr->Fetch(
+  snapshot_ptr->FetchNew(
       std::move(keys_[i]),
-      [this, snapshot = std::move(snapshot), i](
-          Status status, fuchsia::mem::BufferPtr value) mutable {
-        if (QuitOnError(QuitLoopClosure(), status, "PageSnapshot::Fetch")) {
+      [this, snapshot = std::move(snapshot),
+       i](fuchsia::ledger::PageSnapshot_FetchNew_Result result) mutable {
+        if (QuitOnError(QuitLoopClosure(), result, "PageSnapshot::Fetch")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "Fetch", i);
@@ -281,11 +281,11 @@ void FetchBenchmark::FetchPart(PageSnapshotPtr snapshot, size_t i,
   PageSnapshot* snapshot_ptr = snapshot.get();
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", trace_event_id);
-  snapshot_ptr->FetchPartial(
+  snapshot_ptr->FetchPartialNew(
       keys_[i], part * part_size_, part_size_,
       [this, snapshot = std::move(snapshot), i, part, trace_event_id](
-          Status status, fuchsia::mem::BufferPtr value) mutable {
-        if (QuitOnError(QuitLoopClosure(), status,
+          fuchsia::ledger::PageSnapshot_FetchPartialNew_Result result) mutable {
+        if (QuitOnError(QuitLoopClosure(), result,
                         "PageSnapshot::FetchPartial")) {
           return;
         }

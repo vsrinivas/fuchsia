@@ -55,29 +55,23 @@ fit::function<void(zx_status_t)> NewErrorHandler(fit::closure quit_callback,
   };
 }
 
-void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
-                std::vector<fuchsia::ledger::Entry> entries,
-                std::unique_ptr<fuchsia::ledger::Token> token,
-                fit::function<void(fuchsia::ledger::Status,
-                                   std::vector<fuchsia::ledger::Entry>)>
-                    callback) {
+void GetEntries(
+    fuchsia::ledger::PageSnapshotPtr snapshot,
+    std::vector<fuchsia::ledger::Entry> entries,
+    std::unique_ptr<fuchsia::ledger::Token> token,
+    fit::function<void(std::vector<fuchsia::ledger::Entry>)> callback) {
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetEntries(
+  snapshot_ptr->GetEntriesNew(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       [snapshot = std::move(snapshot), entries = std::move(entries),
-       callback = std::move(callback)](fuchsia::ledger::Status status,
+       callback = std::move(callback)](fuchsia::ledger::IterationStatus status,
                                        auto new_entries,
                                        auto next_token) mutable {
-        if (status != fuchsia::ledger::Status::OK &&
-            status != fuchsia::ledger::Status::PARTIAL_RESULT) {
-          callback(status, {});
-          return;
-        }
         for (size_t i = 0; i < new_entries.size(); ++i) {
           entries.push_back(std::move(new_entries.at(i)));
         }
-        if (status == fuchsia::ledger::Status::OK) {
-          callback(fuchsia::ledger::Status::OK, std::move(entries));
+        if (status == fuchsia::ledger::IterationStatus::OK) {
+          callback(std::move(entries));
           return;
         }
         GetEntries(std::move(snapshot), std::move(entries),
@@ -85,10 +79,9 @@ void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
       });
 }
 
-void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
-                fit::function<void(fuchsia::ledger::Status,
-                                   std::vector<fuchsia::ledger::Entry>)>
-                    callback) {
+void GetEntries(
+    fuchsia::ledger::PageSnapshotPtr snapshot,
+    fit::function<void(std::vector<fuchsia::ledger::Entry>)> callback) {
   GetEntries(std::move(snapshot), {}, nullptr, std::move(callback));
 }
 
@@ -135,21 +128,14 @@ void TodoApp::OnChange(fuchsia::ledger::PageChange /*page_change*/,
 }
 
 void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
-  GetEntries(std::move(snapshot),
-             [this](fuchsia::ledger::Status status, auto entries) {
-               if (status != fuchsia::ledger::Status::OK) {
-                 FXL_LOG(ERROR) << "GetEntries failed";
-                 loop_->Quit();
-                 return;
-               }
-
-               std::cout << "--- To Do ---" << std::endl;
-               for (auto& entry : entries) {
-                 std::cout << (entry.value ? ToString(*entry.value) : "<empty>")
-                           << std::endl;
-               }
-               std::cout << "---" << std::endl;
-             });
+  GetEntries(std::move(snapshot), [this](auto entries) {
+    std::cout << "--- To Do ---" << std::endl;
+    for (auto& entry : entries) {
+      std::cout << (entry.value ? ToString(*entry.value) : "<empty>")
+                << std::endl;
+    }
+    std::cout << "---" << std::endl;
+  });
 }
 
 void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
@@ -157,10 +143,10 @@ void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
   page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(
+  snapshot_ptr->GetKeysNew(
       {}, nullptr,
       [snapshot = std::move(snapshot), callback = std::move(callback)](
-          fuchsia::ledger::Status status, auto keys, auto next_token) {
+          fuchsia::ledger::IterationStatus status, auto keys, auto next_token) {
         callback(std::move(keys));
       });
 }

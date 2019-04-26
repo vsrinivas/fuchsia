@@ -24,6 +24,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
+#include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/lib/files/directory.h"
@@ -131,7 +132,6 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
-  ledger::Status status;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
       ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
@@ -148,12 +148,9 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
-  fuchsia::mem::BufferPtr value;
-  snapshot->Get(TestArray(), &status, &value);
-  EXPECT_EQ(ledger::Status::OK, status);
-  std::string value_as_string;
-  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
-  EXPECT_TRUE(Equals(TestArray(), value_as_string));
+  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 }
 
 TEST_F(LedgerEndToEndTest, Terminate) {
@@ -351,7 +348,6 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback(
       [&ledger_app_shut_down] { ledger_app_shut_down = true; });
-  ledger::Status status;
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
@@ -373,19 +369,14 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   // Write and read some data to verify that Ledger still works.
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetPage(nullptr, page.NewRequest());
-  status = ledger::Status::INTERNAL_ERROR;
   page->Put(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  status = ledger::Status::INTERNAL_ERROR;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
   fuchsia::mem::BufferPtr value;
-  status = ledger::Status::INTERNAL_ERROR;
-  snapshot->Get(TestArray(), &status, &value);
-  ASSERT_EQ(ledger::Status::OK, status);
-  std::string value_as_string;
-  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
-  EXPECT_TRUE(Equals(TestArray(), value_as_string));
+  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.
   EXPECT_TRUE(ledger_repository);
@@ -428,12 +419,9 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
   fuchsia::mem::BufferPtr value;
-  status = ledger::Status::INTERNAL_ERROR;
-  snapshot->Get(TestArray(), &status, &value);
-  ASSERT_EQ(ledger::Status::OK, status);
-  std::string value_as_string;
-  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
-  EXPECT_TRUE(Equals(TestArray(), value_as_string));
+  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.
   EXPECT_TRUE(ledger_repository);

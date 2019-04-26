@@ -6,6 +6,7 @@
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/result.h>
 #include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/string_view.h>
 
@@ -178,7 +179,8 @@ namespace {
 constexpr char kJsonNull[] = "null";
 
 class ReadVmoCall
-    : public Operation<fuchsia::ledger::Status, fuchsia::mem::BufferPtr> {
+    : public Operation<
+          fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error>> {
  public:
   ReadVmoCall(PageClient* page_client, fidl::StringPtr key,
               ResultCall result_call)
@@ -188,15 +190,18 @@ class ReadVmoCall
 
  private:
   void Run() override {
-    FlowToken flow{this, &status_, &value_};
+    FlowToken flow{this, &result_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->Get(to_array(key_),
-                        [this, flow](fuchsia::ledger::Status status,
-                                     fuchsia::mem::BufferPtr value) {
-                          status_ = status;
-                          value_ = std::move(value);
-                        });
+    page_snapshot_->GetNew(
+        to_array(key_),
+        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+          if (result.is_err()) {
+            result_ = fit::error(result.err());
+          } else {
+            result_ = fit::ok(std::move(result.response().buffer));
+          }
+        });
   }
 
   // Input parameters.
@@ -207,39 +212,34 @@ class ReadVmoCall
   fuchsia::ledger::PageSnapshotPtr page_snapshot_;
 
   // Return values.
-  fuchsia::ledger::Status status_;
-  fuchsia::mem::BufferPtr value_;
+  fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result_;
 };
 
 // TODO(rosswang): this is a temporary migration helper
 std::tuple<StoryStorage::Status, fidl::StringPtr> ToLinkValue(
-    fuchsia::ledger::Status ledger_status,
-    fuchsia::mem::BufferPtr ledger_value) {
+    fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> ledger_result) {
   StoryStorage::Status link_value_status = StoryStorage::Status::OK;
   fidl::StringPtr link_value;
 
-  switch (ledger_status) {
-    case fuchsia::ledger::Status::KEY_NOT_FOUND:
-      // Leave link_value as a null-initialized StringPtr.
-      break;
-    case fuchsia::ledger::Status::OK:
-      if (!ledger_value) {
-        link_value = kJsonNull;
-      } else {
-        std::string link_value_string;
-        if (fsl::StringFromVmo(*ledger_value, &link_value_string)) {
-          link_value = std::move(link_value_string);
-        } else {
-          FXL_LOG(ERROR) << "VMO could not be copied.";
-          link_value_status = StoryStorage::Status::VMO_COPY_ERROR;
-        }
-      }
-      break;
-    default:
-      FXL_LOG(ERROR) << "PageSnapshot.Get() "
-                     << fidl::ToUnderlying(ledger_status);
-      link_value_status = StoryStorage::Status::LEDGER_ERROR;
-      break;
+  if (ledger_result.is_error()) {
+    switch (ledger_result.error()) {
+      case fuchsia::ledger::Error::KEY_NOT_FOUND:
+        // Leave link_value as a null-initialized StringPtr.
+        break;
+      default:
+        FXL_LOG(ERROR) << "PageSnapshot.Get() "
+                       << fidl::ToUnderlying(ledger_result.error());
+        link_value_status = StoryStorage::Status::LEDGER_ERROR;
+        break;
+    }
+  } else {
+    std::string link_value_string;
+    if (fsl::StringFromVmo(ledger_result.value(), &link_value_string)) {
+      link_value = std::move(link_value_string);
+    } else {
+      FXL_LOG(ERROR) << "VMO could not be copied.";
+      link_value_status = StoryStorage::Status::VMO_COPY_ERROR;
+    }
   }
 
   return {link_value_status, link_value};
@@ -250,8 +250,9 @@ std::tuple<StoryStorage::Status, fidl::StringPtr> ToLinkValue(
 FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetLinkValue(
     const LinkPath& link_path) {
   auto key = MakeLinkKey(link_path);
-  auto ret = Future<fuchsia::ledger::Status, fuchsia::mem::BufferPtr>::Create(
-      "StoryStorage::GetLinkValue " + key);
+  auto ret =
+      Future<fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error>>::Create(
+          "StoryStorage::GetLinkValue " + key);
   operation_queue_.Add(
       std::make_unique<ReadVmoCall>(this, key, ret->Completer()));
 
@@ -324,20 +325,19 @@ class GetEntityTypeCall
 
     operation_queue_.Add(std::make_unique<ReadVmoCall>(
         page_client_, EntityTypeKeyForCookie(cookie_),
-        [this, flow](fuchsia::ledger::Status status,
-                     fuchsia::mem::BufferPtr buffer) {
-          if (status == fuchsia::ledger::Status::KEY_NOT_FOUND) {
+        [this, flow](
+            fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result) {
+          if (result.is_error() &&
+              result.error() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
             status_ = StoryStorage::Status::INVALID_ENTITY_COOKIE;
             return;
           }
 
-          if (status != fuchsia::ledger::Status::OK) {
+          if (result.is_error()) {
             status_ = StoryStorage::Status::LEDGER_ERROR;
             return;
           }
-          if (buffer) {
-            FXL_CHECK(fsl::StringFromVmo(*buffer, &type_));
-          }
+          FXL_CHECK(fsl::StringFromVmo(result.value(), &type_));
         }));
   }
 
@@ -379,14 +379,14 @@ class GetEntityDataCall
 
           operation_queue_.Add(std::make_unique<ReadVmoCall>(
               page_client_, EntityKeyForCookie(cookie_),
-              [this, flow](fuchsia::ledger::Status status,
-                           fuchsia::mem::BufferPtr buffer) {
-                StoryStorage::Status story_status =
-                    status == fuchsia::ledger::Status::OK
-                        ? StoryStorage::Status::OK
-                        : StoryStorage::Status::LEDGER_ERROR;
-                status_ = story_status;
-                result_ = std::move(buffer);
+              [this,
+               flow](fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error>
+                         result) {
+                status_ = StoryStorage::Status::LEDGER_ERROR;
+                if (result.is_ok()) {
+                  status_ = StoryStorage::Status::OK;
+                  result_ = fidl::MakeOptional(std::move(result.value()));
+                }
               }));
         }));
   }
@@ -524,11 +524,10 @@ class UpdateLinkCall
 
     operation_queue_.Add(std::make_unique<ReadVmoCall>(
         page_client_, key_,
-        [this, flow](fuchsia::ledger::Status status,
-                     fuchsia::mem::BufferPtr current_value) {
+        [this, flow](
+            fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> value) {
           fidl::StringPtr json_current_value;
-          std::tie(status_, json_current_value) =
-              ToLinkValue(status, std::move(current_value));
+          std::tie(status_, json_current_value) = ToLinkValue(std::move(value));
 
           if (status_ == StoryStorage::Status::OK) {
             Mutate(flow, std::move(json_current_value));
@@ -692,13 +691,14 @@ StoryStorage::GetEntityCookieForName(const std::string& entity_name) {
       "StoryStorage.GetEntityName.did_get");
   operation_queue_.Add(std::make_unique<ReadVmoCall>(
       this, kEntityNamePrefix + entity_name,
-      [did_get](fuchsia::ledger::Status status, fuchsia::mem::BufferPtr data) {
-        if (status != fuchsia::ledger::Status::OK || !data) {
+      [did_get](
+          fit::result<fuchsia::mem::Buffer, fuchsia::ledger::Error> result) {
+        if (result.is_error()) {
           did_get->Complete(StoryStorage::Status::LEDGER_ERROR, "");
           return;
         }
         std::string cookie;
-        if (!fsl::StringFromVmo(*data, &cookie)) {
+        if (!fsl::StringFromVmo(result.value(), &cookie)) {
           did_get->Complete(StoryStorage::Status::VMO_COPY_ERROR, "");
           return;
         }

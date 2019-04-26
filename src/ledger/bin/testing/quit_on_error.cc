@@ -21,6 +21,14 @@ std::string FidlEnumToString(E e) {
   ss << fidl::ToUnderlying(e);
   return ss.str();
 }
+
+template <typename R>
+std::string FidlResultToString(const R& r) {
+  if (r.is_response()) {
+    return "";
+  }
+  return FidlEnumToString(r.err());
+};
 }  // namespace
 
 StatusTranslater::StatusTranslater(Status status)
@@ -33,6 +41,22 @@ StatusTranslater::StatusTranslater(zx_status_t status)
 StatusTranslater::StatusTranslater(CreateReferenceStatus status)
     : ok_(status == CreateReferenceStatus::OK),
       description_(FidlEnumToString(status)) {}
+
+StatusTranslater::StatusTranslater(
+    const fuchsia::ledger::PageSnapshot_GetNew_Result& result)
+    : ok_(result.is_response()), description_(FidlResultToString(result)) {}
+
+StatusTranslater::StatusTranslater(
+    const fuchsia::ledger::PageSnapshot_GetInlineNew_Result& result)
+    : ok_(result.is_response()), description_(FidlResultToString(result)) {}
+
+StatusTranslater::StatusTranslater(
+    const fuchsia::ledger::PageSnapshot_FetchNew_Result& result)
+    : ok_(result.is_response()), description_(FidlResultToString(result)) {}
+
+StatusTranslater::StatusTranslater(
+    const fuchsia::ledger::PageSnapshot_FetchPartialNew_Result& result)
+    : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 }  // namespace internal
 
 bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,

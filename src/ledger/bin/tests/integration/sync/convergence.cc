@@ -14,6 +14,7 @@
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
@@ -68,18 +69,17 @@ class PageWatcherImpl : public PageWatcher {
   int changes = 0;
 
   void GetInlineOnLatestSnapshot(std::vector<uint8_t> key,
-                                 PageSnapshot::GetInlineCallback callback) {
+                                 PageSnapshot::GetInlineNewCallback callback) {
     // We need to make sure the PageSnapshotPtr used to make the |GetInline|
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
     (*current_snapshot_)
-        ->GetInline(
+        ->GetInlineNew(
             std::move(key),
             [snapshot = current_snapshot_.Clone(),
              callback = std::move(callback)](
-                Status status, std::unique_ptr<InlinedValue> value) mutable {
-              callback(status, std::move(value));
-            });
+                fuchsia::ledger::PageSnapshot_GetInlineNew_Result
+                    result) mutable { callback(std::move(result)); });
   }
 
  private:
@@ -274,22 +274,22 @@ class ConvergenceTest
   bool AreValuesIdentical(
       const std::vector<std::unique_ptr<PageWatcherImpl>>& watchers,
       std::string key) {
-    std::vector<std::unique_ptr<InlinedValue>> values;
+    std::vector<InlinedValue> values;
     for (int i = 0; i < num_ledgers_; i++) {
-      values.emplace_back();
-      Status status = Status::UNKNOWN_ERROR;
       auto loop_waiter = NewWaiter();
+      fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
-          callback::Capture(loop_waiter->GetCallback(), &status, &values[i]));
+          callback::Capture(loop_waiter->GetCallback(), &result));
       EXPECT_TRUE(loop_waiter->RunUntilCalled());
-      EXPECT_EQ(Status::OK, status);
+      EXPECT_TRUE(result.is_response());
+      values.emplace_back(std::move(result.response().value));
     }
 
     bool values_are_identical = true;
     for (int i = 1; i < num_ledgers_; i++) {
-      values_are_identical &= convert::ExtendedStringView(values[0]->value) ==
-                              convert::ExtendedStringView(values[i]->value);
+      values_are_identical &= convert::ExtendedStringView(values[0].value) ==
+                              convert::ExtendedStringView(values[i].value);
     }
     return values_are_identical;
   }

@@ -267,33 +267,30 @@ class MessageQueueManager::GetQueueTokenCall
 
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);
-    snapshot_->Get(to_array(key_), [this, flow](fuchsia::ledger::Status status,
-                                                fuchsia::mem::BufferPtr value) {
-      if (status == fuchsia::ledger::Status::KEY_NOT_FOUND) {
-        // Key wasn't found, that's not an error.
-        return;
-      }
+    snapshot_->GetNew(
+        to_array(key_),
+        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+          if (result.is_err() &&
+              result.err() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
+            // Key wasn't found, that's not an error.
+            return;
+          }
 
-      if (status != fuchsia::ledger::Status::OK) {
-        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                       << "PageSnapshot.Get() " << fidl::ToUnderlying(status);
-        return;
-      }
+          if (result.is_err()) {
+            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                           << "PageSnapshot.Get() "
+                           << fidl::ToUnderlying(result.err());
+            return;
+          }
 
-      if (!value) {
-        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                       << "Value is null.";
-        return;
-      }
-
-      std::string queue_token;
-      if (!fsl::StringFromVmo(*value, &queue_token)) {
-        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                       << "VMO could not be copied.";
-        return;
-      }
-      result_ = queue_token;
-    });
+          std::string queue_token;
+          if (!fsl::StringFromVmo(result.response().buffer, &queue_token)) {
+            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                           << "VMO could not be copied.";
+            return;
+          }
+          result_ = queue_token;
+        });
   }
 
   const std::string component_namespace_;
@@ -323,41 +320,44 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
     page()->GetSnapshot(snapshot_.NewRequest(), std::vector<uint8_t>(),
                         nullptr);
     std::string key = MakeMessageQueueKey(token_);
-    snapshot_->Get(to_array(key), [this, flow](fuchsia::ledger::Status status,
-                                               fuchsia::mem::BufferPtr value) {
-      if (status != fuchsia::ledger::Status::OK) {
-        if (status != fuchsia::ledger::Status::KEY_NOT_FOUND) {
-          // It's expected that the key is not found when the link
-          // is accessed for the first time. Don't log an error
-          // then.
-          FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
-                         << "PageSnapshot.Get() " << fidl::ToUnderlying(status);
-        }
-        return;
-      }
+    snapshot_->GetNew(
+        to_array(key),
+        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+          if (result.is_err()) {
+            if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND) {
+              // It's expected that the key is not found when the link
+              // is accessed for the first time. Don't log an error
+              // then.
+              FXL_LOG(ERROR)
+                  << trace_name() << " " << token_ << " "
+                  << "PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
+            }
+            return;
+          }
 
-      std::string value_as_string;
-      if (value) {
-        if (!fsl::StringFromVmo(*value, &value_as_string)) {
-          FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
-                         << "VMO could not be copied.";
-          return;
-        }
-      }
+          std::string value_as_string;
+          if (result.is_response()) {
+            if (!fsl::StringFromVmo(result.response().buffer,
+                                    &value_as_string)) {
+              FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
+                             << "VMO could not be copied.";
+              return;
+            }
+          }
 
-      if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
-        return;
-      }
+          if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
+            return;
+          }
 
-      if (!result_.is_complete()) {
-        FXL_LOG(WARNING) << trace_name() << " " << token_ << " "
-                         << "Queue token not found in the ledger.";
-        return;
-      }
+          if (!result_.is_complete()) {
+            FXL_LOG(WARNING) << trace_name() << " " << token_ << " "
+                             << "Queue token not found in the ledger.";
+            return;
+          }
 
-      message_queue_manager_->GetMessageQueueStorage(result_)
-          ->AddMessageSenderBinding(std::move(request_));
-    });
+          message_queue_manager_->GetMessageQueueStorage(result_)
+              ->AddMessageSenderBinding(std::move(request_));
+        });
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
@@ -537,16 +537,7 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
     page()->GetSnapshot(snapshot_.NewRequest(),
                         to_array(message_queues_key_prefix_), nullptr);
     GetEntries(snapshot_.get(), &component_entries_,
-               [this, flow](fuchsia::ledger::Status status) {
-                 if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << trace_name() << " "
-                       << "GetEntries() " << fidl::ToUnderlying(status);
-                   return;
-                 }
-
-                 ProcessKeysToDelete(flow);
-               });
+               [this, flow] { ProcessKeysToDelete(flow); });
   }
 
   void ProcessKeysToDelete(FlowToken flow) {

@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/optional.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 
@@ -30,7 +31,6 @@ class LongHistorySyncTest : public IntegrationTest {
 
 TEST_P(LongHistorySyncTest, SyncLongHistory) {
   PageId page_id;
-  Status status = Status::INTERNAL_ERROR;
 
   // Create the first instance and write the page entries.
   auto instance1 = NewLedgerAppInstance();
@@ -63,18 +63,14 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      nullptr);
-  std::unique_ptr<InlinedValue> inlined_value;
 
   waiter = NewWaiter();
-  snapshot->GetInline(
-      convert::ToArray("iteration"),
-      callback::Capture(waiter->GetCallback(), &status, &inlined_value));
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
+  snapshot->GetInlineNew(convert::ToArray("iteration"),
+                         callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_TRUE(inlined_value);
   const int last_iteration = commit_history_length - 1;
-  ASSERT_EQ(std::to_string(last_iteration),
-            convert::ToString(inlined_value->value));
+  ASSERT_THAT(result, MatchesString(std::to_string(last_iteration)));
 
   // Verify that the sync state of the second page connection eventually becomes
   // idle.

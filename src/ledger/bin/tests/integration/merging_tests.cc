@@ -1770,28 +1770,26 @@ TEST_P(MergingIntegrationTest,
   page_conn1->GetSnapshot(snapshot3.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  InlinedValuePtr val1;
   waiter = NewWaiter();
-  Status status;
-  snapshot3->GetInline(
-      convert::ToArray("name"),
-      callback::Capture(waiter->GetCallback(), &status, &val1));
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result1;
+  snapshot3->GetInlineNew(convert::ToArray("name"),
+                          callback::Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
 
   PageSnapshotPtr snapshot4;
   page_conn1->GetSnapshot(snapshot4.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  InlinedValuePtr val2;
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInline(
-      convert::ToArray("name"),
-      callback::Capture(waiter->GetCallback(), &status, &val2));
+  snapshot4->GetInlineNew(convert::ToArray("name"),
+                          callback::Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
 
-  EXPECT_EQ(convert::ToString(val1->value), convert::ToString(val2->value));
+  ASSERT_TRUE(result1.is_response());
+  ASSERT_TRUE(result2.is_response());
+  EXPECT_EQ(convert::ToString(result1.response().value.value),
+            convert::ToString(result2.response().value.value));
 }
 
 // Tests that pages opened after disconnection of a conflict resolver
@@ -1883,28 +1881,26 @@ TEST_P(MergingIntegrationTest,
   page_conn1->GetSnapshot(snapshot3.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  InlinedValuePtr val1;
   waiter = NewWaiter();
-  Status status;
-  snapshot3->GetInline(
-      convert::ToArray("name"),
-      callback::Capture(waiter->GetCallback(), &status, &val1));
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result1;
+  snapshot3->GetInlineNew(convert::ToArray("name"),
+                          callback::Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
 
   PageSnapshotPtr snapshot4;
   page_conn1->GetSnapshot(snapshot4.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  InlinedValuePtr val2;
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInline(
-      convert::ToArray("name"),
-      callback::Capture(waiter->GetCallback(), &status, &val2));
+  snapshot4->GetInlineNew(convert::ToArray("name"),
+                          callback::Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
 
-  EXPECT_EQ(convert::ToString(val1->value), convert::ToString(val2->value));
+  ASSERT_TRUE(result1.is_response());
+  ASSERT_TRUE(result2.is_response());
+  EXPECT_EQ(convert::ToString(result1.response().value.value),
+            convert::ToString(result2.response().value.value));
 }
 
 INSTANTIATE_TEST_SUITE_P(

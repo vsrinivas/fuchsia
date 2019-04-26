@@ -132,37 +132,33 @@ class ReadDataCall : public PageOperation<DataPtr> {
 
     this->page()->GetSnapshot(page_snapshot_.NewRequest(),
                               fidl::VectorPtr<uint8_t>::New(0), nullptr);
-    page_snapshot_->Get(to_array(key_), [this, flow](
-                                            fuchsia::ledger::Status status,
-                                            fuchsia::mem::BufferPtr value) {
-      if (status != fuchsia::ledger::Status::OK) {
-        if (status != fuchsia::ledger::Status::KEY_NOT_FOUND ||
-            !not_found_is_ok_) {
-          FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                         << "PageSnapshot.Get() " << fidl::ToUnderlying(status);
-        }
-        return;
-      }
+    page_snapshot_->GetNew(
+        to_array(key_),
+        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+          if (result.is_err()) {
+            if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND ||
+                !not_found_is_ok_) {
+              FXL_LOG(ERROR)
+                  << this->trace_name() << " " << key_ << " "
+                  << "PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
+            }
+            return;
+          }
 
-      if (!value) {
-        FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                       << "PageSnapshot.Get() null vmo";
-      }
+          std::string value_as_string;
+          if (!fsl::StringFromVmo(result.response().buffer, &value_as_string)) {
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_
+                           << " Unable to extract data.";
+            return;
+          }
 
-      std::string value_as_string;
-      if (!fsl::StringFromVmo(*value, &value_as_string)) {
-        FXL_LOG(ERROR) << this->trace_name() << " " << key_
-                       << " Unable to extract data.";
-        return;
-      }
+          if (!XdrRead(value_as_string, &result_, filter_)) {
+            result_.reset();
+            return;
+          }
 
-      if (!XdrRead(value_as_string, &result_, filter_)) {
-        result_.reset();
-        return;
-      }
-
-      FXL_DCHECK(result_);
-    });
+          FXL_DCHECK(result_);
+        });
   }
 
   const std::string key_;
@@ -194,17 +190,7 @@ class ReadAllDataCall : public PageOperation<DataArray> {
 
     this->page()->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_),
                               nullptr);
-    GetEntries(page_snapshot_.get(), &entries_,
-               [this, flow](fuchsia::ledger::Status status) {
-                 if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << this->trace_name() << " "
-                       << "GetEntries() " << fidl::ToUnderlying(status);
-                   return;
-                 }
-
-                 Cont(flow);
-               });
+    GetEntries(page_snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken /*flow*/) {
@@ -294,17 +280,7 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
 
     page()->GetSnapshot(page_snapshot_.NewRequest(),
                         fidl::VectorPtr<uint8_t>::New(0), nullptr);
-    GetEntries(page_snapshot_.get(), &entries_,
-               [this, flow](fuchsia::ledger::Status status) {
-                 if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << this->trace_name() << " "
-                       << "GetEntries() " << fidl::ToUnderlying(status);
-                   return;
-                 }
-
-                 Cont(flow);
-               });
+    GetEntries(page_snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken /*flow*/) {

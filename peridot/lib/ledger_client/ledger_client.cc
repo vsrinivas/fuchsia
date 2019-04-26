@@ -4,10 +4,10 @@
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 
-#include <algorithm>
-
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/types.h>
+
+#include <algorithm>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -136,19 +136,13 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
             [this, flow] { WithDiff(flow); });
 
     GetEntries(left_version_.get(), &left_entries_,
-               [this, flow](fuchsia::ledger::Status) {
-                 LogEntries("left", left_entries_);
-               });
+               [this, flow] { LogEntries("left", left_entries_); });
 
     GetEntries(right_version_.get(), &right_entries_,
-               [this, flow](fuchsia::ledger::Status) {
-                 LogEntries("right", right_entries_);
-               });
+               [this, flow] { LogEntries("right", right_entries_); });
 
     GetEntries(common_version_.get(), &common_entries_,
-               [this, flow](fuchsia::ledger::Status) {
-                 LogEntries("common", common_entries_);
-               });
+               [this, flow] { LogEntries("common", common_entries_); });
   }
 
   void WithDiff(FlowToken flow) {

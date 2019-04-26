@@ -372,21 +372,19 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
     FlowToken flow{this, &snapshot_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->Get(
-        to_array(key_), [this, flow](fuchsia::ledger::Status status,
-                                     fuchsia::mem::BufferPtr snapshot) {
-          // TODO(MI4-1425): Handle NEEDS_FETCH status if using lazy priority.
-          switch (status) {
-            case fuchsia::ledger::Status::KEY_NOT_FOUND:
-              return;
-            case fuchsia::ledger::Status::OK:
-              snapshot_ = std::move(snapshot);
-              return;
-            default:
-              FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
-                             << fidl::ToUnderlying(status);
-              return;
+    page_snapshot_->GetNew(
+        to_array(key_),
+        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+          if (result.is_response()) {
+            snapshot_ = fidl::MakeOptional(std::move(result.response().buffer));
+            return;
           }
+          if (result.err() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
+            return;
+          }
+          // TODO(MI4-1425): Handle NEEDS_FETCH status if using lazy priority.
+          FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
+                         << fidl::ToUnderlying(result.err());
         });
   }
 

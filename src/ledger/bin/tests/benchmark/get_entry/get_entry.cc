@@ -157,14 +157,10 @@ void GetEntryBenchmark::GetSnapshot() {
 }
 
 void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
-  snapshot_->GetKeys(
+  snapshot_->GetKeysNew(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-      [this](Status status, auto keys, auto next_token) {
-        if (status != Status::PARTIAL_RESULT &&
-            QuitOnError(QuitLoopClosure(), status, "PageSnapshot::GetKeys")) {
-          return;
-        }
-        if (status == Status::PARTIAL_RESULT) {
+      [this](IterationStatus status, auto keys, auto next_token) {
+        if (status == IterationStatus::PARTIAL_RESULT) {
           GetKeys(std::move(next_token));
           return;
         }
@@ -187,10 +183,10 @@ void GetEntryBenchmark::GetNextEntry(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "get_entry", i);
-  snapshot_->Get(
+  snapshot_->GetNew(
       std::move(keys_[i]),
-      [this, i](Status status, fuchsia::mem::BufferPtr /*buffer*/) {
-        if (QuitOnError(QuitLoopClosure(), status, "PageShapshot::Get")) {
+      [this, i](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        if (QuitOnError(QuitLoopClosure(), result, "PageShapshot::Get")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "get_entry", i);
@@ -205,9 +201,10 @@ void GetEntryBenchmark::GetNextEntryInline(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "get_entry_inline", i);
-  snapshot_->GetInline(
-      std::move(keys_[i]), [this, i](Status status, InlinedValuePtr /*value*/) {
-        if (QuitOnError(QuitLoopClosure(), status, "PageShapshot::GetInline")) {
+  snapshot_->GetInlineNew(
+      std::move(keys_[i]),
+      [this, i](fuchsia::ledger::PageSnapshot_GetInlineNew_Result result) {
+        if (QuitOnError(QuitLoopClosure(), result, "PageShapshot::GetInline")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "get_entry_inline", i);

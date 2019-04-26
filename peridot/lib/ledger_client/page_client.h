@@ -146,7 +146,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
 // |callback| is invoked.
 void GetEntries(fuchsia::ledger::PageSnapshot* snapshot,
                 std::vector<fuchsia::ledger::Entry>* entries,
-                fit::function<void(fuchsia::ledger::Status)> done);
+                fit::function<void()> done);
 
 }  // namespace modular
 

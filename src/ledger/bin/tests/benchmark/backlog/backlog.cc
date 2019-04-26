@@ -112,7 +112,7 @@ class BacklogBenchmark : public SyncWatcher {
 
   void GetReaderSnapshot();
   void GetEntriesStep(std::unique_ptr<Token> token, size_t entries_left);
-  void CheckStatusAndGetMore(Status status, size_t entries_left,
+  void CheckStatusAndGetMore(IterationStatus status, size_t entries_left,
                              std::unique_ptr<Token> next_token);
 
   void RecordDirectorySize(const std::string& event_name,
@@ -341,14 +341,9 @@ void BacklogBenchmark::GetReaderSnapshot() {
 }
 
 void BacklogBenchmark::CheckStatusAndGetMore(
-    Status status, size_t entries_left, std::unique_ptr<Token> next_token) {
-  if ((status != Status::OK) && (status != Status::PARTIAL_RESULT)) {
-    if (QuitOnError(QuitLoopClosure(), status, "PageSnapshot::GetEntries")) {
-      return;
-    }
-  }
-
-  if (status == Status::OK) {
+    IterationStatus status, size_t entries_left,
+    std::unique_ptr<Token> next_token) {
+  if (status == IterationStatus::OK) {
     TRACE_ASYNC_END("benchmark", "get_all_entries", 0);
     FXL_DCHECK(entries_left == 0);
     FXL_DCHECK(!next_token);
@@ -366,18 +361,18 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token,
   FXL_DCHECK(entries_left > 0);
   TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
-    reader_snapshot_->GetEntriesInline(
+    reader_snapshot_->GetEntriesInlineNew(
         std::vector<uint8_t>(), std::move(token),
-        [this, entries_left](Status status, auto entries,
+        [this, entries_left](IterationStatus status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries.size(),
                                 std::move(next_token));
         });
   } else {
-    reader_snapshot_->GetEntries(
+    reader_snapshot_->GetEntriesInlineNew(
         std::vector<uint8_t>(), std::move(token),
-        [this, entries_left](Status status, auto entries,
+        [this, entries_left](IterationStatus status, auto entries,
                              auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries.size(),

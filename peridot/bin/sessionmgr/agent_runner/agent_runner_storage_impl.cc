@@ -62,17 +62,7 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    GetEntries(snapshot_.get(), &entries_,
-               [this, flow](fuchsia::ledger::Status status) {
-                 if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << trace_name() << " "
-                       << "GetEntries() " << fidl::ToUnderlying(status);
-                   return;
-                 }
-
-                 Cont(flow);
-               });
+    GetEntries(snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken /*flow*/) {

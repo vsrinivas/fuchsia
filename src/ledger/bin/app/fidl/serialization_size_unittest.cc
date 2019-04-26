@@ -60,10 +60,10 @@ class FakeSnapshotImpl : public PageSnapshot {
   FakeSnapshotImpl() {}
   ~FakeSnapshotImpl() override {}
 
-  GetEntriesInlineCallback get_entries_inline_callback;
-  GetEntriesCallback get_entries_callback;
-  GetCallback get_callback;
-  GetInlineCallback get_inline_callback;
+  GetEntriesInlineNewCallback get_entries_inline_callback;
+  GetEntriesNewCallback get_entries_callback;
+  GetNewCallback get_callback;
+  GetInlineNewCallback get_inline_callback;
 
   // PageSnapshot:
   void Sync(SyncCallback /*callback*/) override { FXL_NOTIMPLEMENTED(); }
@@ -71,25 +71,25 @@ class FakeSnapshotImpl : public PageSnapshot {
   void GetEntriesInline(std::vector<uint8_t> /*key_start*/,
                         std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
-    get_entries_inline_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetEntriesInlineNew(std::vector<uint8_t> /*key_start*/,
                            std::unique_ptr<Token> /*token*/,
-                           GetEntriesInlineNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+                           GetEntriesInlineNewCallback callback) override {
+    get_entries_inline_callback = std::move(callback);
   }
 
   void GetEntries(std::vector<uint8_t> /*key_start*/,
                   std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
-    get_entries_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetEntriesNew(std::vector<uint8_t> /*key_start*/,
                      std::unique_ptr<Token> /*token*/,
-                     GetEntriesNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+                     GetEntriesNewCallback callback) override {
+    get_entries_callback = std::move(callback);
   }
 
   void GetKeys(std::vector<uint8_t> /*key_start*/,
@@ -104,23 +104,22 @@ class FakeSnapshotImpl : public PageSnapshot {
     FXL_NOTIMPLEMENTED();
   }
 
-  void Get(std::vector<uint8_t> /*key*/, GetCallback callback) override {
-    get_callback = std::move(callback);
+  void Get(std::vector<uint8_t> /*key*/, GetCallback /*callback*/) override {
+    FXL_NOTIMPLEMENTED();
   }
 
-  void GetNew(std::vector<uint8_t> /*key*/,
-              GetNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+  void GetNew(std::vector<uint8_t> /*key*/, GetNewCallback callback) override {
+    get_callback = std::move(callback);
   }
 
   void GetInline(std::vector<uint8_t> /*key*/,
                  GetInlineCallback callback) override {
-    get_inline_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetInlineNew(std::vector<uint8_t> /*key*/,
-                    GetInlineNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+                    GetInlineNewCallback callback) override {
+    get_inline_callback = std::move(callback);
   }
 
   void Fetch(std::vector<uint8_t> /*key*/,
@@ -161,24 +160,23 @@ TEST_F(SerializationSizeTest, GetInline) {
   std::vector<uint8_t> key = GetKey(0, key_size);
   std::vector<uint8_t> value = convert::ToArray(GetValue(0, value_size));
 
-  auto client_callback = [](Status /*status*/,
-                            std::unique_ptr<InlinedValue> /*value*/) {};
+  auto client_callback =
+      [](fuchsia::ledger::PageSnapshot_GetInlineNew_Result /*value*/) {};
 
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetInline(std::move(key), std::move(client_callback));
+  snapshot_proxy->GetInlineNew(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   // Run the callback directly.
-  auto inlined_value = std::make_unique<InlinedValue>();
-  inlined_value->value = std::move(value);
-  snapshot_impl.get_inline_callback(Status::OK, std::move(inlined_value));
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result inlined_value;
+  inlined_value.response().value.value = std::move(value);
+  snapshot_impl.get_inline_callback(std::move(inlined_value));
 
   const size_t expected_bytes =
-      Align(kMessageHeaderSize + kPointerSize + GetByteVectorSize(value_size) +
-            kStatusEnumSize);
+      Align(kMessageHeaderSize + kPointerSize + GetByteVectorSize(value_size));
   const size_t expected_handles = 0;
   EXPECT_TRUE(
       CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
@@ -201,27 +199,27 @@ TEST_F(SerializationSizeTest, Get) {
   std::string object_data = GetValue(0, value_size);
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
-  fuchsia::mem::BufferPtr value =
-      fidl::MakeOptional(std::move(vmo).ToTransport());
+  fuchsia::mem::Buffer value = std::move(vmo).ToTransport();
 
-  auto client_callback = [](Status /*status*/,
-                            fuchsia::mem::BufferPtr /*value*/) {};
+  auto client_callback =
+      [](fuchsia::ledger::PageSnapshot_GetNew_Result /*result*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->Get(std::move(key), std::move(client_callback));
+  snapshot_proxy->GetNew(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
   reader = handle.TakeChannel();
 
   // Run the callback directly.
-  snapshot_impl.get_callback(Status::OK, std::move(value));
+  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  result.response().buffer = std::move(value);
+  snapshot_impl.get_callback(std::move(result));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +  // Header.
-            kPointerSize +        // BufferPtr.
-            kPointerSize +        // Size.
+            kPointerSize +        // Union tag.
             Align(kHandleSize) +  // FIDL_HANDLE_PRESENT.
-            kStatusEnumSize       // Status.
+            kPointerSize          // Size.
       );
   const size_t expected_handles = 1;
   EXPECT_TRUE(
@@ -238,12 +236,12 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](Status /*status*/,
+  auto client_callback = [](IterationStatus /*status*/,
                             std::vector<InlinedEntry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesInline(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                                   std::move(client_callback));
+  snapshot_proxy->GetEntriesInlineNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                                      std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -274,7 +272,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
 
   // Run the callback directly.
   snapshot_impl.get_entries_inline_callback(
-      Status::OK, std::move(entries_to_send), std::move(token));
+      IterationStatus::OK, std::move(entries_to_send), std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                         // Header.
@@ -300,11 +298,12 @@ TEST_F(SerializationSizeTest, GetEntries) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](Status /*status*/, std::vector<Entry> /*entries*/,
+  auto client_callback = [](IterationStatus /*status*/,
+                            std::vector<Entry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                             std::move(client_callback));
+  snapshot_proxy->GetEntriesNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                                std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -329,8 +328,8 @@ TEST_F(SerializationSizeTest, GetEntries) {
   }
 
   // Run the callback directly.
-  snapshot_impl.get_entries_callback(Status::OK, std::move(entries_to_send),
-                                     std::move(token));
+  snapshot_impl.get_entries_callback(
+      IterationStatus::OK, std::move(entries_to_send), std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                  // Header.

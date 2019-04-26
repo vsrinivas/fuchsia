@@ -7,11 +7,29 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <gmock/gmock.h>
+#include <lib/fit/result.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
 
 namespace ledger {
+namespace internal {
+// Adapter from return type of Get/GetInline/Fetch/FetchPartial to a
+// fit::result.
+class ErrorOrStringResultAdapter {
+ public:
+  template <typename Result>
+  ErrorOrStringResultAdapter(const Result& result);
+
+  const fit::result<std::string,
+                    std::pair<zx_status_t, fuchsia::ledger::Error>>&
+  ToResult() const;
+
+ private:
+  fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>
+      result_;
+};
+}  // namespace internal
 
 // Matcher that matches a convert::ExtendedStringView against a string-like.
 testing::Matcher<convert::ExtendedStringView> MatchesView(
@@ -32,6 +50,16 @@ testing::Matcher<const Entry&> MatchesEntry(
 // in this Matcher.
 testing::Matcher<const std::vector<Entry>&> MatchEntries(
     std::map<std::string, testing::Matcher<std::string>> matchers);
+
+// Matcher that takes the result of Get/GetInline/Fetch/FetchPartial and matches
+// its value against a string matcher.
+testing::Matcher<internal::ErrorOrStringResultAdapter> MatchesString(
+    testing::Matcher<std::string> matcher);
+
+// Matcher that takes the result of Get/GetInline/Fetch/FetchPartial and matches
+// its error against an error matcher.
+testing::Matcher<internal::ErrorOrStringResultAdapter> MatchesError(
+    testing::Matcher<fuchsia::ledger::Error> matcher);
 
 }  // namespace ledger
 

@@ -9,15 +9,17 @@
 #include <lib/fsl/vmo/vector.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
+#include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 
 namespace ledger {
 namespace {
+
+using testing::SizeIs;
 
 class SyncIntegrationTest : public IntegrationTest {
  protected:
@@ -68,17 +70,14 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      nullptr);
-  std::unique_ptr<InlinedValue> inlined_value;
 
   loop_waiter = NewWaiter();
-  Status status;
-  snapshot->GetInline(
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
+  snapshot->GetInlineNew(
       convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &status, &inlined_value));
+      callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_TRUE(inlined_value);
-  ASSERT_EQ("World", convert::ToString(inlined_value->value));
+  EXPECT_THAT(result, MatchesString("World"));
 
   // Verify that the sync state of the second page connection eventually becomes
   // idle.
@@ -128,16 +127,13 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      nullptr);
 
-  Status status;
-  std::unique_ptr<InlinedValue> inlined_value;
   loop_waiter = NewWaiter();
-  snapshot->GetInline(
+  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
+  snapshot->GetInlineNew(
       convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &status, &inlined_value));
+      callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_TRUE(inlined_value);
-  ASSERT_EQ("World", convert::ToString(inlined_value->value));
+  EXPECT_THAT(result, MatchesString("World"));
 
   // Verify that the sync states of page2 eventually become idle.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
@@ -169,8 +165,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      std::move(watcher_ptr));
 
-  rng::TestRandom rng(0);
-  DataGenerator generator = DataGenerator(&rng);
+  DataGenerator generator = DataGenerator(GetRandom());
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1).take();
@@ -191,24 +186,22 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
       [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 1; }));
   snapshot = std::move(*page2_watcher.GetLastSnapshot());
 
-  Status status;
-  fuchsia::mem::BufferPtr buffer;
-  loop_waiter = NewWaiter();
   // Lazy value is not downloaded eagerly.
-  snapshot->Get(
-      convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &status, &buffer));
+  loop_waiter = NewWaiter();
+  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  snapshot->GetNew(convert::ToArray("Hello"),
+                   callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::NEEDS_FETCH, status);
+  EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
 
+  fuchsia::ledger::PageSnapshot_FetchPartialNew_Result fetch_result;
   loop_waiter = NewWaiter();
   // Fetch only a small part.
-  snapshot->FetchPartial(
+  snapshot->FetchPartialNew(
       convert::ToArray("Hello"), 0, 10,
-      callback::Capture(loop_waiter->GetCallback(), &status, &buffer));
+      callback::Capture(loop_waiter->GetCallback(), &fetch_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_EQ(buffer->size, 10u);
+  EXPECT_THAT(fetch_result, MatchesString(SizeIs(10)));
 
   // Change priority to eager, re-upload.
   page1->PutReference(key, *reference, Priority::EAGER);
@@ -219,17 +212,10 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
 
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();
-  snapshot->Get(
-      convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &status, &buffer));
+  snapshot->GetNew(convert::ToArray("Hello"),
+                   callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-
-  // Check the content.
-  ASSERT_EQ(buffer->size, big_value.size());
-  std::vector<uint8_t> buffer_data;
-  ASSERT_TRUE(fsl::VectorFromVmo(*buffer, &buffer_data));
-  ASSERT_EQ(buffer_data, big_value);
+  EXPECT_THAT(result, MatchesString(convert::ToString(big_value)));
 }
 
 // Verifies that a PageWatcher correctly delivers notifications about the

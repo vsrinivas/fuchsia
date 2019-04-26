@@ -5,6 +5,10 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/errors.h>
+
+#include "lib/fit/result.h"
+#include "src/ledger/bin/fidl/include/types.h"
 
 using testing::AllOf;
 using testing::Field;
@@ -27,6 +31,32 @@ MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   return ExplainMatchResult(sub_matcher, vmo_content, result_listener);
 }
 
+MATCHER_P(InternalErrorOrStringResultAdapterErrorMatcher, sub_matcher, "") {
+  const fit::result<std::string,
+                    std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
+      arg.ToResult();
+  if (!TypedEq<bool>(true).MatchAndExplain(result.is_error(),
+                                           result_listener)) {
+    return false;
+  }
+  if (!TypedEq<zx_status_t>(ZX_OK).MatchAndExplain(result.error().first,
+                                                   result_listener)) {
+    return false;
+  }
+  return ExplainMatchResult(sub_matcher, result.error().second,
+                            result_listener);
+}
+
+MATCHER_P(InternalErrorOrStringResultAdapterStringMatcher, sub_matcher, "") {
+  const fit::result<std::string,
+                    std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
+      arg.ToResult();
+  if (!TypedEq<bool>(true).MatchAndExplain(result.is_ok(), result_listener)) {
+    return false;
+  }
+  return ExplainMatchResult(sub_matcher, result.value(), result_listener);
+}
+
 MATCHER(PointWiseMatchesEntry, "") {  // NOLINT
   auto& a = std::get<0>(arg);
   auto& b = std::get<1>(arg);
@@ -34,6 +64,52 @@ MATCHER(PointWiseMatchesEntry, "") {  // NOLINT
 }
 
 }  // namespace
+
+namespace internal {
+
+// Generic implementation for Get/Fetch/FetchPartial.
+template <typename Result>
+ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(const Result& result) {
+  if (result.is_err()) {
+    result_ = fit::error(std::make_pair(ZX_OK, result.err()));
+    return;
+  }
+  std::string value;
+  bool status = fsl::StringFromVmo(result.response().buffer, &value);
+  if (!status) {
+    result_ = fit::error(std::make_pair(ZX_ERR_BAD_HANDLE,
+                                        fuchsia::ledger::Error::NETWORK_ERROR));
+    return;
+  }
+  result_ = fit::ok(std::move(value));
+}
+
+// Specialize for GetInline that directly has a vector.
+template <>
+ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
+    const fuchsia::ledger::PageSnapshot_GetInlineNew_Result& result) {
+  if (result.is_err()) {
+    result_ = fit::error(std::make_pair(ZX_OK, result.err()));
+    return;
+  }
+  result_ = fit::ok(convert::ToString(result.response().value.value));
+}
+
+// Instantiate for all possible type, as the template implementation is in the
+// .cc file.
+template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
+    const fuchsia::ledger::PageSnapshot_GetNew_Result&);
+template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
+    const fuchsia::ledger::PageSnapshot_FetchNew_Result&);
+template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
+    const fuchsia::ledger::PageSnapshot_FetchPartialNew_Result&);
+
+const fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>&
+ErrorOrStringResultAdapter::ToResult() const {
+  return result_;
+}
+
+}  // namespace internal
 
 testing::Matcher<convert::ExtendedStringView> MatchesView(
     testing::Matcher<std::string> matcher) {
@@ -55,6 +131,16 @@ testing::Matcher<const Entry&> MatchesEntry(
 testing::Matcher<const std::vector<Entry>&> MatchEntries(
     std::map<std::string, testing::Matcher<std::string>> matchers) {
   return Pointwise(PointWiseMatchesEntry(), matchers);
+}
+
+testing::Matcher<internal::ErrorOrStringResultAdapter> MatchesString(
+    testing::Matcher<std::string> matcher) {
+  return InternalErrorOrStringResultAdapterStringMatcher(std::move(matcher));
+}
+
+testing::Matcher<internal::ErrorOrStringResultAdapter> MatchesError(
+    testing::Matcher<fuchsia::ledger::Error> matcher) {
+  return InternalErrorOrStringResultAdapterErrorMatcher(std::move(matcher));
 }
 
 }  // namespace ledger

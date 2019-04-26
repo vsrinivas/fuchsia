@@ -11,6 +11,7 @@
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/status.h"
 
 namespace modular {
 
@@ -34,6 +35,11 @@ PageClient::~PageClient() {
 
 fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot() {
   fuchsia::ledger::PageSnapshotPtr ptr;
+  ptr.set_error_handler([](zx_status_t status) {
+    if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
+      FXL_LOG(ERROR) << "PageSnapshot error: " << LedgerEpitaphToString(status);
+    }
+  });
   page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_),
                      nullptr /* page_watcher */);
   return ptr;
@@ -87,24 +93,18 @@ namespace {
 void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
                          std::vector<fuchsia::ledger::Entry>* const entries,
                          std::unique_ptr<fuchsia::ledger::Token> next_token,
-                         fit::function<void(fuchsia::ledger::Status)> done) {
-  snapshot->GetEntries(
+                         fit::function<void()> done) {
+  snapshot->GetEntriesNew(
       std::vector<uint8_t>{} /* key_start */, std::move(next_token),
       [snapshot, entries, done = std::move(done)](
-          fuchsia::ledger::Status status, auto new_entries,
+          fuchsia::ledger::IterationStatus status, auto new_entries,
           auto next_token) mutable {
-        if (status != fuchsia::ledger::Status::OK &&
-            status != fuchsia::ledger::Status::PARTIAL_RESULT) {
-          done(status);
-          return;
-        }
-
         for (size_t i = 0; i < new_entries.size(); ++i) {
           entries->push_back(std::move(new_entries.at(i)));
         }
 
-        if (status == fuchsia::ledger::Status::OK) {
-          done(fuchsia::ledger::Status::OK);
+        if (status == fuchsia::ledger::IterationStatus::OK) {
+          done();
           return;
         }
 
@@ -117,7 +117,7 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
 
 void GetEntries(fuchsia::ledger::PageSnapshot* const snapshot,
                 std::vector<fuchsia::ledger::Entry>* const entries,
-                fit::function<void(fuchsia::ledger::Status)> done) {
+                fit::function<void()> done) {
   GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
                       std::move(done));
 }

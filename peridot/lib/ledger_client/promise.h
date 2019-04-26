@@ -51,27 +51,23 @@ class PageSnapshotPromise {
   static fit::promise<std::unique_ptr<std::vector<uint8_t>>> GetInline(
       fuchsia::ledger::PageSnapshot* snapshot, std::string key) {
     fit::bridge<std::unique_ptr<std::vector<uint8_t>>> bridge;
-    snapshot->GetInline(
-        to_array(key), [completer = std::move(bridge.completer)](
-                           fuchsia::ledger::Status status,
-                           fuchsia::ledger::InlinedValuePtr value) mutable {
-          switch (status) {
-            case fuchsia::ledger::Status::OK:
-            case fuchsia::ledger::Status::KEY_NOT_FOUND:
-              if (value) {
-                // Convert the result to a unique_ptr instead of a VectorPtr.
-                auto ret = std::make_unique<std::vector<uint8_t>>(value->value);
-                completer.complete_ok(std::move(ret));
-              } else {
-                completer.complete_ok(nullptr);
-              }
-              break;
-            case fuchsia::ledger::Status::VALUE_TOO_LARGE:
-              // TODO(thatguy): Handle a too-large value.
-              FXL_LOG(FATAL) << "TODO: fallback to PageSnapshot_Get().";
-            default:
+    snapshot->GetInlineNew(
+        to_array(key),
+        [completer = std::move(bridge.completer)](
+            fuchsia::ledger::PageSnapshot_GetInlineNew_Result result) mutable {
+          if (result.is_response()) {
+            completer.complete_ok(std::make_unique<std::vector<uint8_t>>(
+                std::move(result.response().value.value)));
+            return;
+          }
+          switch (result.err()) {
+            case fuchsia::ledger::Error::KEY_NOT_FOUND:
+              completer.complete_ok(nullptr);
+              return;
+            case fuchsia::ledger::Error::NEEDS_FETCH:
+            case fuchsia::ledger::Error::NETWORK_ERROR:
               FXL_LOG(ERROR) << "PageSnapshotPromise::GetInline() failed with "
-                             << fidl::ToUnderlying(status);
+                             << fidl::ToUnderlying(result.err());
               completer.complete_error();
           }
         });
