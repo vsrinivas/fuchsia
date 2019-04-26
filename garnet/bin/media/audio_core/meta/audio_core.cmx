@@ -8,8 +8,9 @@
             "class/audio-output"
         ],
         "features": [
-            "system-temp",
-            "isolated-persistent-storage"
+            "config-data",
+            "isolated-persistent-storage",
+            "system-temp"
         ],
         "services": [
             "fuchsia.scheduler.ProfileProvider"

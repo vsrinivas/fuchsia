@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/config.gni")
 
-package("vim2_media_config") {
-  deprecated_system_image = true
-  resources = [
-    {
-      dest = "media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json"
-      path = rebase_path(
-              "media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json")
-    },
+config_data("vim2_media_config") {
+  for_pkg = "audio_core"
+  sources = [
+    rebase_path(
+        "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json"),
+  ]
+  outputs = [
+    "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json",
   ]
 }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/media/audio_core/audio_device_settings.h"
+
 #include <fbl/auto_lock.h>
 #include <fcntl.h>
 #include <rapidjson/document.h>
@@ -13,7 +15,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "garnet/bin/media/audio_core/audio_device_settings.h"
 #include "garnet/bin/media/audio_core/audio_driver.h"
 #include "garnet/bin/media/audio_core/schema/audio_device_settings_schema.inl"
 #include "src/lib/files/directory.h"
@@ -27,9 +28,8 @@ constexpr uint32_t kAllSetGainFlags =
     ::fuchsia::media::SetAudioGainFlag_MuteValid |
     ::fuchsia::media::SetAudioGainFlag_AgcValid;
 
-const std::string kSettingsPath = "/data/media/audio/settings";
-const std::string kDefaultSettingsPath =
-    "/system/data/media/audio/settings/default";
+const std::string kSettingsPath = "/data/settings";
+const std::string kDefaultSettingsPath = "/config/data/settings/default";
 
 std::ostream& operator<<(std::ostream& stream,
                          const rapidjson::ParseResult& result) {
