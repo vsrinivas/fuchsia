@@ -1130,8 +1130,7 @@ private:
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    SourceLocation location, Name* out_name);
-    void RegisterConst(Const* decl);
-    bool RegisterDecl(Decl* decl);
+    bool RegisterDecl(std::unique_ptr<Decl> decl);
 
     bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
                          std::unique_ptr<Constant>* out_constant);

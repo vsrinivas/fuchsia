@@ -1358,20 +1358,58 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
     return true;
 }
 
-void Library::RegisterConst(Const* decl) {
-    const Name* name = &decl->name;
-    constants_.emplace(name, decl);
+namespace {
+
+template<typename T>
+void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarations) {
+    std::unique_ptr<T> t_decl;
+    t_decl.reset(reinterpret_cast<T*>(decl_ptr));
+    declarations->push_back(std::move(t_decl));
 }
 
-bool Library::RegisterDecl(Decl* decl) {
-    const Name* name = &decl->name;
-    auto iter = declarations_.emplace(name, decl);
+} // namespace
+
+bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
+    assert(decl);
+
+    auto decl_ptr = decl.release();
+    auto kind = decl_ptr->kind;
+    switch (kind) {
+    case Decl::Kind::kBits:
+        StoreDecl(decl_ptr, &bits_declarations_);
+        break;
+    case Decl::Kind::kConst:
+        StoreDecl(decl_ptr, &const_declarations_);
+        break;
+    case Decl::Kind::kEnum:
+        StoreDecl(decl_ptr, &enum_declarations_);
+        break;
+    case Decl::Kind::kInterface:
+        StoreDecl(decl_ptr, &interface_declarations_);
+        break;
+    case Decl::Kind::kStruct:
+        StoreDecl(decl_ptr, &struct_declarations_);
+        break;
+    case Decl::Kind::kTable:
+        StoreDecl(decl_ptr, &table_declarations_);
+        break;
+    case Decl::Kind::kUnion:
+        StoreDecl(decl_ptr, &union_declarations_);
+        break;
+    case Decl::Kind::kXUnion:
+        StoreDecl(decl_ptr, &xunion_declarations_);
+        break;
+    } // switch
+
+    const Name* name = &decl_ptr->name;
+    auto iter = declarations_.emplace(name, decl_ptr);
     if (!iter.second) {
         std::string message = "Name collision: ";
         message.append(name->name_part());
         return Fail(*name, message);
     }
-    switch (decl->kind) {
+
+    switch (kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
     case Decl::Kind::kStruct:
@@ -1379,16 +1417,19 @@ bool Library::RegisterDecl(Decl* decl) {
     case Decl::Kind::kUnion:
     case Decl::Kind::kXUnion:
     case Decl::Kind::kInterface: {
-        auto type_decl = static_cast<TypeDecl*>(decl);
+        auto type_decl = static_cast<TypeDecl*>(decl_ptr);
         auto type_template = std::make_unique<TypeDeclTypeTemplate>(
             Name(name->library(), std::string(name->name_part())),
             typespace_, error_reporter_, this, type_decl);
         typespace_->AddTemplate(std::move(type_template));
         break;
     }
-    default:
-        assert(decl->kind == Decl::Kind::kConst);
+    case Decl::Kind::kConst: {
+        auto const_decl = static_cast<Const*>(decl_ptr);
+        const auto name = &const_decl->name;
+        constants_.emplace(name, const_decl);
     }
+    } // switch
     return true;
 }
 
@@ -1514,15 +1555,11 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
             types::Nullability::kNonnullable);
     }
 
-    bits_declarations_.push_back(std::make_unique<Bits>(
+    return RegisterDecl(std::make_unique<Bits>(
         std::move(bits_declaration->attributes),
         Name(this, bits_declaration->identifier->location()),
         std::move(type_ctor),
         std::move(members)));
-    if (!RegisterDecl(bits_declarations_.back().get()))
-        return false;
-
-    return true;
 }
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
@@ -1537,11 +1574,8 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
     if (!ConsumeConstant(std::move(const_declaration->constant), location, &constant))
         return false;
 
-    const_declarations_.push_back(std::make_unique<Const>(std::move(attributes), std::move(name),
-                                                          std::move(type_ctor), std::move(constant)));
-    auto decl = const_declarations_.back().get();
-    RegisterConst(decl);
-    return RegisterDecl(decl);
+    return RegisterDecl(std::make_unique<Const>(
+        std::move(attributes), std::move(name), std::move(type_ctor), std::move(constant)));
 }
 
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
@@ -1571,15 +1605,10 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
             types::Nullability::kNonnullable);
     }
 
-    enum_declarations_.push_back(std::make_unique<Enum>(
+    return RegisterDecl(std::make_unique<Enum>(
         std::move(enum_declaration->attributes),
         Name(this, enum_declaration->identifier->location()),
-        std::move(type_ctor),
-        std::move(members)));
-    if (!RegisterDecl(enum_declarations_.back().get()))
-        return false;
-
-    return true;
+        std::move(type_ctor), std::move(members)));
 }
 
 bool Library::CreateMethodResult(const Name& interface_name,
@@ -1611,11 +1640,11 @@ bool Library::CreateMethodResult(const Name& interface_name,
     result_attributes.emplace_back(*method, "Result", "");
     auto result_attributelist = std::make_unique<raw::AttributeList>(*method,
                                                                      std::move(result_attributes));
-    union_declarations_.push_back(std::make_unique<Union>(std::move(result_attributelist),
-                                                          std::move(result_name),
-                                                          std::move(result_members)));
-    auto result_decl = union_declarations_.back().get();
-    if (!RegisterDecl(result_decl))
+    auto xunion_decl = std::make_unique<Union>(
+        std::move(result_attributelist), std::move(result_name),
+        std::move(result_members));
+    auto result_decl = xunion_decl.get();
+    if (!RegisterDecl(std::move(xunion_decl)))
         return false;
 
     // Make a new response struct for the method containing just the
@@ -1623,11 +1652,12 @@ bool Library::CreateMethodResult(const Name& interface_name,
     std::vector<Struct::Member> response_members;
     response_members.push_back(Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
                                               GeneratedSimpleName("result"), nullptr, nullptr));
-    struct_declarations_.push_back(std::make_unique<Struct>(nullptr, NextAnonymousName(), std::move(response_members), true));
-    *out_response = struct_declarations_.back().get();
-    if (!RegisterDecl(*out_response))
+    auto struct_decl = std::make_unique<Struct>(
+        nullptr /* attributes */, NextAnonymousName(), std::move(response_members), true);
+    auto struct_decl_ptr = struct_decl.get();
+    if (!RegisterDecl(std::move(struct_decl)))
         return false;
-
+    *out_response = struct_decl_ptr;
     return true;
 }
 
@@ -1686,10 +1716,8 @@ bool Library::ConsumeInterfaceDeclaration(
                              std::move(maybe_response));
     }
 
-    interface_declarations_.push_back(
-        std::make_unique<Interface>(std::move(attributes), std::move(name),
-                                    std::move(superinterfaces), std::move(methods)));
-    return RegisterDecl(interface_declarations_.back().get());
+    return RegisterDecl(std::make_unique<Interface>(
+        std::move(attributes), std::move(name), std::move(superinterfaces), std::move(methods)));
 }
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability) {
@@ -1715,15 +1743,10 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
             nullptr /* attributes */);
     }
 
-    struct_declarations_.push_back(
-        std::make_unique<Struct>(nullptr /* attributes */, std::move(name), std::move(members),
-                                 anonymous));
-
-    auto struct_decl = struct_declarations_.back().get();
-    if (!RegisterDecl(struct_decl))
+    if (!RegisterDecl(std::make_unique<Struct>(
+        nullptr /* attributes */, std::move(name), std::move(members), anonymous)))
         return false;
-
-    *out_struct_decl = struct_decl;
+    *out_struct_decl = struct_declarations_.back().get();
     return true;
 }
 
@@ -1748,9 +1771,8 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                              std::move(maybe_default_value), std::move(attributes));
     }
 
-    struct_declarations_.push_back(
-        std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
-    return RegisterDecl(struct_declarations_.back().get());
+    return RegisterDecl(std::make_unique<Struct>(
+        std::move(attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
@@ -1783,9 +1805,8 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
         }
     }
 
-    table_declarations_.push_back(
-        std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members)));
-    return RegisterDecl(table_declarations_.back().get());
+    return RegisterDecl(std::make_unique<Table>(
+        std::move(attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
@@ -1802,9 +1823,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     auto attributes = std::move(union_declaration->attributes);
     auto name = Name(this, union_declaration->identifier->location());
 
-    union_declarations_.push_back(
-        std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
-    return RegisterDecl(union_declarations_.back().get());
+    return RegisterDecl(std::make_unique<Union>(
+        std::move(attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
@@ -1827,9 +1847,8 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
         members.emplace_back(std::move(ordinal), std::move(type_ctor), location, std::move(member->attributes));
     }
 
-    xunion_declarations_.push_back(
-        std::make_unique<XUnion>(std::move(xunion_declaration->attributes), std::move(name), std::move(members)));
-    return RegisterDecl(xunion_declarations_.back().get());
+    return RegisterDecl(std::make_unique<XUnion>(
+        std::move(xunion_declaration->attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
