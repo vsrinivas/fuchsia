@@ -89,10 +89,11 @@ class InterfaceMethodParameter {
 
 class InterfaceMethod {
  public:
+  friend class Interface;
   InterfaceMethod(const Interface& interface, const rapidjson::Value& value);
   InterfaceMethod(InterfaceMethod&& other);
 
-  int32_t get_ordinal() const {
+  Ordinal get_ordinal() const {
     return std::strtoll(value_["ordinal"].GetString(), nullptr, 10);
   }
 
@@ -139,6 +140,16 @@ class Interface {
     }
   }
 
+  Interface(Interface&& other)
+      : value_(other.value_), enclosing_library_(other.enclosing_library_) {
+    for (auto& method : other.interface_methods_) {
+      interface_methods_.emplace_back(*this, method.value_);
+    }
+  }
+
+  Interface(const Interface& other) = delete;
+  Interface& operator=(const Interface&) = delete;
+
   std::string name() const { return value_["name"].GetString(); }
 
   void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
@@ -148,6 +159,10 @@ class Interface {
       index[ordinal] = method;
     }
   }
+
+  // Sets *|method| to the fully qualified |name|'s InterfaceMethod
+  bool GetMethodByFullName(const std::string& name,
+                           const InterfaceMethod** method) const;
 
   const Library& enclosing_library() const { return enclosing_library_; }
 
@@ -224,7 +239,9 @@ class Union {
       : enclosing_library_(enclosing_library),
         value_(value),
         illegal_(nullptr) {
-    for (auto& member : value["members"].GetArray()) {
+    auto member_arr = value["members"].GetArray();
+    members_.reserve(member_arr.Size());
+    for (auto& member : member_arr) {
       members_.emplace_back(*this, member);
     }
   }
@@ -286,7 +303,9 @@ class Struct {
  public:
   Struct(const Library& enclosing_library, const rapidjson::Value& value)
       : enclosing_library_(enclosing_library), value_(value) {
-    for (auto& member : value["members"].GetArray()) {
+    auto member_arr = value["members"].GetArray();
+    members_.reserve(member_arr.Size());
+    for (auto& member : member_arr) {
       members_.emplace_back(*this, member);
     }
   }
@@ -311,7 +330,11 @@ class Library {
  public:
   Library(const LibraryLoader& enclosing, rapidjson::Document& document)
       : enclosing_loader_(enclosing), backing_document_(std::move(document)) {
-    for (auto& decl : backing_document_["interface_declarations"].GetArray()) {
+    auto interfaces_array =
+        backing_document_["interface_declarations"].GetArray();
+    interfaces_.reserve(interfaces_array.Size());
+
+    for (auto& decl : interfaces_array) {
       interfaces_.emplace_back(*this, decl);
     }
     for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
@@ -351,6 +374,9 @@ class Library {
   size_t InlineSizeFromIdentifier(std::string& identifier) const;
 
   const std::vector<Interface>& interfaces() const { return interfaces_; }
+
+  // Set *ptr to the Interface called |name|
+  bool GetInterfaceByName(const std::string& name, const Interface** ptr) const;
 
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;

@@ -51,6 +51,17 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(
   return Type::get_illegal();
 }
 
+bool Library::GetInterfaceByName(const std::string& name,
+                                 const Interface** ptr) const {
+  for (const auto& interface : interfaces()) {
+    if (interface.name() == name) {
+      *ptr = &interface;
+      return true;
+    }
+  }
+  return false;
+}
+
 const std::unique_ptr<Type> Enum::GetType() const {
   // TODO Consider caching this.
   return Type::ScalarTypeFromName(value_["type"].GetString());
@@ -145,7 +156,9 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
   if (value_["has_request"].GetBool()) {
     request_params_ =
         std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& request : value["maybe_request"].GetArray()) {
+    auto request_arr = value["maybe_request"].GetArray();
+    request_params_->reserve(request_arr.Size());
+    for (auto& request : request_arr) {
       request_params_->emplace_back(*this, request);
     }
   } else {
@@ -155,7 +168,9 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
   if (value_["has_response"].GetBool()) {
     response_params_ =
         std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& response : value["maybe_response"].GetArray()) {
+    auto response_arr = value["maybe_response"].GetArray();
+    response_params_->reserve(response_arr.Size());
+    for (auto& response : response_arr) {
       response_params_->emplace_back(*this, response);
     }
   } else {
@@ -188,6 +203,17 @@ InterfaceMethod::InterfaceMethod(InterfaceMethod&& other)
 
 std::string InterfaceMethod::fully_qualified_name() const {
   return enclosing_interface_.name() + "." + name();
+}
+
+bool Interface::GetMethodByFullName(const std::string& name,
+                                    const InterfaceMethod** method_ptr) const {
+  for (const auto& method : methods()) {
+    if (method.fully_qualified_name() == name) {
+      *method_ptr = &method;
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace fidlcat

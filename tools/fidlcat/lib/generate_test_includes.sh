@@ -25,11 +25,17 @@ class ExampleMap {
   ExampleMap() {
     map_ = {
 EOF
-for i in "$@"; do \
+
+for i in "$@"; do
+  if [[ ! -f "${i}" ]]; then
+     echo "file ${i} not found"
+     exit 1
+  fi;
   cat >> "${FILENAME}" << EOF
     {"${i}", R"FIDL($(cat "${i}"))FIDL"},
 EOF
 done
+
 cat >> "${FILENAME}" << EOF
     };
   }

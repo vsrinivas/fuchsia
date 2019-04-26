@@ -89,6 +89,8 @@ source_set("tests") {
 action("json_for_test") {
   deps = [
     ":fidl($fidl_toolchain)",
+    ":fidl-sys($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp/test:frobinator",
     "//zircon/public/fidl/fuchsia-io",
   ]
@@ -104,6 +106,8 @@ action("json_for_test") {
         "/fidling/gen/zircon/public/fidl/fuchsia-io/fuchsia-io.fidl.json",
     rebase_path(root_build_dir) +
         "/fidling/gen/tools/fidlcat/lib/fidl.fidl.json",
+    rebase_path(root_build_dir) +
+        "/fidling/gen/tools/fidlcat/lib/fidl-sys.fidl.json",
   ]
 }
 
@@ -113,5 +117,13 @@ fidl("fidl") {
   sources = [
     "testdata/empty.test.fidl",
     "testdata/types.test.fidl",
+  ]
+}
+
+fidl("fidl-sys") {
+  name = "test.fidlcat.sys"
+
+  sources = [
+    "testdata/sys.test.fidl",
   ]
 }
