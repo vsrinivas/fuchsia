@@ -27,7 +27,8 @@
 
 #define MAC_ADDR_LEN 6
 
-#define FIRMWARE_PATH "BCM4345C4.bin"
+// TODO: Determine firmware name based on controller version.
+#define FIRMWARE_PATH "BCM4345C5.hcd"
 
 #define FIRMWARE_DOWNLOAD_DELAY ZX_MSEC(50)
 
@@ -403,8 +404,9 @@ static int bcm_hci_start_thread(void* arg) {
                 goto fail;
             }
         }
+        zxlogf(INFO, "bcm-hci: firmware loaded\n");
     } else {
-        zxlogf(INFO, "bcm-hci: no firmware file found\n");
+        zxlogf(ERROR, "bcm-hci: no firmware file found\n");
     }
 
     // We're done with the command channel. Close it so that it can be opened by
