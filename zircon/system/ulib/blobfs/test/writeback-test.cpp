@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <blobfs/writeback.h>
+#include <blobfs/writeback-queue.h>
 #include <unittest/unittest.h>
 
 #include "utils.h"

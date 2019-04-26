@@ -52,13 +52,18 @@ library("blobfs") {
       "blob-cache.cpp",
       "blob.cpp",
       "blobfs.cpp",
+      "buffer.cpp",
       "cache-node.cpp",
       "compression/blob-compressor.cpp",
       "directory.cpp",
       "iterator/node-populator.cpp",
       "journal.cpp",
+      "journal-entry.cpp",
       "metrics.cpp",
+      "write-txn.cpp",
       "writeback.cpp",
+      "writeback-queue.cpp",
+      "writeback-work.cpp",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",

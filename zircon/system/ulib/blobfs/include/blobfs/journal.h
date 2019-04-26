@@ -13,10 +13,10 @@ static_assert(false, "Fuchsia only header");
 
 #include <stdint.h>
 
-#include <blobfs/blob.h>
 #include <blobfs/format.h>
 #include <blobfs/transaction-manager.h>
 #include <blobfs/writeback.h>
+#include <blobfs/writeback-queue.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
