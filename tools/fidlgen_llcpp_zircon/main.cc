@@ -19,12 +19,14 @@ static void Usage(const char* exe_name) {
       stderr,
       "Generate or validate the checked-in low-level C++ bindings in zircon.\n"
       "Usage: %s (validate|update) ZIRCON_BUILDROOT FIDLGEN_LLCPP_PATH "
-      "STAMP DEPFILE\n"
+      "STAMP DEPFILE TMP_DIR\n"
       "ZIRCON_BUILDROOT is the root build directory of the Zircon GN build.\n"
       "FIDLGEN_LLCPP_PATH is the path to the fidlgen_llcpp executable.\n"
       "STAMP is the output path to a file indicating the success of the tool.\n"
       "DEPFILE is the output path to a depfile describing the FIDL files\n"
       "which when updated should trigger a re-run of this tool.\n"
+      "TMP_DIR is a temporary directory for the validator to store generated\n"
+      "bindings. It will be cleared on each run.\n"
       "\n"
       "When validate is specified, it will validate that the generated\n"
       "bindings are up-to-date, exiting with an error if not so.\n"
@@ -37,7 +39,7 @@ static void Usage(const char* exe_name) {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 6) {
+  if (argc != 7) {
     std::cerr << argv[0] << ": Invalid arguments" << "\n\n";
     Usage(argv[0]);
     return -1;
@@ -51,10 +53,19 @@ int main(int argc, char** argv) {
   fs::remove(stamp_path);
   fs::path depfile_path = fs::absolute(argv[5]);
   fs::remove(depfile_path);
+  fs::path tmp_dir = fs::absolute(argv[6]);
 
   std::vector<fs::path> dependencies;
   if (strcmp(argv[1], "validate") == 0) {
-    DoValidate(zircon_build_root, fidlgen_llcpp_path, &dependencies);
+    bool ok = DoValidate(zircon_build_root, fidlgen_llcpp_path, tmp_dir,
+                         &dependencies);
+    if (!ok) {
+      std::cerr << "========================================================\n"
+                << "Out-of-date checked-in low-level C++ bindings in Zircon.\n"
+                   "Re-run fx build -k 0 tools/fidlgen_llcpp_zircon:update\n"
+                << "========================================================\n";
+      return -1;
+    }
   } else if (strcmp(argv[1], "update") == 0) {
     DoUpdate(zircon_build_root, fidlgen_llcpp_path, &dependencies);
   } else {

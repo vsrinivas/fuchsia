@@ -68,6 +68,7 @@ group("default") {
   deps = [
     "//build/images:packages",
     "//sdk",
+    ":build_time_checks",
   ]
   if (base_package_labels != [] || cache_package_labels != []) {
     deps += [ "//build/images" ]
@@ -75,6 +76,12 @@ group("default") {
   if (universe_package_labels != []) {
     deps += [ "//build/images:updates" ]
   }
+}
+
+group("build_time_checks") {
+  deps = [
+    "//tools/fidlgen_llcpp_zircon:validate",
+  ]
 }
 
 group("recovery_image") {

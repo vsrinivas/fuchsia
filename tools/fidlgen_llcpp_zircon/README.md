@@ -18,8 +18,8 @@ fx build -k 0 tools/fidlgen_llcpp_zircon:update
 ```
 The `-k 0` switches would keep the build going even if parts of zircon failed to build.
 
-[TODO(yifeit): Implement] As extra precaution measure, the full build will validate that the
-generated bindings are up-to-date. You may manually run the same check with the following command:
+As an extra precaution measure, the full build will validate that the generated bindings are
+up to date. You can manually run the same check with the following command:
 ```bash
 fx build tools/fidlgen_llcpp_zircon:validate
 ```

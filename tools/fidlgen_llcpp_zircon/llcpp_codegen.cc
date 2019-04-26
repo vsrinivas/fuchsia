@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -48,8 +49,13 @@ rapidjson::Document ReadMetadata(const fs::path& path) {
 
 struct Target {
   fs::path gen_dir;
+  std::string name;
   std::vector<fs::path> fidl_sources;
   std::vector<std::string> args;
+  fs::path json;
+  fs::path header;
+  fs::path source;
+  fs::path include_base;
 };
 
 std::vector<Target> AllTargets(const fs::path& zircon_build_root) {
@@ -76,8 +82,13 @@ std::vector<Target> AllTargets(const fs::path& zircon_build_root) {
     }
     targets_vector.push_back(Target {
       .gen_dir = fs::path(target["target_gen_dir"].GetString()),
+      .name = target["name"].GetString(),
       .args = std::move(args_vector),
-      .fidl_sources = std::move(fidl_sources_vector)
+      .fidl_sources = std::move(fidl_sources_vector),
+      .json = fs::path(target["json"].GetString()),
+      .header = fs::path(target["header"].GetString()),
+      .source = fs::path(target["source"].GetString()),
+      .include_base = fs::path(target["include_base"].GetString()),
     });
   }
   return targets_vector;
@@ -118,17 +129,88 @@ void RunCommand(const std::string& cmd, const std::string& working_directory,
   }
 }
 
+fs::path FindCommonPath(fs::path a, fs::path b) {
+  auto a_it = a.begin();
+  auto b_it = b.begin();
+  fs::path result;
+  while (a_it != a.end() && b_it != b.end()) {
+    auto& a_part = *a_it;
+    auto& b_part = *b_it;
+    if (a_part != b_part) {
+      break;
+    }
+    result /= a_part;
+    a_it++;
+    b_it++;
+  }
+  return result;
+}
+
+bool Diff(fs::path a, fs::path b) {
+  std::ifstream a_stream(a.c_str(), std::ios::binary | std::ios::ate);
+  std::ifstream b_stream(b.c_str(), std::ios::binary | std::ios::ate);
+  if (!a_stream) {
+    return false;
+  }
+  if (!b_stream) {
+    return false;
+  }
+  if (a_stream.tellg() != b_stream.tellg()) {
+    return false;
+  }
+  a_stream.seekg(0, std::ifstream::beg);
+  b_stream.seekg(0, std::ifstream::beg);
+  return std::equal(std::istreambuf_iterator<char>(a_stream.rdbuf()),
+                    std::istreambuf_iterator<char>(),
+                    std::istreambuf_iterator<char>(b_stream.rdbuf()));
+}
+
 } // namespace
 
 bool DoValidate(std::filesystem::path zircon_build_root,
                 std::filesystem::path fidlgen_llcpp_path,
+                std::filesystem::path tmp_dir,
                 std::vector<fs::path>* out_dependencies) {
+  fs::remove_all(tmp_dir);
+  fs::create_directories(tmp_dir);
   auto all_targets = AllTargets(zircon_build_root);
+  auto normalize = [&zircon_build_root](fs::path path) {
+    return fs::weakly_canonical(zircon_build_root / path);
+  };
   for (const auto& target : all_targets) {
     for (const auto& source : target.fidl_sources) {
       out_dependencies->push_back(zircon_build_root / source);
     }
-    // TODO(yifeit): Implement.
+    fs::path json = normalize(target.json);
+    fs::path header = normalize(target.header);
+    fs::path source = normalize(target.source);
+    fs::path include_base = normalize(target.include_base);
+    fs::path common = FindCommonPath(header,
+                                     FindCommonPath(include_base, source));
+    // Generate in an alternative location
+    fs::path tmp = fs::absolute(tmp_dir) / target.name;
+    fs::path alt_header = tmp / fs::relative(header, common);
+    fs::path alt_source = tmp / fs::relative(source, common);
+    fs::path alt_include_base = tmp / fs::relative(include_base, common);
+    std::vector<std::string> args = {
+      "-json",
+      json,
+      "-include-base",
+      alt_include_base,
+      "-header",
+      alt_header,
+      "-source",
+      alt_source
+    };
+    RunCommand(fidlgen_llcpp_path, zircon_build_root, args);
+    if (!Diff(header, alt_header)) {
+      std::cerr << header << " is different from " << alt_header << std::endl;
+      return false;
+    }
+    if (!Diff(source, alt_source)) {
+      std::cerr << source << " is different from " << alt_source << std::endl;
+      return false;
+    }
   }
   return true;
 }
@@ -141,6 +223,8 @@ void DoUpdate(fs::path zircon_build_root,
     for (const auto& source : target.fidl_sources) {
       out_dependencies->push_back(zircon_build_root / source);
     }
+    std::cout << "Generating low-level C++ bindings for " << target.name
+              << std::endl;
     RunCommand(fidlgen_llcpp_path, zircon_build_root, target.args);
   }
 }

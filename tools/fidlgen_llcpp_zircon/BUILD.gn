@@ -23,7 +23,8 @@ compiled_action("validate") {
     rebase_path(zircon_root_build_dir, root_build_dir),
     rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
     rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.stamp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.d", root_build_dir)
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.d", root_build_dir),
+    rebase_path("$target_gen_dir/validator_tmp", root_build_dir)
   ]
   depfile = "$target_gen_dir/fidlgen_llcpp_zircon_validated.d"
   inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
@@ -37,7 +38,8 @@ compiled_action("update") {
     rebase_path(zircon_root_build_dir, root_build_dir),
     rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
     rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.stamp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.d", root_build_dir)
+    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.d", root_build_dir),
+    rebase_path("$target_gen_dir/validator_tmp", root_build_dir)
   ]
   depfile = "$target_gen_dir/fidlgen_llcpp_zircon_updated.d"
   inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]

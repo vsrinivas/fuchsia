@@ -13,6 +13,7 @@
 // Returns true when sources are up-to-date.
 bool DoValidate(std::filesystem::path zircon_build_root,
                 std::filesystem::path fidlgen_llcpp_path,
+                std::filesystem::path tmp_dir,
                 std::vector<std::filesystem::path>* out_dependencies);
 
 // Update the checked-in sources.

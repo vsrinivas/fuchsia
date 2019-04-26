@@ -127,6 +127,9 @@ template("fidl_llcpp_library") {
             name = invoker.fidl_name
             target_gen_dir = rebase_path("gen/llcpp", root_build_dir)
             json = rebase_path(fidlc_outputs[0], root_build_dir)
+            header = "$target_gen_dir/include/${invoker.fidl_path}/llcpp/fidl.h"
+            source = "$target_gen_dir/fidl.cc"
+            include_base = "$target_gen_dir/include"
 
             # TODO(BLD-442): Could generate an individual response file
             # here that could be used very simply to drive running fidlgen.
@@ -138,11 +141,11 @@ template("fidl_llcpp_library") {
               "-json",
               json,
               "-include-base",
-              "$target_gen_dir/include",
+              include_base,
               "-header",
-              "$target_gen_dir/include/${invoker.fidl_path}/llcpp/fidl.h",
+              header,
               "-source",
-              "$target_gen_dir/fidl.cc",
+              source
             ]
           },
         ]
