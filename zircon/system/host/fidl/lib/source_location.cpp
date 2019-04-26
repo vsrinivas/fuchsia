@@ -6,7 +6,7 @@
 
 namespace fidl {
 
-StringView SourceLocation::SourceLine(SourceFile::Position* position_out) const {
+std::string_view SourceLocation::SourceLine(SourceFile::Position* position_out) const {
     return source_file_->LineContaining(data(), position_out);
 }
 

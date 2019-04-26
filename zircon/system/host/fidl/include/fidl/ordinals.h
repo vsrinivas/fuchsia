@@ -23,22 +23,22 @@ std::string GetSelector(const raw::AttributeList* attributes,
 //
 // If |method| has an Selector attribute, that value will be used as the
 // method_name.
-raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
-                                 const StringView& interface_name,
+raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_name,
+                                 const std::string_view& interface_name,
                                  const raw::InterfaceMethod& method);
 
 // Retrieves the correct ordinal for this method.
 //
 // If |method.ordinal| is not null, this method will return |method.ordinal|.
 // Otherwise, the ordinal value is computed with GetGeneratedOrdinal.
-raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
-                        const StringView& interface_name,
+raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
+                        const std::string_view& interface_name,
                         const raw::InterfaceMethod& method);
 
 // Retrieves the correct ordinal for |xunion_member|, following the same
 // algorithm as GetOrdinal() for interface methods above.
-raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
-                        const StringView& xunion_declaration_name,
+raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
+                        const std::string_view& xunion_declaration_name,
                         const raw::XUnionMember& xunion_member);
 
 } // namespace ordinals

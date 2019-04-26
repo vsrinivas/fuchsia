@@ -71,7 +71,7 @@ public:
     bool Lint(fidl::Findings* findings) {
         auto ast = parser_.Parse();
         if (!parser_.Ok()) {
-            fidl::StringView beginning(source_file_.data().data(), 0);
+            std::string_view beginning(source_file_.data().data(), 0);
             fidl::SourceLocation source_location(beginning, source_file_);
             findings->emplace_back(source_location, "parser-error",
                                    error_reporter_->errors().front() + "\n");
@@ -180,11 +180,11 @@ public:
     }
 
     std::string filename() const {
-        return source_file().filename();
+        return std::string(source_file().filename());
     }
 
     std::string FileData() const {
-        return source_file().data();
+        return std::string(source_file().data());
     }
 
     std::string FileLocation(std::string within, std::string to_find) const {

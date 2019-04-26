@@ -4,7 +4,6 @@
 
 #include "fidl/error_reporter.h"
 #include "fidl/source_location.h"
-#include "fidl/string_view.h"
 #include "fidl/token.h"
 
 namespace fidl {
@@ -25,7 +24,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
 }
 
 std::string Format(std::string qualifier, const SourceLocation* maybe_location,
-                   StringView message, size_t squiggle_size = 0u) {
+                   std::string_view message, size_t squiggle_size = 0u) {
     if (!maybe_location) {
         std::string error = qualifier;
         error.append(": ");
@@ -35,7 +34,7 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
 
     const auto& location = *maybe_location;
     SourceFile::Position position;
-    std::string surrounding_line = location.SourceLine(&position);
+    std::string surrounding_line = std::string(location.SourceLine(&position));
 
     std::string squiggle = MakeSquiggle(surrounding_line, position.column);
     if (squiggle_size != 0u) {
@@ -82,7 +81,7 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
 //     filename:line:col: error: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportError(const SourceLocation* maybe_location, StringView message) {
+void ErrorReporter::ReportError(const SourceLocation* maybe_location, std::string_view message) {
     auto error = Format("error", maybe_location, message);
     AddError(std::move(error));
 }
@@ -94,7 +93,7 @@ void ErrorReporter::ReportError(const SourceLocation* maybe_location, StringView
 //     sourceline
 //        ^~~~
 void ErrorReporter::ReportErrorWithSquiggle(
-    const SourceLocation& location, StringView message) {
+    const SourceLocation& location, std::string_view message) {
     auto token_data = location.data();
     auto error = Format("error", &location, message, token_data.size());
     AddError(std::move(error));
@@ -108,12 +107,12 @@ void ErrorReporter::ReportErrorWithSquiggle(
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportError(const Token& token, StringView message) {
+void ErrorReporter::ReportError(const Token& token, std::string_view message) {
     ReportErrorWithSquiggle(token.location(), message);
 }
 
 // ReportError records the provided message.
-void ErrorReporter::ReportError(StringView message) {
+void ErrorReporter::ReportError(std::string_view message) {
     std::string error("error: ");
     error.append(message);
     AddError(std::move(error));
@@ -125,7 +124,7 @@ void ErrorReporter::ReportError(StringView message) {
 //     filename:line:col: warning: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, StringView message) {
+void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, std::string_view message) {
     auto warning = Format("warning", maybe_location, message);
     AddWarning(std::move(warning));
 }
@@ -137,7 +136,7 @@ void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, StringVi
 //     sourceline
 //        ^~~~
 void ErrorReporter::ReportWarningWithSquiggle(
-    const SourceLocation& location, StringView message) {
+    const SourceLocation& location, std::string_view message) {
     auto token_data = location.data();
     auto warning = Format("warning", &location, message, token_data.size());
     AddWarning(std::move(warning));

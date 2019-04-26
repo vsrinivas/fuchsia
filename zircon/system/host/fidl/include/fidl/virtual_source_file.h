@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -20,7 +21,7 @@ public:
     VirtualSourceFile(std::string filename) : SourceFile(filename, "") {}
     virtual ~VirtualSourceFile() = default;
 
-    virtual StringView LineContaining(StringView view, Position* position_out) const;
+    virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
     SourceLocation AddLine(const std::string& line);
 

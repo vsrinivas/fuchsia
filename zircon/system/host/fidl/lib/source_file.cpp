@@ -20,7 +20,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
         ++size;
         if (*it == '\n' || *it == '\0') {
             auto& position = *start_of_line;
-            lines_.push_back(StringView(&position, size));
+            lines_.push_back(std::string_view(&position, size));
 
             size = 0u;
             start_of_line = it + 1;
@@ -30,7 +30,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
 
 SourceFile::~SourceFile() = default;
 
-StringView SourceFile::LineContaining(StringView view, Position* position_out) const {
+std::string_view SourceFile::LineContaining(std::string_view view, Position* position_out) const {
     auto ptr_less_equal = std::less_equal<const char*>();
 
     assert(ptr_less_equal(data().data(), view.data()) && "The view is not part of this SourceFile");
@@ -41,7 +41,7 @@ StringView SourceFile::LineContaining(StringView view, Position* position_out) c
     // crbegin and crend), looking for the first line (hence
     // upper_bound) to start at or before before the token in
     // question.
-    auto is_in_line = [&ptr_less_equal](const StringView& left, const StringView& right) {
+    auto is_in_line = [&ptr_less_equal](const std::string_view& left, const std::string_view& right) {
         return ptr_less_equal(right.data(), left.data());
     };
     auto line = std::upper_bound(lines_.crbegin(), lines_.crend(), view, is_in_line);
@@ -55,7 +55,7 @@ StringView SourceFile::LineContaining(StringView view, Position* position_out) c
         int column_number = static_cast<int>(view.data() - line->data()) + 1;
         *position_out = {line_number, column_number};
     }
-    return *line;
+    return std::string_view(*line);
 }
 
 } // namespace fidl

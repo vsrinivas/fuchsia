@@ -6,9 +6,9 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TOKEN_H_
 
 #include <stdint.h>
+#include <string_view>
 
 #include "source_location.h"
-#include "string_view.h"
 
 namespace fidl {
 
@@ -68,7 +68,7 @@ public:
         }
     }
 
-    StringView data() const { return location_.data(); }
+    std::string_view data() const { return location_.data(); }
     const SourceLocation& location() const { return location_; }
     void set_previous_end(SourceLocation location) { previous_end_ = location; }
     SourceLocation previous_end() const { return previous_end_; }

@@ -6,10 +6,9 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_FILE_H_
 
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
-
-#include "string_view.h"
 
 namespace fidl {
 
@@ -18,8 +17,8 @@ public:
     SourceFile(std::string filename, std::string data);
     virtual ~SourceFile();
 
-    StringView filename() const { return filename_; }
-    StringView data() const { return data_; }
+    std::string_view filename() const { return filename_; }
+    std::string_view data() const { return data_; }
 
     // This is in the coordinates that most editors use. Lines start
     // at 1 but columns start at 0.
@@ -28,12 +27,12 @@ public:
         int column;
     };
 
-    virtual StringView LineContaining(StringView view, Position* position_out) const;
+    virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
 private:
     std::string filename_;
     std::string data_;
-    std::vector<StringView> lines_;
+    std::vector<std::string_view> lines_;
 };
 
 } // namespace fidl

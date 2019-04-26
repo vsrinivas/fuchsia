@@ -67,24 +67,24 @@ const fidl::raw::SourceElement& GetElementAsRef(
 }
 
 // Convert the SourceElement (start- and end-tokens within the SourceFile)
-// to a StringView, spanning from the beginning of the start token, to the end
+// to a std::string_view, spanning from the beginning of the start token, to the end
 // of the end token. The three methods support classes derived from
 // SourceElement, by reference, pointer, or unique_ptr.
-static StringView to_string_view(const fidl::raw::SourceElement& element) {
+static std::string_view to_string_view(const fidl::raw::SourceElement& element) {
     auto start_string = element.start_.data();
     const char* start_ptr = start_string.data();
     auto end_string = element.end_.data();
     const char* end_ptr = end_string.data() + end_string.size();
     size_t size = static_cast<size_t>(end_ptr - start_ptr);
-    return StringView(start_ptr, size);
+    return std::string_view(start_ptr, size);
 }
 
-static StringView to_string_view(const fidl::raw::SourceElement* element) {
+static std::string_view to_string_view(const fidl::raw::SourceElement* element) {
     return to_string_view(*element);
 }
 
 template <typename SourceElementSubtype>
-StringView to_string_view(
+std::string_view to_string_view(
     const std::unique_ptr<SourceElementSubtype>& element_ptr) {
     static_assert(
         std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
@@ -93,13 +93,13 @@ StringView to_string_view(
 }
 
 // Convert the SourceElement to a std::string, using the method described above
-// for StringView.
+// for std::string_view.
 static std::string to_string(const fidl::raw::SourceElement& element) {
-    return to_string_view(element);
+    return std::string(to_string_view(element));
 }
 
 static std::string to_string(const fidl::raw::SourceElement* element) {
-    return to_string_view(*element);
+    return std::string(to_string_view(*element));
 }
 
 template <typename SourceElementSubtype>

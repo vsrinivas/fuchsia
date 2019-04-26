@@ -183,8 +183,8 @@ private:
 
 class ResponseFileArguments : public Arguments {
 public:
-    ResponseFileArguments(fidl::StringView filename)
-        : file_(Open(filename, std::ios::in)) {
+    ResponseFileArguments(std::string_view filename)
+        : file_(Open(std::string(filename), std::ios::in)) {
         ConsumeWhitespace();
     }
 
@@ -280,7 +280,7 @@ int main(int argc, char* argv[]) {
             FailWithUsage("Response files must be the only argument to %s.\n", argv[0]);
         }
         // Drop the leading '@'.
-        fidl::StringView response_file = response.data() + 1;
+        std::string_view response_file = response.data() + 1;
         response_file_args = std::make_unique<ResponseFileArguments>(response_file);
         args = response_file_args.get();
     }
@@ -374,8 +374,8 @@ int compile(fidl::ErrorReporter* error_reporter,
         final_library = library.get();
         if (!all_libraries.Insert(std::move(library))) {
             const auto& name = library->name();
-            Fail("Mulitple libraries with the same name: '%s'\n",
-                 NameLibrary(name).data());
+            Fail("Multiple libraries with the same name: '%s'\n",
+                 fidl::NameLibrary(name).data());
         }
     }
     if (final_library == nullptr) {
@@ -383,7 +383,7 @@ int compile(fidl::ErrorReporter* error_reporter,
     }
 
     // Verify that the produced library's name matches the expected name.
-    std::string final_name = NameLibrary(final_library->name());
+    std::string final_name = fidl::NameLibrary(final_library->name());
     if (!library_name.empty() && final_name != library_name) {
         Fail("Generated library '%s' did not match --name argument: %s\n",
              final_name.data(), library_name.data());

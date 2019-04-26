@@ -25,7 +25,7 @@ std::string GetSelector(const raw::AttributeList* attributes,
     return std::string(name.data().data(), name.data().size());
 }
 
-raw::Ordinal GetGeneratedOrdinal(const StringView& full_name,
+raw::Ordinal GetGeneratedOrdinal(const std::string_view& full_name,
                                  const raw::SourceElement& source_element) {
     uint8_t digest[SHA256_DIGEST_LENGTH];
     SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
@@ -40,15 +40,15 @@ raw::Ordinal GetGeneratedOrdinal(const StringView& full_name,
     return raw::Ordinal(source_element, ordinal);
 }
 
-raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
-                                 const StringView& container_name,
+raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_name,
+                                 const std::string_view& container_name,
                                  const raw::AttributeList* attributes,
                                  SourceLocation name,
                                  const raw::SourceElement& source_element) {
     std::string method_name = GetSelector(attributes, name);
     std::string full_name;
     bool once = false;
-    for (StringView id : library_name) {
+    for (std::string_view id : library_name) {
         if (once) {
             full_name.push_back('.');
         } else {
@@ -61,17 +61,17 @@ raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
     full_name.append("/");
     full_name.append(method_name);
 
-    return GetGeneratedOrdinal(StringView(full_name), source_element);
+    return GetGeneratedOrdinal(std::string_view(full_name), source_element);
 }
 
-raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
-                                 const StringView& interface_name,
+raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_name,
+                                 const std::string_view& interface_name,
                                  const raw::InterfaceMethod& method) {
     return GetGeneratedOrdinal(library_name, interface_name, method.attributes.get(), method.identifier->location(), method);
 }
 
-raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
-                        const StringView& interface_name,
+raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
+                        const std::string_view& interface_name,
                         const raw::InterfaceMethod& method) {
     if (method.ordinal != nullptr)
         return *method.ordinal;
@@ -79,8 +79,8 @@ raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
     return GetGeneratedOrdinal(library_name, interface_name, method);
 }
 
-raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
-                        const StringView& xunion_declaration_name,
+raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
+                        const std::string_view& xunion_declaration_name,
                         const raw::XUnionMember& xunion_member) {
     // Note that this ordinal hashing for xunion members uses the same ordinal
     // hashing algorithm as for FIDL methods, which results in 31 bits, not 32.

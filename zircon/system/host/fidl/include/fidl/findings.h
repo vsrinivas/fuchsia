@@ -76,7 +76,7 @@ public:
 
     // Returns a reference to a portion of a |SourceFile|, with supporting
     // methods to get the relative location of the reference within the file
-    // (line and column), and StringView (substring) representing the characters
+    // (line and column), and std::string_view (substring) representing the characters
     // from reference start to end.
     inline const SourceLocation& source_location() const {
         return source_location_;

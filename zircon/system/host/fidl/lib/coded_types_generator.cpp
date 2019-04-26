@@ -36,7 +36,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             vector_type->element_type, coded::CodingContext::kOutsideEnvelope);
         uint32_t max_count = vector_type->element_count->value;
         uint32_t element_size = coded_element_type->size;
-        StringView element_name = coded_element_type->coded_name;
+        std::string_view element_name = coded_element_type->coded_name;
         auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
         auto coded_vector_type = std::make_unique<coded::VectorType>(
             std::move(name), coded_element_type, max_count, element_size, vector_type->nullability);

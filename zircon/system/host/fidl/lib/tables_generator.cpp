@@ -54,7 +54,7 @@ std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
 
 constexpr auto kIndent = "    ";
 
-void Emit(std::ostream* file, StringView data) {
+void Emit(std::ostream* file, std::string_view data) {
     *file << data;
 }
 
@@ -98,7 +98,7 @@ void Emit(std::ostream* file, types::Nullability nullability) {
 
 } // namespace
 
-void TablesGenerator::GenerateInclude(StringView filename) {
+void TablesGenerator::GenerateInclude(std::string_view filename) {
     Emit(&tables_file_, "#include ");
     Emit(&tables_file_, filename);
     Emit(&tables_file_, "\n");

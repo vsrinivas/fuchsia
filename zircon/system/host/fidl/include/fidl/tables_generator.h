@@ -9,13 +9,13 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include "coded_ast.h"
 #include "coded_types_generator.h"
 #include "flat_ast.h"
-#include "string_view.h"
 
 namespace fidl {
 
@@ -39,7 +39,7 @@ public:
     std::ostringstream Produce();
 
 private:
-    void GenerateInclude(StringView filename);
+    void GenerateInclude(std::string_view filename);
     void GenerateFilePreamble();
     void GenerateFilePostamble();
 

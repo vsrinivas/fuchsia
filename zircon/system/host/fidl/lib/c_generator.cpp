@@ -57,7 +57,7 @@ CGenerator::Member EmptyStructMember() {
     };
 }
 
-CGenerator::Transport ParseTransport(StringView view) {
+CGenerator::Transport ParseTransport(std::string_view view) {
     if (view == "SocketControl") {
         return CGenerator::Transport::SocketControl;
     }
@@ -76,7 +76,7 @@ void EmitHeaderGuard(std::ostream* file) {
     *file << "#pragma once\n";
 }
 
-void EmitIncludeHeader(std::ostream* file, StringView header) {
+void EmitIncludeHeader(std::ostream* file, std::string_view header) {
     *file << "#include " << header << "\n";
 }
 
@@ -199,7 +199,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
     }
 }
 
-void EmitClientMethodDecl(std::ostream* file, StringView method_name,
+void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request,
                           const std::vector<CGenerator::Member>& response) {
     *file << "zx_status_t " << method_name << "(zx_handle_t _channel";
@@ -214,7 +214,7 @@ void EmitClientMethodDecl(std::ostream* file, StringView method_name,
     *file << ")";
 }
 
-void EmitServerMethodDecl(std::ostream* file, StringView method_name,
+void EmitServerMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request,
                           bool has_response) {
     *file << "zx_status_t (*" << method_name << ")(void* ctx";
@@ -228,19 +228,19 @@ void EmitServerMethodDecl(std::ostream* file, StringView method_name,
     *file << ")";
 }
 
-void EmitServerDispatchDecl(std::ostream* file, StringView interface_name) {
+void EmitServerDispatchDecl(std::ostream* file, std::string_view interface_name) {
     *file << "zx_status_t " << interface_name
           << "_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
           << interface_name << "_ops_t* ops)";
 }
 
-void EmitServerTryDispatchDecl(std::ostream* file, StringView interface_name) {
+void EmitServerTryDispatchDecl(std::ostream* file, std::string_view interface_name) {
     *file << "zx_status_t " << interface_name
           << "_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
           << interface_name << "_ops_t* ops)";
 }
 
-void EmitServerReplyDecl(std::ostream* file, StringView method_name,
+void EmitServerReplyDecl(std::ostream* file, std::string_view method_name,
                          const std::vector<CGenerator::Member>& response) {
     *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* _txn";
     for (const auto& member : response) {
@@ -328,8 +328,8 @@ size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
 }
 
 void EmitLinearizeMessage(std::ostream* file,
-                          StringView receiver,
-                          StringView bytes,
+                          std::string_view receiver,
+                          std::string_view bytes,
                           const std::vector<CGenerator::Member>& request) {
     if (CountSecondaryObjects(request) > 0)
         *file << kIndent << "uint32_t _next = sizeof(*" << receiver << ");\n";
@@ -678,14 +678,14 @@ void CGenerator::GenerateEpilogues() {
     EmitEndExternC(&file_);
 }
 
-void CGenerator::GenerateIntegerDefine(StringView name, types::PrimitiveSubtype subtype,
-                                       StringView value) {
+void CGenerator::GenerateIntegerDefine(std::string_view name, types::PrimitiveSubtype subtype,
+                                       std::string_view value) {
     std::string literal_macro = NamePrimitiveIntegerCConstantMacro(subtype);
     file_ << "#define " << name << " " << literal_macro << "(" << value << ")\n";
 }
 
-void CGenerator::GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtype subtype,
-                                         StringView value) {
+void CGenerator::GeneratePrimitiveDefine(std::string_view name, types::PrimitiveSubtype subtype,
+                                         std::string_view value) {
     switch (subtype) {
     case types::PrimitiveSubtype::kInt8:
     case types::PrimitiveSubtype::kInt16:
@@ -711,20 +711,20 @@ void CGenerator::GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtyp
     }
 }
 
-void CGenerator::GenerateStringDefine(StringView name, StringView value) {
+void CGenerator::GenerateStringDefine(std::string_view name, std::string_view value) {
     file_ << "#define " << name << " " << value << "\n";
 }
 
-void CGenerator::GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name) {
+void CGenerator::GenerateIntegerTypedef(types::PrimitiveSubtype subtype, std::string_view name) {
     std::string underlying_type = NamePrimitiveCType(subtype);
     file_ << "typedef " << underlying_type << " " << name << ";\n";
 }
 
-void CGenerator::GenerateStructTypedef(StringView name) {
+void CGenerator::GenerateStructTypedef(std::string_view name) {
     file_ << "typedef struct " << name << " " << name << ";\n";
 }
 
-void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Member>& members,
+void CGenerator::GenerateStructDeclaration(std::string_view name, const std::vector<Member>& members,
                                            StructKind kind) {
     file_ << "struct " << name << " {\n";
     if (kind == StructKind::kMessage) {
@@ -748,7 +748,7 @@ void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Me
     file_ << "};\n";
 }
 
-void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
+void CGenerator::GenerateTaggedUnionDeclaration(std::string_view name,
                                                 const std::vector<Member>& members) {
     file_ << "struct " << name << " {\n";
     file_ << kIndent << "fidl_union_tag_t tag;\n";
@@ -762,7 +762,7 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
     file_ << "};\n";
 }
 
-void CGenerator::GenerateTaggedXUnionDeclaration(StringView name,
+void CGenerator::GenerateTaggedXUnionDeclaration(std::string_view name,
                                                  const std::vector<Member>& members) {
     // XUnions are (intentionally) unimplemented for C bindings.
 }

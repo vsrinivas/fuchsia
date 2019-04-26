@@ -7,10 +7,10 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "flat_ast.h"
-#include "string_view.h"
 
 namespace fidl {
 
@@ -130,15 +130,15 @@ private:
     void GeneratePrologues();
     void GenerateEpilogues();
 
-    void GenerateIntegerDefine(StringView name, types::PrimitiveSubtype subtype, StringView value);
-    void GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name);
-    void GeneratePrimitiveDefine(StringView name, types::PrimitiveSubtype subtype, StringView value);
-    void GenerateStringDefine(StringView name, StringView value);
-    void GenerateStructTypedef(StringView name);
+    void GenerateIntegerDefine(std::string_view name, types::PrimitiveSubtype subtype, std::string_view value);
+    void GenerateIntegerTypedef(types::PrimitiveSubtype subtype, std::string_view name);
+    void GeneratePrimitiveDefine(std::string_view name, types::PrimitiveSubtype subtype, std::string_view value);
+    void GenerateStringDefine(std::string_view name, std::string_view value);
+    void GenerateStructTypedef(std::string_view name);
 
-    void GenerateStructDeclaration(StringView name, const std::vector<Member>& members, StructKind kind);
-    void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
-    void GenerateTaggedXUnionDeclaration(StringView name, const std::vector<Member>& members);
+    void GenerateStructDeclaration(std::string_view name, const std::vector<Member>& members, StructKind kind);
+    void GenerateTaggedUnionDeclaration(std::string_view name, const std::vector<Member>& members);
+    void GenerateTaggedXUnionDeclaration(std::string_view name, const std::vector<Member>& members);
 
     std::map<const flat::Decl*, NamedBits>
     NameBits(const std::vector<std::unique_ptr<flat::Bits>>& bits_infos);

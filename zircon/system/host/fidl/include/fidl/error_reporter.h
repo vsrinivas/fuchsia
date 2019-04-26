@@ -6,10 +6,10 @@
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "source_location.h"
-#include "string_view.h"
 #include "token.h"
 
 namespace fidl {
@@ -35,19 +35,19 @@ public:
     };
 
     void ReportErrorWithSquiggle(const SourceLocation& location,
-                                 StringView message);
-    void ReportError(const SourceLocation& location, StringView message) {
+                                 std::string_view message);
+    void ReportError(const SourceLocation& location, std::string_view message) {
         ReportError(&location, message);
     }
-    void ReportError(const SourceLocation* maybe_location, StringView message);
-    void ReportError(const Token& token, StringView message);
-    void ReportError(StringView message);
+    void ReportError(const SourceLocation* maybe_location, std::string_view message);
+    void ReportError(const Token& token, std::string_view message);
+    void ReportError(std::string_view message);
     void ReportWarningWithSquiggle(const SourceLocation& location,
-                                   StringView message);
-    void ReportWarning(const SourceLocation& location, StringView message) {
+                                   std::string_view message);
+    void ReportWarning(const SourceLocation& location, std::string_view message) {
         ReportWarning(&location, message);
     }
-    void ReportWarning(const SourceLocation* maybe_location, StringView message);
+    void ReportWarning(const SourceLocation* maybe_location, std::string_view message);
     void PrintReports();
     Counts Checkpoint() const { return Counts(this); }
     const std::vector<std::string>& errors() const { return errors_; }

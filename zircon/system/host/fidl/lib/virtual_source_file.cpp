@@ -10,7 +10,7 @@ SourceLocation VirtualSourceFile::AddLine(const std::string& line) {
     return SourceLocation(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);
 }
 
-StringView VirtualSourceFile::LineContaining(StringView view, Position* position_out) const {
+std::string_view VirtualSourceFile::LineContaining(std::string_view view, Position* position_out) const {
     for (int i = 0; i < static_cast<int>(virtual_lines_.size()); i++) {
         const std::string& line = *virtual_lines_[i];
         const char* line_begin = &*line.cbegin();
@@ -22,9 +22,9 @@ StringView VirtualSourceFile::LineContaining(StringView view, Position* position
             assert(column < std::numeric_limits<int>::max());
             *position_out = {i + 1, static_cast<int>(column)};
         }
-        return StringView(line);
+        return std::string_view(line);
     }
-    return StringView();
+    return std::string_view();
 }
 
 }  // namespace fidl

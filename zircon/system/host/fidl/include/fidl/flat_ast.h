@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <optional>
 #include <type_traits>
 #include <variant>
@@ -47,7 +48,7 @@ class Library;
 bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
-std::string LibraryName(const Library* library, StringView separator);
+std::string LibraryName(const Library* library, std::string_view separator);
 
 // Name represents a scope name, i.e. a name within the context of a library
 // or in the 'global' context. Names either reference (or name) things which
@@ -72,7 +73,7 @@ struct Name {
         }
         return &std::get<SourceLocation>(name_);
     }
-    const StringView name_part() const {
+    const std::string_view name_part() const {
         if (std::holds_alternative<AnonymousName>(name_)) {
             return std::get<AnonymousName>(name_);
         } else {
@@ -357,7 +358,7 @@ struct BoolConstantValue : ConstantValue {
 };
 
 struct StringConstantValue : ConstantValue {
-    explicit StringConstantValue(StringView value)
+    explicit StringConstantValue(std::string_view value)
         : ConstantValue(ConstantValue::Kind::kString), value(value) {}
 
     friend std::ostream& operator<<(std::ostream& os, const StringConstantValue& v) {
@@ -369,14 +370,14 @@ struct StringConstantValue : ConstantValue {
         assert(out_value != nullptr);
         switch (kind) {
         case Kind::kString:
-            *out_value = std::make_unique<StringConstantValue>(StringView(value));
+            *out_value = std::make_unique<StringConstantValue>(std::string_view(value));
             return true;
         default:
             return false;
         }
     }
 
-    StringView value;
+    std::string_view value;
 };
 
 struct Constant {
@@ -453,8 +454,8 @@ struct Decl {
     std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
 
-    bool HasAttribute(fidl::StringView name) const;
-    fidl::StringView GetAttribute(fidl::StringView name) const;
+    bool HasAttribute(std::string_view name) const;
+    std::string_view GetAttribute(std::string_view name) const;
     std::string GetName() const;
 
     bool compiling = false;
@@ -1048,7 +1049,7 @@ public:
     bool Insert(std::unique_ptr<Library> library);
 
     // Lookup a library by its |library_name|.
-    bool Lookup(const std::vector<StringView>& library_name,
+    bool Lookup(const std::vector<std::string_view>& library_name,
                 Library** out_library) const;
 
     void AddAttributeSchema(const std::string& name, AttributeSchema schema) {
@@ -1061,7 +1062,7 @@ public:
                                                    const raw::Attribute& attribute) const;
 
 private:
-    std::map<std::vector<StringView>, std::unique_ptr<Library>> all_libraries_;
+    std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
     std::map<std::string, AttributeSchema> attribute_schemas_;
 };
 
@@ -1070,20 +1071,20 @@ public:
     // Register a dependency to a library. The newly recorded dependent library
     // will be referenced by its name, and may also be optionally be referenced
     // by an alias.
-    bool Register(StringView filename, Library* dep_library,
+    bool Register(std::string_view filename, Library* dep_library,
                   const std::unique_ptr<raw::Identifier>& maybe_alias);
 
     // Lookup a dependent library by |filename| and |name|.
-    bool Lookup(StringView filename, const std::vector<StringView>& name,
+    bool Lookup(std::string_view filename, const std::vector<std::string_view>& name,
                 Library** out_library);
 
     const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
 private:
-    bool InsertByName(StringView filename, const std::vector<StringView>& name,
+    bool InsertByName(std::string_view filename, const std::vector<std::string_view>& name,
                       Library* library);
 
-    using ByName = std::map<std::vector<StringView>, Library*>;
+    using ByName = std::map<std::vector<std::string_view>, Library*>;
     using ByFilename = std::map<std::string, std::unique_ptr<ByName>>;
 
     ByFilename dependencies_;
@@ -1098,21 +1099,21 @@ public:
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
 
-    const std::vector<StringView>& name() const { return library_name_; }
+    const std::vector<std::string_view>& name() const { return library_name_; }
     const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
 
 private:
     friend class TypeAliasTypeTemplate;
 
-    bool Fail(StringView message);
-    bool Fail(const SourceLocation& location, StringView message) {
+    bool Fail(std::string_view message);
+    bool Fail(const SourceLocation& location, std::string_view message) {
         return Fail(&location, message);
     }
-    bool Fail(const SourceLocation* maybe_location, StringView message);
-    bool Fail(const Name& name, StringView message) {
+    bool Fail(const SourceLocation* maybe_location, std::string_view message);
+    bool Fail(const Name& name, std::string_view message) {
         return Fail(name.maybe_location(), message);
     }
-    bool Fail(const Decl& decl, StringView message) { return Fail(decl.name, message); }
+    bool Fail(const Decl& decl, std::string_view message) { return Fail(decl.name, message); }
 
     void ValidateAttributesPlacement(AttributeSchema::Placement placement,
                                      const raw::AttributeList* attributes);
@@ -1126,7 +1127,7 @@ private:
     // underscores as delimiters.
     SourceLocation GeneratedSimpleName(const std::string& name);
     Name NextAnonymousName();
-    Name DerivedName(const std::vector<StringView>& components);
+    Name DerivedName(const std::vector<std::string_view>& components);
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    SourceLocation location, Name* out_name);
@@ -1211,11 +1212,11 @@ public:
     template <typename NumericType>
     bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
 
-    bool HasAttribute(fidl::StringView name) const;
+    bool HasAttribute(std::string_view name) const;
 
     const std::set<Library*>& dependencies() const;
 
-    std::vector<StringView> library_name_;
+    std::vector<std::string_view> library_name_;
 
     std::vector<std::unique_ptr<Bits>> bits_declarations_;
     std::vector<std::unique_ptr<Const>> const_declarations_;

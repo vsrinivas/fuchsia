@@ -22,7 +22,7 @@ void EmitBoolean(std::ostream* file, bool value) {
         *file << "false";
 }
 
-void EmitString(std::ostream* file, StringView value) {
+void EmitString(std::ostream* file, std::string_view value) {
     *file << "\"";
 
     for (size_t i = 0; i < value.size(); ++i) {
@@ -46,7 +46,7 @@ void EmitString(std::ostream* file, StringView value) {
     *file << "\"";
 }
 
-void EmitLiteral(std::ostream* file, StringView value) {
+void EmitLiteral(std::ostream* file, std::string_view value) {
     file->rdbuf()->sputn(value.data(), value.size());
 }
 
@@ -77,7 +77,7 @@ void EmitObjectEnd(std::ostream* file) {
     *file << "}";
 }
 
-void EmitObjectKey(std::ostream* file, int indent_level, StringView key) {
+void EmitObjectKey(std::ostream* file, int indent_level, std::string_view key) {
     EmitString(file, key);
     *file << ": ";
 }
@@ -177,7 +177,7 @@ void JSONGenerator::GenerateObjectPunctuation(Position position) {
 }
 
 template <typename Type>
-void JSONGenerator::GenerateObjectMember(StringView key, const Type& value, Position position) {
+void JSONGenerator::GenerateObjectMember(std::string_view key, const Type& value, Position position) {
     GenerateObjectPunctuation(position);
     EmitObjectKey(&json_file_, indent_level_, key);
     Generate(value);
@@ -201,7 +201,7 @@ void JSONGenerator::Generate(bool value) {
     EmitBoolean(&json_file_, value);
 }
 
-void JSONGenerator::Generate(StringView value) {
+void JSONGenerator::Generate(std::string_view value) {
     EmitString(&json_file_, value);
 }
 
@@ -357,7 +357,7 @@ void JSONGenerator::Generate(const raw::Attribute& value) {
         if (value.value != "")
             GenerateObjectMember("value", value.value);
         else
-            GenerateObjectMember("value", StringView());
+            GenerateObjectMember("value", std::string_view());
     });
 }
 
@@ -601,7 +601,7 @@ void JSONGenerator::Generate(const flat::Library* library) {
     });
 }
 
-void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl) {
+void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl) {
     if (count == 0)
         EmitNewlineAndIndent(&json_file_, ++indent_level_);
     else
@@ -647,7 +647,7 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
 std::ostringstream JSONGenerator::Produce() {
     indent_level_ = 0;
     GenerateObject([&]() {
-        GenerateObjectMember("version", StringView("0.0.1"), Position::kFirst);
+        GenerateObjectMember("version", std::string_view("0.0.1"), Position::kFirst);
 
         GenerateObjectMember("name", LibraryName(library_, "."));
 

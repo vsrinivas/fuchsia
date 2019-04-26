@@ -8,16 +8,16 @@
 #include <assert.h>
 #include <map>
 #include <stdint.h>
+#include <string_view>
 
 #include "error_reporter.h"
 #include "source_manager.h"
-#include "string_view.h"
 #include "token.h"
 
 namespace fidl {
 
 // The lexer does not own the data it operates on. It merely takes a
-// StringView and produces a stream of tokens and possibly a failure
+// std::string_view and produces a stream of tokens and possibly a failure
 // partway through.
 class Lexer {
 public:
@@ -39,12 +39,12 @@ public:
     Token LexNoComments();
 
 private:
-    StringView data() { return source_file_.data(); }
+    std::string_view data() { return source_file_.data(); }
 
     constexpr char Peek() const;
     void Skip();
     char Consume();
-    StringView Reset(Token::Kind kind);
+    std::string_view Reset(Token::Kind kind);
     Token Finish(Token::Kind kind);
 
     void SkipWhitespace();
@@ -57,7 +57,7 @@ private:
     Token LexCommentOrDocComment();
 
     const SourceFile& source_file_;
-    std::map<StringView, Token::Subkind> keyword_table_;
+    std::map<std::string_view, Token::Subkind> keyword_table_;
     ErrorReporter* error_reporter_;
 
     const char* current_ = nullptr;

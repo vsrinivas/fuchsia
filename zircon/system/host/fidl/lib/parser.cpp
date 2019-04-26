@@ -82,7 +82,7 @@ decltype(nullptr) Parser::Fail() {
     return Fail("found unexpected token");
 }
 
-decltype(nullptr) Parser::Fail(StringView message) {
+decltype(nullptr) Parser::Fail(std::string_view message) {
     if (Ok()) {
         error_reporter_->ReportError(last_token_, std::move(message));
     }

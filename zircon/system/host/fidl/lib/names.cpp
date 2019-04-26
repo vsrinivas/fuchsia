@@ -27,7 +27,7 @@ std::string NameSize(uint64_t size) {
 
 } // namespace
 
-std::string StringJoin(const std::vector<StringView>& strings, StringView separator) {
+std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
     std::string result;
     bool first = true;
     for (const auto& part : strings) {
@@ -277,11 +277,11 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
     }
 }
 
-std::string NameUnionTag(StringView union_name, const flat::Union::Member& member) {
+std::string NameUnionTag(std::string_view union_name, const flat::Union::Member& member) {
     return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
-std::string NameXUnionTag(StringView xunion_name, const flat::XUnion::Member& member) {
+std::string NameXUnionTag(std::string_view xunion_name, const flat::XUnion::Member& member) {
     return std::string(xunion_name) + "Tag_" + NameIdentifier(member.name);
 }
 
@@ -289,7 +289,7 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     switch (constant->kind) {
     case flat::Constant::Kind::kLiteral: {
         auto literal_constant = static_cast<const flat::LiteralConstant*>(constant);
-        return literal_constant->literal->location().data();
+        return std::string(literal_constant->literal->location().data());
     }
     case flat::Constant::Kind::kIdentifier: {
         auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
@@ -423,10 +423,10 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
 
 std::string NameIdentifier(SourceLocation name) {
     // TODO(TO-704) C name escaping and ergonomics.
-    return name.data();
+    return std::string(name.data());
 }
 
-std::string NameName(const flat::Name& name, StringView library_separator, StringView name_separator) {
+std::string NameName(const flat::Name& name, std::string_view library_separator, std::string_view name_separator) {
     std::string compiled_name("");
     if (name.library() != nullptr) {
         compiled_name += LibraryName(name.library(), library_separator);
@@ -436,11 +436,11 @@ std::string NameName(const flat::Name& name, StringView library_separator, Strin
     return compiled_name;
 }
 
-std::string NameLibrary(const std::vector<StringView>& library_name) {
+std::string NameLibrary(const std::vector<std::string_view>& library_name) {
     return StringJoin(library_name, ".");
 }
 
-std::string NameLibraryCHeader(const std::vector<StringView>& library_name) {
+std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name) {
     return StringJoin(library_name, "/") + "/c/fidl.h";
 }
 
@@ -452,24 +452,24 @@ std::string NameDiscoverable(const flat::Interface& interface) {
     return NameName(interface.name, ".", ".");
 }
 
-std::string NameMethod(StringView interface_name, const flat::Interface::Method& method) {
+std::string NameMethod(std::string_view interface_name, const flat::Interface::Method& method) {
     return std::string(interface_name) + NameIdentifier(method.name);
 }
 
-std::string NameOrdinal(StringView method_name) {
+std::string NameOrdinal(std::string_view method_name) {
     std::string ordinal_name(method_name);
     ordinal_name += "Ordinal";
     return ordinal_name;
 }
 
 // TODO: Remove post-FIDL-425
-std::string NameGenOrdinal(StringView method_name) {
+std::string NameGenOrdinal(std::string_view method_name) {
     std::string ordinal_name(method_name);
     ordinal_name += "GenOrdinal";
     return ordinal_name;
 }
 
-std::string NameMessage(StringView method_name, types::MessageKind kind) {
+std::string NameMessage(std::string_view method_name, types::MessageKind kind) {
     std::string message_name(method_name);
     switch (kind) {
     case types::MessageKind::kRequest:
@@ -485,23 +485,23 @@ std::string NameMessage(StringView method_name, types::MessageKind kind) {
     return message_name;
 }
 
-std::string NameTable(StringView type_name) {
+std::string NameTable(std::string_view type_name) {
     return std::string(type_name) + "Table";
 }
 
-std::string NamePointer(StringView name) {
+std::string NamePointer(std::string_view name) {
     std::string pointer_name(name);
     pointer_name += "Pointer";
     return pointer_name;
 }
 
-std::string NameMembers(StringView name) {
+std::string NameMembers(std::string_view name) {
     std::string members_name(name);
     members_name += "Members";
     return members_name;
 }
 
-std::string NameFields(StringView name) {
+std::string NameFields(std::string_view name) {
     std::string fields_name(name);
     fields_name += "Fields";
     return fields_name;
@@ -530,28 +530,28 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
     return name;
 }
 
-std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability) {
+std::string NameCodedInterfaceHandle(std::string_view interface_name, types::Nullability nullability) {
     std::string name(interface_name);
     name += "Interface";
     name += NameNullability(nullability);
     return name;
 }
 
-std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability) {
+std::string NameCodedRequestHandle(std::string_view interface_name, types::Nullability nullability) {
     std::string name(interface_name);
     name += "Request";
     name += NameNullability(nullability);
     return name;
 }
 
-std::string NameCodedArray(StringView element_name, uint64_t size) {
+std::string NameCodedArray(std::string_view element_name, uint64_t size) {
     std::string name("Array");
     name += element_name;
     name += NameSize(size);
     return name;
 }
 
-std::string NameCodedVector(StringView element_name, uint64_t max_size,
+std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
                             types::Nullability nullability) {
     std::string name("Vector");
     name += element_name;

@@ -383,11 +383,11 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
 void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {
     // Eat ws at the beginning of the file.
     fidl::Token real_start = element->start_;
-    fidl::StringView start_view = real_start.previous_end().data();
+    std::string_view start_view = real_start.previous_end().data();
     const char* start_ptr = start_view.data();
     size_t initial_length = start_view.size();
     size_t offset = strspn(start_ptr, kWsCharacters);
-    fidl::StringView processed_file_start(
+    std::string_view processed_file_start(
         start_ptr + offset, initial_length - offset);
     element->start_.set_previous_end(
         fidl::SourceLocation(processed_file_start, real_start.previous_end().source_file()));

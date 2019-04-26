@@ -8,10 +8,10 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "flat_ast.h"
-#include "string_view.h"
 
 namespace fidl {
 
@@ -69,7 +69,7 @@ private:
     void GenerateObject(Callback callback);
 
     template <typename Type>
-    void GenerateObjectMember(StringView key, const Type& value,
+    void GenerateObjectMember(std::string_view key, const Type& value,
                               Position position = Position::kSubsequent);
 
     template <typename T>
@@ -81,7 +81,7 @@ private:
     void Generate(const std::vector<T>& value);
 
     void Generate(bool value);
-    void Generate(StringView value);
+    void Generate(std::string_view value);
     void Generate(SourceLocation value);
     void Generate(NameLocation value);
     void Generate(uint32_t value);
@@ -118,7 +118,7 @@ private:
     void Generate(const flat::XUnion::Member& value);
     void Generate(const flat::Library* library);
 
-    void GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl);
+    void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl);
     void GenerateDeclarationsMember(const flat::Library* library,
                                     Position position = Position::kSubsequent);
 

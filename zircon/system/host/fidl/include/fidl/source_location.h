@@ -5,35 +5,35 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_LOCATION_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_LOCATION_H_
 
-#include <stdint.h>
+#include <cstdint>
+#include <string_view>
 
 #include "source_manager.h"
-#include "string_view.h"
 
 namespace fidl {
 
 // A SourceLocation represents a range of a source file. It consists
-// of a StringView, and a reference to the SourceFile that is backing
-// the StringView.
+// of a std::string_view, and a reference to the SourceFile that is backing
+// the std::string_view.
 
 class SourceLocation {
 public:
-    SourceLocation(StringView data, const SourceFile& source_file)
+    SourceLocation(std::string_view data, const SourceFile& source_file)
         : data_(data), source_file_(&source_file) {}
 
-    SourceLocation() : data_(StringView()), source_file_(nullptr) {}
+    SourceLocation() : data_(std::string_view()), source_file_(nullptr) {}
 
     bool valid() const { return source_file_ != nullptr; }
 
-    const StringView& data() const { return data_; }
+    const std::string_view& data() const { return data_; }
     const SourceFile& source_file() const { return *source_file_; }
 
-    StringView SourceLine(SourceFile::Position* position_out) const;
+    std::string_view SourceLine(SourceFile::Position* position_out) const;
 
     std::string position() const;
 
 private:
-    StringView data_;
+    std::string_view data_;
     const SourceFile* source_file_;
 };
 

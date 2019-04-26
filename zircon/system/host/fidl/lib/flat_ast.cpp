@@ -74,7 +74,7 @@ private:
 
 struct MethodScope {
     Scope<uint32_t> ordinals;
-    Scope<StringView> names;
+    Scope<std::string_view> names;
     Scope<const Interface*> interfaces;
 };
 
@@ -309,30 +309,30 @@ TypeShape PrimitiveType::Shape(types::PrimitiveSubtype subtype) {
     return TypeShape(SubtypeSize(subtype), SubtypeSize(subtype));
 }
 
-bool Decl::HasAttribute(fidl::StringView name) const {
+bool Decl::HasAttribute(std::string_view name) const {
     if (!attributes)
         return false;
-    return attributes->HasAttribute(name);
+    return attributes->HasAttribute(std::string(name));
 }
 
-fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
+std::string_view Decl::GetAttribute(std::string_view name) const {
     if (!attributes)
-        return fidl::StringView();
+        return std::string_view();
     for (const auto& attribute : attributes->attributes) {
-        if (StringView(attribute.name) == name) {
+        if (attribute.name == name) {
             if (attribute.value != "") {
                 const auto& value = attribute.value;
-                return fidl::StringView(value.data(), value.size());
+                return std::string_view(value.data(), value.size());
             }
             // Don't search for another attribute with the same name.
             break;
         }
     }
-    return fidl::StringView();
+    return std::string_view();
 }
 
 std::string Decl::GetName() const {
-    return name.name_part();
+    return std::string(name.name_part());
 }
 
 bool IsSimple(const Type* type, const FieldShape& fieldshape) {
@@ -418,7 +418,7 @@ void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
 }
 
 const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
-    Name global_name(nullptr, name.name_part());
+    Name global_name(nullptr, std::string(name.name_part()));
     auto iter1 = templates_.find(&global_name);
     if (iter1 != templates_.end())
         return iter1->second.get();
@@ -1141,12 +1141,12 @@ Libraries::Libraries() {
 }
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
-    std::vector<fidl::StringView> library_name = library->name();
+    std::vector<std::string_view> library_name = library->name();
     auto iter = all_libraries_.emplace(library_name, std::move(library));
     return iter.second;
 }
 
-bool Libraries::Lookup(const std::vector<StringView>& library_name,
+bool Libraries::Lookup(const std::vector<std::string_view>& library_name,
                        Library** out_library) const {
     auto iter = all_libraries_.find(library_name);
     if (iter == all_libraries_.end()) {
@@ -1210,7 +1210,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
     return nullptr;
 }
 
-bool Dependencies::Register(StringView filename, Library* dep_library,
+bool Dependencies::Register(std::string_view filename, Library* dep_library,
                             const std::unique_ptr<raw::Identifier>& maybe_alias) {
     auto library_name = dep_library->name();
     if (!InsertByName(filename, library_name, dep_library)) {
@@ -1218,7 +1218,7 @@ bool Dependencies::Register(StringView filename, Library* dep_library,
     }
 
     if (maybe_alias) {
-        std::vector<StringView> alias_name = {maybe_alias->location().data()};
+        std::vector<std::string_view> alias_name = {maybe_alias->location().data()};
         if (!InsertByName(filename, alias_name, dep_library)) {
             return false;
         }
@@ -1229,23 +1229,23 @@ bool Dependencies::Register(StringView filename, Library* dep_library,
     return true;
 }
 
-bool Dependencies::InsertByName(StringView filename, const std::vector<StringView>& name,
+bool Dependencies::InsertByName(std::string_view filename, const std::vector<std::string_view>& name,
                                 Library* library) {
-    auto iter = dependencies_.find(filename);
+    auto iter = dependencies_.find(std::string(filename));
     if (iter == dependencies_.end()) {
         dependencies_.emplace(filename, std::make_unique<ByName>());
     }
 
-    iter = dependencies_.find(filename);
+    iter = dependencies_.find(std::string(filename));
     assert(iter != dependencies_.end());
 
     auto insert = iter->second->emplace(name, library);
     return insert.second;
 }
 
-bool Dependencies::Lookup(StringView filename, const std::vector<StringView>& name,
+bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
                           Library** out_library) {
-    auto iter1 = dependencies_.find(filename);
+    auto iter1 = dependencies_.find(std::string(filename));
     if (iter1 == dependencies_.end()) {
         return false;
     }
@@ -1265,19 +1265,19 @@ bool Dependencies::Lookup(StringView filename, const std::vector<StringView>& na
 // a struct declaration inside an interface out to the top level and
 // so on.
 
-std::string LibraryName(const Library* library, StringView separator) {
+std::string LibraryName(const Library* library, std::string_view separator) {
     if (library != nullptr) {
         return StringJoin(library->name(), separator);
     }
     return std::string();
 }
 
-bool Library::Fail(StringView message) {
+bool Library::Fail(std::string_view message) {
     error_reporter_->ReportError(message);
     return false;
 }
 
-bool Library::Fail(const SourceLocation* maybe_location, StringView message) {
+bool Library::Fail(const SourceLocation* maybe_location, std::string_view message) {
     error_reporter_->ReportError(maybe_location, message);
     return false;
 }
@@ -1320,7 +1320,7 @@ Name Library::NextAnonymousName() {
     return Name(this, GeneratedSimpleName(data.str()));
 }
 
-Name Library::DerivedName(const std::vector<StringView>& components) {
+Name Library::DerivedName(const std::vector<std::string_view>& components) {
     return Name(this, GeneratedSimpleName(StringJoin(components, "_")));
 }
 
@@ -1336,7 +1336,7 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         return true;
     }
 
-    std::vector<StringView> library_name;
+    std::vector<std::string_view> library_name;
     for (auto iter = components.begin();
          iter != components.end() - 1;
          ++iter) {
@@ -1486,7 +1486,7 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     if (using_directive->maybe_type_ctor)
         return ConsumeTypeAlias(std::move(using_directive));
 
-    std::vector<StringView> library_name;
+    std::vector<std::string_view> library_name;
     for (const auto& component : using_directive->using_path->components) {
         library_name.push_back(component->location().data());
     }
@@ -1722,7 +1722,7 @@ bool Library::ConsumeInterfaceDeclaration(
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability) {
     return std::make_unique<TypeConstructor>(
-        Name(decl->name.library(), decl->name.name_part()),
+        Name(decl->name.library(), std::string(decl->name.name_part())),
         nullptr /* maybe_arg_type */,
         std::optional<types::HandleSubtype>(),
         nullptr /* maybe_size */,
@@ -1868,7 +1868,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     }
 
     // All fidl files in a library should agree on the library name.
-    std::vector<StringView> new_name;
+    std::vector<std::string_view> new_name;
     for (const auto& part : file->library_name->components) {
         new_name.push_back(part->location().data());
     }
@@ -2920,7 +2920,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
 
     for (auto& method : interface_declaration->methods) {
         auto CreateMessage = [&](Struct* message) -> bool {
-            Scope<StringView> scope;
+            Scope<std::string_view> scope;
             for (auto& param : message->members) {
                 if (!scope.Insert(param.name.data(), param.name).ok())
                     return Fail(param.name, "Multiple parameters with the same name in a method");
@@ -2943,7 +2943,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
 }
 
 bool Library::CompileStruct(Struct* struct_declaration) {
-    Scope<StringView> scope;
+    Scope<std::string_view> scope;
     std::vector<FieldShape*> fidl_struct;
 
     uint32_t max_member_handles = 0;
@@ -2971,7 +2971,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
 }
 
 bool Library::CompileTable(Table* table_declaration) {
-    Scope<StringView> name_scope;
+    Scope<std::string_view> name_scope;
     Scope<uint32_t> ordinal_scope;
 
     uint32_t max_member_handles = 0;
@@ -3021,7 +3021,7 @@ bool Library::CompileTable(Table* table_declaration) {
 }
 
 bool Library::CompileUnion(Union* union_declaration) {
-    Scope<StringView> scope;
+    Scope<std::string_view> scope;
     for (auto& member : union_declaration->members) {
         auto name_result = scope.Insert(member.name.data(), member.name);
         if (!name_result.ok())
@@ -3052,7 +3052,7 @@ bool Library::CompileUnion(Union* union_declaration) {
 }
 
 bool Library::CompileXUnion(XUnion* xunion_declaration) {
-    Scope<StringView> scope;
+    Scope<std::string_view> scope;
     Scope<uint32_t> ordinal_scope;
 
     for (auto& member : xunion_declaration->members) {
@@ -3088,7 +3088,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
 bool Library::CompileLibraryName() {
     const std::regex pattern("^[a-z][a-z0-9]*$");
     for (const auto& part_view : library_name_) {
-        std::string part = part_view;
+        std::string part(part_view);
         if (!std::regex_match(part, pattern)) {
             return Fail("Invalid library name part " + part);
         }
@@ -3264,10 +3264,10 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     return ValidateMembers<Enum, MemberType>(enum_decl, validator);
 }
 
-bool Library::HasAttribute(fidl::StringView name) const {
+bool Library::HasAttribute(std::string_view name) const {
     if (!attributes_)
         return false;
-    return attributes_->HasAttribute(name);
+    return attributes_->HasAttribute(std::string(name));
 }
 
 const std::set<Library*>& Library::dependencies() const {

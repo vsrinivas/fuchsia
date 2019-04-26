@@ -172,7 +172,7 @@ private:
                              std::optional<types::HandleSubtype>* out_handle_subtype);
 
     decltype(nullptr) Fail();
-    decltype(nullptr) Fail(StringView message);
+    decltype(nullptr) Fail(std::string_view message);
 
     std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
     std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
@@ -243,7 +243,7 @@ private:
 
     std::unique_ptr<raw::File> ParseFile();
 
-    std::map<StringView, types::HandleSubtype> handle_subtype_table_;
+    std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;
 
     Lexer* lexer_;
     ErrorReporter* error_reporter_;

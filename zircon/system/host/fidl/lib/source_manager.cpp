@@ -9,7 +9,7 @@
 
 namespace fidl {
 
-bool SourceManager::CreateSource(StringView filename) {
+bool SourceManager::CreateSource(std::string_view filename) {
     struct stat s;
     if (stat(filename.data(), &s) != 0)
         return false;
@@ -30,7 +30,7 @@ bool SourceManager::CreateSource(StringView filename) {
     fread(&data[0], 1, filesize, file);
     fclose(file);
 
-    AddSourceFile(std::make_unique<SourceFile>(filename, std::move(data)));
+    AddSourceFile(std::make_unique<SourceFile>(std::string(filename), std::move(data)));
     return true;
 }
 
