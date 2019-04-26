@@ -22,8 +22,8 @@ typedef struct {
     ftlmcEntry** hash_tbl; // hash table used to index cached pages
     CircLink lru_list;     // least recently used entry list
     void* ftl;             // handle to FTL volume using cache
-    ftlmcFuncW write_TFS;  // write function on cache miss
-    ftlmcFuncR read_TFS;   // read function on cache miss
+    ftlmcFuncW write;      // write function on cache miss
+    ftlmcFuncR read;       // read function on cache miss
     ui32 num_mpgs;         // number of cached map pages
     ui32 num_dirty;        // number of dirty cached entries
     ui32 mpg_sz;           // size of a cached map page in bytes
