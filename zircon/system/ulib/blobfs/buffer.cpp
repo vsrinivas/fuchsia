@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <blobfs/buffer.h>
-#include <blobfs/writeback-work.h>
 
 #include <utility>
 
@@ -133,7 +132,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
     txn->SetBuffer(vmoid_);
 }
 
-void Buffer::AddTransaction(size_t start, size_t disk_start, size_t length, WritebackWork* work) {
+void Buffer::AddTransaction(size_t start, size_t disk_start, size_t length, WriteTxn* work) {
     // Ensure the request fits within the buffer.
     ZX_DEBUG_ASSERT(length > 0);
     ZX_DEBUG_ASSERT(start + length <= capacity_);

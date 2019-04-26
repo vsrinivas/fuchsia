@@ -47,7 +47,7 @@ public:
 
     // Adds a transaction to |work| with buffer offset |start| and length |length|,
     // starting at block |disk_start| on disk.
-    void AddTransaction(size_t start, size_t disk_start, size_t length, WritebackWork* work);
+    void AddTransaction(size_t start, size_t disk_start, size_t length, WriteTxn* work);
 
     // Returns true if |txn| belongs to this buffer, and if so verifies
     // that it owns the next valid set of blocks within the buffer.
