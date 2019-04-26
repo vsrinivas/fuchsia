@@ -175,7 +175,7 @@ pub(crate) fn receive_arp_packet<
     dst_addr: AD::HardwareAddr,
     mut buffer: B,
 ) {
-    // TODO(wesleyac) Add support for gratuitous ARP and probe/announce.
+    // TODO(wesleyac) Add support for probe.
     let packet = match buffer.parse::<ArpPacket<_, AD::HardwareAddr, P>>() {
         Ok(packet) => packet,
         Err(err) => {
@@ -193,6 +193,25 @@ pub(crate) fn receive_arp_packet<
     let addressed_to_me =
         Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
     let table = &mut AD::get_arp_state(ctx, device_id).table;
+
+    // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous ARP"
+    // section of RFC 2002.
+
+    // Gratuitous ARPs, which have the same sender and target address, need to
+    // be handled separately since they do not send a response.
+    if packet.sender_protocol_address() == packet.target_protocol_address() {
+        table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
+
+        increment_counter!(ctx, "arp::rx_gratuitous_resolve");
+        // Notify device layer:
+        AD::address_resolved(
+            ctx,
+            device_id,
+            packet.sender_protocol_address(),
+            packet.sender_hardware_address(),
+        );
+        return;
+    }
 
     // The following logic is equivalent to the "Packet Reception" section of
     // RFC 826.
@@ -451,6 +470,7 @@ mod tests {
     const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+    const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
 
     fn send_arp_packet(
         ctx: &mut Context<DummyEventDispatcher>,
@@ -503,6 +523,68 @@ mod tests {
             }
         }
         false
+    }
+
+    #[test]
+    fn test_receive_gratuitous_arp_request() {
+        let mut state = StackState::default();
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        let dispatcher = DummyEventDispatcher::default();
+        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        let device_id = dev_id.id();
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+
+        send_arp_packet(
+            &mut ctx,
+            device_id,
+            ArpOp::Request,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_INVALID_MAC,
+        );
+
+        assert_eq!(
+            *EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                .table
+                .lookup(TEST_REMOTE_IPV4)
+                .unwrap(),
+            TEST_REMOTE_MAC
+        );
+
+        // Gratuitous ARPs should not send a response.
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+    }
+
+    #[test]
+    fn test_receive_gratuitous_arp_response() {
+        let mut state = StackState::default();
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        let dispatcher = DummyEventDispatcher::default();
+        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        let device_id = dev_id.id();
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+
+        send_arp_packet(
+            &mut ctx,
+            device_id,
+            ArpOp::Response,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_REMOTE_MAC,
+        );
+
+        assert_eq!(
+            *EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                .table
+                .lookup(TEST_REMOTE_IPV4)
+                .unwrap(),
+            TEST_REMOTE_MAC
+        );
+
+        // Gratuitous ARPs should not send a response.
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
     }
 
     #[test]
