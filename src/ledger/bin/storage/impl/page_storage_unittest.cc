@@ -1462,13 +1462,15 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier = MakeSplitMap(
-      data_str,
-      [&sync](ObjectIdentifier object_identifier, std::string content) {
-        if (!GetObjectDigestInfo(object_identifier.object_digest())
-                 .is_inlined()) {
-          sync.AddObject(std::move(object_identifier), std::move(content));
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest())
+                .is_inlined()) {
+          return;
         }
+        sync.AddObject(std::move(object_identifier),
+                       piece->GetData().ToString());
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
@@ -1488,13 +1490,15 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier = MakeSplitMap(
-      data_str,
-      [&sync](ObjectIdentifier object_identifier, std::string content) {
-        if (!GetObjectDigestInfo(object_identifier.object_digest())
-                 .is_inlined()) {
-          sync.AddObject(std::move(object_identifier), std::move(content));
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest())
+                .is_inlined()) {
+          return;
         }
+        sync.AddObject(std::move(object_identifier),
+                       piece->GetData().ToString());
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
@@ -1536,13 +1540,15 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier = MakeSplitMap(
-      data_str,
-      [&sync](ObjectIdentifier object_identifier, std::string content) {
-        if (!GetObjectDigestInfo(object_identifier.object_digest())
-                 .is_inlined()) {
-          sync.AddObject(std::move(object_identifier), std::move(content));
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest())
+                .is_inlined()) {
+          return;
         }
+        sync.AddObject(std::move(object_identifier),
+                       piece->GetData().ToString());
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
@@ -1631,8 +1637,8 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
         handler, tree_reference,
         {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
-    ForEachPiece(piece->GetData(), [this, handler, object_identifier](
-                                       ObjectIdentifier piece_identifier) {
+    ForEachIndexChild(piece->GetData(), [this, handler, object_identifier](
+                                            ObjectIdentifier piece_identifier) {
       CheckInboundObjectReferences(
           handler, piece_identifier,
           {{object_identifier.object_digest(), KeyPriority::EAGER}});

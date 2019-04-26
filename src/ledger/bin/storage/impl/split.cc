@@ -381,7 +381,7 @@ void CollectPiecesInternal(ObjectIdentifier root,
     }
 
     auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
-    status = ForEachPiece(data, [&](ObjectIdentifier identifier) {
+    status = ForEachIndexChild(data, [&](ObjectIdentifier identifier) {
       CollectPiecesInternal(std::move(identifier), state,
                             waiter->NewCallback());
       return Status::OK;
@@ -411,8 +411,8 @@ void SplitDataSource(
   });
 }
 
-Status ForEachPiece(fxl::StringView index_content,
-                    fit::function<Status(ObjectIdentifier)> callback) {
+Status ForEachIndexChild(fxl::StringView index_content,
+                         fit::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
   Status status =
       FileIndexSerialization::ParseFileIndex(index_content, &file_index);

@@ -33,9 +33,9 @@ void SplitDataSource(
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
 
-// Iterates over the pieces of an index object.
-Status ForEachPiece(fxl::StringView index_content,
-                    fit::function<Status(ObjectIdentifier)> callback);
+// Iterates over the children of an index object.
+Status ForEachIndexChild(fxl::StringView index_content,
+                         fit::function<Status(ObjectIdentifier)> callback);
 
 // Collects all pieces ids needed to build the object with id |root|. This
 // returns the id of the object itself, and recurse inside any index if the

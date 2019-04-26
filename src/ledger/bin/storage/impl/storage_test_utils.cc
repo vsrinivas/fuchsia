@@ -44,20 +44,8 @@ std::string ResizeForBehavior(std::string value,
 
 ObjectIdentifier GetObjectIdentifier(std::string value,
                                      ObjectType object_type) {
-  ObjectDigest result;
-  auto data_source = DataSource::Create(std::move(value));
-  SplitDataSource(
-      data_source.get(), object_type,
-      [](ObjectDigest object_digest) {
-        return encryption::MakeDefaultObjectIdentifier(
-            std::move(object_digest));
-      },
-      [&result](IterationStatus status, std::unique_ptr<Piece> piece) {
-        if (status == IterationStatus::DONE) {
-          result = piece->GetIdentifier().object_digest();
-        }
-      });
-  return encryption::MakeDefaultObjectIdentifier(std::move(result));
+  return ForEachPiece(std::move(value), object_type,
+                      [](std::unique_ptr<const Piece> /*piece*/) {});
 }
 
 // Pre-determined node level function.
@@ -109,24 +97,23 @@ ObjectIdentifier MakeObjectIdentifier(std::string content,
   return data.object_identifier;
 }
 
-ObjectIdentifier MakeSplitMap(
-    std::string content,
-    fit::function<void(ObjectIdentifier object_identifier, std::string)>
-        callback) {
+ObjectIdentifier ForEachPiece(
+    std::string content, ObjectType type,
+    fit::function<void(std::unique_ptr<const Piece>)> callback) {
   ObjectDigest result;
   auto data_source = DataSource::Create(std::move(content));
   SplitDataSource(
-      data_source.get(), ObjectType::BLOB,
+      data_source.get(), type,
       [](ObjectDigest object_digest) {
         return encryption::MakeDefaultObjectIdentifier(
             std::move(object_digest));
       },
       [&result, callback = std::move(callback)](IterationStatus status,
                                                 std::unique_ptr<Piece> piece) {
-        callback(piece->GetIdentifier(), piece->GetData().ToString());
         if (status == IterationStatus::DONE) {
           result = piece->GetIdentifier().object_digest();
         }
+        callback(std::move(piece));
       });
   return encryption::MakeDefaultObjectIdentifier(std::move(result));
 }
