@@ -5,15 +5,61 @@
 #pragma once
 
 #include <crypto/secret.h>
+#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <zxcrypt/volume.h>
 
 namespace zxcrypt {
+
+// Describes what activity we are performing: creating a new volume from
+// scratch, or unsealing an existing volume.  Different activities may prefer
+// different key sources for migration reasons.
+enum Activity {
+    Create,
+    Unseal,
+};
+
+enum KeySourcePolicy {
+    // Always uses a key of all zeroes.
+    NullSource,
+
+    // Always uses a key from the TEE; fail if not available
+    TeeRequiredSource,
+
+    // Always uses a key from the TEE for new volumes;
+    // allows fallback to null key for unsealing volumes
+    TeeTransitionalSource,
+
+    // Attempts to use a key from the TEE for new volumes and unlocking, but
+    // falls back to null key if TEE key fails
+    TeeOpportunisticSource,
+
+    // someday: TpmSource variants?
+};
+
+enum KeySource {
+    kNullSource,
+    kTeeSource,
+};
+
+// Computes the ordered list of key sources that should be used in the context
+// under the policy |ksp|.
+fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp);
+fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp);
+
+// Calls |callback| on a key provided by each key source in
+// |ordered_key_sources| until either the callback returns ZX_OK or the callback
+// has returned some error on all key sources in |ordered_key_sources|.
+zx_status_t TryWithKeysFrom(const fbl::Vector<KeySource>& ordered_key_sources,
+                            Activity activity,
+                            fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>,
+                                                        size_t)> callback);
 
 // |zxcrypt::FdioVolumeManager| represents a channel to an instance of a bound
 // zxcrypt device (named "zxcrypt" in the device tree).

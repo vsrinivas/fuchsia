@@ -148,7 +148,7 @@ zx_status_t WatchTee(int dirfd, int event, const char* filename, void* cookie) {
     fbl::StringBuffer<kMaxPathLen> device_path;
     device_path.Append(kDeviceClass).Append("/").Append(filename);
     // Hardware derived key is expected to be 128-bit AES key.
-    fbl::unique_ptr<uint8_t> key_buffer(new uint8_t[kDerivedKeySize]);
+    fbl::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kDerivedKeySize]);
     size_t key_size = 0;
     WatchTeeArgs* args = reinterpret_cast<WatchTeeArgs*>(cookie);
     if (!GetKeyFromTeeDevice(device_path.c_str(), std::move(args->key_info), args->key_info_size,

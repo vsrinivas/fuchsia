@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,12 +12,14 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/fdio.h>
+#include <kms-stateless/kms-stateless.h>
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
 
+#include <memory>
 #include <utility>
 
 #include "test-device.h"
@@ -261,6 +264,53 @@ RUN_EACH_DEVICE(TestShred)
 #endif
 
 END_TEST_CASE(VolumeTest)
+
+bool CheckOneCreatePolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
+    BEGIN_HELPER;
+    fbl::Vector<KeySource> actual = ComputeEffectiveCreatePolicy(policy);
+    ASSERT_EQ(actual.size(), expected.size());
+    for (size_t i = 0; i < actual.size(); i++) {
+        ASSERT_EQ(actual[i], expected[i]);
+    }
+    END_HELPER;
+}
+
+bool TestCreatePolicy() {
+    BEGIN_TEST;
+
+    EXPECT_TRUE(CheckOneCreatePolicy(NullSource, {kNullSource}));
+    EXPECT_TRUE(CheckOneCreatePolicy(TeeRequiredSource, {kTeeSource}));
+    EXPECT_TRUE(CheckOneCreatePolicy(TeeTransitionalSource, {kTeeSource}));
+    EXPECT_TRUE(CheckOneCreatePolicy(TeeOpportunisticSource, {kTeeSource, kNullSource}));
+
+    END_TEST;
+}
+
+bool CheckOneUnsealPolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {
+    BEGIN_HELPER;
+    fbl::Vector<KeySource> actual = ComputeEffectiveUnsealPolicy(policy);
+    ASSERT_EQ(actual.size(), expected.size());
+    for (size_t i = 0; i < actual.size(); i++) {
+        ASSERT_EQ(actual[i], expected[i]);
+    }
+    END_HELPER;
+}
+
+bool TestUnsealPolicy() {
+    BEGIN_TEST;
+
+    EXPECT_TRUE(CheckOneUnsealPolicy(NullSource, {kNullSource}));
+    EXPECT_TRUE(CheckOneUnsealPolicy(TeeRequiredSource, {kTeeSource}));
+    EXPECT_TRUE(CheckOneUnsealPolicy(TeeTransitionalSource, {kTeeSource, kNullSource}));
+    EXPECT_TRUE(CheckOneUnsealPolicy(TeeOpportunisticSource, {kTeeSource, kNullSource}));
+
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(PolicyTest)
+RUN_TEST(TestCreatePolicy)
+RUN_TEST(TestUnsealPolicy)
+END_TEST_CASE(PolicyTest)
 
 } // namespace
 } // namespace testing

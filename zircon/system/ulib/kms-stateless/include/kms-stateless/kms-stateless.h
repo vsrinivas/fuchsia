@@ -11,7 +11,7 @@ namespace kms_stateless {
 
     // The callback called when a hardware key is successfully derived. Arguments to the callback
     // is a unique_ptr of the key buffer and the key size.
-    using GetHardwareDerivedKeyCallback = fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t>,
+    using GetHardwareDerivedKeyCallback = fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>,
                                                                     size_t)>;
 
     // Get a hardware derived key using

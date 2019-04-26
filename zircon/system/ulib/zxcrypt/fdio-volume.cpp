@@ -9,6 +9,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
+#include <fbl/vector.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -40,23 +41,25 @@ const size_t kKeyLength = 32;
 const char kHardwareKeyInfo[] = "zxcrypt";
 
 // How many bytes to read from /boot/config/zxcrypt?
-const size_t kMaxKeySourceLength = 16;
+const size_t kMaxKeySourcePolicyLength = 32;
 const char kZxcryptConfigFile[] = "/boot/config/zxcrypt";
 
-enum KeySource {
-    NullSource,
-    TeeSource,
-    // someday: TpmSource
-};
-
-zx_status_t SelectKeySource(KeySource* out) {
+// Reads /boot/config/zxcrypt to determine what key source policy was selected for this product at
+// build time.
+//
+// Returns ZX_OK and sets |out| to the appropriate KeySourcePolicy value if the file contents
+// exactly match a known configuration value.
+// Returns ZX_ERR_NOT_FOUND if the config file was not present
+// Returns ZX_ERR_IO if the config file could not be read
+// Returns ZX_ERR_BAD_STATE if the config value was not recognized.
+zx_status_t SelectKeySourcePolicy(KeySourcePolicy* out) {
     fbl::unique_fd fd(open(kZxcryptConfigFile, O_RDONLY));
     if (!fd) {
         xprintf("zxcrypt: couldn't open %s\n", kZxcryptConfigFile);
         return ZX_ERR_NOT_FOUND;
     }
 
-    char key_source_buf[kMaxKeySourceLength + 1];
+    char key_source_buf[kMaxKeySourcePolicyLength + 1];
     ssize_t len = read(fd.get(), key_source_buf, sizeof(key_source_buf)-1);
     if (len < 0) {
         xprintf("zxcrypt: couldn't read %s\n", kZxcryptConfigFile);
@@ -65,48 +68,118 @@ zx_status_t SelectKeySource(KeySource* out) {
         // add null terminator
         key_source_buf[len] = '\0';
         // Dispatch if recognized
-        if (strcmp(key_source_buf, "tee") == 0) {
-            *out = TeeSource;
-            return ZX_OK;
-        }
         if (strcmp(key_source_buf, "null") == 0) {
             *out = NullSource;
+            return ZX_OK;
+        }
+        if (strcmp(key_source_buf, "tee") == 0) {
+            *out = TeeRequiredSource;
+            return ZX_OK;
+        }
+        if (strcmp(key_source_buf, "tee-transitional") == 0) {
+            *out = TeeTransitionalSource;
+            return ZX_OK;
+        }
+        if (strcmp(key_source_buf, "tee-opportunistic") == 0) {
+            *out = TeeOpportunisticSource;
             return ZX_OK;
         }
         return ZX_ERR_BAD_STATE;
     }
 }
 
-zx_status_t DoWithHardwareKey(fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t>, size_t)>
-                              callback) {
-    KeySource source;
-    zx_status_t rc;
-    rc = SelectKeySource(&source);
-    if (rc != ZX_OK) {
-        return rc;
+} // namespace
+
+// Returns a ordered vector of |KeySource|s, representing all key sources,
+// ordered from most-preferred to least-preferred, that we should try for the
+// purposes of creating a new volume
+fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp) {
+    fbl::Vector<KeySource> r;
+    switch (ksp) {
+        case NullSource:
+            r = { kNullSource };
+            break;
+        case TeeRequiredSource:
+        case TeeTransitionalSource:
+            r = { kTeeSource };
+            break;
+        case TeeOpportunisticSource:
+            r = { kTeeSource, kNullSource };
+            break;
     }
-    switch(source) {
-        case TeeSource: {
-            // key info is |kHardwareKeyInfo| padded with 0.
-            uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = {0};
-            memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
-            return kms_stateless::GetHardwareDerivedKey([&](
-                    fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
-                return callback(std::move(key_buffer), key_size);
-            }, key_info);
-        }
-        case NullSource: {
-            // If we don't have secure storage for the root key, just use the null key
-            fbl::unique_ptr<uint8_t> key_buffer(new uint8_t[kKeyLength]);
-            memset(key_buffer.get(), 0, kKeyLength);
-            return callback(std::move(key_buffer), kKeyLength);
-        }
-    }
-    // unreachable, but the compiler seems unable to infer this
-    return ZX_OK;
+    return r;
 }
 
-} // namespace
+// Returns a ordered vector of |KeySource|s, representing all key sources,
+// ordered from most-preferred to least-preferred, that we should try for the
+// purposes of unsealing an existing volume
+fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp) {
+    fbl::Vector<KeySource> r;
+    switch (ksp) {
+        case NullSource:
+            r = { kNullSource };
+            break;
+        case TeeRequiredSource:
+            r = { kTeeSource };
+            break;
+        case TeeTransitionalSource:
+        case TeeOpportunisticSource:
+            r = { kTeeSource, kNullSource };
+            break;
+    }
+    return r;
+}
+
+zx_status_t TryWithKeysFrom(const fbl::Vector<KeySource>& ordered_key_sources,
+                            Activity activity,
+                            fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>,
+                                                        size_t)> callback) {
+    zx_status_t rc = ZX_ERR_INTERNAL;
+    for (auto& key_source : ordered_key_sources) {
+        switch (key_source) {
+            case kNullSource:
+                {
+                    auto key_buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[kKeyLength]);
+                    memset(key_buf.get(), 0, kKeyLength);
+                    rc = callback(std::move(key_buf), kKeyLength);
+                }
+                break;
+            case kTeeSource:
+                {
+                    // key info is |kHardwareKeyInfo| padded with 0.
+                    uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = {0};
+                    memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
+                    // make names for these so the callback to kms_stateless can
+                    // copy them out later
+                    fbl::unique_ptr<uint8_t[]> key_buf;
+                    size_t key_size;
+                    zx_status_t kms_rc = kms_stateless::GetHardwareDerivedKey([&](
+                            fbl::unique_ptr<uint8_t[]> cb_key_buffer, size_t cb_key_size) {
+                        key_size = cb_key_size;
+                        key_buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[cb_key_size]);
+                        memcpy(key_buf.get(), cb_key_buffer.get(), cb_key_size);
+                        return ZX_OK;
+                    }, key_info);
+
+                    if (kms_rc != ZX_OK) {
+                        rc = kms_rc;
+                        break;
+                    }
+
+                    rc = callback(std::move(key_buf), key_size);
+                }
+                break;
+        }
+        if (rc == ZX_OK) {
+            return rc;
+        }
+    }
+
+    xprintf("TryWithKeysFrom (%s): none of the %lu key sources succeeded\n",
+            activity == Activity::Create ? "create" : "unseal",
+            ordered_key_sources.size());
+    return rc;
+}
 
 FdioVolumeManager::FdioVolumeManager(zx::channel&& chan) : chan_(std::move(chan)) {}
 
@@ -125,7 +198,18 @@ zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_
 }
 
 zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    KeySourcePolicy source;
+    zx_status_t rc;
+    rc = SelectKeySourcePolicy(&source);
+    if (rc != ZX_OK) {
+        return rc;
+    }
+
+    auto ordered_key_sources = ComputeEffectiveUnsealPolicy(source);
+
+    return TryWithKeysFrom(ordered_key_sources,
+                           Activity::Unseal,
+                           [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         return Unseal(key_buffer.release(), key_size, slot);
     });
 }
@@ -199,7 +283,19 @@ zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
 
 zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& fd,
                                             fbl::unique_ptr<FdioVolume>* out) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    KeySourcePolicy source;
+    zx_status_t rc;
+    rc = SelectKeySourcePolicy(&source);
+    if (rc != ZX_OK) {
+        return rc;
+    }
+
+    // Figure out which keying approaches we'll try, based on the key source
+    // policy and context we're using this key in
+    auto ordered_key_sources = ComputeEffectiveCreatePolicy(source);
+    return TryWithKeysFrom(ordered_key_sources,
+                           Activity::Create,
+                           [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         crypto::Secret secret;
         zx_status_t rc;
         uint8_t* inner;
@@ -235,7 +331,17 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key
 zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd fd,
                                             key_slot_t slot,
                                             fbl::unique_ptr<FdioVolume>* out) {
-    return DoWithHardwareKey([&](fbl::unique_ptr<uint8_t> key_buffer, size_t key_size) {
+    KeySourcePolicy source;
+    zx_status_t rc;
+    rc = SelectKeySourcePolicy(&source);
+    if (rc != ZX_OK) {
+        return rc;
+    }
+
+    auto ordered_key_sources = ComputeEffectiveUnsealPolicy(source);
+    return TryWithKeysFrom(ordered_key_sources,
+                           Activity::Unseal,
+                           [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
         crypto::Secret secret;
         zx_status_t rc;
         uint8_t* inner;
