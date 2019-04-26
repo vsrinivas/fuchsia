@@ -41,9 +41,12 @@ test("sdmmc-test") {
     "sdio-controller-device.cpp",
     "sdio-controller-device-test.cpp",
     "sdio-function-device.cpp",
+    "sdmmc-block-device.cpp",
+    "sdmmc-block-device-test.cpp",
     "sdmmc-device.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdio",
     "$zx/system/banjo/ddk.protocol.sdmmc",
@@ -55,6 +58,7 @@ test("sdmmc-test") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/pretty",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

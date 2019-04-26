@@ -38,6 +38,14 @@ zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdm
     return ZX_OK;
 }
 
+zx_status_t SdmmcBlockDevice::StartWorkerThread() {
+    int rc = thrd_create_with_name(
+        &worker_thread_,
+        [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
+        this, "sdmmc-block-worker");
+    return thrd_status_to_zx_status(rc);
+}
+
 zx_status_t SdmmcBlockDevice::AddDevice() {
     // Device must be in TRAN state at this point
     zx_status_t st = WaitForTran();
@@ -46,12 +54,9 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
         return ZX_ERR_TIMED_OUT;
     }
 
-    int rc = thrd_create_with_name(
-        &worker_thread_,
-        [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
-        this, "sdmmc-block-worker");
-    if (rc != thrd_success) {
-        st = thrd_status_to_zx_status(rc);
+    st = StartWorkerThread();
+    if (st != thrd_success) {
+        zxlogf(ERROR, "sdmmc: Failed to start worker thread, retcode = %d\n", st);
         return st;
     }
 
@@ -72,7 +77,7 @@ void SdmmcBlockDevice::DdkUnbind() {
     DdkRemove();
 }
 
-void SdmmcBlockDevice::DdkRelease() {
+void SdmmcBlockDevice::StopWorkerThread() {
     dead_ = true;
 
     if (worker_thread_) {
@@ -93,7 +98,10 @@ void SdmmcBlockDevice::DdkRelease() {
         }
         lock_.Release();
     }
+}
 
+void SdmmcBlockDevice::DdkRelease() {
+    StopWorkerThread();
     __UNUSED bool dummy = Release();
 }
 
@@ -183,7 +191,7 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     fzl::VmoMapper mapper;
 
     zx_status_t st = ZX_OK;
-    if (sdmmc_.UseDma()) {
+    if (sdmmc().UseDma()) {
         req->use_dma = true;
         req->virt_buffer = nullptr;
         req->pmt = ZX_HANDLE_INVALID;
@@ -202,12 +210,12 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
         req->virt_size = length;
     }
 
-    st = sdmmc_.host().Request(req);
+    st = sdmmc().SdmmcRequest(req);
     if (st != ZX_OK) {
         zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
     } else {
-        if ((req->blockcount > 1) && !(sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
-            st = sdmmc_.SdmmcStopTransmission();
+        if ((req->blockcount > 1) && !(sdmmc().host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
+            st = sdmmc().SdmmcStopTransmission();
             if (st != ZX_OK) {
                 zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", st);
             }
@@ -266,14 +274,15 @@ int SdmmcBlockDevice::WorkerThread() {
     fbl::AutoLock lock(&lock_);
 
     for (;;) {
+        if (dead_) {
+            break;
+        }
+
         for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
             DoTxn(&(*txn));
         }
 
         worker_event_.Wait(&lock_);
-        if (dead_) {
-            break;
-        }
     }
 
     zxlogf(TRACE, "sdmmc: worker thread terminated successfully\n");
@@ -285,7 +294,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
     size_t attempt = 0;
     for (; attempt <= kTranMaxAttempts; attempt++) {
         uint32_t response;
-        zx_status_t st = sdmmc_.SdmmcSendStatus(&response);
+        zx_status_t st = sdmmc().SdmmcSendStatus(&response);
         if (st != ZX_OK) {
             zxlogf(SPEW, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d\n", st);
             return st;
@@ -293,7 +302,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
 
         current_state = MMC_STATUS_CURRENT_STATE(response);
         if (current_state == MMC_STATUS_CURRENT_STATE_RECV) {
-            st = sdmmc_.SdmmcStopTransmission();
+            st = sdmmc().SdmmcStopTransmission();
             continue;
         } else if (current_state == MMC_STATUS_CURRENT_STATE_TRAN) {
             break;

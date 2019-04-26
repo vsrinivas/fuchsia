@@ -32,6 +32,8 @@ public:
     // Update the current voltage field, e.g. after reading the card status registers.
     void SetCurrentVoltage(sdmmc_voltage_t new_voltage) { signal_voltage_ = new_voltage; }
 
+    virtual zx_status_t SdmmcRequest(sdmmc_req_t* req) { return host_.Request(req); }
+
     // SD/MMC shared ops
     virtual zx_status_t SdmmcGoIdle();
     virtual zx_status_t SdmmcSendStatus(uint32_t* response);
