@@ -32,7 +32,7 @@ void SystemDataUpdaterImpl::SetChannel(::fidl::StringPtr current_channel,
   if (current_channel) {
     system_data_->SetChannel(current_channel);
   } else {
-    system_data_->SetChannel("Unknown");
+    system_data_->SetChannel("<unknown>");
   }
   callback(Status::OK);
 }

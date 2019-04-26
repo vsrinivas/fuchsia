@@ -63,6 +63,10 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
     return cobalt_app_->system_data().experiments();
   }
 
+  const std::string& channel() {
+    return cobalt_app_->system_data().system_profile().channel();
+  }
+
   VectorPtr<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(
       int64_t experiment_id, int64_t arm_id) {
     VectorPtr<fuchsia::cobalt::Experiment> vector;
@@ -120,6 +124,22 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   EXPECT_FALSE(experiments().empty());
   EXPECT_EQ(experiments().front().experiment_id(), kUpdatedExperimentId);
   EXPECT_EQ(experiments().front().arm_id(), kUpdatedArmId);
+}
+
+TEST_F(SystemDataUpdaterImplTests, SetChannel) {
+  SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
+
+  EXPECT_EQ(channel(), "<unset>");
+
+  system_data_updater->SetChannel(nullptr, nullptr, [](Status s) {});
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(channel(), "<unknown>");
+
+  system_data_updater->SetChannel("fishfood", nullptr, [](Status s) {});
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(channel(), "fishfood");
 }
 
 }  // namespace cobalt
