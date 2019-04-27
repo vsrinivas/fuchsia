@@ -47,9 +47,18 @@ bool ImagePipeSurfaceAsync::CreateImage(
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
 
+    // Find lowest usable index.
+    uint32_t memory_type_index = __builtin_ctz(
+        memory_requirements.memoryTypeBits);
+
+    VkMemoryDedicatedAllocateInfo dedicated_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .image = image,
+        .buffer = VK_NULL_HANDLE};
     VkExportMemoryAllocateInfoKHR export_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
-        .pNext = nullptr,
+        .pNext = &dedicated_allocate_info,
         .handleTypes =
             VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
 
@@ -57,7 +66,7 @@ bool ImagePipeSurfaceAsync::CreateImage(
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = &export_allocate_info,
         .allocationSize = memory_requirements.size,
-        .memoryTypeIndex = 0,
+        .memoryTypeIndex = memory_type_index,
     };
     VkDeviceMemory memory;
     result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
