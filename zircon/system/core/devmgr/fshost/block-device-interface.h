@@ -58,6 +58,10 @@ private:
     // Unseals the underlying zxcrypt volume.
     virtual zx_status_t UnsealZxcrypt() = 0;
 
+    // Returns true if the consistency of filesystems should be validated before
+    // mounting.
+    virtual bool ShouldCheckFilesystems() = 0;
+
     // Validates the state of the filesystem, and returns ZX_OK if it appears
     // consistent (or if the consistency check should be skipped).
     virtual zx_status_t CheckFilesystem() = 0;

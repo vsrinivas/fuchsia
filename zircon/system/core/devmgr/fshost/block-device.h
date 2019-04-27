@@ -30,6 +30,7 @@ public:
     zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
     zx_status_t AttachDriver(const fbl::StringPiece& driver) final;
     zx_status_t UnsealZxcrypt() final;
+    bool ShouldCheckFilesystems() final;
     zx_status_t CheckFilesystem() final;
     zx_status_t FormatFilesystem() final;
     zx_status_t MountFilesystem() final;

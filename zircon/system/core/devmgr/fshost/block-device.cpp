@@ -108,26 +108,6 @@ int UnsealZxcryptThread(void* arg) {
     return 0;
 }
 
-zx_status_t FormatMinfs(const fbl::unique_fd& block_device,
-                        const fuchsia_hardware_block_BlockInfo& info) {
-    fprintf(stderr, "fshost: Formatting minfs.\n");
-    uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-    std::unique_ptr<minfs::Bcache> bc;
-    zx_status_t status;
-    if ((status = minfs::Bcache::Create(&bc, block_device.duplicate(),
-                                        static_cast<uint32_t>(device_size))) != ZX_OK) {
-        fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
-        return status;
-    }
-    minfs::MountOptions options = {};
-    if ((status = Mkfs(options, std::move(bc))) != ZX_OK) {
-        fprintf(stderr, "fshost: Could not format minfs filesystem.\n");
-        return status;
-    }
-    printf("fshost: Minfs filesystem re-formatted. Expect data loss.\n");
-    return ZX_OK;
-}
-
 } // namespace
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd)
@@ -209,8 +189,12 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
     return ZX_OK;
 }
 
+bool BlockDevice::ShouldCheckFilesystems() {
+    return mounter_->ShouldCheckFilesystems();
+}
+
 zx_status_t BlockDevice::CheckFilesystem() {
-    if (!getenv_bool("zircon.system.filesystem-check", false)) {
+    if (!ShouldCheckFilesystems()) {
         return ZX_OK;
     }
 

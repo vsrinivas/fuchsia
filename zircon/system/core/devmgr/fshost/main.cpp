@@ -22,6 +22,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include "../shared/env.h"
+
 #include "block-watcher.h"
 #include "fs-manager.h"
 
@@ -218,7 +220,8 @@ int main(int argc, char** argv) {
     }
 
     if (!disable_block_watcher) {
-        BlockDeviceWatcher(std::move(fs_manager), netboot);
+        bool check_filesystems = devmgr::getenv_bool("zircon.system.filesystem-check", false);
+        BlockDeviceWatcher(std::move(fs_manager), netboot, check_filesystems);
     } else {
         // Keep the process alive so that the loader service continues to be supplied
         // to the devmgr. Otherwise the devmgr will segfault.

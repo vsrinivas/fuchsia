@@ -66,8 +66,8 @@ zx_status_t BlockDeviceCallback(int dirfd, int event, const char* name, void* co
 
 } // namespace
 
-void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, bool netboot) {
-    FilesystemMounter mounter(std::move(fshost), netboot);
+void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, bool netboot, bool check_filesystems) {
+    FilesystemMounter mounter(std::move(fshost), netboot, check_filesystems);
 
     fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
     if (dirfd) {

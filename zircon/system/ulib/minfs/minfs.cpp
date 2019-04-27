@@ -126,7 +126,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
 
     TransactionLimits limits(*info);
     if ((info->flags & kMinfsFlagFVM) == 0) {
-        if (info->dat_block + info->block_count > max) {
+        if (info->dat_block + info->block_count != max) {
             FS_TRACE_ERROR("minfs: too large for device\n");
             return ZX_ERR_INVALID_ARGS;
         }

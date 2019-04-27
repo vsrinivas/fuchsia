@@ -34,6 +34,9 @@ public:
     zx_status_t UnsealZxcrypt() override {
         ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
     }
+    bool ShouldCheckFilesystems() override {
+        ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+    }
     zx_status_t CheckFilesystem() override {
         ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
     }

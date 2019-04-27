@@ -56,7 +56,8 @@ private:
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
     std::unique_ptr<FsManager> manager = TakeManager();
     bool netboot = false;
-    FilesystemMounter mounter(std::move(manager), netboot);
+    bool check_filesystems = false;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
     fbl::unique_fd fd;
     BlockDevice device(&mounter, std::move(fd));
     EXPECT_EQ(device.Netbooting(), netboot);
@@ -71,7 +72,7 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
     // thread without observing the results.
     EXPECT_OK(device.UnsealZxcrypt());
 
-    // Returns ZX_OK because filesystem checks are only enabled via environment variables.
+    // Returns ZX_OK because filesystem checks are disabled.
     EXPECT_OK(device.CheckFilesystem());
 
     EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_BAD_HANDLE);
@@ -81,7 +82,8 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
 TEST_F(BlockDeviceHarness, TestEmptyDevice) {
     std::unique_ptr<FsManager> manager = TakeManager();
     bool netboot = false;
-    FilesystemMounter mounter(std::move(manager), netboot);
+    bool check_filesystems = false;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
     // Initialize Ramdisk.
     constexpr uint64_t kBlockSize = 512;
@@ -118,7 +120,8 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
     std::unique_ptr<FsManager> manager = TakeManager();
     bool netboot = false;
-    FilesystemMounter mounter(std::move(manager), netboot);
+    bool check_filesystems = false;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
     // Initialize Ramdisk with an empty GUID.
     constexpr uint64_t kBlockSize = 512;
@@ -147,7 +150,8 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
     std::unique_ptr<FsManager> manager = TakeManager();
 
     bool netboot = false;
-    FilesystemMounter mounter(std::move(manager), netboot);
+    bool check_filesystems = false;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
 
     // Initialize Ramdisk with a data GUID.
     constexpr uint64_t kBlockSize = 512;
@@ -171,8 +175,75 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
     ASSERT_OK(ramdisk_destroy(ramdisk));
 }
 
-// TODO(smklein): Plumb through the "check filesystem" decision using
-// something other than environment variables, and add a test for it.
+TEST_F(BlockDeviceHarness, TestMinfsReformat) {
+    std::unique_ptr<FsManager> manager = TakeManager();
+
+    bool netboot = false;
+    bool check_filesystems = true;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+
+    // Initialize Ramdisk with a data GUID.
+    constexpr uint64_t kBlockSize = 512;
+    constexpr uint64_t kBlockCount = 1 << 20;
+    ramdisk_client_t* ramdisk;
+    const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    ASSERT_OK(ramdisk_create_with_guid(kBlockSize, kBlockCount, data_guid, sizeof(data_guid),
+                                       &ramdisk));
+    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
+    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_TRUE(fd);
+
+    BlockDevice device(&mounter, std::move(fd));
+    device.SetFormat(DISK_FORMAT_MINFS);
+    EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+
+    // Before formatting the device, this isn't a valid minfs partition.
+    EXPECT_NOT_OK(device.CheckFilesystem());
+    EXPECT_NOT_OK(device.MountFilesystem());
+
+    // After formatting the device, it is a valid partition. We can check the device,
+    // and also mount it.
+    EXPECT_OK(device.FormatFilesystem());
+    EXPECT_OK(device.CheckFilesystem());
+    EXPECT_OK(device.MountFilesystem());
+
+    ASSERT_OK(ramdisk_destroy(ramdisk));
+}
+
+TEST_F(BlockDeviceHarness, TestBlobfs) {
+    std::unique_ptr<FsManager> manager = TakeManager();
+
+    bool netboot = false;
+    bool check_filesystems = true;
+    FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+
+    // Initialize Ramdisk with a data GUID.
+    constexpr uint64_t kBlockSize = 512;
+    constexpr uint64_t kBlockCount = 1 << 20;
+    ramdisk_client_t* ramdisk;
+    const uint8_t data_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
+    ASSERT_OK(ramdisk_create_with_guid(kBlockSize, kBlockCount, data_guid, sizeof(data_guid),
+                                       &ramdisk));
+    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
+    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_TRUE(fd);
+
+    BlockDevice device(&mounter, std::move(fd));
+    device.SetFormat(DISK_FORMAT_BLOBFS);
+    EXPECT_EQ(device.GetFormat(), DISK_FORMAT_BLOBFS);
+
+    // Before formatting the device, this isn't a valid blobfs partition.
+    // However, as implemented, we always validate the consistency of the filesystem.
+    EXPECT_OK(device.CheckFilesystem());
+    EXPECT_NOT_OK(device.MountFilesystem());
+
+    // Additionally, blobfs does not yet support reformatting within fshost.
+    EXPECT_NOT_OK(device.FormatFilesystem());
+    EXPECT_OK(device.CheckFilesystem());
+    EXPECT_NOT_OK(device.MountFilesystem());
+
+    ASSERT_OK(ramdisk_destroy(ramdisk));
+}
 
 // TODO: Add tests for Zxcrypt binding.
 

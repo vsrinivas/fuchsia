@@ -14,7 +14,7 @@
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
-#include "../shared/env.h"
+// Used for fshost signals.
 #include "../shared/fdio.h"
 
 #include "registry.h"
