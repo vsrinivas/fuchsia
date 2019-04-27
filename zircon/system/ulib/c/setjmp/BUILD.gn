@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(mcgrathr): This code was all rewritten from scratch.  Move it out of
-# third_party/ulib/musl into system/ulib/c.
-
 source_set("setjmp") {
   deps = [
     "$zx/third_party/ulib/musl:musl_internal",
@@ -12,7 +9,6 @@ source_set("setjmp") {
   sources = [
     "${toolchain.cpu}/longjmp.S",
     "${toolchain.cpu}/setjmp.S",
-    "longjmp.c",
     "setjmp.c",
   ]
 }

@@ -17,6 +17,7 @@ config("headers") {
 group("musl_internal") {
   visibility = [
     "./*",
+    "$zx/system/ulib/c/*",
     "$zx/third_party/ulib/$malloc:*",
   ]
   public_deps = [
@@ -90,7 +91,6 @@ if (toolchain.base_environment == "user") {
       "src/process",
       "src/regex",
       "src/sched",
-      "src/setjmp",
       "src/signal",
       "src/stat",
       "src/stdio",
