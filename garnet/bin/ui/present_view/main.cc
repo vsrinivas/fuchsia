@@ -85,7 +85,7 @@ int main(int argc, const char** argv) {
     loop.Quit();
   });
 
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Note: This instance must be retained for the lifetime of the UI, so it has
   // to be declared in the outer scope of |main| rather than inside the relevant

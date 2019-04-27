@@ -62,7 +62,7 @@ void TileView::ConnectViews() {
                                    controller.NewRequest());
 
     // Create a View from the launched component.
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     auto view_provider =
         services.ConnectToService<fuchsia::ui::app::ViewProvider>();

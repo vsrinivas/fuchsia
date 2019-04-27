@@ -40,7 +40,7 @@ class TilesTest : public component::testing::TestWithContext {
     // happen before calling |TakeContext|.
     controller().AddService(fake_scenic_.GetHandler());
 
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     auto startup_context = TakeContext();
     auto scenic =

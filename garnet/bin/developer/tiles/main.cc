@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
           ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
 
   // Create tiles with a token for its root view.
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),

@@ -47,7 +47,7 @@ impl ScenicFacade {
         let launcher = launcher().context("Failed to open launcher service")?;
         let app = launch(&launcher, url, None)?;
 
-        let mut token_pair = scenic::ViewTokenPair::new()?;
+        let (view_token, mut view_holder_token) = scenic::new_view_token_pair()?;
 
         // (for now) gate v1/v2 on the presence of a view config
         match config {
@@ -55,16 +55,16 @@ impl ScenicFacade {
                 // v2
                 let view = app.connect_to_service::<ViewMarker>()?;
                 view.set_config(&mut config)?;
-                view.attach(token_pair.view_token.value)?;
+                view.attach(view_token.value)?;
             }
             None => {
                 // v1
                 let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
-                view_provider.create_view(token_pair.view_token.value, None, None)?;
+                view_provider.create_view(view_token.value, None, None)?;
             }
         }
 
-        presenter.present_view(&mut token_pair.view_holder_token, None)?;
+        presenter.present_view(&mut view_holder_token, None)?;
 
         app.controller().detach()?;
         Ok(())

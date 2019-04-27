@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.#include <cstdio>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -10,19 +14,15 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
-
-#include <memory>
-#include <string>
-#include <vector>
 
 namespace {
 
@@ -109,7 +109,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
       g_context = component::StartupContext::CreateFromStartupInfo().release();
     }
 
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Connect to Scenic, create a View.
     scenic_ =

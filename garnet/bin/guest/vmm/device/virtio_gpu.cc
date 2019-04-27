@@ -345,7 +345,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     PrepStart(std::move(start_info));
 
     if (view_listener) {
-      auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+      auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
       // Create view.
       auto scenic =

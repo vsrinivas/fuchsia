@@ -800,7 +800,7 @@ void SessionmgrImpl::RunSessionShell(
     Shutdown();
   });
 
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
   fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);

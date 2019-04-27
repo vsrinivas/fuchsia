@@ -6,14 +6,15 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
-#include <unistd.h>
 #include <zircon/types.h>
+
+#include <unistd.h>
 
 #include "example_view_provider_service.h"
 
@@ -94,7 +95,7 @@ App::App(async::Loop* loop, AppType type)
   });
 
   if (type_ == AppType::CONTAINER) {
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Create the subview and bind the ServiceProviders.
     FXL_LOG(INFO) << AppTypeString(type_) << "Creating view.";
