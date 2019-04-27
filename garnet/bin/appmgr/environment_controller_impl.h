@@ -5,10 +5,12 @@
 #ifndef GARNET_BIN_APPMGR_ENVIRONMENT_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_ENVIRONMENT_CONTROLLER_IMPL_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/fidl/cpp/binding.h>
+
 #include <memory>
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/macros.h"
 
 namespace component {
@@ -32,8 +34,19 @@ class EnvironmentControllerImpl : public fuchsia::sys::EnvironmentController {
   void OnCreated();
 
  private:
+  // Kills realm and returns self object extracted form parent realm.
+  std::unique_ptr<EnvironmentControllerImpl> ExtractEnvironmentController();
+
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+               zx_status_t status, const zx_packet_signal* signal);
+
   fidl::Binding<fuchsia::sys::EnvironmentController> binding_;
+
   std::unique_ptr<Realm> realm_;
+
+  async::WaitMethod<EnvironmentControllerImpl,
+                    &EnvironmentControllerImpl::Handler>
+      wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
 };

@@ -2,17 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/component_controller_impl.h"
-#include "garnet/bin/appmgr/realm.h"
-
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fstream>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
@@ -29,12 +18,23 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <test/appmgr/integration/cpp/fidl.h>
+#include <unistd.h>
 
+#include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
+#include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
@@ -281,6 +281,83 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
   EXPECT_TRUE(RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; }));
   EXPECT_TRUE(
       RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; }));
+}
+
+TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
+  auto env_services = CreateServices();
+
+  ASSERT_EQ(ZX_OK,
+            env_services->AddServiceWithLaunchInfo(
+                CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
+                                 "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                fidl::examples::echo::Echo::Name_));
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+
+  // make sure echo service is running.
+  fidl::examples::echo::EchoPtr echo;
+  enclosing_environment->ConnectToService(echo.NewRequest());
+  const std::string message = "some_msg";
+  fidl::StringPtr ret_msg = "";
+  echo->EchoString(message,
+                   [&](::fidl::StringPtr retval) { ret_msg = retval; });
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
+
+  fuchsia::sys::JobProviderSyncPtr ptr;
+  files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
+  ASSERT_EQ(1u, glob.size());
+  const std::string path = *glob.begin();
+  fdio_service_connect(path.c_str(), ptr.NewRequest().TakeChannel().release());
+
+  zx::job job;
+  EXPECT_EQ(ZX_OK, ptr->GetJob(&job));
+  ASSERT_EQ(ZX_OK, job.kill());
+
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return !enclosing_environment->is_running(); }));
+}
+
+TEST_F(RealmTest, EmptyRealmDiesWhenItsJobDies) {
+  auto env_services = CreateServices();
+
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+
+  fuchsia::sys::JobProviderSyncPtr ptr;
+  files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
+  ASSERT_EQ(1u, glob.size());
+  const std::string path = *glob.begin();
+  fdio_service_connect(path.c_str(), ptr.NewRequest().TakeChannel().release());
+
+  zx::job job;
+  EXPECT_EQ(ZX_OK, ptr->GetJob(&job));
+  ASSERT_EQ(ZX_OK, job.kill());
+
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return !enclosing_environment->is_running(); }));
+}
+
+TEST_F(RealmTest, KillWorks) {
+  auto env_services = CreateServices();
+
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+
+  std::string hub_path = std::string("/hub/r/") + kRealm;
+  // make sure realm was created
+  files::Glob glob1(hub_path);
+  ASSERT_EQ(1u, glob1.size());
+
+  bool killed = false;
+  enclosing_environment->Kill([&] { killed = true; });
+  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+
+  // make sure realm was really killed
+  files::Glob glob2(hub_path);
+  ASSERT_EQ(0u, glob2.size());
 }
 
 class EnvironmentOptionsTest

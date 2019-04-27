@@ -33,7 +33,9 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       nullptr, kRootLabel, "/data", "/data/cache", args.environment_services,
       args.run_virtual_console, fuchsia::sys::EnvironmentOptions{});
 
-  root_realm_ = std::make_unique<Realm>(std::move(realm_args));
+  root_realm_ = Realm::Create(std::move(realm_args));
+
+  FXL_CHECK(root_realm_) << "Cannot create root realm ";
 
   // 2. Publish outgoing directories.
   // Publish the root realm's hub directory as 'hub/' and the first nested

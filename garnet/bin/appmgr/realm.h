@@ -62,7 +62,11 @@ struct RealmArgs {
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
  public:
-  Realm(RealmArgs args);
+  static std::unique_ptr<Realm> Create(RealmArgs args);
+
+  // Constructor to create a Realm object. Clients should call |Create|.
+  Realm(RealmArgs args, zx::job job);
+
   ~Realm();
 
   Realm* parent() const { return parent_; }
@@ -79,7 +83,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   HubInfo HubInfo();
 
-  zx::job DuplicateJob() const;
+  zx::job DuplicateJobForHub() const;
+
+  const zx::job& job() const { return job_; }
 
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
@@ -97,9 +103,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       ComponentObjectCreatedCallback callback = nullptr);
 
   // Removes the child realm from this realm and returns the owning
-  // reference to the child's controller. The caller of this function typically
-  // destroys the controller (and hence the environment) shortly after calling
-  // this function.
+  // reference to the child's controller. The caller of this function
+  // typically destroys the controller (and hence the environment) shortly
+  // after calling this function.
   std::unique_ptr<EnvironmentControllerImpl> ExtractChild(Realm* child);
 
   // Removes the application from this environment and returns the owning

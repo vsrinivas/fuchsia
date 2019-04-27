@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/rights.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -42,6 +43,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/pkg_url/url_resolver.h"
 
 namespace component {
@@ -233,35 +235,49 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .options = std::move(options)};
 }
 
-Realm::Realm(RealmArgs args)
+std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
+  if (args.label.empty()) {
+    FXL_LOG(ERROR) << "Cannot create realm with empty label";
+    return nullptr;
+  }
+
+  // parent_ is null if this is the root application environment. if so, we
+  // derive from the application manager's job.
+  zx::unowned<zx::job> parent_job;
+  if (args.parent) {
+    parent_job = zx::unowned<zx::job>(args.parent->job_);
+  } else {
+    parent_job = zx::unowned<zx::job>(zx::job::default_job());
+  }
+
+  zx::job job;
+  if (zx::job::create(*parent_job, 0u, &job) != ZX_OK) {
+    FXL_LOG(ERROR) << "Job creation failed. Cannot create realm '"
+                   << args.label;
+    return nullptr;
+  }
+
+  return std::make_unique<Realm>(std::move(args), std::move(job));
+}
+
+Realm::Realm(RealmArgs args, zx::job job)
     : parent_(args.parent),
       data_path_(args.data_path),
       cache_path_(args.cache_path),
       run_virtual_console_(args.run_virtual_console),
+      job_(std::move(job)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services),
       allow_parent_runners_(args.options.allow_parent_runners),
       delete_storage_on_death_(args.options.delete_storage_on_death) {
-  // parent_ is null if this is the root application environment. if so, we
-  // derive from the application manager's job.
-  zx::unowned<zx::job> parent_job;
-  if (parent_) {
-    parent_job = zx::unowned<zx::job>(parent_->job_);
-  } else {
-    parent_job = zx::unowned<zx::job>(zx::job::default_job());
-  }
-
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
     FXL_CHECK(zx::channel::create(0, &first_nested_realm_svc_server_,
                                   &first_nested_realm_svc_client_) == ZX_OK);
   }
 
-  FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
-
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
-  FXL_CHECK(!args.label.empty());
   label_ = args.label.substr(0, fuchsia::sys::kLabelMaxLength);
 
   if (args.options.kill_on_oom) {
@@ -341,16 +357,16 @@ HubInfo Realm::HubInfo() {
   return component::HubInfo(label_, koid_, hub_.dir());
 }
 
-zx::job Realm::DuplicateJob() const {
+zx::job Realm::DuplicateJobForHub() const {
   zx::job duplicate_job;
-  zx_status_t status =
-      job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &duplicate_job);
+  // As htis only goes inside /hub, it is fine to give destoy rights
+  auto flags = ZX_RIGHTS_BASIC | ZX_RIGHT_DESTROY;
+  zx_status_t status = job_.duplicate(flags | ZX_RIGHT_WRITE, &duplicate_job);
   if (status == ZX_ERR_INVALID_ARGS) {
     // In the process of removing WRITE for processes; if duplicate with WRITE
     // failed, try the new rights. TODO(ZX-2967): Once the transition is
     // complete, only duplicate with MANAGE_PROCESS.
-    status = job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_PROCESS,
-                            &duplicate_job);
+    status = job_.duplicate(flags | ZX_RIGHT_MANAGE_PROCESS, &duplicate_job);
   }
   if (status != ZX_OK) {
     return zx::job();
@@ -406,8 +422,14 @@ void Realm::CreateNestedEnvironment(
                            environment_services_,
                            /*run_virtual_console=*/false, std::move(options));
   }
+
+  auto realm = Realm::Create(std::move(args));
+  if (!realm) {
+    return;
+  }
+
   auto controller = std::make_unique<EnvironmentControllerImpl>(
-      std::move(controller_request), std::make_unique<Realm>(std::move(args)));
+      std::move(controller_request), std::move(realm));
   Realm* child = controller->realm();
   child->AddBinding(std::move(environment));
 
