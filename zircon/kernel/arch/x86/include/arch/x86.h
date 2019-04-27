@@ -337,6 +337,10 @@ static inline void write_msr(uint32_t msr_id, uint64_t msr_write_val) {
         : "c"(msr_id), "a"(msr_write_val & 0xffffffff), "d"(msr_write_val >> 32));
 }
 
+// Write value |val| into MSR |msr_id|. Returns ZX_OK if the write was successful or
+// a non-Ok status if the write failed because we received a #GP fault.
+zx_status_t write_msr_safe(uint32_t msr_id, uint64_t val);
+
 static inline bool x86_is_paging_enabled(void) {
     if (x86_get_cr0() & X86_CR0_PG)
         return true;

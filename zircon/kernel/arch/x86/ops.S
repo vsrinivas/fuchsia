@@ -71,6 +71,37 @@ FUNCTION(read_msr_safe)
     ret
 END_FUNCTION(read_msr_safe)
 
+/* zx_status_t write_msr_safe(uint32_t msr_id, uint64_t val); */
+FUNCTION(write_msr_safe)
+    // Disable interrupts before touching percpu state
+    pushfq
+    cli
+
+    // If we take a #GP fault, vector to write_msr_safe_gpf
+    leaq .Lwrite_msr_safe_gpf(%rip), %rax
+    movq %rax, %gs:PERCPU_GPF_RETURN_OFFSET
+
+    // %rdi holds |msr_id|, %rsi holds |val|
+    // we need |msr_id| in %rcx and |val| in %edi:%eax
+    movq %rdi, %rcx
+    movl %esi, %eax
+    movq %rsi, %rdx
+    shrq $32, %rdx
+
+    wrmsr
+    // We made it here, no #GP. Cleanup the handler and restore interrupt state.
+    movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
+    popfq
+    movq $ZX_OK, %rax
+    ret
+
+.Lwrite_msr_safe_gpf:
+    movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
+    popfq
+    mov $ZX_ERR_NOT_SUPPORTED, %rax
+    ret
+END_FUNCTION(write_msr_safe)
+
 /* void x86_mwait(); */
 FUNCTION(x86_mwait)
     pushf
