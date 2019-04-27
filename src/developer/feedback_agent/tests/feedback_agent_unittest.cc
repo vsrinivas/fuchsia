@@ -5,13 +5,7 @@
 #include "src/developer/feedback_agent/feedback_agent.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <lib/fostr/indent.h>
@@ -23,15 +17,14 @@
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
-#include <lib/zx/vmo.h>
-#include <stdint.h>
 #include <zircon/errors.h>
 
 #include <memory>
 #include <ostream>
 #include <vector>
 
-#include "src/lib/files/file.h"
+#include "src/developer/feedback_agent/tests/stub_log_listener.h"
+#include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -41,78 +34,8 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-using fuchsia::ui::scenic::ScreenshotData;
-
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
-
-constexpr zx_time_t kSyslogBaseTimestamp = ZX_SEC(15604);
-constexpr uint64_t kSyslogProcessId = 7559;
-constexpr uint64_t kSyslogThreadId = 7687;
-
-// Returns an empty screenshot, still needed when Scenic::TakeScreenshot()
-// returns false as the FIDL ScreenshotData field is not marked optional in
-// fuchsia.ui.scenic.Scenic.TakeScreenshot.
-ScreenshotData CreateEmptyScreenshot() {
-  ScreenshotData screenshot;
-  FXL_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
-  return screenshot;
-}
-
-struct RGBA {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-  uint8_t a;
-};
-
-// Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px|
-// checkerboard, where each white/black region is a 10x10 pixel square.
-ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
-  const size_t height = image_dim_in_px;
-  const size_t width = image_dim_in_px;
-  const size_t block_size = 10;
-  const uint8_t black = 0;
-  const uint8_t white = 0xff;
-
-  const size_t size_in_bytes = image_dim_in_px * image_dim_in_px * sizeof(RGBA);
-  auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
-  RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
-
-  // We go pixel by pixel, row by row. |y| tracks the row and |x| the column.
-  //
-  // We compute in which |block_size| x |block_size| block the pixel is to
-  // determine the color (black or white). |block_y| tracks the "block" row and
-  // |block_x| the "block" column.
-  for (size_t y = 0; y < height; ++y) {
-    size_t block_y = y / block_size;
-    for (size_t x = 0; x < width; ++x) {
-      size_t block_x = x / block_size;
-      uint8_t block_color = (block_x + block_y) % 2 ? black : white;
-      size_t index = y * width + x;
-      auto& p = pixels[index];
-      p.r = p.g = p.b = block_color;
-      p.a = 255;
-    }
-  }
-
-  ScreenshotData screenshot;
-  FXL_CHECK(zx::vmo::create(size_in_bytes, 0u, &screenshot.data.vmo) == ZX_OK);
-  FXL_CHECK(screenshot.data.vmo.write(ptr.get(), 0u, size_in_bytes) == ZX_OK);
-  screenshot.data.size = size_in_bytes;
-  screenshot.info.height = image_dim_in_px;
-  screenshot.info.width = image_dim_in_px;
-  screenshot.info.stride = image_dim_in_px * 4u /*4 bytes per pixel*/;
-  screenshot.info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
-  return screenshot;
-}
-
-// Returns an empty screenshot with a pixel format different from BGRA-8.
-ScreenshotData CreateNonBGRA8Screenshot() {
-  ScreenshotData screenshot = CreateEmptyScreenshot();
-  screenshot.info.pixel_format = fuchsia::images::PixelFormat::YUY2;
-  return screenshot;
-}
 
 // Returns a Screenshot with the right dimensions, no image.
 std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
@@ -121,15 +44,6 @@ std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
   screenshot->dimensions_in_px.width = image_dim_in_px;
   return screenshot;
 }
-
-// Represents arguments for Scenic::TakeScreenshot().
-struct TakeScreenshotResponse {
-  ScreenshotData screenshot;
-  bool success;
-
-  TakeScreenshotResponse(ScreenshotData data, bool success)
-      : screenshot(std::move(data)), success(success){};
-};
 
 // Represents arguments for DataProvider::GetScreenshotCallback.
 struct GetScreenshotResponse {
@@ -232,84 +146,6 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
                "' and value '" + std::string(expected_value) + "'") {
   return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
 }
-
-// Stub Scenic service to return canned responses to Scenic::TakeScreenshot().
-class StubScenic : public fuchsia::ui::scenic::Scenic {
- public:
-  // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
-  // Scenic methods.
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetDisplayInfo(GetDisplayInfoCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetDisplayOwnershipEvent(
-      GetDisplayOwnershipEventCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void TakeScreenshot(TakeScreenshotCallback callback) override {
-    FXL_CHECK(!take_screenshot_responses_.empty())
-        << "You need to set up Scenic::TakeScreenshot() responses before "
-           "testing GetScreenshot() using set_scenic_responses()";
-    TakeScreenshotResponse response = std::move(take_screenshot_responses_[0]);
-    take_screenshot_responses_.erase(take_screenshot_responses_.begin());
-    callback(std::move(response.screenshot), response.success);
-  }
-
-  // Stub injection and verification methods.
-  void set_take_screenshot_responses(
-      std::vector<TakeScreenshotResponse> responses) {
-    take_screenshot_responses_ = std::move(responses);
-  }
-  const std::vector<TakeScreenshotResponse>& take_screenshot_responses() const {
-    return take_screenshot_responses_;
-  }
-
- private:
-  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  std::vector<TakeScreenshotResponse> take_screenshot_responses_;
-};
-
-// Stub Log service to return canned responses to Log::DumpLogs().
-class StubLogger : public fuchsia::logger::Log {
- public:
-  // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
-  // fuchsia::logger::Log methods.
-  void Listen(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
-    fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
-    FXL_CHECK(log_listener_ptr.is_bound());
-    log_listener_ptr->LogMany(messages_);
-    log_listener_ptr->Done();
-  }
-
-  // Stub injection methods.
-  void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    messages_ = messages;
-  }
-
- private:
-  fidl::BindingSet<fuchsia::logger::Log> bindings_;
-  std::vector<fuchsia::logger::LogMessage> messages_;
-};
 
 // Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL
 // interface.
@@ -478,20 +314,6 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
     EXPECT_TRUE(response.screenshot->image.vmo.is_valid());
     EXPECT_GE(response.screenshot->image.size, 0u);
   }
-}
-
-fuchsia::logger::LogMessage BuildLogMessage(
-    const int32_t severity, const std::string& text,
-    const zx_time_t timestamp_offset,
-    const std::vector<std::string>& tags = {}) {
-  fuchsia::logger::LogMessage msg{};
-  msg.time = kSyslogBaseTimestamp + timestamp_offset;
-  msg.pid = kSyslogProcessId;
-  msg.tid = kSyslogThreadId;
-  msg.tags = tags;
-  msg.severity = severity;
-  msg.msg = text;
-  return msg;
 }
 
 TEST_F(FeedbackAgentTest, GetData_SmokeTest) {

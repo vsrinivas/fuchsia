@@ -47,6 +47,10 @@ executable("unittest") {
 
   sources = [
     "feedback_agent_unittest.cc",
+    "stub_log_listener.cc",
+    "stub_log_listener.h",
+    "stub_scenic.cc",
+    "stub_scenic.h",
   ]
 
   deps = [
