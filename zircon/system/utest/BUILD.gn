@@ -38,6 +38,7 @@ if (current_cpu != "") {
       "$zx/system/dev/nand/ram-nand:ram-nand-test",
       "$zx/system/dev/nand/skip-block:skip-block-test",
       "$zx/system/dev/power/msm8x53-power:msm8x53-power-test",
+      "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/dev/test/usb",
       "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",

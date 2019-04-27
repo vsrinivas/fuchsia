@@ -27,3 +27,35 @@ driver("msm8x53-clk") {
     "$zx/system/ulib/zxcpp",
   ]
 }
+
+test("msm8x53-clk-test") {
+  testonly = true
+  output_name = "msm8x53-clk-test"
+  sources = [
+    "msm8x53-clk.cpp",
+    "msm8x53-clk-test.cpp"
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.clock",
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/msm8x53",
+    "$zx/system/fidl/fuchsia-hardware-clock:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}

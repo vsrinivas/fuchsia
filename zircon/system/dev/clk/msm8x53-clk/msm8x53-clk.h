@@ -9,9 +9,14 @@
 #include <fbl/mutex.h>
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/mmio/mmio.h>
+#include <soc/msm8x53/msm8x53-clock.h>
 #include <zircon/thread_annotations.h>
 
 namespace clk {
+
+// Fwd declarations
+class RcgFrequencyTable;
+class MsmClkRcg;
 
 class Msm8x53Clk;
 using DeviceType = ddk::Device<Msm8x53Clk, ddk::Unbindable>;
@@ -33,33 +38,48 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
-private:
-    Msm8x53Clk(zx_device_t* parent)
-        : DeviceType(parent) {}
+// Protected for tests.
+protected:
+    Msm8x53Clk(zx_device_t* parent, ddk::MmioBuffer mmio)
+        : DeviceType(parent)
+        , mmio_(std::move(mmio)) {}
 
     zx_status_t RegisterClockProtocol();
+
+    enum class Toggle {
+        Enabled,
+        Disabled
+    };
 
     // Gate Clocks
     zx_status_t GateClockEnable(uint32_t index);
     zx_status_t GateClockDisable(uint32_t index);
 
+    // RCG Clocks
+    zx_status_t RcgClockEnable(uint32_t index);
+    zx_status_t RcgClockDisable(uint32_t index);
+    zx_status_t RcgClockSetRate(uint32_t index, uint64_t hz) __TA_REQUIRES(rcg_rates_lock_);
+    zx_status_t ToggleRcgForceEnable(uint32_t rcgr_cmd_offset, Toggle toggle);
+    zx_status_t AwaitRcgEnableLocked(uint32_t rcgr_cmd_offset) __TA_REQUIRES(lock_);
+    zx_status_t RcgSetRateMnd(const MsmClkRcg& clk, const RcgFrequencyTable* table);
+    zx_status_t RcgSetRateHalfInteger(const MsmClkRcg& clk, const RcgFrequencyTable* table);
+    zx_status_t LatchRcgConfig(const MsmClkRcg& clk);
+
     // Branch Clocks
     zx_status_t BranchClockEnable(uint32_t index);
     zx_status_t BranchClockDisable(uint32_t index);
-    enum class AwaitBranchClockStatus {
-        Enabled,
-        Disabled
-    };
     // Wait for a change to a particular branch clock to take effect.
-    zx_status_t AwaitBranchClock(AwaitBranchClockStatus s,
-                                 const uint32_t cbcr_reg);
+    zx_status_t AwaitBranchClock(Toggle s, const uint32_t cbcr_reg);
 
     // Voter Clocks
     zx_status_t VoterClockEnable(uint32_t index);
     zx_status_t VoterClockDisable(uint32_t index);
 
-    fbl::Mutex lock_;       // Lock guards mmio_.
-    std::optional<ddk::MmioBuffer> mmio_;
+    fbl::Mutex lock_; // Lock guards mmio_.
+    ddk::MmioBuffer mmio_;
+
+    fbl::Mutex rcg_rates_lock_;
+    uint64_t rcg_rates_[msm8x53::kRcgClkCount];
 };
 
 } // namespace clk
