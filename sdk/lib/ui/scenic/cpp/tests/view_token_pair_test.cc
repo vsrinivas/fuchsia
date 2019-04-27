@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
+
 #include <tuple>
 
 namespace {
 
 TEST(ViewTokenPairTest, ViewTokensAreRelated) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   // Get info about the |view_token|.
   zx_info_handle_basic_t view_info;

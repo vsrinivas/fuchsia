@@ -11,9 +11,7 @@ use fidl_fuchsia_math::RectF;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
 use fuchsia_component::client::{launch, launcher, App as LaunchedApp};
-use fuchsia_scenic::{
-    new_view_token_pair, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
-};
+use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder, ViewTokenPair};
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
@@ -77,15 +75,15 @@ struct EmbeddingViewAssistant {
 
 impl EmbeddingViewAssistant {
     fn create_and_setup_view(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        let (view_token, view_holder_token) = new_view_token_pair()?;
+        let token_pair = ViewTokenPair::new()?;
 
         let view_provider = self.app.connect_to_service::<ViewProviderMarker>()?;
-        view_provider.create_view(view_token.value, None, None)?;
+        view_provider.create_view(token_pair.view_token.value, None, None)?;
 
         let holder_node = EntityNode::new(context.session.clone());
         let view_holder = ViewHolder::new(
             context.session.clone(),
-            view_holder_token,
+            token_pair.view_holder_token,
             Some(String::from("Carnelian Embedded View")),
         );
         holder_node.attach(&view_holder);

@@ -5,5 +5,5 @@
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/resources.h": "c34d6a22311f5f81e6d7c571f178049f",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/session.h": "3055e2a58ffb264559fe73e14774cf85",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/util/mesh_utils.h": "41dd823e1bd4cf48c560873547a689ea",
-  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/view_token_pair.h": "5891b46e01fcae095aeef0e8ff9b7398"
+  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/view_token_pair.h": "1d32d345d5e1746ada8a36d45b1ebf56"
 }

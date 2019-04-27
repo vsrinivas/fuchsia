@@ -625,7 +625,7 @@ fuchsia::ui::views::ViewHolderToken GoogleAuthProviderImpl::SetupChromium() {
   web_frame_->SetNavigationEventListener(std::move(navigation_event_listener));
 
   // And create a view for the frame.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   web_frame_->CreateView(std::move(view_token));
 
   return std::move(view_holder_token);

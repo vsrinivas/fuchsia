@@ -4,9 +4,6 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/resources/view.h"
-#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
-#include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
-#include "garnet/lib/ui/gfx/resources/view_holder.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -14,6 +11,8 @@
 #include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
 
@@ -60,7 +59,7 @@ TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
 }
 
 TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_id = 1;
   EXPECT_TRUE(
@@ -88,7 +87,7 @@ TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
 }
 
 TEST_F(ViewTest, ExportsViewHolderViaCmd) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1;
   EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
@@ -106,7 +105,7 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
 }
 
 TEST_F(ViewTest, ImportsViewViaCmd) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_id = 1;
   EXPECT_TRUE(
@@ -124,7 +123,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
 }
 
 TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
@@ -164,7 +163,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
 TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   fuchsia::ui::views::ViewHolderToken view_holder_token_out;
   {
-    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     view_holder_token_out.value = zx::eventpair(view_holder_token.value.get());
     // view_holder_token dies now.
   }
@@ -184,7 +183,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
 }
 
 TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -203,7 +202,7 @@ TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
 }
 
 TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -223,7 +222,7 @@ TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
 }
 
 TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -248,7 +247,7 @@ TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
 }
 
 TEST_F(ViewTest, ViewHolderConnectsToScene) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -276,7 +275,7 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
 
 TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   // Create ViewHolder and View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -338,7 +337,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
 
 TEST_F(ViewTest, ViewHolderChildrenReleasedFromSceneGraphWhenViewDestroyed) {
   // Create ViewHolder and View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -385,7 +384,7 @@ TEST_F(ViewTest, ViewHolderChildrenReleasedFromSceneGraphWhenViewDestroyed) {
 
 TEST_F(ViewTest, ViewNodeChildAddedToViewHolder) {
   // Create ViewHolder and View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -404,7 +403,7 @@ TEST_F(ViewTest, ViewNodeChildAddedToViewHolder) {
 
 TEST_F(ViewTest, ViewHolderCannotAddArbitraryChildNodes) {
   // Create ViewHolder.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -420,7 +419,7 @@ TEST_F(ViewTest, ViewHolderCannotAddArbitraryChildNodes) {
 
 TEST_F(ViewTest, ViewNodePairedToView) {
   // Create View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -440,7 +439,7 @@ TEST_F(ViewTest, ViewNodePairedToView) {
 
 TEST_F(ViewTest, ViewNodeNotInResourceMap) {
   // Create ViewHolder and View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
@@ -457,7 +456,7 @@ TEST_F(ViewTest, ViewNodeNotInResourceMap) {
 }
 
 TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId kViewHolderId = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -486,7 +485,7 @@ TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
 }
 
 TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -525,7 +524,7 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
 }
 
 TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -553,7 +552,7 @@ TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
 }
 
 TEST_F(ViewTest, RenderStateAcrossManyFrames) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -586,7 +585,7 @@ TEST_F(ViewTest, RenderStateAcrossManyFrames) {
 }
 
 TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -618,7 +617,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
 }
 
 TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -645,7 +644,7 @@ TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
 }
 
 TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
   Apply(scenic::NewCreateViewHolderCmd(
@@ -668,7 +667,7 @@ TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
 }
 
 TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 2u;
   Apply(scenic::NewCreateViewHolderCmd(

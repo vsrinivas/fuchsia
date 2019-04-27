@@ -80,8 +80,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
       /*release fence signaller*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
-  auto [view_token_1, view_holder_token_1] = scenic::NewViewTokenPair();
-  auto [view_token_2, view_holder_token_2] = scenic::NewViewTokenPair();
+  auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();
+  auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
 
   // Root session sets up the scene and two view holders.
   CustomSession s_r(0, engine->session_context());

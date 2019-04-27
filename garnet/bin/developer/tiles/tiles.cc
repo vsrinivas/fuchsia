@@ -8,6 +8,7 @@
 #include <lib/ui/gfx/cpp/math.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/logging.h>
+
 #include <cmath>
 
 constexpr float kTileElevation = 5.f;
@@ -53,7 +54,7 @@ void Tiles::AddTileFromURL(std::string url, bool allow_focus,
   launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   // Create a View from the launched component.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto view_provider =
       services.ConnectToService<fuchsia::ui::app::ViewProvider>();
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
@@ -73,7 +74,7 @@ void Tiles::AddTileFromViewProvider(
   FXL_VLOG(2) << "AddTile " << url;
 
   // Create a View from the ViewProvider.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto view_provider = provider.Bind();
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 

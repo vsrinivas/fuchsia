@@ -102,7 +102,7 @@ void BasemgrImpl::StartBaseShell() {
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       launcher_, std::move(base_shell_config));
 
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;
   base_shell_app_->services().ConnectToService(
@@ -286,7 +286,7 @@ void BasemgrImpl::GetAuthenticationUIContext(
 void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
                           fuchsia::auth::TokenManagerPtr ledger_token_manager,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   auto did_start_session = session_provider_->StartSession(
       std::move(view_token), std::move(account),

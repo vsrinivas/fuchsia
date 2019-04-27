@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <map>
-#include <string>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
@@ -20,6 +17,9 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
+
+#include <map>
+#include <string>
 
 #include "garnet/testing/views/embedder_view.h"
 
@@ -63,7 +63,7 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/simplest_embedder
   scenic::ViewContext CreatePresentationContext() {
-    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     scenic::ViewContext view_context = {
         .session_and_listener_request =

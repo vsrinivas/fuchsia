@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
 #include <trace-provider/provider.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
 #include <cstring>
+#include <memory>
 
 #include "garnet/examples/ui/simplest_app/view.h"
 
@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
   // device shell, and connects it to the root presenter.  Here, we create
   // two eventpair handles, one of which will be passed to the root presenter
   // and the other to the View.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   // Create a startup context for ourselves and use it to connect to
   // environment services.

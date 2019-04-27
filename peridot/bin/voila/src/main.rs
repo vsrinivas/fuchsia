@@ -22,7 +22,7 @@ use fuchsia_app::{
 };
 use fuchsia_async as fasync;
 use fuchsia_scenic::{
-    new_view_token_pair, Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
+    Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder, ViewTokenPair,
 };
 use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
 use futures::prelude::*;
@@ -120,10 +120,10 @@ impl VoilaViewAssistant {
         let mut story_shell_config = AppConfig { url: MONDRIAN_URI.to_string(), args: None };
 
         // Set up views.
-        let (mut view_token, view_holder_token) = new_view_token_pair()?;
+        let mut token_pair = ViewTokenPair::new()?;
 
         let host_node = EntityNode::new(session.clone());
-        let host_view_holder = ViewHolder::new(session.clone(), view_holder_token, None);
+        let host_view_holder = ViewHolder::new(session.clone(), token_pair.view_holder_token, None);
         host_node.attach(&host_view_holder);
         root_node.add_child(&host_node);
 
@@ -160,7 +160,7 @@ impl VoilaViewAssistant {
                 None,  /* ledger_token_manager */
                 None,  /* agent_token_manager */
                 session_context_client,
-                &mut view_token,
+                &mut token_pair.view_token,
             )
             .context("Failed to issue initialize request for sessionmgr")?;
         Ok(())
