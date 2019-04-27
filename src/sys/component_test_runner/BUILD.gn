@@ -1,0 +1,66 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "component_test_runner"
+
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/fuchsia_uri",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:serde_json",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("component_test_runner") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "component_test_runner"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/component_test_runner.cmx"
+      dest = "component_test_runner.cmx"
+    },
+  ]
+}
+
+package("component_test_runner_tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "component_test_runner_bin_test"
+    },
+  ]
+  meta = [
+    {
+      path = "meta/component_test_runner_tests.cmx"
+      dest = "component_test_runner_tests.cmx"
+    },
+  ]
+}
