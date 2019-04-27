@@ -564,12 +564,14 @@ fn process_eapol_ind(
 ) -> RsnaStatus {
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
-    inspect_log!(context.inspect.rsn_events, rx_eapol_frame: InspectBytes(&eapol_pdu));
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
         Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
-            inspect_log!(context.inspect.rsn_events, parse_eapol_error: format!("{:?}", e));
+            inspect_log!(context.inspect.rsn_events, {
+                rx_eapol_frame: InspectBytes(&eapol_pdu),
+                status: format!("rejected (parse error): {:?}", e)
+            });
             return RsnaStatus::Unchanged;
         }
     };
@@ -578,11 +580,21 @@ fn process_eapol_ind(
     match rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
         Err(e) => {
             error!("error processing EAPOL key frame: {}", e);
-            inspect_log!(context.inspect.rsn_events, process_eapol_error: format!("{:?}", e));
+            inspect_log!(context.inspect.rsn_events, {
+                rx_eapol_frame: InspectBytes(&eapol_pdu),
+                status: format!("rejected (processing error): {}", e)
+            });
             return RsnaStatus::Unchanged;
         }
-        Ok(_) if update_sink.is_empty() => return RsnaStatus::Unchanged,
-        _ => (),
+        Ok(_) => {
+            inspect_log!(context.inspect.rsn_events, {
+                rx_eapol_frame: InspectBytes(&eapol_pdu),
+                status: "processed"
+            });
+            if update_sink.is_empty() {
+                return RsnaStatus::Unchanged
+            }
+        }
     }
 
     let bssid = ind.src_addr;
