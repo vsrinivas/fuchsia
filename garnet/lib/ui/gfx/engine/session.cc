@@ -35,23 +35,6 @@ namespace {
 #define SESSION_TRACE_ID(session_id, count) \
   (((uint64_t)(session_id) << 32) | (count))
 
-// Converts the provided vector of Hits into a fidl array of HitPtrs.
-fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
-    const std::vector<Hit>& hits) {
-  fidl::VectorPtr<::fuchsia::ui::gfx::Hit> wrapped_hits;
-  wrapped_hits.resize(hits.size());
-  for (size_t i = 0; i < hits.size(); ++i) {
-    const Hit& hit = hits[i];
-    fuchsia::ui::gfx::Hit wrapped_hit;
-    wrapped_hit.tag_value = hit.tag_value;
-    wrapped_hit.ray_origin = Wrap(hit.ray.origin);
-    wrapped_hit.ray_direction = Wrap(hit.ray.direction);
-    wrapped_hit.inverse_transform = Wrap(hit.inverse_transform);
-    wrapped_hit.distance = hit.distance;
-    wrapped_hits->at(i) = std::move(wrapped_hit);
-  }
-  return wrapped_hits;
-}
 }  // anonymous namespace
 
 Session::Session(SessionId id, SessionContext session_context,
@@ -329,43 +312,6 @@ bool Session::ApplyUpdate(CommandContext* command_context,
   return true;
   // TODO: acquire_fences and release_fences should be added to a list that is
   // consumed by the FrameScheduler.
-}
-
-void Session::HitTest(uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
-                      fuchsia::ui::gfx::vec3 ray_direction,
-                      fuchsia::ui::scenic::Session::HitTestCallback callback) {
-  if (auto node = resources_.FindResource<Node>(node_id)) {
-    SessionHitTester hit_tester(node->session());
-    std::vector<Hit> hits = hit_tester.HitTest(
-        node.get(), escher::ray4{escher::vec4(Unwrap(ray_origin), 1.f),
-                                 escher::vec4(Unwrap(ray_direction), 0.f)});
-    callback(WrapHits(hits));
-  } else {
-    // TODO(SCN-162): Currently the test fails if the node isn't presented yet.
-    // Perhaps we should given clients more control over which state of
-    // the scene graph will be consulted for hit testing purposes.
-    error_reporter_->WARN()
-        << "Cannot perform hit test because node " << node_id
-        << " does not exist in the currently presented content.";
-    callback(nullptr);
-  }
-}
-
-void Session::HitTestDeviceRay(
-    fuchsia::ui::gfx::vec3 ray_origin, fuchsia::ui::gfx::vec3 ray_direction,
-    fuchsia::ui::scenic::Session::HitTestCallback callback) {
-  escher::ray4 ray =
-      escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
-
-  // The layer stack expects the input to the hit test to be in unscaled device
-  // coordinates.
-  SessionHitTester hit_tester(this);
-  // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
-  std::vector<Hit> layer_stack_hits =
-      session_context_.scene_graph->first_compositor()->layer_stack()->HitTest(
-          ray, &hit_tester);
-
-  callback(WrapHits(layer_stack_hits));
 }
 
 }  // namespace gfx

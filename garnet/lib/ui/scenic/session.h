@@ -50,18 +50,6 @@ class Session final : public fuchsia::ui::scenic::Session,
                PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
-  // TODO(SCN-422): Remove this after it's removed from session.fidl.
-  void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-               ::fuchsia::ui::gfx::vec3 ray_direction,
-               HitTestCallback callback) override;
-
-  // |fuchsia::ui::scenic::Session|
-  // TODO(SCN-422): Remove this after it's removed from session.fidl.
-  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                        ::fuchsia::ui::gfx::vec3 ray_direction,
-                        HitTestCallback callback) override;
-
-  // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
 
   // |EventReporter|

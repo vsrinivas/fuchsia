@@ -63,21 +63,6 @@ void Session::SetCommandDispatchers(
   }
 }
 
-void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-                      ::fuchsia::ui::gfx::vec3 ray_direction,
-                      HitTestCallback callback) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
-    return;
-  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate =
-      static_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
-                    std::move(callback));
-}
-
 void Session::SetDebugName(std::string debug_name) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
@@ -88,17 +73,6 @@ void Session::SetDebugName(std::string debug_name) {
   TempSessionDelegate* delegate =
       static_cast<TempSessionDelegate*>(dispatcher.get());
   delegate->SetDebugName(debug_name);
-}
-
-void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                               ::fuchsia::ui::gfx::vec3 ray_direction,
-                               HitTestCallback callback) {
-  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate =
-      reinterpret_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
-                             std::move(callback));
 }
 
 void Session::PostFlushTask() {

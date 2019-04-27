@@ -127,13 +127,6 @@ protocol Session {
             vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
         -> (fuchsia.images.PresentationInfo presentation_info);
 
-    // TODO(SCN-422) Remove these methods from the FIDL; they should just be
-    // exposed to View Manager directly using a C++ interface.
-    HitTest(uint32 node_id, fuchsia.ui.gfx.vec3 ray_origin, fuchsia.ui.gfx.vec3 ray_direction)
-        -> (vector<fuchsia.ui.gfx.Hit>? hits);
-    HitTestDeviceRay(fuchsia.ui.gfx.vec3 ray_origin, fuchsia.ui.gfx.vec3 ray_direction)
-        -> (vector<fuchsia.ui.gfx.Hit>? hits);
-
     // Set an optional debug name for the session.  The debug name will be
     // output in things such as logging and trace events.
     SetDebugName(string debug_name);

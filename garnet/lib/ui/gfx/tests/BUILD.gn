@@ -82,7 +82,6 @@ executable("unittests") {
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
     "hittest_global_unittest.cc",
-    "hittest_unittest.cc",
     "image_pipe_unittest.cc",
     "import_unittest.cc",
     "memory_unittest.cc",

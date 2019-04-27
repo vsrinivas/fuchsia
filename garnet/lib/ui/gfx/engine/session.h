@@ -120,16 +120,6 @@ class Session {
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
 
-  // Called by SessionHandler::HitTest().
-  void HitTest(uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
-               fuchsia::ui::gfx::vec3 ray_direction,
-               fuchsia::ui::scenic::Session::HitTestCallback callback);
-
-  // Called by SessionHandler::HitTestDeviceRay().
-  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                        fuchsia::ui::gfx::vec3 ray_direction,
-                        fuchsia::ui::scenic::Session::HitTestCallback callback);
-
   void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
 
  private:

@@ -69,16 +69,6 @@ class TempSessionDelegate : public CommandDispatcher {
       ::std::vector<zx::event> release_fences,
       fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
-  virtual void HitTest(
-      uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-      ::fuchsia::ui::gfx::vec3 ray_direction,
-      fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
-
-  virtual void HitTestDeviceRay(
-      ::fuchsia::ui::gfx::vec3 ray_origin,
-      ::fuchsia::ui::gfx::vec3 ray_direction,
-      fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
-
   virtual void SetDebugName(const std::string& debug_name) = 0;
 
  private:

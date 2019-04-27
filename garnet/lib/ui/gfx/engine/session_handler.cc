@@ -38,21 +38,6 @@ void SessionHandler::Present(
   }
 }
 
-void SessionHandler::HitTest(
-    uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
-    fuchsia::ui::gfx::vec3 ray_direction,
-    fuchsia::ui::scenic::Session::HitTestCallback callback) {
-  session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
-                    std::move(callback));
-}
-
-void SessionHandler::HitTestDeviceRay(
-    fuchsia::ui::gfx::vec3 ray_origin, fuchsia::ui::gfx::vec3 ray_direction,
-    fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
-  session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
-                             std::move(callback));
-}
-
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
   FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
   buffered_commands_.emplace_back(std::move(command.gfx()));

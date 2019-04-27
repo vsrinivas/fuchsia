@@ -57,14 +57,6 @@ class FakeSession : public fuchsia::ui::scenic::Session {
                std::vector<::zx::event> release_fences,
                PresentCallback callback) override;
 
-  void HitTest(uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
-               fuchsia::ui::gfx::vec3 ray_direction,
-               HitTestCallback callback) override;
-
-  void HitTestDeviceRay(fuchsia::ui::gfx::vec3 ray_origin,
-                        fuchsia::ui::gfx::vec3 ray_direction,
-                        HitTestDeviceRayCallback callback) override;
-
   void SetDebugName(std::string debug_name) override {}
 
  private:

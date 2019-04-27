@@ -137,20 +137,6 @@ void FakeSession::Present(uint64_t presentation_time,
   });
 }
 
-void FakeSession::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-                          ::fuchsia::ui::gfx::vec3 ray_direction,
-                          HitTestCallback callback) {
-  FXL_LOG(INFO) << "HitTest (not implemented)";
-  // fit::function<void(fidl::VectorPtr<::fuchsia::ui::gfx::Hit>)>
-}
-
-void FakeSession::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                                   ::fuchsia::ui::gfx::vec3 ray_direction,
-                                   HitTestDeviceRayCallback callback) {
-  FXL_LOG(INFO) << "HitTestDeviceRay (not implemented)";
-  // fit::function<void(fidl::VectorPtr<::fuchsia::ui::gfx::Hit>)>
-}
-
 FakeSession::Resource* FakeSession::FindResource(uint32_t id) {
   auto iter = resources_by_id_.find(id);
   return (iter == resources_by_id_.end()) ? nullptr : &iter->second;

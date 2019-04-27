@@ -34,10 +34,6 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   using PresentCallback =
       fit::function<void(fuchsia::images::PresentationInfo info)>;
 
-  // Provide information about hits.
-  using HitTestCallback =
-      fit::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
-
   // Called when session events are received.
   using EventHandler =
       fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
@@ -105,16 +101,6 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Implicitly flushes all queued operations to the session.
   // Invokes the callback when the scene manager applies the presentation.
   void Present(uint64_t presentation_time, PresentCallback callback);
-
-  // Performs a hit test along the specified ray.
-  void HitTest(uint32_t node_id, const float ray_origin[3],
-               const float ray_direction[3], HitTestCallback callback);
-
-  // Performs a hit test along the specified ray into the engine's first
-  // compositor.
-  void HitTestDeviceRay(
-      const float ray_origin[3], const float ray_direction[3],
-      fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback);
 
   // Unbinds the internal SessionPtr; this allows moving this across threads.
   void Unbind();
