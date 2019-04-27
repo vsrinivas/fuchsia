@@ -91,6 +91,7 @@ library("x86") {
     "mmu.cpp",
     "mmu_mem_types.cpp",
     "mp.cpp",
+    "msr.cpp",
     "ops.S",
     "perf_mon.cpp",
     "proc_trace.cpp",

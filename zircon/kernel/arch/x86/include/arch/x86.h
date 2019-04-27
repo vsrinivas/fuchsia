@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cpuid.h>
+#include <kernel/cpu.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -325,6 +326,9 @@ static inline uint32_t read_msr32(uint32_t msr_id) {
 }
 
 zx_status_t read_msr_safe(uint32_t msr_id, uint64_t* val);
+
+// Read msr |msr_id| on CPU |cpu| and return the 64-bit value.
+uint64_t read_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id);
 
 static inline void write_msr(uint32_t msr_id, uint64_t msr_write_val) {
     __asm__ __volatile__(
