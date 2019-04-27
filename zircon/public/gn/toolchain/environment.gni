@@ -38,19 +38,21 @@ declare_args() {
   # Selector scope parameters
   #
   #   * variant
-  #     - Required: The variant to use when this selector matches.  If this is a
-  #     string then it must match a fully-defined variant elsewhere in the
-  #     list (or in $default_variants + $standard_variants, which is appended
-  #     implicitly to the $variants list).  If it's a scope then it defines a
-  #     new variant (see details below).
+  #     - Required: The variant to use when this selector matches.  If this
+  #     is a string then it must match a fully-defined variant elsewhere in
+  #     the list (or in $default_variants + $standard_variants, which is
+  #     appended implicitly to the $variants list).  If it's a scope then
+  #     it defines a new variant (see details below).
   #     - Type: string or scope, described below
   #
   #   * cpu
-  #     - Optional: If nonempty, match only when $current_cpu is one in the list.
+  #     - Optional: If nonempty, match only when $current_cpu is one in the
+  #     - list.
   #     - Type: list(string)
   #
   #   * os
-  #     - Optional: If nonempty, match only when $current_os is one in the list.
+  #     - Optional: If nonempty, match only when $current_os is one in the
+  #     - list.
   #     - Type: list(string)
   #
   #   * host
@@ -82,8 +84,9 @@ declare_args() {
   #     - Type: list(string)
   #
   #   * target_type
-  #     - Optional: If nonempty, a list of target types to match.  This is one of
-  #     "executable", "host_tool", "loadable_module", "driver", or "test".
+  #     - Optional: If nonempty, a list of target types to match.  This is
+  #     one of "executable", "host_tool", "loadable_module", "driver", or
+  #     "test".
   #     Note, test_driver() matches as "driver".
   #     - Type: list(string)
   #
@@ -106,9 +109,10 @@ declare_args() {
   #     - Type: list(label_no_toolchain)
   #
   #   * output_name
-  #     - Optional: If nonempty, match only when the `output_name` of the target
-  #     is one in the list.  Note `output_name` defaults to `target_name`,
-  #     and does not include prefixes or suffixes like ".so" or ".exe".
+  #     - Optional: If nonempty, match only when the `output_name` of the
+  #     target is one in the list.  Note `output_name` defaults to
+  #     `target_name`, and does not include prefixes or suffixes like ".so"
+  #     or ".exe".
   #     - Type: list(string)
   #
   # An element with a scope for `.variant` defines a new variant.  Each
@@ -297,14 +301,23 @@ declare_args() {
 #     This is just like $toolchain_args passed to toolchain() in bare GN.
 #
 #   * toolchain_vars
-#     - Optional: A scope imported into the $toolchain scope in these toolchains.
-#     This can store useful toolchain-specific variables that should be
-#     available within the toolchain.  $toolchain automatically contains
-#     `tool_dir`, `tool_prefix`, `cc, and `cxx`, from c_toolchain().
-#     If `variant_suffix` is defined here, terminal targets in the environment
-#     will have "$target_name$variant_suffix" aliases that get the same thing
-#     but in that particular variant installed under the suffixed name.
-#     The default `variant_suffix` is ".$variant" in each variant.
+#     - Optional: A scope imported into the $toolchain scope in these
+#     toolchains.  This can store useful toolchain-specific variables that
+#     should be available within the toolchain.  $toolchain automatically
+#     contains `tool_dir`, `tool_prefix`, `cc, and `cxx`, from
+#     c_toolchain().  If `variant_suffix` is defined here, terminal targets
+#     in the environment will have "$target_name$variant_suffix" aliases
+#     that get the same thing but in that particular variant installed
+#     under the suffixed name.  The default `variant_suffix` is ".$variant"
+#     in each variant.
+#
+#   * variant_libprefix
+#     - Optional: If true, each variant's name is used to form the
+#     ${toolchain.libprefix} value in that variant.  The final libprefix
+#     is "${toolchain_vars.libprefix}${toolchain.variant}/".  By default,
+#     this is true *only* in variants that have the "instrumented" tag.
+#     If explicitly set to true or false, that applies to *all* variants.
+#     - Type: bool
 #
 #   * variant_selectors
 #     - Optional: A list in the schema of the $variants build argument.  This
@@ -324,7 +337,7 @@ declare_args() {
 #     .variant scope.  If any of these strings appears in a .variant scope,
 #     then $variant_selectors elements using that variant will be silently
 #     ignored in this environment's toolchains.  e.g. an environment that is
-#     incompatbile with instrumentation could list the "instrumentation" tag
+#     incompatbile with instrumentation could list the "instrumented" tag
 #     and variants that enable instrumentation will be defined with that tag.
 #     Then simple `variants=["asan"]` user configurations that would apply
 #     ordinarily to all targets don't break the special-case execution
@@ -905,13 +918,19 @@ template("environment") {
           # `variant`, so it can't be used any more in this block.)
           variant = variant.name
 
+          if (!defined(libprefix)) {
+            libprefix = ""
+          }
+          if ((defined(invoker.variant_libprefix) &&
+               invoker.variant_libprefix) ||
+              (!defined(invoker.variant_libprefix) &&
+               tags + [ "instrumented" ] - [ "instrumented" ] != tags)) {
+            libprefix += "$variant/"
+          }
+
           # Plumb through the suffix of this variant and the list of others.
           if (!defined(variant_suffix)) {
             variant_suffix = ".$variant"
-          }
-
-          if (!defined(libprefix)) {
-            libprefix = ""
           }
 
           other_variants = []

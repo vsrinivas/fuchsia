@@ -13,4 +13,11 @@ source_set("ldso") {
     "dynlink-sancov.S",
     "dynlink.c",
   ]
+  if (toolchain.libprefix != "") {
+    # The libprefix always ends with a / but that's not part of the
+    # "config" string in the loader-service protocol.
+    ldsvc_config = get_path_info("${toolchain.libprefix}libfoo.so", "dir")
+    assert(ldsvc_config != "" && ldsvc_config != ".")
+    defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
+  }
 }

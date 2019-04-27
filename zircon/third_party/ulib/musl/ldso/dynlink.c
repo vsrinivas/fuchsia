@@ -2090,6 +2090,11 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
 __NO_SAFESTACK NO_ASAN static void early_init(void) {
 #if __has_feature(address_sanitizer)
     __asan_early_init();
+#endif
+#ifdef DYNLINK_LDSVC_CONFIG
+    // Inform the loader service to look for libraries of the right variant.
+    loader_svc_config(DYNLINK_LDSVC_CONFIG);
+#elif __has_feature(address_sanitizer)
     // Inform the loader service that we prefer ASan-supporting libraries.
     loader_svc_config("asan");
 #endif

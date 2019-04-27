@@ -520,11 +520,17 @@ config("user_executable") {
     compiler_flags = [ "-fPIE" ]
     asmflags = compiler_flags
     cflags = compiler_flags
-    ldflags = compiler_flags
-    ldflags += [
-      "-Wl,-pie",
-      "-Wl,-dynamic-linker,ld.so.1",
-    ]
+    ldflags = compiler_flags + [ "-Wl,-pie" ]
+  } else {
+    ldflags = []
+  }
+
+  # Specify the dynamic linker if building a variant that uses a separate
+  # set of libraries.  With GCC, the dynamic linker must be explicit even
+  # in the default case because the compiler driver is not inherently
+  # configured for Fuchsia as it is in Clang.
+  if (is_gcc || toolchain.libprefix != "") {
+    ldflags += [ "-Wl,-dynamic-linker,${toolchain.libprefix}ld.so.1" ]
   }
 }
 
