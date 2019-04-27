@@ -4,6 +4,8 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use {
+    crate::mutation::*,
+    crate::setting_adapter::SettingAdapter,
     failure::Error,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
@@ -15,6 +17,10 @@ use {
     std::sync::Arc,
 };
 
+mod common;
+mod fidl_clone;
+mod mutation;
+mod setting_adapter;
 mod setui_handler;
 
 fn main() -> Result<(), Error> {
@@ -25,6 +31,13 @@ fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     let handler = Arc::new(SetUIHandler::new());
+
+    // TODO(SU-210): Remove once other adapters are ready.
+    handler.register_adapter(Box::new(SettingAdapter::new(
+        SettingType::Unknown,
+        Box::new(process_string_mutation),
+        None,
+    )));
 
     fs.dir("public").add_fidl_service(move |stream: SetUiServiceRequestStream| {
         let handler_clone = handler.clone();
