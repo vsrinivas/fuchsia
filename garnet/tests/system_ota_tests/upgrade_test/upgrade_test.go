@@ -10,9 +10,11 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"fuchsia.googlesource.com/system_ota_tests/config"
+	"fuchsia.googlesource.com/system_ota_tests/packages"
 )
 
 var c *config.Config
@@ -34,7 +36,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestUpgrade(t *testing.T) {
+func TestDowngradeAndUpgrade(t *testing.T) {
 	log.Printf("starting downgrade test")
 	buildID, err := c.BuildID()
 	if err != nil {
@@ -51,6 +53,21 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	doSystemOTA(t, repo)
+
+	if c.AmberFilesDir != "" {
+		log.Printf("starting upgrade test")
+
+		repo, err := packages.NewRepository(filepath.Join(c.AmberFilesDir))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		doSystemOTA(t, repo)
+	}
+}
+
+func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	device, err := c.NewDeviceClient()
 	if err != nil {
 		t.Fatalf("failed to create ota test client: %s", err)
@@ -103,4 +120,6 @@ func TestUpgrade(t *testing.T) {
 	if !bytes.Equal(expectedBuildSnapshot, remoteBuildSnapshot) {
 		t.Fatalf("system version expected to be:\n\n%s\n\nbut instead got:\n\n%s", expectedBuildSnapshot, remoteBuildSnapshot)
 	}
+
+	log.Printf("system OTA successful")
 }

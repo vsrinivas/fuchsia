@@ -28,6 +28,7 @@ type Config struct {
 	LkgbPath       string
 	ArtifactsPath  string
 	BuilderName    string
+	AmberFilesDir  string
 	buildID        string
 	archive        *artifacts.Archive
 }
@@ -53,6 +54,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.BuilderName, "builder-name", "", "download the amber repository from the latest build of this builder")
 	fs.StringVar(&c.buildID, "build-id", "", "download the amber repository from this build id")
+	fs.StringVar(&c.AmberFilesDir, "amber-files", os.Getenv("AMBER_FILES"), "Path to the current build amber-files repository")
 
 	return c, nil
 }
