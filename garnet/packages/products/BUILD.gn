@@ -88,6 +88,7 @@ group("base") {
     "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:runtime",
+    "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:scpi",
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
