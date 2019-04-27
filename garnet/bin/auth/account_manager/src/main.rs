@@ -44,7 +44,7 @@ lazy_static! {
     static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
         vec![AuthProviderConfig {
             auth_provider_type: "google".to_string(),
-            url: fuchsia_single_component_package_url!("google_auth_provider_2").to_string(),
+            url: fuchsia_single_component_package_url!("google_auth_provider").to_string(),
             params: None
         }]
     };

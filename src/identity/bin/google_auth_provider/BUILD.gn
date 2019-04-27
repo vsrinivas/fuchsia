@@ -4,25 +4,23 @@
 
 import("//build/package.gni")
 
-# TODO(jsankey): Complete soft transition to migrate users away from
-# the conflicting target in Topaz then remove the _2.
-package("google_auth_provider_2") {
+package("google_auth_provider") {
   deps = [
     ":bin",
   ]
 
-  binary = "google_auth_provider_2"
+  binary = "google_auth_provider"
 
   meta = [
     {
-      path = rebase_path("meta/google_auth_provider_2.cmx")
-      dest = "google_auth_provider_2.cmx"
+      path = rebase_path("meta/google_auth_provider.cmx")
+      dest = "google_auth_provider.cmx"
     },
   ]
 }
 
 executable("bin") {
-  output_name = "google_auth_provider_2"
+  output_name = "google_auth_provider"
 
   sources = [
     "main.cc",

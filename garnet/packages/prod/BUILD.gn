@@ -134,7 +134,7 @@ group("auth") {
     "//garnet/bin/auth:account_handler",
     "//garnet/bin/auth:account_manager",
     "//garnet/bin/auth:token_manager_factory",
-    "//src/identity/bin/google_auth_provider:google_auth_provider_2",
+    "//src/identity/bin/google_auth_provider:google_auth_provider",
   ]
 }
 
