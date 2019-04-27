@@ -264,9 +264,9 @@ impl VirtualOutput {
             ASF_RANGE_FLAG_FPS_CONTINUOUS,
         )?;
 
-        // set buffer size to be 250ms-1000ms
+        // set buffer size to be 500ms-1000ms
         let frames_1ms = self.frames_per_second / 1000;
-        let frames_low = 250 * frames_1ms;
+        let frames_low = 500 * frames_1ms;
         let frames_high = 1000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
         va_output.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
@@ -593,9 +593,9 @@ impl VirtualInput {
             ASF_RANGE_FLAG_FPS_CONTINUOUS,
         )?;
 
-        // set buffer size to be 250ms-1000ms
+        // set buffer size to be 500ms-1000ms
         let frames_1ms = self.frames_per_second / 1000;
-        let frames_low = 250 * frames_1ms;
+        let frames_low = 500 * frames_1ms;
         let frames_high = 1000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
         va_input.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
