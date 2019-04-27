@@ -60,7 +60,14 @@ zx_status_t BlockDeviceCallback(int dirfd, int event, const char* name, void* co
 
     auto mounter = static_cast<FilesystemMounter*>(cookie);
     BlockDevice device(mounter, std::move(device_fd));
-    device.Add();
+    zx_status_t rc = device.Add();
+    if (rc != ZX_OK) {
+        // This callback has to return ZX_OK for resiliency reasons, or we'll
+        // stop getting subsequent callbacks, but we should log loudly that we
+        // tried to do something and that failed.
+        fprintf(stderr, "fshost: (%s/%s) failed: %s\n", kPathBlockDeviceRoot,
+                name, zx_status_get_string(rc));
+    }
     return ZX_OK;
 }
 
