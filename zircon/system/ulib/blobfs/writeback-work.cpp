@@ -9,7 +9,7 @@
 namespace blobfs {
 
 void WritebackWork::MarkCompleted(zx_status_t status) {
-    WriteTxn::Reset();
+    transaction_.Reset();
     if (sync_cb_) {
         sync_cb_(status);
     }
@@ -51,12 +51,12 @@ void WritebackWork::SetSyncCallback(SyncCallback callback) {
 
 // Returns the number of blocks of the writeback buffer that have been consumed
 zx_status_t WritebackWork::Complete() {
-    zx_status_t status = Flush();
+    zx_status_t status = transaction_.Flush();
     MarkCompleted(status);
     return status;
 }
 
 WritebackWork::WritebackWork(TransactionManager* transaction_manager)
-    : WriteTxn(transaction_manager), ready_cb_(nullptr), sync_cb_(nullptr) {}
+    : transaction_(transaction_manager), ready_cb_(nullptr), sync_cb_(nullptr) {}
 
 } // namespace blobfs

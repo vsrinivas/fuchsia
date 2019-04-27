@@ -38,8 +38,8 @@ public:
 
         zx::vmo vmo;
         ZX_ASSERT(zx::vmo::create(PAGE_SIZE, 0, &vmo) == ZX_OK);
-        work->Enqueue(vmo, 0, 0, block_count);
-        work->SetBuffer(2);
+        work->Transaction().Enqueue(vmo, 0, 0, block_count);
+        work->Transaction().SetBuffer(2);
         return work;
     }
 

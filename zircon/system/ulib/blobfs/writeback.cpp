@@ -15,7 +15,7 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
     const size_t kMaxChunkBlocks = (3 * transaction_manager->WritebackCapacity()) / 4;
     uint64_t delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
     while (nblocks > 0) {
-        if ((*work)->BlkCount() + delta_blocks > kMaxChunkBlocks) {
+        if ((*work)->Transaction().BlkCount() + delta_blocks > kMaxChunkBlocks) {
             // If enqueueing these blocks could push us past the writeback buffer capacity
             // when combined with all previous writes, break this transaction into a smaller
             // chunk first.
@@ -31,7 +31,7 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
             *work = std::move(tmp);
         }
 
-        (*work)->Enqueue(vmo, relative_block, absolute_block, delta_blocks);
+        (*work)->Transaction().Enqueue(vmo, relative_block, absolute_block, delta_blocks);
         relative_block += delta_blocks;
         absolute_block += delta_blocks;
         nblocks -= delta_blocks;

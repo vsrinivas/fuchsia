@@ -253,19 +253,20 @@ void Blobfs::WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_blo
         fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
 
     // Write back the block allocation bitmap
-    wb->Enqueue(allocator_->GetBlockMapVmo(), bbm_start_block,
-                BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block - bbm_start_block);
+    wb->Transaction().Enqueue(allocator_->GetBlockMapVmo(), bbm_start_block,
+                              BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block -
+                              bbm_start_block);
 }
 
 void Blobfs::WriteNode(WritebackWork* wb, uint32_t map_index) {
     TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
     uint64_t b = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
-    wb->Enqueue(allocator_->GetNodeMapVmo(), b, NodeMapStartBlock(info_) + b, 1);
+    wb->Transaction().Enqueue(allocator_->GetNodeMapVmo(), b, NodeMapStartBlock(info_) + b, 1);
 }
 
 void Blobfs::WriteInfo(WritebackWork* wb) {
     memcpy(info_mapping_.start(), &info_, sizeof(info_));
-    wb->Enqueue(info_mapping_.vmo(), 0, 0, 1);
+    wb->Transaction().Enqueue(info_mapping_.vmo(), 0, 0, 1);
 }
 
 zx_status_t Blobfs::CreateFsId() {
@@ -401,8 +402,8 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     }
 
     WriteInfo(wb.get());
-    wb.get()->Enqueue(node_map->vmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
-                      inoblks - inoblks_old);
+    wb->Transaction().Enqueue(node_map->vmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
+                              inoblks - inoblks_old);
     return EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
@@ -461,7 +462,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
         uint64_t vmo_offset = abmblks_old;
         uint64_t dev_offset = BlockMapStartBlock(info_) + abmblks_old;
         uint64_t length = abmblks - abmblks_old;
-        wb.get()->Enqueue(block_map->StorageUnsafe()->GetVmo(), vmo_offset, dev_offset, length);
+        wb->Transaction().Enqueue(block_map->StorageUnsafe()->GetVmo(), vmo_offset, dev_offset,
+                                  length);
     }
 
     info_.vslice_count += length;

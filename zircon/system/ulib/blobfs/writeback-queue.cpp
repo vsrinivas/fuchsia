@@ -83,18 +83,18 @@ zx_status_t WritebackQueue::Enqueue(fbl::unique_ptr<WritebackWork> work) {
         // enqueued and ultimately processed by the WritebackThread. This will help us avoid
         // potential race conditions if the work callback must acquire a lock.
         status = ZX_ERR_BAD_STATE;
-    } else if (!work->IsBuffered()) {
+    } else if (!work->Transaction().IsBuffered()) {
         ZX_DEBUG_ASSERT(state_ == WritebackState::kRunning);
 
         // Only copy blocks to the buffer if they have not already been copied to another buffer.
-        EnsureSpaceLocked(work->BlkCount());
+        EnsureSpaceLocked(work->Transaction().BlkCount());
 
         // It is possible that the queue entered a read only state
         // while we were waiting to ensure space, so check again now.
         if (IsReadOnly()) {
             status = ZX_ERR_BAD_STATE;
         } else {
-            buffer_->CopyTransaction(work.get());
+            buffer_->CopyTransaction(&work->Transaction());
         }
     }
 
@@ -143,8 +143,8 @@ int WritebackQueue::WritebackThread(void* arg) {
             auto work = b->work_queue_.pop();
             TRACE_DURATION("blobfs", "WritebackQueue::WritebackThread", "work ptr", work.get());
 
-            bool our_buffer = b->buffer_->VerifyTransaction(work.get());
-            size_t blk_count = work->BlkCount();
+            bool our_buffer = b->buffer_->VerifyTransaction(&work->Transaction());
+            size_t blk_count = work->Transaction().BlkCount();
 
             // Stay unlocked while processing a unit of work.
             b->lock_.Release();
@@ -155,7 +155,7 @@ int WritebackQueue::WritebackThread(void* arg) {
             } else {
                 // If we should complete the work, make sure it has been buffered.
                 // (This is not necessary if we are currently in an error state).
-                ZX_DEBUG_ASSERT(work->IsBuffered());
+                ZX_DEBUG_ASSERT(work->Transaction().IsBuffered());
                 zx_status_t status;
                 if ((status = work->Complete()) != ZX_OK) {
                     FS_TRACE_ERROR("Work failed with status %d - "

@@ -209,10 +209,10 @@ zx_status_t Journal::InitWriteback() {
 zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
     // Verify that the work exists and has not already been prepared for writeback.
     ZX_DEBUG_ASSERT(work != nullptr);
-    ZX_DEBUG_ASSERT(!work->IsBuffered());
+    ZX_DEBUG_ASSERT(!work->Transaction().IsBuffered());
 
     // Block count will be the number of blocks in the transaction + header + commit.
-    size_t blocks = work->BlkCount();
+    size_t blocks = work->Transaction().BlkCount();
     // By default set the header/commit indices to the buffer capacity,
     // since this will be an invalid index value.
     size_t header_index = entries_->capacity();
@@ -249,7 +249,7 @@ zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
             // header and commit blocks asynchronously, since this will involve calculating the
             // checksum.
             // TODO(planders): Release the lock while transaction is being copied.
-            entries_->CopyTransaction(work.get());
+            entries_->CopyTransaction(&work->Transaction());
 
             // Assign commit_index immediately after copying to the buffer.
             // Increase length_ accordingly.
@@ -313,7 +313,7 @@ fbl::unique_ptr<JournalEntry> Journal::CreateEntry(uint64_t header_index, uint64
                                                    fbl::unique_ptr<WritebackWork> work) {
     EntryStatus status = EntryStatus::kInit;
 
-    if (work->BlkCount() == 0) {
+    if (work->Transaction().BlkCount() == 0) {
         // If the work has no transactions, this is a sync work - we can return early.
         // Right now we make the assumption that if a WritebackWork has any transactions, it cannot
         // have a corresponding sync callback. We may need to revisit this later.
@@ -408,8 +408,10 @@ void Journal::PrepareDelete(JournalEntry* entry, WritebackWork* work) {
     memset(entries_->MutableData(commit_index), 0, kBlobfsBlockSize);
 
     // Enqueue transactions for the header/commit blocks.
-    entries_->AddTransaction(header_index, start_block_ + 1 + header_index, 1, work);
-    entries_->AddTransaction(commit_index, start_block_ + 1 + commit_index, 1, work);
+    entries_->AddTransaction(header_index, start_block_ + 1 + header_index, 1,
+                             &work->Transaction());
+    entries_->AddTransaction(commit_index, start_block_ + 1 + commit_index, 1,
+                             &work->Transaction());
 }
 
 fbl::unique_ptr<WritebackWork> Journal::CreateWork() {
@@ -420,7 +422,7 @@ fbl::unique_ptr<WritebackWork> Journal::CreateWork() {
 }
 
 zx_status_t Journal::EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) {
-    entries_->ValidateTransaction(work.get());
+    entries_->ValidateTransaction(&work->Transaction());
     return transaction_manager_->EnqueueWork(std::move(work), EnqueueType::kData);
 }
 
@@ -486,7 +488,7 @@ zx_status_t Journal::ReplayEntry(size_t header_index, size_t remaining_length,
     // Enqueue one block at a time, since they may not end up being contiguous on disk.
     for (unsigned i = 0; i < header->num_blocks; i++) {
         size_t vmo_block = (header_index + i + 1) % entries_->capacity();
-        entries_->AddTransaction(vmo_block, header->target_blocks[i], 1, work.get());
+        entries_->AddTransaction(vmo_block, header->target_blocks[i], 1, &work->Transaction());
     }
 
     // Replay (and therefore mount) will fail if we cannot enqueue the replay work. Since the
@@ -510,7 +512,7 @@ zx_status_t Journal::CommitReplay() {
     memset(entries_->MutableData(0), 0, kBlobfsBlockSize);
     fbl::unique_ptr<WritebackWork> work = CreateWork();
 
-    entries_->AddTransaction(0, start_block_ + 1, 1, work.get());
+    entries_->AddTransaction(0, start_block_ + 1, 1, &work->Transaction());
 
     zx_status_t status;
     if ((status = EnqueueEntryWork(std::move(work))) != ZX_OK) {
@@ -566,8 +568,8 @@ zx_status_t Journal::WriteInfo(uint64_t start, uint64_t length) {
     uint8_t* info_ptr = reinterpret_cast<uint8_t*>(info);
     info->checksum = crc32(0, info_ptr, sizeof(JournalInfo));
 
-    info_->AddTransaction(0, start_block_, 1, work.get());
-    info_->ValidateTransaction(work.get());
+    info_->AddTransaction(0, start_block_, 1, &work->Transaction());
+    info_->ValidateTransaction(&work->Transaction());
     return transaction_manager_->EnqueueWork(std::move(work), EnqueueType::kData);
 }
 
@@ -606,12 +608,12 @@ void Journal::AddEntryTransaction(size_t start, size_t length, WritebackWork* wo
 
     // Enqueue the first part of the transaction.
     size_t disk_start = start_block_ + 1;
-    entries_->AddTransaction(start, disk_start + start, first_length, work);
+    entries_->AddTransaction(start, disk_start + start, first_length, &work->Transaction());
 
     // If we wrapped around to the front of the journal,
     // enqueue a second transaction with the remaining data + commit block.
     if (first_length < length) {
-        entries_->AddTransaction(0, disk_start, length - first_length, work);
+        entries_->AddTransaction(0, disk_start, length - first_length, &work->Transaction());
     }
 }
 

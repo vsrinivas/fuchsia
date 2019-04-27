@@ -19,8 +19,7 @@
 namespace blobfs {
 
 // A wrapper around a WriteTxn with added support for callback invocation on completion.
-class WritebackWork : public WriteTxn,
-                      public fbl::SinglyLinkedListable<std::unique_ptr<WritebackWork>> {
+class WritebackWork : public fbl::SinglyLinkedListable<std::unique_ptr<WritebackWork>> {
 public:
     using ReadyCallback = fbl::Function<bool()>;
     using SyncCallback = fs::Vnode::SyncCallback;
@@ -55,7 +54,10 @@ public:
     // and resets the WritebackWork to its initial state.
     zx_status_t Complete();
 
+    WriteTxn& Transaction() { return transaction_; }
+
 private:
+    WriteTxn transaction_;
     // Optional callbacks.
     ReadyCallback ready_cb_; // Call to check whether work is ready to be processed.
     SyncCallback sync_cb_; // Call after work has been completely flushed.

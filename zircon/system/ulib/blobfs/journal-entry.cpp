@@ -21,15 +21,15 @@ JournalEntry::JournalEntry(JournalBase* journal, EntryStatus status, size_t head
         return;
     }
 
-    size_t work_blocks = work_->BlkCount();
+    size_t work_blocks = work_->Transaction().BlkCount();
     // Ensure the work is valid.
     ZX_DEBUG_ASSERT(work_blocks > 0);
-    ZX_DEBUG_ASSERT(work_->IsBuffered());
+    ZX_DEBUG_ASSERT(work_->Transaction().IsBuffered());
     ZX_DEBUG_ASSERT(work_blocks <= kMaxEntryDataBlocks);
 
     // Copy all target blocks from the WritebackWork to the entry's header block.
-    for (size_t i = 0; i < work_->Requests().size(); i++) {
-        WriteRequest& request = work_->Requests()[i];
+    for (size_t i = 0; i < work_->Transaction().Requests().size(); i++) {
+        WriteRequest& request = work_->Transaction().Requests()[i];
         for (size_t j = request.dev_offset; j < request.dev_offset + request.length; j++) {
             header_block_.target_blocks[block_count_++] = j;
         }

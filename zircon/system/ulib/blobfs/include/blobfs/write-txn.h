@@ -68,7 +68,6 @@ public:
         vmoid_ = VMOID_INVALID;
     }
 
-protected:
     // Activates the transaction.
     zx_status_t Flush();
 
