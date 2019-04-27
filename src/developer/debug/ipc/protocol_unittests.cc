@@ -379,6 +379,7 @@ TEST(Protocol, ReadMemoryReply) {
 
 TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest initial;
+  initial.breakpoint_type = BreakpointType::kHardware;
   initial.breakpoint.breakpoint_id = 8976;
   initial.breakpoint.stop = debug_ipc::Stop::kProcess;
   initial.breakpoint.locations.resize(1);
@@ -391,6 +392,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
+  EXPECT_EQ(initial.breakpoint_type, second.breakpoint_type);
   EXPECT_EQ(initial.breakpoint.breakpoint_id, second.breakpoint.breakpoint_id);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
   ASSERT_EQ(initial.breakpoint.locations.size(),

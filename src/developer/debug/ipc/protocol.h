@@ -222,7 +222,12 @@ struct ReadMemoryReply {
 };
 
 struct AddOrChangeBreakpointRequest {
+  // What kind of request this is.
+  BreakpointType breakpoint_type = BreakpointType::kSoftware;
+
+  // Only one of these should be valid at a time.
   BreakpointSettings breakpoint;
+  WatchpointSettings watchpoint;
 };
 struct AddOrChangeBreakpointReply {
   // A variety of race conditions could cause a breakpoint modification or

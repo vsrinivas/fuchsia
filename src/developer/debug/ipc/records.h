@@ -151,7 +151,10 @@ enum class Stop : uint32_t {
 enum class BreakpointType : uint32_t {
   kSoftware,
   kHardware,
+  kWatchpoint,
+  kLast,
 };
+const char* BreakpointTypeToString(BreakpointType);
 
 struct BreakpointSettings {
   // The ID if this breakpoint. This is assigned by the client. This is
@@ -165,9 +168,6 @@ struct BreakpointSettings {
 
   // What should stop when the breakpoint is hit.
   Stop stop = Stop::kAll;
-
-  // What kind of breakpoint this is.
-  BreakpointType type = BreakpointType::kSoftware;
 
   // Processes to which this breakpoint applies.
   //

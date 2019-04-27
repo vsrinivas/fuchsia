@@ -346,17 +346,18 @@ void DebugAgent::OnWriteRegisters(
 void DebugAgent::OnAddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-  TIME_BLOCK();
-  uint32_t id = request.breakpoint.breakpoint_id;
 
-  auto found = breakpoints_.find(id);
-  if (found == breakpoints_.end()) {
-    found = breakpoints_
-                .emplace(std::piecewise_construct, std::forward_as_tuple(id),
-                         std::forward_as_tuple(this))
-                .first;
+  switch (request.breakpoint_type) {
+    case debug_ipc::BreakpointType::kSoftware:
+    case debug_ipc::BreakpointType::kHardware:
+      return SetupBreakpoint(request, reply);
+    case debug_ipc::BreakpointType::kWatchpoint:
+      return SetupWatchpoint(request, reply);
+    case debug_ipc::BreakpointType::kLast:
+      break;
   }
-  reply->status = found->second.SetSettings(request.breakpoint);
+
+  FXL_NOTREACHED() << "Invalid Breakpoint Type.";
 }
 
 void DebugAgent::OnRemoveBreakpoint(
@@ -418,6 +419,21 @@ void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
     proc->UnregisterBreakpoint(bp, address);
 }
 
+void DebugAgent::SetupBreakpoint(
+    const debug_ipc::AddOrChangeBreakpointRequest& request,
+    debug_ipc::AddOrChangeBreakpointReply* reply) {
+  uint32_t id = request.breakpoint.breakpoint_id;
+  auto found = breakpoints_.find(id);
+  if (found == breakpoints_.end()) {
+    found = breakpoints_
+                .emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                         std::forward_as_tuple(this))
+                .first;
+  }
+  reply->status = found->second.SetSettings(request.breakpoint_type,
+                                            request.breakpoint);
+}
+
 zx_status_t DebugAgent::RegisterWatchpoint(
     Watchpoint* wp, zx_koid_t process_koid,
     const debug_ipc::AddressRange& range) {
@@ -440,6 +456,21 @@ void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
     return;
 
   process->UnregisterWatchpoint(wp, range);
+}
+
+void DebugAgent::SetupWatchpoint(
+    const debug_ipc::AddOrChangeBreakpointRequest& request,
+    debug_ipc::AddOrChangeBreakpointReply* reply) {
+  auto id = request.watchpoint.watchpoint_id;
+
+  auto wp_it = watchpoints_.find(id);
+  if (wp_it == watchpoints_.end()) {
+    wp_it = watchpoints_
+                .emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                         std::forward_as_tuple(this))
+                .first;
+  }
+  reply->status = wp_it->second.SetSettings(request.watchpoint);
 }
 
 void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

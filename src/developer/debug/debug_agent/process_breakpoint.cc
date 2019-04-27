@@ -73,7 +73,7 @@ void ProcessBreakpoint::OnHit(
   hit_breakpoints->clear();
   for (Breakpoint* breakpoint : breakpoints_) {
     // Only care for breakpoints that match the exception type.
-    if (breakpoint->settings().type != exception_type)
+    if (breakpoint->type() != exception_type)
       continue;
 
     breakpoint->OnHit();
@@ -137,7 +137,7 @@ zx_status_t ProcessBreakpoint::Update() {
   // regardless of which threads are targeted.
   int sw_bp_count = 0;
   for (Breakpoint* bp : breakpoints_) {
-    if (bp->settings().type == debug_ipc::BreakpointType::kSoftware)
+    if (bp->type() == debug_ipc::BreakpointType::kSoftware)
       sw_bp_count++;
   }
 

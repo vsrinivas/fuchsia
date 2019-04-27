@@ -30,9 +30,15 @@ Breakpoint::~Breakpoint() {
 }
 
 zx_status_t Breakpoint::SetSettings(
+    debug_ipc::BreakpointType type,
     const debug_ipc::BreakpointSettings& settings) {
-  zx_status_t result = ZX_OK;
+  FXL_DCHECK(type == debug_ipc::BreakpointType::kSoftware ||
+             type == debug_ipc::BreakpointType::kHardware)
+      << "Got: " << debug_ipc::BreakpointTypeToString(type);
+  type_ = type;
   settings_ = settings;
+
+  zx_status_t result = ZX_OK;
 
   // The stats needs to reference the current ID. We assume setting the
   // settings doesn't update the stats (an option to do this may need to be
@@ -63,8 +69,6 @@ zx_status_t Breakpoint::SetSettings(
   locations_ = std::move(new_set);
   return result;
 }
-
-
 
 bool Breakpoint::AppliesToThread(zx_koid_t pid,
                                  zx_koid_t tid) const {

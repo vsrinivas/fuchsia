@@ -86,7 +86,6 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const BreakpointSettings& settings);
 std::string BreakpointStopToString(BreakpointSettings::StopMode mode);
 const char* BreakpointEnabledToString(bool enabled);
-const char* BreakpointTypeToString(debug_ipc::BreakpointType);
 
 std::string DescribeTarget(const ConsoleContext* context, const Target* target);
 

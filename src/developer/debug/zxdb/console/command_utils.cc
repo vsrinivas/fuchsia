@@ -330,15 +330,6 @@ const char* BreakpointEnabledToString(bool enabled) {
   return enabled ? "Enabled" : "Disabled";
 }
 
-const char* BreakpointTypeToString(debug_ipc::BreakpointType type) {
-  switch (type) {
-    case debug_ipc::BreakpointType::kSoftware:
-      return "Software";
-    case debug_ipc::BreakpointType::kHardware:
-      return "Hardware";
-  }
-}
-
 std::string DescribeJobContext(const ConsoleContext* context,
                                const JobContext* job_context) {
   int id = context->IdForJobContext(job_context);

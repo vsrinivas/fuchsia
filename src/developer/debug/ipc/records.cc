@@ -77,6 +77,22 @@ const char* RegisterCategory::TypeToString(RegisterCategory::Type type) {
   return nullptr;
 }
 
+const char* BreakpointTypeToString(BreakpointType type) {
+  switch (type) {
+    case BreakpointType::kSoftware:
+      return "Software";
+    case BreakpointType::kHardware:
+      return "Hardware";
+    case BreakpointType::kWatchpoint:
+      return "Watchpoint";
+    case BreakpointType::kLast:
+      return "Last";
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
 RegisterCategory::Type RegisterCategory::RegisterIDToCategory(RegisterID id) {
   uint32_t val = static_cast<uint32_t>(id);
 

@@ -31,11 +31,6 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
     return false;
   settings->stop = static_cast<Stop>(stop);
 
-  uint32_t type;
-  if (!reader->ReadUint32(&type))
-    return false;
-  settings->type = static_cast<BreakpointType>(type);
-
   return Deserialize(reader, &settings->locations);
 }
 
@@ -350,6 +345,14 @@ bool ReadRequest(MessageReader* reader, AddOrChangeBreakpointRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
+
+  uint32_t breakpoint_type;
+  if (!reader->ReadUint32(&breakpoint_type) ||
+      breakpoint_type >= static_cast<uint32_t>(BreakpointType::kLast)) {
+    return false;
+  }
+  request->breakpoint_type = static_cast<BreakpointType>(breakpoint_type);
+
   return Deserialize(reader, &request->breakpoint);
 }
 

@@ -110,12 +110,18 @@ class DebugAgent : public RemoteAPI,
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                             uint64_t address) override;
 
+  void SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                       debug_ipc::AddOrChangeBreakpointReply* reply);
+
   // Watchpoint::ProcessDelegate implementation --------------------------------
 
   zx_status_t RegisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
                                  const debug_ipc::AddressRange&) override;
   void UnregisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
                             const debug_ipc::AddressRange&) override;
+
+  void SetupWatchpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
+                       debug_ipc::AddOrChangeBreakpointReply* reply);
 
   // Job/Process/Thread Management ---------------------------------------------
 

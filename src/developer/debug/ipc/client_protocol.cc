@@ -130,7 +130,6 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteUint32(settings.breakpoint_id);
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
-  writer->WriteUint32(static_cast<uint32_t>(settings.type));
   Serialize(settings.locations, writer);
 }
 
@@ -414,6 +413,7 @@ bool ReadReply(MessageReader* reader, WriteRegistersReply* reply,
 void WriteRequest(const AddOrChangeBreakpointRequest& request,
                   uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
+  writer->WriteUint32(static_cast<uint32_t>(request.breakpoint_type));
   Serialize(request.breakpoint, writer);
 }
 
