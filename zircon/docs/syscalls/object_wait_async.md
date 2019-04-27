@@ -28,32 +28,23 @@ Use [`zx_port_wait()`] to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
-The *options* argument can be either **ZX_WAIT_ASYNC_ONCE** or **ZX_WAIT_ASYNC_REPEATING**.
-See notes below for **ZX_WAIT_ASYNC_REPEATING**.
+The *options* argument must be set to **ZX_WAIT_ASYNC_ONCE**.
 
-In both cases, *signals* indicates which signals on the object specified by *handle*
+The *signals* argument indicates which signals on the object specified by *handle*
 will cause a packet to be enqueued, and if **any** of those signals are asserted when
 `zx_object_wait_async()` is called, or become asserted afterwards, a packet will be
 enqueued on *port* containing all of the currently-asserted signals (not just the ones
-listed in the *signals* argument).
-
-In the case of **ZX_WAIT_ASYNC_ONCE**, once a packet has been enqueued the asynchronous
+listed in the *signals* argument).  Once a packet has been enqueued the asynchronous
 waiting ends.  No further packets will be enqueued.
 
-In the case of **ZX_WAIT_ASYNC_REPEATING** the asynchronous waiting continues until
-canceled. If any of *signals* are asserted and a packet is not currently in *port*'s
-queue on behalf of this wait, a packet is enqueued. If a packet is already in the
-queue, the packet's *observed* field is updated to include all of the currently-asserted
-signals (without removing the existing signals).
-
-In either mode, [`zx_port_cancel()`] will terminate the operation and if a packet was
+[`zx_port_cancel()`] will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
 
 If *handle* is closed, the operation will also be terminated, but packets already
 in the queue are not affected.
 
-Packets generated via this syscall will have *type* set to either **ZX_PKT_TYPE_SIGNAL_ONE**
-or **ZX_PKT_TYPE_SIGNAL_REP**, and the union is of type `zx_packet_signal_t`:
+Packets generated via this syscall will have *type* set to **ZX_PKT_TYPE_SIGNAL_ONE**
+and the union is of type `zx_packet_signal_t`:
 
 ```
 typedef struct zx_packet_signal {
@@ -82,7 +73,7 @@ therefore match *count* with the operation.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *options* is not **ZX_WAIT_ASYNC_ONCE** or **ZX_WAIT_ASYNC_REPEATING**.
+**ZX_ERR_INVALID_ARGS**  *options* is not **ZX_WAIT_ASYNC_ONCE**.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle or *port* is not a valid handle.
 
@@ -100,10 +91,6 @@ In a future build this error will no longer occur.
 ## NOTES
 
 See [signals](../signals.md) for more information about signals and their terminology.
-
-**ZX_WAIT_ASYNC_REPEATING** is being deprecated and should not be used. After a
-packet has been retrieved, it can be re-armed with **ZX_WAIT_ASYNC_ONCE** to achieve
-similar behavior.
 
 ## SEE ALSO
 

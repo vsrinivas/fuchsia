@@ -425,8 +425,9 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
         case ZX_WAIT_ASYNC_ONCE:
             type = ZX_PKT_TYPE_SIGNAL_ONE;
             break;
-        case ZX_WAIT_ASYNC_REPEATING:
-            type = ZX_PKT_TYPE_SIGNAL_REP;
+        case 1u:
+            printf("ZX_WAIT_ASYNC_REPEATING no longer supported. Use ZX_WAIT_ASYNC_ONCE.\n");
+            return ZX_ERR_INVALID_ARGS;
             break;
         default:
             return ZX_ERR_INVALID_ARGS;

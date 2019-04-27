@@ -14,7 +14,6 @@ __BEGIN_CDECLS
 
 // zx_object_wait_async() options
 #define ZX_WAIT_ASYNC_ONCE          ((uint32_t)0u)
-#define ZX_WAIT_ASYNC_REPEATING     ((uint32_t)1u)
 
 // packet types.  zx_port_packet_t::type
 #define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
