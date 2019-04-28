@@ -186,6 +186,7 @@ static zx_driver_ops_t wlantapctl_driver_ops = []() {
   return ops;
 }();
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(wlantapctl, wlantapctl_driver_ops, "fuchsia", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-    ZIRCON_DRIVER_END(wlantapctl)
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+ZIRCON_DRIVER_END(wlantapctl)

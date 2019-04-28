@@ -36,8 +36,7 @@ namespace wlan {
 
 class Device : public DeviceInterface {
  public:
-  Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
-         std::shared_ptr<component::Services> services);
+  Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto);
   ~Device();
 
   zx_status_t Bind();
@@ -163,8 +162,6 @@ class Device : public DeviceInterface {
   zx::port port_;
 
   fbl::unique_ptr<MinstrelRateSelector> minstrel_;
-
-  std::shared_ptr<component::Services> services_;
 
   fbl::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
 

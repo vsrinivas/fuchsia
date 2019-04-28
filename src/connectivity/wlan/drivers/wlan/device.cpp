@@ -108,11 +108,9 @@ static ethmac_protocol_ops_t ethmac_ops = {
 };
 #undef DEV
 
-Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto,
-               std::shared_ptr<component::Services> services)
+Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
     : parent_(device),
       wlanmac_proxy_(wlanmac_proto),
-      services_(services),
       fidl_msg_buf_(ZX_CHANNEL_MAX_MSG_BYTES),
       timer_scheduler_(this) {
   debugfn();

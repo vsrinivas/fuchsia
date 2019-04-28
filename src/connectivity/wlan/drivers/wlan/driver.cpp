@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "device.h"
-#include "lib/component/cpp/environment_services_helper.h"
 
 zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);
@@ -22,10 +21,7 @@ zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
     return ZX_ERR_INTERNAL;
   }
 
-  auto environment_services = component::GetEnvironmentServices();
-
-  auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto,
-                                                environment_services);
+  auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto);
   auto status = wlandev->Bind();
   if (status != ZX_OK) {
     std::printf("wlan: could not bind: %d\n", status);
@@ -42,6 +38,7 @@ static zx_driver_ops_t wlan_driver_ops = {
     .bind = wlan_bind,
 };
 
-// clang-format: off
+// clang-format off
 ZIRCON_DRIVER_BEGIN(wlan, wlan_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANMAC), ZIRCON_DRIVER_END(wlan)
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANMAC),
+ZIRCON_DRIVER_END(wlan)
