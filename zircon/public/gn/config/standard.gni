@@ -124,12 +124,13 @@ standard_environments = [
       ]
     }
     configs = standard_fuchsia_configs + standard_fuchsia_user_configs + [
-      {
-        types = [ "driver" ]
-        # All drivers use hidden visibility.
-        add = [ "$zx/public/gn/config:visibility_hidden" ]
-      }
-    ]
+                {
+                  types = [ "driver" ]
+
+                  # All drivers use hidden visibility.
+                  add = [ "$zx/public/gn/config:visibility_hidden" ]
+                },
+              ]
     implicit_deps = [
       "$zx/system/ulib/c",
       {
@@ -202,6 +203,14 @@ standard_variants = [
       ]
     }
   },
+]
+
+# Like `standard_variants`, but specifically for variants that are sanitized.
+# As with `standard_variants` also has the same structure as $variants (see
+# $zx/public/gn/toolchain/environment.gni) and supplies definitions of variants
+# with standard names.  The $variants list can also refer to variants defined
+# here by name, and these also are not otherwise involved in variant selection.
+standard_sanitizer_variants = [
   {
     variant = {
       name = "asan"
@@ -259,6 +268,7 @@ standard_variants = [
     }
   },
 ]
+standard_variants += standard_sanitizer_variants
 
 # This list is appended to the $variants list for the build.  It provides
 # default selectors that match if nothing else does.  The first catch-all
