@@ -159,7 +159,7 @@ protocol Stack {
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
-    DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
+    DelInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
 
     /// List all the entries in the forwarding table for the network stack.
     GetForwardingTable() -> (vector<ForwardingEntry> table);

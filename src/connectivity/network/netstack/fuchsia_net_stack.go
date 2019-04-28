@@ -333,8 +333,31 @@ func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress)
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(id uint64, addr net.IpAddress) (*stack.Error, error) {
-	panic("not implemented")
+func (ni *stackImpl) DelInterfaceAddress(id uint64, addr stack.InterfaceAddress) (*stack.Error, error) {
+	ni.ns.mu.Lock()
+	_, ok := ni.ns.mu.ifStates[tcpip.NICID(id)]
+	ni.ns.mu.Unlock()
+
+	if !ok {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}, nil
+	}
+
+	var protocol tcpip.NetworkProtocolNumber
+	switch tag := addr.IpAddress.Which(); tag {
+	case net.IpAddressIpv4:
+		protocol = ipv4.ProtocolNumber
+	case net.IpAddressIpv6:
+		protocol = ipv6.ProtocolNumber
+	default:
+		panic(fmt.Sprintf("unknown IpAddress type %d", tag))
+	}
+
+	if err := ni.ns.removeInterfaceAddress(tcpip.NICID(id), protocol, fidlconv.ToTCPIPAddress(addr.IpAddress), uint8(addr.PrefixLen)); err != nil {
+		logger.Errorf("failed to remove interface address: %s", err)
+		return &stack.Error{Type: stack.ErrorTypeInternal}, nil
+	}
+
+	return nil, nil
 }
 
 func (ni *stackImpl) GetForwardingTable() ([]stack.ForwardingEntry, error) {

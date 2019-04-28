@@ -194,6 +194,66 @@ async fn add_ethernet_interface() -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn add_del_interface_address() -> Result {
+    let name = stringify!(add_del_interface_address);
+
+    let sandbox = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_netemul_sandbox::SandboxMarker,
+    >()
+    .context("failed to connect to sandbox")?;
+    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+        .context("failed to create netstack environment")?;
+    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
+        .context("failed to connect to netstack")?;
+
+    let interfaces = await!(stack.list_interfaces()).context("failed to list interfaces")?;
+    let loopback = interfaces
+        .iter()
+        .find(|interface| {
+            interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK
+                != 0
+        })
+        .ok_or(failure::err_msg("failed to find loopback"))?;
+    let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
+        ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+            addr: [1, 1, 1, 1],
+        }),
+        prefix_len: 32,
+    };
+    let error = await!(stack.add_interface_address(loopback.id, &mut interface_address))
+        .context("failed to call add interface address")?;
+    assert_eq!(error.as_ref(), None);
+    let (loopback, error) = await!(stack.get_interface_info(loopback.id))
+        .context("failed to get loopback interface")?;
+    assert_eq!(error.as_ref(), None);
+    let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
+
+    assert!(
+        loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_some(),
+        "couldn't find {:#?} in {:#?}",
+        interface_address,
+        loopback.properties.addresses
+    );
+
+    let error = await!(stack.del_interface_address(loopback.id, &mut interface_address))
+        .context("failed to call del interface address")?;
+    assert_eq!(error.as_ref(), None);
+    let (loopback, error) = await!(stack.get_interface_info(loopback.id))
+        .context("failed to get loopback interface")?;
+    assert_eq!(error.as_ref(), None);
+    let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
+
+    assert!(
+        loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_none(),
+        "did not expect to find {:#?} in {:#?}",
+        interface_address,
+        loopback.properties.addresses
+    );
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn add_interface_address_not_found() -> Result {
     let name = stringify!(add_interface_address_not_found);
 

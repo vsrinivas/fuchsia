@@ -511,7 +511,7 @@ impl EventLoop {
     fn fidl_del_interface_address(
         &mut self,
         id: u64,
-        addr: fidl_net::IpAddress,
+        addr: fidl_net_stack::InterfaceAddress,
     ) -> Option<fidl_net_stack::Error> {
         // TODO(eyalsoha): Implement this.
         None
