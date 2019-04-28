@@ -20,16 +20,6 @@ group("tests") {
   ]
 }
 
-# TODO(INTK-1015): This is used by old bot configs.  When those have all
-# been converted to use //bundles/buildbot:core directly then this group
-# should be removed.
-group("buildbot") {
-  testonly = true
-  public_deps = [
-    "buildbot:core",
-  ]
-}
-
 group("kitchen_sink") {
   testonly = true
   public_deps = [
