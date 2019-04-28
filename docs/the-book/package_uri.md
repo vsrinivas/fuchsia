@@ -61,7 +61,7 @@ themselves.  See [here][TUF Security] and [here][TUF METADATA] for more details.
 
 To verify that a package is authentic, we must also verify that the repository
 from which it is being downloaded is authentic.  This will be implemented by
-maintaining a list of know source repositories with their public keys on the
+maintaining a list of known source repositories with their public keys on the
 device.  Packages from unknown sources will be rejected.
 
 [TUF Security]: https://theupdateframework.github.io/security.html
@@ -162,9 +162,9 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 ### Resource Paths
 
 A resource path is a UTF-8 string which identifies a resource within a package.
-This is simply a file path, consisting of a sequence of single `/` delimited
+This is a file path, consisting of a sequence of single `/` delimited
 path segments, each of which is a non-empty sequence of non-zero UTF-8
-characters not equal to `.` or `..`.
+characters not equal to `.`, `..`, or `/`.
 
 This definition is compatible with the definition of [Fuchsia filesystem paths]
 but it imposes a UTF-8 encoding rather than admitting arbitrary binary strings
@@ -180,7 +180,7 @@ Per [RFC 3986], resource paths are percent-encoded when they appear in URIs.
  * `assets/en/strings`
  * `hello/unicode/%F0%9F%98%81`, which decodes to `hello/unicode/😁`
 
-[Fuchsia filesystem paths]: /docs/the-book/namespaces.md
+[Fuchsia filesystem paths]: /docs/the-book/namespaces.md#object-relative-path-expressions
 [RFC 3986]: https://tools.ietf.org/html/rfc3986#page-11
 
 ## The fuchsia-pkg URI Scheme
