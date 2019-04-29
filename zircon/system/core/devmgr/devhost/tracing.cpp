@@ -36,7 +36,7 @@ zx_status_t devhost_start_trace_provider() {
 
     // N.B. The registry has begun, but these things are async. TraceManager
     // may not even be running yet (and likely isn't).
-    log(INFO, "devhost: trace provider registry begun\n");
+    log(SPEW, "devhost: trace provider registry begun\n");
     return ZX_OK;
 }
 
