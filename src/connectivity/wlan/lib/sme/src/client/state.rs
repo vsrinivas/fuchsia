@@ -327,6 +327,10 @@ impl State {
                         LinkState::LinkUp(Some(mut rsna)) => {
                             match process_eapol_ind(context, &mut rsna, &ind) {
                                 RsnaStatus::Unchanged => {}
+                                // This can happen when there's a GTK rotation. Timeout is ignored
+                                // because only one RX frame is needed in the exchange, so we are
+                                // not waiting for another one.
+                                RsnaStatus::Progressed { new_resp_timeout: _ } => {}
                                 // Once re-keying is supported, the RSNA can fail in LinkUp as well
                                 // and cause deauthentication.
                                 s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
@@ -844,7 +848,8 @@ mod tests {
         let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
         let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![ptk, gtk]);
 
-        expect_set_keys(&mut h.mlme_stream, bssid);
+        expect_set_ptk(&mut h.mlme_stream, bssid);
+        expect_set_gtk(&mut h.mlme_stream);
 
         // (mlme->sme) Send an EapolInd, mock supplicant with completion status
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
@@ -1080,7 +1085,7 @@ mod tests {
     fn reject_foreign_eapol_frames() {
         let mut h = TestHelper::new();
         let (supplicant, mock) = mock_supplicant();
-        let state = link_up_state_protected(supplicant);
+        let state = link_up_state_protected(supplicant, [7; 6]);
         mock.set_on_eapol_frame_callback(|| {
             panic!("eapol frame should not have been processed");
         });
@@ -1172,6 +1177,36 @@ mod tests {
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
         expect_result(receiver, ConnectResult::Failed);
+    }
+
+    #[test]
+    fn gtk_rotation_during_link_up() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+        let bssid = [7; 6];
+        let state = link_up_state_protected(supplicant, bssid);
+
+        // (mlme->sme) Send an EapolInd, mock supplication with key frame and GTK
+        let key_frame = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
+        let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![key_frame, gtk]);
+
+        // EAPoL frame is sent out, but state still remains the same
+        expect_eapol_req(&mut h.mlme_stream, bssid);
+        expect_set_gtk(&mut h.mlme_stream);
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+        match state {
+            State::Associated { link_state: LinkState::LinkUp(..), .. } => (), // expected
+            _ => panic!("expect still in link-up state"),
+        }
+
+        // Any timeout is ignored
+        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
+        state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+        match state {
+            State::Associated { link_state: LinkState::LinkUp(..), .. } => (), // expected
+            _ => panic!("expect still in link-up state"),
+        }
     }
 
     #[test]
@@ -1421,7 +1456,7 @@ mod tests {
         }
     }
 
-    fn expect_set_keys(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+    fn expect_set_ptk(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::SetKeys(set_keys_req) => {
                 assert_eq!(set_keys_req.keylist.len(), 1);
@@ -1436,7 +1471,9 @@ mod tests {
             }
             _ => panic!("expect set keys req to MLME"),
         }
+    }
 
+    fn expect_set_gtk(mlme_stream: &mut MlmeStream) {
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::SetKeys(set_keys_req) => {
                 assert_eq!(set_keys_req.keylist.len(), 1);
@@ -1572,8 +1609,8 @@ mod tests {
         }
     }
 
-    fn link_up_state_protected(supplicant: MockSupplicant) -> State {
-        let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
+    fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> State {
+        let bss = protected_bss(b"foo".to_vec(), bssid);
         let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
         let rsna = Rsna {
             negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),

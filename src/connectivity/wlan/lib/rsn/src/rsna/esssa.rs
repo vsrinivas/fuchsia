@@ -201,6 +201,7 @@ impl EssSa {
         update_sink: &mut UpdateSink,
         key: Key,
     ) -> Result<(), failure::Error> {
+        let was_esssa_established = self.is_established();
         match key {
             Key::Pmk(pmk) => {
                 self.pmksa.replace_state(|state| match state {
@@ -235,6 +236,13 @@ impl EssSa {
                         // PTK was already initialized.
                         info!("re-established new PTKSA; invalidating previous one");
                         info!("(this is likely a result of using a wrong password)");
+                        // Key can be re-established in two cases:
+                        // 1. Message gets replayed
+                        // 2. Key is being rotated
+                        // Checking that ESSSA is already established eliminates the first case.
+                        if was_esssa_established {
+                            update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
+                        }
                         Ptksa::Established { method, ptk }
                     }
                     other @ Ptksa::Uninitialized { .. } => {
@@ -251,6 +259,11 @@ impl EssSa {
                     }
                     Gtksa::Established { method, .. } => {
                         info!("re-established new GTKSA; invalidating previous one");
+                        // Checking that ESSSA was already established to make sure that it's a key
+                        // rotation (and not a message replay) before pushing to update sink.
+                        if was_esssa_established {
+                            update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
+                        }
                         Gtksa::Established { method, gtk }
                     }
                     Gtksa::Uninitialized { cfg } => {
@@ -311,18 +324,16 @@ impl EssSa {
             });
         update_sink.append(&mut updates);
 
-        // Report keys once an ESSSA is established.
         let state = (self.ptksa.state(), self.gtksa.state());
         if let (Ptksa::Established { ptk, .. }, Gtksa::Established { gtk, .. }) = state {
+            // Report all the keys now if ESSSA is established and wasn't previously.
+            // In the case where ESSSA had already been established and keys are being rotated,
+            // the keys were already pushed to the update sink.
             if !was_esssa_established {
                 info!("established ESSSA");
                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                 update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
                 update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
-            } else {
-                info!("rekey'ed some keys of an established ESSSA");
-                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
-                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
             }
         }
 
@@ -736,6 +747,12 @@ mod tests {
         // Verify the message's MIC.
         let mic = test_util::compute_mic(ptk.kck(), &msg2);
         assert_eq!(&msg2.key_mic[..], &mic[..]);
+
+        // Verify PTK was NOT reported.
+        assert!(
+            extract_reported_ptk(&updates[..]).is_none(),
+            "Unexpected PTK reported for GTK re-key"
+        );
 
         // Verify GTK was reported.
         let reported_gtk =
