@@ -70,12 +70,12 @@ fuchsia_internal/firmware/bluetooth/mt7668
 	O-_ROaTk675thCdQAi6es_gv_znD5zYRBul6tqdKc9cC
 
 gn/gn/linux-amd64
-	git_revision:2349dc4e9609d43c552b648b05ec83a777076492
-	sWc1t-BeMfXukeGn3Kvlw_NYKWz07Jcsu3G4iD-Y3GkC
+	git_revision:d409ab897d648b80e8b97fe04ced3fb013b6f39d
+	zGR4PCR4u0fc1YhbglqjO4r-dTSHHdTmTPcT6GrjP0YC
 
 gn/gn/mac-amd64
-	git_revision:2349dc4e9609d43c552b648b05ec83a777076492
-	H35pzFr8Y4c0gTI29qrY6q7CrOM0NEubxZNO9I3ix4YC
+	git_revision:d409ab897d648b80e8b97fe04ced3fb013b6f39d
+	fhkRlVBYtnaOD7n_L0LRVb7E0Cb1sK5Yg5c0YETbhaMC
 
 infra/ninja/linux-amd64
 	version:1.8.2
