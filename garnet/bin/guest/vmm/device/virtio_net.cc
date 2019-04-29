@@ -119,8 +119,12 @@ class TxStream : public StreamBase {
       if (desc_.has_next) {
         // Section 5.1.6.2  Packet Transmission: The header and packet are added
         // as one output descriptor to the transmitq.
-        FXL_LOG(ERROR)
-            << "Transmit packet and header must be on a single descriptor";
+        static bool warned = false;
+        if (!warned) {
+          warned = true;
+          FXL_LOG(ERROR)
+              << "Transmit packet and header must be on a single descriptor";
+        }
         continue;
       }
       if (desc_.len < sizeof(virtio_net_hdr_t)) {
