@@ -221,6 +221,13 @@ group("escher") {
   ]
 }
 
+group("ui") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/ui/base_view/cpp:base_view_unittests",
+  ]
+}
+
 group("sysmgr") {
   testonly = true
   public_deps = [
@@ -399,6 +406,7 @@ group("all") {
     "//garnet/packages/tests:tiles",
     "//garnet/packages/tests:timezone",
     "//garnet/packages/tests:tracing",
+    "//garnet/packages/tests:ui",
     "//garnet/packages/tests:unicode_utils",
     "//garnet/packages/tests:url",
     "//garnet/packages/tests:uuid",

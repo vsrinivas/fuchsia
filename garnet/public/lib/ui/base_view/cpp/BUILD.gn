@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+
 source_set("cpp") {
   sources = [
     "base_view.cc",
@@ -27,5 +30,37 @@ source_set("cpp") {
 
   deps = [
     "//zircon/public/lib/trace",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "base_view_unittests"
+
+  sources = [
+    "base_view_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+package("base_view_unittests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+  tests = [
+    {
+      name = "base_view_unittests"
+      environments = basic_envs
+    },
   ]
 }

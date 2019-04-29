@@ -6,10 +6,10 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 
@@ -129,7 +129,10 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
 
 void BaseView::PresentScene(zx_time_t presentation_time) {
   TRACE_DURATION("view", "BaseView::PresentScene");
-  FXL_DCHECK(!present_pending_);
+  // TODO(SCN-1202): Remove this when BaseView::PresentScene() is deprecated,
+  // see SCN-1379.
+  if (present_pending_)
+    return;
 
   present_pending_ = true;
 
