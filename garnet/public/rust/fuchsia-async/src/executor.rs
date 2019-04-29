@@ -4,7 +4,7 @@
 
 use crate::atomic_future::AtomicFuture;
 use crossbeam::queue::SegQueue;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
     ArcWake, waker_ref, AtomicWaker, Spawn, SpawnError,
@@ -16,11 +16,11 @@ use slab::Slab;
 use std::cell::RefCell;
 use std::collections::BinaryHeap;
 use std::marker::Unpin;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::ops::Deref;
+use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU32, Ordering};
 use std::sync::{Arc, Weak};
-use std::thread;
-use std::{cmp, fmt, mem};
-use std::{u64, usize};
+use std::task::Waker;
+use std::{cmp, fmt, mem, thread, u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
 const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
@@ -73,6 +73,50 @@ pub trait PacketReceiver: Send + Sync + 'static {
     fn receive_packet(&self, packet: zx::Packet);
 }
 
+pub(crate) fn need_signal(
+    lw: &Waker,
+    task: &AtomicWaker,
+    atomic_signals: &AtomicU32,
+    signal: zx::Signals,
+    clear_closed: bool,
+    handle: zx::HandleRef<'_>,
+    port: &zx::Port,
+    key: u64,
+) -> Result<(), zx::Status> {
+    const OBJECT_PEER_CLOSED: zx::Signals = zx::Signals::OBJECT_PEER_CLOSED;
+
+    task.register(lw);
+    let mut clear_signals = signal;
+    if clear_closed { clear_signals |= OBJECT_PEER_CLOSED; }
+    let old = zx::Signals::from_bits_truncate(
+        atomic_signals.fetch_and(!clear_signals.bits(), Ordering::SeqCst)
+    );
+    // We only need to schedule a new packet if one isn't already scheduled.
+    // If the bits were already false, a packet was already scheduled.
+    let was_signal = old.contains(signal);
+    let was_closed = old.contains(OBJECT_PEER_CLOSED);
+    if was_closed || was_signal {
+        let mut signals_to_schedule = zx::Signals::empty();
+        if was_signal { signals_to_schedule |= signal; }
+        if clear_closed && was_closed { signals_to_schedule |= OBJECT_PEER_CLOSED };
+        schedule_packet(handle, port, key, signals_to_schedule)?;
+    }
+    if was_closed && !clear_closed {
+        // We just missed a channel close-- go around again.
+        lw.wake();
+    }
+    Ok(())
+}
+
+pub(crate) fn schedule_packet(
+    handle: zx::HandleRef<'_>,
+    port: &zx::Port,
+    key: u64,
+    signals: zx::Signals,
+) -> Result<(), zx::Status> {
+    handle.wait_async_handle(port, key, signals, zx::WaitAsyncOpts::Once)
+}
+
 /// A registration of a `PacketReceiver`.
 /// When dropped, it will automatically deregister the `PacketReceiver`.
 // NOTE: purposefully does not implement `Clone`.
@@ -101,6 +145,11 @@ where
     pub fn port(&self) -> &zx::Port {
         self.ehandle.port()
     }
+}
+
+impl<T: PacketReceiver> Deref for ReceiverRegistration<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target { self.receiver() }
 }
 
 impl<T> Drop for ReceiverRegistration<T>
