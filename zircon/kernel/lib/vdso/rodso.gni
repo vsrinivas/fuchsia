@@ -11,6 +11,10 @@ import("$zx/public/gn/toolchain/c_utils.gni")
 # gold).  The kernel needs to use address constants extracted from these
 # ELF files' headers and symbols.
 #
+# This generates two targets: $target_name creates the $outputs file;
+# and $target_name.rsp generates "$target_gen_dir/$target_name.rsp"
+# via link_output_rspfile().
+#
 # Parameters
 #
 #   outputs
@@ -23,7 +27,7 @@ import("$zx/public/gn/toolchain/c_utils.gni")
 #
 template("rodso_code_header") {
   main_target_name = target_name
-  rspfile_target_name = "_rodso_code_header.rsp.$main_target_name"
+  rspfile_target_name = "$main_target_name.rsp"
   rspfile = "$target_gen_dir/$target_name.rsp"
 
   link_output_rspfile(rspfile_target_name) {
@@ -31,11 +35,14 @@ template("rodso_code_header") {
                            [
                              "deps",
                              "testonly",
+                             "visibility",
                            ])
+    if (defined(visibility)) {
+      visibility += [ ":$main_target_name" ]
+    }
     outputs = [
       rspfile,
     ]
-    visibility = [ ":$main_target_name" ]
   }
 
   toolchain_utils_action(main_target_name) {

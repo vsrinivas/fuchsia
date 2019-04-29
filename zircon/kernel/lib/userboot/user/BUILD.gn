@@ -57,9 +57,6 @@ if (current_toolchain == default_toolchain) {
   # This is the output of target ":gen-vdso-syms-ld", below.
   vdso_syms_ld = "$target_gen_dir/vdso-syms.ld"
 
-  # This file holds the name of the vDSO binary to extract symbols from.
-  vdso_syms_rspfile = "$target_gen_dir/vdso-syms.h.rsp"
-
   # userboot is a reentrant DSO (no writable segment) with an entry point.
   loadable_module("userboot") {
     sources = [
@@ -93,12 +90,17 @@ if (current_toolchain == default_toolchain) {
   # addresses.  It's used to generate vdso-syms.ld, below.
   toolchain_utils_action("gen-vdso-syms-header") {
     visibility = [ ":gen-vdso-syms-ld" ]
-    sources = [
-      vdso_syms_rspfile,
-    ]
+
+    # Use the same link_output_rspfile() that lib/vdso uses to embed it,
+    # so we're sure to be getting the exact same binary.
     deps = [
-      ":gen-vdso-syms-header-rspfile",
+      "$zx/kernel/lib/vdso:gen-vdso-code-header.rsp",
     ]
+    vdso_gen_dir = get_label_info(deps[0], "target_gen_dir")
+    sources = [
+      "$vdso_gen_dir/gen-vdso-code-header.rsp",
+    ]
+
     outputs = [
       "$target_gen_dir/vdso-syms.h",
     ]
@@ -107,23 +109,13 @@ if (current_toolchain == default_toolchain) {
     script = "$zx/scripts/shlib-symbols"
     args = [
       "-a",
-      "@" + rebase_path(vdso_syms_rspfile, root_build_dir),
+      "@" + rebase_path(sources[0], root_build_dir),
       rebase_path(outputs[0], root_build_dir),
       rebase_path(depfile, root_build_dir),
     ]
     metadata = {
       generated_sources = rebase_path(outputs, root_build_dir)
     }
-  }
-
-  link_output_rspfile("gen-vdso-syms-header-rspfile") {
-    visibility = [ ":gen-vdso-syms-header" ]
-    deps = [
-      "$zx/system/ulib/zircon",
-    ]
-    outputs = [
-      vdso_syms_rspfile,
-    ]
   }
 
   # This generated linker script defines symbols for each vDSO entry point

@@ -97,7 +97,10 @@ config("vdso-code-header.config") {
 # This generated header file tells the vdso.cpp code
 # where the segment boundaries and entry points are.
 rodso_code_header("gen-vdso-code-header") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "$zx/kernel/lib/userboot/*",
+  ]
   name = "VDSO"
   outputs = [
     "$target_gen_dir/vdso-code.h",

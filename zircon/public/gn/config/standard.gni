@@ -156,12 +156,16 @@ standard_environments = [
   },
 ]
 
-# This list has the same structure as $variants (see
-# $zx/public/gn/toolchain/environment.gni) but it just supplies definitions
+# These `standard*variants` lists have the same structure as $variants (see
+# $zx/public/gn/toolchain/environment.gni) but it just supply definitions
 # of variants with standard names.  The $variants list can refer to
 # variants defined here by name, but these are not otherwise involved in
 # variant selection.
-standard_variants = [
+standard_variants = []
+
+# These are the baseline variants.  $default_variants refers only to things
+# defined here.
+standard_base_variants = [
   {
     variant = {
       name = "clang"
@@ -176,36 +180,11 @@ standard_variants = [
       }
     }
   },
-  {
-    variant = {
-      name = "lto"
-      configs = [ "$zx/public/gn/config/lto" ]
-    }
-  },
-  {
-    variant = {
-      name = "thinlto"
-      configs = [ "$zx/public/gn/config/lto:thinlto" ]
-    }
-  },
-  {
-    variant = {
-      name = "profile"
-      configs = [ "$zx/public/gn/config/instrumentation:profile" ]
-      implicit_deps = [ "$zx/public/gn/config/instrumentation:profile_deps" ]
-      tags = [
-        "instrumented",
-        "useronly",
-      ]
-    }
-  },
 ]
+standard_variants += standard_base_variants
 
-# Like `standard_variants`, but specifically for variants that are sanitized.
-# As with `standard_variants` also has the same structure as $variants (see
-# $zx/public/gn/toolchain/environment.gni) and supplies definitions of variants
-# with standard names.  The $variants list can also refer to variants defined
-# here by name, and these also are not otherwise involved in variant selection.
+# These are variants that use "sanitizer" instrumentation.
+# They are interesting for e.g. fuzzer environments.
 standard_sanitizer_variants = [
   {
     variant = {
@@ -266,25 +245,79 @@ standard_sanitizer_variants = [
 ]
 standard_variants += standard_sanitizer_variants
 
+# These are additional standard variants that are not likely to
+# be interesting for special-purpose environments like fuzzers.
+standard_variants += [
+  {
+    variant = {
+      name = "lto"
+      configs = [ "$zx/public/gn/config/lto" ]
+    }
+  },
+  {
+    variant = {
+      name = "thinlto"
+      configs = [ "$zx/public/gn/config/lto:thinlto" ]
+    }
+  },
+  {
+    variant = {
+      name = "profile"
+      configs = [ "$zx/public/gn/config/instrumentation:profile" ]
+      implicit_deps = [ "$zx/public/gn/config/instrumentation:profile_deps" ]
+      tags = [
+        "instrumented",
+        "useronly",
+      ]
+    }
+  },
+]
+
 # This list is appended to the $variants list for the build.  It provides
 # default selectors that match if nothing else does.  The first catch-all
 # selector must be compatible with all environments used in
 # environment_redirect(),
 default_variants = [
+  # For host environments default to Clang.  The prebuilt Clang toolchain
+  # supplied for Fuchsia targets also targets Linux and Mac hosts and is
+  # more reliable (especially in C++ language and library support) than
+  # many native host toolchains (depending on host OS version), so always
+  # use it.  Users can use the "host_gcc" variant shorthand (below) to use
+  # the host-native GCC instead.
   {
-    # The EFI toolchain is only supported using Clang.
-    # For host default to Clang.
-    environment = [
-      "efi",
-      "host",
-    ]
+    host = true
     variant = "clang"
   },
-  {
-    # Otherwise default to gcc.
-    variant = "gcc"
-  },
+
+  # Otherwise default to gcc.
+  "gcc",
+
+  # But GCC doesn't support some environments (efi, *.fuzz).  Those use
+  # exclude_variant_tags = [ "gcc" ] so the preceding selector won't match,
+  # and this final fallback is needed.  Clang supports all the environments
+  # defined in this build.
+  "clang",
 ]
+
+# default_variants only refers to variants in standard_base_variants.
+foreach(default, default_variants) {
+  if (default == "$default") {
+    _default = default
+  } else {
+    _default = default.variant
+  }
+  assert(_default == "$_default")
+  foreach(selector, standard_base_variants) {
+    _variant = {
+      # Clear from last iteration.
+    }
+    _variant = selector.variant
+    if (_default == _variant.name) {
+      _default = true
+    }
+  }
+  assert(_default == true)
+}
 
 # Define shorthand selectors that can be used in $variants, which see.
 # This is a list of scopes.  Each scope defines one shorthand.
