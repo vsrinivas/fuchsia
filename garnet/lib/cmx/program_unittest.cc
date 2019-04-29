@@ -80,6 +80,34 @@ TEST_F(ProgramMetadataTest, ParseBinaryArgsWithErrors) {
                   "'args' contains an item that's not a string"));
 }
 
+TEST_F(ProgramMetadataTest, ParseBinaryEnvVars) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsEnvVarsNull());
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(ParseFrom(
+      &program,
+      R"JSON({ "binary": "bin/app", "env_vars": ["FOO=1", "BAR=0"] })JSON",
+      &error));
+  EXPECT_FALSE(program.IsBinaryNull());
+  EXPECT_FALSE(program.IsEnvVarsNull());
+  EXPECT_TRUE(program.IsDataNull());
+  EXPECT_EQ("bin/app", program.binary());
+  std::vector<std::string> expected_env_vars{"FOO=1", "BAR=0"};
+  EXPECT_EQ(expected_env_vars, program.env_vars());
+}
+
+TEST_F(ProgramMetadataTest, ParseBinaryEnvVarsWithErrors) {
+  std::string error;
+  ProgramMetadata program;
+  EXPECT_FALSE(ParseFrom(
+      &program, R"JSON({ "binary": "bin/app", "env_vars": [0, 1] })JSON", &error));
+  EXPECT_THAT(error,
+              ::testing::HasSubstr(
+                  "'env_vars' contains an item that's not a string"));
+}
+
 TEST_F(ProgramMetadataTest, ParseData) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());

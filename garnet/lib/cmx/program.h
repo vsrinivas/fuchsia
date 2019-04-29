@@ -23,6 +23,7 @@ class ProgramMetadata {
 
   bool IsBinaryNull() const { return binary_null_; }
   bool IsArgsNull() const { return args_null_; }
+  bool IsEnvVarsNull() const { return env_vars_null_; }
   bool IsDataNull() const { return data_null_; }
 
   // Returns the "binary" attribute. Only applicable if this program is run as
@@ -33,6 +34,10 @@ class ProgramMetadata {
   // an ELF binary or shell script.
   const std::vector<std::string>& args() const { return args_; }
 
+  // Returns the "vars" attribute. Only applicable if this program is run as
+  // an ELF binary or shell script.
+  const std::vector<std::string>& env_vars() const { return env_vars_; }
+
   // Returns the "data" attribute. Applicable if this program is run as a
   // flutter or dart program; /pkg/data is a general persistent storage.
   const std::string& data() const { return data_; }
@@ -40,9 +45,11 @@ class ProgramMetadata {
  private:
   bool binary_null_ = true;
   bool args_null_ = true;
+  bool env_vars_null_ = true;
   bool data_null_ = true;
   std::string binary_;
   std::vector<std::string> args_;
+  std::vector<std::string> env_vars_;
   std::string data_;
 
   bool ParseBinary(const rapidjson::Value& program_value,

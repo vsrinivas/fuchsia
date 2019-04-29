@@ -13,6 +13,7 @@ namespace component {
 
 constexpr char kBinary[] = "binary";
 constexpr char kArgs[] = "args";
+constexpr char kEnvVars[] = "env_vars";
 constexpr char kData[] = "data";
 
 bool ProgramMetadata::Parse(const rapidjson::Value& program_value,
@@ -56,6 +57,12 @@ bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
   if (args != program_value.MemberEnd()) {
     json_parser->CopyStringArray("args", args->value, &args_);
     args_null_ = false;
+  }
+
+  const auto env_vars = program_value.FindMember(kEnvVars);
+  if (env_vars != program_value.MemberEnd()) {
+    json_parser->CopyStringArray("env_vars", env_vars->value, &env_vars_);
+    env_vars_null_ = false;
   }
 
   return !json_parser->HasError();
