@@ -28,6 +28,7 @@ driver("mt8167s_ref") {
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/focaltech",
     "$zx/system/dev/lib/mmio",
@@ -44,5 +45,49 @@ driver("mt8167s_ref") {
   data_deps = [
     "$zx/kernel/target/arm64/boot-shim:cleo",
     "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
+  ]
+}
+
+test("mt8167s_ref-test") {
+  output_name = "mt8167s_ref-test"
+  sources = [
+    "mt8167-audio.cpp",
+    "mt8167-backlight.cpp",
+    "mt8167-buttons.cpp",
+    "mt8167-clk.cpp",
+    "mt8167-display.cpp",
+    "mt8167-gpio.cpp",
+    "mt8167-gpu.cpp",
+    "mt8167-i2c.cpp",
+    "mt8167-msdc0.cpp",
+    "mt8167-msdc2.cpp",
+    "mt8167-power.cpp",
+    "mt8167-soc.cpp",
+    "mt8167-sysmem.cpp",
+    "mt8167-test.cpp",
+    "mt8167-thermal.cpp",
+    "mt8167-touch.cpp",
+    "mt8167-usb.cpp",
+    "mt8167.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
+    "$zx/system/dev/lib/focaltech",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }

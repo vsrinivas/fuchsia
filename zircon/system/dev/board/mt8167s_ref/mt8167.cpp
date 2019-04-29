@@ -106,8 +106,6 @@ int Mt8167::Thread() {
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "UsbInit() failed\n");
     }
-    // TouchInit() must be called before ThermalInit() as the touch driver uses the PMIC wrapper to
-    // enable the VGP1 regulator.
     if (TouchInit() != ZX_OK) {
         zxlogf(ERROR, "TouchInit() failed\n");
     }

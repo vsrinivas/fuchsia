@@ -4,11 +4,27 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/powerimpl.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
 
 namespace board_mt8167 {
+
+zx_status_t Mt8167::Vgp1Enable() {
+    ddk::PowerImplProtocolClient power(parent());
+    if (!power.is_valid()) {
+        zxlogf(ERROR, "Failed to get power impl protocol\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    zx_status_t status = power.EnablePowerDomain(kVDLdoVGp1);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to enable VGP1 regulator: %d\n", __FUNCTION__, status);
+    }
+
+    return status;
+}
 
 zx_status_t Mt8167::PowerInit() {
     static const pbus_mmio_t power_mmios[] = {
@@ -28,9 +44,12 @@ zx_status_t Mt8167::PowerInit() {
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Adding power device failed %d\n", __FUNCTION__, status);
+        return status;
     }
 
-    return status;
+    // Vgp1Enable() must be called before ThermalInit() as it uses the PMIC wrapper to enable the
+    // VGP1 regulator.
+    return Vgp1Enable();
 }
 
 }  // namespace board_mt8167

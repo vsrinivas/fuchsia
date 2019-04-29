@@ -2,54 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <lib/mmio/mmio.h>
 #include <fbl/algorithm.h>
-#include <hwreg/bitfields.h>
 #include <lib/focaltech/focaltech.h>
 #include <soc/mt8167/mt8167-hw.h>
+#include <soc/mt8167/mt8167-power.h>
 
 #include "mt8167.h"
 
-namespace {
-
-constexpr uintptr_t kPmicBaseAligned =
-    fbl::round_down<uintptr_t, uintptr_t>(MT8167_PMIC_WRAP_BASE, PAGE_SIZE);
-constexpr size_t kPmicOffset = MT8167_PMIC_WRAP_BASE - kPmicBaseAligned;
-constexpr size_t kPmicSizeAligned =
-    fbl::round_up<size_t, size_t>(kPmicOffset + MT8167_PMIC_WRAP_SIZE, PAGE_SIZE);
-
-constexpr uint32_t kDigLdoCon7 = 0x285;
-constexpr uint16_t kVgp1Enable = 0x8000;
-
-}  // namespace
-
 namespace board_mt8167 {
-
-class PmicCmd : public hwreg::RegisterBase<PmicCmd, uint32_t> {
-public:
-    static auto Get() { return hwreg::RegisterAddr<PmicCmd>(0xa0 + kPmicOffset); }
-
-    DEF_BIT(31, write);
-    DEF_FIELD(30, 16, addr);
-    DEF_FIELD(15, 0, data);
-};
-
-class PmicReadData : public hwreg::RegisterBase<PmicReadData, uint32_t> {
-public:
-    static constexpr uint32_t kStateIdle  = 0;
-
-    static auto Get() { return hwreg::RegisterAddr<PmicReadData>(0xa4 + kPmicOffset); }
-
-    DEF_FIELD(18, 16, status);
-};
 
 zx_status_t Mt8167::TouchInit() {
     if (board_info_.vid != PDEV_VID_GOOGLE || board_info_.pid != PDEV_PID_CLEO) {
@@ -108,30 +74,12 @@ zx_status_t Mt8167::TouchInit() {
         { fbl::count_of(gpio_reset_component), gpio_reset_component },
     };
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
-    zx::unowned_resource root_resource(get_root_resource());
-    std::optional<ddk::MmioBuffer> pmic_mmio;
-    auto status = ddk::MmioBuffer::Create(kPmicBaseAligned, kPmicSizeAligned, *root_resource,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to enable VGP1 regulator: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    while (PmicReadData::Get().ReadFrom(&(*pmic_mmio)).status() != PmicReadData::kStateIdle) {}
-
-    PmicCmd::Get()
-        .FromValue(0)
-        .set_write(1)
-        .set_addr(kDigLdoCon7)
-        .set_data(kVgp1Enable)
-        .WriteTo(&(*pmic_mmio));
-
     // platform device protocol is only needed to provide metadata to the driver.
     // TODO(voydanoff) remove pdev after we have a better way to provide metadata to composite
     // devices.
-    if ((status = pbus_.CompositeDeviceAdd(&touch_dev, ft_components, fbl::count_of(ft_components),
-                                           UINT32_MAX)) != ZX_OK) {
+    zx_status_t status = pbus_.CompositeDeviceAdd(&touch_dev, ft_components,
+                                                  fbl::count_of(ft_components), UINT32_MAX);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to add touch device: %d\n", __FUNCTION__, status);
     }
 
