@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::{
-    future::{FusedFuture, Future, FutureExt},
-    task::Waker,
-    Poll,
+use {
+    futures::{
+        channel::oneshot,
+        future::{self, FusedFuture, Future, FutureExt},
+        task::Waker,
+        Poll,
+    },
+    std::{marker::Unpin, mem, pin::Pin},
 };
-use std::marker::Unpin;
-use std::pin::Pin;
 
-pub struct FutureOrEmpty<'a, F>(pub &'a mut Option<F>);
+pub struct FutureOrEmpty<'a, F>(pub Option<&'a mut F>);
 
 impl<'a, F> Future for FutureOrEmpty<'a, F>
 where
@@ -34,5 +36,37 @@ where
             None => true,
             Some(fut) => fut.is_terminated(),
         }
+    }
+}
+
+/// A Signal fires once and can be watched by many clients.
+pub struct Signal {
+    sender: oneshot::Sender<()>,
+    receiver: future::Shared<oneshot::Receiver<()>>,
+}
+
+pub type SignalWatcher = future::Shared<oneshot::Receiver<()>>;
+
+impl Signal {
+    /// Returns a new signal.
+    pub fn new() -> Signal {
+        let (sender, receiver) = oneshot::channel();
+        Signal { sender, receiver: receiver.shared() }
+    }
+
+    /// Returns a future that completes when the signal is asserted.
+    pub fn watch(&self) -> SignalWatcher {
+        self.receiver.clone()
+    }
+
+    /// Asserts the signal. All associated futures will complete.
+    pub fn signal(self) {
+        // Unwrap ok because we hold one end of the channel.
+        self.sender.send(()).unwrap()
+    }
+
+    /// Asserts the signal, then create a new signal in-place.
+    pub fn signal_and_rearm(&mut self) {
+        mem::replace(self, Self::new()).signal()
     }
 }

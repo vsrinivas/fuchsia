@@ -74,14 +74,13 @@ impl DeviceSetSession {
 
     async fn handle_requests(mut self) -> Result<(), fidl::Error> {
         loop {
-            let mut watcher_mut = self.watcher.as_mut().map(|(w, _)| w);
             select! {
                 req = self.requests.try_next() =>
                     match req? {
                         None => return Ok(()),
                         Some(req) => self.handle_request(req)?
                     },
-                () = FutureOrEmpty(&mut watcher_mut) => {
+                _ = FutureOrEmpty(self.watcher.as_mut().map(|(w, _)| w)) => {
                     // self.watcher cannot be None here.
                     let (_, proxy) = self.watcher.take().unwrap();
                     proxy.on_cloud_erased()?
@@ -136,8 +135,8 @@ impl PageSession {
         loop {
             let fut = shared.storage.borrow_mut().get_page(page_id.clone()).watch(position);
             if let Some(fut) = fut {
-                await!(fut)
-            };
+                await!(fut).expect("Cloud state destoyed before PageSession");
+            }
             let mut exclusive_storage = shared.storage.borrow_mut();
             if let Some((next_position, commits)) =
                 exclusive_storage.get_page(page_id.clone()).get_commits(position)
@@ -232,15 +231,13 @@ impl PageSession {
     async fn handle_requests(mut self) -> Result<(), fidl::Error> {
         loop {
             select! {
-                req = self.requests.next() => {
-                    match req {
+                req = self.requests.try_next() => {
+                    match req? {
                         None => return Ok(()),
-                        Some(req) => {
-                            self.handle_request(req?)?
-                        }
+                        Some(req) => self.handle_request(req)?,
                     }
                 },
-                _ = FutureOrEmpty(&mut self.watcher) => {
+                () = FutureOrEmpty(self.watcher.as_mut()) => {
                     // The watcher has been disconnected.
                     self.watcher.take();
                 }
@@ -298,10 +295,9 @@ impl CloudSession {
             select! {
                 _ = self.device_sets.next() => {},
                 _ = self.pages.next() => {},
-                req = self.requests.next() =>
-                    match req {
-                        Some(req) =>
-                            self.handle_request(req?)?,
+                req = self.requests.try_next() =>
+                    match req? {
+                        Some(req) => self.handle_request(req)?,
                         None => return Ok(())
                     }
             }

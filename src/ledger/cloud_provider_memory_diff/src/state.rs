@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::channel::oneshot;
-use futures::future;
-use futures::future::{FutureExt, LocalFutureObj};
-use std::collections::{HashMap, HashSet};
-use std::mem;
+use {
+    crate::utils::{Signal, SignalWatcher},
+    std::collections::{HashMap, HashSet},
+};
 
 /// Representation of errors sent to the client.
 #[derive(PartialEq, Eq, Hash, Debug)]
@@ -59,10 +58,8 @@ pub struct Commit {
 pub struct DeviceSet {
     /// The set of fingerprints present on the cloud.
     fingerprints: HashSet<Fingerprint>,
-    /// Shared future that is woken up on cloud erasure.
-    watch_receiver: future::Shared<oneshot::Receiver<()>>,
-    /// Sender for erasure_receiver.
-    watch_sender: oneshot::Sender<()>,
+    /// Signal for cloud erasure.
+    erasure_signal: Signal,
 }
 
 /// Stores the state of a page.
@@ -73,10 +70,8 @@ pub struct PageCloud {
     commit_log: Vec<CommitId>,
     /// The set of commits uploaded by the clients.
     commits: HashMap<CommitId, Commit>,
-    /// Shared future that is woken up on new commits.
-    watch_receiver: future::Shared<oneshot::Receiver<()>>,
-    /// Sender for watch_receiver.
-    watch_sender: oneshot::Sender<()>,
+    /// Signal for new commits
+    commit_signal: Signal,
 }
 
 /// Stores the state of the cloud.
@@ -85,17 +80,15 @@ pub struct Cloud {
     device_set: DeviceSet,
 }
 
-pub type PageCloudWatcher = LocalFutureObj<'static, ()>;
+pub type PageCloudWatcher = SignalWatcher;
 impl PageCloud {
     /// Creates a new, empty page.
     pub fn new() -> PageCloud {
-        let (watch_sender, watch_receiver) = oneshot::channel();
         PageCloud {
             objects: HashMap::new(),
             commit_log: Vec::new(),
             commits: HashMap::new(),
-            watch_sender,
-            watch_receiver: watch_receiver.shared(),
+            commit_signal: Signal::new(),
         }
     }
 
@@ -134,7 +127,7 @@ impl PageCloud {
             self.commits.insert(commit.id.clone(), commit);
         }
 
-        self.notify_watchers();
+        self.commit_signal.signal_and_rearm();
 
         Ok(())
     }
@@ -145,7 +138,7 @@ impl PageCloud {
             None
         } else {
             // We ignore cancellations, because extra watch notifications are OK.
-            Some(LocalFutureObj::new(self.watch_receiver.clone().map(|_| ()).boxed()))
+            Some(self.commit_signal.watch())
         }
     }
 
@@ -161,12 +154,6 @@ impl PageCloud {
             .map(|id| self.commits.get(id).expect("Unknown commit in commit log."))
             .collect();
         Some((Token(self.commit_log.len()), new_commits))
-    }
-
-    fn notify_watchers(&mut self) {
-        let (new_sender, new_receiver) = oneshot::channel();
-        let _ = mem::replace(&mut self.watch_sender, new_sender).send(());
-        self.watch_receiver = new_receiver.shared();
     }
 }
 
@@ -188,16 +175,11 @@ impl Cloud {
     }
 }
 
-pub type DeviceSetWatcher = LocalFutureObj<'static, ()>;
+pub type DeviceSetWatcher = SignalWatcher;
 impl DeviceSet {
     /// Creates a new, empty device set.
     pub fn new() -> DeviceSet {
-        let (watch_sender, watch_receiver) = oneshot::channel();
-        DeviceSet {
-            fingerprints: HashSet::new(),
-            watch_sender,
-            watch_receiver: watch_receiver.shared(),
-        }
+        DeviceSet { fingerprints: HashSet::new(), erasure_signal: Signal::new() }
     }
 
     /// Adds a fingerprint to the set. Nothing happens if the
@@ -219,9 +201,7 @@ impl DeviceSet {
     /// Erases all fingerprints and calls the watchers.
     pub fn erase(&mut self) {
         self.fingerprints.clear();
-        let (new_sender, new_receiver) = oneshot::channel();
-        let _ = mem::replace(&mut self.watch_sender, new_sender).send(());
-        self.watch_receiver = new_receiver.shared();
+        self.erasure_signal.signal_and_rearm()
     }
 
     /// If `fingerprint` is present on the cloud, returns a future that
@@ -231,8 +211,6 @@ impl DeviceSet {
         if !self.fingerprints.contains(fingerprint) {
             return Err(CloudError::FingerprintNotFound(fingerprint.clone()));
         }
-        let fut =
-            self.watch_receiver.clone().map(|r| r.expect("Storage destroyed before clients?"));
-        Ok(LocalFutureObj::new(fut.boxed()))
+        Ok(self.erasure_signal.watch())
     }
 }
