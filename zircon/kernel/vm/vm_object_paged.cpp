@@ -70,10 +70,11 @@ VmObjectPaged::VmObjectPaged(
     uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
     fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock,
     fbl::RefPtr<PageSource> page_source)
-    : VmObject(ktl::move(parent), ktl::move(root_lock)),
+    : VmObject(ktl::move(root_lock)),
       options_(options),
       size_(size),
       pmm_alloc_flags_(pmm_alloc_flags),
+      parent_(ktl::move(parent)),
       page_source_(ktl::move(page_source)) {
     LTRACEF("%p\n", this);
 
@@ -111,6 +112,12 @@ VmObjectPaged::~VmObjectPaged() {
     }
 
     pmm_free(&list);
+
+    // remove ourself from our parent (if present)
+    if (parent_) {
+        LTRACEF("removing ourself from our parent %p\n", parent_.get());
+        parent_->RemoveChild(this);
+    }
 }
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags,
@@ -354,6 +361,21 @@ zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint6
     *child_vmo = ktl::move(vmo);
 
     return ZX_OK;
+}
+
+uint64_t VmObjectPaged::parent_user_id() const {
+    canary_.Assert();
+    // Don't hold both our lock and our parent's lock at the same time, because
+    // it's probably the same lock.
+    fbl::RefPtr<VmObject> parent;
+    {
+        Guard<fbl::Mutex> guard{&lock_};
+        if (parent_ == nullptr) {
+            return 0u;
+        }
+        parent = parent_;
+    }
+    return parent->user_id();
 }
 
 void VmObjectPaged::Dump(uint depth, bool verbose) {

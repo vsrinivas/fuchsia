@@ -23,7 +23,7 @@
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size)
-    : VmObject(nullptr, ktl::move(lock)), size_(size), base_(base) {
+    : VmObject(ktl::move(lock)), size_(size), base_(base) {
     LTRACEF("%p, size %#" PRIx64 "\n", this, size_);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));

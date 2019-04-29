@@ -84,6 +84,7 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return parent_ ? ChildType::kCowClone : ChildType::kNotChild;
     }
+    uint64_t parent_user_id() const override;
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -195,6 +196,9 @@ private:
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
+
+    // parent pointer (may be null)
+    fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
 
     // The page source, if any.
     const fbl::RefPtr<PageSource> page_source_;

@@ -27,6 +27,7 @@
 
 class VmMapping;
 class PageRequest;
+class VmObjectPaged;
 
 typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
@@ -45,7 +46,7 @@ typedef struct vm_lock : fbl::RefCounted<struct vm_lock> {
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
 class VmObject : public fbl::RefCounted<VmObject>,
-                 public fbl::DoublyLinkedListable<VmObject*> {
+                 public fbl::DoublyLinkedListable<VmObjectPaged*> {
 public:
     // public API
     virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -150,7 +151,7 @@ public:
 
     // Returns the parent's user_id() if this VMO has a parent,
     // otherwise returns zero.
-    uint64_t parent_user_id() const;
+    virtual uint64_t parent_user_id() const = 0;
 
     // Sets the value returned by |user_id()|. May only be called once.
     void set_user_id(uint64_t user_id);
@@ -233,12 +234,12 @@ public:
     uint32_t share_count() const;
 
     // Returns the number of children post-add.
-    uint32_t AddChildLocked(VmObject* r) TA_REQ(lock_);
+    uint32_t AddChildLocked(VmObjectPaged* r) TA_REQ(lock_);
 
     // Notifies the child observer that there is one child.
     void NotifyOneChild() TA_EXCL(lock_);
 
-    void RemoveChild(VmObject* r);
+    void RemoveChild(VmObjectPaged* r);
     uint32_t num_children() const;
 
     // Calls the provided |func(const VmObject&)| on every VMO in the system,
@@ -260,7 +261,7 @@ public:
     virtual void DetachSource() {}
 
 protected:
-    VmObject(fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock);
+    explicit VmObject(fbl::RefPtr<vm_lock_t> root_lock);
 
     // private destructor, only called from refptr
     virtual ~VmObject();
@@ -292,10 +293,7 @@ protected:
     fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 
     // list of every child
-    fbl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
-
-    // parent pointer (may be null)
-    fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<VmObjectPaged*> children_list_ TA_GUARDED(lock_);
 
     // lengths of corresponding lists
     uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;

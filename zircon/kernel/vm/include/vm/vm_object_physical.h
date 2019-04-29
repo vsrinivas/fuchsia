@@ -29,6 +29,7 @@ public:
 
     ChildType child_type() const override { return ChildType::kNotChild; }
     bool is_contiguous() const override { return true; }
+    uint64_t parent_user_id() const override { return 0u; }
 
     uint64_t size() const override { return size_; }
 

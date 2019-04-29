@@ -22,6 +22,7 @@
 
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
+#include <vm/vm_object_paged.h>
 
 #include <zircon/types.h>
 
@@ -29,13 +30,9 @@
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
-VmObject::VmObject(fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> lock_ptr)
-    : lock_(lock_ptr->lock), lock_ptr_(ktl::move(lock_ptr)), parent_(ktl::move(parent)) {
+VmObject::VmObject(fbl::RefPtr<vm_lock_t> lock_ptr)
+    : lock_(lock_ptr->lock), lock_ptr_(ktl::move(lock_ptr)) {
     LTRACEF("%p\n", this);
-
-    if (parent_) {
-        DEBUG_ASSERT(lock_ptr_ == parent_->lock_ptr_);
-    }
 }
 
 VmObject::~VmObject() {
@@ -43,12 +40,6 @@ VmObject::~VmObject() {
     LTRACEF("%p\n", this);
 
     DEBUG_ASSERT(global_list_state_.InContainer() == false);
-
-    // remove ourself from our parent (if present)
-    if (parent_) {
-        LTRACEF("removing ourself from our parent %p\n", parent_.get());
-        parent_->RemoveChild(this);
-    }
 
     DEBUG_ASSERT(mapping_list_.is_empty());
     DEBUG_ASSERT(children_list_.is_empty());
@@ -86,21 +77,6 @@ uint64_t VmObject::user_id() const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{&lock_};
     return user_id_;
-}
-
-uint64_t VmObject::parent_user_id() const {
-    canary_.Assert();
-    // Don't hold both our lock and our parent's lock at the same time, because
-    // it's probably the same lock.
-    fbl::RefPtr<VmObject> parent;
-    {
-        Guard<fbl::Mutex> guard{&lock_};
-        if (parent_ == nullptr) {
-            return 0u;
-        }
-        parent = parent_;
-    }
-    return parent->user_id();
 }
 
 void VmObject::AddMappingLocked(VmMapping* r) {
@@ -186,7 +162,7 @@ void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
     child_observer_ = child_observer;
 }
 
-uint32_t VmObject::AddChildLocked(VmObject* o) {
+uint32_t VmObject::AddChildLocked(VmObjectPaged* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.lock().IsHeld());
     children_list_.push_front(o);
@@ -209,7 +185,7 @@ void VmObject::NotifyOneChild() {
     }
 }
 
-void VmObject::RemoveChild(VmObject* o) {
+void VmObject::RemoveChild(VmObjectPaged* o) {
     canary_.Assert();
     Guard<fbl::Mutex> shared_guard{&lock_};
     children_list_.erase(*o);
