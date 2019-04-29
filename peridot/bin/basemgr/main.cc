@@ -100,12 +100,13 @@ int main(int argc, const char** argv) {
     config = CreateBasemgrConfigFromCommandLine(command_line);
   }
 
-  // When auto-login to guest is specified, we use dev_base_shell with user
-  // specified such that a persistent guest user is created on first-time boot.
+  // When auto-login to guest is specified, we use auto_login_base_shell with
+  // user specified such that a persistent guest user is created on first-time
+  // boot.
   if (kAutoLoginToGuest) {
     fuchsia::modular::session::AppConfig override_base_shell;
     override_base_shell.set_url(modular_config::kDefaultBaseShellUrl);
-    override_base_shell.mutable_args()->push_back("--user=persistent_guest");
+    override_base_shell.mutable_args()->push_back("--persist_user");
     config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
   }
 
