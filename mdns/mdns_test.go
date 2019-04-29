@@ -6,7 +6,10 @@ package mdns
 
 import (
 	"bytes"
+	"net"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestUint16(t *testing.T) {
@@ -15,8 +18,8 @@ func TestUint16(t *testing.T) {
 	writeUint16(&buf, v)
 	var v2 uint16
 	readUint16(&buf, &v2)
-	if v != v2 {
-		t.Errorf("read/writeUint16 mismatch: wrote %v, read %v", v, v2)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("read/writeUint16: mismatch (-wrote +read)\n%s", d)
 	}
 }
 
@@ -26,8 +29,8 @@ func TestUint32(t *testing.T) {
 	writeUint32(&buf, v)
 	var v2 uint32
 	readUint32(&buf, &v2)
-	if v != v2 {
-		t.Errorf("read/writeUint32 mismatch: wrote %v, read %v", v, v2)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("read/writeUint32: mismatch (-wrote +read)\n%s", d)
 	}
 }
 
@@ -44,8 +47,8 @@ func TestHeader(t *testing.T) {
 	v.serialize(&buf)
 	var v2 Header
 	v2.deserialize(buf.Bytes(), &buf)
-	if v != v2 {
-		t.Errorf("header (de)serialize mismatch: wrote %v, read %v", v, v2)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("header (de)serialize: mismatch (-serialize +deserialize)\n%s", d)
 	}
 }
 
@@ -55,8 +58,8 @@ func TestDomain(t *testing.T) {
 	writeDomain(&buf, v)
 	var v2 string
 	readDomain(buf.Bytes(), &buf, &v2)
-	if v != v2 {
-		t.Errorf("read/writeDomain mismatch: wrote %v, read %v", v, v2)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("read/writeDomain: mismatch (-wrote +read)\n%s", d)
 	}
 }
 
@@ -70,21 +73,9 @@ func TestQuestion(t *testing.T) {
 	v.serialize(&buf)
 	var v2 Question
 	v2.deserialize(buf.Bytes(), &buf)
-	if v != v2 {
-		t.Errorf("question (de)serialize mismatch: wrote %v, read %v", v, v2)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("question (de)serialize: mismatch (-serialize +deserialize)\n%s", d)
 	}
-}
-
-func equalBytes(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, ai := range a {
-		if ai != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func TestRecord(t *testing.T) {
@@ -100,22 +91,25 @@ func TestRecord(t *testing.T) {
 	v.serialize(&buf)
 	var v2 Record
 	v2.deserialize(buf.Bytes(), &buf)
-	if v.Domain != v2.Domain {
-		t.Errorf("record (de)serialize mismatch (domain): wrote %v, read %v", v.Domain, v2.Domain)
+	if d := cmp.Diff(v, v2); d != "" {
+		t.Errorf("record (de)serialize: mismatch (-serialize +deserialize)\n%s", d)
 	}
-	if v.Type != v2.Type {
-		t.Errorf("record (de)serialize mismatch (type): wrote %v, read %v", v.Type, v2.Type)
+}
+
+func TestIPToSend(t *testing.T) {
+	m := MDNS{}
+	got := m.ipToSend()
+	// Should send to the default address.
+	want := net.ParseIP("224.0.0.251")
+	if d := cmp.Diff(want, got); d != "" {
+		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
 	}
-	if v.Class != v2.Class {
-		t.Errorf("record (de)serialize mismatch (class): wrote %v, read %v", v.Class, v2.Class)
-	}
-	if v.Flush != v2.Flush {
-		t.Errorf("record (de)serialize mismatch (flush): wrote %v, read %v", v.Flush, v2.Flush)
-	}
-	if v.TTL != v2.TTL {
-		t.Errorf("record (de)serialize mismatch (ttl): wrote %v, read %v", v.TTL, v2.TTL)
-	}
-	if !equalBytes(v.Data, v2.Data) {
-		t.Errorf("record (de)serialize mismatch (data): wrote %v, read %v", v.Data, v2.Data)
+
+	m = MDNS{Address: "11.22.33.44"}
+	got = m.ipToSend()
+	// Should send to the given custom address.
+	want = net.ParseIP("11.22.33.44")
+	if d := cmp.Diff(want, got); d != "" {
+		t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
 	}
 }

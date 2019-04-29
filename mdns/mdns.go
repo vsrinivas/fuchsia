@@ -396,10 +396,20 @@ const (
 type MDNS struct {
 	conn      *ipv4.PacketConn
 	senders   []net.PacketConn
+	Address   string
 	port      int
 	pHandlers []func(net.Interface, net.Addr, Packet)
 	wHandlers []func(net.Addr, error)
 	eHandlers []func(error)
+}
+
+var defaultMDNSMulticastIPv4 = net.ParseIP("224.0.0.251")
+
+func (m *MDNS) ipToSend() net.IP {
+	if m.Address == "" {
+		return defaultMDNSMulticastIPv4
+	}
+	return net.ParseIP(m.Address)
 }
 
 // AddHandler calls f on every Packet received.
@@ -437,13 +447,11 @@ func (m *MDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
 	return nil
 }
 
-var mdnsMulticastIPv4 = net.ParseIP("224.0.0.251")
-
 // Send serializes and sends packet out as a multicast to all interfaces
 // using the port that m is listening on. Note that Start must be
 // called prior to making this call.
 func (m *MDNS) Send(packet Packet) error {
-	dst := net.UDPAddr{IP: mdnsMulticastIPv4, Port: m.port}
+	dst := net.UDPAddr{IP: m.ipToSend(), Port: m.port}
 	return m.SendTo(packet, &dst)
 }
 
@@ -482,7 +490,7 @@ func makeUnixIpv4Socket(port int, ip net.IP) (net.PacketConn, error) {
 // Start causes m to start listening for MDNS packets on all interfaces on
 // the specified port. Listening will stop if ctx is done.
 func (m *MDNS) Start(ctx context.Context, port int) error {
-	dst := &net.UDPAddr{IP: mdnsMulticastIPv4, Port: port}
+	dst := &net.UDPAddr{IP: m.ipToSend(), Port: port}
 	conn, err := net.ListenUDP("udp4", dst)
 	if err != nil {
 		return err
