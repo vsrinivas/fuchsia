@@ -4,7 +4,6 @@
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/testing/environments.gni")
 
 source_set("lib") {
   visibility = [ ":*" ]
