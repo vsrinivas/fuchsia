@@ -251,9 +251,10 @@ std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
   }
 
   zx::job job;
-  if (zx::job::create(*parent_job, 0u, &job) != ZX_OK) {
-    FXL_LOG(ERROR) << "Job creation failed. Cannot create realm '"
-                   << args.label;
+  auto status = zx::job::create(*parent_job, 0u, &job);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Job creation failed (" << zx_status_get_string(status)
+                   << "). Cannot create realm '" << args.label << "'";
     return nullptr;
   }
 
@@ -273,8 +274,10 @@ Realm::Realm(RealmArgs args, zx::job job)
       delete_storage_on_death_(args.options.delete_storage_on_death) {
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
-    FXL_CHECK(zx::channel::create(0, &first_nested_realm_svc_server_,
-                                  &first_nested_realm_svc_client_) == ZX_OK);
+    auto status = zx::channel::create(0, &first_nested_realm_svc_server_,
+                                      &first_nested_realm_svc_client_);
+    FXL_CHECK(status == ZX_OK)
+        << "Cannot create channel: " << zx_status_get_string(status);
   }
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
