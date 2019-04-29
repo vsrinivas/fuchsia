@@ -5,16 +5,16 @@
 #include "lib/fsl/io/device_watcher.h"
 
 #include <dirent.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <utility>
-
 #include <fbl/unique_fd.h>
+#include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/fdio.h>
+#include <sys/types.h>
 #include <zircon/device/vfs.h>
+
+#include <utility>
 
 #include "src/lib/fxl/logging.h"
 
@@ -35,13 +35,13 @@ DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
 }
 
 std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(
-    std::string directory_path, ExistsCallback exists_callback) {
+    const std::string& directory_path, ExistsCallback exists_callback) {
   return CreateWithIdleCallback(directory_path, std::move(exists_callback),
                                 [] {});
 }
 
 std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
-    std::string directory_path, ExistsCallback exists_callback,
+    const std::string& directory_path, ExistsCallback exists_callback,
     IdleCallback idle_callback) {
   // Open the directory.
   int open_result = open(directory_path.c_str(), O_DIRECTORY | O_RDONLY);
@@ -56,11 +56,11 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
     return nullptr;
   }
   fzl::FdioCaller caller{std::move(dir_fd)};
-  uint32_t mask =
-      fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
+  uint32_t mask = fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING |
+                  fuchsia_io_WATCH_MASK_IDLE;
   zx_status_t status;
-  zx_status_t io_status = fuchsia_io_DirectoryWatch(caller.borrow_channel(),
-                                                    mask, 0, server.release(), &status);
+  zx_status_t io_status = fuchsia_io_DirectoryWatch(
+      caller.borrow_channel(), mask, 0, server.release(), &status);
   if (io_status != ZX_OK || status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", status=" << status;
@@ -96,7 +96,8 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
       if (size < (namelen + 2u)) {
         break;
       }
-      if ((event == fuchsia_io_WATCH_EVENT_ADDED) || (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
+      if ((event == fuchsia_io_WATCH_EVENT_ADDED) ||
+          (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
         exists_callback_(dir_fd_.get(),
                          std::string(reinterpret_cast<char*>(msg), namelen));
       } else if (event == fuchsia_io_WATCH_EVENT_IDLE) {

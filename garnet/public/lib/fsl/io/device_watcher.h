@@ -28,7 +28,8 @@ class FXL_EXPORT DeviceWatcher {
   // Callback function which is invoked whenever a device is found.
   // |dir_fd| is the file descriptor of the directory (use for openat()).
   // |filename| is the name of the file relative to the directory.
-  using ExistsCallback = fit::function<void(int dir_fd, std::string filename)>;
+  using ExistsCallback =
+      fit::function<void(int dir_fd, const std::string& filename)>;
   // Callback function which is invoked after the existing files have been
   // reported via ExistsCallback, and before newly-arriving files are delivered
   // via ExistsCallback.
@@ -49,8 +50,8 @@ class FXL_EXPORT DeviceWatcher {
   //
   // |exists_callback| gets called with each existing or new filename, or with
   // an empty string after existing files if empty_after_existing is true.
-  static std::unique_ptr<DeviceWatcher> Create(std::string directory_path,
-                                               ExistsCallback exists_callback);
+  static std::unique_ptr<DeviceWatcher> Create(
+      const std::string& directory_path, ExistsCallback exists_callback);
 
   // Creates a device watcher associated with the current message loop.
   //
@@ -74,7 +75,7 @@ class FXL_EXPORT DeviceWatcher {
   // |idle_callback| will be deleted after it is called, so captured context
   // is guaranteed to not be retained.
   static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(
-      std::string directory_path, ExistsCallback exists_callback,
+      const std::string& directory_path, ExistsCallback exists_callback,
       IdleCallback idle_callback);
 
  private:
