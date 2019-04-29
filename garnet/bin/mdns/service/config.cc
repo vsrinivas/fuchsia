@@ -22,6 +22,16 @@ const char kSchema[] = R"({
       "minimum": 1,
       "maximum": 65535
     },
+    "v4_multicast_address": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 15
+    },
+    "v6_multicast_address": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 39
+    },
     "perform_host_name_probe": {
       "type": "boolean"
     },
@@ -33,10 +43,12 @@ const char kSchema[] = R"({
         "properties": {
           "service": {
             "type": "string",
+            "minLength": 8,
             "maxLength": 22
           },
           "instance": {
             "type": "string",
+            "minLength": 1,
             "maxLength": 63
           },
           "port": {
@@ -61,11 +73,13 @@ const char kSchema[] = R"({
   }
 })";
 
+const char kPortKey[] = "port";
+const char kV4MultcastAddressKey[] = "v4_multicast_address";
+const char kV6MultcastAddressKey[] = "v6_multicast_address";
 const char kPerformHostNameProbeKey[] = "perform_host_name_probe";
 const char kPublicationsKey[] = "publications";
 const char kServiceKey[] = "service";
 const char kInstanceKey[] = "instance";
-const char kPortKey[] = "port";
 const char kTextKey[] = "text";
 const char kPerformProbeKey[] = "perform_probe";
 
@@ -98,7 +112,40 @@ void Config::IntegrateDocument(const rapidjson::Document& document,
     FXL_DCHECK(document[kPortKey].IsUint());
     FXL_DCHECK(document[kPortKey].GetUint() >= 1);
     FXL_DCHECK(document[kPortKey].GetUint() <= 65535);
-    mdns_port_ = inet::IpPort::From_uint16_t(document[kPortKey].GetUint());
+    addresses_.SetPort(
+        inet::IpPort::From_uint16_t(document[kPortKey].GetUint()));
+  }
+
+  if (document.HasMember(kV4MultcastAddressKey)) {
+    FXL_DCHECK(document[kV4MultcastAddressKey].IsString());
+    auto address = inet::IpAddress::FromString(
+        document[kV4MultcastAddressKey].GetString(), AF_INET);
+    if (!address.is_valid()) {
+      parser_.ReportError((std::stringstream()
+                           << kV4MultcastAddressKey << " value "
+                           << document[kV4MultcastAddressKey].GetString()
+                           << " is not a valid IPV4 address.")
+                              .str());
+      return;
+    }
+
+    addresses_.SetMulticastAddress(address);
+  }
+
+  if (document.HasMember(kV6MultcastAddressKey)) {
+    FXL_DCHECK(document[kV6MultcastAddressKey].IsString());
+    auto address = inet::IpAddress::FromString(
+        document[kV6MultcastAddressKey].GetString(), AF_INET6);
+    if (!address.is_valid()) {
+      parser_.ReportError((std::stringstream()
+                           << kV6MultcastAddressKey << " value "
+                           << document[kV6MultcastAddressKey].GetString()
+                           << " is not a valid IPV6 address.")
+                              .str());
+      return;
+    }
+
+    addresses_.SetMulticastAddress(address);
   }
 
   if (document.HasMember(kPerformHostNameProbeKey)) {

@@ -6,33 +6,26 @@
 
 namespace mdns {
 
+void MdnsAddresses::SetPort(inet::IpPort port) { port_ = port; }
+
+void MdnsAddresses::SetMulticastAddress(inet::IpAddress address) {
+  FXL_DCHECK(address.is_valid());
+  if (address.is_v4()) {
+    v4_multicast_ = address;
+  } else {
+    FXL_DCHECK(address.is_v6());
+    v6_multicast_ = address;
+  }
+}
+
 // static
 const inet::IpPort MdnsAddresses::kDefaultMdnsPort =
     inet::IpPort::From_uint16_t(5353);
 
 // static
-inet::SocketAddress MdnsAddresses::V4Multicast(inet::IpPort port) {
-  return inet::SocketAddress(224, 0, 0, 251, port);
-}
+const inet::IpAddress MdnsAddresses::kDefaultV4MulticastAddress(224, 0, 0, 251);
 
 // static
-inet::SocketAddress MdnsAddresses::V6Multicast(inet::IpPort port) {
-  return inet::SocketAddress(0xff02, 0xfb, port);
-}
-
-// static
-inet::SocketAddress MdnsAddresses::V4Bind(inet::IpPort port) {
-  return inet::SocketAddress(INADDR_ANY, port);
-}
-
-// static
-inet::SocketAddress MdnsAddresses::V6Bind(inet::IpPort port) {
-  return inet::SocketAddress(in6addr_any, port);
-}
-
-// static
-ReplyAddress MdnsAddresses::V4MulticastReply(inet::IpPort port) {
-  return ReplyAddress(V4Multicast(port), inet::IpAddress());
-}
+const inet::IpAddress MdnsAddresses::kDefaultV6MulticastAddress(0xff02, 0xfb);
 
 }  // namespace mdns

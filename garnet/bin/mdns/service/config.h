@@ -34,24 +34,24 @@ class Config {
                        const std::string& config_dir = kConfigDir);
 
   // Indicates whether the configuration is valid.
-  bool valid() { return !parser_.HasError(); }
+  bool valid() const { return !parser_.HasError(); }
 
   // Returns a string describing the error if |valid()| returns true, otherwise
   // an empty string.
-  std::string error() { return parser_.error_str(); }
-
-  // Returns the port to use for mDNS multicast communication (normally 5353).
-  inet::IpPort mdns_port() { return mdns_port_; }
+  std::string error() const { return parser_.error_str(); }
 
   // Indicates whether a probe should be performed for the hostname.
-  bool perform_host_name_probe() {
+  bool perform_host_name_probe() const {
     return perform_host_name_probe_.has_value()
                ? perform_host_name_probe_.value()
                : true;
   }
 
   // Gets the publications.
-  const std::vector<Publication>& publications() { return publications_; }
+  const std::vector<Publication>& publications() const { return publications_; }
+
+  // Gets the mDNS addresses.
+  const MdnsAddresses& addresses() const { return addresses_; }
 
  private:
   static const char kConfigDir[];
@@ -70,9 +70,9 @@ class Config {
   void SetPerformHostNameProbe(bool perform_host_name_probe);
 
   json::JSONParser parser_;
-  inet::IpPort mdns_port_ = MdnsAddresses::kDefaultMdnsPort;
   std::optional<bool> perform_host_name_probe_;
   std::vector<Publication> publications_;
+  MdnsAddresses addresses_;
 };
 
 }  // namespace mdns

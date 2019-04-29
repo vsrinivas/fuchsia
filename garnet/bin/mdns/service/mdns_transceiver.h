@@ -29,8 +29,8 @@ class MdnsTransceiver {
   ~MdnsTransceiver();
 
   // Starts the transceiver.
-  void Start(fuchsia::netstack::NetstackPtr netstack, inet::IpPort mdns_port,
-             fit::closure link_change_callback,
+  void Start(fuchsia::netstack::NetstackPtr netstack,
+             const MdnsAddresses& addresses, fit::closure link_change_callback,
              InboundMessageCallback inbound_message_callback);
 
   // Stops the transceiver.
@@ -66,7 +66,7 @@ class MdnsTransceiver {
                          std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
   fuchsia::netstack::NetstackPtr netstack_;
-  inet::IpPort mdns_port_;
+  const MdnsAddresses* addresses_;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;

@@ -75,7 +75,7 @@ void ResourceRenewer::SendRenewals() {
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
       SendResource(resource, MdnsResourceSection::kExpired,
-                   MdnsAddresses::V4MulticastReply(mdns_port()));
+                   addresses().multicast_reply());
       EraseEntry(entry);
     } else {
       // Need to query.

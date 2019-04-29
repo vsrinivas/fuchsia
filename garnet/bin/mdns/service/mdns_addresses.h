@@ -5,23 +5,58 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_ADDRESSES_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_ADDRESSES_H_
 
-#include <memory>
-#include <vector>
-
 #include "garnet/bin/mdns/service/reply_address.h"
 #include "garnet/lib/inet/socket_address.h"
 
 namespace mdns {
 
-struct MdnsAddresses {
+class MdnsAddresses {
+ public:
+  // Sets the port to use. The default is 5353.
+  void SetPort(inet::IpPort port);
+
+  // Sets the V4 or V6 multicast IP address to use. The default for V4 is
+  // 244.0.0.251. The default for V6 is ff02::fb.
+  void SetMulticastAddress(inet::IpAddress address);
+
+  // Gets the mDNS port.
+  inet::IpPort port() const { return port_; }
+
+  // Gets the V4 multicast socket address.
+  inet::SocketAddress v4_multicast() const {
+    return inet::SocketAddress(v4_multicast_, port_);
+  }
+
+  // Gets the V6 multicast socket address.
+  inet::SocketAddress v6_multicast() const {
+    return inet::SocketAddress(v6_multicast_, port_);
+  }
+
+  // Gets the V4 socket address to bind to.
+  inet::SocketAddress v4_bind() const {
+    return inet::SocketAddress(INADDR_ANY, port_);
+  }
+
+  // Gets the V6 socket address to bind to.
+  inet::SocketAddress v6_bind() const {
+    return inet::SocketAddress(in6addr_any, port_);
+  }
+
+  // Gets the placeholder multicast reply address. This address is used when
+  // sending messages and represents the appropriate reply address based on
+  // context.
+  ReplyAddress multicast_reply() const {
+    return ReplyAddress(v4_multicast(), inet::IpAddress());
+  }
+
+ private:
   static const inet::IpPort kDefaultMdnsPort;
+  static const inet::IpAddress kDefaultV4MulticastAddress;
+  static const inet::IpAddress kDefaultV6MulticastAddress;
 
-  static inet::SocketAddress V4Multicast(inet::IpPort port);
-  static inet::SocketAddress V6Multicast(inet::IpPort port);
-  static inet::SocketAddress V4Bind(inet::IpPort port);
-  static inet::SocketAddress V6Bind(inet::IpPort port);
-
-  static ReplyAddress V4MulticastReply(inet::IpPort port);
+  inet::IpPort port_ = kDefaultMdnsPort;
+  inet::IpAddress v4_multicast_ = kDefaultV4MulticastAddress;
+  inet::IpAddress v6_multicast_ = kDefaultV6MulticastAddress;
 };
 
 }  // namespace mdns

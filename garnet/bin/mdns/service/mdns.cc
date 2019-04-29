@@ -37,7 +37,7 @@ void Mdns::SetVerbose(bool verbose) {
 }
 
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
-                 const std::string& host_name, inet::IpPort mdns_port,
+                 const std::string& host_name, const MdnsAddresses& addresses,
                  bool perform_address_probe, fit::closure ready_callback) {
   FXL_DCHECK(!host_name.empty());
   FXL_DCHECK(ready_callback);
@@ -47,7 +47,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
   state_ = State::kWaitingForInterfaces;
 
   original_host_name_ = host_name;
-  mdns_port_ = mdns_port;
+  addresses_ = &addresses;
 
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
@@ -56,7 +56,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
   AddAgent(std::make_shared<AddressResponder>(this));
 
   transceiver_.Start(
-      std::move(netstack), mdns_port,
+      std::move(netstack), *addresses_,
       [this, perform_address_probe]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we
@@ -81,11 +81,11 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
           // the question or if the sender's port isn't 5353.
-          ReceiveQuestion(*question,
-                          (question->unicast_response_ ||
-                           reply_address.socket_address().port() != mdns_port_)
-                              ? reply_address
-                              : MdnsAddresses::V4MulticastReply(mdns_port_));
+          ReceiveQuestion(*question, (question->unicast_response_ ||
+                                      reply_address.socket_address().port() !=
+                                          addresses_->port())
+                                         ? reply_address
+                                         : addresses_->multicast_reply());
         }
 
         for (auto& resource : message->answers_) {
@@ -213,7 +213,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   // We don't use |AddAgent| here, because agents added that way don't
   // actually participate until we're done probing for host name conflicts.
   agents_.emplace(address_prober.get(), address_prober);
-  address_prober->Start(host_full_name_, mdns_port_);
+  address_prober->Start(host_full_name_, *addresses_);
   SendMessages();
 }
 
@@ -232,7 +232,7 @@ void Mdns::OnReady() {
 
   // |resource_renewer_| doesn't need to be started, but we do it
   // anyway in case that changes.
-  resource_renewer_->Start(host_full_name_, mdns_port_);
+  resource_renewer_->Start(host_full_name_, *addresses_);
 
   for (auto agent : agents_awaiting_start_) {
     AddAgent(agent);
@@ -264,8 +264,7 @@ void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task,
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FXL_DCHECK(question);
   DnsMessage& message =
-      outbound_messages_by_reply_address_[MdnsAddresses::V4MulticastReply(
-          mdns_port_)];
+      outbound_messages_by_reply_address_[addresses_->multicast_reply()];
   message.questions_.push_back(question);
 }
 
@@ -347,7 +346,7 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
     agents_.emplace(agent.get(), agent);
     FXL_DCHECK(!host_full_name_.empty());
-    agent->Start(host_full_name_, mdns_port_);
+    agent->Start(host_full_name_, *addresses_);
     SendMessages();
   } else {
     agents_awaiting_start_.push_back(agent);
@@ -408,7 +407,7 @@ void Mdns::SendMessages() {
 
 #ifdef MDNS_TRACE
     if (verbose_) {
-      if (reply_address == MdnsAddresses::V4MulticastReply(mdns_port_)) {
+      if (reply_address == addresses_->multicast_reply()) {
         FXL_LOG(INFO) << "Outbound message (multicast): " << message;
       } else {
         FXL_LOG(INFO) << "Outbound message to " << reply_address << ":"

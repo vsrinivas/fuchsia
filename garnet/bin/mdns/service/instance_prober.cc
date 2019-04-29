@@ -29,8 +29,7 @@ void InstanceProber::SendProposedResources(MdnsResourceSection section) {
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->srv_.port_ = port_;
   srv_resource->srv_.target_ = host_full_name();
-  SendResource(srv_resource, section,
-               MdnsAddresses::V4MulticastReply(mdns_port()));
+  SendResource(srv_resource, section, addresses().multicast_reply());
 }
 
 }  // namespace mdns

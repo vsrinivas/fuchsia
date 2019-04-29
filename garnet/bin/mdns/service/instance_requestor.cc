@@ -39,8 +39,8 @@ void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
 }
 
 void InstanceRequestor::Start(const std::string& host_full_name,
-                              inet::IpPort mdns_port) {
-  MdnsAgent::Start(host_full_name, mdns_port);
+                              const MdnsAddresses& addresses) {
+  MdnsAgent::Start(host_full_name, addresses);
   SendQuery();
 }
 

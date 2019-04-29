@@ -15,10 +15,10 @@ AddressResponder::AddressResponder(MdnsAgent::Host* host) : MdnsAgent(host) {}
 AddressResponder::~AddressResponder() {}
 
 void AddressResponder::Start(const std::string& host_full_name,
-                             inet::IpPort mdns_port) {
+                             const MdnsAddresses& addresses) {
   FXL_DCHECK(!host_full_name.empty());
 
-  MdnsAgent::Start(host_full_name, mdns_port);
+  MdnsAgent::Start(host_full_name, addresses);
   host_full_name_ = host_full_name;
 }
 

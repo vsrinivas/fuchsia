@@ -42,7 +42,8 @@ class Prober : public MdnsAgent {
   ~Prober() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name, inet::IpPort mdns_port) final;
+  void Start(const std::string& host_full_name,
+             const MdnsAddresses& addresses) final;
 
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) final;

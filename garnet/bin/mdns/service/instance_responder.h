@@ -29,7 +29,7 @@ class InstanceResponder : public MdnsAgent {
 
   // MdnsAgent overrides.
   void Start(const std::string& host_full_name,
-             inet::IpPort mdns_port) override;
+             const MdnsAddresses& addresses) override;
 
   void ReceiveQuestion(const DnsQuestion& question,
                        const ReplyAddress& reply_address) override;

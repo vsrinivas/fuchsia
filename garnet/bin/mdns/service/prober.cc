@@ -23,10 +23,11 @@ Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
 
 Prober::~Prober() {}
 
-void Prober::Start(const std::string& host_full_name, inet::IpPort mdns_port) {
+void Prober::Start(const std::string& host_full_name,
+                   const MdnsAddresses& addresses) {
   FXL_DCHECK(!host_full_name.empty());
 
-  MdnsAgent::Start(host_full_name, mdns_port);
+  MdnsAgent::Start(host_full_name, addresses);
 
   host_full_name_ = host_full_name;
 

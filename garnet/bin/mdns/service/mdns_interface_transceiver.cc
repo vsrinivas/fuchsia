@@ -48,15 +48,15 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address,
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-bool MdnsInterfaceTransceiver::Start(inet::IpPort mdns_port,
+bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
                                      InboundMessageCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  mdns_port_ = mdns_port;
+  addresses_ = &addresses;
 
   std::cerr << "Starting mDNS on interface " << name_ << " " << address_
-            << " using port " << mdns_port_ << "\n";
+            << " using port " << addresses.port() << "\n";
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -98,7 +98,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   FXL_DCHECK(message);
   FXL_DCHECK(address.is_valid());
   FXL_DCHECK(address.family() == address_.family() ||
-             address == MdnsAddresses::V4Multicast(mdns_port_));
+             address == addresses_->v4_multicast());
 
   FixUpAddresses(&message->answers_);
   FixUpAddresses(&message->authorities_);
@@ -125,7 +125,7 @@ void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   DnsMessage message;
   message.answers_.push_back(GetAddressResource(host_full_name));
 
-  SendMessage(&message, MdnsAddresses::V4Multicast(mdns_port_));
+  SendMessage(&message, addresses_->v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::SendAddressGoodbye(
@@ -135,7 +135,7 @@ void MdnsInterfaceTransceiver::SendAddressGoodbye(
   message.answers_.push_back(MakeAddressResource(host_full_name, address_));
   message.answers_.back()->time_to_live_ = 0;
 
-  SendMessage(&message, MdnsAddresses::V4Multicast(mdns_port_));
+  SendMessage(&message, addresses_->v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::LogTraffic() {

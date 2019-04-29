@@ -35,7 +35,7 @@ int MdnsInterfaceTransceiverV4::SetOptionDisableMulticastLoop() {
 int MdnsInterfaceTransceiverV4::SetOptionJoinMulticastGroup() {
   ip_mreqn param;
   param.imr_multiaddr.s_addr =
-      MdnsAddresses::V4Multicast(mdns_port()).as_sockaddr_in().sin_addr.s_addr;
+      addresses().v4_multicast().as_sockaddr_in().sin_addr.s_addr;
   param.imr_address = address().as_in_addr();
   param.imr_ifindex = index();
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_ADD_MEMBERSHIP,
@@ -95,9 +95,8 @@ int MdnsInterfaceTransceiverV4::SetOptionFamilySpecific() {
 }
 
 int MdnsInterfaceTransceiverV4::Bind() {
-  int result =
-      bind(socket_fd().get(), MdnsAddresses::V4Bind(mdns_port()).as_sockaddr(),
-           MdnsAddresses::V4Bind(mdns_port()).socklen());
+  int result = bind(socket_fd().get(), addresses().v4_bind().as_sockaddr(),
+                    addresses().v4_bind().socklen());
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to bind socket to V4 address, "
                    << strerror(errno);

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "garnet/bin/mdns/service/dns_message.h"
+#include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/reply_address.h"
 #include "garnet/lib/inet/ip_address.h"
 #include "garnet/lib/inet/socket_address.h"
@@ -44,7 +45,7 @@ class MdnsInterfaceTransceiver {
   uint32_t index() const { return index_; }
 
   // Starts the interface transceiver.
-  bool Start(inet::IpPort mdns_port, InboundMessageCallback callback);
+  bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback);
 
   // Stops the interface transceiver.
   void Stop();
@@ -77,7 +78,10 @@ class MdnsInterfaceTransceiver {
                            uint32_t index);
 
   const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
-  inet::IpPort mdns_port() const { return mdns_port_; }
+  const MdnsAddresses& addresses() const {
+    FXL_DCHECK(addresses_);
+    return *addresses_;
+  }
 
   virtual int SetOptionDisableMulticastLoop() = 0;
   virtual int SetOptionJoinMulticastGroup() = 0;
@@ -124,7 +128,7 @@ class MdnsInterfaceTransceiver {
   fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
-  inet::IpPort mdns_port_;
+  const MdnsAddresses* addresses_;
   InboundMessageCallback inbound_message_callback_;
   std::shared_ptr<DnsResource> address_resource_;
   std::shared_ptr<DnsResource> alternate_address_resource_;

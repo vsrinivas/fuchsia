@@ -65,8 +65,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // the agent is created, so |shared_from_this| is safe to call.
   // Specializations should call this method first.
   virtual void Start(const std::string& host_full_name,
-                     inet::IpPort mdns_port) {
-    mdns_port_ = mdns_port;
+                     const MdnsAddresses& addresses) {
+    addresses_ = &addresses;
   }
 
   // Presents a received question. This agent must not call |RemoveSelf| during
@@ -90,7 +90,10 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  protected:
   MdnsAgent(Host* host) : host_(host) { FXL_DCHECK(host_); }
 
-  inet::IpPort mdns_port() const { return mdns_port_; }
+  const MdnsAddresses& addresses() const {
+    FXL_DCHECK(addresses_);
+    return *addresses_;
+  }
 
   // Posts a task to be executed at the specified time. Scheduled tasks posted
   // by agents that have since been removed are not executed.
@@ -137,7 +140,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
  private:
   Host* host_;
-  inet::IpPort mdns_port_;
+  const MdnsAddresses* addresses_;
 };
 
 }  // namespace mdns
