@@ -4,6 +4,11 @@
 
 library fuchsia.sys.index;
 
+/// Errors that the FuzzySearch interface presents.
+enum FuzzySearchError : uint32 {
+    MALFORMED_INPUT = 1;
+};
+
 /// ComponentIndex provides search and indexing interfaces for components.
 [Discoverable]
 protocol ComponentIndex {
@@ -16,5 +21,5 @@ protocol ComponentIndex {
     /// segments. There is no support for globbing.
     ///
     /// Returns an empty list if there are no matches, or if needle is empty.
-    FuzzySearch(string needle) -> (vector<string> uris);
+    FuzzySearch(string needle) -> (vector<string> uris) error FuzzySearchError;
 };

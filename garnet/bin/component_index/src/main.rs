@@ -5,7 +5,9 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_sys_index::{ComponentIndexRequest, ComponentIndexRequestStream};
+use fidl_fuchsia_sys_index::{
+    ComponentIndexRequest, ComponentIndexRequestStream, FuzzySearchError,
+};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
@@ -19,18 +21,14 @@ async fn run_fuzzy_search_server(
     while let Some(ComponentIndexRequest::FuzzySearch { needle, responder }) =
         await!(stream.try_next()).context("Error serving fuzzy search")?
     {
-        let mut ret = vec![];
-
-        if check_needle(&needle) {
-            let mut iter = index.iter();
-            while let Some(c) = iter.next() {
-                if c.contains(&needle) {
-                    ret.push(c.as_str());
-                }
-            }
+        if !check_needle(&needle) {
+            responder
+                .send(&mut Err(FuzzySearchError::MalformedInput))
+                .context("error sending response")?;
+        } else {
+            let res: Vec<String> = index.iter().filter(|c| c.contains(&needle)).cloned().collect();
+            responder.send(&mut Ok(res)).context("error sending response")?;
         }
-
-        responder.send(&mut ret.into_iter()).context("error sending response")?;
     }
     Ok(())
 }
