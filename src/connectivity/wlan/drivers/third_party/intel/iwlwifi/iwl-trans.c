@@ -37,31 +37,26 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
-#if 0   // NEEDS_PORTING
-struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
-                                  const struct iwl_cfg* cfg, const struct iwl_trans_ops* ops) {
+struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
+                                  const struct iwl_trans_ops* ops) {
     struct iwl_trans* trans;
 #ifdef CONFIG_LOCKDEP
     static struct lock_class_key __key;
 #endif
 
-    trans = devm_kzalloc(dev, sizeof(*trans) + priv_size, GFP_KERNEL);
-    if (!trans) { return NULL; }
+    trans = calloc(1, sizeof(*trans) + priv_size);
+    if (!trans) {
+        IWL_ERR(trans, "Failed to allocate transport\n");
+        return NULL;
+    }
 
 #ifdef CONFIG_LOCKDEP
     lockdep_init_map(&trans->sync_cmd_lockdep_map, "sync_cmd_lockdep_map", &__key, 0);
 #endif
 
-    trans->dev = dev;
     trans->cfg = cfg;
     trans->ops = ops;
     trans->num_rx_queues = 1;
-
-    snprintf(trans->dev_cmd_pool_name, sizeof(trans->dev_cmd_pool_name), "iwl_cmd_pool:%s",
-             dev_name(trans->dev));
-    trans->dev_cmd_pool = kmem_cache_create(trans->dev_cmd_pool_name, sizeof(struct iwl_device_cmd),
-                                            sizeof(void*), SLAB_HWCACHE_ALIGN, NULL);
-    if (!trans->dev_cmd_pool) { return NULL; }
 
     WARN_ON(!ops->wait_txq_empty && !ops->wait_tx_queues_empty);
 
@@ -69,9 +64,10 @@ struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
 }
 
 void iwl_trans_free(struct iwl_trans* trans) {
-    kmem_cache_destroy(trans->dev_cmd_pool);
+    free(trans);
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
     int ret;
 

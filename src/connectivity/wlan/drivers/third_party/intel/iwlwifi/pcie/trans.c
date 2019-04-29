@@ -33,31 +33,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/bitops.h>
-#include <linux/debugfs.h>
-#include <linux/gfp.h>
-#include <linux/interrupt.h>
-#include <linux/module.h>
-#include <linux/pci-aspm.h>
-#include <linux/pci.h>
-#include <linux/pm_runtime.h>
-#include <linux/sched.h>
-#include <linux/vmalloc.h>
-#include <linux/wait.h>
+#include <zircon/syscalls.h>
 
-#include "fw/dbg.h"
-#include "fw/error-dump.h"
-#include "internal.h"
-#include "iwl-agn-hw.h"
-#include "iwl-constants.h"
-#include "iwl-csr.h"
-#include "iwl-drv.h"
-#include "iwl-fh.h"
-#include "iwl-prph.h"
-#include "iwl-scd.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-constants.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
 #endif
 
 /* extended range in FW SRAM */
@@ -65,6 +55,7 @@
 #define IWL_FW_MEM_EXTENDED_END 0x57FFF
 
 void iwl_trans_pcie_dump_regs(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
 #define PCI_DUMP_SIZE 64
 #define PREFIX_LEN 32
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -139,14 +130,17 @@ err_read:
 out:
     trans_pcie->pcie_dbg_dumped_once = 1;
     kfree(buf);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_sw_reset(struct iwl_trans* trans) {
     /* Reset entire device - do controller reset (results in SHRD_HW_RST) */
     iwl_set_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_sw_reset));
-    usleep_range(5000, 6000);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(6)));
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_pcie_free_fw_monitor(struct iwl_trans* trans) {
     int i;
 
@@ -159,9 +153,11 @@ static void iwl_pcie_free_fw_monitor(struct iwl_trans* trans) {
         trans->num_blocks--;
     }
 }
+#endif // NEEDS_PORTING
 
 static void iwl_pcie_alloc_fw_monitor_block(struct iwl_trans* trans, uint8_t max_power,
                                             uint8_t min_power) {
+#if 0  // NEEDS_PORTING
     void* cpu_addr = NULL;
     dma_addr_t phys = 0;
     uint32_t size = 0;
@@ -187,6 +183,8 @@ static void iwl_pcie_alloc_fw_monitor_block(struct iwl_trans* trans, uint8_t max
     trans->fw_mon[trans->num_blocks].physical = phys;
     trans->fw_mon[trans->num_blocks].size = size;
     trans->num_blocks++;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power) {
@@ -197,8 +195,9 @@ void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power) {
         max_power += 11;
     }
 
-    if (WARN(max_power > 26, "External buffer size for monitor is too big %d, check the FW TLV\n",
-             max_power)) {
+    if (max_power > 26) {
+        IWL_WARN(iwl_trans, "External buffer size for monitor is too big %d, check the FW TLV\n",
+                 max_power);
         return;
     }
 
@@ -211,6 +210,7 @@ void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power) {
     iwl_pcie_alloc_fw_monitor_block(trans, max_power, 11);
 }
 
+#if 0  // NEEDS_PORTING
 static uint32_t iwl_trans_pcie_read_shr(struct iwl_trans* trans, uint32_t reg) {
     iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG, ((reg & 0x0000ffff) | (2 << 28)));
     return iwl_read32(trans, HEEP_CTRL_WRD_PCIEX_DATA_REG);
@@ -231,11 +231,13 @@ static void iwl_pcie_set_pwr(struct iwl_trans* trans, bool vaux) {
         iwl_set_bits_mask_prph(trans, APMG_PS_CTRL_REG, APMG_PS_CTRL_VAL_PWR_SRC_VMAIN,
                                ~APMG_PS_CTRL_MSK_PWR_SRC);
 }
+#endif // NEEDS_PORTING
 
 /* PCI registers */
 #define PCI_CFG_RETRY_TIMEOUT 0x041
 
 void iwl_pcie_apm_config(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint16_t lctl;
     uint16_t cap;
@@ -261,6 +263,8 @@ void iwl_pcie_apm_config(struct iwl_trans* trans) {
     IWL_DEBUG_POWER(trans, "L1 %sabled - LTR %sabled\n",
                     (lctl & PCI_EXP_LNKCTL_ASPM_L1) ? "En" : "Dis",
                     trans->ltr_enabled ? "En" : "Dis");
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 /*
@@ -268,6 +272,7 @@ void iwl_pcie_apm_config(struct iwl_trans* trans) {
  * (e.g. after platform boot, or shutdown via iwl_pcie_apm_stop())
  * NOTE:  This does not load uCode nor start the embedded processor
  */
+#if 0   // NEEDS_PORTING
 static int iwl_pcie_apm_init(struct iwl_trans* trans) {
     int ret;
 
@@ -354,7 +359,7 @@ static int iwl_pcie_apm_init(struct iwl_trans* trans) {
      */
     if (!trans->cfg->apmg_not_supported) {
         iwl_write_prph(trans, APMG_CLK_EN_REG, APMG_CLK_VAL_DMA_CLK_RQT);
-        udelay(20);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(20)));
 
         /* Disable L1-Active */
         iwl_set_bits_prph(trans, APMG_PCIDEV_STT_REG, APMG_PCIDEV_STT_VAL_L1_ACT_DIS);
@@ -449,7 +454,7 @@ static void iwl_pcie_apm_lp_xtal_enable(struct iwl_trans* trans) {
 
     /* Release XTAL ON request */
     __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
-    udelay(10);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
     /* Release APMG XTAL */
     iwl_trans_pcie_write_shr(trans, SHR_APMG_XTAL_CFG_REG,
@@ -482,10 +487,10 @@ static void iwl_pcie_apm_stop(struct iwl_trans* trans, bool op_mode_leave) {
             iwl_set_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
             iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG,
                         CSR_HW_IF_CONFIG_REG_PREPARE | CSR_HW_IF_CONFIG_REG_ENABLE_PME);
-            mdelay(1);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
             iwl_clear_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
         }
-        mdelay(5);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
 
     clear_bit(STATUS_DEVICE_ENABLED, &trans->status);
@@ -506,7 +511,9 @@ static void iwl_pcie_apm_stop(struct iwl_trans* trans, bool op_mode_leave) {
      */
     iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
 }
+#endif // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
 static int iwl_pcie_nic_init(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int ret;
@@ -568,7 +575,7 @@ int iwl_pcie_prepare_card_hw(struct iwl_trans* trans) {
     if (ret >= 0) { return 0; }
 
     iwl_set_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
-    usleep_range(1000, 2000);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
     for (iter = 0; iter < 10; iter++) {
         /* If HW is not ready, prepare the conditions to check again */
@@ -578,10 +585,10 @@ int iwl_pcie_prepare_card_hw(struct iwl_trans* trans) {
             ret = iwl_pcie_set_hw_ready(trans);
             if (ret >= 0) { return 0; }
 
-            usleep_range(200, 1000);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
             t += 200;
         } while (t < 150000);
-        msleep(25);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(25)));
     }
 
     IWL_ERR(trans, "Couldn't prepare the card\n");
@@ -1146,7 +1153,7 @@ static void _iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power)
         /* Power-down device's busmaster DMA clocks */
         if (!trans->cfg->apmg_not_supported) {
             iwl_write_prph(trans, APMG_CLK_DIS_REG, APMG_CLK_VAL_DMA_CLK_RQT);
-            udelay(5);
+            zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
         }
     }
 
@@ -1204,9 +1211,11 @@ void iwl_pcie_synchronize_irqs(struct iwl_trans* trans) {
         synchronize_irq(trans_pcie->pci_dev->irq);
     }
 }
+#endif // NEEDS_PORTING
 
 static int iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                    bool run_in_rfkill) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     bool hw_rfkill;
     int ret;
@@ -1288,14 +1297,21 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct fw_img*
 out:
     mutex_unlock(&trans_pcie->mutex);
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static void iwl_trans_pcie_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
+#if 0  // NEEDS_PORTING
     iwl_pcie_reset_ict(trans);
     iwl_pcie_tx_start(trans, scd_addr);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_trans_pcie_handle_stop_rfkill(struct iwl_trans* trans, bool was_in_rfkill) {
+#if 0  // NEEDS_PORTING
     bool hw_rfkill;
 
     /*
@@ -1319,9 +1335,12 @@ void iwl_trans_pcie_handle_stop_rfkill(struct iwl_trans* trans, bool was_in_rfki
         clear_bit(STATUS_RFKILL_OPMODE, &trans->status);
     }
     if (hw_rfkill != was_in_rfkill) { iwl_trans_pcie_rf_kill(trans, hw_rfkill); }
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     bool was_in_rfkill;
 
@@ -1331,9 +1350,12 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) 
     _iwl_trans_pcie_stop_device(trans, low_power);
     iwl_trans_pcie_handle_stop_rfkill(trans, was_in_rfkill);
     mutex_unlock(&trans_pcie->mutex);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie __maybe_unused* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     lockdep_assert_held(&trans_pcie->mutex);
@@ -1346,9 +1368,12 @@ void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state) {
             _iwl_trans_pcie_stop_device(trans, true);
         }
     }
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_d3_suspend(struct iwl_trans* trans, bool test, bool reset) {
+#if 0  // NEEDS_PORTING
     if (!reset) {
         /* Enable persistence mode to avoid reset */
         iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_PERSIST_MODE);
@@ -1379,10 +1404,13 @@ static void iwl_trans_pcie_d3_suspend(struct iwl_trans* trans, bool test, bool r
     }
 
     iwl_pcie_set_pwr(trans, true);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status* status, bool test,
                                     bool reset) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t val;
     int ret;
@@ -1396,7 +1424,9 @@ static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status*
     iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
     iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
 
-    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) { udelay(2); }
+    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
+    }
 
     ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
                        BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
@@ -1440,8 +1470,12 @@ static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status*
     }
 
     return 0;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_pcie_set_interrupt_capa(struct pci_dev* pdev, struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int max_irqs, num_irqs, i, ret;
@@ -1591,8 +1625,10 @@ static int _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
 
     return 0;
 }
+#endif // NEEDS_PORTING
 
 static int iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int ret;
 
@@ -1601,9 +1637,13 @@ static int iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
     mutex_unlock(&trans_pcie->mutex);
 
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static void iwl_trans_pcie_op_mode_leave(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     mutex_lock(&trans_pcie->mutex);
@@ -1620,18 +1660,30 @@ static void iwl_trans_pcie_op_mode_leave(struct iwl_trans* trans) {
     mutex_unlock(&trans_pcie->mutex);
 
     iwl_pcie_synchronize_irqs(trans);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
+#if 0  // NEEDS_PORTING
     writeb(val, IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
+#if 0  // NEEDS_PORTING
     writel(val, IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static uint32_t iwl_trans_pcie_read32(struct iwl_trans* trans, uint32_t ofs) {
+#if 0  // NEEDS_PORTING
     return readl(IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return 0;
 }
 
 static uint32_t iwl_trans_pcie_prph_msk(struct iwl_trans* trans) {
@@ -1658,6 +1710,7 @@ static void iwl_trans_pcie_write_prph(struct iwl_trans* trans, uint32_t addr, ui
 
 static void iwl_trans_pcie_configure(struct iwl_trans* trans,
                                      const struct iwl_trans_config* trans_cfg) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     trans_pcie->cmd_queue = trans_cfg->cmd_queue;
@@ -1693,9 +1746,12 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
     if (trans_pcie->napi_dev.reg_state != NETREG_DUMMY) {
         init_dummy_netdev(&trans_pcie->napi_dev);
     }
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_trans_pcie_free(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int i;
 
@@ -1733,6 +1789,7 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
 
     free_percpu(trans_pcie->tso_hdr_page);
     mutex_destroy(&trans_pcie->mutex);
+#endif // NEEDS_PORTING
     iwl_trans_free(trans);
 }
 
@@ -1749,6 +1806,7 @@ struct iwl_trans_pcie_removal {
     struct work_struct work;
 };
 
+#if 0  // NEEDS_PORTING
 static void iwl_trans_pcie_removal_wk(struct work_struct* wk) {
     struct iwl_trans_pcie_removal* removal = container_of(wk, struct iwl_trans_pcie_removal, work);
     struct pci_dev* pdev = removal->pdev;
@@ -1769,8 +1827,10 @@ static void iwl_trans_pcie_removal_wk(struct work_struct* wk) {
     kfree(removal);
     module_put(THIS_MODULE);
 }
+#endif // NEEDS_PORTING
 
 static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned long* flags) {
+#if 0  // NEEDS_PORTING
     int ret;
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -1780,7 +1840,9 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
 
     /* this bit wakes up the NIC */
     __iwl_trans_pcie_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
-    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) { udelay(2); }
+    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
+    }
 
     /*
      * These bits say the device is running, and should keep running for
@@ -1861,9 +1923,13 @@ out:
      */
     __release(&trans_pcie->reg_lock);
     return true;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return false;
 }
 
 static void iwl_trans_pcie_release_nic_access(struct iwl_trans* trans, unsigned long* flags) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     lockdep_assert_held(&trans_pcie->reg_lock);
@@ -1886,9 +1952,12 @@ static void iwl_trans_pcie_release_nic_access(struct iwl_trans* trans, unsigned 
     mmiowb();
 out:
     spin_unlock_irqrestore(&trans_pcie->reg_lock, *flags);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static int iwl_trans_pcie_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf, int dwords) {
+#if 0  // NEEDS_PORTING
     unsigned long flags;
     int offs, ret = 0;
     uint32_t* vals = buf;
@@ -1903,10 +1972,14 @@ static int iwl_trans_pcie_read_mem(struct iwl_trans* trans, uint32_t addr, void*
         ret = -EBUSY;
     }
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static int iwl_trans_pcie_write_mem(struct iwl_trans* trans, uint32_t addr, const void* buf,
                                     int dwords) {
+#if 0  // NEEDS_PORTING
     unsigned long flags;
     int offs, ret = 0;
     const uint32_t* vals = buf;
@@ -1921,10 +1994,14 @@ static int iwl_trans_pcie_write_mem(struct iwl_trans* trans, uint32_t addr, cons
         ret = -EBUSY;
     }
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static void iwl_trans_pcie_freeze_txq_timer(struct iwl_trans* trans, unsigned long txqs,
                                             bool freeze) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int queue;
 
@@ -1967,9 +2044,12 @@ static void iwl_trans_pcie_freeze_txq_timer(struct iwl_trans* trans, unsigned lo
     next_queue:
         spin_unlock_bh(&txq->lock);
     }
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_block_txq_ptrs(struct iwl_trans* trans, bool block) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int i;
 
@@ -1989,10 +2069,13 @@ static void iwl_trans_pcie_block_txq_ptrs(struct iwl_trans* trans, bool block) {
 
         spin_unlock_bh(&txq->lock);
     }
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 #define IWL_FLUSH_WAIT_MS 2000
 
+#if 0  // NEEDS_PORTING
 void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq) {
     uint32_t txq_id = txq->id;
     uint32_t status;
@@ -2020,9 +2103,11 @@ void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq) 
                 (trans->cfg->base_params->max_tfd_queue_size - 1),
             iwl_read_direct32(trans, FH_TX_TRB_REG(fifo)));
 }
+#endif // NEEDS_PORTING
 
 static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
                                        struct iwl_trans_rxq_dma_data* data) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     if (queue >= trans->num_rx_queues || !trans_pcie->rxq) { return -EINVAL; }
@@ -2033,9 +2118,13 @@ static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
     data->fr_bd_wid = 0;
 
     return 0;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq;
     unsigned long now = jiffies;
@@ -2070,9 +2159,13 @@ static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
     IWL_DEBUG_TX_QUEUES(trans, "Queue %d is now empty.\n", txq_idx);
 
     return 0;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_bm) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int cnt;
     int ret = 0;
@@ -2088,19 +2181,26 @@ static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_
     }
 
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
                                          uint32_t value) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     unsigned long flags;
 
     spin_lock_irqsave(&trans_pcie->reg_lock, flags);
     __iwl_trans_pcie_set_bits_mask(trans, reg, mask, value);
     spin_unlock_irqrestore(&trans_pcie->reg_lock, flags);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_ref(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     if (iwlwifi_mod_params.d0i3_disable) { return; }
@@ -2113,9 +2213,12 @@ static void iwl_trans_pcie_ref(struct iwl_trans* trans) {
                   atomic_read(&trans_pcie->pci_dev->dev.power.usage_count));
 #endif
 #endif /* CONFIG_PM */
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 static void iwl_trans_pcie_unref(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     if (iwlwifi_mod_params.d0i3_disable) { return; }
@@ -2129,8 +2232,11 @@ static void iwl_trans_pcie_unref(struct iwl_trans* trans) {
                   atomic_read(&trans_pcie->pci_dev->dev.power.usage_count));
 #endif
 #endif /* CONFIG_PM */
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
+#if 0  // NEEDS_PORTING
 static const char* get_csr_string(int cmd) {
 #define IWL_CMD(x) \
     case x:        \
@@ -2787,9 +2893,11 @@ static int iwl_trans_get_fw_monitor_len(struct iwl_trans* trans, int* len) {
     }
     return 0;
 }
+#endif // NEEDS_PORTING
 
 static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* trans,
                                                             uint32_t dump_mask) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_fw_error_dump_data* data;
     struct iwl_txq* cmdq = trans_pcie->txq[trans_pcie->cmd_queue];
@@ -2919,6 +3027,9 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
     dump_data->len = len;
 
     return dump_data;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return NULL;
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -3004,28 +3115,30 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 #endif
 };
 
-struct iwl_trans* iwl_trans_pcie_alloc(struct pci_dev* pdev, const struct pci_device_id* ent,
-                                       const struct iwl_cfg* cfg) {
+struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
     struct iwl_trans_pcie* trans_pcie;
     struct iwl_trans* trans;
+#if 0  // NEEDS_PORTING
     int ret, addr_size;
 
     ret = pcim_enable_device(pdev);
     if (ret) { return ERR_PTR(ret); }
+#endif // NEEDS_PORTING
 
-    if (cfg->gen2)
+    if (cfg->gen2) {
         trans =
-            iwl_trans_alloc(sizeof(struct iwl_trans_pcie), &pdev->dev, cfg, &trans_ops_pcie_gen2);
-    else {
-        trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), &pdev->dev, cfg, &trans_ops_pcie);
+            iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie_gen2);
+    } else {
+        trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie);
     }
 
-    if (!trans) { return ERR_PTR(-ENOMEM); }
+    if (!trans) { return NULL; }
 
     trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     trans_pcie->trans = trans;
     trans_pcie->opmode_down = true;
+#if 0  // NEEDS_PORTING
     spin_lock_init(&trans_pcie->irq_lock);
     spin_lock_init(&trans_pcie->reg_lock);
     mutex_init(&trans_pcie->mutex);
@@ -3122,7 +3235,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct pci_dev* pdev, const struct pci_de
          * id located at the AUX bus MISC address space.
          */
         iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
-        udelay(2);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
 
         ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
                            BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
@@ -3261,12 +3374,15 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct pci_dev* pdev, const struct pci_de
     mutex_init(&trans_pcie->fw_mon_data.mutex);
 #endif
 
+#endif // NEEDS_PORTING
     return trans;
 
+#if 0  // NEEDS_PORTING
 out_free_ict:
     iwl_pcie_free_ict(trans);
 out_no_pci:
     free_percpu(trans_pcie->tso_hdr_page);
     iwl_trans_free(trans);
     return ERR_PTR(ret);
+#endif // NEEDS_PORTING
 }

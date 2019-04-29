@@ -48,6 +48,10 @@ driver_module("iwlwifi_driver") {
     "mvm/tx.c",
     "pcie/drv.c",
     "pcie/internal.h",
+    "pcie/trans-gen2.c",
+    "pcie/trans.c",
+    "pcie/tx-gen2.c",
+    "pcie/tx.c",
   ]
 
   deps = [

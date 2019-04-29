@@ -35,9 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 
-#include <stdbool.h>
-
 #include <ddk/debug.h>
+#include <stdbool.h>
 
 #include "iwl-modparams.h"
 
@@ -53,9 +52,9 @@ struct device;
 
 #define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) \
     zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
-#define __iwl_warn(dev, fmt, args...) zxlogf(WARN, "iwlwifi: " fmt, args)
-#define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, args)
-#define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, args)
+#define __iwl_warn(dev, fmt, args...) zxlogf(WARN, "iwlwifi: " fmt, ##args)
+#define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, ##args)
+#define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, ##args)
 
 /* not all compilers can evaluate strlen() at compile time, so use sizeof() */
 #define CHECK_FOR_NEWLINE(f) BUILD_BUG_ON(f[sizeof(f) - 2] != '\n')
@@ -89,7 +88,7 @@ struct device;
     } while (0)
 
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
-    zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, args)
+    zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, ##args)
 
 #define iwl_print_hex_error(m, p, len)                                                \
     do {                                                                              \

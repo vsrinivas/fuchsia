@@ -735,9 +735,6 @@ struct iwl_trans {
     uint8_t* iml;
 
     /* The following fields are internal only */
-    struct kmem_cache* dev_cmd_pool;
-    char dev_cmd_pool_name[50];
-
     struct dentry* dbgfs_dir;
 
 #ifdef CONFIG_LOCKDEP
@@ -885,9 +882,10 @@ static inline struct iwl_trans_dump_data* iwl_trans_dump_data(struct iwl_trans* 
     return trans->ops->dump_data(trans, dump_mask);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline struct iwl_device_cmd*
 iwl_trans_alloc_tx_cmd(struct iwl_trans* trans) {
+    // TODO(alexlegg): dev_cmd_pool is a cache-line aligned slab allocator in the Linux driver.
     return kmem_cache_alloc(trans->dev_cmd_pool, GFP_ATOMIC);
 }
 
@@ -1031,19 +1029,16 @@ static inline void iwl_trans_freeze_txq_timer(struct iwl_trans* trans,
 }
 #endif  // NEEDS_PORTING
 
-static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans,
-        bool block) {
+static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans, bool block) {
     if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
         IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
         return;
     }
 
-    if (trans->ops->block_txq_ptrs) {
-        trans->ops->block_txq_ptrs(trans, block);
-    }
+    if (trans->ops->block_txq_ptrs) { trans->ops->block_txq_ptrs(trans, block); }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline int iwl_trans_wait_tx_queues_empty(struct iwl_trans* trans,
         uint32_t txqs) {
     if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty)) {
@@ -1145,10 +1140,10 @@ static inline void iwl_trans_sw_reset(struct iwl_trans* trans) {
         trans->ops->sw_reset(trans);
     }
 }
-#endif   // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
-static inline void
-iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask, uint32_t value) {
+static inline void iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
+                                           uint32_t value) {
     trans->ops->set_bits_mask(trans, reg, mask, value);
 }
 
@@ -1179,8 +1174,8 @@ static inline bool iwl_trans_fw_running(struct iwl_trans* trans) {
 /*****************************************************
  * transport helper functions
  *****************************************************/
-struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
-                                  const struct iwl_cfg* cfg, const struct iwl_trans_ops* ops);
+struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
+                                  const struct iwl_trans_ops* ops);
 void iwl_trans_free(struct iwl_trans* trans);
 void iwl_trans_ref(struct iwl_trans* trans);
 void iwl_trans_unref(struct iwl_trans* trans);

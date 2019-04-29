@@ -33,23 +33,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/etherdevice.h>
-#include <linux/ieee80211.h>
-#include <linux/pm_runtime.h>
-#include <linux/sched.h>
-#include <linux/slab.h>
-#include <net/ip6_checksum.h>
-#include <net/tso.h>
+#if 0  // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#endif // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 
-#include "fw/api/tx.h"
-#include "internal.h"
-#include "iwl-csr.h"
-#include "iwl-debug.h"
-#include "iwl-io.h"
-#include "iwl-op-mode.h"
-#include "iwl-prph.h"
-#include "iwl-scd.h"
-
+#if 0  // NEEDS_PORTING
 #define IWL_TX_CRC_SIZE 4
 #define IWL_TX_DELIMITER_SIZE 4
 
@@ -952,10 +947,12 @@ static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
         mod_timer(&txq->stuck_timer, jiffies + txq->wd_timeout);
     }
 }
+#endif // NEEDS_PORTING
 
 /* Frees buffers until index _not_ inclusive */
 void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
                             struct sk_buff_head* skbs) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
     int tfd_num = iwl_pcie_get_cmd_index(txq, ssn);
@@ -1051,8 +1048,11 @@ void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
 
 out:
     spin_unlock_bh(&txq->lock);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans, const struct iwl_host_cmd* cmd) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     const struct iwl_cfg* cfg = trans->cfg;
@@ -1164,9 +1164,11 @@ static int iwl_pcie_txq_set_ratid_map(struct iwl_trans* trans, uint16_t ra_tid, 
 /* Receiver address (actually, Rx station's index into station table),
  * combined with Traffic ID (QOS priority), in format used by Tx Scheduler */
 #define BUILD_RAxTID(sta_id, tid) (((sta_id) << 4) + (tid))
+#endif // NEEDS_PORTING
 
 bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int txq_id, uint16_t ssn,
                                const struct iwl_trans_txq_scd_cfg* cfg, unsigned int wdg_timeout) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
     int fifo = -1;
@@ -1265,17 +1267,24 @@ bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int txq_id, uint16_t ssn
     }
 
     return scd_bug;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return false;
 }
 
 void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id,
                                         bool shared_mode) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
 
     txq->ampdu = !shared_mode;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool configure_scd) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t stts_addr = trans_pcie->scd_base_addr + SCD_TX_STTS_QUEUE_OFFSET(txq_id);
     static const uint32_t zero_val[4] = {};
@@ -1304,8 +1313,11 @@ void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool config
     trans_pcie->txq[txq_id]->ampdu = false;
 
     IWL_DEBUG_TX_QUEUES(trans, "Deactivate queue %d\n", txq_id);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
+#if 0  // NEEDS_PORTING
 /*************** HOST COMMAND QUEUE FUNCTIONS   *****/
 
 /*
@@ -1752,8 +1764,10 @@ cancel:
 
     return ret;
 }
+#endif // NEEDS_PORTING
 
 int iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
+#if 0  // NEEDS_PORTING
     /* Make sure the NIC is still alive in the bus */
     if (test_bit(STATUS_TRANS_DEAD, &trans->status)) { return -ENODEV; }
 
@@ -1766,8 +1780,12 @@ int iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) 
 
     /* We still can fail on RFKILL that can be asserted while we wait */
     return iwl_pcie_send_hcmd_sync(trans, cmd);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
+#if 0  // NEEDS_PORTING
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 static void iwl_trans_pci_tx_lat_add_ts_write(struct sk_buff* skb) {
     s64 temp = ktime_to_ms(ktime_get());
@@ -2023,9 +2041,11 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
     return -1;
 }
 #endif /* CONFIG_INET */
+#endif // NEEDS_PORTING
 
 int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_device_cmd* dev_cmd,
                       int txq_id) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct ieee80211_hdr* hdr;
     struct iwl_tx_cmd* tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
@@ -2219,5 +2239,8 @@ int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_d
 out_err:
     iwl_pcie_tfd_unmap(trans, out_meta, txq, txq->write_ptr);
     spin_unlock(&txq->lock);
+    return -1;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
     return -1;
 }

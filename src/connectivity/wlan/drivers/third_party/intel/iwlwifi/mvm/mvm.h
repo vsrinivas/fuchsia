@@ -622,7 +622,7 @@ struct iwl_mvm_tcm_mac {
 
 struct iwl_mvm_tcm {
     struct delayed_work work;
-    mtx_t lock;  /* used when time elapsed */
+    mtx_t lock;       /* used when time elapsed */
     unsigned long ts; /* timestamp when period ends */
     unsigned long ll_ts;
     unsigned long uapsd_nonagg_ts;

@@ -37,16 +37,13 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
 #include <threads.h>
-
 #include <zircon/listnode.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
-#if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
-#endif  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
@@ -639,10 +636,7 @@ static inline struct iwl_trans* iwl_trans_pcie_get_trans(struct iwl_trans_pcie* 
  * Convention: trans API functions: iwl_trans_pcie_XXX
  *  Other functions: iwl_pcie_XXX
  */
-#if 0   // NEEDS_PORTING
-struct iwl_trans* iwl_trans_pcie_alloc(struct pci_dev* pdev, const struct pci_device_id* ent,
-                                       const struct iwl_cfg* cfg);
-#endif  // NEEDS_PORTING
+struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg);
 void iwl_trans_pcie_free(struct iwl_trans* trans);
 
 /*****************************************************
@@ -954,9 +948,10 @@ static inline bool iwl_is_rfkill_set(struct iwl_trans* trans) {
 
     return !(iwl_read32(trans, CSR_GP_CNTRL) & CSR_GP_CNTRL_REG_FLAG_HW_RF_KILL_SW);
 }
+#endif  // NEEDS_PORTING
 
-static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
-        uint32_t value) {
+static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg,
+                                                  uint32_t mask, uint32_t value) {
     uint32_t v;
 
 #ifdef CPTCFG_IWLWIFI_DEBUG
@@ -969,7 +964,8 @@ static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint3
     iwl_write32(trans, reg, v);
 }
 
-static inline void __iwl_trans_pcie_clear_bit(struct iwl_trans* trans, uint32_t reg, uint32_t mask) {
+static inline void __iwl_trans_pcie_clear_bit(struct iwl_trans* trans, uint32_t reg,
+                                              uint32_t mask) {
     __iwl_trans_pcie_set_bits_mask(trans, reg, mask, 0);
 }
 
@@ -984,7 +980,6 @@ static inline bool iwl_pcie_dbg_on(struct iwl_trans* trans) {
 void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state);
 void iwl_trans_pcie_dump_regs(struct iwl_trans* trans);
 
-#endif  // NEEDS_PORTING
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 int iwl_trans_pcie_dbgfs_register(struct iwl_trans* trans);
 #else

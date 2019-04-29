@@ -31,16 +31,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/pm_runtime.h>
-#include <linux/tcp.h>
-#include <net/tso.h>
+#if 0  // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
+#endif // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 
-#include "fw/api/tx.h"
-#include "internal.h"
-#include "iwl-csr.h"
-#include "iwl-debug.h"
-#include "iwl-io.h"
-
+#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_gen2_tx_stop - Stop all Tx DMA channels
  */
@@ -489,9 +488,11 @@ static struct iwl_tfh_tfd* iwl_pcie_gen2_build_tfd(struct iwl_trans* trans, stru
     }
     return iwl_pcie_gen2_build_tx(trans, txq, dev_cmd, skb, out_meta, hdr_len, len, !amsdu);
 }
+#endif // NEEDS_PORTING
 
 int iwl_trans_pcie_gen2_tx(struct iwl_trans* trans, struct sk_buff* skb,
                            struct iwl_device_cmd* dev_cmd, int txq_id) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_cmd_meta* out_meta;
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
@@ -573,8 +574,12 @@ int iwl_trans_pcie_gen2_tx(struct iwl_trans* trans, struct sk_buff* skb,
      */
     spin_unlock(&txq->lock);
     return 0;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
+#if 0  // NEEDS_PORTING
 /*************** HOST COMMAND QUEUE FUNCTIONS   *****/
 
 /*
@@ -896,8 +901,10 @@ cancel:
 
     return ret;
 }
+#endif // NEEDS_PORTING
 
 int iwl_trans_pcie_gen2_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
+#if 0  // NEEDS_PORTING
     if (!(cmd->flags & CMD_SEND_IN_RFKILL) && test_bit(STATUS_RFKILL_OPMODE, &trans->status)) {
         IWL_DEBUG_RF_KILL(trans, "Dropping CMD 0x%x: RF KILL\n", cmd->id);
         return -ERFKILL;
@@ -919,8 +926,12 @@ int iwl_trans_pcie_gen2_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* 
     }
 
     return iwl_pcie_gen2_send_hcmd_sync(trans, cmd);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
+#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_gen2_txq_unmap -  Unmap any remaining DMA mappings and free skb's
  */
@@ -1103,9 +1114,11 @@ error_free_resp:
     iwl_pcie_gen2_txq_free_memory(trans, txq);
     return ret;
 }
+#endif // NEEDS_PORTING
 
 int iwl_trans_pcie_dyn_txq_alloc(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid,
                                  int cmd_id, int size, unsigned int timeout) {
+#if 0  // NEEDS_PORTING
     struct iwl_txq* txq = NULL;
     struct iwl_tx_queue_cfg_cmd cmd = {
         .flags = flags,
@@ -1138,9 +1151,13 @@ int iwl_trans_pcie_dyn_txq_alloc(struct iwl_trans* trans, __le16 flags, uint8_t 
 error:
     iwl_pcie_gen2_txq_free_memory(trans, txq);
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
 
 void iwl_trans_pcie_dyn_txq_free(struct iwl_trans* trans, int queue) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     /*
@@ -1157,8 +1174,11 @@ void iwl_trans_pcie_dyn_txq_free(struct iwl_trans* trans, int queue) {
     iwl_pcie_gen2_txq_unmap(trans, queue);
 
     IWL_DEBUG_TX_QUEUES(trans, "Deactivate queue %d\n", queue);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_pcie_gen2_tx_free(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int i;
@@ -1209,3 +1229,4 @@ error:
     iwl_pcie_gen2_tx_free(trans);
     return ret;
 }
+#endif // NEEDS_PORTING

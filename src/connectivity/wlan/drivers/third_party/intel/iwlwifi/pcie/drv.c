@@ -1027,15 +1027,16 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     IWL_INFO(iwl_trans, "Device ID: %x Subsystem Device ID: %x", pci_info.device_id,
              subsystem_device_id);
 
-    iwl_trans = calloc(1, sizeof(struct iwl_trans));
-    if (!iwl_trans) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &iwl_trans->cfg);
+    const struct iwl_cfg* cfg;
+    status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &cfg);
     if (status != ZX_OK) {
         IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
         return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    iwl_trans = iwl_trans_pcie_alloc(cfg);
+    if (!iwl_trans) {
+        return ZX_ERR_NO_MEMORY;
     }
 
     if (!iwl_trans->cfg->csr) {

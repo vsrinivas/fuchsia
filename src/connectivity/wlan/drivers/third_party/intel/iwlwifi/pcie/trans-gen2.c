@@ -31,19 +31,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "fw/dbg.h"
-#include "internal.h"
-#include "iwl-constants.h"
-#include "iwl-context-info-gen3.h"
-#include "iwl-context-info.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-constants.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info-gen3.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 
 /*
  * Start up NIC's basic functionality after it has been reset
  * (e.g. after platform boot, or shutdown via iwl_pcie_apm_stop())
  * NOTE:  This does not load uCode nor start the embedded processor
  */
+#if 0  // NEEDS_PORTING
 int iwl_pcie_gen2_apm_init(struct iwl_trans* trans) {
     int ret = 0;
 
@@ -201,8 +202,10 @@ void _iwl_trans_pcie_gen2_stop_device(struct iwl_trans* trans, bool low_power) {
     /* re-take ownership to prevent other users from stealing the device */
     iwl_pcie_prepare_card_hw(trans);
 }
+#endif // NEEDS_PORTING
 
 void iwl_trans_pcie_gen2_stop_device(struct iwl_trans* trans, bool low_power) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     bool was_in_rfkill;
 
@@ -212,8 +215,11 @@ void iwl_trans_pcie_gen2_stop_device(struct iwl_trans* trans, bool low_power) {
     _iwl_trans_pcie_gen2_stop_device(trans, low_power);
     iwl_trans_pcie_handle_stop_rfkill(trans, was_in_rfkill);
     mutex_unlock(&trans_pcie->mutex);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_pcie_gen2_nic_init(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -236,8 +242,10 @@ static int iwl_pcie_gen2_nic_init(struct iwl_trans* trans) {
 
     return 0;
 }
+#endif // NEEDS_PORTING
 
 void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     iwl_pcie_reset_ict(trans);
@@ -250,10 +258,13 @@ void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
      * paging memory cannot be freed included since FW will still use it
      */
     iwl_pcie_ctxt_info_free(trans);
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 int iwl_trans_pcie_gen2_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                  bool run_in_rfkill) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     bool hw_rfkill;
     int ret;
@@ -322,4 +333,7 @@ int iwl_trans_pcie_gen2_start_fw(struct iwl_trans* trans, const struct fw_img* f
 out:
     mutex_unlock(&trans_pcie->mutex);
     return ret;
+#endif // NEEDS_PORTING
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    return -1;
 }
