@@ -56,8 +56,4 @@ fidl("maxwell_internal") {
   sources = [
     "module_manifest_source/fidl/module_package_indexer.fidl",
   ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
 }

@@ -7,7 +7,6 @@
 
 #include <set>
 
-#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 

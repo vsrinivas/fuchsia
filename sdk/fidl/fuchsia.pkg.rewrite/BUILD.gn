@@ -8,8 +8,4 @@ fidl("fuchsia.pkg.rewrite") {
   sources = [
     "rewrite.fidl",
   ]
-
-  public_deps = [
-    "//zircon/public/fidl/fuchsia-io",
-  ]
 }

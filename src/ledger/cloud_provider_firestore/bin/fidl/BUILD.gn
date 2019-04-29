@@ -13,8 +13,6 @@ fidl("fidl") {
 
   deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
-    "//sdk/fidl/fuchsia.modular.auth",
   ]
 }
