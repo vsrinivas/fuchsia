@@ -19,7 +19,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
-const VENDOR_FONT_MANIFEST_PATH: &str = "/system/data/vendor/fonts/manifest.json";
+const VENDOR_FONT_MANIFEST_PATHS: &[&str] = &[
+    "/system/data/vendor/fonts/manifest.json",
+    "/config/data/fonts/manifest.json" ];
 
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
@@ -45,9 +47,11 @@ fn main() -> Result<(), Error> {
     if !options.opt_present("n") {
         service.load_manifest(&PathBuf::from(FONT_MANIFEST_PATH))?;
 
-        let vendor_font_manifest_path = PathBuf::from(VENDOR_FONT_MANIFEST_PATH);
-        if vendor_font_manifest_path.exists() {
-            service.load_manifest(&vendor_font_manifest_path)?;
+        for m in VENDOR_FONT_MANIFEST_PATHS.iter() {
+            let font_manifest_path = PathBuf::from(m);
+            if font_manifest_path.exists() {
+                service.load_manifest(&font_manifest_path)?;
+            }
         }
     }
 

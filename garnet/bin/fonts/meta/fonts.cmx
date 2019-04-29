@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "system": [ "data/vendor/fonts" ]
+        "system": [ "data/vendor/fonts" ],
+        "features": [
+            "config-data"
+        ]
     }
 }
