@@ -380,6 +380,9 @@ struct NotifyException {
     // Hardware breakpoints are issues by the CPU via debug registers.
     kHardware,
 
+    // HW exceptions triggered on memory read/write.
+    kWatchpoint,
+
     // Single-step completion issued by the CPU.
     kSingleStep,
 

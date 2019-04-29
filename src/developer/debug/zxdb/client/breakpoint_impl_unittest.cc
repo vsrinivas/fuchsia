@@ -187,8 +187,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   EXPECT_FALSE(err.has_error());
   ASSERT_TRUE(sink().adds.empty());
   ASSERT_EQ(1u, sink().removes.size());
-  EXPECT_EQ(out.breakpoint.breakpoint_id,
-            sink().removes[0].first.breakpoint_id);
+  EXPECT_EQ(out.breakpoint.id, sink().removes[0].first.breakpoint_id);
 }
 
 // Tests that address breakpoints are enabled immediately even when no symbols

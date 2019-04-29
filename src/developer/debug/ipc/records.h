@@ -160,7 +160,7 @@ struct BreakpointSettings {
   // The ID if this breakpoint. This is assigned by the client. This is
   // different than the ID in the console frontend which can be across mutliple
   // processes or may match several addresses in a single process.
-  uint32_t breakpoint_id = 0;
+  uint32_t id = 0;
 
   // When set, the breakpoint will automatically be removed as soon as it is
   // hit.
@@ -178,7 +178,7 @@ struct BreakpointSettings {
 };
 
 struct BreakpointStats {
-  uint32_t breakpoint_id = 0;
+  uint32_t id = 0;
   uint32_t hit_count = 0;
 
   // On a "breakpoint hit" message from the debug agent, if this flag is set,
@@ -210,8 +210,13 @@ struct ProcessWatchpointSetings {
 //                plumbing (get it?) going.
 struct WatchpointSettings {
   // Assigned by the client. Analogous to BreakpointSettings::breakpoint_id.
-  uint32_t watchpoint_id = 0;
+  uint32_t id = 0;
 
+  // When set, the watchpoint will automatically be removed as soon as it is
+  // hit.
+  bool one_shot = false;
+
+  // What should stop when the watchpoint is hit.
   Stop stop = Stop::kAll;
 
   std::vector<ProcessWatchpointSetings> locations;

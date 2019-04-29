@@ -8,6 +8,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
+#include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
@@ -47,6 +48,33 @@ bool ArchProvider::IsBreakpointInstruction(zx::process& process,
   // instruction address that is passed in assumes a 1-byte instruction. It
   // should be OK to ignore this case in practice.
   return data == kBreakInstruction;
+}
+
+uint64_t ArchProvider::InstructionForWatchpointHit(
+    const DebuggedThread& thread) {
+  zx_thread_state_debug_regs_t debug_regs;
+  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(debug_regs));
+  uint64_t exception_address = 0;
+  // HW breakpoints have priority over single-step.
+  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
+    exception_address = debug_regs.dr[0];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
+    exception_address = debug_regs.dr[1];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
+    exception_address = debug_regs.dr[2];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
+    exception_address = debug_regs.dr[3];
+  } else {
+    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
+  }
+
+  return exception_address;
+}
+
+uint64_t ArchProvider::NextInstructionForWatchpointHit(
+    uint64_t exception_addr) {
+  return exception_addr;
 }
 
 uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) {
@@ -226,6 +254,48 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
 
 // Hardware Exceptions ---------------------------------------------------------
 
+namespace {
+
+debug_ipc::NotifyException::Type DetermineHWException(
+    const DebuggedThread& thread,
+    const zx_thread_state_debug_regs_t& debug_regs) {
+
+  // TODO(DX-1445): This permits only one trigger per exception, when overlaps
+  //                could occur. For a first pass this is acceptable.
+  uint64_t exception_address = 0;
+  // HW breakpoints have priority over single-step.
+  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
+    exception_address = debug_regs.dr[0];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
+    exception_address = debug_regs.dr[1];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
+    exception_address = debug_regs.dr[2];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
+    exception_address = debug_regs.dr[3];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6BS)) {
+    return debug_ipc::NotifyException::Type::kSingleStep;
+  } else {
+    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
+  }
+
+  // Search for a hardware breakpoint.
+  for (auto& [address, breakpoint] : thread.process()->breakpoints()) {
+    if (address == exception_address)
+      return debug_ipc::NotifyException::Type::kHardware;
+  }
+
+  // Search for a watchpoint.
+  for (auto& [address, watchpoint] : thread.process()->watchpoints()) {
+    if (address == exception_address)
+      return debug_ipc::NotifyException::Type::kWatchpoint;
+  }
+
+  FXL_NOTREACHED();
+  return debug_ipc::NotifyException::Type::kNone;
+}
+
+}  // namespace
+
 uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(
     uint64_t exception_addr) {
   // x86 returns the instruction *about* to be executed when hitting the hw
@@ -252,18 +322,7 @@ debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
     DEBUG_LOG(Archx64) << "Decoding HW exception. "
                        << DR6ToString(debug_regs.dr6);
 
-    // HW breakpoints have priority over single-step.
-    if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0) ||
-        X86_FLAG_VALUE(debug_regs.dr6, DR6B1) ||
-        X86_FLAG_VALUE(debug_regs.dr6, DR6B2) ||
-        X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
-      return debug_ipc::NotifyException::Type::kHardware;
-    } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6BS)) {
-      return debug_ipc::NotifyException::Type::kSingleStep;
-    } else {
-      FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
-    }
-    return debug_ipc::NotifyException::Type::kSingleStep;
+    return DetermineHWException(thread, debug_regs);
   } else {
     return debug_ipc::NotifyException::Type::kGeneral;
   }
@@ -319,16 +378,56 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
                              sizeof(debug_regs));
 }
 
-zx_status_t ArchProvider::InstallWatchpoint(zx::thread*,
-                                            const debug_ipc::AddressRange&) {
-  FXL_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ArchProvider::InstallWatchpoint(
+    zx::thread* thread, const debug_ipc::AddressRange& range) {
+  FXL_DCHECK(thread);
+  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
+  zx_status_t status;
+  zx_thread_state_debug_regs_t debug_regs;
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                              sizeof(debug_regs));
+  if (status != ZX_OK)
+    return status;
+
+  DEBUG_LOG(Archx64) << "Before installing watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  // x64 doesn't support ranges.
+  status = SetupWatchpoint(range.begin, &debug_regs);
+  if (status != ZX_OK)
+    return status;
+
+  DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(debug_regs));
 }
 
-zx_status_t ArchProvider::UninstallWatchpoint(zx::thread*,
-                                              const debug_ipc::AddressRange&) {
-  FXL_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ArchProvider::UninstallWatchpoint(
+    zx::thread* thread, const debug_ipc::AddressRange& range) {
+  FXL_DCHECK(thread);
+  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
+  zx_status_t status;
+  zx_thread_state_debug_regs_t debug_regs;
+  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                              sizeof(debug_regs));
+  if (status != ZX_OK)
+    return status;
+
+  DEBUG_LOG(Archx64) << "Before uninstalling watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  // x64 doesn't support ranges.
+  status = RemoveHWBreakpoint(range.begin, &debug_regs);
+  if (status != ZX_OK)
+    return status;
+
+  DEBUG_LOG(Archx64) << "After uninstalling watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(debug_regs));
 }
 
 }  // namespace arch

@@ -91,6 +91,8 @@ const char* LogCategoryToString(LogCategory category) {
       return "Test";
     case LogCategory::kThread:
       return "Thread";
+    case LogCategory::kWatchpoint:
+      return "Watchpoint";
     case LogCategory::kAll:
       return "All";
   }

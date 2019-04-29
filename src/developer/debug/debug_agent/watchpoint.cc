@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/watchpoint.h"
 
 #include "src/developer/debug/ipc/records_utils.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
 
@@ -20,6 +21,7 @@ zx_status_t Watchpoint::SetSettings(
     const debug_ipc::WatchpointSettings& settings) {
   zx_status_t result = ZX_OK;
   settings_ = settings;
+  stats_.id = settings_.id;
 
   // The updated set of locations.
   std::set<WatchpointInstallation> updated_locations;
@@ -78,6 +80,14 @@ bool Watchpoint::WatchpointInstallation::operator<(
 
   debug_ipc::AddressRangeCompare comparer;
   return comparer(range, other.range);
+}
+
+debug_ipc::BreakpointStats Watchpoint::OnHit() {
+  stats_.hit_count++;
+  if (settings_.one_shot)
+    stats_.should_delete = true;
+
+  return stats_;
 }
 
 }  // namespace debug_agent

@@ -43,7 +43,7 @@ zx_status_t Breakpoint::SetSettings(
   // The stats needs to reference the current ID. We assume setting the
   // settings doesn't update the stats (an option to do this may need to be
   // added in the future).
-  stats_.breakpoint_id = settings_.breakpoint_id;
+  stats_.id = settings_.id;
 
   // The set of new locations.
   std::set<LocationPair> new_set;
@@ -75,13 +75,13 @@ bool Breakpoint::AppliesToThread(zx_koid_t pid,
   for (auto& location : settings_.locations) {
     if (location.process_koid == pid) {
       if (location.thread_koid == 0 || location.thread_koid == tid) {
-        LogAppliesToThread(settings_.breakpoint_id, pid, tid, true);
+        LogAppliesToThread(settings_.id, pid, tid, true);
         return true;
       }
     }
   }
 
-  LogAppliesToThread(settings_.breakpoint_id, pid, tid, false);
+  LogAppliesToThread(settings_.id, pid, tid, false);
   return false;
 }
 

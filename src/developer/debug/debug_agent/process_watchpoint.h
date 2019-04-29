@@ -16,6 +16,7 @@
 namespace debug_agent {
 
 class DebuggedProcess;
+class DebuggedThread;
 class Watchpoint;
 
 class ProcessWatchpoint {
@@ -40,9 +41,24 @@ class ProcessWatchpoint {
   // removed.
   zx_status_t Update();
 
+  // Notification that this watchpoint was just hit. All affected Watchpoints
+  // will have their stats updated and placed in the *stats param.
+  //
+  // IMPORTANT: The caller should check the stats and for any breakpoint
+  // with "should_delete" set, remove the breakpoints. This can't conveniently
+  // be done within this call because it will cause this ProcessBreakpoint
+  // object to be deleted from within itself.
+  debug_ipc::BreakpointStats OnHit();
+
  private:
   // Force uninstallation of the HW watchpoint for all installed threads.
   void Uninstall();
+
+  // Performs the actual arch installation.
+  // Will update |installed_threads_| accordingly.
+  zx_status_t UpdateWatchpoints(
+      const std::vector<DebuggedThread*>& threads_to_remove,
+      const std::vector<DebuggedThread*>& threads_to_install);
 
   // A Process Watchpoint is only related to one abstract watchpoint.
   // This is because watchpoint will differ in range most frequently and having

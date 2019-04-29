@@ -15,6 +15,7 @@
 extern "C" {
 
 EXPORT extern bool gTestPassed;
+EXPORT extern int gWatchpointVariable;
 
 // Breakpoint Test -------------------------------------------------------------
 
@@ -25,8 +26,13 @@ EXPORT NOINLINE void AnotherFunctionForKicks();
 
 EXPORT NOINLINE void MultithreadedFunctionToBreakOn();
 
+// Watchpoint Test -------------------------------------------------------------
+
+EXPORT NOINLINE void WatchpointFunction();
+
 // Write Register Symbols ------------------------------------------------------
 
 EXPORT NOINLINE void Test_BranchOnRAX();
 EXPORT NOINLINE void Test_PCJump();
+
 }

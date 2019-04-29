@@ -109,7 +109,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.hit_breakpoints.emplace_back();
-  exception.hit_breakpoints[0].breakpoint_id =
+  exception.hit_breakpoints[0].id =
       mock_remote_api()->last_breakpoint_id();
 
   // Create a stack now showing frame 2 as the top (new frame 0).

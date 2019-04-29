@@ -357,7 +357,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   location.address = function_address;
   AddOrChangeBreakpointRequest breakpoint_request;
   breakpoint_request.breakpoint_type = debug_ipc::BreakpointType::kSoftware;
-  breakpoint_request.breakpoint.breakpoint_id = breakpoint_id;
+  breakpoint_request.breakpoint.id = breakpoint_id;
   breakpoint_request.breakpoint.locations.push_back(location);
   AddOrChangeBreakpointReply breakpoint_reply;
   remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
@@ -378,7 +378,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   EXPECT_EQ(exception.thread.process_koid, process_koid);
   ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
   const auto& breakpoint_stat = exception.hit_breakpoints.back();
-  EXPECT_EQ(breakpoint_stat.breakpoint_id, breakpoint_id);
+  EXPECT_EQ(breakpoint_stat.id, breakpoint_id);
   EXPECT_EQ(breakpoint_stat.hit_count, 1u);
   EXPECT_EQ(breakpoint_stat.should_delete, false);  // Non one-shot breakpoint.
 

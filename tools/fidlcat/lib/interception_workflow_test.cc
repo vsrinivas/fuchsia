@@ -148,7 +148,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       std::function<void(const zxdb::Err&,
                          debug_ipc::AddOrChangeBreakpointReply)>
           cb) override {
-    breakpoint_ids_.insert(request.breakpoint.breakpoint_id);
+    breakpoint_ids_.insert(request.breakpoint.id);
     MockRemoteAPI::AddOrChangeBreakpoint(request, cb);
   }
 
@@ -195,7 +195,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
   void PopulateBreakpointIds(debug_ipc::NotifyException& notification) {
     for (uint32_t id : breakpoint_ids_) {
       notification.hit_breakpoints.emplace_back();
-      notification.hit_breakpoints.back().breakpoint_id = id;
+      notification.hit_breakpoints.back().id = id;
     }
   }
 

@@ -58,6 +58,7 @@ group("test_executables") {
   public_deps = [
     ":breakpoint_test_exe",
     ":multithreaded_breakpoint_test_exe",
+    ":watchpoint_test_exe",
   ]
 
   if (current_cpu == "x64") {
@@ -85,6 +86,19 @@ executable("multithreaded_breakpoint_test_exe") {
 
   sources = [
     "multithreaded_breakpoint_test_exe.cc",
+  ]
+
+  deps = [
+    ":debug_agent_test_so",
+  ]
+}
+
+executable("watchpoint_test_exe") {
+  testonly = true
+  output_name = "watchpoint_test_exe"
+
+  sources = [
+    "watchpoint_test_exe.cc",
   ]
 
   deps = [

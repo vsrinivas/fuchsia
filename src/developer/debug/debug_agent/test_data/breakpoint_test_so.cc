@@ -6,6 +6,10 @@
 
 #include <atomic>
 
+#include <stdio.h>
+
+int gWatchpointVariable = 0;
+
 int InsertBreakpointFunction(int c) { return 10 * c; }
 
 void AnotherFunctionForKicks() {}
@@ -14,4 +18,10 @@ void MultithreadedFunctionToBreakOn() {
   // This counter is meant to be a bare-bones example of multi-threaded logic.
   static std::atomic<int> global_counter = 0;
   global_counter++;
+}
+
+void WatchpointFunction() {
+  printf("gWatchpointVariable address: 0x%p\n", &gWatchpointVariable);
+  fflush(stdout);
+  gWatchpointVariable++;
 }

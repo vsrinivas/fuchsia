@@ -15,6 +15,7 @@
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/debug_agent/process_watchpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -108,6 +109,8 @@ void DebuggedThread::OnException(uint32_t type) {
     // TODO(donosoc): Should synthetic be general or invalid?
     case debug_ipc::NotifyException::Type::kSynthetic:
       return HandleGeneralException(&exception, &regs);
+    case debug_ipc::NotifyException::Type::kWatchpoint:
+      return HandleWatchpoint(&exception, &regs);
     case debug_ipc::NotifyException::Type::kNone:
     case debug_ipc::NotifyException::Type::kLast:
       break;
@@ -167,6 +170,11 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   SendExceptionNotification(exception, regs);
 }
 
+void DebuggedThread::HandleGeneralException(
+    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+  SendExceptionNotification(exception, regs);
+}
+
 void DebuggedThread::HandleSoftwareBreakpoint(
     debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint";
@@ -197,8 +205,11 @@ void DebuggedThread::HandleHardwareBreakpoint(
   SendExceptionNotification(exception, regs);
 }
 
-void DebuggedThread::HandleGeneralException(
-    debug_ipc::NotifyException* exception, zx_thread_state_general_regs* regs) {
+void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
+                                      zx_thread_state_general_regs* regs) {
+  if (UpdateForWatchpoint(regs, &exception->hit_breakpoints) == OnStop::kIgnore)
+    return;
+
   SendExceptionNotification(exception, regs);
 }
 
@@ -515,6 +526,31 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
   return OnStop::kNotify;
 }
 
+DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(
+      zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  auto& arch = arch::ArchProvider::Get();
+  uint64_t address = arch.InstructionForWatchpointHit(*this);
+
+  ProcessWatchpoint* wp = process_->FindWatchpointByAddress(address);
+  if (!wp) {
+    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
+    // This is probably a race between the removal and the exception handler.
+
+    // Send a notification.
+    *arch::ArchProvider::Get().IPInRegs(regs) = address;
+    return OnStop::kNotify;
+  }
+
+  FixAddressForWatchpointHit(wp, regs);
+  UpdateForWatchpointHit(wp, regs, hit_breakpoints);
+
+  // If the watchpoint was one-shot, it would've been deleted, so we should not
+  // rely on it being there.
+  wp = nullptr;
+  return OnStop::kNotify;
+}
+
 void DebuggedThread::FixSoftwareBreakpointAddress(
     ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs) {
   // When the program hits one of our breakpoints, set the IP back to
@@ -531,6 +567,13 @@ void DebuggedThread::FixSoftwareBreakpointAddress(
   }
 }
 
+void DebuggedThread::FixAddressForWatchpointHit(
+    ProcessWatchpoint* watchpoint, zx_thread_state_general_regs* regs) {
+  auto& arch_provider = arch::ArchProvider::Get();
+  *arch_provider.IPInRegs(regs) = arch_provider.NextInstructionForWatchpointHit(
+      *arch_provider.IPInRegs(regs));
+}
+
 void DebuggedThread::UpdateForHitProcessBreakpoint(
     debug_ipc::BreakpointType exception_type,
     ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
@@ -545,8 +588,24 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
   // does, our observer will be told and current_breakpoint_ will be cleared.
   for (const auto& stats : *hit_breakpoints) {
     if (stats.should_delete)
-      process_->debug_agent()->RemoveBreakpoint(stats.breakpoint_id);
+      process_->debug_agent()->RemoveBreakpoint(stats.id);
   }
+}
+
+void DebuggedThread::UpdateForWatchpointHit(
+    ProcessWatchpoint* watchpoint, zx_thread_state_general_regs* regs,
+    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  auto break_stat = watchpoint->OnHit();
+
+  // Delete any one-shot watchpoints. Since there can be multiple Watchpoints
+  // (some one-shot, some not) referring to the current ProcessBreakpoint,
+  // this operation could delete the ProcessBreakpoint or it could not. If it
+  // does, our observer will be told and current_breakpoint_ will be cleared.
+  if (break_stat.should_delete)
+    process_->debug_agent()->RemoveWatchpoint(break_stat.id);
+
+  *hit_breakpoints = {};
+  hit_breakpoints->push_back(std::move(break_stat));
 }
 
 void DebuggedThread::ResumeForRunMode() {

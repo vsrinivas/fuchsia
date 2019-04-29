@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 
-#include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -34,6 +35,8 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
   // NOTE: Here is where you add more notification handlers as they are sent by
   //       the debug agent.
   uint32_t transaction = 0;
+  DEBUG_LOG(Test) << "Got notification: "
+                  << debug_ipc::MsgHeader::TypeToString(header->type);
   switch (header->type) {
     case debug_ipc::MsgHeader::Type::kAttach: {
       debug_ipc::AttachReply attach;

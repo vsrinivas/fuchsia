@@ -162,7 +162,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     location.address = module_function;
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
-    breakpoint_request.breakpoint.breakpoint_id = kBreakpointId;
+    breakpoint_request.breakpoint.id = kBreakpointId;
     breakpoint_request.breakpoint.one_shot = true;
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
@@ -184,7 +184,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // Verify that the correct breakpoint was hit.
     auto& breakpoint = exception.hit_breakpoints[0];
-    EXPECT_EQ(breakpoint.breakpoint_id, kBreakpointId);
+    EXPECT_EQ(breakpoint.id, kBreakpointId);
     EXPECT_EQ(breakpoint.hit_count, 1u);
     EXPECT_TRUE(breakpoint.should_delete);
   }
@@ -255,7 +255,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
     breakpoint_request.breakpoint_type = debug_ipc::BreakpointType::kHardware;
-    breakpoint_request.breakpoint.breakpoint_id = kBreakpointId;
+    breakpoint_request.breakpoint.id = kBreakpointId;
     breakpoint_request.breakpoint.one_shot = true;
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
@@ -281,7 +281,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // Verify that the correct breakpoint was hit.
     auto& breakpoint = exception.hit_breakpoints[0];
-    EXPECT_EQ(breakpoint.breakpoint_id, kBreakpointId);
+    EXPECT_EQ(breakpoint.id, kBreakpointId);
     EXPECT_EQ(breakpoint.hit_count, 1u);
     EXPECT_TRUE(breakpoint.should_delete);
 

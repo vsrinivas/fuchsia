@@ -38,7 +38,7 @@ class MockRemoteAPI : public RemoteAPI {
     return last_breakpoint_add_;
   }
   uint64_t last_breakpoint_id() const {
-    return last_breakpoint_add_.breakpoint.breakpoint_id;
+    return last_breakpoint_add_.breakpoint.id;
   }
   uint64_t last_breakpoint_address() const {
     if (last_breakpoint_add_.breakpoint.locations.empty())

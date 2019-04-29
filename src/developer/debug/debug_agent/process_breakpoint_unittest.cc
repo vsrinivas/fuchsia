@@ -233,7 +233,7 @@ TEST(ProcessBreakpoint, HitCount) {
 
   constexpr uint32_t kBreakpointId1 = 12;
   debug_ipc::BreakpointSettings settings;
-  settings.breakpoint_id = kBreakpointId1;
+  settings.id = kBreakpointId1;
   settings.locations.resize(1);
 
   constexpr zx_koid_t kProcess1 = 1;
@@ -254,7 +254,7 @@ TEST(ProcessBreakpoint, HitCount) {
   std::unique_ptr<Breakpoint> main_breakpoint2 =
       std::make_unique<Breakpoint>(&process_delegate);
   constexpr uint32_t kBreakpointId2 = 13;
-  settings.breakpoint_id = kBreakpointId2;
+  settings.id = kBreakpointId2;
   status = main_breakpoint2->SetSettings(debug_ipc::BreakpointType::kSoftware,
                                          settings);
   ASSERT_EQ(ZX_OK, status);
@@ -271,10 +271,9 @@ TEST(ProcessBreakpoint, HitCount) {
   ASSERT_EQ(2u, stats.size());
 
   // Order of the vector is not defined so allow either.
-  EXPECT_TRUE((stats[0].breakpoint_id == kBreakpointId1 &&
-               stats[1].breakpoint_id == kBreakpointId2) ||
-              (stats[0].breakpoint_id == kBreakpointId2 &&
-               stats[1].breakpoint_id == kBreakpointId1));
+  EXPECT_TRUE(
+      (stats[0].id == kBreakpointId1 && stats[1].id == kBreakpointId2) ||
+      (stats[0].id == kBreakpointId2 && stats[1].id == kBreakpointId1));
 
   // The hit count of both should be 1 (order doesn't matter).
   EXPECT_EQ(1u, stats[0].hit_count);
@@ -310,7 +309,7 @@ TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
 
   auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings1 = {};
-  settings1.breakpoint_id = kBreakpointId1;
+  settings1.id = kBreakpointId1;
   // This location is for all threads.
   settings1.locations.push_back({kProcessId, 0, kAddress});
   zx_status_t status =
@@ -357,7 +356,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
 
   auto breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings1 = {};
-  settings1.breakpoint_id = kBreakpointId1;
+  settings1.id = kBreakpointId1;
   settings1.locations.push_back({kProcessId, kThreadId1, kAddress});
   zx_status_t status =
       breakpoint1->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
@@ -377,7 +376,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   // Register another breakpoint.
   auto breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings2 = {};
-  settings2.breakpoint_id = kBreakpointId2;
+  settings2.id = kBreakpointId2;
   settings2.locations.push_back({kProcessId, kThreadId2, kAddress});
   // This breakpoint has another location for another thread.
   // In practice, this should not happen, but it's important that no HW
@@ -411,7 +410,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   // Adding a SW breakpoint should not install HW locations.
   auto sw_breakpoint = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings sw_settings = {};
-  sw_settings.breakpoint_id = kSwBreakpointId;
+  sw_settings.id = kSwBreakpointId;
   sw_settings.locations.push_back({kProcessId, 0, kAddress});
   sw_breakpoint->SetSettings(debug_ipc::BreakpointType::kSoftware, sw_settings);
   // Should have installed only a SW breakpoint.

@@ -215,6 +215,9 @@ test_package("debug_agent_tests") {
     {
       name = "multithreaded_breakpoint_test_exe"
     },
+    {
+      name = "watchpoint_test_exe"
+    },
   ]
 
   if (current_cpu == "x64") {

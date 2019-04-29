@@ -75,6 +75,17 @@ uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(
   return exception_addr + 4;
 }
 
+uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
+  FXL_NOTREACHED() << "Not implemented.";
+  return 0;
+}
+
+
+uint64_t ArchProvider::InstructionForWatchpointHit(const DebuggedThread&) {
+  FXL_NOTREACHED() << "Not implemented.";
+  return 0;
+}
+
 bool ArchProvider::IsBreakpointInstruction(zx::process& process,
                                            uint64_t address) {
   BreakInstructionType data;

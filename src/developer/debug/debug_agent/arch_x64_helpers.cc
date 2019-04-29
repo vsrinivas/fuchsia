@@ -101,10 +101,10 @@ uint64_t WatchpointDR7SetMask(size_t index) {
   // TODO(donosoc): This is only setting write-only watchpoints.
   //                When enabled in the client, we need to allow read/write.
   static uint64_t masks[4] = {
-    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b11 << kDR7LEN0Shift,
-    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b11 << kDR7LEN1Shift,
-    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b11 << kDR7LEN2Shift,
-    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b11 << kDR7LEN3Shift,
+    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
+    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
+    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
+    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
   };
   return masks[index];
 }

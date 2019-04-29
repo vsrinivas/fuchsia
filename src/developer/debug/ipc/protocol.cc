@@ -101,6 +101,8 @@ const char* NotifyException::TypeToString(NotifyException::Type type) {
       return "General";
     case NotifyException::Type::kHardware:
       return "Hardware";
+    case NotifyException::Type::kWatchpoint:
+      return "Watchpoint";
     case NotifyException::Type::kSingleStep:
       return "Single Step";
     case NotifyException::Type::kSoftware:

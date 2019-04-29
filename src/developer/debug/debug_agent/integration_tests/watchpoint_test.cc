@@ -34,6 +34,7 @@ class WatchpointStreamBackend : public MockStreamBackend {
   void HandleNotifyModules(NotifyModules) override;
   void HandleNotifyException(NotifyException) override;
   void HandleNotifyProcessExiting(NotifyProcessExiting) override;
+  void HandleNotifyThreadStarting(NotifyThread) override;
 
   // Getters -------------------------------------------------------------------
 
@@ -52,13 +53,14 @@ class WatchpointStreamBackend : public MockStreamBackend {
   void ShouldQuitLoop();
 
   enum class TestStage {
+    kWaitingForThread,
     kWaitingForModules,
     kWaitingForException,
     kWaitingForExit,
     kDone,
   };
 
-  TestStage test_stage_ = TestStage::kWaitingForModules;
+  TestStage test_stage_ = TestStage::kWaitingForThread;
 
   MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
@@ -78,7 +80,15 @@ GetLaunchRequest(const WatchpointStreamBackend& backend, std::string exe);
 std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
 GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address);
 
+#if defined(__x86_64__)
 TEST(Watchpoint, DefaultCase) {
+// Arm64 implementation is not done yet.
+#elif defined(__aarch64__)
+TEST(Watchpoint, DISABLED_DefaultCase) {
+#endif
+  // Activate this is the test is giving you trouble.
+  /* debug_ipc::SetDebugMode(true); */
+
   static constexpr const char kTestSo[] = "debug_agent_test_so.so";
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
@@ -93,8 +103,7 @@ TEST(Watchpoint, DefaultCase) {
     WatchpointStreamBackend backend(loop);
     RemoteAPI* remote_api = backend.remote_api();
 
-    static constexpr const char kExecutable[] =
-        "/pkg/bin/multithreaded_breakpoint_test_exe";
+    static constexpr const char kExecutable[] = "/pkg/bin/watchpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
     remote_api->OnLaunch(lnch_request, &lnch_reply);
     ASSERT_EQ(lnch_reply.status, ZX_OK) << ZxStatusToString(lnch_reply.status);
@@ -138,7 +147,7 @@ TEST(Watchpoint, DefaultCase) {
     backend.ResumeAllThreadsAndRunLoop();
 
     // The process should've exited correctly.
-    EXPECT_EQ(backend.return_code(), 0u);
+    EXPECT_EQ(backend.return_code(), 0);
   }
 
 }
@@ -162,13 +171,27 @@ GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address) {
   location.range = {address, address};
 
   debug_ipc::AddOrChangeBreakpointRequest watchpoint_request = {};
-  watchpoint_request.breakpoint.id = kWatchpointId;
+  watchpoint_request.breakpoint_type = BreakpointType::kWatchpoint;
+  watchpoint_request.watchpoint.id = kWatchpointId;
+  watchpoint_request.watchpoint.one_shot = true;
   watchpoint_request.watchpoint.locations.push_back(location);
 
   return {watchpoint_request, {}};
 }
 
 // WatchpointStreamBackend Implementation --------------------------------------
+
+void WatchpointStreamBackend::ResumeAllThreadsAndRunLoop() {
+  ResumeAllThreads();
+  loop()->Run();
+}
+
+void WatchpointStreamBackend::ResumeAllThreads() {
+  debug_ipc::ResumeRequest resume_request;
+  resume_request.process_koid = process_koid();
+  debug_ipc::ResumeReply resume_reply;
+  remote_api()->OnResume(resume_request, &resume_reply);
+}
 
 // Searches the loaded modules for specific one.
 void WatchpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
@@ -191,6 +214,12 @@ void WatchpointStreamBackend::HandleNotifyException(NotifyException exception) {
   ShouldQuitLoop();
 }
 
+void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
+  process_koid_ = thread.record.process_koid;
+  thread_koid_ = thread.record.thread_koid;
+  ShouldQuitLoop();
+}
+
 void WatchpointStreamBackend::HandleNotifyProcessExiting(
     NotifyProcessExiting process) {
   DEBUG_LOG(Test) << "Process " << process.process_koid
@@ -201,7 +230,16 @@ void WatchpointStreamBackend::HandleNotifyProcessExiting(
 }
 
 void WatchpointStreamBackend::ShouldQuitLoop() {
-  if (test_stage_ == TestStage::kWaitingForModules) {
+  if (test_stage_ == TestStage::kWaitingForThread) {
+    if (process_koid_ != 0u && thread_koid_ != 0u) {
+      test_stage_ = TestStage::kWaitingForModules;
+      DEBUG_LOG(Test) << "Stage changed to WAITING FOR MODULES.";
+
+      // In this case we resume the thread.
+      ResumeAllThreads();
+      return;
+    }
+  } else if (test_stage_ == TestStage::kWaitingForModules) {
     if (so_test_base_addr_ != 0u) {
       test_stage_ = TestStage::kWaitingForException;
       DEBUG_LOG(Test) << "State changed to WAITING FOR EXCEPTION.";

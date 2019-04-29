@@ -11,49 +11,20 @@
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
 namespace {
 
-zx_status_t InstallWatchpoints(const ProcessWatchpoint& wp,
-                               std::vector<DebuggedThread*>* threads) {
-  if (threads->empty())
-    return ZX_OK;
-
-  // TODO(Cristian): This is wrong! Thread could be running, which means the
-  //                 installation will fail. This need to:
-  //                 1. Suspend threads.
-  //                 2. Install/uninstall watchpoints.
-  //                 3. Resume threads that weren't suspended before this.
-  //
-  // The CL is big enough already so we'll leave it at this.
-  auto& arch_provider = arch::ArchProvider::Get();
-  for (DebuggedThread* thread : *threads) {
-    arch_provider.InstallWatchpoint(&thread->thread(), wp.range());
+std::string KoidsToString(const std::vector<DebuggedThread*>& threads) {
+  std::stringstream ss;
+  for (DebuggedThread* thread : threads) {
+    ss << thread->koid() << ", ";
   }
 
-  return ZX_OK;
-}
-
-zx_status_t UninstallWatchpoints(const ProcessWatchpoint& wp,
-                                 std::vector<DebuggedThread*>* threads) {
-  if (threads->empty())
-    return ZX_OK;
-  // TODO(Cristian): This is wrong! Thread could be running, which means the
-  //                 installation will fail. This need to:
-  //                 1. Suspend threads.
-  //                 2. Install/uninstall watchpoints.
-  //                 3. Resume threads that weren't suspended before this.
-  //
-  // The CL is big enough already so we'll leave it at this.
-  auto& arch_provider = arch::ArchProvider::Get();
-  for (DebuggedThread* thread : *threads) {
-    arch_provider.UninstallWatchpoint(&thread->thread(), wp.range());
-  }
-
-  return ZX_OK;
+  return ss.str();
 }
 
 }  // namespace
@@ -112,29 +83,16 @@ zx_status_t ProcessWatchpoint::Update() {
     }
   }
 
-  // NOTE: Each one of this installs/uninstalls will potentially block, because
-  //       the thread needs to be stopped in order to mess with the register.
-  if (zx_status_t res = UninstallWatchpoints(*this, &threads_to_remove);
-      res != ZX_OK) {
+  zx_status_t res = UpdateWatchpoints(threads_to_remove, threads_to_install);
+  if (res != ZX_OK)
     return res;
-  }
-
-  if (zx_status_t res = InstallWatchpoints(*this, &threads_to_install);
-      res != ZX_OK) {
-    return res;
-  }
-
-  for (DebuggedThread* thread : threads_to_remove) {
-    size_t remove_count = installed_threads_.erase(thread->koid());
-    FXL_DCHECK(remove_count == 1u);
-  }
-
-  for (DebuggedThread* thread : threads_to_install) {
-    auto [it, inserted] = installed_threads_.insert(thread->koid());
-    FXL_DCHECK(inserted);
-  }
 
   return ZX_OK;
+}
+
+debug_ipc::BreakpointStats ProcessWatchpoint::OnHit() {
+  FXL_DCHECK(watchpoint_);
+  return watchpoint_->OnHit();
 }
 
 void ProcessWatchpoint::Uninstall() {
@@ -147,7 +105,45 @@ void ProcessWatchpoint::Uninstall() {
     threads_to_remove.push_back(thread);
   }
 
-  UninstallWatchpoints(*this, &threads_to_remove);
+  // We only want to remove threads.
+  UpdateWatchpoints(threads_to_remove, {});
+}
+
+zx_status_t ProcessWatchpoint::UpdateWatchpoints(
+    const std::vector<DebuggedThread*>& threads_to_remove,
+    const std::vector<DebuggedThread*>& threads_to_install) {
+  DEBUG_LOG(Watchpoint) << "Installs: " << KoidsToString(threads_to_install)
+                        << "uninstalls: " << KoidsToString(threads_to_remove);
+
+  // We suspend the process synchronously.
+  // TODO(donosoc): If this prooves to be too intrusive, we could just stop
+  //                the threads that will be changed.
+  std::vector<uint64_t> suspended_koids;
+  process()->SuspendAll(true, &suspended_koids);
+
+  auto& arch_provider = arch::ArchProvider::Get();
+  for (DebuggedThread* thread : threads_to_remove) {
+    auto res = arch_provider.UninstallWatchpoint(&thread->thread(), range());
+    if (res != ZX_OK)
+      return res;
+    installed_threads_.erase(thread->koid());
+  }
+
+  for (DebuggedThread* thread : threads_to_install) {
+    auto res = arch_provider.InstallWatchpoint(&thread->thread(), range());
+    if (res != ZX_OK)
+      return res;
+    installed_threads_.insert(thread->koid());
+  }
+
+  // We resume the threads that were affected.
+  for (uint64_t thread_koid : suspended_koids) {
+    auto* thread = process()->GetThread(thread_koid);
+    FXL_DCHECK(thread);
+    thread->Resume({});
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace debug_agent

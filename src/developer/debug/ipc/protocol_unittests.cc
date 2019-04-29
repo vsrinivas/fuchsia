@@ -380,7 +380,7 @@ TEST(Protocol, ReadMemoryReply) {
 TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest initial;
   initial.breakpoint_type = BreakpointType::kHardware;
-  initial.breakpoint.breakpoint_id = 8976;
+  initial.breakpoint.id = 8976;
   initial.breakpoint.stop = debug_ipc::Stop::kProcess;
   initial.breakpoint.locations.resize(1);
 
@@ -393,7 +393,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
   EXPECT_EQ(initial.breakpoint_type, second.breakpoint_type);
-  EXPECT_EQ(initial.breakpoint.breakpoint_id, second.breakpoint.breakpoint_id);
+  EXPECT_EQ(initial.breakpoint.id, second.breakpoint.id);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
   ASSERT_EQ(initial.breakpoint.locations.size(),
             second.breakpoint.locations.size());
@@ -778,12 +778,12 @@ TEST(Protocol, NotifyException) {
   initial.type = NotifyException::Type::kHardware;
 
   initial.hit_breakpoints.emplace_back();
-  initial.hit_breakpoints[0].breakpoint_id = 45;
+  initial.hit_breakpoints[0].id = 45;
   initial.hit_breakpoints[0].hit_count = 15;
   initial.hit_breakpoints[0].should_delete = true;
 
   initial.hit_breakpoints.emplace_back();
-  initial.hit_breakpoints[1].breakpoint_id = 46;
+  initial.hit_breakpoints[1].id = 46;
   initial.hit_breakpoints[1].hit_count = 16;
   initial.hit_breakpoints[1].should_delete = false;
 
@@ -800,15 +800,15 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.type, second.type);
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 
-  EXPECT_EQ(initial.hit_breakpoints[0].breakpoint_id,
-            second.hit_breakpoints[0].breakpoint_id);
+  EXPECT_EQ(initial.hit_breakpoints[0].id,
+            second.hit_breakpoints[0].id);
   EXPECT_EQ(initial.hit_breakpoints[0].hit_count,
             second.hit_breakpoints[0].hit_count);
   EXPECT_EQ(initial.hit_breakpoints[0].should_delete,
             second.hit_breakpoints[0].should_delete);
 
-  EXPECT_EQ(initial.hit_breakpoints[1].breakpoint_id,
-            second.hit_breakpoints[1].breakpoint_id);
+  EXPECT_EQ(initial.hit_breakpoints[1].id,
+            second.hit_breakpoints[1].id);
   EXPECT_EQ(initial.hit_breakpoints[1].hit_count,
             second.hit_breakpoints[1].hit_count);
   EXPECT_EQ(initial.hit_breakpoints[1].should_delete,

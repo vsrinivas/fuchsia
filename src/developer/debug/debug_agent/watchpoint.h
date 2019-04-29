@@ -36,7 +36,7 @@ class Watchpoint {
   explicit Watchpoint(ProcessDelegate* delegate);
   ~Watchpoint();
 
-  uint32_t id() const { return settings_.watchpoint_id; }
+  uint32_t id() const { return settings_.id; }
 
   zx_status_t SetSettings(const debug_ipc::WatchpointSettings& settings);
 
@@ -44,6 +44,8 @@ class Watchpoint {
   // Returns false if the watchpoint doesn't span the process.
   // If |out| is empty, it means all the threads.
   bool ThreadsToInstall(zx_koid_t process_koid, std::set<zx_koid_t>* out) const;
+
+  debug_ipc::BreakpointStats OnHit();
 
  private:
   // This is a pair of process and the id of the ProcessWatchpoint installed
@@ -57,6 +59,8 @@ class Watchpoint {
 
   ProcessDelegate* delegate_ = nullptr;  // Not-owning.
   debug_ipc::WatchpointSettings settings_ = {};
+
+  debug_ipc::BreakpointStats stats_;
 
   std::set<WatchpointInstallation> installed_watchpoints_ = {};
 

@@ -125,7 +125,7 @@ GetBreakpointRequest(zx_koid_t process_koid, zx_koid_t thread_koid,
   location.address = address;
 
   debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
-  breakpoint_request.breakpoint.breakpoint_id = kBreakpointId;
+  breakpoint_request.breakpoint.id = kBreakpointId;
   breakpoint_request.breakpoint.locations.push_back(location);
 
   DEBUG_LOG(Test) << "Setting breakpoint for [P: " << process_koid
@@ -136,7 +136,14 @@ GetBreakpointRequest(zx_koid_t process_koid, zx_koid_t thread_koid,
 
 }  // namespace
 
+// TODO(DX-1448): Arm64 has an instruction cache that makes a thread sometimes
+//                hit a thread that has been removed, making this test flake.
+//                This has to be fixed in zircon.
+#if defined(__x86_64__)
 TEST(MultithreadedBreakpoint, SWBreakpoint) {
+#elif defined(__aarch64__)
+TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
+#endif
   // Uncomment these is the test is giving you trouble.
   // Only uncomment SetDebugMode if the test is giving you *real* trouble.
   // debug_ipc::SetDebugMode(true);
@@ -207,7 +214,7 @@ TEST(MultithreadedBreakpoint, SWBreakpoint) {
 
     ASSERT_EQ(brk_notify.hit_breakpoints.size(), 1u);
     auto& hit_brk = brk_notify.hit_breakpoints.front();
-    EXPECT_EQ(hit_brk.breakpoint_id, kBreakpointId);
+    EXPECT_EQ(hit_brk.id, kBreakpointId);
     EXPECT_EQ(hit_brk.hit_count, 1u);
     EXPECT_EQ(hit_brk.should_delete, false);
 

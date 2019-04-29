@@ -89,7 +89,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
   break_frames.emplace(break_frames.begin(), kReturnAddress,
                        kInitialBase - 0x100, kInitialBase - 0x100);
   break_notification.hit_breakpoints.emplace_back();
-  break_notification.hit_breakpoints[0].breakpoint_id =
+  break_notification.hit_breakpoints[0].id =
       mock_remote_api()->last_breakpoint_id();
   InjectException(break_notification);
   EXPECT_FALSE(thread_observer.got_stopped());
@@ -175,7 +175,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   // Make breakpoint hit notification.
   std::vector<debug_ipc::BreakpointStats> hit_breakpoints;
   hit_breakpoints.emplace_back();
-  hit_breakpoints[0].breakpoint_id = mock_remote_api()->last_breakpoint_id();
+  hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
 
   // Make an inline function starting at the return address of the function.
   AddressRange second_inline_range(return_address, return_address + 4);

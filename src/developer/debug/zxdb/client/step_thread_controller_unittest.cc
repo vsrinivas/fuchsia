@@ -315,8 +315,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   // Breakpoint exceptions are "software".
   src_exception.type = debug_ipc::NotifyException::Type::kSoftware;
   src_exception.hit_breakpoints.resize(1);
-  src_exception.hit_breakpoints[0].breakpoint_id =
-      mock_remote_api()->last_breakpoint_id();
+  src_exception.hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
   src_exception.hit_breakpoints[0].hit_count = 1;
   src_exception.thread.frames[0].ip = kAddrReturn;
   InjectException(src_exception);

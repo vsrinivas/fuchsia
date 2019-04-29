@@ -261,7 +261,7 @@ void BreakpointImpl::SendBackendAddOrChange(
 
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint_type = settings_.type;
-  request.breakpoint.breakpoint_id = backend_id_;
+  request.breakpoint.id = backend_id_;
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
   request.breakpoint.one_shot = settings_.one_shot;
 

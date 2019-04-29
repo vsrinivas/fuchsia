@@ -558,7 +558,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify,
     // Update breakpoints' hit counts and stats. This is done before any
     // notifications are sent so that all breakpoint state is consistent.
     for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
-      BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
+      BreakpointImpl* impl = system_.BreakpointImplForId(stats.id);
       if (impl) {
         impl->UpdateStats(stats);
         hit_breakpoints.push_back(impl->GetWeakPtr());
@@ -576,7 +576,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify,
       continue;
 
     // Breakpoint needs deleting.
-    BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
+    BreakpointImpl* impl = system_.BreakpointImplForId(stats.id);
     if (impl) {
       // Need to tell the breakpoint it was removed in the backend before
       // deleting it or it will try to uninstall itself.

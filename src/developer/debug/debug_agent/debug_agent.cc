@@ -72,6 +72,12 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
     breakpoints_.erase(found);
 }
 
+void DebugAgent::RemoveWatchpoint(uint32_t watchpoint_id) {
+  auto found = watchpoints_.find(watchpoint_id);
+  if (found != watchpoints_.end())
+    watchpoints_.erase(found);
+}
+
 void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                                debug_ipc::ConfigAgentReply* reply) {
   reply->results = HandleActions(request.actions, &configuration_);
@@ -422,7 +428,7 @@ void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
 void DebugAgent::SetupBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-  uint32_t id = request.breakpoint.breakpoint_id;
+  uint32_t id = request.breakpoint.id;
   auto found = breakpoints_.find(id);
   if (found == breakpoints_.end()) {
     found = breakpoints_
@@ -461,7 +467,7 @@ void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
 void DebugAgent::SetupWatchpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-  auto id = request.watchpoint.watchpoint_id;
+  auto id = request.watchpoint.id;
 
   auto wp_it = watchpoints_.find(id);
   if (wp_it == watchpoints_.end()) {

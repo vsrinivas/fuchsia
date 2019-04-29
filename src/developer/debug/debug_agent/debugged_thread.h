@@ -17,6 +17,7 @@ namespace debug_agent {
 class DebugAgent;
 class DebuggedProcess;
 class ProcessBreakpoint;
+class ProcessWatchpoint;
 
 enum class ThreadCreationOption {
   // Already running, don't do anything
@@ -122,12 +123,14 @@ class DebuggedThread {
 
   void HandleSingleStep(debug_ipc::NotifyException*,
                         zx_thread_state_general_regs*);
+  void HandleGeneralException(debug_ipc::NotifyException*,
+                              zx_thread_state_general_regs*);
   void HandleSoftwareBreakpoint(debug_ipc::NotifyException*,
                                 zx_thread_state_general_regs*);
   void HandleHardwareBreakpoint(debug_ipc::NotifyException*,
                                 zx_thread_state_general_regs*);
-  void HandleGeneralException(debug_ipc::NotifyException*,
-                              zx_thread_state_general_regs*);
+  void HandleWatchpoint(debug_ipc::NotifyException*,
+                        zx_thread_state_general_regs*);
 
   void SendExceptionNotification(debug_ipc::NotifyException*,
                                  zx_thread_state_general_regs*);
@@ -140,10 +143,17 @@ class DebuggedThread {
       zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
+  OnStop UpdateForWatchpoint(
+      zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
   // When hitting a SW breakpoint, the PC needs to be correctly re-set depending
   // on where the CPU leaves the PC after a SW exception.
   void FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
                                     zx_thread_state_general_regs* regs);
+
+  void FixAddressForWatchpointHit(ProcessWatchpoint* watchpoint,
+                                  zx_thread_state_general_regs* regs);
 
   // Handles an exception corresponding to a ProcessBreakpoint. All
   // Breakpoints affected will have their updated stats added to
@@ -154,6 +164,12 @@ class DebuggedThread {
   void UpdateForHitProcessBreakpoint(
       debug_ipc::BreakpointType exception_type,
       ProcessBreakpoint* process_breakpoint, zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
+  // WARNING: The ProcessWatchpoint argument could be deleted in this call
+  // if it was a one-shot breakpoint.
+  void UpdateForWatchpointHit(
+      ProcessWatchpoint*, zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Resumes the thread according to the current run mode.

@@ -305,6 +305,15 @@ ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
   return found->second.get();
 }
 
+ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
+  DEBUG_LOG(Process) << ProcessPreamble(this) << "WP address 0x" << std::hex
+                     << address;
+  auto it = watchpoints_.find(address);
+  if (it == watchpoints_.end())
+    return nullptr;
+  return it->second.get();
+}
+
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
                                                 uint64_t address) {
   DEBUG_LOG(Process) << ProcessPreamble(this)
@@ -344,21 +353,25 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
 zx_status_t DebuggedProcess::RegisterWatchpoint(
     Watchpoint* wp, const debug_ipc::AddressRange& range) {
   // We should not install the same watchpoint twice.
-  FXL_DCHECK(watchpoints_.find(range) != watchpoints_.end());
+  FXL_DCHECK(watchpoints_.find(range.begin) == watchpoints_.end());
+
+  DEBUG_LOG(Process) << ProcessPreamble(this)
+                     << "Registering watchpoint: " << wp->id() << " on [0x"
+                     << std::hex << range.begin << ", 0x" << range.end << ").";
 
   auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, range);
   if (zx_status_t res = process_wp->Init(); res != ZX_OK)
     return res;
 
   // We let the associated Watchpoint know about this installed process wp.
-  watchpoints_[range] = std::move(process_wp);
+  watchpoints_[range.begin] = std::move(process_wp);
   return ZX_OK;
 }
 
 void DebuggedProcess::UnregisterWatchpoint(
     Watchpoint* wp, const debug_ipc::AddressRange& range) {
   // The process watchpoint owns the resource and will free it upon destruction.
-  auto node = watchpoints_.extract(range);
+  auto node = watchpoints_.extract(range.begin);
   FXL_DCHECK(!node.empty());
 }
 

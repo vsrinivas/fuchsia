@@ -98,7 +98,7 @@ bool Deserialize(MessageReader* reader, StackFrame* frame) {
 }
 
 bool Deserialize(MessageReader* reader, BreakpointStats* stats) {
-  if (!reader->ReadUint32(&stats->breakpoint_id))
+  if (!reader->ReadUint32(&stats->id))
     return false;
   if (!reader->ReadUint32(&stats->hit_count))
     return false;
@@ -127,7 +127,7 @@ void Serialize(const ProcessBreakpointSettings& settings,
 }
 
 void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
-  writer->WriteUint32(settings.breakpoint_id);
+  writer->WriteUint32(settings.id);
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
   Serialize(settings.locations, writer);

@@ -62,6 +62,9 @@ enum class LogCategory {
   // Associated with threads (exception, state, etc.)
   kThread,
 
+  // Associated with watchpoints.
+  kWatchpoint,
+
   // All the previous categories are enabled.
   // Log statements in this category will always be outputting if debug logging
   // is enabled.

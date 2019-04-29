@@ -116,13 +116,26 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // at that address.
   ProcessBreakpoint* FindProcessBreakpointForAddr(uint64_t address);
 
+  // Find a process watchpoint whose range starts at |address|.
+  // Returns nullptr if no watchpoint is at that address.
+  ProcessWatchpoint* FindWatchpointByAddress(uint64_t address);
+
   // Notifications when breakpoints are added or removed that affect this
   // process.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
+  const std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& breakpoints()
+      const {
+    return breakpoints_;
+  }
 
   zx_status_t RegisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
   void UnregisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
+
+  const std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>>& watchpoints()
+      const {
+    return watchpoints_;
+  }
 
  private:
   // ZirconExceptionWatcher implementation.
@@ -177,10 +190,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> breakpoints_;
 
   // Each watchpoint holds the information about what range of addresses
-  // it spans.
-  std::map<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
-           debug_ipc::AddressRangeCompare>
-      watchpoints_;
+  // it spans. They're keyed by the first address of their range.
+  std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>> watchpoints_;
 
   debug_ipc::BufferedZxSocket stdout_;
   debug_ipc::BufferedZxSocket stderr_;

@@ -55,6 +55,11 @@ class ArchProvider {
   // exception.
   uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
+  uint64_t NextInstructionForWatchpointHit(uint64_t exception_addr);
+
+  // Address of the instruction that caused the watchpoint exception.
+  uint64_t InstructionForWatchpointHit(const DebuggedThread&);
+
   // Returns true if there is a breakpoint instruction at the given address.
   // This doesn't just check equality of kBreakInstruction which is guaranteed
   // to be used for our breakpoints, but also checks other encodings that may

@@ -76,10 +76,10 @@ uint64_t GetWatchpointDR7Mask(size_t index) {
   FXL_DCHECK(index < 4);
   // Mask is: L = 1, RW = 0b01, LEN = 10 (8 bytes).
   static uint64_t masks[4] = {
-    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b11 << kDR7LEN0Shift,
-    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b11 << kDR7LEN1Shift,
-    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b11 << kDR7LEN2Shift,
-    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b11 << kDR7LEN3Shift,
+    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
+    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
+    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
+    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
   };
   return masks[index];
 }

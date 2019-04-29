@@ -49,7 +49,7 @@ class SessionSink : public RemoteAPI {
     notify->hit_breakpoints.clear();
     for (uint32_t id : set_breakpoint_ids_) {
       notify->hit_breakpoints.emplace_back();
-      notify->hit_breakpoints.back().breakpoint_id = id;
+      notify->hit_breakpoints.back().id = id;
     }
   }
 
@@ -66,7 +66,7 @@ class SessionSink : public RemoteAPI {
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
       override {
-    set_breakpoint_ids_.insert(request.breakpoint.breakpoint_id);
+    set_breakpoint_ids_.insert(request.breakpoint.id);
     MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
       cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
     });

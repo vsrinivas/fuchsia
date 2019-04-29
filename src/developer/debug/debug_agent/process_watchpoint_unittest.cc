@@ -110,7 +110,7 @@ TEST(ProcessWatchpoint, InstallAndRemove) {
 
   // Insert the watchpoint for all threads.
   debug_ipc::WatchpointSettings settings = {};
-  settings.watchpoint_id = 0x1;
+  settings.id = 0x1;
   settings.locations.push_back({kProcessId1, kThreadId11, kAddressRange1});
   settings.locations.push_back({kProcessId1, kThreadId13, kAddressRange1});
   // All of the process 2 threads.
