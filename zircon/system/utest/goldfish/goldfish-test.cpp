@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/hardware/goldfish/address/space/c/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 static bool GoldfishPipeFdioTest() {
     BEGIN_TEST;
@@ -134,6 +136,62 @@ BEGIN_TEST_CASE(GoldfishPipeTests)
 RUN_TEST(GoldfishPipeFdioTest)
 RUN_TEST(GoldfishPipeFidlTest)
 END_TEST_CASE(GoldfishPipeTests)
+
+static bool GoldfishAddressSpaceTest() {
+    BEGIN_TEST;
+
+    int fd = open("/dev/class/goldfish-address-space/000", O_RDWR);
+    EXPECT_GE(fd, 0);
+
+    zx::channel channel;
+    EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()),
+              ZX_OK);
+
+    constexpr uint64_t kHeapSize = 512ULL * 1048576ULL;
+
+    zx_status_t res;
+    uint64_t actual_size = 0;
+    uint64_t paddr = 0;
+    zx::vmo vmo;
+    EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock(
+                  channel.get(), kHeapSize, &res, &paddr,
+                  vmo.reset_and_get_address()),
+              ZX_OK);
+    EXPECT_EQ(res, ZX_OK);
+    EXPECT_NE(paddr, 0);
+    EXPECT_EQ(vmo.is_valid(), true);
+    EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
+    EXPECT_GE(actual_size, kHeapSize);
+
+    uint64_t paddr2 = 0;
+    zx::vmo vmo2;
+    EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock(
+                  channel.get(), kHeapSize, &res, &paddr2,
+                  vmo2.reset_and_get_address()),
+              ZX_OK);
+    EXPECT_EQ(res, ZX_OK);
+    EXPECT_NE(paddr2, 0);
+    EXPECT_NE(paddr2, paddr);
+    EXPECT_EQ(vmo2.is_valid(), true);
+    EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
+    EXPECT_GE(actual_size, kHeapSize);
+
+    EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock(
+                  channel.get(), paddr, &res),
+              ZX_OK);
+    EXPECT_EQ(res, ZX_OK);
+
+    EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock(
+                  channel.get(), paddr2, &res),
+              ZX_OK);
+    EXPECT_EQ(res, ZX_OK);
+
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(GoldfishAddressSpaceTests)
+RUN_TEST(GoldfishAddressSpaceTest)
+END_TEST_CASE(GoldfishAddressSpaceTests)
 
 int main(int argc, char** argv) {
     if (access("/dev/sys/platform/acpi/goldfish", F_OK) != -1) {

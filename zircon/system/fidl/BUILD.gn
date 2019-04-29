@@ -28,6 +28,7 @@ group("fidl") {
     "fuchsia-hardware-display",
     "fuchsia-hardware-ethernet",
     "fuchsia-hardware-ethertap",
+    "fuchsia-hardware-goldfish-address-space",
     "fuchsia-hardware-goldfish-pipe",
     "fuchsia-hardware-gpu-clock",
     "fuchsia-hardware-hidctl",

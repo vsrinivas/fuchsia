@@ -8,6 +8,7 @@ group("misc") {
     "console",
     "cpu-trace",
     "goldfish",
+    "goldfish-address-space",
     "ktrace",
     "pty",
     "sysinfo",

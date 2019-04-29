@@ -2,17 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("goldfish") {
+driver("goldfish-address-space") {
   sources = [
-    "goldfish-test.cpp",
+    "address-space-device.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/fidl/fuchsia-hardware-goldfish-address-space:c",
-    "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
-    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
