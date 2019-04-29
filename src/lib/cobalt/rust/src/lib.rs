@@ -8,7 +8,8 @@ use {
     failure::{bail, Error, ResultExt},
     fdio, fidl,
     fidl_fuchsia_cobalt::{
-        HistogramBucket, LoggerFactoryMarker, LoggerProxy, ProjectProfile, ReleaseStage, Status,
+        CobaltEvent, CountEvent, EventPayload, HistogramBucket, LoggerFactoryMarker, LoggerProxy,
+        ProjectProfile, ReleaseStage, Status,
     },
     fidl_fuchsia_mem as fuchsia_mem,
     fuchsia_component::client::connect_to_service,
@@ -24,47 +25,110 @@ use {
     },
 };
 
-enum EventValue {
-    Event { event_code: u32 },
-    Count { event_code: u32, count: i64 },
-    ElapsedTime { event_code: u32, elapsed_micros: i64 },
-    IntHistogram { values: Vec<HistogramBucket> },
+pub trait AsEventCodes {
+    fn as_event_codes(&self) -> Vec<u32>;
 }
 
-struct Event {
-    metric_id: u32,
-    value: EventValue,
+impl AsEventCodes for () {
+    fn as_event_codes(&self) -> Vec<u32> {
+        Vec::new()
+    }
 }
+
+impl AsEventCodes for u32 {
+    fn as_event_codes(&self) -> Vec<u32> {
+        vec![*self]
+    }
+}
+
+impl AsEventCodes for Vec<u32> {
+    fn as_event_codes(&self) -> Vec<u32> {
+        self.to_owned()
+    }
+}
+
+impl AsEventCodes for [u32] {
+    fn as_event_codes(&self) -> Vec<u32> {
+        Vec::from(self)
+    }
+}
+
+macro_rules! array_impls {
+    ($($N:expr)+) => {
+        $(
+            impl AsEventCodes for [u32; $N] {
+                fn as_event_codes(&self) -> Vec<u32> {
+                    self[..].as_event_codes()
+                }
+            }
+        )+
+    }
+}
+
+array_impls! {0 1 2 3 4 5 6}
 
 #[derive(Clone)]
 pub struct CobaltSender {
-    sender: mpsc::Sender<Event>,
+    sender: mpsc::Sender<CobaltEvent>,
     is_blocked: Arc<AtomicBool>,
 }
 
 impl CobaltSender {
-    pub fn log_event(&mut self, metric_id: u32, event_code: u32) {
-        let event_value = EventValue::Event { event_code };
-        self.log_event_value(metric_id, event_value);
+    pub fn new(sender: mpsc::Sender<CobaltEvent>) -> CobaltSender {
+        CobaltSender { sender, is_blocked: Arc::new(AtomicBool::new(false)) }
     }
 
-    pub fn log_event_count(&mut self, metric_id: u32, event_code: u32, count: i64) {
-        let event_value = EventValue::Count { event_code, count };
-        self.log_event_value(metric_id, event_value);
+    pub fn log_event<Codes: AsEventCodes>(&mut self, metric_id: u32, event_codes: Codes) {
+        self.log_event_value(CobaltEvent {
+            metric_id,
+            event_codes: event_codes.as_event_codes(),
+            component: None,
+            payload: EventPayload::Event(fidl_fuchsia_cobalt::Event {}),
+        });
     }
 
-    pub fn log_elapsed_time(&mut self, metric_id: u32, event_code: u32, elapsed_micros: i64) {
-        let event_value = EventValue::ElapsedTime { event_code, elapsed_micros };
-        self.log_event_value(metric_id, event_value);
+    pub fn log_event_count<Codes: AsEventCodes>(
+        &mut self,
+        metric_id: u32,
+        event_codes: Codes,
+        count: i64,
+    ) {
+        self.log_event_value(CobaltEvent {
+            metric_id,
+            event_codes: event_codes.as_event_codes(),
+            component: None,
+            payload: EventPayload::EventCount(CountEvent { period_duration_micros: 0, count }),
+        });
+    }
+
+    pub fn log_elapsed_time<Codes: AsEventCodes>(
+        &mut self,
+        metric_id: u32,
+        event_codes: Codes,
+        elapsed_micros: i64,
+    ) {
+        self.log_event_value(CobaltEvent {
+            metric_id,
+            event_codes: event_codes.as_event_codes(),
+            component: None,
+            payload: EventPayload::ElapsedMicros(elapsed_micros),
+        });
     }
 
     pub fn log_int_histogram(&mut self, metric_id: u32, values: Vec<HistogramBucket>) {
-        let event_value = EventValue::IntHistogram { values };
-        self.log_event_value(metric_id, event_value);
+        self.log_event_value(CobaltEvent {
+            metric_id,
+            event_codes: vec![0],
+            component: None,
+            payload: EventPayload::IntHistogram(values),
+        });
     }
 
-    fn log_event_value(&mut self, metric_id: u32, value: EventValue) {
-        let event = Event { metric_id, value };
+    pub fn log_cobalt_event(&mut self, event: CobaltEvent) {
+        self.log_event_value(event);
+    }
+
+    fn log_event_value(&mut self, event: CobaltEvent) {
         if self.sender.try_send(event).is_err() {
             let was_blocked = self.is_blocked.compare_and_swap(false, true, Ordering::SeqCst);
             if !was_blocked {
@@ -84,7 +148,7 @@ pub fn serve_with_project_name(
     project_name: &str,
 ) -> (CobaltSender, impl Future<Output = ()>) {
     let (sender, receiver) = mpsc::channel(buffer_size);
-    let sender = CobaltSender { sender, is_blocked: Arc::new(AtomicBool::new(false)) };
+    let sender = CobaltSender::new(sender);
     let project_name = project_name.to_string();
     let fut = async move {
         let logger = match await!(get_cobalt_logger_with_project_name(project_name)) {
@@ -101,7 +165,7 @@ pub fn serve_with_project_name(
 
 pub fn serve(buffer_size: usize, config_path: &str) -> (CobaltSender, impl Future<Output = ()>) {
     let (sender, receiver) = mpsc::channel(buffer_size);
-    let sender = CobaltSender { sender, is_blocked: Arc::new(AtomicBool::new(false)) };
+    let sender = CobaltSender::new(sender);
     let config_path = config_path.to_string();
     let fut = async move {
         let logger = match await!(get_cobalt_logger(config_path)) {
@@ -162,28 +226,39 @@ fn handle_cobalt_factory_result(
     }
 }
 
-async fn send_cobalt_events(logger: LoggerProxy, mut receiver: mpsc::Receiver<Event>) {
+async fn send_cobalt_events(logger: LoggerProxy, mut receiver: mpsc::Receiver<CobaltEvent>) {
     let mut is_full = false;
-    while let Some(event) = await!(receiver.next()) {
-        let resp = match event.value {
-            EventValue::Event { event_code } => {
-                await!(logger.log_event(event.metric_id, event_code))
-            }
-            EventValue::Count { event_code, count } => {
-                await!(logger.log_event_count(
+    while let Some(mut event) = await!(receiver.next()) {
+        let resp = if event.event_codes.len() == 1 {
+            match event.payload {
+                EventPayload::Event(_) => {
+                    await!(logger.log_event(event.metric_id, event.event_codes[0]))
+                }
+                EventPayload::EventCount(CountEvent { period_duration_micros, count }) => {
+                    await!(logger.log_event_count(
+                        event.metric_id,
+                        event.event_codes[0],
+                        &event.component.unwrap_or_else(String::new),
+                        period_duration_micros,
+                        count
+                    ))
+                }
+                EventPayload::ElapsedMicros(elapsed_micros) => await!(logger.log_elapsed_time(
                     event.metric_id,
-                    event_code,
-                    "",
-                    0, // TODO report a period duration once the backend supports it.
-                    count
-                ))
+                    event.event_codes[0],
+                    &event.component.unwrap_or_else(String::new),
+                    elapsed_micros
+                )),
+                EventPayload::IntHistogram(mut values) => await!(logger.log_int_histogram(
+                    event.metric_id,
+                    event.event_codes[0],
+                    &event.component.unwrap_or_else(String::new),
+                    &mut values.iter_mut()
+                )),
+                _ => await!(logger.log_cobalt_event(&mut event)),
             }
-            EventValue::ElapsedTime { event_code, elapsed_micros } => {
-                await!(logger.log_elapsed_time(event.metric_id, event_code, "", elapsed_micros))
-            }
-            EventValue::IntHistogram { mut values } => {
-                await!(logger.log_int_histogram(event.metric_id, 0, "", &mut values.iter_mut()))
-            }
+        } else {
+            await!(logger.log_cobalt_event(&mut event))
         };
         handle_cobalt_response(resp, event.metric_id, &mut is_full);
     }
@@ -247,5 +322,74 @@ mod tests {
         let cobalt_resp = Err(fidl::Error::ClientWrite(fuchsia_zircon::Status::PEER_CLOSED));
         assert!(throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
         assert_eq!(is_full, false);
+    }
+
+    #[test]
+    fn test_as_event_codes() {
+        assert_eq!(().as_event_codes(), vec![]);
+        assert_eq!([].as_event_codes(), vec![]);
+        assert_eq!(1.as_event_codes(), vec![1]);
+        assert_eq!([1].as_event_codes(), vec![1]);
+        assert_eq!(vec![1].as_event_codes(), vec![1]);
+        assert_eq!([1, 2].as_event_codes(), vec![1, 2]);
+        assert_eq!(vec![1, 2].as_event_codes(), vec![1, 2]);
+        assert_eq!([1, 2, 3].as_event_codes(), vec![1, 2, 3]);
+        assert_eq!(vec![1, 2, 3].as_event_codes(), vec![1, 2, 3]);
+        assert_eq!([1, 2, 3, 4].as_event_codes(), vec![1, 2, 3, 4]);
+        assert_eq!(vec![1, 2, 3, 4].as_event_codes(), vec![1, 2, 3, 4]);
+        assert_eq!([1, 2, 3, 4, 5].as_event_codes(), vec![1, 2, 3, 4, 5]);
+        assert_eq!(vec![1, 2, 3, 4, 5].as_event_codes(), vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_cobalt_sender() {
+        let (sender, mut receiver) = mpsc::channel(1);
+        let mut sender = CobaltSender::new(sender);
+        sender.log_event(1, 1);
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: 1,
+                event_codes: vec![1],
+                component: None,
+                payload: EventPayload::Event(fidl_fuchsia_cobalt::Event {}),
+            }
+        );
+
+        sender.log_event_count(2, (), 1);
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: 2,
+                event_codes: vec![],
+                component: None,
+                payload: EventPayload::EventCount(CountEvent {
+                    period_duration_micros: 0,
+                    count: 1
+                })
+            }
+        );
+
+        sender.log_elapsed_time(3, [1, 2], 30);
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: 3,
+                event_codes: vec![1, 2],
+                component: None,
+                payload: EventPayload::ElapsedMicros(30),
+            }
+        );
+
+        sender.log_int_histogram(4, vec![HistogramBucket { index: 2, count: 2 }]);
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: 4,
+                event_codes: vec![0],
+                component: None,
+                payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 2, count: 2 }]),
+            }
+        );
     }
 }
