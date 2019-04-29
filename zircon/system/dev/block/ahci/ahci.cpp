@@ -34,8 +34,8 @@
 #define ahci_read(reg)       pcie_read32(reg)
 #define ahci_write(reg, val) pcie_write32(reg, val)
 
-#define HI32(val) (((val) >> 32) & 0xffffffff)
-#define LO32(val) ((val) & 0xffffffff)
+static inline uint32_t hi32(uint64_t val) { return static_cast<uint32_t>(val >> 32); }
+static inline uint32_t lo32(uint64_t val) { return static_cast<uint32_t>(val); }
 
 #define PAGE_MASK (PAGE_SIZE - 1ull)
 
@@ -72,17 +72,17 @@ typedef struct ahci_port {
 } ahci_port_t;
 
 struct ahci_device {
-    zx_device_t* zxdev;
+    zx_device_t* zxdev = nullptr;
 
-    ahci_hba_t* regs;
-    mmio_buffer_t mmio;
+    ahci_hba_t* regs = nullptr;
+    mmio_buffer_t mmio{};
 
-    pci_protocol_t pci;
+    pci_protocol_t pci{};
 
-    zx_handle_t irq_handle;
+    zx_handle_t irq_handle = ZX_HANDLE_INVALID;
     thrd_t irq_thread;
 
-    zx_handle_t bti_handle;
+    zx_handle_t bti_handle = ZX_HANDLE_INVALID;
 
     thrd_t worker_thread;
     sync_completion_t worker_completion;
@@ -90,10 +90,10 @@ struct ahci_device {
     thrd_t watchdog_thread;
     sync_completion_t watchdog_completion;
 
-    uint32_t cap;
+    uint32_t cap = 0;
 
     // TODO(ZX-1641): lazily allocate these
-    ahci_port_t ports[AHCI_MAX_PORTS];
+    ahci_port_t ports[AHCI_MAX_PORTS]{};
 };
 
 static inline zx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint32_t mask,
@@ -239,7 +239,7 @@ static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, zx_sta
     sync_completion_signal(&dev->worker_completion);
 }
 
-static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, sata_txn_t* txn) {
+static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, unsigned int slot, sata_txn_t* txn) {
     assert(slot < AHCI_MAX_COMMANDS);
     assert(!ahci_port_cmd_busy(port, slot));
 
@@ -265,12 +265,12 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
     txn->pmt = pmt;
 
-    phys_iter_buffer_t physbuf = {
-        .phys = pages,
-        .phys_count = pagecount,
-        .length = bytes,
-        .vmo_offset = offset_vmo,
-    };
+    phys_iter_buffer_t physbuf = {};
+    physbuf.phys = pages;
+    physbuf.phys_count = pagecount;
+    physbuf.length = bytes;
+    physbuf.vmo_offset = offset_vmo;
+
     phys_iter_t iter;
     phys_iter_init(&iter, &physbuf, AHCI_PRD_MAX_SIZE);
 
@@ -328,7 +328,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
 
     cl->prdtl = 0;
-    ahci_prd_t* prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t));
+    ahci_prd_t* prd = (ahci_prd_t*)((uintptr_t)port->ct[slot] + sizeof(ahci_ct_t));
     size_t length;
     zx_paddr_t paddr;
     for (;;) {
@@ -344,10 +344,10 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
             return ZX_ERR_NOT_SUPPORTED;
         }
 
-        prd->dba = LO32(paddr);
-        prd->dbau = HI32(paddr);
+        prd->dba = lo32(paddr);
+        prd->dbau = hi32(paddr);
         prd->dbc = ((length - 1) & (AHCI_PRD_MAX_SIZE - 1)); // 0-based byte count
-        cl->prdtl += 1;
+        cl->prdtl++;
         prd += 1;
     }
 
@@ -357,7 +357,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     zxlogf(SPEW, "ahci.%d: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
                   " slot %d prdtl %u\n",
             port->nr, txn, cl->w ? 'w' : 'r', lba, count, slot, cl->prdtl);
-    prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t));
+    prd = (ahci_prd_t*)((uintptr_t)port->ct[slot] + sizeof(ahci_ct_t));
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         for (uint i = 0; i < cl->prdtl; i++) {
             zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x\n",
@@ -398,7 +398,7 @@ static zx_status_t ahci_port_initialize(ahci_device_t* dev, ahci_port_t* port) {
         return status;
     }
     zx_paddr_t mem_phys = io_buffer_phys(&port->buffer);
-    void* mem = io_buffer_virt(&port->buffer);
+    uint8_t* mem = static_cast<uint8_t*>(io_buffer_virt(&port->buffer));
 
     // clear memory area
     // order is command list (1024-byte aligned)
@@ -407,25 +407,25 @@ static zx_status_t ahci_port_initialize(ahci_device_t* dev, ahci_port_t* port) {
     memset(mem, 0, mem_sz);
 
     // command list
-    ahci_write(&port->regs->clb, LO32(mem_phys));
-    ahci_write(&port->regs->clbu, HI32(mem_phys));
+    ahci_write(&port->regs->clb, lo32(mem_phys));
+    ahci_write(&port->regs->clbu, hi32(mem_phys));
     mem_phys += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
-    port->cl = mem;
+    port->cl = reinterpret_cast<ahci_cl_t*>(mem);
     mem += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
 
     // FIS receive area
-    ahci_write(&port->regs->fb, LO32(mem_phys));
-    ahci_write(&port->regs->fbu, HI32(mem_phys));
+    ahci_write(&port->regs->fb, lo32(mem_phys));
+    ahci_write(&port->regs->fbu, hi32(mem_phys));
     mem_phys += sizeof(ahci_fis_t);
-    port->fis = mem;
+    port->fis = reinterpret_cast<ahci_fis_t*>(mem);
     mem += sizeof(ahci_fis_t);
 
     // command table, followed by PRDT
     for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
-        port->cl[i].ctba = LO32(mem_phys);
-        port->cl[i].ctbau = HI32(mem_phys);
+        port->cl[i].ctba = lo32(mem_phys);
+        port->cl[i].ctbau = hi32(mem_phys);
         mem_phys += ct_prd_sz + ct_prd_padding;
-        port->ct[i] = mem;
+        port->ct[i] = reinterpret_cast<ahci_ct_t*>(mem);
         mem += ct_prd_sz + ct_prd_padding;
     }
 
@@ -505,7 +505,7 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
 
 static void ahci_release(void* ctx) {
     // FIXME - join threads created by this driver
-    ahci_device_t* device = ctx;
+    ahci_device_t* device = static_cast<ahci_device_t*>(ctx);
     mmio_buffer_release(&device->mmio);
     zx_handle_close(device->irq_handle);
     zx_handle_close(device->bti_handle);
@@ -731,12 +731,12 @@ static int ahci_irq_thread(void* arg) {
 
 // implement device protocol:
 
-static zx_protocol_device_t ahci_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = ahci_release,
-};
-
-extern zx_protocol_device_t ahci_port_device_proto;
+static zx_protocol_device_t ahci_device_proto = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.release = ahci_release;
+    return device;
+}();
 
 static int ahci_init_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
@@ -766,7 +766,9 @@ static int ahci_init_thread(void* arg) {
         list_initialize(&port->txn_list);
 
         status = ahci_port_initialize(dev, port);
-        if (status) goto fail;
+        if (status) {
+            return status;
+        }
     }
 
     // clear hba interrupts
@@ -801,38 +803,41 @@ static int ahci_init_thread(void* arg) {
     }
 
     return ZX_OK;
-fail:
-    free(dev->ports);
-    return status;
 }
 
 // implement driver object:
 
 static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
+    int ret;
+    zx_status_t status;
+    uint32_t irq_cnt;
+    zx_pci_irq_mode_t irq_mode;
+    zx_pcie_device_info_t config;
+    device_add_args_t args = {};
+
     // map resources and initialize the device
-    ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
+    ahci_device_t* device = new ahci_device_t;
     if (!device) {
         zxlogf(ERROR, "ahci: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
 
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &device->pci)) {
-        free(device);
+        delete device;
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // map register window
-    zx_status_t status = pci_map_bar_buffer(&device->pci,
-                                          5u,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          &device->mmio);
+    status = pci_map_bar_buffer(&device->pci,
+                                5u,
+                                ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &device->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci: error %d mapping register window\n", status);
         goto fail;
     }
-    device->regs = device->mmio.vaddr;
+    device->regs = static_cast<ahci_hba_t*>(device->mmio.vaddr);
 
-    zx_pcie_device_info_t config;
     status = pci_get_device_info(&device->pci, &config);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci: error getting config information\n");
@@ -855,8 +860,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
 
     // Query and configure IRQ modes by trying MSI first and falling back to
     // legacy if necessary.
-    uint32_t irq_cnt;
-    zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
+    irq_mode = ZX_PCIE_IRQ_MODE_MSI;
     status = pci_query_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status == ZX_ERR_NOT_SUPPORTED) {
         status = pci_query_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
@@ -896,18 +900,16 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     }
 
     // start irq thread
-    int ret = thrd_create_with_name(&device->irq_thread, ahci_irq_thread, device, "ahci-irq");
+    ret = thrd_create_with_name(&device->irq_thread, ahci_irq_thread, device, "ahci-irq");
     if (ret != thrd_success) {
         zxlogf(ERROR, "ahci: error %d in irq thread create\n", ret);
         goto fail;
     }
 
     // start watchdog thread
-    device->watchdog_completion = SYNC_COMPLETION_INIT;
     thrd_create_with_name(&device->watchdog_thread, ahci_watchdog_thread, device, "ahci-watchdog");
 
     // start worker thread (for iotxn queue)
-    device->worker_completion = SYNC_COMPLETION_INIT;
     ret = thrd_create_with_name(&device->worker_thread, ahci_worker_thread, device, "ahci-worker");
     if (ret != thrd_success) {
         zxlogf(ERROR, "ahci: error %d in worker thread create\n", ret);
@@ -915,13 +917,11 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     }
 
     // add the device for the controller
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ahci",
-        .ctx = device,
-        .ops = &ahci_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ahci";
+    args.ctx = device;
+    args.ops = &ahci_device_proto;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
 
     status = device_add(dev, &args, &device->zxdev);
     if (status != ZX_OK) {
@@ -940,14 +940,16 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 fail:
     // FIXME unmap, and join any threads created above
-    free(device);
+    delete device;
     return status;
 }
 
-static zx_driver_ops_t ahci_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = ahci_bind,
-};
+static zx_driver_ops_t ahci_driver_ops = []() {
+    zx_driver_ops_t driver;
+    driver.version = DRIVER_OPS_VERSION;
+    driver.bind = ahci_bind;
+    return driver;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)

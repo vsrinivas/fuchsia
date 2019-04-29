@@ -69,19 +69,16 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
         return status;
     }
 
-    sync_completion_t completion = SYNC_COMPLETION_INIT;
-    sata_txn_t txn = {
-        .bop = {
-            .rw.vmo = vmo,
-            .rw.length = 1,
-            .rw.offset_dev = 0,
-            .rw.offset_vmo = 0,
-        },
-        .cmd = SATA_CMD_IDENTIFY_DEVICE,
-        .device = 0,
-        .completion_cb = sata_device_identify_complete,
-        .cookie = &completion,
-    };
+    sync_completion_t completion;
+    sata_txn_t txn = {};
+    txn.bop.rw.vmo = vmo;
+    txn.bop.rw.length = 1;
+    txn.bop.rw.offset_dev = 0;
+    txn.bop.rw.offset_vmo = 0;
+    txn.cmd = SATA_CMD_IDENTIFY_DEVICE;
+    txn.device = 0;
+    txn.completion_cb = sata_device_identify_complete;
+    txn.cookie = &completion;
 
     ahci_queue(controller, dev->port, &txn);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
@@ -185,33 +182,33 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
 
 // implement device protocol:
 
-static zx_protocol_device_t sata_device_proto;
-
 static zx_off_t sata_getsize(void* ctx) {
-    sata_device_t* device = ctx;
+    sata_device_t* device = static_cast<sata_device_t*>(ctx);
     return device->info.block_count * device->info.block_size;
 }
 
 static void sata_release(void* ctx) {
-    sata_device_t* device = ctx;
+    sata_device_t* device = static_cast<sata_device_t*>(ctx);
     free(device);
 }
 
-static zx_protocol_device_t sata_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_size = sata_getsize,
-    .release = sata_release,
-};
+static zx_protocol_device_t sata_device_proto = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.get_size = sata_getsize;
+    device.release = sata_release;
+    return device;
+}();
 
 static void sata_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
-    sata_device_t* dev = ctx;
+    sata_device_t* dev = static_cast<sata_device_t*>(ctx);
     memcpy(info_out, &dev->info, sizeof(*info_out));
     *block_op_size_out = sizeof(sata_txn_t);
 }
 
 static void sata_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
                        void* cookie) {
-    sata_device_t* dev = ctx;
+    sata_device_t* dev = static_cast<sata_device_t*>(ctx);
     sata_txn_t* txn = containerof(bop, sata_txn_t, bop);
     txn->completion_cb = completion_cb;
     txn->cookie = cookie;
@@ -254,7 +251,7 @@ static block_impl_protocol_ops_t sata_block_proto = {
 
 zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port) {
     // initialize the device
-    sata_device_t* device = calloc(1, sizeof(sata_device_t));
+    sata_device_t* device = static_cast<sata_device_t*>(calloc(1, sizeof(sata_device_t)));
     if (!device) {
         zxlogf(ERROR, "sata: out of memory\n");
         return ZX_ERR_NO_MEMORY;
@@ -274,14 +271,13 @@ zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port) 
     }
 
     // add the device
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = name,
-        .ctx = device,
-        .ops = &sata_device_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-        .proto_ops = &sata_block_proto,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = name;
+    args.ctx = device;
+    args.ops = &sata_device_proto;
+    args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+    args.proto_ops = &sata_block_proto;
 
     status = device_add(parent, &args, &device->zxdev);
     if (status < 0) {

@@ -4,8 +4,8 @@
 
 driver("ahci") {
   sources = [
-    "ahci.c",
-    "sata.c",
+    "ahci.cpp",
+    "sata.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
@@ -14,5 +14,6 @@ driver("ahci") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
   ]
 }
