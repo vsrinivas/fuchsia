@@ -547,7 +547,7 @@ TEST(CatapultConverter, ConvertBytesUnit) {
     },
     {
         "name": "ExampleWithBytes",
-        "unit": "sizeInBytes",
+        "unit": "sizeInBytes_smallerIsBetter",
         "description": "",
         "diagnostics": {
             "pointId": "dummy_guid_0",

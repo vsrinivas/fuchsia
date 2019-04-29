@@ -146,7 +146,7 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     // data rate units to Catapult.
     return "unitless_biggerIsBetter";
   } else if (strcmp(input_unit, "bytes") == 0) {
-    return "sizeInBytes";
+    return "sizeInBytes_smallerIsBetter";
   } else if (strcmp(input_unit, "frames/second") == 0) {
     return "Hz_biggerIsBetter";
   } else if (strcmp(input_unit, "percent") == 0) {
