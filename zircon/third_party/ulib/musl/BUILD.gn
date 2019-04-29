@@ -65,7 +65,6 @@ if (toolchain.base_environment == "user") {
       "$zx/third_party/ulib/$malloc",
       "ldso",
       "pthread",
-      "sanitizers",
       "src/complex",
       "src/conf",
       "src/ctype",
@@ -104,7 +103,6 @@ if (toolchain.base_environment == "user") {
       "stubs",
       "third_party/smoothsort",
       "third_party/tre",
-      "zircon",
     ]
   }
 }

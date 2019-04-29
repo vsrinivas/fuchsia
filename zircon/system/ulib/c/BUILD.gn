@@ -17,7 +17,9 @@ library("c") {
   sources = []
   deps = [
     "$zx/third_party/ulib/musl",
+    "sanitizers",
     "setjmp",
+    "zircon",
   ]
 
   # Suppress the ${toolchain.implicit_deps} that points back to here.
