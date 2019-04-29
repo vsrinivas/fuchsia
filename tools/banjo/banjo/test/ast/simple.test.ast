@@ -54,7 +54,7 @@ BanjoAst {
                             []
                         ),
                         name: "Up",
-                        size: Constant(
+                        value: Constant(
                             "0"
                         )
                     },
@@ -63,7 +63,7 @@ BanjoAst {
                             []
                         ),
                         name: "Down",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -72,7 +72,7 @@ BanjoAst {
                             []
                         ),
                         name: "Left",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -81,7 +81,7 @@ BanjoAst {
                             []
                         ),
                         name: "Right",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     }

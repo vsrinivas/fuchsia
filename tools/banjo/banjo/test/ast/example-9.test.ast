@@ -19,7 +19,7 @@ BanjoAst {
                             []
                         ),
                         name: "zero",
-                        size: Constant(
+                        value: Constant(
                             "0"
                         )
                     },
@@ -28,7 +28,7 @@ BanjoAst {
                             []
                         ),
                         name: "one",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     }

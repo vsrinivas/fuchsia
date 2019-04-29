@@ -43,7 +43,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }

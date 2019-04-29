@@ -4503,7 +4503,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4526,7 +4526,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4549,7 +4549,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4572,7 +4572,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4595,7 +4595,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4618,7 +4618,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4641,7 +4641,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4664,7 +4664,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }
@@ -4687,7 +4687,7 @@ BanjoAst {
                             []
                         ),
                         name: "x ",
-                        size: Constant(
+                        value: Constant(
                             "23"
                         )
                     }

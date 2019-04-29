@@ -33,7 +33,7 @@ BanjoAst {
                             ]
                         ),
                         name: "Chocolate",
-                        size: Constant(
+                        value: Constant(
                             "0"
                         )
                     },
@@ -49,7 +49,7 @@ BanjoAst {
                             ]
                         ),
                         name: "Gingerbread",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -65,7 +65,7 @@ BanjoAst {
                             ]
                         ),
                         name: "Snickerdoodle",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     }

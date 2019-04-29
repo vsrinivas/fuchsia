@@ -460,7 +460,7 @@ impl UnionField {
 pub struct EnumVariant {
     pub attributes: Attrs,
     pub name: String,
-    pub size: Constant,
+    pub value: Constant,
 }
 impl EnumVariant {
     pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
@@ -468,7 +468,7 @@ impl EnumVariant {
         Ok(EnumVariant {
             attributes: Attrs::from_pair(fields[0].clone())?,
             name: String::from(fields[1].as_str()),
-            size: Constant::from_str(fields[2].as_str()),
+            value: Constant::from_str(fields[2].as_str()),
         })
     }
 }

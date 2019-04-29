@@ -129,7 +129,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
             if let Decl::Enum { ty: enum_ty, variants, .. } = decl {
                 for variant in variants {
                     if variant.name == *size {
-                        return size_to_c_str(enum_ty, &variant.size, ast);
+                        return size_to_c_str(enum_ty, &variant.value, ast);
                     }
                 }
             }
@@ -409,7 +409,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     "#define {c_name}_{v_name} {c_size}",
                     c_name = to_c_name(name.name()).to_uppercase(),
                     v_name = v.name.to_uppercase().trim(),
-                    c_size = size_to_c_str(ty, &v.size, ast)
+                    c_size = size_to_c_str(ty, &v.value, ast)
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()?

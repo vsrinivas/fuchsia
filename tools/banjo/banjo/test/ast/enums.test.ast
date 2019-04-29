@@ -19,7 +19,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: Constant(
+                        value: Constant(
                             "-1"
                         )
                     },
@@ -28,7 +28,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     }
@@ -51,7 +51,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: Constant(
+                        value: Constant(
                             "-1"
                         )
                     },
@@ -60,7 +60,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -69,7 +69,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     }
@@ -92,7 +92,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: Constant(
+                        value: Constant(
                             "-1"
                         )
                     },
@@ -101,7 +101,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -110,7 +110,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -119,7 +119,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     }
@@ -142,7 +142,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: Constant(
+                        value: Constant(
                             "-1"
                         )
                     },
@@ -151,7 +151,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -160,7 +160,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -169,7 +169,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     },
@@ -178,7 +178,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: Constant(
+                        value: Constant(
                             "4"
                         )
                     }
@@ -201,7 +201,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -210,7 +210,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -219,7 +219,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     },
@@ -228,7 +228,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: Constant(
+                        value: Constant(
                             "4"
                         )
                     },
@@ -237,7 +237,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: Constant(
+                        value: Constant(
                             "5"
                         )
                     }
@@ -260,7 +260,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -269,7 +269,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -278,7 +278,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     },
@@ -287,7 +287,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: Constant(
+                        value: Constant(
                             "4"
                         )
                     },
@@ -296,7 +296,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: Constant(
+                        value: Constant(
                             "5"
                         )
                     },
@@ -305,7 +305,7 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: Constant(
+                        value: Constant(
                             "6"
                         )
                     }
@@ -328,7 +328,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -337,7 +337,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -346,7 +346,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     },
@@ -355,7 +355,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: Constant(
+                        value: Constant(
                             "4"
                         )
                     },
@@ -364,7 +364,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: Constant(
+                        value: Constant(
                             "5"
                         )
                     },
@@ -373,7 +373,7 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: Constant(
+                        value: Constant(
                             "6"
                         )
                     },
@@ -382,7 +382,7 @@ BanjoAst {
                             []
                         ),
                         name: "kSeven",
-                        size: Constant(
+                        value: Constant(
                             "7"
                         )
                     }
@@ -405,7 +405,7 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: Constant(
+                        value: Constant(
                             "1"
                         )
                     },
@@ -414,7 +414,7 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: Constant(
+                        value: Constant(
                             "2"
                         )
                     },
@@ -423,7 +423,7 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: Constant(
+                        value: Constant(
                             "3"
                         )
                     },
@@ -432,7 +432,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: Constant(
+                        value: Constant(
                             "4"
                         )
                     },
@@ -441,7 +441,7 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: Constant(
+                        value: Constant(
                             "5"
                         )
                     },
@@ -450,7 +450,7 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: Constant(
+                        value: Constant(
                             "6"
                         )
                     },
@@ -459,7 +459,7 @@ BanjoAst {
                             []
                         ),
                         name: "kSeven",
-                        size: Constant(
+                        value: Constant(
                             "7"
                         )
                     },
@@ -468,7 +468,7 @@ BanjoAst {
                             []
                         ),
                         name: "kEight",
-                        size: Constant(
+                        value: Constant(
                             "8"
                         )
                     }

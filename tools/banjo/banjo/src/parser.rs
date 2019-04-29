@@ -31,13 +31,13 @@ attribute_list = { "[" ~ ( (attribute) ~ (",")? )* ~ "]" }
 attributes = !{ (doc_comment_block)? ~ (attribute_list)? }
 
 struct_declaration = { attributes ~ "struct" ~ ident ~ "{" ~ (struct_field ~ ";")* ~ "}" }
-struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~  constant)? }
+struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ constant)? }
 
 union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
 union_field  = { attributes? ~ type_ ~ ident }
 
 enum_declaration = { attributes ~ "enum" ~ ident ~ (":" ~ integer_type)? ~ "{" ~ (enum_field ~ ";")* ~ "}" }
-enum_field  = { attributes? ~ ident ~ ("=" ~ constant)? }
+enum_field  = { attributes? ~ ident ~ "=" ~ constant }
 
 protocol_method = { attributes ~ protocol_parameters }
 protocol_parameters = { ident ~ parameter_list ~ ( "->" ~ parameter_list )? }
