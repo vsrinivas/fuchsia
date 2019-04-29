@@ -74,14 +74,6 @@ int main(int argc, char** argv) {
     Usage(argv[0]);
     return -1;
   }
-  // Generate stamp file
-  std::fstream stamp;
-  stamp.open(stamp_path, std::ios::out);
-  if (!stamp) {
-    std::cerr << "Failed to stamp " << stamp_path << std::endl;
-    return -1;
-  }
-  stamp.close();
   // Generate depfile
   std::fstream depfile;
   depfile.open(depfile_path, std::ios::out);
@@ -93,7 +85,16 @@ int main(int argc, char** argv) {
   for (const auto& dep : dependencies) {
     depfile << " " << fs::relative(dep).string();
   }
+  depfile << " " << fs::relative(fidlgen_llcpp_path).string();
   depfile << std::endl;
   depfile.close();
+  // Generate stamp file
+  std::fstream stamp;
+  stamp.open(stamp_path, std::ios::out);
+  if (!stamp) {
+    std::cerr << "Failed to stamp " << stamp_path << std::endl;
+    return -1;
+  }
+  stamp.close();
   return 0;
 }

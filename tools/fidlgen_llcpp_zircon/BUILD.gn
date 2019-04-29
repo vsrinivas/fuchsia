@@ -13,35 +13,25 @@ executable("fidlgen_llcpp_zircon") {
     "main.cc",
   ]
   deps = [ "//third_party/rapidjson" ]
-  data_deps = [ "//garnet/go/src/fidl" ]
 }
 
-compiled_action("validate") {
-  tool = ":fidlgen_llcpp_zircon"
-  args = [
-    "validate",
-    rebase_path(zircon_root_build_dir, root_build_dir),
-    rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.stamp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_validated.d", root_build_dir),
-    rebase_path("$target_gen_dir/validator_tmp", root_build_dir)
-  ]
-  depfile = "$target_gen_dir/fidlgen_llcpp_zircon_validated.d"
-  inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
-  outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_validated.stamp" ]
-}
-
-compiled_action("update") {
-  tool = ":fidlgen_llcpp_zircon"
-  args = [
-    "update",
-    rebase_path(zircon_root_build_dir, root_build_dir),
-    rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.stamp", root_build_dir),
-    rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_updated.d", root_build_dir),
-    rebase_path("$target_gen_dir/validator_tmp", root_build_dir)
-  ]
-  depfile = "$target_gen_dir/fidlgen_llcpp_zircon_updated.d"
-  inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
-  outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_updated.stamp" ]
+foreach(command, [ "validate", "update" ]) {
+  compiled_action(command) {
+    tool = ":fidlgen_llcpp_zircon"
+    args = [
+      command,
+      rebase_path(zircon_root_build_dir, root_build_dir),
+      rebase_path("$root_build_dir/tools/fidlgen_llcpp", root_build_dir),
+      rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_${command}.stamp", root_build_dir),
+      rebase_path("$target_gen_dir/fidlgen_llcpp_zircon_${command}.d", root_build_dir),
+      rebase_path("$target_gen_dir/validator_tmp", root_build_dir)
+    ]
+    # This dependency delivers $root_build_dir/tools/fidlgen_llcpp.
+    # It doesn't have to appear in inputs, because the tool will output
+    # the exact path to fidlgen_llcpp in the depfile.
+    deps = [ "//garnet/go/src/fidl" ]
+    depfile = "$target_gen_dir/fidlgen_llcpp_zircon_${command}.d"
+    inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
+    outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_${command}.stamp" ]
+  }
 }
