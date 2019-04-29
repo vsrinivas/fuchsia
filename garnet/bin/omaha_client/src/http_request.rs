@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::http_request::HttpRequest;
+#![allow(dead_code)]
+
 use futures::compat::Future01CompatExt;
 use futures::future::FutureObj;
 use hyper::{Body, Client, Request, Response};
+use omaha_client::http_request::HttpRequest;
 
 pub struct FuchsiaHyperHttpRequest {
     client: Client<hyper_rustls::HttpsConnector<fuchsia_hyper::HyperConnector>, Body>,

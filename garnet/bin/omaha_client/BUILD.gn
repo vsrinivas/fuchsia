@@ -20,11 +20,13 @@ rustc_binary("bin") {
     "//garnet/lib/rust/omaha_client",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-hyper",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
   ]
 }

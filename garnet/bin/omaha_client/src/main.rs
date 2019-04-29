@@ -16,6 +16,7 @@ use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info};
 
+mod http_request;
 mod install_plan;
 
 async fn run_fidl_server(stream: IncomingServices) -> Result<(), Error> {
