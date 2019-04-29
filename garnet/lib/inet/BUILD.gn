@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 static_library("inet") {
   sources = [
@@ -18,5 +20,31 @@ static_library("inet") {
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-net",
+  ]
+}
+
+test("tests") {
+  output_name = "libinet_tests"
+
+  sources = [
+    "test/ip_address_test.cc",
+  ]
+
+  deps = [
+    ":inet",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("libinet_tests") {
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "libinet_tests"
+      environments = basic_envs
+    },
   ]
 }

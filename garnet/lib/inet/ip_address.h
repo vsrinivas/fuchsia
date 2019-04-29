@@ -6,10 +6,9 @@
 #define GARNET_LIB_INET_IP_ADDRESS_H_
 
 #include <arpa/inet.h>
+#include <fuchsia/net/cpp/fidl.h>
 
 #include "src/lib/fxl/logging.h"
-
-#include <fuchsia/net/cpp/fidl.h>
 
 namespace inet {
 
@@ -56,48 +55,80 @@ class IpAddress {
   // Creates an address from an IpAddress struct.
   explicit IpAddress(const fuchsia::net::IpAddress* addr);
 
+  // Indicates whether this address is valid.
   bool is_valid() const { return family_ != AF_UNSPEC; }
 
+  // Returns the family of this address: |AF_INET| for V4, |AF_INET6| for V6 and
+  // |AF_UNSPEC| for an invalid address.
   sa_family_t family() const { return family_; }
 
+  // Indicates whether this address is a V4 address.
   bool is_v4() const { return family() == AF_INET; }
 
+  // Indicates whether this address is a V6 address.
   bool is_v6() const { return family() == AF_INET6; }
 
+  // Indicates whether this address is a loopback address.
   bool is_loopback() const;
 
+  // Returns this address as an |in_addr|. Only defined for V4 addresses.
   const in_addr& as_in_addr() const {
     FXL_DCHECK(is_v4());
     return v4_;
   }
 
+  // Returns this address as an |in_addr_t|. Only defined for V4 addresses.
   in_addr_t as_in_addr_t() const {
     FXL_DCHECK(is_v4());
     return v4_.s_addr;
   }
 
+  // Returns this address as an |in6_addr|. Only defined for V6 addresses.
   const in6_addr& as_in6_addr() const {
     FXL_DCHECK(is_v6());
     return v6_;
   }
 
-  const uint8_t* as_bytes() const { return v6_.s6_addr; }
+  // Returns a pointer to the bytes that make up this address. |byte_count|
+  // indicates the byte count. Not defined for invalid addresses.
+  const uint8_t* as_bytes() const {
+    FXL_DCHECK(is_valid());
+    return v6_.s6_addr;
+  }
 
-  const uint16_t* as_words() const { return v6_.s6_addr16; }
+  // Returns a pointer to the network-order words (big-endian) that make up the
+  // address. |word_count| indicates the byte count. Not defined for invalid
+  // addresses.
+  const uint16_t* as_words() const {
+    FXL_DCHECK(is_valid());
+    return v6_.s6_addr16;
+  }
 
+  // Returns the number of bytes that make up this address. A V4 address is
+  // 4 bytes, and a V6 address is 16 bytes. Not defined for invalid addresses.
   size_t byte_count() const {
+    FXL_DCHECK(is_valid());
     return is_v4() ? sizeof(in_addr) : sizeof(in6_addr);
   }
 
-  size_t word_count() const { return byte_count() / sizeof(uint16_t); }
+  // Returns the number of words that make up this address. A V4 address is
+  // 2 words, and a V6 address is 8 words. Not defined for invalid addresses.
+  size_t word_count() const {
+    FXL_DCHECK(is_valid());
+    return byte_count() / sizeof(uint16_t);
+  }
 
+  // Returns a string representation of this address. V6 addresses are
+  // represented as specified in RFC 5952. For invalid addresses, this method
+  // returns "<invalid>".
   std::string ToString() const;
 
   explicit operator bool() const { return is_valid(); }
 
   bool operator==(const IpAddress& other) const {
-    return is_v4() == other.is_v4() &&
-           std::memcmp(as_bytes(), other.as_bytes(), byte_count()) == 0;
+    return family() == other.family() &&
+           (!is_valid() ||
+            (std::memcmp(as_bytes(), other.as_bytes(), byte_count()) == 0));
   }
 
   bool operator!=(const IpAddress& other) const { return !(*this == other); }
@@ -110,6 +141,9 @@ class IpAddress {
   };
 };
 
+// Inserts a string representation of |value|. V6 addresses are represented as
+// specified in RFC 5952. For invalid addresses, this method inserts
+// "<invalid>".
 std::ostream& operator<<(std::ostream& os, const IpAddress& value);
 
 }  // namespace inet
@@ -119,10 +153,12 @@ struct std::hash<inet::IpAddress> {
   std::size_t operator()(const inet::IpAddress& address) const noexcept {
     size_t hash = 0;
 
-    auto byte_ptr = address.as_bytes();
-    for (size_t i = 0; i < address.byte_count(); ++i) {
-      hash = (hash << 1) ^ *byte_ptr;
-      ++byte_ptr;
+    if (address.is_valid()) {
+      auto word_ptr = address.as_words();
+      for (size_t i = 0; i < address.word_count(); ++i) {
+        hash = (hash << 1) ^ *word_ptr;
+        ++word_ptr;
+      }
     }
 
     return hash;

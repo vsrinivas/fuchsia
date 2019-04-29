@@ -4,14 +4,224 @@
 
 #include "garnet/lib/inet/ip_address.h"
 
-#include <sstream>
-
 #include <arpa/inet.h>
 #include <endian.h>
 #include <netdb.h>
 #include <sys/socket.h>
 
+#include <sstream>
+
 namespace inet {
+namespace {
+
+// Parses a string. Match functions either return true and update the position
+// of the parser or return false and leave the position unchanged.
+class Parser {
+ public:
+  Parser(const std::string& str) : str_(str), pos_(0) {}
+
+  // Matches end-of-string.
+  bool MatchEnd() { return pos_ == str_.length(); }
+
+  // Matches a specified character.
+  bool Match(char to_match) {
+    if (pos_ == str_.length() || str_[pos_] != to_match) {
+      return false;
+    }
+
+    ++pos_;
+
+    return true;
+  }
+
+  // Matches a single decimal digit.
+  bool MatchDecDigit(uint8_t* out) {
+    FXL_DCHECK(out);
+
+    if (pos_ == str_.length() ||
+        !std::isdigit(static_cast<unsigned char>(str_[pos_]))) {
+      return false;
+    }
+
+    *out = str_[pos_] - '0';
+    ++pos_;
+
+    return true;
+  }
+
+  // Matches a single lowercase hexadecimal digit.
+  bool MatchLowerHexDigit(uint8_t* out) {
+    FXL_DCHECK(out);
+
+    if (pos_ == str_.length() ||
+        !std::isxdigit(static_cast<unsigned char>(str_[pos_]))) {
+      return false;
+    }
+
+    if (std::isdigit(static_cast<unsigned char>(str_[pos_]))) {
+      *out = str_[pos_] - '0';
+    } else if (std::islower(static_cast<unsigned char>(str_[pos_]))) {
+      *out = 10 + (str_[pos_] - 'a');
+    } else {
+      // Uppercase hexadecimal is not permitted.
+      return false;
+    }
+
+    ++pos_;
+
+    return true;
+  }
+
+  // Matches a decimal byte of at most 3 digits. The match will succeed even
+  // if the decimal byte is followed immediately by a digit. If matching three
+  // digits would produce a value greater than 255, only two digits are matched.
+  bool MatchMax3DigitDecByte(uint8_t* byte_out) {
+    FXL_DCHECK(byte_out);
+
+    uint8_t digit = 0;
+    if (!MatchDecDigit(&digit)) {
+      return false;
+    }
+
+    uint16_t accum = digit;
+    if (MatchDecDigit(&digit)) {
+      accum = accum * 10 + digit;
+      if (accum <= 25 && MatchDecDigit(&digit)) {
+        if (accum < 25 || digit < 6) {
+          accum = accum * 10 + digit;
+        } else {
+          // Including that last digit would produce a value > 255.
+          --pos_;
+        }
+      }
+    }
+
+    FXL_DCHECK(accum <= 255);
+    *byte_out = static_cast<uint8_t>(accum);
+    return true;
+  }
+
+  // Matches a lowercase hexadecimal word of at most 4 digits. The match will
+  // succeed even if the hexadecimal word is followed immediately by a
+  // hexadecimal digit.
+  bool MatchMax4DigitLowerHexWord(uint16_t* word_out) {
+    FXL_DCHECK(word_out);
+
+    uint8_t digit = 0;
+    if (!MatchLowerHexDigit(&digit)) {
+      return false;
+    }
+
+    uint16_t accum = digit;
+    if (MatchLowerHexDigit(&digit)) {
+      accum = accum * 16 + digit;
+      if (MatchLowerHexDigit(&digit)) {
+        accum = accum * 16 + digit;
+        if (MatchLowerHexDigit(&digit)) {
+          accum = accum * 16 + digit;
+        }
+      }
+    }
+
+    *word_out = accum;
+    return true;
+  }
+
+  // Matches an IPV4 address.
+  bool MatchIpV4Address(IpAddress* address_out) {
+    FXL_DCHECK(address_out);
+
+    size_t old_pos = pos_;
+    uint8_t b0, b1, b2, b3;
+    if (MatchMax3DigitDecByte(&b0) && Match('.') &&
+        MatchMax3DigitDecByte(&b1) && Match('.') &&
+        MatchMax3DigitDecByte(&b2) && Match('.') &&
+        MatchMax3DigitDecByte(&b3)) {
+      *address_out = IpAddress(b0, b1, b2, b3);
+      return true;
+    }
+
+    pos_ = old_pos;
+    return false;
+  }
+
+  // Matches an IPV6 address.
+  bool MatchIpV6Address(IpAddress* address_out) {
+    FXL_DCHECK(address_out);
+
+    size_t old_pos = pos_;
+    uint16_t words[8];
+    size_t word_index = 0;
+    size_t ellipsis_word_index = 0;
+
+    if (MatchMax4DigitLowerHexWord(&words[word_index]) && Match(':')) {
+      while (true) {
+        // At this point, we've matched at least one word, we've just matched a
+        // colon, and |word_index| indexes the last word we matched.
+        ++word_index;
+
+        // Check for "::" ellipsis.
+        if (Match(':')) {
+          if (ellipsis_word_index != 0) {
+            // More than one "::" ellipsis.
+            break;
+          }
+
+          ellipsis_word_index = word_index;
+        }
+
+        if (MatchMax4DigitLowerHexWord(&words[word_index])) {
+          if (word_index < 7 && Match(':')) {
+            // More words to read.
+            continue;
+          }
+        } else if (word_index == 1) {
+          // Need at least two words.
+          break;
+        } else {
+          // We've read a ':' past the end.
+          --pos_;
+        }
+
+        if (word_index == 7) {
+          if (ellipsis_word_index != 0) {
+            // We parsed 8 words, and there's an ellipsis.
+            break;
+          }
+        } else {
+          if (ellipsis_word_index == 0) {
+            // We parsed less than 8 words, and there's no ellipsis.
+            break;
+          }
+
+          // Insert zeros for the ellipsis.
+          size_t to = 7;
+          for (size_t from = word_index; from >= ellipsis_word_index; --from) {
+            words[to] = words[from];
+            --to;
+          }
+
+          for (; to >= ellipsis_word_index; --to) {
+            words[to] = 0;
+          }
+        }
+
+        *address_out = IpAddress(words[0], words[1], words[2], words[3],
+                                 words[4], words[5], words[6], words[7]);
+        return true;
+      }
+    }
+
+    pos_ = old_pos;
+    return false;
+  }
+
+ private:
+  const std::string& str_;
+  size_t pos_;
+};
+
+}  // namespace
 
 // static
 const IpAddress IpAddress::kInvalid;
@@ -24,34 +234,16 @@ const IpAddress IpAddress::kV6Loopback(0, 0, 0, 0, 0, 0, 0, 1);
 IpAddress IpAddress::FromString(const std::string address_string,
                                 sa_family_t family) {
   FXL_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = family;
-  hints.ai_socktype = 0;
-  hints.ai_flags = AI_NUMERICHOST;
-  hints.ai_protocol = 0;
 
-  struct addrinfo* addrinfos;
-  int result = getaddrinfo(address_string.c_str(), nullptr, &hints, &addrinfos);
-  if (result != 0) {
-    FXL_DLOG(ERROR) << "Failed to getaddrinfo for address " << address_string
-                    << ", errno" << errno;
-    return kInvalid;
+  Parser parser(address_string);
+  IpAddress address;
+  if ((parser.MatchIpV4Address(&address) ||
+       parser.MatchIpV6Address(&address)) &&
+      parser.MatchEnd()) {
+    return address;
   }
 
-  if (addrinfos == nullptr) {
-    return kInvalid;
-  }
-
-  FXL_DCHECK(addrinfos->ai_family == family ||
-             (family == AF_UNSPEC && (addrinfos->ai_family == AF_INET ||
-                                      addrinfos->ai_family == AF_INET6)));
-
-  IpAddress ip_address = IpAddress(addrinfos->ai_addr);
-
-  freeaddrinfo(addrinfos);
-
-  return ip_address;
+  return kInvalid;
 }
 
 IpAddress::IpAddress() {
@@ -110,11 +302,11 @@ IpAddress::IpAddress(const sockaddr* addr) {
   switch (addr->sa_family) {
     case AF_INET:
       family_ = AF_INET;
-      v4_ = reinterpret_cast<const sockaddr_in*>(addr)->sin_addr;
+      v4_ = *reinterpret_cast<const in_addr*>(addr->sa_data);
       break;
     case AF_INET6:
       family_ = AF_INET6;
-      v6_ = reinterpret_cast<const sockaddr_in6*>(addr)->sin6_addr;
+      v6_ = *reinterpret_cast<const in6_addr*>(addr->sa_data);
       break;
     default:
       family_ = AF_UNSPEC;
@@ -127,11 +319,13 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
   switch (addr.ss_family) {
     case AF_INET:
       family_ = AF_INET;
-      v4_ = reinterpret_cast<const sockaddr_in*>(&addr)->sin_addr;
+      v4_ = *reinterpret_cast<const in_addr*>(
+          reinterpret_cast<const uint8_t*>(&addr) + sizeof(sa_family_t));
       break;
     case AF_INET6:
       family_ = AF_INET6;
-      v6_ = reinterpret_cast<const sockaddr_in6*>(&addr)->sin6_addr;
+      v6_ = *reinterpret_cast<const in6_addr*>(
+          reinterpret_cast<const uint8_t*>(&addr) + sizeof(sa_family_t));
       break;
     default:
       family_ = AF_UNSPEC;
@@ -221,11 +415,11 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
       best_zeros_seen = zeros_seen;
     }
 
-    os << "[" << std::hex;
+    os << std::hex;
     for (uint8_t i = 0; i < 8; ++i) {
       if (i < start_of_best_zeros ||
           i >= start_of_best_zeros + best_zeros_seen) {
-        os << words[i];
+        os << betoh16(words[i]);
         if (i != 7) {
           os << ":";
         }
@@ -237,7 +431,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
         }
       }
     }
-    return os << std::dec << "]";
+    return os << std::dec;
   }
 }
 
