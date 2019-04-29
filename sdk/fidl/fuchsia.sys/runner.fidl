@@ -53,7 +53,7 @@ struct Package {
 
     // Resolved URL of the component. This is the url specified in startup_info
     // after following redirects and resolving relative paths.
-    string resolved_url;
+    component_url resolved_url;
 };
 
 // An interface for running components.

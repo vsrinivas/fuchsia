@@ -8,5 +8,5 @@ library fuchsia.sys;
 [Discoverable]
 protocol Loader {
     // LoadUrl a package by url.
-    LoadUrl(string url) -> (Package? package);
+    LoadUrl(component_url url) -> (Package? package);
 };

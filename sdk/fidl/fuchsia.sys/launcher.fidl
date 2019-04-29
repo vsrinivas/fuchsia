@@ -26,7 +26,7 @@ struct LaunchInfo {
     // This field will probably be replaced with a stronger notion of identity,
     // such as an unforgeable token. This field is included in this iteration to
     // ease the transition from the previous component interfaces.
-    string url;
+    component_url url;
 
     // The arguments to be provided to the component.
     vector<string>? arguments;

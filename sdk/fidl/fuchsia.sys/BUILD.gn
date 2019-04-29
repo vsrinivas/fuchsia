@@ -17,6 +17,7 @@ fidl("fuchsia.sys") {
     "loader.fidl",
     "runner.fidl",
     "service_provider.fidl",
+    "types.fidl",
   ]
 
   public_deps = [
