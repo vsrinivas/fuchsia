@@ -62,7 +62,6 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   void MountExtrasPartition();
   void ConfigureNetwork();
   void StartTermina();
-  void LaunchVmShell();
   void LaunchContainerShell();
   void CreateContainer();
   void StartContainer();

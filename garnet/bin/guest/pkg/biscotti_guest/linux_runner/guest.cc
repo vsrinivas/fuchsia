@@ -25,14 +25,6 @@
 
 namespace linux_runner {
 
-// If this is true, a container shell is spawned on /dev/hvc0 logged into the
-// default 'machina' user. If this is false then the shell on /dev/hvc0 will
-// be a root shell for the VM.
-//
-// Generally 'true' here will be more useful but we'll keep it around to enable
-// debugging any issues with container startup.
-static constexpr bool kBootToContainer = true;
-
 static constexpr const char* kLinuxEnvirionmentName = "biscotti";
 static constexpr const char* kLinuxGuestPackage =
     "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
@@ -42,7 +34,6 @@ static constexpr uint32_t kMaitredPort = 8888;
 static constexpr uint32_t kGarconPort = 8889;
 static constexpr uint32_t kTremplinPort = 8890;
 static constexpr uint32_t kLogCollectorPort = 9999;
-static constexpr const char* kVmShellCommand = "/bin/sh";
 static constexpr const char* kContainerName = "stretch";
 static constexpr const char* kContainerImageAlias = "debian/stretch";
 static constexpr const char* kContainerImageServer =
@@ -386,36 +377,6 @@ void Guest::StartTermina() {
 
 // This exposes a shell on /dev/hvc0 that can be used to interact with the
 // VM.
-void Guest::LaunchVmShell() {
-  FXL_CHECK(maitred_) << "Called LaunchShell without a maitre'd connection";
-  FXL_LOG(INFO) << "Launching '" << kVmShellCommand << "'...";
-
-  grpc::ClientContext context;
-  vm_tools::LaunchProcessRequest request;
-  vm_tools::LaunchProcessResponse response;
-
-  request.add_argv()->assign(kVmShellCommand);
-  request.set_respawn(true);
-  request.set_use_console(true);
-  request.set_wait_for_exit(false);
-  {
-    auto env = request.mutable_env();
-    // These make the lxd/lxc commands behave as expected from the shell.
-    env->insert({"LXD_DIR", "/mnt/stateful/lxd"});
-    env->insert({"LXD_CONF", "/mnt/stateful/lxd_conf"});
-    env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
-  }
-
-  {
-    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
-    auto status = maitred_->LaunchProcess(&context, request, &response);
-    FXL_CHECK(status.ok()) << "Failed to launch '" << kVmShellCommand
-                           << "': " << status.error_message();
-  }
-}
-
-// This exposes a shell on /dev/hvc0 that can be used to interact with the
-// VM.
 void Guest::LaunchContainerShell() {
   FXL_CHECK(maitred_) << "Called LaunchShell without a maitre'd connection";
   FXL_LOG(INFO) << "Launching container shell...";
@@ -547,9 +508,7 @@ void Guest::SetupUser() {
     case vm_tools::tremplin::SetUpUserResponse::EXISTS:
     case vm_tools::tremplin::SetUpUserResponse::SUCCESS:
       FXL_LOG(INFO) << "User created.";
-      if (kBootToContainer) {
-        LaunchContainerShell();
-      }
+      LaunchContainerShell();
       break;
     case vm_tools::tremplin::SetUpUserResponse::FAILED:
       FXL_LOG(ERROR) << "Failed to create user: " << response.failure_reason();
@@ -639,11 +598,6 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
                                    zx_status_t>& result) mutable {
             if (result.is_ok()) {
               this->maitred_ = std::move(result.value());
-              // If we're not booting to a container; we'll drop the VM inside a
-              // root shell.
-              if (!kBootToContainer) {
-                LaunchVmShell();
-              }
               MountExtrasPartition();
               ConfigureNetwork();
               StartTermina();
