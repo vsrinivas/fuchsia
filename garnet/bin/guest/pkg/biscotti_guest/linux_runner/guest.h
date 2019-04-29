@@ -7,7 +7,10 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <grpc++/grpc++.h>
+#include <lib/async_promise/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/bridge.h>
+#include <lib/fit/promise.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
@@ -55,8 +58,8 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   void Launch(AppLaunchRequest request);
 
  private:
-  void Start();
-  void StartGrpcServer();
+  fit::promise<> Start();
+  fit::promise<std::unique_ptr<grpc::Server>, zx_status_t> StartGrpcServer();
   void StartGuest();
   void MountExtrasPartition();
   void ConfigureNetwork();
@@ -124,8 +127,9 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       vm_tools::EmptyMessage* response) override;
 
   template <typename Service>
-  std::unique_ptr<typename Service::Stub> NewVsockStub(uint32_t cid,
-                                                       uint32_t port);
+  fit::promise<std::unique_ptr<typename Service::Stub>, zx_status_t>
+  NewVsockStub(uint32_t cid, uint32_t port);
+
   void LaunchApplication(AppLaunchRequest request);
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void CreateComponent(
@@ -134,8 +138,9 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   void OnComponentTerminated(const LinuxComponent* component);
 
   async_dispatcher_t* async_;
+  async::Executor executor_;
   std::unique_ptr<grpc::Server> grpc_server_;
-  fuchsia::guest::HostVsockEndpointSyncPtr socket_endpoint_;
+  fuchsia::guest::HostVsockEndpointPtr socket_endpoint_;
   fidl::BindingSet<fuchsia::guest::HostVsockAcceptor> acceptor_bindings_;
   fuchsia::guest::EnvironmentControllerPtr guest_env_;
   fuchsia::guest::InstanceControllerPtr guest_controller_;

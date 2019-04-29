@@ -48,6 +48,7 @@ source_set("lib") {
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
     ":protos",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/guest",
     "//sdk/fidl/fuchsia.guest",

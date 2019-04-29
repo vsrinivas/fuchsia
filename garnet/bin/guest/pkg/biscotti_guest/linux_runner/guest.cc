@@ -160,18 +160,29 @@ zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
 
 Guest::Guest(sys::ComponentContext* context,
              fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
-    : guest_env_(std::move(env)),
+    : async_(async_get_default_dispatcher()),
+      executor_(async_),
+      guest_env_(std::move(env)),
       cl_(std::move(cl)),
       wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
-  Start();
+  executor_.schedule_task(Start());
 }
 
-void Guest::Start() {
+fit::promise<> Guest::Start() {
   TRACE_DURATION("linux_runner", "Guest::Start");
-  StartGrpcServer();
-  StartGuest();
+  return StartGrpcServer()
+      .and_then([this](std::unique_ptr<grpc::Server>& server) mutable
+                -> fit::result<void, zx_status_t> {
+        grpc_server_ = std::move(server);
+        StartGuest();
+        return fit::ok();
+      })
+      .or_else([](const zx_status_t& status) {
+        FXL_LOG(ERROR) << "Failed to start guest: " << status;
+        return fit::ok();
+      });
 }
 
 // A thin wrapper around |grpc::ServerBuilder| that also registers the service
@@ -183,9 +194,8 @@ class GrpcServerBuilder {
   using BindingFactory =
       fit::function<fidl::InterfaceHandle<fuchsia::guest::HostVsockAcceptor>()>;
 
-  GrpcServerBuilder(
-      const fuchsia::guest::HostVsockEndpointSyncPtr& socket_endpoint,
-      BindingFactory binding_factory)
+  GrpcServerBuilder(const fuchsia::guest::HostVsockEndpointPtr& socket_endpoint,
+                    BindingFactory binding_factory)
       : binding_factory_(std::move(binding_factory)),
         socket_endpoint_(socket_endpoint) {}
 
@@ -196,16 +206,20 @@ class GrpcServerBuilder {
   // requests for 'service B' that are sent to 'port A' would still be handled.
   // This is because all the services are backed by the same gRPC server
   // instance.
-  zx_status_t RegisterService(uint32_t vsock_port, grpc::Service* service) {
+  fit::promise<void, zx_status_t> RegisterService(uint32_t vsock_port,
+                                                  grpc::Service* service) {
+    fit::bridge<void, zx_status_t> bridge;
     builder_.RegisterService(service);
-    zx_status_t listen_status, fidl_status;
-    fidl_status = socket_endpoint_->Listen(vsock_port, binding_factory_(),
-                                           &listen_status);
-    if (fidl_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to perform vsock Listen RCP";
-      return fidl_status;
-    }
-    return listen_status;
+    socket_endpoint_->Listen(
+        vsock_port, binding_factory_(),
+        [completer = std::move(bridge.completer)](zx_status_t status) mutable {
+          if (status != ZX_OK) {
+            completer.complete_error(status);
+          } else {
+            completer.complete_ok();
+          }
+        });
+    return bridge.consumer.promise();
   }
 
   // Constructs the |grpc::Server| and starts processing any in-bound requests
@@ -214,37 +228,48 @@ class GrpcServerBuilder {
 
  private:
   BindingFactory binding_factory_;
-  const fuchsia::guest::HostVsockEndpointSyncPtr& socket_endpoint_;
+  const fuchsia::guest::HostVsockEndpointPtr& socket_endpoint_;
   grpc::ServerBuilder builder_;
 };
 
-void Guest::StartGrpcServer() {
+fit::promise<std::unique_ptr<grpc::Server>, zx_status_t>
+Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   FXL_LOG(INFO) << "Starting GRPC server...";
-  zx_status_t status;
-  GrpcServerBuilder builder(socket_endpoint_, [this]() {
-    return acceptor_bindings_.AddBinding(this);
-  });
+  auto builder = std::make_unique<GrpcServerBuilder>(
+      socket_endpoint_,
+      [this]() { return acceptor_bindings_.AddBinding(this); });
 
-  status = builder.RegisterService(kLogCollectorPort, &log_collector_);
-  FXL_CHECK(status == ZX_OK) << "Failed to register LogCollector service.";
-
-  status = builder.RegisterService(
+  std::vector<fit::promise<void, zx_status_t>> promises;
+  promises.push_back(
+      builder->RegisterService(kLogCollectorPort, &log_collector_));
+  promises.push_back(builder->RegisterService(
       kStartupListenerPort,
-      static_cast<vm_tools::StartupListener::Service*>(this));
-  FXL_CHECK(status == ZX_OK) << "Failed to register StartupListener service.";
-
-  status = builder.RegisterService(
+      static_cast<vm_tools::StartupListener::Service*>(this)));
+  promises.push_back(builder->RegisterService(
       kTremplinListenerPort,
-      static_cast<vm_tools::tremplin::TremplinListener::Service*>(this));
-  FXL_CHECK(status == ZX_OK) << "Failed to register TremplinListener service.";
-
-  status = builder.RegisterService(
+      static_cast<vm_tools::tremplin::TremplinListener::Service*>(this)));
+  promises.push_back(builder->RegisterService(
       kGarconPort,
-      static_cast<vm_tools::container::ContainerListener::Service*>(this));
-  FXL_CHECK(status == ZX_OK) << "Failed to register ContainerListener service.";
-
-  grpc_server_ = builder.Build();
+      static_cast<vm_tools::container::ContainerListener::Service*>(this)));
+  return fit::join_promise_vector(std::move(promises))
+      .then([builder = std::move(builder)](
+                const fit::result<std::vector<fit::result<void, zx_status_t>>>&
+                    result)
+                -> fit::result<std::unique_ptr<grpc::Server>, zx_status_t> {
+        // join_promise_vector should never fail, but instead return a vector
+        // of results.
+        FXL_CHECK(result.is_ok())
+            << "fit::join_promise_vector returns fit::error";
+        for (const auto& result : result.value()) {
+          if (result.is_error()) {
+            FXL_CHECK(false)
+                << "Failed to listen on vsock port: " << result.error();
+            return fit::error(result.error());
+          }
+        }
+        return fit::ok(builder->Build());
+      });
 }
 
 void Guest::StartGuest() {
@@ -573,42 +598,44 @@ void Guest::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
   callback(status, std::move(h2));
 }
 
-// Creates a new GRPC stub for a service.
 template <typename T>
-std::unique_ptr<typename T::Stub> Guest::NewVsockStub(uint32_t cid,
-                                                      uint32_t port) {
+fit::promise<std::unique_ptr<typename T::Stub>, zx_status_t>
+Guest::NewVsockStub(uint32_t cid, uint32_t port) {
   TRACE_DURATION("linux_runner", "Guest::NewVsockStub");
   // Create the socket for the connection.
   zx::socket h1, h2;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create socket";
-    return nullptr;
+    return fit::make_result_promise<std::unique_ptr<typename T::Stub>,
+                                    zx_status_t>(fit::error(status));
   }
 
   // Establish connection, hand first socket endpoint over to the guest.
-  zx_status_t fidl_status =
-      socket_endpoint_->Connect(cid, port, std::move(h1), &status);
-  if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to perform vsock Connect RPC for "
-                   << T::service_full_name() << ": " << status;
-    return nullptr;
-  }
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to " << T::service_full_name() << ": "
-                   << status;
-    return nullptr;
-  }
+  fit::bridge<std::unique_ptr<typename T::Stub>, zx_status_t> bridge;
+  socket_endpoint_->Connect(
+      cid, port, std::move(h1),
+      [completer = std::move(bridge.completer),
+       h2 = std::move(h2)](zx_status_t status) mutable {
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "Failed to connect to " << T::service_full_name()
+                         << ": " << status;
+          completer.complete_error(status);
+          return;
+        }
 
-  // Hand the second socket endpoint to GRPC. We need to use a FDIO interface
-  // to the socket for gRPC.
-  int fd = convert_socket_to_fd(std::move(h2));
-  if (fd < 0) {
-    FXL_LOG(ERROR) << "Failed to get socket FD";
-    return nullptr;
-  }
-  auto chan = grpc::CreateInsecureChannelFromFd("vsock", fd);
-  return T::NewStub(std::move(chan));
+        // Hand the second socket endpoint to GRPC. We need to use a FDIO
+        // interface to the socket for gRPC.
+        int fd = convert_socket_to_fd(std::move(h2));
+        if (fd < 0) {
+          FXL_LOG(ERROR) << "Failed to get socket FD";
+          completer.complete_error(ZX_ERR_IO);
+          return;
+        }
+        completer.complete_ok(
+            T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd)));
+      });
+  return bridge.consumer.promise();
 }
 
 grpc::Status Guest::VmReady(grpc::ServerContext* context,
@@ -617,19 +644,30 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
   TRACE_DURATION("linux_runner", "Guest::VmReady");
   TRACE_FLOW_END("linux_runner", "TerminaBoot", vm_ready_nonce_);
   FXL_LOG(INFO) << "VM Ready -- Connecting to Maitre'd...";
-  maitred_ = NewVsockStub<vm_tools::Maitred>(guest_cid_, kMaitredPort);
-  FXL_CHECK(maitred_) << "Failed to connect to Maitre'd";
+  std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
+  auto p =
+      NewVsockStub<vm_tools::Maitred>(guest_cid_, kMaitredPort)
+          .then([this](fit::result<std::unique_ptr<vm_tools::Maitred::Stub>,
+                                   zx_status_t>& result) mutable {
+            if (result.is_ok()) {
+              this->maitred_ = std::move(result.value());
+              // If we're not booting to a container; we'll drop the VM inside a
+              // root shell.
+              const bool vm_only = cl_.HasOption("vm");
+              if (!kBootToContainer || vm_only) {
+                LaunchVmShell();
+              }
+              if (!vm_only) {
+                MountExtrasPartition();
+                ConfigureNetwork();
+                StartTermina();
+              }
 
-  // If we're not booting to a container; we'll drop the VM inside a root shell.
-  const bool vm_only = cl_.HasOption("vm");
-  if (!kBootToContainer || vm_only) {
-    LaunchVmShell();
-  }
-  if (!vm_only) {
-    MountExtrasPartition();
-    ConfigureNetwork();
-    StartTermina();
-  }
+            } else {
+              FXL_CHECK(false) << "Failed to connect to Maitre'd";
+            }
+          });
+  executor_.schedule_task(std::move(p));
   return grpc::Status::OK;
 }
 
@@ -646,12 +684,19 @@ grpc::Status Guest::TremplinReady(
     vm_tools::tremplin::EmptyMessage* response) {
   TRACE_DURATION("linux_runner", "Guest::TremplinReady");
   FXL_LOG(INFO) << "Tremplin Ready.";
-  tremplin_ =
-      NewVsockStub<vm_tools::tremplin::Tremplin>(guest_cid_, kTremplinPort);
-  FXL_CHECK(tremplin_) << "Failed to connect to tremplin";
-  // The post is important here because the guest won't process requests until
-  // this RPC has completed.
-  async::PostTask(async_, [this]() { CreateContainer(); });
+  auto p = NewVsockStub<vm_tools::tremplin::Tremplin>(guest_cid_, kTremplinPort)
+               .then([this](fit::result<
+                            std::unique_ptr<vm_tools::tremplin::Tremplin::Stub>,
+                            zx_status_t>& result) mutable -> fit::result<> {
+                 if (result.is_ok()) {
+                   tremplin_ = std::move(result.value());
+                   CreateContainer();
+                 } else {
+                   FXL_LOG(ERROR) << "Failed to connect to tremplin";
+                 }
+                 return fit::ok();
+               });
+  executor_.schedule_task(std::move(p));
   return grpc::Status::OK;
 }
 
@@ -695,14 +740,26 @@ grpc::Status Guest::ContainerReady(
   // TODO(tjdetwiler): validate token.
   auto garcon_port = request->garcon_port();
   FXL_LOG(INFO) << "Container Ready; Garcon listening on port " << garcon_port;
-  garcon_ = NewVsockStub<vm_tools::container::Garcon>(guest_cid_, garcon_port);
+  auto p = NewVsockStub<vm_tools::container::Garcon>(guest_cid_, garcon_port)
+               .then([this](fit::result<
+                            std::unique_ptr<vm_tools::container::Garcon::Stub>,
+                            zx_status_t>& result) mutable -> fit::result<> {
+                 if (result.is_ok()) {
+                   garcon_ = std::move(result.value());
 
-  DumpContainerDebugInfo();
+                   DumpContainerDebugInfo();
 
-  for (auto it = pending_requests_.begin(); it != pending_requests_.end();
-       it = pending_requests_.erase(it)) {
-    LaunchApplication(std::move(*it));
-  }
+                   for (auto it = pending_requests_.begin();
+                        it != pending_requests_.end();
+                        it = pending_requests_.erase(it)) {
+                     LaunchApplication(std::move(*it));
+                   }
+                 } else {
+                   FXL_LOG(ERROR) << "Failed to connect to garcon";
+                 }
+                 return fit::ok();
+               });
+  executor_.schedule_task(std::move(p));
 
   return grpc::Status::OK;
 }
