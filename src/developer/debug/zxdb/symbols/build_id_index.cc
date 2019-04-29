@@ -6,28 +6,33 @@
 
 #include <algorithm>
 
+#include "src/developer/debug/shared/elf.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/developer/debug/shared/elf.h"
-#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 
 namespace {
 
 std::optional<std::string> FindInRepoFolder(const std::string& build_id,
-                                            const std::filesystem::path& path) {
+                                            const std::filesystem::path& path,
+                                            BuildIDIndex::FileType file_type) {
   if (build_id.size() <= 2) {
     return std::nullopt;
   }
 
   auto prefix = build_id.substr(0, 2);
   auto tail = build_id.substr(2);
+  auto name = tail;
+
+  if (file_type == BuildIDIndex::FileType::kDebugInfo) {
+    name += ".debug";
+  }
 
   std::error_code ec;
-
-  auto direct = path / prefix / (tail + ".debug");
+  auto direct = path / prefix / name;
   if (std::filesystem::exists(direct, ec)) {
     return direct;
   }
@@ -44,7 +49,13 @@ std::optional<std::string> FindInRepoFolder(const std::string& build_id,
 
   for (const auto& child :
        std::filesystem::directory_iterator(prefix_folder, ec)) {
-    if (child.path().extension() != ".debug") {
+    if (file_type == BuildIDIndex::FileType::kDebugInfo &&
+        child.path().extension() != ".debug") {
+      continue;
+    }
+
+    if (file_type == BuildIDIndex::FileType::kBinary &&
+        child.path().extension() != "") {
       continue;
     }
 
@@ -61,7 +72,8 @@ std::optional<std::string> FindInRepoFolder(const std::string& build_id,
 BuildIDIndex::BuildIDIndex() = default;
 BuildIDIndex::~BuildIDIndex() = default;
 
-std::string BuildIDIndex::FileForBuildID(const std::string& build_id) {
+std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
+                                         BuildIDIndex::FileType file_type) {
   EnsureCacheClean();
 
   const std::string* to_find = &build_id;
@@ -73,15 +85,16 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id) {
 
   auto found = build_id_to_file_.find(*to_find);
   if (found == build_id_to_file_.end())
-    return SearchRepoSources(*to_find);
+    return SearchRepoSources(*to_find, file_type);
   return found->second;
 }
 
-std::string BuildIDIndex::SearchRepoSources(const std::string& build_id) {
+std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
+                                            BuildIDIndex::FileType file_type) {
   for (const auto& source : repo_sources_) {
     const auto& path = std::filesystem::path(source) / ".build-id";
 
-    auto got = FindInRepoFolder(build_id, path);
+    auto got = FindInRepoFolder(build_id, path, file_type);
     if (got) {
       return *got;
     }

@@ -97,8 +97,12 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
 }  // namespace
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
+                                     const std::string& binary_name,
                                      const std::string& build_id)
-    : name_(name), build_id_(build_id), weak_factory_(this) {
+    : name_(name),
+      binary_name_(binary_name),
+      build_id_(build_id),
+      weak_factory_(this) {
   symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
 }
 
@@ -120,7 +124,7 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 }
 
 Err ModuleSymbolsImpl::Load() {
-  if (auto elf = elflib::ElfLib::Create(name_)) {
+  if (auto elf = elflib::ElfLib::Create(binary_name_)) {
     plt_locations_ = elf->GetPLTOffsets();
   }
 

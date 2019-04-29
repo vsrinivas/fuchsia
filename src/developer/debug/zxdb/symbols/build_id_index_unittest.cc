@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/build_id_index.h"
+
 #include <filesystem>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
-#include "src/developer/debug/zxdb/symbols/build_id_index.h"
 
 namespace zxdb {
 
@@ -35,13 +36,18 @@ TEST(BuildIDIndex, IndexFile) {
   index.AddSymbolSource(test_file);
 
   // The known file should be found.
-  EXPECT_EQ(test_file, index.FileForBuildID(kSmallTestBuildID));
+  EXPECT_EQ(test_file,
+            index.FileForBuildID(kSmallTestBuildID,
+                                 BuildIDIndex::FileType::kDebugInfo));
 
   // If Minidump truncates the build ID we should still find it.
-  EXPECT_EQ(test_file, index.FileForBuildID(kSmallTestBuildIDTrunc));
+  EXPECT_EQ(test_file,
+            index.FileForBuildID(kSmallTestBuildIDTrunc,
+                                 BuildIDIndex::FileType::kDebugInfo));
 
   // Test some random build ID fails.
-  EXPECT_EQ("", index.FileForBuildID("random build id"));
+  EXPECT_EQ("", index.FileForBuildID("random build id",
+                                     BuildIDIndex::FileType::kDebugInfo));
 }
 
 // Index all files in a directory.
@@ -50,10 +56,14 @@ TEST(BuildIDIndex, IndexDir) {
   index.AddSymbolSource(GetTestDataDir());
 
   // It should have found the small test file and indexed it.
-  EXPECT_EQ(GetSmallTestFile(), index.FileForBuildID(kSmallTestBuildID));
+  EXPECT_EQ(GetSmallTestFile(),
+            index.FileForBuildID(kSmallTestBuildID,
+                                 BuildIDIndex::FileType::kDebugInfo));
 
   // If Minidump truncates the build ID we should still find it.
-  EXPECT_EQ(GetSmallTestFile(), index.FileForBuildID(kSmallTestBuildIDTrunc));
+  EXPECT_EQ(GetSmallTestFile(),
+            index.FileForBuildID(kSmallTestBuildIDTrunc,
+                                 BuildIDIndex::FileType::kDebugInfo));
 }
 
 TEST(BuildIDIndex, ParseIDFile) {

@@ -36,7 +36,7 @@ class ScopedUnlink {
 // Trying to load a nonexistant file should error.
 TEST(ModuleSymbols, NonExistantFile) {
   ModuleSymbolsImpl module(
-      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
+      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
@@ -53,13 +53,14 @@ TEST(ModuleSymbols, BadFileType) {
   close(fd);
 
   ModuleSymbolsImpl module(
-      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
+      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
 
 TEST(ModuleSymbols, Basic) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "",
+                           "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -94,7 +95,8 @@ TEST(ModuleSymbols, Basic) {
 }
 
 TEST(ModuleSymbols, LineDetailsForAddress) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "",
+                           "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -152,7 +154,8 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
 }
 
 TEST(ModuleSymbols, ResolveLineInputLocation) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "",
+                           "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -226,7 +229,8 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
 }
 
 TEST(ModuleSymbols, ResolveGlobalVariable) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "",
+                           "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -275,7 +279,8 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 }
 
 TEST(ModuleSymbols, ResolvePLTEntry) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(),
+                           TestSymbolModule::GetCheckedInTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 

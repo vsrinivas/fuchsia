@@ -20,6 +20,11 @@ namespace zxdb {
 // files and index.
 class BuildIDIndex {
  public:
+  enum class FileType {
+    kDebugInfo,
+    kBinary,
+  };
+
   using IDMap = std::map<std::string, std::string>;
 
   // Lists symbol sources and the number of ELF files indexed at that location.
@@ -36,8 +41,9 @@ class BuildIDIndex {
   }
 
   // Returns the local file name for the given build ID, or the empty string
-  // if there is no match.
-  std::string FileForBuildID(const std::string& build_id);
+  // if there is no match. The file type specifies whether we need the debug
+  // info, or the actual binary.
+  std::string FileForBuildID(const std::string& build_id, FileType file_type);
 
   // Manually inserts a mapping of
   void AddBuildIDMapping(const std::string& build_id,
@@ -100,7 +106,8 @@ class BuildIDIndex {
   bool IndexOneSourceFile(const std::string& file_path);
 
   // Search the repo sources.
-  std::string SearchRepoSources(const std::string& build_id);
+  std::string SearchRepoSources(const std::string& build_id,
+                                FileType file_type);
 
   // Function to output informational messages. May be null. Use LogMessage().
   std::function<void(const std::string&)> information_callback_;

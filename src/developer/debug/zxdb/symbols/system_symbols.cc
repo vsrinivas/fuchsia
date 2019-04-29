@@ -84,7 +84,8 @@ Err SystemSymbols::GetModule(const std::string& build_id,
     return Err();
   }
 
-  std::string file_name = build_id_index_.FileForBuildID(build_id);
+  std::string file_name = build_id_index_.FileForBuildID(
+      build_id, BuildIDIndex::FileType::kDebugInfo);
   if (file_name.empty()) {
     // This should only be null in tests.
     FXL_DCHECK(download_handler_);
@@ -94,8 +95,11 @@ Err SystemSymbols::GetModule(const std::string& build_id,
     return Err();
   }
 
-  auto module_symbols =
-      std::make_unique<ModuleSymbolsImpl>(file_name, build_id);
+  std::string binary_file_name =
+      build_id_index_.FileForBuildID(build_id, BuildIDIndex::FileType::kBinary);
+
+  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(
+      file_name, binary_file_name, build_id);
   Err err = module_symbols->Load();
   if (err.has_error())
     return err;

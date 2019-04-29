@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace llvm {
 
@@ -40,6 +40,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
  public:
   // You must call Load before using this class.
   explicit ModuleSymbolsImpl(const std::string& name,
+                             const std::string& binary_name,
                              const std::string& build_id);
   ~ModuleSymbolsImpl();
 
@@ -100,6 +101,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                        std::vector<Location>* output) const;
 
   const std::string name_;
+  const std::string binary_name_;
   const std::string build_id_;
 
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.

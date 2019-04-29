@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
@@ -66,7 +67,7 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
 }  // namespace
 
 TEST(DwarfSymbolFactory, Function) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -94,7 +95,7 @@ TEST(DwarfSymbolFactory, Function) {
 }
 
 TEST(DwarfSymbolFactory, PtrToMemberFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -116,7 +117,7 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
 }
 
 TEST(DwarfSymbolFactory, InlinedMemberFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -153,7 +154,7 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
 }
 
 TEST(DwarfSymbolFactory, InlinedFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -183,7 +184,7 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -227,7 +228,7 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
 }
 
 TEST(DwarfSymbolFactory, RValueRef) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -248,7 +249,7 @@ TEST(DwarfSymbolFactory, RValueRef) {
 }
 
 TEST(DwarfSymbolFactory, ArrayType) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -277,7 +278,7 @@ TEST(DwarfSymbolFactory, ArrayType) {
 }
 
 TEST(DwarfSymbolFactory, Array2D) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -317,7 +318,7 @@ TEST(DwarfSymbolFactory, Array2D) {
 }
 
 TEST(DwarfSymbolFactory, Collection) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -380,7 +381,7 @@ TEST(DwarfSymbolFactory, Collection) {
 }
 
 TEST(DwarfSymbolFactory, Enum) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -448,7 +449,7 @@ TEST(DwarfSymbolFactory, Enum) {
 
 // Tests nested code blocks, variables, and parameters.
 TEST(DwarfSymbolFactory, CodeBlocks) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -515,7 +516,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
 
 // Tests both nullptr_t and typedef decoding (which is how it's encoded).
 TEST(DwarfSymbolFactory, NullPtrTTypedef) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 

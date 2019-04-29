@@ -547,7 +547,8 @@ void MinidumpRemoteAPI::CollectMemory() {
 
   for (const auto& minidump_mod : minidump_->Modules()) {
     uint64_t base = minidump_mod->Address();
-    auto path = build_id_index.FileForBuildID(MinidumpGetUUID(*minidump_mod));
+    auto path = build_id_index.FileForBuildID(MinidumpGetUUID(*minidump_mod),
+                                              BuildIDIndex::FileType::kBinary);
     std::shared_ptr<elflib::ElfLib> elf = elflib::ElfLib::Create(path);
 
     if (!elf) {
