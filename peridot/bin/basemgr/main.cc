@@ -18,7 +18,6 @@
 #include "peridot/bin/basemgr/basemgr_impl.h"
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
-#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 #include "peridot/lib/modular_config/modular_config.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
 
@@ -43,38 +42,7 @@ fit::deferred_action<fit::closure> SetupCobalt(
 fuchsia::modular::session::BasemgrConfig CreateBasemgrConfigFromCommandLine(
     fxl::CommandLine command_line) {
   modular::BasemgrSettings settings(command_line);
-  auto config = settings.CreateBasemgrConfig();
-
-  if (!config.test()) {
-    auto session_shell_settings =
-        modular::SessionShellSettings::GetSystemSettings();
-
-    // The session shell settings overrides the session_shell flag passed via
-    // command line, except in integration tests. We clear the default session
-    // shell when |session_shell_settings| is not empty.
-    // TODO(MF-340) Remove when all clients are no longer providing
-    // base_shell_config.json
-    if (session_shell_settings.size() > 0) {
-      config.mutable_session_shell_map()->clear();
-    }
-
-    for (auto setting : session_shell_settings) {
-      fuchsia::modular::session::SessionShellConfig session_shell_config;
-      session_shell_config.set_display_usage(setting.display_usage);
-      session_shell_config.set_screen_height(setting.screen_height);
-      session_shell_config.set_screen_width(setting.screen_width);
-      session_shell_config.mutable_app_config()->set_url(setting.name);
-      session_shell_config.mutable_app_config()->set_args({});
-
-      fuchsia::modular::session::SessionShellMapEntry entry;
-      entry.set_name(setting.name);
-      entry.set_config(std::move(session_shell_config));
-
-      config.mutable_session_shell_map()->push_back(std::move(entry));
-    }
-  }
-
-  return config;
+  return settings.CreateBasemgrConfig();
 }
 
 int main(int argc, const char** argv) {

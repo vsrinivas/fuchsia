@@ -5,9 +5,8 @@
 #include "peridot/bin/basemgr/presentation_container.h"
 
 #include <src/lib/fxl/logging.h>
-#include <cmath>
 
-#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
+#include <cmath>
 
 namespace modular {
 

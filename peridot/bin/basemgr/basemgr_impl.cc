@@ -12,7 +12,6 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/session_provider.h"
-#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 #include "peridot/bin/basemgr/wait_for_minfs.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"

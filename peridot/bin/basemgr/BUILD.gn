@@ -36,7 +36,6 @@ executable_package("basemgr") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//peridot/bin/basemgr/cobalt",
-    "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
@@ -82,7 +81,6 @@ executable_package("basemgr") {
 tests_package("basemgr_unittests") {
   deps = [
     ":session_context_impl_unittest",
-    "//peridot/bin/basemgr/session_shell_settings:session_shell_settings_unittest",
   ]
   environments = basic_envs
 }
@@ -114,7 +112,6 @@ source_set("lib") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
