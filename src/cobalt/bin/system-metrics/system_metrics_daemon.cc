@@ -32,13 +32,14 @@ using cobalt::CobaltEventBuilder;
 using cobalt::StatusToString;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::Logger_Sync;
-using fuchsia_system_metrics::FuchsiaLifetimeEventsEventCode;
+using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
 using fuchsia_system_metrics::
     FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown;
 using fuchsia_system_metrics::
     FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
-using fuchsia_system_metrics::FuchsiaMemoryExperimentalEventCode;
-using fuchsia_system_metrics::FuchsiaUpPingEventCode;
+using fuchsia_system_metrics::
+    FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown;
+using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using std::chrono::steady_clock;
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
@@ -103,6 +104,9 @@ std::chrono::seconds SystemMetricsDaemon::LogUpTimeAndLifeTimeEvents() {
 std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
     std::chrono::seconds uptime) {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogFuchsiaUpPing");
+
+  typedef FuchsiaUpPingMetricDimensionUptime Uptime;
+
   // We always log that we are |Up|.
   // If |uptime| is at least one minute we log that we are |UpOneMinute|.
   // If |uptime| is at least ten minutes we log that we are |UpTenMinutes|.
@@ -127,8 +131,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   // Always log that we are "Up".
-  logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::Up, &status);
+  logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId, Uptime::Up,
+                    &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -141,7 +145,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // Log UpOneMinute
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::UpOneMinute, &status);
+                    Uptime::UpOneMinute, &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -154,7 +158,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // Log UpTenMinutes
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::UpTenMinutes, &status);
+                    Uptime::UpTenMinutes, &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -167,7 +171,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // Log UpOneHour
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::UpOneHour, &status);
+                    Uptime::UpOneHour, &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -184,7 +188,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // Log UpTwelveHours.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::UpTwelveHours, &status);
+                    Uptime::UpTwelveHours, &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -196,7 +200,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // Log UpOneDay.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                    FuchsiaUpPingEventCode::UpOneDay, &status);
+                    Uptime::UpOneDay, &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
@@ -219,7 +223,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   if (!boot_reported_) {
     logger_->LogEvent(fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
-                      FuchsiaLifetimeEventsEventCode::Boot, &status);
+                      FuchsiaLifetimeEventsMetricDimensionEvents::Boot,
+                      &status);
     if (status != fuchsia::cobalt::Status::OK) {
       FXL_LOG(ERROR)
           << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
@@ -328,7 +333,7 @@ SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
 
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(
     const zx_info_kmem_stats_t& stats) {
-  typedef FuchsiaMemoryExperimentalEventCode Breakdown;
+  typedef FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown Breakdown;
 
   std::vector<CobaltEvent> events;
   auto builder = CobaltEventBuilder(
