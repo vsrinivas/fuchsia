@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from difl.ir import Method, Argument, Library, Protocol
 from difl.changes import *
@@ -10,7 +10,7 @@ from difl.intersection import intersect_changes
 from difl.struct import struct_changes
 
 
-def method_changes(before: Method, after: Method) -> List[Change]:
+def method_changes(before: Method, after: Method, identifier_compatibility: Dict[str, bool]) -> List[Change]:
     changes: List[Change] = []
     # Ordinal change
     if before.ordinal != after.ordinal:
@@ -29,15 +29,18 @@ def method_changes(before: Method, after: Method) -> List[Change]:
     before_request = before.request()
     after_request = after.request()
     if before_request is not None and after_request is not None:
-        changes = changes + struct_changes(before_request, after_request)
+        changes = changes + struct_changes(before_request, after_request, identifier_compatibility)
 
     before_response = before.response()
     after_response = after.response()
     if before_response is not None and after_response is not None:
-        changes = changes + struct_changes(before_response, after_response)
+        changes = changes + struct_changes(before_response, after_response, identifier_compatibility)
+
+    identifier_compatibility[before.name] = (len(changes) == 0)
 
     return changes
 
 
-def protocol_changes(before: Protocol, after: Protocol) -> List[Change]:
-    return intersect_changes(before.methods, after.methods, method_changes)
+def protocol_changes(before: Protocol, after: Protocol, identifier_compatibility: Dict[str, bool]) -> List[Change]:
+    return intersect_changes(before.methods, after.methods, method_changes, identifier_compatibility)
+

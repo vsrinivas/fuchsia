@@ -7,11 +7,34 @@ import os
 import sys
 import typing as t
 
+__all__ = [
+    'Declaration',
+    'Type',
+    'Const',
+    'EnumMember',
+    'Enum',
+    'StructMember',
+    'Struct',
+    'Argument',
+    'Method',
+    'Protocol',
+    'TableMember',
+    'Table',
+    'UnionMember',
+    'Union',
+    'XUnion',
+    'Library',
+    'Libraries',
+]
 
 class Declaration(dict):
     def __init__(self, library: 'Library', value: dict):
         dict.__init__(self, value)
         self.library = library
+
+    @property
+    def inline_size(self) -> int:
+        return self['size']
 
     @property
     def name(self) -> str:
@@ -40,6 +63,28 @@ class Type(dict):
     def __init__(self, library, value):
         self.library = library
         dict.__init__(self, value)
+
+    @property
+    def inline_size(self) -> int:
+        if self.is_primitive:
+            if self['subtype'] in {'bool', 'int8', 'uint8'}: return 1
+            if self['subtype'] in {'int16', 'uint16'}: return 2
+            if self['subtype'] in {'int32', 'uint32', 'float32'}: return 4
+            if self['subtype'] in {'int64', 'uint64', 'float64'}: return 8
+            raise Exception('Unknown primitive subtype %r' % self['subtype'])
+        if self.kind == 'array':
+            return self['element_count'] * self.element_type.inline_size
+        if self.kind == 'vector' or self.kind == 'string':
+            return 16
+        if self.kind == 'handle' or self.kind == 'request':
+            return 4
+
+        assert self.kind == 'identifier'
+        if self.is_nullable:
+            return 8
+
+        declaration = self.library.libraries.find(self['identifier'])
+        return declaration.inline_size
 
     @property
     def kind(self):
@@ -86,6 +131,11 @@ class Enum(Declaration):
             'kind': 'primitive',
             'subtype': self['type']
         })
+
+
+    @property
+    def inline_size(self) -> int:
+        return self.type.inline_size
 
     @property
     def members(self) -> t.List[EnumMember]:
@@ -180,6 +230,10 @@ class Protocol(Declaration):
     def methods(self) -> t.List[Method]:
         return [Method(self, m) for m in self.get('methods', [])]
 
+    @property
+    def inline_size(self) -> int:
+        return 4 # it's a handle
+
 
 class TableMember(Declaration):
     def __init__(self, table: 'Table', value: dict):
@@ -191,11 +245,17 @@ class TableMember(Declaration):
         return self.get('name', '')
 
     @property
+    def ordinal(self) -> int:
+        return int(self['ordinal'])
+
+    @property
     def reserved(self) -> bool:
         return self['reserved']
 
     @property
     def type(self) -> Type:
+        if self.reserved:
+            raise Exception('Reserved table members have no type')
         return Type(self.library, self['type'])
 
 
@@ -220,6 +280,9 @@ class Union(Declaration):
     def members(self) -> t.List[UnionMember]:
         return [UnionMember(self, m) for m in self['members']]
 
+class XUnion(Declaration):
+    pass
+
 
 DECLARATION_TYPES = {
     'const': ('const_declarations', Const),
@@ -228,78 +291,46 @@ DECLARATION_TYPES = {
     'struct': ('struct_declarations', Struct),
     'table': ('table_declarations', Table),
     'union': ('union_declarations', Union),
+    'xunion': ('xunion_declarations', XUnion),
 }
 
+D = t.TypeVar('D', bound=Declaration)
 
 class Library(dict):
     def __init__(self, libraries: 'Libraries', path: str):
+
         self.libraries = libraries
         self._path = path
         dict.__init__(self, json.load(open(path)))
         self.name = self['name']
 
+        self.declarations: t.Dict[str, Declaration] = {}
+        self.filenames: t.Set[str] = set()
+        self.consts = self._collect_declarations('const_declarations', Const)
+        self.enums = self._collect_declarations('enum_declarations', Enum)
+        self.protocols = self._collect_declarations('interface_declarations', Protocol)
+        self.structs = self._collect_declarations('struct_declarations', Struct)
+        self.tables = self._collect_declarations('table_declarations', Table)
+        self.unions = self._collect_declarations('union_declarations', Union)
+
+    def _collect_declarations(self, key: str, ctor: t.Callable[['Library', dict], D]) -> t.List[D]:
+        decls : t.List[D] = []
+        for json in self[key]:
+            decl: D = ctor(self, json)
+            decls.append(decl)
+            self.declarations[decl.name] = decl
+            self.filenames.add(decl.filename)
+        return decls
+
     def __repr__(self):
         return 'Library<%s>' % self.name
 
-    @property
-    def consts(self) -> t.List[Const]:
-        return [Const(self, value) for value in self['const_declarations']]
+    def find(self, identifier: str) -> Declaration:
+        return self.declarations[identifier]
 
     @property
-    def enums(self) -> t.List[Enum]:
-        return [Enum(self, value) for value in self['enum_declarations']]
-
-    @property
-    def protocols(self) -> t.List[Protocol]:
-        return [Protocol(self, v) for v in self['interface_declarations']]
-
-    @property
-    def structs(self) -> t.List[Struct]:
-        return [Struct(self, value) for value in self['struct_declarations']]
-
-    @property
-    def tables(self) -> t.List[Table]:
-        return [Table(self, value) for value in self['table_declarations']]
-
-    @property
-    def unions(self) -> t.List[Union]:
-        return [Union(self, value) for value in self['union_declarations']]
-
-    @property
-    def methods(self) -> t.List[Method]:
-        return [
-            method for protocol in self.protocols
-            for method in protocol.methods
-        ]
-
-    def find(self, identifier: str
-             ) -> t.Union[None, Const, Enum, Protocol, Struct, Table, Union]:
-        if identifier not in self['declarations']:
-            return None
-        declaration_type = self['declarations'][identifier]
-        declarations_key, constructor = DECLARATION_TYPES[declaration_type]
-        return self._lookup_declaration(identifier, declarations_key,
-                                        constructor)
-
-    def _lookup_declaration(self, identifier, declarations_key, constructor):
-        value = next(
-            s for s in self[declarations_key] if s['name'] == identifier)
-        return constructor(self, value)
-
-    @property
-    def declarations(self) -> t.List[Declaration]:
-        decls: t.List[Declaration] = []
-        decls.extend(self.consts)
-        decls.extend(self.enums)
-        decls.extend(self.protocols)
-        decls.extend(self.structs)
-        decls.extend(self.tables)
-        decls.extend(self.unions)
-        return decls
-
-    @property
-    def filenames(self) -> t.List[str]:
-        return list(set(decl.filename for decl in self.declarations))
+    def declaration_order(self) -> t.List[str]:
+        return list(self['declarations'].keys())
 
 
 class Libraries(list):
@@ -307,7 +338,8 @@ class Libraries(list):
         self.by_name = dict()
 
     def load_all(self, list_path: str):
-        for relative_path in (line.strip() for line in open(list_path).readlines()):
+        for relative_path in (line.strip()
+                              for line in open(list_path).readlines()):
             path = os.path.join(os.path.dirname(list_path), relative_path)
             self.load(path)
 

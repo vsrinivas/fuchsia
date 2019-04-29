@@ -84,7 +84,8 @@ def _describe_decl_type(decl: Optional[Declaration]) -> str:
     return _describe_type(decl.type)
 
 
-abi_nonchanges = (StructMemberRenamed, DeclAdded)
+abi_nonchanges = (StructMemberRenamed, DeclAdded, TableMemberAdded,
+                  TableMemberRenamed, TableMemberReserved, TableMemberUnreserved)
 
 
 def abi_changes(changes: List[Change]) -> Iterator[ClassifiedChange]:
@@ -144,6 +145,13 @@ def abi_changes(changes: List[Change]) -> Iterator[ClassifiedChange]:
                 format(
                     _describe_decl(change.before), ', '.join(
                         m.name for m in change.befores), after_field.name))
+
+        ### Table Changes
+        elif isinstance(change, TableMemberRemoved):
+            yield ClassifiedChange(
+                change, False,
+                "{} removed, it should have been marked as reserved".format(
+                    _describe_decl(change.before)))
 
         ### Protocol Changes
         elif isinstance(change, MethodOrdinalChanged):

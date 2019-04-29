@@ -104,6 +104,38 @@ class StructMemberJoined(Change):
         self.befores = befores
 
 
+#### Table Changes
+
+
+class TableMemberAdded(Change):
+    pass
+
+
+class TableMemberRemoved(Change):
+    pass
+
+
+class TableMemberReserved(Change):
+    pass
+
+
+class TableMemberUnreserved(Change):
+    pass
+
+
+class TableMemberRenamed(Change):
+    pass
+
+
+class TableMemberTypeChanged(Change):
+    compatible: bool
+
+    def __init__(self, before: TableMember, after: TableMember,
+                 comptatible: bool):
+        super().__init__(before, after)
+        self.compatible = comptatible
+
+
 #### Protocol Changes
 class MethodOrdinalChanged(Change):
     pass

@@ -65,8 +65,11 @@ protocol MethodArgumentCount {
     MethodResponseArgumentsAdded() -> (bool foo, bool bar);
 //!StructMemberAdded
     -> EventArgumentsAdded(bool foo, bool bar);
+//!StructMemberRemoved
     MethodRequestArgumentsRemoved(bool foo);
+//!StructMemberRemoved
     MethodResponseArgumentsRemoved() -> (bool foo);
+//!StructMemberRemoved
     -> EventArgumentsRemoved(bool foo);
 };
 

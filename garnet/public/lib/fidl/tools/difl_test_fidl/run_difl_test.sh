@@ -13,5 +13,6 @@ done
 if [[ -z "${PYTHON}" ]]; then
     echo 'WARNING: no recent Python found, not running difl tests'
 else
+    "${PYTHON}" -m mypy difl/*.py
     exec "${PYTHON}" -m difl.test "$@"
 fi

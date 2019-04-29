@@ -122,7 +122,7 @@ def compare_struct_layout(before: Struct,
         added=list(after_bytes.keys()))
 
 
-def struct_changes(before: Struct, after: Struct) -> List[Change]:
+def struct_changes(before: Struct, after: Struct, identifier_compatibility: Dict[str, bool]) -> List[Change]:
     changes: List[Change] = []
 
     if before.size != after.size:
@@ -140,7 +140,7 @@ def struct_changes(before: Struct, after: Struct) -> List[Change]:
         before_member = before_members[name]
         after_member = after_members[name]
         equal, compatible = compare_types(before_member.type,
-                                          after_member.type)
+                                          after_member.type, identifier_compatibility)
         if not equal:
             changes.append(
                 StructMemberTypeChanged(before_member, after_member,
@@ -151,7 +151,7 @@ def struct_changes(before: Struct, after: Struct) -> List[Change]:
         after_member = after_members[name]
         changes.append(StructMemberMoved(before_member, after_member))
         equal, compatible = compare_types(before_member.type,
-                                          after_member.type)
+                                          after_member.type, identifier_compatibility)
         if not equal:
             changes.append(
                 StructMemberTypeChanged(before_member, after_member,
@@ -162,7 +162,7 @@ def struct_changes(before: Struct, after: Struct) -> List[Change]:
         after_member = after_members[name]
         changes.append(StructMemberSizeChanged(before_member, after_member))
         equal, compatible = compare_types(before_member.type,
-                                          after_member.type)
+                                          after_member.type, identifier_compatibility)
         assert not equal
         changes.append(
             StructMemberTypeChanged(before_member, after_member, compatible))
@@ -188,4 +188,5 @@ def struct_changes(before: Struct, after: Struct) -> List[Change]:
             StructMemberJoined([before_members[n] for n in before_names],
                                after_members[after_name]))
 
+    identifier_compatibility[before.name] = (len(changes) == 0)
     return changes

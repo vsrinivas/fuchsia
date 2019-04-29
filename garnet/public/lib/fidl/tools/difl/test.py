@@ -136,7 +136,9 @@ if __name__ == '__main__':
     before_expected_changes = expected_library_changes(before, args.build_dir)
     after_expected_changes = expected_library_changes(after, args.build_dir)
 
-    changes: List[Change] = library_changes(before, after)
+    identifier_compatibility: Dict[str, bool] = {}
+
+    changes: List[Change] = library_changes(before, after, identifier_compatibility)
 
     before_actual_changes = actual_library_changes(before, changes,
                                                    before_selector)

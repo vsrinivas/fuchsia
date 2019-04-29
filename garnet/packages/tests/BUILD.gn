@@ -565,6 +565,13 @@ group("fidl") {
   ]
 }
 
+group("difl") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/fidl/tools/difl_test_fidl",
+  ]
+}
+
 group("netemul") {
   testonly = true
   public_deps = [

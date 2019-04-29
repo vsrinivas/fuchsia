@@ -36,7 +36,7 @@ if args.after:
 else:
     after_libraries.load_all(args.after_files)
 
-changes = libraries_changes(before_libraries, after_libraries)
+changes = libraries_changes(before_libraries, after_libraries, {})
 
 classified_changes = abi_changes(changes)
 

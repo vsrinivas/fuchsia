@@ -52,15 +52,18 @@ action("run_difl_test") {
     before_ir,
   ]
   inputs = [
-    "../difl/changes.py",
     "../difl/__init__.py",
-    "../difl/protocol.py",
+    "../difl/__main__.py",
+    "../difl/changes.py",
+    "../difl/enum.py",
     "../difl/intersection.py",
     "../difl/ir.py",
     "../difl/library.py",
-    "../difl/__main__.py",
+    "../difl/protocol.py",
     "../difl/struct.py",
     "../difl/test.py",
+    "../difl/text_output.py",
+    "../difl/tricium_output.py",
     "../difl/type.py",
   ]
   outputs = [
@@ -82,8 +85,10 @@ fidl_ir("before") {
   name = "fidl.difl.test"
   output = target_gen_dir + "/before.fidl.json"
   sources = [
-    "before/protocol.fidl",
-    "before/struct.fidl",
+    "before/protocol.test.fidl",
+    "before/struct.test.fidl",
+    "before/table.test.fidl",
+    "before/types.test.fidl",
   ]
 }
 
@@ -91,7 +96,9 @@ fidl_ir("after") {
   name = "fidl.difl.test"
   output = target_gen_dir + "/after.fidl.json"
   sources = [
-    "after/protocol.fidl",
-    "after/struct.fidl",
+    "after/protocol.test.fidl",
+    "after/struct.test.fidl",
+    "after/table.test.fidl",
+    "after/types.test.fidl",
   ]
 }

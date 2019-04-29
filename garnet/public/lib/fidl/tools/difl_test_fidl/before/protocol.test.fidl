@@ -58,8 +58,11 @@ protocol MethodLostResponse {
 };
 
 protocol MethodArgumentCount {
+//!StructMemberAdded
     MethodRequestArgumentsAdded(bool foo);
+//!StructMemberAdded
     MethodResponseArgumentsAdded() -> (bool foo);
+//!StructMemberAdded
     -> EventArgumentsAdded(bool foo);
 //!StructMemberRemoved
     MethodRequestArgumentsRemoved(bool foo, bool bar);

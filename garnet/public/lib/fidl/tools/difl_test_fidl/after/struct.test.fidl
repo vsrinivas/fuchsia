@@ -1,28 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// found in the LICENSE file
 
 library fidl.difl.test;
 
-// Before
+// After
 
-//!DeclRemoved
-struct StructRemoved {
+//!DeclAdded
+struct StructAdded {
     int32 field;
 };
 
 // Attributes
 
+[Attribute]
 struct StructAttributeAdded {
     int32 field;
 };
 
-[Attribute]
 struct StructAttributeRemoved {
     int32 field;
 };
 
-[Attribute="before"]
+[Attribute="after"]
 struct StructAttributeChanged {
     int32 field;
 };
@@ -31,36 +31,37 @@ struct StructAttributeChanged {
 
 struct StructMemberRenamed {
 //!StructMemberRenamed
-    int32 field;
+    int32 renamed_field;
 };
 
 //!StructSizeChanged
 struct StructMemberAdded {
     int32 field;
+//!StructMemberAdded
+    int32 new_field;
 };
 
 //!StructSizeChanged
+//!StructMemberRemoved
 struct StructMemberRemoved {
     int32 field;
-//!StructMemberRemoved
-    int32 old_field;
 };
 
 struct StructMemberReordered {
 //!StructMemberMoved
-    int32 first;
-//!StructMemberMoved
     int32 second;
+//!StructMemberMoved
+    int32 first;
 };
 
 // Field attributes
 
 struct StructMemberAttributeAdded {
+    [Attribute]
     int32 field;
 };
 
 struct StructMemberAttributeRemoved {
-    [Attribute]
     int32 field;
 };
 
@@ -73,83 +74,85 @@ struct StructMemberAttributeChanged {
 
 struct StructMemberSignChanged {
 //!StructMemberTypeChanged
-    int32 field;
+    uint32 field;
 };
 
 //!StructSizeChanged
 struct StructMemberSizeChanged {
-//!StructMemberTypeChanged
 //!StructMemberSizeChanged
-    int32 field;
+//!StructMemberTypeChanged
+    int64 field;
 };
 
-struct StructMemberSplit {
 //!StructMemberSplit
-    int32 ab;
-};
-
-//!StructMemberJoined
-struct StructMemberJoin {
+struct StructMemberSplit {
     int16 a;
     int16 b;
 };
 
+struct StructMemberJoin {
+//!StructMemberJoined
+    int32 ab;
+};
+
 //!StructSizeChanged
+//!StructMemberRemoved
 struct StructMemberSplitPadding {
     uint16 z;
-//!StructMemberRemoved
-    int32 ab;
+//!StructMemberAdded
+    int16 a;
+//!StructMemberAdded
+    int16 b;
 };
 
 //!StructSizeChanged
+//!StructMemberRemoved
 struct StructMemberJoinPadding {
     uint16 z;
-//!StructMemberRemoved
-    int16 a;
-//!StructMemberRemoved
-    int16 b;
+//!StructMemberAdded
+    int32 ab;
 };
 
 struct StructMemberStringToOptionalString {
 //!StructMemberTypeChanged
-    string field;
+    string? field;
 };
 
 struct StructMemberStringFromOptionalString {
 //!StructMemberTypeChanged
-    string? field;
+    string field;
 };
 
 struct StructMemberHandleToOptionalHandle {
 //!StructMemberTypeChanged
-    handle field;
+    handle? field;
 };
 
 struct StructMemberHandleFromOptionalHandle {
 //!StructMemberTypeChanged
-    handle? field;
+    handle field;
 };
 
 struct StructMemberHandleTypeChanged {
 //!StructMemberTypeChanged
-    handle<channel> field;
+    handle<socket> field;
 };
 
 struct StructMemberStringLengthChanged {
 //!StructMemberTypeChanged
-    string:5 field;
+    string:10 field;
 };
 
 struct StructMemberVectorLengthChanged {
 //!StructMemberTypeChanged
-    vector<int32>:5 field;
+    vector<int32>:10 field;
 };
 
 //!StructSizeChanged
 struct StructMemberArrayLengthChanged {
 //!StructMemberSizeChanged
 //!StructMemberTypeChanged
-    array<int32>:5 field;
+    array<int32>:10 field;
 };
 
 // Struct Layout

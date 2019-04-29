@@ -1,0 +1,66 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.difl.test;
+
+// After
+
+//!DeclAdded
+table TableAdded {
+    1: int32 field;
+};
+
+// Attributes
+
+[Attribute]
+table TableAttributeAdded {
+    1: int32 field;
+};
+
+table TableAttributeRemoved {
+    1: int32 field;
+};
+
+[Attribute="after"]
+table TableAttributeChanged {
+    1: int32 field;
+};
+
+// Members
+
+table TableMemberAdded {
+    1: int32 one;
+//!TableMemberAdded
+    2: int32 two;
+};
+
+//!TableMemberRemoved
+table TableMemberRemoved {
+    1: int32 one;
+};
+
+table TableMemberReserved {
+//!TableMemberReserved
+    1: reserved;
+};
+
+table TableMemberUnreserved {
+//!TableMemberUnreserved
+    1: int32 member;
+};
+
+table TableMemberRenamed {
+//!TableMemberRenamed
+    1: int32 new_name;
+};
+
+table TableMemberSoftTypeChange {
+//!TableMemberTypeChanged
+    1: uint32 member;
+};
+
+table TableMemberHardTypeChange {
+//!TableMemberTypeChanged
+    1: string member;
+};

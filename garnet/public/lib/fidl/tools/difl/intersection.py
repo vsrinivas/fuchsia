@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import Sequence, TypeVar, Generic, List, Tuple, Callable
+from typing import Sequence, TypeVar, Generic, List, Tuple, Callable, Dict
 
 from difl.ir import Declaration
 from difl.changes import Change, DeclAdded, DeclRemoved
@@ -11,7 +11,8 @@ D = TypeVar('D', bound=Declaration)
 
 
 def intersect_changes(before: Sequence[D], after: Sequence[D],
-                      compare: Callable[[D, D], List[Change]],
+                      compare: Callable[[D, D, Dict[str, bool]], List[Change]],
+                      identifier_compatibility: Dict[str, bool],
                       include_decl_added_and_decl_removed=True) -> List[Change]:
     # dictionaries of declarations by name
     before_by_name = {d.name: d for d in before}
@@ -31,6 +32,6 @@ def intersect_changes(before: Sequence[D], after: Sequence[D],
         (before_by_name[n], after_by_name[n])
             for n in before_names.intersection(after_names)
     ]:
-        changes.extend(compare(before_decl, after_decl))
+        changes.extend(compare(before_decl, after_decl, identifier_compatibility))
 
     return changes
