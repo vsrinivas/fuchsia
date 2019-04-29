@@ -12,9 +12,6 @@
         "services": [
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic"
-        ],
-        "system": [
-            "data/root_presenter"
         ]
     }
 }

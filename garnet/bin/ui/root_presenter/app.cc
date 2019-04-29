@@ -43,9 +43,7 @@ void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
   int32_t display_startup_rotation_adjustment = 0;
   {
     std::string rotation_value;
-    if (files::ReadFileToString("/system/data/root_presenter/display_rotation",
-                                &rotation_value) ||
-        files::ReadFileToString("/config/data/display_rotation",
+    if (files::ReadFileToString("/config/data/display_rotation",
                                 &rotation_value)) {
       display_startup_rotation_adjustment = atoi(rotation_value.c_str());
       FXL_LOG(INFO) << "Display rotation adjustment applied: "

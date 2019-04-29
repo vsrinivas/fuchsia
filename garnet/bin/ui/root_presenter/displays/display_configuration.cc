@@ -42,9 +42,6 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
   {
     std::string pixel_density;
     if (files::ReadFileToString(
-            "/system/data/root_presenter/display_pixel_density",
-            &pixel_density) ||
-        files::ReadFileToString(
             "/config/data/display_pixel_density", &pixel_density)) {
       auto pixel_density_value = atof(pixel_density.c_str());
       if (pixel_density_value != 0.0) {
@@ -86,9 +83,7 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
   // of identifying and classifying them.
   {
     std::string display_usage;
-    if (files::ReadFileToString("/system/data/root_presenter/display_usage",
-                                &display_usage) ||
-        files::ReadFileToString("/config/data/display_usage",
+    if (files::ReadFileToString("/config/data/display_usage",
                                 &display_usage)) {
       if (display_usage == "handheld") {
         return fuchsia::ui::policy::DisplayUsage::kHandheld;
