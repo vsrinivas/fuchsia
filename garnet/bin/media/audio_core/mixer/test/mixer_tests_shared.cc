@@ -42,7 +42,7 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
 // destination format. They perform no SRC, gain scaling or rechannelization, so
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
-OutputProducerPtr SelectOutputProducer(
+std::unique_ptr<OutputProducer> SelectOutputProducer(
     fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels) {
   fuchsia::media::AudioStreamTypePtr dest_details =
       fuchsia::media::AudioStreamType::New();
@@ -50,9 +50,7 @@ OutputProducerPtr SelectOutputProducer(
   dest_details->channels = num_channels;
   dest_details->frames_per_second = 48000;
 
-  OutputProducerPtr output_producer = OutputProducer::Select(dest_details);
-
-  return output_producer;
+  return OutputProducer::Select(dest_details);
 }
 
 // This shared function normalizes data arrays into our float32 pipeline.

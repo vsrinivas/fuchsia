@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_core/mixer/output_producer.h"
 
 #include <fbl/algorithm.h>
+
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -137,7 +138,7 @@ OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
 
 // Selection routine which will instantiate a particular templatized version of
 // the output producer.
-OutputProducerPtr OutputProducer::Select(
+std::unique_ptr<OutputProducer> OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
   if (!format || format->channels == 0u) {
     FXL_LOG(ERROR) << "Invalid output format";
@@ -146,13 +147,13 @@ OutputProducerPtr OutputProducer::Select(
 
   switch (format->sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return OutputProducerPtr(new OutputProducerImpl<uint8_t>(format));
+      return std::make_unique<OutputProducerImpl<uint8_t>>(format);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return OutputProducerPtr(new OutputProducerImpl<int16_t>(format));
+      return std::make_unique<OutputProducerImpl<int16_t>>(format);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return OutputProducerPtr(new OutputProducerImpl<int32_t>(format));
+      return std::make_unique<OutputProducerImpl<int32_t>>(format);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return OutputProducerPtr(new OutputProducerImpl<float>(format));
+      return std::make_unique<OutputProducerImpl<float>>(format);
     default:
       FXL_LOG(ERROR) << "Unsupported output format "
                      << (uint32_t)format->sample_format;

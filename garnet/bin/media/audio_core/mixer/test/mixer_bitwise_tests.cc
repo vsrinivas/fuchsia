@@ -321,7 +321,7 @@ TEST(PassThru, Output_8) {
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78, 89, 42};
   uint8_t expect[] = {0x0, 0x0, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF, 42};
 
-  OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
@@ -341,7 +341,7 @@ TEST(PassThru, Output_16) {
   int16_t expect[] = {-0x8000, -0x8000, -0x4080, -1, 0,
                       0x4080,  0x7FFF,  0x7FFF,  -42};
 
-  OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
@@ -362,7 +362,7 @@ TEST(PassThru, Output_24) {
       kMinInt24In32, kMinInt24In32, -0x40800000,   -0x00000100, 0,
       0x40800000,    kMaxInt24In32, kMaxInt24In32, -42};
 
-  OutputProducerPtr output_producer = SelectOutputProducer(
+  auto output_producer = SelectOutputProducer(
       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
@@ -384,7 +384,7 @@ TEST(PassThru, Output_Float) {
                     0.0f,  0.50390625f, 0.99999988f,  1.0f,
                     4.2f};
 
-  audio::OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
   output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest),
@@ -397,7 +397,7 @@ TEST(PassThru, Output_8_Silence) {
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
   ASSERT_NE(nullptr, output_producer);
 
@@ -413,7 +413,7 @@ TEST(PassThru, Output_16_Silence) {
   int16_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
   ASSERT_NE(output_producer, nullptr);
 
@@ -429,7 +429,7 @@ TEST(PassThru, Output_24_Silence) {
   int32_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
   // should be overwritten, except for the last value: we only fill(6)
 
-  OutputProducerPtr output_producer = SelectOutputProducer(
+  auto output_producer = SelectOutputProducer(
       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
   ASSERT_NE(output_producer, nullptr);
 
@@ -444,7 +444,7 @@ TEST(PassThru, Output_Float_Silence) {
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f};
   // should be overwritten, except for the last value: we only fill(6)
 
-  audio::OutputProducerPtr output_producer =
+  auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 2);
   ASSERT_NE(output_producer, nullptr);
 

@@ -6,16 +6,14 @@
 #define GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_PRODUCER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+
 #include <memory>
 
 namespace media::audio {
 
-class OutputProducer;
-using OutputProducerPtr = std::unique_ptr<OutputProducer>;
-
 class OutputProducer {
  public:
-  static OutputProducerPtr Select(
+  static std::unique_ptr<OutputProducer> Select(
       const fuchsia::media::AudioStreamTypePtr& output_format);
 
   virtual ~OutputProducer() = default;

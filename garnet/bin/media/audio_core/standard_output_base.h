@@ -74,7 +74,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Details about the final output format
-  OutputProducerPtr output_producer_;
+  std::unique_ptr<OutputProducer> output_producer_;
 
   // Timer used to schedule periodic mixing.
   fbl::RefPtr<::dispatcher::Timer> mix_timer_;

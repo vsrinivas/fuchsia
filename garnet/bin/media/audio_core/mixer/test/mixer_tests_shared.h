@@ -24,7 +24,7 @@ std::unique_ptr<Mixer> SelectMixer(
     Mixer::Resampler resampler = Mixer::Resampler::Default);
 
 // OutputProducers convert frames from accumulation format to dest format.
-OutputProducerPtr SelectOutputProducer(
+std::unique_ptr<OutputProducer> SelectOutputProducer(
     fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels);
 
 // When doing direct bit-for-bit comparisons in our tests, we must factor in the

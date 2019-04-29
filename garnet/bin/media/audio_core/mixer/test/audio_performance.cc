@@ -341,14 +341,12 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
     return;
   }
 
-  audio::OutputProducerPtr output_producer =
-      SelectOutputProducer(sample_format, num_chans);
+  auto output_producer = SelectOutputProducer(sample_format, num_chans);
 
   uint32_t num_samples = kFreqTestBufSize * num_chans;
 
-  std::unique_ptr<float[]> accum = std::make_unique<float[]>(num_samples);
-  std::unique_ptr<SampleType[]> dest =
-      std::make_unique<SampleType[]>(num_samples);
+  auto accum = std::make_unique<float[]>(num_samples);
+  auto dest = std::make_unique<SampleType[]>(num_samples);
 
   switch (data_range) {
     case OutputDataRange::Silence:

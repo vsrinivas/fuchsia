@@ -149,7 +149,7 @@ TEST(NoiseFloor, Source_Float) {
 // populate the accumulator with full-range vals that translate to [-1.0, +1.0].
 template <typename T>
 double MeasureOutputNoiseFloor(double* sinad_db) {
-  OutputProducerPtr output_producer;
+  std::unique_ptr<OutputProducer> output_producer;
   double amplitude, expected_amplitude;
 
   // Calculate expected magnitude of signal strength, compared to max value.
