@@ -1,0 +1,173 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/developer/feedback_agent/log_listener.h"
+
+#include <fuchsia/mem/cpp/fidl.h>
+#include <lib/async_promise/executor.h>
+#include <lib/fit/single_threaded_executor.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
+#include <zircon/errors.h>
+
+#include <memory>
+#include <ostream>
+#include <vector>
+
+#include "src/developer/feedback_agent/tests/stub_log_listener.h"
+#include "src/lib/fxl/logging.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
+
+namespace fuchsia {
+namespace feedback {
+namespace {
+
+template <typename ResultListenerT>
+bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual,
+                         const std::string& expected,
+                         ResultListenerT* result_listener) {
+  std::string actual_value;
+  if (!fsl::StringFromVmo(actual, &actual_value)) {
+    *result_listener << "Cannot parse actual VMO to string";
+    return false;
+  }
+
+  if (actual_value.compare(expected) != 0) {
+    return false;
+  }
+
+  return true;
+}
+
+// Returns true if gMock str(|arg|) matches |expected|.
+MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
+  return DoStringBufferMatch(arg, expected, result_listener);
+}
+
+class CollectSystemLogTest : public gtest::RealLoopFixture {
+ public:
+  CollectSystemLogTest() : executor_(dispatcher()) {}
+
+ protected:
+  void ResetStubLogger(std::unique_ptr<StubLogger> stub_logger) {
+    stub_logger_ = std::move(stub_logger);
+    if (stub_logger_) {
+      FXL_CHECK(service_directory_provider_.AddService(
+                    stub_logger_->GetHandler()) == ZX_OK);
+    }
+  }
+
+  fit::result<fuchsia::mem::Buffer> CollectSystemLog() {
+    fit::result<fuchsia::mem::Buffer> result;
+    executor_.schedule_task(
+        fuchsia::feedback::CollectSystemLog(
+            service_directory_provider_.service_directory())
+            .then([&result](fit::result<fuchsia::mem::Buffer>& res) {
+              result = std::move(res);
+            }));
+    RunLoopWithTimeoutOrUntil([&result] { return !!result; });
+    return result;
+  }
+
+ private:
+  async::Executor executor_;
+  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+
+  std::unique_ptr<StubLogger> stub_logger_;
+};
+
+TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
+  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
+  stub_logger->set_messages({
+      BuildLogMessage(0 /*INFO*/, "line 1", 0),
+      BuildLogMessage(1 /*WARN*/, "line 2", ZX_MSEC(1)),
+      BuildLogMessage(2 /*ERROR*/, "line 3", ZX_MSEC(2)),
+      BuildLogMessage(3 /*FATAL*/, "line 4", ZX_MSEC(3)),
+      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", ZX_MSEC(4)),
+      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", ZX_MSEC(5)),
+      BuildLogMessage(0 /*INFO*/, "line 7", ZX_MSEC(6), /*tags=*/{"foo"}),
+      BuildLogMessage(0 /*INFO*/, "line 8", ZX_MSEC(7), /*tags=*/{"bar"}),
+      BuildLogMessage(0 /*INFO*/, "line 9", ZX_MSEC(8),
+                      /*tags=*/{"foo", "bar"}),
+  });
+  ResetStubLogger(std::move(stub_logger));
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_ok());
+  fuchsia::mem::Buffer logs = result.take_value();
+  EXPECT_THAT(logs, MatchesStringBuffer(
+                        R"([15604.000][07559][07687][] INFO: line 1
+[15604.001][07559][07687][] WARN: line 2
+[15604.002][07559][07687][] ERROR: line 3
+[15604.003][07559][07687][] FATAL: line 4
+[15604.004][07559][07687][] VLOG(1): line 5
+[15604.005][07559][07687][] VLOG(2): line 6
+[15604.006][07559][07687][foo] INFO: line 7
+[15604.007][07559][07687][bar] INFO: line 8
+[15604.008][07559][07687][foo, bar] INFO: line 9
+)"));
+}
+
+TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsAfterOneMessage) {
+  std::unique_ptr<StubLogger> stub_logger =
+      std::make_unique<StubLoggerUnbindsAfterOneMessage>();
+  stub_logger->set_messages({
+      BuildLogMessage(0 /*INFO*/,
+                      "this line should appear in the partial logs"),
+      BuildLogMessage(0 /*INFO*/,
+                      "this line should be missing from the partial logs"),
+  });
+  ResetStubLogger(std::move(stub_logger));
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_ok());
+  fuchsia::mem::Buffer logs = result.take_value();
+  EXPECT_THAT(logs,
+              MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
+                                  "should appear in the partial logs\n"));
+}
+
+TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
+  ResetStubLogger(nullptr);
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
+  ResetStubLogger(std::make_unique<StubLoggerNeverBindsToLogListener>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
+}  // namespace
+}  // namespace feedback
+
+namespace mem {
+
+// Pretty-prints string VMOs in gTest matchers instead of the default byte
+// string in case of failed expectations.
+void PrintTo(const Buffer& vmo, std::ostream* os) {
+  std::string value;
+  FXL_CHECK(fsl::StringFromVmo(vmo, &value));
+  *os << "'" << value << "'";
+}
+
+}  // namespace mem
+}  // namespace fuchsia
+
+int main(int argc, char** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  syslog::InitLogger({"feedback_agent", "test"});
+  return RUN_ALL_TESTS();
+}

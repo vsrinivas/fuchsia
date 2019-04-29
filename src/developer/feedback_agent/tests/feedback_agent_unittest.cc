@@ -317,17 +317,10 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
 }
 
 TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
+  // CollectSystemLogs() has its own set of unit tests so we only cover one log
+  // message here to check that we are attaching the logs.
   set_logger_messages({
-      BuildLogMessage(0 /*INFO*/, "line 1", 0),
-      BuildLogMessage(1 /*WARN*/, "line 2", ZX_MSEC(1)),
-      BuildLogMessage(2 /*ERROR*/, "line 3", ZX_MSEC(2)),
-      BuildLogMessage(3 /*FATAL*/, "line 4", ZX_MSEC(3)),
-      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", ZX_MSEC(4)),
-      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", ZX_MSEC(5)),
-      BuildLogMessage(0 /*INFO*/, "line 7", ZX_MSEC(6), /*tags=*/{"foo"}),
-      BuildLogMessage(0 /*INFO*/, "line 8", ZX_MSEC(7), /*tags=*/{"bar"}),
-      BuildLogMessage(0 /*INFO*/, "line 9", ZX_MSEC(8),
-                      /*tags=*/{"foo", "bar"}),
+      BuildLogMessage(0 /*INFO*/, "log message", 0, {"foo"}),
   });
 
   DataProvider_GetData_Result feedback_result;
@@ -340,19 +333,10 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   // As we control the system log attachment, we can expect it to be present and
   // with a particular value.
   ASSERT_TRUE(feedback_result.response().data.has_attachments());
-  EXPECT_THAT(feedback_result.response().data.attachments(),
-              testing::Contains(
-                  MatchesAttachment("log.system",
-                                    R"([15604.000][07559][07687][] INFO: line 1
-[15604.001][07559][07687][] WARN: line 2
-[15604.002][07559][07687][] ERROR: line 3
-[15604.003][07559][07687][] FATAL: line 4
-[15604.004][07559][07687][] VLOG(1): line 5
-[15604.005][07559][07687][] VLOG(2): line 6
-[15604.006][07559][07687][foo] INFO: line 7
-[15604.007][07559][07687][bar] INFO: line 8
-[15604.008][07559][07687][foo, bar] INFO: line 9
-)")));
+  EXPECT_THAT(
+      feedback_result.response().data.attachments(),
+      testing::Contains(MatchesAttachment(
+          "log.system", "[15604.000][07559][07687][foo] INFO: log message\n")));
   // There is nothing else we can assert here as no missing annotation nor
   // attachment is fatal.
 }

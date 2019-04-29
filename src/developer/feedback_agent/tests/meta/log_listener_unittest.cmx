@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/log_listener_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

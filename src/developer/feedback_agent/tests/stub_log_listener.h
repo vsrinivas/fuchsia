@@ -17,10 +17,10 @@ namespace feedback {
 
 // Returns a LogMessage with the given severity, message and optional tags.
 // The process and thread ids are constants. The timestamp is a constant plus
-// the provided offset.
+// the optionally provided offset.
 fuchsia::logger::LogMessage BuildLogMessage(
     const int32_t severity, const std::string& text,
-    const zx_time_t timestamp_offset,
+    const zx_time_t timestamp_offset = 0,
     const std::vector<std::string>& tags = {});
 
 // Stub Log service to return canned responses to Log::DumpLogs().
@@ -46,9 +46,25 @@ class StubLogger : public fuchsia::logger::Log {
     messages_ = messages;
   }
 
+ protected:
+  std::vector<fuchsia::logger::LogMessage> messages_;
+
  private:
   fidl::BindingSet<fuchsia::logger::Log> bindings_;
-  std::vector<fuchsia::logger::LogMessage> messages_;
+};
+
+class StubLoggerNeverBindsToLogListener : public StubLogger {
+ public:
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+};
+
+class StubLoggerUnbindsAfterOneMessage : public StubLogger {
+ public:
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 }  // namespace feedback
