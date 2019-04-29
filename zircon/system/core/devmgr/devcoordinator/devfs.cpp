@@ -575,8 +575,8 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev) {
         Devnode* dir = proto_dir(dev->protocol_id());
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
-    if (dev->parent() && dev->parent()->self) {
-        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    if (dev->self->parent) {
+        devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
 }
 
@@ -587,9 +587,9 @@ void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
-    if (dev->parent() && dev->parent()->self) {
-        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_REMOVED);
-        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    if (dev->self->parent) {
+        devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_REMOVED);
+        devfs_notify(dev->self->parent, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
 }
 
