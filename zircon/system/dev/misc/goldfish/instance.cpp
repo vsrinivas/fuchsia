@@ -173,38 +173,6 @@ zx_status_t Instance::FidlWrite(size_t count, zx_off_t offset,
                                                             actual);
 }
 
-zx_status_t Instance::DdkRead(void* buf, size_t buf_len, zx_off_t off,
-                              size_t* actual) {
-    TRACE_DURATION("gfx", "Instance::DdkRead", "buf_len", buf_len);
-
-    size_t count = std::min(buf_len, buffer_.size);
-    zx_status_t status = Read(buffer_.phys, count, actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = buffer_.vmo.read(buf, 0, *actual);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: zx_vmo_read failed %d size: %zu\n", kTag, status,
-               *actual);
-        return status;
-    }
-    return ZX_OK;
-}
-
-zx_status_t Instance::DdkWrite(const void* buf, size_t buf_len, zx_off_t off,
-                               size_t* actual) {
-    TRACE_DURATION("gfx", "Instance::DdkWrite", "buf_len", buf_len);
-
-    size_t count = std::min(buf_len, buffer_.size);
-    zx_status_t status = buffer_.vmo.write(buf, 0, count);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: zx_vmo_write failed %d size: %zu\n", kTag, status,
-               count);
-        return status;
-    }
-    return Write(buffer_.phys, count, actual);
-}
-
 zx_status_t Instance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     using Binder = fidl::Binder<Instance>;
 
@@ -232,23 +200,18 @@ void Instance::DdkRelease() {
 void Instance::OnSignal(void* ctx, int32_t flags) {
     TRACE_DURATION("gfx", "Instance::OnSignal", "flags", flags);
 
-    zx_signals_t dev_state_set = 0;
     zx_signals_t state_set = 0;
     if (flags & PIPE_WAKE_FLAG_CLOSED) {
-        dev_state_set = DEV_STATE_HANGUP;
         state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_HANGUP;
     }
     if (flags & PIPE_WAKE_FLAG_READ) {
-        dev_state_set = DEV_STATE_READABLE;
         state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE;
     }
     if (flags & PIPE_WAKE_FLAG_WRITE) {
-        dev_state_set = DEV_STATE_WRITABLE;
         state_set = fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE;
     }
 
     auto instance = static_cast<Instance*>(ctx);
-    instance->SetState(dev_state_set);
     instance->buffer_.event.signal(0, state_set);
 }
 
@@ -280,19 +243,18 @@ zx_status_t Instance::SetBufferSize(size_t size) {
 
 zx_status_t Instance::Read(zx_paddr_t paddr, size_t count, size_t* actual) {
     return Transfer(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                    fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
-                    DEV_STATE_READABLE, paddr, count, actual);
+                    fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE, paddr,
+                    count, actual);
 }
 
 zx_status_t Instance::Write(zx_paddr_t paddr, size_t count, size_t* actual) {
     return Transfer(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                    fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
-                    DEV_STATE_WRITABLE, paddr, count, actual);
+                    fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE, paddr,
+                    count, actual);
 }
 
 zx_status_t Instance::Transfer(int32_t cmd, int32_t wake_cmd,
-                               zx_signals_t state_clr,
-                               zx_signals_t dev_state_clr, zx_paddr_t paddr,
+                               zx_signals_t state_clr, zx_paddr_t paddr,
                                size_t count, size_t* actual) {
     TRACE_DURATION("gfx", "Instance::Transfer", "count", count);
 
@@ -323,7 +285,6 @@ zx_status_t Instance::Transfer(int32_t cmd, int32_t wake_cmd,
     // readable/writable before we can perform another transfer command.
     // Remove device state and request an interrupt that will indicate
     // that the pipe is again readable/writable.
-    ClearState(dev_state_clr);
     buffer_.event.signal(state_clr, 0);
 
     buffer->id = id_;
