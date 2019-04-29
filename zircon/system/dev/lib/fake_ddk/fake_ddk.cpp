@@ -180,4 +180,4 @@ zx_off_t device_get_size(zx_device_t* device) {
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}
 
-zx_driver_rec __zircon_driver_rec__ = {};
+__WEAK zx_driver_rec __zircon_driver_rec__ = {};
