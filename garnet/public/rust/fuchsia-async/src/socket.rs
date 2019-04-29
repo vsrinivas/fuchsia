@@ -218,22 +218,37 @@ where
         Ok(socket)
     }
 
+    /// Tests if the resource currently has either the provided `signal`
+    /// or the OBJECT_PEER_CLOSED signal set.
+    ///
+    /// Returns `true` if the CLOSED signal was set.
+    fn poll_signal_or_closed(
+        &self,
+        lw: &Waker,
+        task: &AtomicWaker,
+        signal: zx::Signals,
+    ) -> Poll<Result<bool, zx::Status>> {
+        let signals = zx::Signals::from_bits_truncate(self.receiver.signals.load(Ordering::SeqCst));
+        let was_closed = signals.contains(zx::Signals::OBJECT_PEER_CLOSED);
+        let was_signal = signals.contains(signal);
+        if was_closed || was_signal {
+            Poll::Ready(Ok(was_closed))
+        } else {
+            self.need_signal(lw, task, signal, was_closed)?;
+            Poll::Pending
+        }
+    }
+
     /// Test whether this socket is ready to be read or not.
     ///
     /// If the socket is *not* readable then the current task is scheduled to
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    pub fn poll_read_task(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        if (self.receiver.receiver().signals.load(Ordering::SeqCst)
-            & (F::READABLE.bits() | Signals::SOCKET_PEER_CLOSED.bits()))
-            != 0
-        {
-            Poll::Ready(Ok(()))
-        } else {
-            self.need_read(lw)?;
-            Poll::Pending
-        }
+    ///
+    /// Returns `true` if the CLOSED signal was set.
+    pub fn poll_read_task(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(lw, &self.receiver.read_task, F::READABLE)
     }
 
     /// Test whether this socket is ready to be written to or not.
@@ -242,68 +257,69 @@ where
     /// get a notification when the socket does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is writable again.
-    pub fn poll_write_task(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        if (self.receiver.receiver().signals.load(Ordering::SeqCst)
-            & (F::WRITABLE.bits() | Signals::SOCKET_PEER_CLOSED.bits()))
-            != 0
-        {
-            Poll::Ready(Ok(()))
-        } else {
-            self.need_write(lw)?;
-            Poll::Pending
-        }
+    ///
+    /// Returns `true` if the CLOSED signal was set.
+    pub fn poll_write_task(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(lw, &self.receiver.write_task, F::WRITABLE)
+    }
+
+    fn need_signal(
+        &self,
+        lw: &Waker,
+        task: &AtomicWaker,
+        signal: zx::Signals,
+        clear_closed: bool,
+    ) -> Result<(), zx::Status> {
+        crate::executor::need_signal(
+            lw,
+            task,
+            &self.receiver.signals,
+            signal,
+            clear_closed,
+            self.handle.as_handle_ref(),
+            self.receiver.port(),
+            self.receiver.key(),
+        )
     }
 
     /// Arranges for the current task to receive a notification when a
     /// "readable" signal arrives.
-    pub fn need_read(&self, lw: &Waker) -> Result<(), zx::Status> {
-        self.receiver.receiver().read_task.register(lw);
-        let old = self.receiver.receiver().signals.fetch_and(!F::READABLE.bits(), Ordering::SeqCst);
-        // We only need to schedule a new packet if one isn't already scheduled.
-        // If READABLE was already false, a packet was already scheduled.
-        if Signals::from_bits(old).unwrap().contains(F::READABLE) {
-            self.schedule_packet(F::READABLE)?;
-        }
-        if Signals::from_bits(old).unwrap().contains(Signals::SOCKET_PEER_CLOSED) {
-            // We just missed a channel close-- go around again.
-            lw.wake();
-        }
-        Ok(())
+    ///
+    /// `clear_closed` indicates that we previously mistakenly thought
+    /// the channel was closed due to a false signal, and we should
+    /// now reset the CLOSED bit. This value should often be passed in directly
+    /// from the output of `poll_read`.
+    pub fn need_read(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(lw, &self.receiver.read_task, F::READABLE, clear_closed)
     }
 
     /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self, lw: &Waker) -> Result<(), zx::Status> {
-        self.receiver.receiver().write_task.register(lw);
-        let old = self.receiver.receiver().signals.fetch_and(!F::WRITABLE.bits(), Ordering::SeqCst);
-        // We only need to schedule a new packet if one isn't already scheduled.
-        // If WRITABLE was already false, a packet was already scheduled.
-        if Signals::from_bits(old).unwrap().contains(F::WRITABLE) {
-            self.schedule_packet(F::WRITABLE)?;
-        }
-        if Signals::from_bits(old).unwrap().contains(Signals::SOCKET_PEER_CLOSED) {
-            // We just missed a channel close-- go around again.
-            lw.wake();
-        }
-        Ok(())
+    ///
+    /// `clear_closed` indicates that we previously mistakenly thought
+    /// the channel was closed due to a false signal, and we should
+    /// now reset the CLOSED bit. This value should often be passed in directly
+    /// from the output of `poll_write`.
+    pub fn need_write(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(lw, &self.receiver.write_task, F::WRITABLE, clear_closed)
     }
 
     fn schedule_packet(&self, signals: Signals) -> Result<(), zx::Status> {
-        self.handle.wait_async_handle(
+        crate::executor::schedule_packet(
+            self.handle.as_handle_ref(),
             self.receiver.port(),
             self.receiver.key(),
             signals,
-            zx::WaitAsyncOpts::Once,
         )
     }
 
     // Private helper for reading without `&mut` self.
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
     fn read_nomut(&self, buf: &mut [u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        try_ready!(self.poll_read_task(lw));
+        let clear_closed = try_ready!(self.poll_read_task(lw));
         let res = self.read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.need_read(lw)?;
+            self.need_read(lw, clear_closed)?;
             return Poll::Pending;
         }
         if res == Err(zx::Status::PEER_CLOSED) {
@@ -315,10 +331,10 @@ where
     // Private helper for writing without `&mut` self.
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
     fn write_nomut(&self, buf: &[u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        try_ready!(self.poll_write_task(lw));
+        let clear_closed = try_ready!(self.poll_write_task(lw));
         let res = self.write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.need_write(lw)?;
+            self.need_write(lw, clear_closed)?;
             Poll::Pending
         } else {
             Poll::Ready(res)
@@ -333,14 +349,14 @@ where
         out: &mut Vec<u8>,
         lw: &Waker,
     ) -> Poll<Result<usize, zx::Status>> {
-        try_ready!(self.poll_read_task(lw));
+        let clear_closed = try_ready!(self.poll_read_task(lw));
         let avail = self.avail_bytes()?;
         let len = out.len();
         out.resize(len + avail, 0);
         let (_, mut tail) = out.split_at_mut(len);
         match self.read(&mut tail) {
             Err(zx::Status::SHOULD_WAIT) => {
-                self.need_read(lw)?;
+                self.need_read(lw, clear_closed)?;
                 Poll::Pending
             }
             Err(e) => Poll::Ready(Err(e)),
