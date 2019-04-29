@@ -477,7 +477,7 @@ template("environment") {
     # If the selector filters on environment, then don't bother including
     # it if it will never match in the environment we're defining.
     if (sel.environment != [] && (sel.environment + [ environment ] -
-                                  [ environment ] == sel.environment ||
+                                  [ environment ] == sel.environment &&
                                   sel.environment + [ base_environment ] -
                                   [ base_environment ] == sel.environment)) {
       sel = {
