@@ -39,7 +39,11 @@ zx_status_t Device::PciConfigWrite(uint16_t offset, size_t width, uint32_t value
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-uint8_t Device::PciGetNextCapability(uint8_t type, uint8_t offset) {
+zx_status_t Device::PciGetFirstCapability(uint8_t type, uint8_t* out_offset) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciGetNextCapability(uint8_t type, uint8_t offset, uint8_t* out_offset) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

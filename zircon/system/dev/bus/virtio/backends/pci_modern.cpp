@@ -95,9 +95,11 @@ zx_status_t PciModernBackend::Init() {
     fbl::AutoLock lock(&lock_);
 
     // try to parse capabilities
-    for (uint8_t off = pci_get_first_capability(&pci_, PCI_CAP_ID_VENDOR);
-         off != 0;
-         off = pci_get_next_capability(&pci_, off, PCI_CAP_ID_VENDOR)) {
+    uint8_t off;
+    zx_status_t st;
+    for (st = pci_get_first_capability(&pci_, PCI_CAP_ID_VENDOR, &off);
+         st == ZX_OK;
+         st = pci_get_next_capability(&pci_, PCI_CAP_ID_VENDOR, off, &off)) {
         virtio_pci_cap_t cap;
 
         ReadVirtioCap(&pci_, off, cap);
@@ -109,7 +111,7 @@ zx_status_t PciModernBackend::Init() {
             // Virtio 1.0 section 4.1.4.4
             // notify_off_multiplier is a 32bit field following this capability
             pci_config_read32(&pci_, static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)),
-                    &notify_off_mul_);
+                              &notify_off_mul_);
             NotifyCfgCallbackLocked(cap);
             break;
         case VIRTIO_PCI_CAP_ISR_CFG:
@@ -230,7 +232,7 @@ void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 
     // interrupt status is directly read from the register at this address
     isr_status_ = reinterpret_cast<volatile uint32_t*>(
-            reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset);
+        reinterpret_cast<uintptr_t>(bar_[cap.bar]->get()) + cap.offset);
 }
 
 void PciModernBackend::DeviceCfgCallbackLocked(const virtio_pci_cap_t& cap) {

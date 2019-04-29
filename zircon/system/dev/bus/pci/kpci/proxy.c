@@ -129,9 +129,10 @@ static zx_status_t pci_op_config_write(void* ctx, uint16_t offset, size_t width,
     return pci_rpc_request(dev, PCI_OP_CONFIG_WRITE, NULL, &req, &resp);
 }
 
-static uint8_t pci_op_get_next_capability(void* ctx, uint8_t offset, uint8_t type) {
+static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t in_offset,
+                                              uint8_t* out_offset) {
     uint32_t cap_offset = 0;
-    pci_op_config_read(ctx, offset + 1, sizeof(uint8_t), &cap_offset);
+    pci_op_config_read(ctx, in_offset + 1, sizeof(uint8_t), &cap_offset);
     uint8_t limit = 64;
     zx_status_t st;
 
@@ -143,28 +144,36 @@ static uint8_t pci_op_get_next_capability(void* ctx, uint8_t offset, uint8_t typ
         if ((st = pci_op_config_read(ctx, cap_offset, sizeof(uint8_t), &type_id)) != ZX_OK) {
             zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d\n",
                    __func__, cap_offset, st);
-            return 0;
+            return st;
         }
 
         if (type_id == type) {
-            return cap_offset;
+            *out_offset = cap_offset;
+            return ZX_OK;
         }
 
         // We didn't find the right type, move on, but ensure we're still
         // within the first 256 bytes of standard config space.
         if (cap_offset >= UINT8_MAX) {
             zxlogf(ERROR, "%s: %#x is an invalid capability offset!\n", __func__, cap_offset);
-            return 0;
+            return ZX_ERR_BAD_STATE;
         }
         if ((st = pci_op_config_read(ctx, cap_offset + 1, sizeof(uint8_t), &cap_offset)) != ZX_OK) {
             zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d\n",
                    __func__, cap_offset + 1, st);
-            return 0;
+            return ZX_ERR_BAD_STATE;
         }
     }
 
     // No more entries are in the list
-    return 0;
+    return ZX_ERR_NOT_FOUND;
+}
+
+static zx_status_t pci_op_get_first_capability(void* ctx, uint8_t type, uint8_t* out_offset) {
+    // the next_capability method will always look at the second byte next
+    // pointer to fetch the next capability. By offsetting the CapPtr field
+    // by -1 we can pretend we're working with a normal capability entry
+    return pci_op_get_next_capability(ctx, type, PCI_CFG_CAPABILITIES_PTR - 1u, out_offset);
 }
 
 static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_bar) {
@@ -312,6 +321,7 @@ static pci_protocol_ops_t _pci_protocol = {
     .config_read = pci_op_config_read,
     .config_write = pci_op_config_write,
     .get_next_capability = pci_op_get_next_capability,
+    .get_first_capability = pci_op_get_first_capability,
     .get_auxdata = pci_op_get_auxdata,
     .get_bti = pci_op_get_bti,
 };

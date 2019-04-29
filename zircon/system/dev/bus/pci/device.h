@@ -102,7 +102,8 @@ public:
     zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_into);
     zx_status_t PciConfigRead(uint16_t offset, size_t width, uint32_t* out_value);
     zx_status_t PciConfigWrite(uint16_t offset, size_t width, uint32_t value);
-    uint8_t PciGetNextCapability(uint8_t type, uint8_t offset);
+    zx_status_t PciGetNextCapability(uint8_t type, uint8_t offset, uint8_t* out_offset);
+    zx_status_t PciGetFirstCapability(uint8_t type, uint8_t* out_offset);
     zx_status_t PciGetAuxdata(const char* args,
                               void* out_data_buffer,
                               size_t data_size,

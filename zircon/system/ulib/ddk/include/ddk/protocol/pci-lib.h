@@ -62,13 +62,6 @@ static inline zx_status_t pci_config_write32(const pci_protocol_t* pci,
     return pci->ops->config_write(pci->ctx, offset, sizeof(uint32_t), value);
 }
 
-static inline uint8_t pci_get_first_capability(const pci_protocol_t* pci, uint8_t type) {
-    // the next_capability method will always look at the second byte next
-    // pointer to fetch the next capability. By offsetting the CapPtr field
-    // by -1 we can pretend we're working with a normal capability entry
-    return pci_get_next_capability(pci, PCI_CFG_CAPABILITIES_PTR - 1u, type);
-}
-
 __END_CDECLS
 
 #endif  // DDK_PROTOCOL_PCI_LIB_H_

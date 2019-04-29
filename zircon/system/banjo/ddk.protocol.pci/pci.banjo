@@ -50,15 +50,13 @@ protocol Pci {
     GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
     ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
     ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
-    GetNextCapability(uint8 type, uint8 offset) -> (uint8 cap);
+    GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
+    GetFirstCapability(uint8 id) -> (zx.status s, uint8 offset);
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };
 
 // TODO: Implement the following.
-//static inline uint8_t pci_get_first_capability(const pci_protocol_t* pci, uint8_t type) {
-//    return pci_get_next_capability(pci, kPciCfgCapabilitiesPtr - 1u, type);
-//}
 //static inline zx_status_t pci_get_auxdata(const pci_protocol_t* pci,
 //                                          const char* args, voidptr* data,
 //                                          uint32_t bytes, uint32_t* actual) {

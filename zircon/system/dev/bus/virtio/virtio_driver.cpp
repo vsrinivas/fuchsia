@@ -58,7 +58,8 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
     // If no vendor capabilities are found then we will default to the legacy
     // interface.
     fbl::unique_ptr<virtio::Backend> backend = nullptr;
-    if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR) != 0) {
+    uint8_t offset;
+    if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
         zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id,
                info.func_id);
         backend.reset(new virtio::PciModernBackend(pci, info));
