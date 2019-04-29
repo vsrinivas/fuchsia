@@ -16,9 +16,6 @@ protocol ExternalController {
     ExecuteCommand(handle<socket>? log_socket, string:COMMAND_MAX? command)
         -> (zx.status status);
 
-    /// Opens a new virtual console and transfers a handle to it over |vc_receiver|.
-    OpenVirtcon(handle<channel> vc_receiver);
-
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.
     PerformMexec(handle<vmo> kernel, handle<vmo> bootdata);

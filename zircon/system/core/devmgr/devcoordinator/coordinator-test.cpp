@@ -45,33 +45,6 @@ TEST(CoordinatorTestCase, InitializeCoreDevices) {
     ASSERT_EQ(ZX_OK, status);
 }
 
-TEST(CoordinatorTestCase, OpenVirtcon) {
-    devmgr::Coordinator coordinator(DefaultConfig(nullptr));
-
-    zx::channel client, server;
-    zx_status_t status = zx::channel::create(0, &client, &server);
-    ASSERT_EQ(ZX_OK, status);
-    coordinator.set_virtcon_channel(std::move(client));
-
-    zx::channel sender, receiver;
-    status = zx::channel::create(0, &sender, &receiver);
-    ASSERT_EQ(ZX_OK, status);
-    status = coordinator.DmOpenVirtcon(std::move(sender));
-    ASSERT_EQ(ZX_OK, status);
-
-    zx_signals_t signals;
-    status = server.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &signals);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(signals & ZX_CHANNEL_READABLE);
-
-    zx::channel sender_channel;
-    uint32_t actual_handles;
-    status = server.read(0, nullptr, sender_channel.reset_and_get_address(), 0, 1, nullptr, &actual_handles);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(1, actual_handles);
-    ASSERT_TRUE(sender_channel.is_valid());
-}
-
 TEST(CoordinatorTestCase, DumpState) {
     devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 

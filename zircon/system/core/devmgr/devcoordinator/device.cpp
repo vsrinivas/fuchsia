@@ -322,7 +322,6 @@ static const fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .AddCompositeDevice = fidl_AddCompositeDevice,
 
     .DmCommand = fidl_DmCommand,
-    .DmOpenVirtcon = fidl_DmOpenVirtcon,
     .DmMexec = fidl_DmMexec,
     .DirectoryWatch = fidl_DirectoryWatch,
 };

@@ -78,14 +78,6 @@ static zx_status_t fidl_ExecuteCommand(void* ctx, zx_handle_t raw_log_socket,
     return fuchsia_device_manager_ExternalControllerExecuteCommand_reply(txn, status);
 }
 
-static zx_status_t fidl_OpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
-    zx::channel vc_receiver(raw_vc_receiver);
-    auto zxdev = static_cast<zx_device_t*>(ctx);
-    const zx::channel& rpc = *zxdev->rpc;
-
-    return fuchsia_device_manager_CoordinatorDmOpenVirtcon(rpc.get(), vc_receiver.release());
-}
-
 static zx_status_t fidl_PerformMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
     zx::vmo kernel(raw_kernel);
     zx::vmo bootdata(raw_bootdata);
@@ -98,7 +90,6 @@ static zx_status_t fidl_PerformMexec(void* ctx, zx_handle_t raw_kernel, zx_handl
 
 static fuchsia_device_manager_ExternalController_ops_t fidl_ops = {
     .ExecuteCommand = fidl_ExecuteCommand,
-    .OpenVirtcon = fidl_OpenVirtcon,
     .PerformMexec = fidl_PerformMexec,
 };
 

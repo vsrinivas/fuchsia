@@ -185,7 +185,6 @@ public:
                                    size_t components_count, uint32_t coresident_device_index);
 
     zx_status_t DmCommand(size_t len, const char* cmd);
-    zx_status_t DmOpenVirtcon(zx::channel virtcon_receiver) const;
     void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
     void HandleNewDevice(const fbl::RefPtr<Device>& dev);
@@ -208,9 +207,6 @@ public:
     bool system_loaded() const { return system_loaded_; }
     void set_loader_service(DevhostLoaderService* loader_service) {
         loader_service_ = loader_service;
-    }
-    void set_virtcon_channel(zx::channel virtcon_channel) {
-        virtcon_channel_ = std::move(virtcon_channel);
     }
     void set_dmctl_socket(zx::socket dmctl_socket) { dmctl_socket_ = std::move(dmctl_socket); }
 
@@ -252,8 +248,6 @@ private:
     bool system_loaded_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
 
-    // Channel for creating new virtual consoles.
-    zx::channel virtcon_channel_;
     // This socket is used by DmPrintf for output, and DmPrintf can be called in
     // the context of a const member function, therefore it is also const. Given
     // that, we must make dmctl_socket_ mutable.
@@ -326,7 +320,6 @@ extern const char* kComponentDriverPath;
 
 zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,
                            size_t command_size, fidl_txn_t* txn);
-zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver);
 zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata);
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
                                 zx_handle_t raw_watcher, fidl_txn_t* txn);

@@ -215,9 +215,6 @@ protocol Coordinator {
     DmCommand(handle<socket>? log_socket, string:COMMAND_MAX? command)
         -> (zx.status status);
 
-    /// Opens a new virtual console and transfers a handle to it over |vc_receiver|.
-    DmOpenVirtcon(handle<channel> vc_receiver);
-
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.
     DmMexec(handle<vmo> kernel, handle<vmo> bootdata);

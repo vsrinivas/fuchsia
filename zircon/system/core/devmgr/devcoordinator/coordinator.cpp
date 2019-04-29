@@ -132,11 +132,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::DmOpenVirtcon(zx::channel virtcon_receiver) const {
-    zx_handle_t raw_virtcon_receiver = virtcon_receiver.release();
-    return virtcon_channel_.write(0, nullptr, 0, &raw_virtcon_receiver, 1);
-}
-
 zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
     if (InSuspend()) {
         log(ERROR, "devcoordinator: rpc: dm-command \"%.*s\" forbidden in suspend\n",
@@ -988,11 +983,6 @@ zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* co
     zx_status_t status = dev->coordinator->DmCommand(command_size, command_data);
     dev->coordinator->set_dmctl_socket(zx::socket());
     return fuchsia_device_manager_CoordinatorDmCommand_reply(txn, status);
-}
-
-zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
-    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
-    return dev->coordinator->DmOpenVirtcon(zx::channel(raw_vc_receiver));
 }
 
 zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
