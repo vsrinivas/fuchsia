@@ -27,6 +27,8 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
+const zx::duration kLoopTimeout = zx::sec(1);
+
 template <typename ResultListenerT>
 bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual,
                          const std::string& expected,
@@ -51,31 +53,51 @@ MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
 
 class CollectSystemLogTest : public gtest::RealLoopFixture {
  public:
-  CollectSystemLogTest() : executor_(dispatcher()) {}
+  CollectSystemLogTest()
+      : executor_(dispatcher()),
+        service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
+        service_directory_provider_(
+            service_directory_provider_loop_.dispatcher()) {
+    // We run the service directory provider in a different loop and thread so
+    // that the stub logger can sleep (blocking call) without affecting the main
+    // loop.
+    FXL_CHECK(service_directory_provider_loop_.StartThread(
+                  "service directory provider thread") == ZX_OK);
+  }
+
+  ~CollectSystemLogTest() { service_directory_provider_loop_.Shutdown(); }
 
  protected:
   void ResetStubLogger(std::unique_ptr<StubLogger> stub_logger) {
     stub_logger_ = std::move(stub_logger);
     if (stub_logger_) {
-      FXL_CHECK(service_directory_provider_.AddService(
-                    stub_logger_->GetHandler()) == ZX_OK);
+      FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(
+                    service_directory_provider_loop_.dispatcher())) == ZX_OK);
     }
   }
 
-  fit::result<fuchsia::mem::Buffer> CollectSystemLog() {
+  fit::result<fuchsia::mem::Buffer> CollectSystemLog(
+      zx::duration timeout = zx::msec(900)) {
+    FXL_CHECK(timeout < kLoopTimeout)
+        << "The timeout for the system log collection must be strictly smaller "
+           "than the timeout for the test";
+
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
         fuchsia::feedback::CollectSystemLog(
-            service_directory_provider_.service_directory())
+            service_directory_provider_.service_directory(), timeout)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
             }));
-    RunLoopWithTimeoutOrUntil([&result] { return !!result; });
+    FXL_CHECK(
+        RunLoopWithTimeoutOrUntil([&result] { return !!result; }, kLoopTimeout))
+        << "Test timed out";
     return result;
   }
 
  private:
   async::Executor executor_;
+  async::Loop service_directory_provider_loop_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
   std::unique_ptr<StubLogger> stub_logger_;
@@ -126,6 +148,32 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsAfterOneMessage) {
   ResetStubLogger(std::move(stub_logger));
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_ok());
+  fuchsia::mem::Buffer logs = result.take_value();
+  EXPECT_THAT(logs,
+              MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
+                                  "should appear in the partial logs\n"));
+}
+
+TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
+  // The logger will sleep after the first message and longer than the log
+  // collection timeout, resulting in partial logs.
+  const zx::duration logger_sleep = zx::msec(100);
+  const zx::duration log_collection_timeout = zx::msec(1);
+
+  std::unique_ptr<StubLogger> stub_logger =
+      std::make_unique<StubLoggerSleepsAfterOneMessage>(logger_sleep);
+  stub_logger->set_messages({
+      BuildLogMessage(0 /*INFO*/,
+                      "this line should appear in the partial logs"),
+      BuildLogMessage(0 /*INFO*/,
+                      "this line should be missing from the partial logs"),
+  });
+  ResetStubLogger(std::move(stub_logger));
+
+  fit::result<fuchsia::mem::Buffer> result =
+      CollectSystemLog(log_collection_timeout);
 
   ASSERT_TRUE(result.is_ok());
   fuchsia::mem::Buffer logs = result.take_value();

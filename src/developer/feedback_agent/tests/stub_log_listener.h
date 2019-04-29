@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
@@ -27,7 +28,9 @@ fuchsia::logger::LogMessage BuildLogMessage(
 class StubLogger : public fuchsia::logger::Log {
  public:
   // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
+  // // We pass a dispatcher to run it on a different loop than the main one.
+  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(
+      async_dispatcher_t* dispatcher) {
     return bindings_.GetHandler(this);
   }
 
@@ -65,6 +68,18 @@ class StubLoggerUnbindsAfterOneMessage : public StubLogger {
   void DumpLogs(
       fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
       std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+};
+
+class StubLoggerSleepsAfterOneMessage : public StubLogger {
+ public:
+  StubLoggerSleepsAfterOneMessage(zx::duration sleep) : sleep_(sleep) {}
+
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+
+ private:
+  zx::duration sleep_;
 };
 
 }  // namespace feedback

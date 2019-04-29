@@ -51,11 +51,30 @@ void StubLoggerUnbindsAfterOneMessage::DumpLogs(
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FXL_CHECK(messages_.size() > 1u)
       << "You need to set up more than one message using set_messages()";
+
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
   FXL_CHECK(log_listener_ptr.is_bound());
   log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
       messages_.begin(), messages_.begin() + 1));
   log_listener_ptr.Unbind();
+}
+
+void StubLoggerSleepsAfterOneMessage::DumpLogs(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  FXL_CHECK(messages_.size() > 1u)
+      << "You need to set up more than one message using set_messages()";
+
+  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  FXL_CHECK(log_listener_ptr.is_bound());
+  log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
+      messages_.begin(), messages_.begin() + 1));
+
+  zx::nanosleep(zx::deadline_after(sleep_));
+
+  log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
+      messages_.begin() + 1, messages_.end()));
+  log_listener_ptr->Done();
 }
 
 }  // namespace feedback

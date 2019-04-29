@@ -160,7 +160,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
                   stub_scenic_->GetHandler()) == ZX_OK);
     stub_logger_.reset(new StubLogger());
     FXL_CHECK(service_directory_provider_.AddService(
-                  stub_logger_->GetHandler()) == ZX_OK);
+                  stub_logger_->GetHandler(dispatcher())) == ZX_OK);
 
     agent_.reset(new FeedbackAgent(
         dispatcher(), service_directory_provider_.service_directory()));

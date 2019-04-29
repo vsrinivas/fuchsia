@@ -15,6 +15,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/time.h>
 
 #include <string>
 #include <vector>
@@ -25,6 +26,9 @@
 namespace fuchsia {
 namespace feedback {
 namespace {
+
+// Timeout for a single asynchronous attachment, e.g., syslog collection.
+const zx::duration kAttachmentTimeout = zx::sec(10);
 
 // This is actually synchronous, but we return a fit::promise to match other
 // attachment providers that are asynchronous.
@@ -97,8 +101,8 @@ std::vector<fit::promise<Attachment>> GetAttachments(
   attachments.push_back(BuildAttachment(
       "build.snapshot", VmoFromFilename("/config/build-info/snapshot")));
   attachments.push_back(BuildAttachment("log.kernel", GetKernelLog()));
-  attachments.push_back(
-      BuildAttachment("log.system", CollectSystemLog(services)));
+  attachments.push_back(BuildAttachment(
+      "log.system", CollectSystemLog(services, kAttachmentTimeout)));
   return attachments;
 }
 

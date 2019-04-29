@@ -14,7 +14,6 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-#include <zircon/time.h>
 
 #include <string>
 #include <vector>
@@ -24,18 +23,12 @@
 
 namespace fuchsia {
 namespace feedback {
-namespace {
-
-const zx::duration kSystemLogCollectionTimeout = zx::sec(10);
-
-}  // namespace
-
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    std::shared_ptr<::sys::ServiceDirectory> services) {
+    std::shared_ptr<::sys::ServiceDirectory> services, zx::duration timeout) {
   std::unique_ptr<LogListener> log_listener =
       std::make_unique<LogListener>(services);
 
-  return log_listener->CollectLogs().then(
+  return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](const fit::result<void>& result)
           -> fit::result<fuchsia::mem::Buffer> {
         if (!result.is_ok()) {
@@ -61,7 +54,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
 LogListener::LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
     : services_(services), binding_(this) {}
 
-fit::promise<void> LogListener::CollectLogs() {
+fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   done_ = std::make_shared<fit::bridge<void, void>>();
 
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
@@ -97,8 +90,7 @@ fit::promise<void> LogListener::CollectLogs() {
   });
   const zx_status_t post_status = async::PostDelayedTask(
       async_get_default_dispatcher(),
-      [cb = done_after_timeout_.callback()] { cb(); },
-      kSystemLogCollectionTimeout);
+      [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
     FX_LOGS(ERROR)
         << "Failed to post delayed task, no timeout for log collection: "
@@ -143,7 +135,11 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 }
 
 void LogListener::Done() {
-  done_->completer.complete_ok();
+  // Check that the fit::bridge was not already completed, e.g., by the
+  // timeout task.
+  if (done_->completer) {
+    done_->completer.complete_ok();
+  }
   Reset();
 }
 

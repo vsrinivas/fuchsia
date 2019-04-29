@@ -12,6 +12,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/time.h>
 
 #include <vector>
 
@@ -24,14 +25,15 @@ namespace feedback {
 //
 // fuchsia::logger::Log is expected to be in |services|.
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    std::shared_ptr<::sys::ServiceDirectory> services);
+    std::shared_ptr<::sys::ServiceDirectory> services, zx::duration timeout);
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
   explicit LogListener(std::shared_ptr<::sys::ServiceDirectory> services);
 
-  // Collects the logs and returns a promise to when the collection is done.
-  fit::promise<void> CollectLogs();
+  // Collects the logs and returns a promise to when the collection is done or
+  // the timeout over.
+  fit::promise<void> CollectLogs(zx::duration timeout);
 
   // Returns the logs that have been collected so far.
   std::string CurrentLogs() { return logs_; }
