@@ -190,6 +190,19 @@ private:
     // set our offset within our parent
     zx_status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);
 
+    // Searches for info for initialization of a page being commited into |this| at |offset|.
+    //
+    // If an ancestor has a committed page which corresponds to |offset|, returns that page
+    // as well as the VmObject and offset which own the page. If no ancestor has a committed
+    // page for the offset, returns null as well as the VmObject/offset which need to be queried
+    // to populate the page.
+    //
+    // It is an error to call this when |this| has a committed page at |offset|.
+    vm_page_t* FindInitialPageContentLocked(
+            uint64_t offset, uint pf_flags, VmObject** owner_out, uint64_t* owner_offset_out)
+            // Walks the child chain, which confuses analysis.
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // members
     const uint32_t options_;
     uint64_t size_ TA_GUARDED(lock_) = 0;

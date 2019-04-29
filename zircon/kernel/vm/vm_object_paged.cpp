@@ -465,6 +465,44 @@ zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     return ZX_OK;
 }
 
+vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
+                                                       VmObject** owner_out,
+                                                       uint64_t* owner_offset_out) {
+    DEBUG_ASSERT(page_list_.GetPage(offset) == nullptr);
+
+    // Search up the clone chain for any committed pages.
+    vm_page_t* page = nullptr;
+    VmObjectPaged* cur = this;
+    uint64_t parent_offset = offset;
+    while (!page && cur->parent_) {
+        bool overflowed = add_overflow(cur->parent_offset_, parent_offset, &parent_offset);
+        ASSERT(!overflowed);
+        if (parent_offset >= cur->parent_->size()) {
+            // The offset is off the end of the parent, so cur is the VmObject
+            // which will provide the page.
+            break;
+        }
+
+        if (!cur->parent_->is_paged()) {
+            uint parent_pf_flags = pf_flags & ~VMM_PF_FLAG_WRITE;
+            auto status = cur->parent_->GetPageLocked(parent_offset, parent_pf_flags,
+                                                      nullptr, nullptr, &page, nullptr);
+            // The first if statement should ensure we never make an out-of-range query into a
+            // physical VMO, and physical VMOs will always return a page for all valid offsets.
+            DEBUG_ASSERT(status == ZX_OK);
+            DEBUG_ASSERT(page != nullptr);
+        } else {
+            cur = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+            page = cur->page_list_.GetPage(parent_offset);
+        }
+    }
+
+    *owner_out = cur;
+    *owner_offset_out = parent_offset;
+
+    return page;
+}
+
 // Looks up the page at the requested offset, faulting it in if requested and necessary.  If
 // this VMO has a parent and the requested page isn't found, the parent will be searched.
 //
@@ -483,7 +521,6 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     }
 
     vm_page_t* p;
-    paddr_t pa;
 
     // see if we already have a page at that offset
     p = page_list_.GetPage(offset);
@@ -501,153 +538,113 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, offset, pf_flags,
             vmm_pf_flags_to_string(pf_flags, pf_string));
 
-    // if we have a parent see if they have a page for us
-    if (parent_) {
-        uint64_t parent_offset;
-        bool overflowed = add_overflow(parent_offset_, offset, &parent_offset);
-        ASSERT(!overflowed);
-
-        // we're not going to be writing to the parent, so mask out the write bit. if we are
-        // faulting, we still need to read fault on the parent to make sure that the page's
-        // contents are properly populated from the pager source (if present).
-        uint parent_pf_flags = pf_flags & ~VMM_PF_FLAG_WRITE;
-
-        zx_status_t status = parent_->GetPageLocked(parent_offset, parent_pf_flags,
-                                                    nullptr, page_request, &p, &pa);
-        if (status == ZX_OK) {
-            // we have a page from them. if we're read-only faulting, return that page so they can map
-            // or read from it directly
-            if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
-                if (page_out) {
-                    *page_out = p;
-                }
-                if (pa_out) {
-                    *pa_out = pa;
-                }
-
-                LTRACEF("read only faulting in page %p, pa %#" PRIxPTR " from parent\n", p, pa);
-
-                return ZX_OK;
-            }
-
-            // if we're write faulting, we need to clone it and return the new page
-            paddr_t pa_clone;
-            vm_page_t* p_clone = nullptr;
-            if (free_list) {
-                p_clone = list_remove_head_type(free_list, vm_page, queue_node);
-                if (p_clone) {
-                    pa_clone = p_clone->paddr();
-                }
-            }
-            if (!p_clone) {
-                status = pmm_alloc_page(pmm_alloc_flags_, &p_clone, &pa_clone);
-            }
-            if (!p_clone) {
-                return ZX_ERR_NO_MEMORY;
-            }
-
-            InitializeVmPage(p_clone);
-
-            void* dst = paddr_to_physmap(pa_clone);
-            DEBUG_ASSERT(dst);
-
-            if (likely(pa != vm_get_zero_page_paddr())) {
-                // do a direct copy of the two pages
-                const void* src = paddr_to_physmap(pa);
-                DEBUG_ASSERT(src);
-                memcpy(dst, src, PAGE_SIZE);
-            } else {
-                // avoid pointless fetches by directly zeroing dst
-                arch_zero_page(dst);
-            }
-
-            // add the new page and return it
-            status = AddPageLocked(p_clone, offset);
-            DEBUG_ASSERT(status == ZX_OK);
-
-            LTRACEF("copy-on-write faulted in page %p, pa %#" PRIxPTR " copied from %p, pa %#" PRIxPTR "\n",
-                    p, pa, p_clone, pa_clone);
-
-            if (page_out) {
-                *page_out = p_clone;
-            }
-            if (pa_out) {
-                *pa_out = pa_clone;
-            }
-
-            return ZX_OK;
-        } else if (status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_NEXT) {
-            return status;
-        }
-    }
-
-    // if we're not being asked to sw or hw fault in the page, return not found
-    if ((pf_flags & VMM_PF_FLAG_FAULT_MASK) == 0) {
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    // if there's a page source, ask it for the page
-    if (page_source_) {
-        ASSERT(page_request);
-
-        zx_status_t status = page_source_->GetPage(offset, page_request, &p, &pa);
-        if (status != ZX_OK) {
-            return status;
-        }
+    VmObject* page_owner;
+    uint64_t owner_offset;
+    if (!parent_) {
+        // Avoid the function call in the common case.
+        page_owner = this;
+        owner_offset = offset;
     } else {
-        // if we're read faulting, we don't already have a page, and the parent doesn't have it,
-        // return the single global zero page
-        if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
-            LTRACEF("returning the zero page\n");
-            if (page_out) {
-                *page_out = vm_get_zero_page();
-            }
-            if (pa_out) {
-                *pa_out = vm_get_zero_page_paddr();
-            }
-            return ZX_OK;
+        p = FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset);
+    }
+
+    if (!p) {
+        // If we're not being asked to sw or hw fault in the page, return not found.
+        if ((pf_flags & VMM_PF_FLAG_FAULT_MASK) == 0) {
+            return ZX_ERR_NOT_FOUND;
         }
 
-        // allocate a page
-        if (free_list) {
-            p = list_remove_head_type(free_list, vm_page, queue_node);
-            if (p) {
-                pa = p->paddr();
+        // Since physical VMOs always provide pages for their full range, we should
+        // never get here for physical VMOs.
+        DEBUG_ASSERT(page_owner->is_paged());
+        VmObjectPaged* typed_owner = static_cast<VmObjectPaged*>(page_owner);
+
+        if (typed_owner->page_source_) {
+            zx_status_t status =
+                    typed_owner->page_source_->GetPage(owner_offset, page_request, &p, nullptr);
+            // Pager page sources will never synchronously return a page.
+            DEBUG_ASSERT(status != ZX_OK);
+
+            if (typed_owner != this && status == ZX_ERR_NOT_FOUND) {
+                // The default behavior of clones of detached pager VMOs fault in zero
+                // pages instead of propagating the pager's fault.
+                // TODO(stevensd): Add an arg to zx_vmo_create_child to optionally fault here.
+                p = vm_get_zero_page();
+            } else {
+                return status;
             }
+        } else {
+            // If there's no page source, we're using an anonymous page. It's not
+            // necessary to fault a writable page directly into the owning VMO.
+            p = vm_get_zero_page();
         }
-        if (!p) {
-            pmm_alloc_page(pmm_alloc_flags_, &p, &pa);
+    }
+    DEBUG_ASSERT(p);
+
+    if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
+        // If we're read-only faulting, return the page so they can map or read from it directly.
+        if (page_out) {
+            *page_out = p;
         }
-        if (!p) {
+        if (pa_out) {
+            *pa_out = p->paddr();
+        }
+        LTRACEF("read only faulting in page %p, pa %#" PRIxPTR " from parent\n", p, p->paddr());
+        return ZX_OK;
+    }
+
+    // If we're write faulting, we need to allocate a wriable page into this VMO.
+    vm_page_t* new_p = nullptr;
+    paddr_t new_pa;
+    if (free_list) {
+        new_p = list_remove_head_type(free_list, vm_page, queue_node);
+        if (new_p) {
+            new_pa = new_p->paddr();
+        }
+    }
+    if (!new_p) {
+        pmm_alloc_page(pmm_alloc_flags_, &new_p, &new_pa);
+        if (!new_p) {
             return ZX_ERR_NO_MEMORY;
         }
+    }
 
-        InitializeVmPage(p);
+    InitializeVmPage(new_p);
 
-        // TODO: remove once pmm returns zeroed pages
-        ZeroPage(pa);
+    void* dst = paddr_to_physmap(new_pa);
+    DEBUG_ASSERT(dst);
 
-        // if ARM and not fully cached, clean/invalidate the page after zeroing it
+    if (likely(p == vm_get_zero_page())) {
+        // avoid pointless fetches by directly zeroing dst
+        arch_zero_page(dst);
+
+        // If ARM and not fully cached, clean/invalidate the page after zeroing it.
+        // check doesn't need to be done in the other branch, since that branch is
+        // only hit for clones and clones are always cached.
 #if ARCH_ARM64
         if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
-            arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(pa), PAGE_SIZE);
+            arch_clean_invalidate_cache_range((addr_t) dst, PAGE_SIZE);
         }
 #endif
+    } else {
+        // do a direct copy of the two pages
+        const void* src = paddr_to_physmap(p->paddr());
+        DEBUG_ASSERT(src);
+        memcpy(dst, src, PAGE_SIZE);
     }
 
-    zx_status_t status = AddPageLocked(p, offset);
+    // Add the new page and return it. This also is responsible for
+    // unmapping this offset in any children.
+    zx_status_t status = AddPageLocked(new_p, offset);
     DEBUG_ASSERT(status == ZX_OK);
 
-    // other mappings may have covered this offset into the vmo, so unmap those ranges
-    RangeChangeUpdateLocked(offset, PAGE_SIZE);
-
-    LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
+    LTRACEF("faulted in page %p, pa %#" PRIxPTR " copied from %p\n", new_p, new_pa, p);
 
     if (page_out) {
-        *page_out = p;
+        *page_out = new_p;
     }
     if (pa_out) {
-        *pa_out = pa;
+        *pa_out = new_pa;
     }
 
     return ZX_OK;
