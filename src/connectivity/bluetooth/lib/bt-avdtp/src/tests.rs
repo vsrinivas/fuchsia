@@ -507,7 +507,7 @@ fn get_capabilities_event_responder_send_works() {
         0x02, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
         0x03, 0x03, 0x01, 0x0A, 0xFF,
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
         // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
@@ -566,7 +566,7 @@ fn get_capabilities_command_works() {
         0x01, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (2), Number Media Packets (5)
         0x03, 0x03, 0x01, 0x02, 0x05,
-        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec specific (0xB0DE)
         0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
         // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
         0x04, 0x03, 0x02, 0x00, 0x7A,
@@ -620,7 +620,7 @@ fn get_capabilities_reject_command() {
 
     let response: &[u8] = &[
         txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
-        0x02,                         // Get Capabiliities
+        0x02,                         // Get Capabilities
         0x12,                         // BAD_ACP_SEID
     ];
 
@@ -693,7 +693,7 @@ fn get_all_capabilities_event_responder_send_works() {
         0x02, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
         0x03, 0x03, 0x01, 0x0A, 0xFF,
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
         // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
@@ -752,7 +752,7 @@ fn get_all_capabilities_command_works() {
         0x01, 0x00,
         // Reporting (LOSC = 0)
         0x02, 0x00,
-        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec specific (0xB0DE)
         0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
         // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
         0x04, 0x03, 0x02, 0x00, 0x7A,
@@ -806,7 +806,7 @@ fn get_all_capabilities_reject_command() {
 
     let response: &[u8] = &[
         txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
-        0x0C,                         // Get Capabiliities
+        0x0C,                         // Get Capabilities
         0x12,                         // BAD_ACP_SEID
     ];
 
@@ -879,7 +879,7 @@ fn get_configuration_event_responder_send_works() {
         0x02, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
         0x03, 0x03, 0x01, 0x0A, 0xFF,
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
         // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
@@ -938,7 +938,7 @@ fn get_configuration_command_works() {
         0x01, 0x00,
         // Reporting (LOSC = 0)
         0x02, 0x00,
-        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec specific (0xB0DE)
         0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
         // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
         0x04, 0x03, 0x02, 0x00, 0x7A,
@@ -1423,7 +1423,7 @@ fn expect_config_recv_cap_okay(
 incoming_cmd_length_fail_test!(set_config_length_too_short, 0x03, 2);
 
 #[test]
-fn set_configration_invalid_media_transport_format() {
+fn set_configuration_invalid_media_transport_format() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
     // TxLabel (4), ResponseReject, Signal, Relevant Cap (Media Transport),
@@ -1482,7 +1482,7 @@ fn set_config_event_responder_reject_works() {
     assert!(respond_res.is_ok());
 
     // Expected response: Same TxLabel (4) & ResponseReject, Signal,
-    // Relevant capabilitiy, Error Code (Unsupported Configure)
+    // Relevant capability, Error Code (Unsupported Configure)
     expect_remote_recv(&[0x43, 0x03, 0x01, 0x29], &remote);
 }
 
@@ -1527,7 +1527,7 @@ fn set_config_command_works() {
         0x02, 0x00,
         // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
         0x03, 0x03, 0x01, 0x0A, 0xFF,
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
         // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
@@ -1579,7 +1579,7 @@ fn set_config_error_response() {
         0x02 << 2, // INT SEID, RFA
         // MediaTransport (Length of Service Capability = 0)
         0x01, 0x00,
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
     ];
@@ -1814,7 +1814,7 @@ fn reconfigure_invalid_capabilities() {
         0x03, 0x03, // Recovery (3), length 3,
         0x01, 0x01, 0x01, // RFC2733, MRWS, MNMP
     ];
-    // TxLabel (4), ResponseRreject, Relevant cap (Recovery), Invalid Capabilities
+    // TxLabel (4), ResponseReject, Relevant cap (Recovery), Invalid Capabilities
     let rsp = &[0x43, 0x05, 0x03, 0x1A];
 
     stream_request_response(&mut exec, &mut stream, &remote, cmd, rsp);
@@ -1916,7 +1916,7 @@ fn reconfigure_command_works() {
     let reconfigure_req = &[
         0x05,      // Reconfigure Signal
         0x01 << 2, // ACP SEID, RFA
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
         // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
@@ -1971,7 +1971,7 @@ fn reconfigure_error_response() {
     let reconfigure_req = &[
         0x05,      // Reconfigure Signal
         0x01 << 2, // ACP SEID, RFA
-        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific
         // as above
         0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
     ];

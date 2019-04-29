@@ -79,7 +79,7 @@ pub enum Error {
     PeerWrite(#[cause] zx::Status),
 
     /// A message couldn't be encoded.
-    #[fail(display = "Encontered an error encoding a message")]
+    #[fail(display = "Encountered an error encoding a message")]
     Encoding,
 
     /// An error has been detected, and the request that is being handled
@@ -283,7 +283,7 @@ pub_decodable_enum! {
 }
 
 decodable_enum! {
-    /// Indicated whether this paket is part of a fragmented packet set.
+    /// Indicated whether this packet is part of a fragmented packet set.
     /// See Section 8.4.2
     SignalingPacketType<u8> {
         Single => 0x00,
@@ -343,9 +343,9 @@ impl SignalingHeader {
         message_type: SignalingMessageType,
     ) -> SignalingHeader {
         SignalingHeader {
-            label: label,
-            signal: signal,
-            message_type: message_type,
+            label,
+            signal,
+            message_type,
             packet_type: SignalingPacketType::Single,
             num_packets: 1,
         }
@@ -388,11 +388,11 @@ impl Decodable for SignalingHeader {
         let id = SignalIdentifier::try_from(signal_id_val)
             .map_err(|_| Error::InvalidSignalId(label, signal_id_val))?;
         let header = SignalingHeader {
-            label: label,
-            packet_type: packet_type,
+            label,
+            packet_type,
             message_type: SignalingMessageType::try_from(bytes[0] & 0x3)?,
             signal: id,
-            num_packets: num_packets,
+            num_packets,
         };
         Ok(header)
     }
@@ -432,7 +432,7 @@ impl StreamEndpointId {
     }
 
     /// Produce a byte where the SEID value is placed in the upper six bits,
-    /// which is often how it is placed in a mesage.
+    /// which is often how it is placed in a message.
     pub(crate) fn to_msg(&self) -> u8 {
         self.0 << 2
     }
@@ -539,7 +539,7 @@ pub enum ServiceCapability {
     /// Defined in section 8.21.6
     ContentProtection {
         protection_type: ContentProtectionType,
-        extra: Vec<u8>, // Protection speciifc parameters
+        extra: Vec<u8>, // Protection specific parameters
     },
     /// Indicates that delay reporting is offered by this end point.
     /// Defined in section 8.21.9
@@ -736,12 +736,7 @@ impl StreamInformation {
         media_type: MediaType,
         endpoint_type: EndpointType,
     ) -> StreamInformation {
-        StreamInformation {
-            id: id,
-            in_use: in_use,
-            media_type: media_type,
-            endpoint_type: endpoint_type,
-        }
+        StreamInformation { id, in_use, media_type, endpoint_type }
     }
 
     pub fn id(&self) -> &StreamEndpointId {
@@ -762,12 +757,7 @@ impl Decodable for StreamInformation {
         let in_use: bool = from[0] & 0x02 != 0;
         let media_type = MediaType::try_from(from[1] >> 4)?;
         let endpoint_type = EndpointType::try_from((from[1] >> 3) & 0x1)?;
-        Ok(StreamInformation {
-            id: id,
-            in_use: in_use,
-            media_type: media_type,
-            endpoint_type: endpoint_type,
-        })
+        Ok(StreamInformation { id, in_use, media_type, endpoint_type })
     }
 }
 

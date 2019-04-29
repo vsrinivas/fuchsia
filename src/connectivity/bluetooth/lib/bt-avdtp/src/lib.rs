@@ -181,7 +181,7 @@ impl Peer {
     /// given remote `stream_id`, to reconfigure the Application Service
     /// capabilities in `capabilities`.
     /// Note: Per the spec, only the Media Codec and Content Protection
-    /// capablities will be accepted in this command.
+    /// capabilities will be accepted in this command.
     /// Panics if there are no capabilities to configure.
     /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
     /// if the remote refused.
@@ -277,7 +277,7 @@ impl Peer {
     }
 
     /// Sends a signal on the socket and receive a future that will complete
-    /// when we get the expected reponse.
+    /// when we get the expected response.
     async fn send_command<'a, D: Decodable>(
         &'a self,
         signal: SignalIdentifier,
@@ -417,7 +417,7 @@ impl Request {
                 if body.len() > 0 {
                     return Err(Error::RequestInvalid(ErrorCode::BadLength));
                 }
-                Ok(Request::Discover { responder: DiscoverResponder { peer: peer, id: id } })
+                Ok(Request::Discover { responder: DiscoverResponder { peer, id } })
             }
             SignalIdentifier::GetCapabilities => {
                 parse_one_seid!(body, signal, peer, id, GetCapabilities, GetCapabilitiesResponder)
@@ -563,7 +563,7 @@ impl Decodable for DiscoverResponse {
             idx += endpoint.encoded_len();
             endpoints.push(endpoint);
         }
-        Ok(DiscoverResponse { endpoints: endpoints })
+        Ok(DiscoverResponse { endpoints })
     }
 }
 
@@ -636,7 +636,7 @@ impl Decodable for GetCapabilitiesResponse {
             idx = idx + capability.encoded_len();
             capabilities.push(capability);
         }
-        Ok(GetCapabilitiesResponse { capabilities: capabilities })
+        Ok(GetCapabilitiesResponse { capabilities })
     }
 }
 
@@ -724,7 +724,7 @@ enum RequestListener {
     None,
     /// Someone wants to listen but hasn't polled.
     New,
-    /// Someone is listening, and can be woken whith the waker.
+    /// Someone is listening, and can be woken with the waker.
     Some(Waker),
 }
 
@@ -744,7 +744,7 @@ enum ResponseWaiter {
     /// A response that has been received, stored here until it's polled, at
     /// which point it will be decoded.
     Received(Vec<u8>),
-    /// It's still waiting on the reponse, but the receiver has decided they
+    /// It's still waiting on the response, but the receiver has decided they
     /// don't care and we'll throw it out.
     Discard,
 }
@@ -848,7 +848,7 @@ struct PeerInner {
     response_waiters: Mutex<Slab<ResponseWaiter>>,
 
     /// A queue of requests that have been received and are waiting to
-    /// be reponded to, along with the waker for the task that has
+    /// be responded to, along with the waker for the task that has
     /// taken the request receiver (if it exists)
     incoming_requests: Mutex<RequestQueue>,
 }

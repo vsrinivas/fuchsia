@@ -74,7 +74,7 @@ pub struct StreamEndpoint {
 impl StreamEndpoint {
     /// Make a new StreamEndpoint.
     /// |id| must be in the valid range for a StreamEndpointId (0x01 - 0x3E).
-    /// StreamEndpooints start in the Idle state.
+    /// StreamEndpoints start in the Idle state.
     pub fn new(
         id: u8,
         media_type: MediaType,
@@ -84,9 +84,9 @@ impl StreamEndpoint {
         let seid = StreamEndpointId::try_from(id)?;
         Ok(StreamEndpoint {
             id: seid,
-            capabilities: capabilities,
-            media_type: media_type,
-            endpoint_type: endpoint_type,
+            capabilities,
+            media_type,
+            endpoint_type,
             state: StreamState::Idle,
             transport: None,
             stream_held: Arc::new(Mutex::new(false)),
@@ -194,7 +194,7 @@ impl StreamEndpoint {
     }
 
     /// Close this stream.  This procedure checks that the media channels are closed.
-    /// If the channels are not closed in 3 seconds, it initates an abort prodecure with the
+    /// If the channels are not closed in 3 seconds, it initiates an abort procedure with the
     /// remote |peer| and returns the result of that.
     pub async fn release<'a>(
         &'a mut self,
@@ -273,7 +273,7 @@ impl StreamEndpoint {
         &self.id
     }
 
-    /// Make a StreamInforamtion which represents the current state of this stream.
+    /// Make a StreamInformation which represents the current state of this stream.
     pub fn information(&self) -> StreamInformation {
         StreamInformation::new(
             self.id.clone(),
@@ -284,7 +284,7 @@ impl StreamEndpoint {
     }
 
     /// Take the media stream, which transmits (or receives) any media for this StreamEndpoint.
-    /// Panics if the media stream is alraedy taken, or if the stream is not open.
+    /// Panics if the media stream is already taken, or if the stream is not open.
     pub fn take_transport(&mut self) -> MediaStream {
         let mut lock = self.stream_held.lock();
         assert!(!*lock && self.transport.is_some(), "Media stream has already been taken.");
@@ -417,7 +417,7 @@ mod tests {
         );
 
         // Note: we allow devices to be configured (and reconfigured) again when they are
-        // just configured, even though this is proabably not allowed per the spec.
+        // just configured, even though this is probably not allowed per the spec.
 
         // Can't configure while open
         establish_stream(&mut s);
@@ -469,7 +469,7 @@ mod tests {
             }])
         );
 
-        // Configure is stil not allowed.
+        // Configure is still not allowed.
         assert_eq!(
             Err(Error::InvalidState),
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
@@ -584,7 +584,7 @@ mod tests {
         // TODO(jamuraa): We need to wait until the timer expires for now.
         exec.wake_next_timer();
         let complete = exec.run_until_stalled(&mut release_fut);
-        // Now we're wairing on response from the Abort
+        // Now we're waiting on response from the Abort
         assert!(complete.is_pending());
         // Should have got an abort
         let received = recv_remote(&signaling).unwrap();
