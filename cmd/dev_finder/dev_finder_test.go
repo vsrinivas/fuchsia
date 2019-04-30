@@ -77,6 +77,35 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 }
 func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
+func newDevFinderCmd(handler mDNSHandler, answerDomains []string) devFinderCmd {
+	// Because mdnsAddrs have two addresses specified and mdnsPorts have
+	// two ports specified, four MDNS objects are created. To emulate the
+	// case where only one of them responds, create only one fake MDNS
+	// object with answers. The others wouldn't respond at all. See the
+	// Send() method above.
+	mdnsCount := 0
+	return devFinderCmd{
+		mdnsHandler: handler,
+		mdnsAddrs:   "224.0.0.251,224.0.0.250",
+		mdnsPorts:   "5353,5356",
+		timeout:     10,
+		newMDNSFunc: func(addr string) mdnsInterface {
+			mdnsCount++
+			switch mdnsCount {
+			case 1:
+				return &fakeMDNS{
+					answer: &fakeAnswer{
+						ip:      "192.168.0.42",
+						domains: answerDomains,
+					},
+				}
+			default:
+				return &fakeMDNS{}
+			}
+		},
+	}
+}
+
 func compareFuchsiaDevices(d1, d2 *fuchsiaDevice) bool {
 	return cmp.Equal(d1.addr, d2.addr) && cmp.Equal(d1.domain, d2.domain)
 }
@@ -84,34 +113,13 @@ func compareFuchsiaDevices(d1, d2 *fuchsiaDevice) bool {
 //// Tests for the `list` command.
 
 func TestListDevices(t *testing.T) {
-	// Because mdnsPorts have two ports specified, two MDNS objects are
-	// created. To emulate the case where only one port responds, create
-	// only one fake MDNS object with answers. The other one wouldn't
-	// respond at all. See the Start() method above.
-	mdnsCount := 0
 	cmd := listCmd{
-		devFinderCmd: devFinderCmd{
-			mdnsHandler: listMDNSHandler,
-			mdnsPorts:   "5353,5356",
-			timeout:     10,
-			newMDNSFunc: func() mdnsInterface {
-				mdnsCount++
-				switch mdnsCount {
-				case 1:
-					return &fakeMDNS{
-						answer: &fakeAnswer{
-							ip: "192.168.0.42",
-							domains: []string{
-								"some.domain",
-								"another.domain",
-							},
-						},
-					}
-				default:
-					return &fakeMDNS{}
-				}
-			},
-		},
+		devFinderCmd: newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				"some.domain",
+				"another.domain",
+			}),
 	}
 
 	got, err := cmd.listDevices(context.Background())
@@ -135,34 +143,13 @@ func TestListDevices(t *testing.T) {
 }
 
 func TestListDevices_domainFilter(t *testing.T) {
-	// Because mdnsPorts have two ports specified, two MDNS objects are
-	// created. To emulate the case where only one port responds, create
-	// only one fake MDNS object with answers. The other one wouldn't
-	// respond at all. See the Start() method above.
-	mdnsCount := 0
 	cmd := listCmd{
-		devFinderCmd: devFinderCmd{
-			mdnsHandler: listMDNSHandler,
-			mdnsPorts:   "5353,5356",
-			timeout:     10,
-			newMDNSFunc: func() mdnsInterface {
-				mdnsCount++
-				switch mdnsCount {
-				case 1:
-					return &fakeMDNS{
-						answer: &fakeAnswer{
-							ip: "192.168.0.42",
-							domains: []string{
-								"some.domain",
-								"another.domain",
-							},
-						},
-					}
-				default:
-					return &fakeMDNS{}
-				}
-			},
-		},
+		devFinderCmd: newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				"some.domain",
+				"another.domain",
+			}),
 		domainFilter: "some",
 	}
 
@@ -185,34 +172,13 @@ func TestListDevices_domainFilter(t *testing.T) {
 //// Tests for the `resolve` command.
 
 func TestResolveDevices(t *testing.T) {
-	// Because mdnsPorts have two ports specified, two MDNS objects are
-	// created. To emulate the case where only one port responds, create
-	// only one fake MDNS object with answers. The other one wouldn't
-	// respond at all. See the Start() method above.
-	mdnsCount := 0
 	cmd := resolveCmd{
-		devFinderCmd: devFinderCmd{
-			mdnsHandler: resolveMDNSHandler,
-			mdnsPorts:   "5353,5356",
-			timeout:     10,
-			newMDNSFunc: func() mdnsInterface {
-				mdnsCount++
-				switch mdnsCount {
-				case 1:
-					return &fakeMDNS{
-						answer: &fakeAnswer{
-							ip: "192.168.0.42",
-							domains: []string{
-								"some.domain.local",
-								"another.domain.local",
-							},
-						},
-					}
-				default:
-					return &fakeMDNS{}
-				}
-			},
-		},
+		devFinderCmd: newDevFinderCmd(
+			resolveMDNSHandler,
+			[]string{
+				"some.domain.local",
+				"another.domain.local",
+			}),
 	}
 
 	got, err := cmd.resolveDevices(context.Background(), "some.domain")

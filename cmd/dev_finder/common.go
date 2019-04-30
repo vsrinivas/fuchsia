@@ -58,12 +58,14 @@ type mdnsInterface interface {
 	Start(ctx context.Context, port int) error
 }
 
-type newMDNSFunc func() mdnsInterface
+type newMDNSFunc func(address string) mdnsInterface
 
 // Contains common command information for embedding in other dev_finder commands.
 type devFinderCmd struct {
 	// Outputs in JSON format if true.
 	json bool
+	// The mDNS addresses to connect to.
+	mdnsAddrs string
 	// The mDNS ports to connect to.
 	mdnsPorts string
 	// The timeout in ms to either give up or to exit the program after finding at least one
@@ -91,6 +93,7 @@ type fuchsiaDevice struct {
 
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
+	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,224.0.0.250", "Comma separated list of addresses to issue mDNS queries to.")
 	f.StringVar(&cmd.mdnsPorts, "port", "5353,5356", "Comma separated list of ports to issue mDNS queries to.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
@@ -117,11 +120,11 @@ func addrToIP(addr net.Addr) (net.IP, error) {
 	return nil, errors.New("unsupported address type")
 }
 
-func (cmd *devFinderCmd) newMDNS() mdnsInterface {
+func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	if cmd.newMDNSFunc != nil {
-		return cmd.newMDNSFunc()
+		return cmd.newMDNSFunc(address)
 	}
-	return &mdns.MDNS{}
+	return &mdns.MDNS{Address: address}
 }
 
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet) ([]*fuchsiaDevice, error) {
@@ -132,30 +135,38 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		return nil, fmt.Errorf("invalid timeout value: %v", cmd.timeout)
 	}
 
+	addrs := strings.Split(cmd.mdnsAddrs, ",")
+	var ports []int
+	for _, s := range strings.Split(cmd.mdnsPorts, ",") {
+		p, err := strconv.ParseUint(s, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse port number %v: %v\n", s, err)
+		}
+		ports = append(ports, int(p))
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
 	defer cancel()
 	errChan := make(chan error)
 	devChan := make(chan *fuchsiaDevice)
-	for _, p := range strings.Split(cmd.mdnsPorts, ",") {
-		m := cmd.newMDNS()
-		m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
-			response := mDNSResponse{recv, addr, rxPacket}
-			cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)
-		})
-		m.AddErrorHandler(func(err error) {
-			errChan <- err
-		})
-		m.AddWarningHandler(func(addr net.Addr, err error) {
-			log.Printf("from: %v warn: %v\n", addr, err)
-		})
-		i, err := strconv.ParseUint(p, 10, 16)
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse port number %v: %v\n", p, err)
+	for _, addr := range addrs {
+		for _, p := range ports {
+			m := cmd.newMDNS(addr)
+			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
+				response := mDNSResponse{recv, addr, rxPacket}
+				cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)
+			})
+			m.AddErrorHandler(func(err error) {
+				errChan <- err
+			})
+			m.AddWarningHandler(func(addr net.Addr, err error) {
+				log.Printf("from: %v warn: %v\n", addr, err)
+			})
+			if err := m.Start(ctx, p); err != nil {
+				return nil, fmt.Errorf("starting mdns: %v", err)
+			}
+			m.Send(packet)
 		}
-		if err := m.Start(ctx, int(i)); err != nil {
-			return nil, fmt.Errorf("starting mdns: %v", err)
-		}
-		m.Send(packet)
 	}
 
 	devices := make([]*fuchsiaDevice, 0)
