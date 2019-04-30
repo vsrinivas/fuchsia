@@ -296,7 +296,7 @@ fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64) -
     result.unwrap()
 }
 
-fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
+pub fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
     updates
         .iter()
         .filter_map(|u| match u {
@@ -369,9 +369,9 @@ impl FourwayTestEnv {
         let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg1);
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         let msg2 = extract_eapol_resp(&s_update_sink[..]);
-        let s_ptk = extract_reported_ptk(&s_update_sink[..]);
+        let ptk = get_ptk(&msg1.key_nonce[..], &msg2.key_nonce[..]);
 
-        (msg2, s_ptk)
+        (msg2, ptk)
     }
 
     pub fn send_msg1_to_supplicant_expect_err(&mut self, msg1: eapol::KeyFrame, krc: u64) {
@@ -388,7 +388,7 @@ impl FourwayTestEnv {
         msg2: eapol::KeyFrame,
         expected_krc: u64,
         next_krc: u64,
-    ) -> (eapol::KeyFrame, Ptk) {
+    ) -> eapol::KeyFrame {
         let verified_msg2 = make_verified(&msg2, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -397,16 +397,15 @@ impl FourwayTestEnv {
             self.authenticator.on_eapol_key_frame(&mut a_update_sink, next_krc, verified_msg2);
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         let msg3 = extract_eapol_resp(&a_update_sink[..]);
-        let a_ptk = extract_reported_ptk(&a_update_sink[..]);
 
-        (msg3, a_ptk)
+        msg3
     }
 
     pub fn send_msg3_to_supplicant(
         &mut self,
         msg3: eapol::KeyFrame,
         krc: u64,
-    ) -> (eapol::KeyFrame, Gtk) {
+    ) -> (eapol::KeyFrame, Ptk, Gtk) {
         let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -414,9 +413,23 @@ impl FourwayTestEnv {
         let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg3);
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
         let msg4 = extract_eapol_resp(&s_update_sink[..]);
+        let s_ptk = extract_reported_ptk(&s_update_sink[..]);
         let s_gtk = extract_reported_gtk(&s_update_sink[..]);
 
-        (msg4, s_gtk)
+        (msg4, s_ptk, s_gtk)
+    }
+
+    pub fn send_msg3_to_supplicant_capture_updates(
+        &mut self,
+        msg3: eapol::KeyFrame,
+        krc: u64,
+        mut update_sink: &mut UpdateSink,
+    ) {
+        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+
+        // Send message #1 to Supplicant and extract responses.
+        let result = self.supplicant.on_eapol_key_frame(&mut update_sink, 0, verified_msg3);
+        assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
     }
 
     pub fn send_msg3_to_supplicant_expect_err(&mut self, msg3: eapol::KeyFrame, krc: u64) {
@@ -428,7 +441,11 @@ impl FourwayTestEnv {
         assert!(result.is_err(), "Supplicant successfully processed illegal msg #3");
     }
 
-    pub fn send_msg4_to_authenticator(&mut self, msg4: eapol::KeyFrame, expected_krc: u64) -> Gtk {
+    pub fn send_msg4_to_authenticator(
+        &mut self,
+        msg4: eapol::KeyFrame,
+        expected_krc: u64,
+    ) -> (Ptk, Gtk) {
         let verified_msg4 = make_verified(&msg4, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -437,7 +454,8 @@ impl FourwayTestEnv {
             self.authenticator.on_eapol_key_frame(&mut a_update_sink, expected_krc, verified_msg4);
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
         let a_gtk = extract_reported_gtk(&a_update_sink[..]);
+        let a_ptk = extract_reported_ptk(&a_update_sink[..]);
 
-        a_gtk
+        (a_ptk, a_gtk)
     }
 }

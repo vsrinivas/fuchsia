@@ -310,31 +310,19 @@ impl EssSa {
         // If ESS-SA was not already established, wait with reporting PTK until GTK
         // is also known.
         let was_esssa_established = self.is_established();
-        updates
-            .drain_filter(|update| match update {
-                SecAssocUpdate::Key(_) => true,
-                _ => false,
-            })
-            .for_each(|update| {
-                if let SecAssocUpdate::Key(key) = update {
-                    if let Err(e) = self.on_key_confirmed(update_sink, key.clone()) {
-                        error!("error while processing key: {}", e);
-                    };
-                }
-            });
+        updates.iter().for_each(|update| {
+            if let SecAssocUpdate::Key(key) = update {
+                if let Err(e) = self.on_key_confirmed(update_sink, key.clone()) {
+                    error!("error while processing key: {}", e);
+                };
+            }
+        });
         update_sink.append(&mut updates);
 
-        let state = (self.ptksa.state(), self.gtksa.state());
-        if let (Ptksa::Established { ptk, .. }, Gtksa::Established { gtk, .. }) = state {
-            // Report all the keys now if ESSSA is established and wasn't previously.
-            // In the case where ESSSA had already been established and keys are being rotated,
-            // the keys were already pushed to the update sink.
-            if !was_esssa_established {
-                info!("established ESSSA");
-                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
-                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
-                update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
-            }
+        // Report once ESSSA is established.
+        if !was_esssa_established && self.is_established() {
+            info!("established ESSSA");
+            update_sink.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
         }
 
         Ok(())

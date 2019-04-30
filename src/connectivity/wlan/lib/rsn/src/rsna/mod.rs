@@ -395,16 +395,16 @@ mod tests {
 
         // Use arbitrarily chosen key_replay_counter.
         let msg1 = env.initiate(12);
-        let (mut msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
 
         // Use CCMP-128 key length.
         msg2.key_len = 16;
-        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+        msg2 = test_util::finalize_key_frame(msg2, Some(ptk.kck()));
         let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
 
         msg2.key_len = 0;
-        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+        msg2 = test_util::finalize_key_frame(msg2, Some(ptk.kck()));
         let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
     }
@@ -417,9 +417,9 @@ mod tests {
 
         // Use arbitrarily chosen key_replay_counter.
         let msg1 = env.initiate(12);
-        let (mut msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let (mut msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
         msg2.key_len = 29;
-        msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
+        msg2 = test_util::finalize_key_frame(msg2, Some(ptk.kck()));
 
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
             .expect("could not derive negotiated RSNE");

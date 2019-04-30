@@ -14,9 +14,10 @@ use crate::rsna::{
 };
 use crate::Error;
 use bytes::Bytes;
+use crypto::util::fixed_time_eq;
 use eapol;
 use failure::{self, bail, ensure};
-use log::{error, info};
+use log::error;
 use wlan_common::ie::rsn::rsne::Rsne;
 
 // IEEE Std 802.11-2016, 12.7.6.2
@@ -167,7 +168,7 @@ fn create_message_4(
 pub enum State {
     AwaitingMsg1 { pmk: Vec<u8>, cfg: Config },
     AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, anonce: Nonce, cfg: Config },
-    Completed { pmk: Vec<u8>, cfg: Config },
+    KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Gtk, cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
@@ -199,7 +200,6 @@ impl State {
                             }
                             Ok((msg2, ptk, anonce)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
-                                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                                 State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
                             }
                         }
@@ -217,8 +217,8 @@ impl State {
                     fourway::MessageNumber::Message1 => {
                         State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
                     }
-                    // Third message of the handshake is only processed once to prevent replay
-                    // attacks.
+                    // Third message of the handshake can be processed multiple times but PTK and
+                    // GTK are only installed once.
                     fourway::MessageNumber::Message3 => {
                         match handle_message_3(&cfg, ptk.kck(), ptk.kek(), frame) {
                             Err(e) => {
@@ -227,8 +227,9 @@ impl State {
                             }
                             Ok((msg4, gtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
-                                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
-                                State::Completed { pmk, cfg }
+                                update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
+                                update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
+                                State::KeysInstalled { pmk, ptk, gtk, cfg }
                             }
                         }
                     }
@@ -238,22 +239,41 @@ impl State {
                     }
                 }
             }
-            State::Completed { pmk, cfg } => {
+            State::KeysInstalled { ref ptk, gtk: ref expected_gtk, ref cfg, .. } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
-                    // Restart handshake if first message was received to support re-keying.
-                    fourway::MessageNumber::Message1 => {
-                        info!("restarting already completed 4-Way Handshake");
-                        State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
+                    // Allow message 3 replays for robustness but never reinstall PTK or GTK.
+                    // Reinstalling keys could create an attack surface for vulnerabilities such as
+                    // KRACK.
+                    fourway::MessageNumber::Message3 => {
+                        match handle_message_3(cfg, ptk.kck(), ptk.kek(), frame) {
+                            Err(e) => error!("error: {}", e),
+                            // Ensure GTK didn't change. IEEE 802.11-2016 isn't specifying this edge
+                            // case and leaves room for interpretation whether or not a replayed
+                            // 3rd message can carry a different GTK than originally sent.
+                            // Fuchsia decided to require all GTKs to match; if the GTK doesn't
+                            // match with the original one Fuchsia drops the received message.
+                            Ok((msg4, gtk)) => {
+                                if fixed_time_eq(&gtk.gtk[..], &expected_gtk.gtk[..]) {
+                                    update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
+                                } else {
+                                    error!("error: GTK differs in replayed 3rd message");
+                                    // TODO(hahnr): Cancel RSNA and deauthenticate from network.
+                                    // Client won't be able to recover from this state. For now,
+                                    // Authenticator will timeout the client.
+                                }
+                            }
+                        };
                     }
                     unexpected_msg => {
                         error!(
                             "ignoring message {:?}; 4-Way Handshake already completed",
                             unexpected_msg
                         );
-                        State::Completed { pmk, cfg }
                     }
-                }
+                };
+
+                self
             }
         }
     }
@@ -262,7 +282,7 @@ impl State {
         match self {
             State::AwaitingMsg1 { .. } => None,
             State::AwaitingMsg3 { anonce, .. } => Some(&anonce[..]),
-            State::Completed { .. } => None,
+            State::KeysInstalled { .. } => None,
         }
     }
 
@@ -270,7 +290,7 @@ impl State {
         match self {
             State::AwaitingMsg1 { cfg, .. } => cfg,
             State::AwaitingMsg3 { cfg, .. } => cfg,
-            State::Completed { cfg, .. } => cfg,
+            State::KeysInstalled { cfg, .. } => cfg,
         }
     }
 }

@@ -148,7 +148,6 @@ fn process_message_2(
     let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
 
     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg3));
-    update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
     Ok((ptk, gtk))
 }
 
@@ -161,6 +160,7 @@ fn process_message_4(
     frame: FourwayHandshakeFrame,
 ) -> Result<(), failure::Error> {
     handle_message_4(cfg, ptk.kck(), last_krc, frame)?;
+    update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
     update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
     Ok(())
 }

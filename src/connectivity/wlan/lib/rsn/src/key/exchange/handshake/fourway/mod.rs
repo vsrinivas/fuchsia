@@ -360,7 +360,7 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::rsna::test_util;
+    use crate::rsna::{test_util, SecAssocUpdate, UpdateSink};
 
     // Create an Authenticator and Supplicant and perfoms the entire 4-Way Handshake.
     #[test]
@@ -369,14 +369,68 @@ mod tests {
 
         // Use arbitrarily chosen key_replay_counter.
         let msg1 = env.initiate(12);
-        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
-        let (msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
-        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
-        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+        let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
+        let msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg4, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
 
         // Finally verify that Supplicant and Authenticator derived the same keys.
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
+    }
+
+    #[test]
+    fn test_supplicant_replay_msg3() {
+        let mut env = test_util::FourwayTestEnv::new();
+
+        // Use arbitrarily chosen key_replay_counter.
+        let msg1 = env.initiate(12);
+        let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
+        let msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (_, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3.clone(), 13);
+
+        // Replay third message pretending Authenticator did not receive Supplicant's response.
+        let mut update_sink = UpdateSink::default();
+        env.send_msg3_to_supplicant_capture_updates(msg3, 13, &mut update_sink);
+        let msg4 = test_util::extract_eapol_resp(&update_sink[..]);
+        for update in update_sink {
+            match update {
+                SecAssocUpdate::Key(_) => panic!("reinstalled key"),
+                _ => (),
+            }
+        }
+
+        // Let Authenticator process 4th message.
+        let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
+
+        // Finally verify that Supplicant and Authenticator derived the same keys.
+        assert_eq!(s_ptk, a_ptk);
+        assert_eq!(s_gtk, a_gtk);
+    }
+
+    #[test]
+    fn test_supplicant_replay_msg3_different_gtk() {
+        let mut env = test_util::FourwayTestEnv::new();
+
+        // Use arbitrarily chosen key_replay_counter.
+        let msg1 = env.initiate(12);
+        let anonce = msg1.key_nonce.clone();
+        let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
+        let msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (_, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3.clone(), 13);
+
+        // Replay third message pretending Authenticator did not receive Supplicant's response.
+        // Modify GTK to simulate GTK rotation while 4-Way Handshake was in progress.
+        let mut other_gtk = s_gtk.gtk.clone();
+        other_gtk[0] ^= 0xFF;
+        let msg3 = test_util::get_4whs_msg3(&s_ptk, &anonce[..], &other_gtk[..], |msg3| {
+            msg3.key_replay_counter = 42;
+        });
+        let mut update_sink = UpdateSink::default();
+        env.send_msg3_to_supplicant_capture_updates(msg3, 13, &mut update_sink);
+
+        // Ensure Supplicant rejected and dropped 3rd message without replying.
+        assert_eq!(update_sink.len(), 0);
     }
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
@@ -411,14 +465,14 @@ mod tests {
         let mut env = test_util::FourwayTestEnv::new();
 
         let msg1 = env.initiate(12);
-        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
-        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let mut msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
         msg3.version = 1;
         msg3.key_iv = [0xFFu8; 16];
-        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+        msg3 = test_util::finalize_key_frame(msg3, Some(ptk.kck()));
 
-        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
-        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+        let (msg4, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
 
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
@@ -429,14 +483,14 @@ mod tests {
         let mut env = test_util::FourwayTestEnv::new();
 
         let msg1 = env.initiate(12);
-        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
-        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let mut msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
         msg3.version = 2;
         msg3.key_iv = [0xFFu8; 16];
-        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+        msg3 = test_util::finalize_key_frame(msg3, Some(ptk.kck()));
 
-        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
-        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+        let (msg4, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
 
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
@@ -447,14 +501,14 @@ mod tests {
         let mut env = test_util::FourwayTestEnv::new();
 
         let msg1 = env.initiate(12);
-        let (msg2, s_ptk) = env.send_msg1_to_supplicant(msg1, 12);
-        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let mut msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
         msg3.version = 2;
         msg3.key_iv = [0u8; 16];
-        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+        msg3 = test_util::finalize_key_frame(msg3, Some(ptk.kck()));
 
-        let (msg4, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
-        let a_gtk = env.send_msg4_to_authenticator(msg4, 13);
+        let (msg4, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
 
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
@@ -465,11 +519,11 @@ mod tests {
         let mut env = test_util::FourwayTestEnv::new();
 
         let msg1 = env.initiate(12);
-        let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
-        let (mut msg3, a_ptk) = env.send_msg2_to_authenticator(msg2, 12, 13);
+        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let mut msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
         msg3.version = 3;
         msg3.key_iv = [0xFFu8; 16];
-        msg3 = test_util::finalize_key_frame(msg3, Some(a_ptk.kck()));
+        msg3 = test_util::finalize_key_frame(msg3, Some(ptk.kck()));
 
         env.send_msg3_to_supplicant_expect_err(msg3, 13);
     }
