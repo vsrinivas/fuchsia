@@ -79,10 +79,16 @@ int main(int argc, const char** argv) {
 
     // Test block device performance.
     {
+      // Passing this parameter reduces the test running time to something
+      // reasonable -- 10 seconds for a transfer rate of 500 MiB/second.
+      // (Otherwise biotime reads the whole device.)
+      auto* kBytesToTransfer = "5G";
+
       std::string out_file = benchmarks_runner.MakeTempFile();
       benchmarks_runner.AddCustomBenchmark(
           "block_device_throughput",
-          {"/boot/bin/biotime", "-output-file", out_file, block_device},
+          {"/boot/bin/biotime", "-total-bytes-to-transfer", kBytesToTransfer,
+           "-output-file", out_file, block_device},
           out_file);
     }
 

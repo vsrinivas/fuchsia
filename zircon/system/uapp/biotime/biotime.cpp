@@ -275,7 +275,7 @@ void usage(void) {
     fprintf(stderr, "usage: biotime <option>* <device>\n"
                     "\n"
                     "args:  -bs <num>     transfer block size (multiple of 4K)\n"
-                    "       -tt <num>     total bytes to transfer\n"
+                    "       -total-bytes-to-transfer <num>  total amount to read or write\n"
                     "       -mo <num>     maximum outstanding ops (1..128)\n"
                     "       -read         test reading from the block device (default)\n"
                     "       -write        test writing to the block device\n"
@@ -322,7 +322,7 @@ int main(int argc, char** argv) {
             if ((a.xfer == 0) || (a.xfer % 4096)) {
                 error("error: block size must be multiple of 4K\n");
             }
-        } else if (!strcmp(argv[0], "-tt")) {
+        } else if (!strcmp(argv[0], "-total-bytes-to-transfer")) {
             needparam();
             total = number(argv[0]);
         } else if (!strcmp(argv[0], "-mo")) {
