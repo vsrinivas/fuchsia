@@ -26,7 +26,7 @@ if (have_prebuilt_libvulkan_arm) {
   libvulkan_gen_path = "$target_gen_dir/libvulkan"
 }
 
-if (have_libvulkan) {
+if (have_libvulkan_mali) {
   icd_list = []
   if (build_libvulkan_arm_mali != []) {
     foreach(entry, build_libvulkan_arm_mali) {
