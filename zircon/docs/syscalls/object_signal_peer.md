@@ -29,8 +29,6 @@ per-object functions, like **ZX_CHANNEL_READABLE** or **ZX_TASK_TERMINATED**. Th
 are 8 signal bits available for userspace processes to use as they see fit:
 **ZX_USER_SIGNAL_0** through **ZX_USER_SIGNAL_7**.
 
-*Event* objects also allow control over the **ZX_EVENT_SIGNALED** bit.
-
 *Eventpair* objects also allow control over the **ZX_EVENTPAIR_SIGNALED** bit.
 
 The *clear_mask* is first used to clear any bits indicated, and then the
@@ -61,7 +59,6 @@ failure, a negative error value is returned.
 
 ## SEE ALSO
 
- - [`zx_event_create()`]
  - [`zx_eventpair_create()`]
  - [`zx_object_signal()`]
 
