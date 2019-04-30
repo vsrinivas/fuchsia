@@ -105,8 +105,8 @@ protocol DevhostController {
     ///
     /// parent_proxy, if present, will usually be a channel to the upper half of
     /// a shadowed device.  The one exception is when this method is used
-    /// to create the Platform Bus, in which case it will be a VMO containing
-    /// the ZBI.
+    /// to create the Platform Bus, in which case it will be a channel to a
+    /// fuchsia.boot.Items protocol.
     ///
     /// |local_device_id| will be a unique value within the device's devhost
     CreateDevice(handle<channel> rpc, string:DEVICE_PATH_MAX driver_path,
