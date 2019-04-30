@@ -9,29 +9,29 @@ import (
 	"testing"
 )
 
-func testUint16(t *testing.T) {
+func TestUint16(t *testing.T) {
 	var buf bytes.Buffer
 	v := uint16(6857)
 	writeUint16(&buf, v)
 	var v2 uint16
 	readUint16(&buf, &v2)
 	if v != v2 {
-		t.Fatal()
+		t.Errorf("read/writeUint16 mismatch: wrote %v, read %v", v, v2)
 	}
 }
 
-func testUint32(t *testing.T) {
+func TestUint32(t *testing.T) {
 	var buf bytes.Buffer
 	v := uint32(6857)
 	writeUint32(&buf, v)
 	var v2 uint32
 	readUint32(&buf, &v2)
 	if v != v2 {
-		t.Fatal()
+		t.Errorf("read/writeUint32 mismatch: wrote %v, read %v", v, v2)
 	}
 }
 
-func testHeader(t *testing.T) {
+func TestHeader(t *testing.T) {
 	var buf bytes.Buffer
 	v := Header{
 		ID:      593,
@@ -43,24 +43,24 @@ func testHeader(t *testing.T) {
 	}
 	v.serialize(&buf)
 	var v2 Header
-	v.deserialize(buf.Bytes(), &buf)
+	v2.deserialize(buf.Bytes(), &buf)
 	if v != v2 {
-		t.Fatal()
+		t.Errorf("header (de)serialize mismatch: wrote %v, read %v", v, v2)
 	}
 }
 
-func testDomain(t *testing.T) {
+func TestDomain(t *testing.T) {
 	var buf bytes.Buffer
 	v := "this.is.a.random.domain.to.check"
 	writeDomain(&buf, v)
 	var v2 string
 	readDomain(buf.Bytes(), &buf, &v2)
 	if v != v2 {
-		t.Fatal()
+		t.Errorf("read/writeDomain mismatch: wrote %v, read %v", v, v2)
 	}
 }
 
-func testQuestion(t *testing.T) {
+func TestQuestion(t *testing.T) {
 	var buf bytes.Buffer
 	v := Question{
 		Domain:  "some.random.thing.local",
@@ -71,7 +71,7 @@ func testQuestion(t *testing.T) {
 	var v2 Question
 	v2.deserialize(buf.Bytes(), &buf)
 	if v != v2 {
-		t.Fatal()
+		t.Errorf("question (de)serialize mismatch: wrote %v, read %v", v, v2)
 	}
 }
 
@@ -87,7 +87,7 @@ func equalBytes(a, b []byte) bool {
 	return true
 }
 
-func testRecord(t *testing.T) {
+func TestRecord(t *testing.T) {
 	var buf bytes.Buffer
 	v := Record{
 		Domain: "some.random.thing",
@@ -101,21 +101,21 @@ func testRecord(t *testing.T) {
 	var v2 Record
 	v2.deserialize(buf.Bytes(), &buf)
 	if v.Domain != v2.Domain {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (domain): wrote %v, read %v", v.Domain, v2.Domain)
 	}
 	if v.Type != v2.Type {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (type): wrote %v, read %v", v.Type, v2.Type)
 	}
 	if v.Class != v2.Class {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (class): wrote %v, read %v", v.Class, v2.Class)
 	}
 	if v.Flush != v2.Flush {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (flush): wrote %v, read %v", v.Flush, v2.Flush)
 	}
 	if v.TTL != v2.TTL {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (ttl): wrote %v, read %v", v.TTL, v2.TTL)
 	}
 	if !equalBytes(v.Data, v2.Data) {
-		t.Fatal()
+		t.Errorf("record (de)serialize mismatch (data): wrote %v, read %v", v.Data, v2.Data)
 	}
 }
