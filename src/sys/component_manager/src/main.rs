@@ -17,7 +17,6 @@ mod directory_broker;
 mod elf_runner;
 mod fuchsia_boot_resolver;
 mod fuchsia_pkg_resolver;
-mod io_util;
 mod model;
 mod ns_util;
 
@@ -30,6 +29,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_pkg_resolver::FuchsiaPkgResolver,
     futures::prelude::*,
+    io_util,
     log::*,
     model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
     std::env,

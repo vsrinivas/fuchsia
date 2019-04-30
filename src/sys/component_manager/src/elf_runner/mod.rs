@@ -171,9 +171,7 @@ impl Runner for ElfRunner {
 
 #[cfg(test)]
 mod tests {
-    use {
-        crate::elf_runner::*, crate::io_util, fidl::endpoints::ClientEnd, fuchsia_async as fasync,
-    };
+    use {crate::elf_runner::*, fidl::endpoints::ClientEnd, fuchsia_async as fasync, io_util};
 
     #[test]
     fn hello_world_test() {

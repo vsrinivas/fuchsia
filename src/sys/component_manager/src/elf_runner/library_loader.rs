@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     crate::log::*,
     crate::ns_util::{self, PKG_PATH},
     failure::{err_msg, format_err, Error},
@@ -12,6 +11,7 @@ use {
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
+    io_util,
     std::collections::HashMap,
     std::path::PathBuf,
 };

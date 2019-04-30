@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     crate::model::*,
     cm_rust::{self, Capability, ExposeSource, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
+    io_util,
     std::sync::Arc,
 };
 

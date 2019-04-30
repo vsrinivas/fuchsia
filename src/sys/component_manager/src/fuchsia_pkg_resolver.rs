@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     crate::model::{Resolver, ResolverError},
     cm_fidl_translator,
     failure::format_err,
@@ -14,6 +13,7 @@ use {
     fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
+    io_util,
     std::path::PathBuf,
 };
 

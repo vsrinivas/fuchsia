@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{directory_broker, io_util, log::*, model::tests::mocks::*, model::*},
+    crate::{directory_broker, log::*, model::tests::mocks::*, model::*},
     cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeSource, OfferSource, UseDecl},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -20,6 +20,7 @@ use {
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::TryStreamExt,
+    io_util,
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,

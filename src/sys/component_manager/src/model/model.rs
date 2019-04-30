@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     crate::model::*,
     cm_rust::data,
     cm_rust::CapabilityPath,
@@ -15,6 +14,7 @@ use {
         future::{join_all, FutureObj},
         lock::Mutex,
     },
+    io_util,
     std::sync::Arc,
 };
 

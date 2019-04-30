@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     failure::{err_msg, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys, io_util,
     lazy_static::lazy_static,
     std::collections::HashMap,
     std::path::PathBuf,

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::io_util,
     crate::model::{Resolver, ResolverError},
     cm_fidl_translator::translate,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_uri::boot_uri::BootUri,
     futures::future::FutureObj,
+    io_util,
     std::path::PathBuf,
 };
 
