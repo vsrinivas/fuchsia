@@ -36,6 +36,5 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
 
   test_harness()->Run(std::move(spec));
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intercepted; }, zx::sec(5)));
+  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
 }

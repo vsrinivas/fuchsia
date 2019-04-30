@@ -48,8 +48,7 @@ namespace {
 
 TEST_F(TestHarnessImplTest, ExitCallback) {
   test_harness().Unbind();
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return did_exit(); }, zx::sec(5)));
+  ASSERT_TRUE(RunLoopUntil([&] { return did_exit(); }));
 }
 
 TEST_F(TestHarnessImplTest, DefaultMakeBasemgrArgs) {
@@ -92,8 +91,7 @@ TEST_F(TestHarnessImplTest, InterceptBaseShell) {
 
   test_harness()->Run(std::move(spec));
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intercepted; }, zx::sec(5)));
+  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
 };
 
 TEST_F(TestHarnessImplTest, InterceptSessionShell) {
@@ -114,8 +112,7 @@ TEST_F(TestHarnessImplTest, InterceptSessionShell) {
 
   test_harness()->Run(std::move(spec));
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intercepted; }, zx::sec(5)));
+  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
 };
 
 TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
