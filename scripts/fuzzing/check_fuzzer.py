@@ -20,7 +20,7 @@ def main():
       name_required=False)
   args = parser.parse_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzers = Fuzzer.filter(host.fuzzers, args.name)
 

@@ -19,7 +19,7 @@ def main():
       'Transfers a fuzzing corpus for a named fuzzer from a device to CIPD')
   args = parser.parse_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 

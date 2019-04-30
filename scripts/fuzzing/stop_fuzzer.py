@@ -16,7 +16,7 @@ def main():
   parser = Args.make_parser('Stops the named fuzzer.')
   args = parser.parse_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 

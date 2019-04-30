@@ -18,7 +18,7 @@ def main():
       'units for the fuzzer. Use \'check-fuzzer\' to see current tests units.')
   args, fuzzer_args = parser.parse_known_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 

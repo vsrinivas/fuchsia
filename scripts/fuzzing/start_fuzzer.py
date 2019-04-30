@@ -19,7 +19,7 @@ def main():
       'Starts the named fuzzer.  Additional arguments are passed through.')
   args, fuzzer_args = parser.parse_known_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 

@@ -25,7 +25,7 @@ class Log(object):
       restart loglistener.
     """
     self.device.ssh(['rm', self.fuzzer.data_path('fuzz-*.log')])
-    subprocess.call(['killall', 'loglistener'], stderr=Host.DEVNULL)
+    self.host.killall('loglistener')
     with open(self.fuzzer.results('zircon.log'), 'w') as log:
       self.host.zircon_tool(['loglistener'], logfile=log)
 
@@ -37,7 +37,7 @@ class Log(object):
       the device for each libFuzzer worker, and download any test unit artifacts
       they reference.
     """
-    subprocess.call(['killall', 'loglistener'])
+    self.host.killall('loglistener')
     with open(self.fuzzer.results('zircon.log'), 'r') as log_in:
       with open(self.fuzzer.results('symbolized.log'), 'w') as log_out:
         self.host.symbolize(log_in, log_out)

@@ -19,7 +19,7 @@ def main():
       'Lists the fuzzing corpus instances in CIPD for a named fuzzer')
   args = parser.parse_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
   cipd = Cipd(fuzzer)

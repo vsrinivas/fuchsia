@@ -18,7 +18,7 @@ class TestDevice(unittest.TestCase):
   """ Tests lib.Device. See MockDevice for additional details."""
 
   def test_from_args(self):
-    host = Host()
+    host = Host.from_build()
     parser = Args.make_parser('description', name_required=False)
     # netaddr should get called with 'just-four-random-words', and fail
     with self.assertRaises(RuntimeError):
@@ -28,9 +28,9 @@ class TestDevice(unittest.TestCase):
   def test_ssh(self):
     mock = MockDevice()
     mock.ssh(['some-command', '--with', 'some-argument'])
-    self.assertEqual(
-        mock.last, 'ssh -F ' + mock.host.ssh_config +
-        ' ::1 some-command --with some-argument')
+    self.assertIn(
+        'ssh -F ' + mock.host.ssh_config +
+        ' ::1 some-command --with some-argument', mock.history)
 
   def test_getpids(self):
     mock = MockDevice()
@@ -42,9 +42,9 @@ class TestDevice(unittest.TestCase):
   def test_ls(self):
     mock = MockDevice()
     files = mock.ls('path-to-some-corpus')
-    self.assertEqual(
-        mock.last,
-        'ssh -F ' + mock.host.ssh_config + ' ::1 ls -l path-to-some-corpus')
+    self.assertIn(
+        'ssh -F ' + mock.host.ssh_config + ' ::1 ls -l path-to-some-corpus',
+        mock.history)
     self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
     self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
@@ -53,18 +53,18 @@ class TestDevice(unittest.TestCase):
     with self.assertRaises(ValueError):
       mock.fetch('foo', 'not-likely-to-be-a-directory')
     mock.fetch('remote-path', '/tmp')
-    self.assertEqual(
-        mock.last, 'scp -F ' + mock.host.ssh_config + ' [::1]:remote-path /tmp')
+    self.assertIn('scp -F ' + mock.host.ssh_config + ' [::1]:remote-path /tmp',
+                  mock.history)
     mock.fetch('corpus/*', '/tmp')
-    self.assertEqual(mock.last,
-                     'scp -F ' + mock.host.ssh_config + ' [::1]:corpus/* /tmp')
+    self.assertIn('scp -F ' + mock.host.ssh_config + ' [::1]:corpus/* /tmp',
+                  mock.history)
 
   def test_store(self):
     mock = MockDevice()
     mock.store('local-path', 'remote-path')
-    self.assertEqual(
-        mock.last,
-        'scp -F ' + mock.host.ssh_config + ' local-path [::1]:remote-path')
+    self.assertIn(
+        'scp -F ' + mock.host.ssh_config + ' local-path [::1]:remote-path',
+        mock.history)
 
 
 if __name__ == '__main__':

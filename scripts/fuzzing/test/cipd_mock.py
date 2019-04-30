@@ -14,9 +14,9 @@ class MockCipd(Cipd):
 
   def __init__(self):
     self.fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
-    self.last = None
+    self.history = []
     super(MockCipd, self).__init__(self.fuzzer)
 
   def _exec(self, cmd, quiet=False):
     """Overrides Cipd._exec for testing."""
-    self.last = self._bin + ' ' + ' '.join(cmd)
+    self.history.append(self._bin + ' ' + ' '.join(cmd))

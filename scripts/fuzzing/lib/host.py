@@ -29,65 +29,136 @@ class Host(object):
     pass
 
   @classmethod
+  def from_build(cls):
+    """Uses a local build directory to configure a Host object from it."""
+    host = Host()
+    host.set_build_dir(host.find_build_dir())
+    return host
+
+  @classmethod
   def join(cls, *segments):
+    """Creates a source tree path."""
     fuchsia = os.getenv('FUCHSIA_DIR')
     if not fuchsia:
       raise Host.ConfigError('Unable to find FUCHSIA_DIR; have you `fx set`?')
     return os.path.join(fuchsia, *segments)
 
   def __init__(self):
-    build_dir = None
-    with open(Host.join('.config'), 'r') as f:
-      for line in f.readlines():
-        m = re.search(r'^FUCHSIA_BUILD_DIR=\'(\S*)\'$', line)
-        if m:
-          build_dir = Host.join(m.group(1))
-    if not build_dir:
-      raise Host.ConfigError(
-          'Unable to determine FUCHSIA_BUILD_DIR from .config')
-    self.ssh_config = os.path.join(build_dir, 'ssh-keys', 'ssh_config')
-    self._ids = os.path.join(build_dir, 'ids.txt')
-
-    if os.uname()[0] == 'Darwin':
-      self._platform = 'mac-x64'
-    else:
-      self._platform = 'linux-x64'
-
+    self._ids = None
+    self._llvm_symbolizer = None
+    self._symbolizer_exec = None
+    self._platform = None
+    self._zxtools = None
+    self.ssh_config = None
     self.fuzzers = []
-    try:
-      with open(os.path.join(build_dir, 'fuzzers.json')) as f:
-        fuzz_specs = json.load(f)
-      for fuzz_spec in fuzz_specs:
-        pkg = fuzz_spec['fuzz_package']
-        for tgt in fuzz_spec['fuzz_targets']:
-          self.fuzzers.append((pkg, tgt))
-    except IOError as e:
-      if e.errno != errno.ENOENT:
-        raise
+
+  def find_build_dir(self):
+    """Examines the source tree to locate a build directory."""
+    build_dir = Host.join('.fx-build-dir')
+    if not os.path.exists(build_dir):
+      raise Host.ConfigError('Unable to find .fx-build-dir; have you `fx set`?')
+    with open(build_dir, 'r') as f:
+      return Host.join(f.read().strip())
+
+  def set_ssh_config(self, config_file):
+    """Sets the SSH arguments to use a config file."""
+    if not os.path.exists(config_file):
+      raise Host.ConfigError('Unable to find SSH configuration.')
+    self.ssh_config = config_file
+
+  def set_build_ids(self, build_ids):
+    """Sets the build IDs used to symbolize logs."""
+    if not os.path.exists(build_ids):
+      raise Host.ConfigError('Unable to find builds IDs.')
+    self._ids = build_ids
+
+  def set_zxtools(self, zxtools):
+    """Sets the location of the Zircon host tools directory."""
+    if not os.path.isdir(zxtools):
+      raise Host.ConfigError('Unable to find Zircon host tools.')
+    self._zxtools = zxtools
+
+  def set_platform(self, platform):
+    """Sets the platform used for host OS-specific behavior."""
+    if not os.path.isdir(Host.join('buildtools', platform)):
+      raise Host.ConfigError('Unsupported host platform: ' + platform)
+    self._platform = platform
+
+  def set_symbolizer(self, executable, symbolizer):
+    """Sets the paths to both the wrapper and LLVM symbolizers."""
+    if not os.path.exists(executable) or not os.access(executable, os.X_OK):
+      raise Host.ConfigError('Invalid symbolize binary: ' + executable)
+    if not os.path.exists(symbolizer) or not os.access(symbolizer, os.X_OK):
+      raise Host.ConfigError('Invalid LLVM symbolizer: ' + symbolizer)
+    self._symbolizer_exec = executable
+    self._llvm_symbolizer = symbolizer
+
+  def set_fuzzers_json(self, json_file):
+    """Sets the path to the build file with fuzzer metadata."""
+    if not os.path.exists(json_file):
+      raise Host.ConfigError('Unable to find list of fuzzers.')
+    self.fuzzers = []
+    with open(json_file) as f:
+      fuzz_specs = json.load(f)
+    for fuzz_spec in fuzz_specs:
+      pkg = fuzz_spec['fuzz_package']
+      for tgt in fuzz_spec['fuzz_targets']:
+        self.fuzzers.append((pkg, tgt))
+
+  def set_build_dir(self, build_dir):
+    """Configure the host using data from a build directory."""
+    self.set_ssh_config(Host.join(build_dir, 'ssh-keys', 'ssh_config'))
+    self.set_build_ids(Host.join(build_dir, 'ids.txt'))
+    self.set_zxtools(Host.join(build_dir + '.zircon', 'tools'))
+    platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
+    self.set_platform(platform)
+    self.set_symbolizer(
+        Host.join('zircon', 'prebuilt', 'downloads', 'symbolize'),
+        Host.join('buildtools', platform, 'clang', 'bin', 'llvm-symbolizer'))
+    json_file = Host.join(build_dir, 'fuzzers.json')
+    # fuzzers.json isn't emitted in release builds
+    if os.path.exists(json_file):
+      self.set_fuzzers_json(json_file)
 
   def zircon_tool(self, cmd, logfile=None):
-    """Executes a tool found in the ZIROCN_BUILD_DIR."""
-    cmd = [Host.join('out', 'build-zircon', 'tools', cmd[0])] + cmd[1:]
+    """Executes a tool found in the ZIRCON_BUILD_DIR."""
+    if not self._zxtools:
+      raise Host.ConfigError('Zircon host tools unavailable.')
+    if not os.path.isabs(cmd[0]):
+      cmd[0] = os.path.join(self._zxtools, cmd[0])
+    if not os.path.exists(cmd[0]):
+      raise Host.ConfigError('Unable to find Zircon host tool: ' + cmd[0])
     if logfile:
       subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
     else:
       return subprocess.check_output(cmd, stderr=Host.DEVNULL).strip()
 
+  def killall(self, process):
+    """ Invokes killall on the process name."""
+    subprocess.call(['killall', process],
+                    stdout=Host.DEVNULL,
+                    stderr=Host.DEVNULL)
+
   def symbolize(self, log_in, log_out):
     """Symbolizes backtraces in a log file using the current build."""
-    executable = Host.join('zircon', 'prebuilt', 'downloads', 'symbolize')
-    symbolizer = Host.join('buildtools', self._platform, 'clang', 'bin',
-                           'llvm-symbolizer')
+    if not self._symbolizer_exec:
+      raise Host.ConfigError('Symbolizer executable not set.')
+    if not self._ids:
+      raise Host.ConfigError('Build IDs not set.')
+    if not self._llvm_symbolizer:
+      raise Host.ConfigError('LLVM symbolizer not set.')
     subprocess.check_call([
-        executable, '-ids-rel', '-ids', self._ids, '-llvm-symbolizer',
-        symbolizer
+        self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
+        '-llvm-symbolizer', self._llvm_symbolizer
     ],
                           stdin=log_in,
                           stdout=log_out)
 
   def notify_user(self, title, body):
     """Displays a message to the user in a platform-specific way"""
-    if self._platform == 'mac-x64':
+    if not self._platform:
+      return
+    elif self._platform == 'mac-x64':
       subprocess.call([
           'osascript', '-e',
           'display notification "' + body + '" with title "' + title + '"'

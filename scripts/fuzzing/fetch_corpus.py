@@ -19,7 +19,7 @@ def main():
       'Transfers corpus for a named fuzzer to a device', label_present=True)
   args = parser.parse_args()
 
-  host = Host()
+  host = Host.from_build()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 

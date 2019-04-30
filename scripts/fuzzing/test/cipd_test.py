@@ -38,23 +38,24 @@ class TestCipd(unittest.TestCase):
   def test_list(self):
     mock_cipd = MockCipd()
     mock_cipd.list()
-    self.assertEqual(
-        mock_cipd.last, mock_cipd._bin +
-        ' instances fuchsia/test_data/fuzzing/' + str(mock_cipd.fuzzer))
+    self.assertIn(
+        mock_cipd._bin + ' instances fuchsia/test_data/fuzzing/' +
+        str(mock_cipd.fuzzer), mock_cipd.history)
 
   def test_install(self):
     mock_cipd = MockCipd()
     mock_cipd.install()
-    self.assertEqual(
-        mock_cipd.last, mock_cipd._bin + ' install fuchsia/test_data/fuzzing/' +
-        str(mock_cipd.fuzzer) + ' --root ' + mock_cipd.root)
+    self.assertIn(
+        mock_cipd._bin + ' install fuchsia/test_data/fuzzing/' +
+        str(mock_cipd.fuzzer) + ' --root ' + mock_cipd.root, mock_cipd.history)
 
   def test_create(self):
     mock_cipd = MockCipd()
     mock_cipd.create()
-    self.assertEqual(
-        mock_cipd.last, mock_cipd._bin + ' create --pkg-def ' +
-        os.path.join(mock_cipd.root, 'cipd.yaml') + ' --ref latest')
+    self.assertIn(
+        mock_cipd._bin + ' create --pkg-def ' +
+        os.path.join(mock_cipd.root, 'cipd.yaml') + ' --ref latest',
+        mock_cipd.history)
 
 
 if __name__ == '__main__':
