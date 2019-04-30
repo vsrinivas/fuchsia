@@ -107,13 +107,6 @@ group("cpuperf") {
   ]
 }
 
-group("boringssl_tool") {
-  testonly = true
-  public_deps = [
-    "//third_party/boringssl:boringssl_tool",
-  ]
-}
-
 group("installblob") {
   testonly = true
   public_deps = [
@@ -211,7 +204,6 @@ group("all") {
     "//garnet/packages/prod:bluetooth_hid",
     "//garnet/packages/prod:bluetooth_intel",
     "//garnet/packages/prod:bluetooth_profiles",
-    "//garnet/packages/prod:boringssl_tool",
     "//garnet/packages/prod:broadcom",
     "//garnet/packages/prod:build_info",
     "//garnet/packages/prod:chrealm",
