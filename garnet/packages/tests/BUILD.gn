@@ -320,7 +320,6 @@ group("all") {
     "//garnet/packages/tests:debug_agent",
     "//garnet/packages/tests:debugserver",
     "//garnet/packages/tests:device_settings",
-    "//garnet/packages/tests:dhcp_tests",
     "//garnet/packages/tests:display_capture_test",
     "//garnet/packages/tests:e2e_input_tests",
     "//garnet/packages/tests:elflib",
@@ -354,6 +353,7 @@ group("all") {
     "//garnet/packages/tests:guest",
     "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
+
     # TODO(FLK-186): Reenable this test.
     # "//garnet/packages/tests:inspect_query_unittests",
     "//garnet/packages/tests:inspect_unittests",
@@ -428,6 +428,7 @@ group("all") {
     "//garnet/packages/tests:webpki_roots_fuchsia",
     "//garnet/packages/tests:zircon",
     "//garnet/packages/tests:zxdb",
+    "//src/connectivity/dhcp:dhcp_tests",
   ]
 }
 
@@ -516,7 +517,7 @@ group("memory_monitor") {
 group("netstack_integration_tests") {
   testonly = true
   public_deps = [
-    "//garnet/bin/dhcpd",
+    "//src/connectivity/dhcp:dhcpd",
     "//src/connectivity/network/testing/netemul",
     "//src/connectivity/network/tests:netstack_integration_tests",
   ]
@@ -957,13 +958,6 @@ group("magma") {
       "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
     ]
   }
-}
-
-group("dhcp_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/rust/dhcp:dhcp_tests",
-  ]
 }
 
 group("json") {

@@ -17,8 +17,6 @@ group("bin") {
     "debugserver",
     "developer",
     "device_settings",
-    "dhcpd",
-    "dhcpd_test_client",
     "display_capture_test",
     "display_manager",
     "far",
