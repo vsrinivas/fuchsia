@@ -1,0 +1,2 @@
+# TODO(SPN-7): Reformat and enforce formatting of all compute code
+DisableFormat: 'true'
