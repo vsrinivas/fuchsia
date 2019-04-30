@@ -61,7 +61,7 @@ test_package("routing_integration_test") {
   components = [
     ":echo_realm",
     ":mock_pkg_resolver",
-    "//garnet/bin/sys/component_manager:component_manager_component",
+    "//src/sys/component_manager:component_manager_as_v1_component",
     "//src/sys/examples/topology:echo_server",
     "//src/sys/examples/topology:echo_client",
   ]

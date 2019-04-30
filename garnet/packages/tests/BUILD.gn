@@ -1051,9 +1051,10 @@ group("runtime") {
     "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
     "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
     "//garnet/bin/glob",
-    "//garnet/bin/sys/component_manager:component_manager_tests",
     "//garnet/examples/fidl/echo_server_cpp",
     "//garnet/packages/prod:runtime",
+    "//src/sys/component_manager:component_manager_tests",
+    "//src/sys/component_manager/tests:routing_integration_test",
   ]
 }
 
@@ -1143,7 +1144,6 @@ group("rust_crates") {
   public_deps = [
     "//garnet/bin/cmc:cmc_integration_test",
     "//garnet/bin/rolldice:rolldice-tests",
-    "//garnet/bin/sys/component_manager/tests:routing_integration_test",
     "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
     "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
     "//garnet/lib/rust/cm_json:cm_json_tests",

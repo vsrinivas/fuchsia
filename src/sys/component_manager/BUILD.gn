@@ -54,7 +54,7 @@ generate_manifest("component_manager.bootfs") {
            rebase_path("$root_build_dir/component_manager", root_build_dir) ]
 }
 
-fuchsia_component("component_manager_component") {
+fuchsia_component("component_manager_as_v1_component") {
   deps = [
     ":bin",
   ]
@@ -62,8 +62,11 @@ fuchsia_component("component_manager_component") {
   binary = "component_manager"
 }
 
+# Note that this package and the component it contains wrap component_manager
+# as a v1 Component for interactive testing purposes through the shell. This
+# will eventually go away.
 package("component_manager") {
-  components = [ ":component_manager_component" ]
+  components = [ ":component_manager_as_v1_component" ]
 }
 
 test_package("component_manager_tests") {

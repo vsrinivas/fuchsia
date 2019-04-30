@@ -53,7 +53,7 @@ group("network_settings_server") {
 group("sys") {
   testonly = true
   public_deps = [
-    "//garnet/bin/sys/component_manager",
+    "//src/sys/component_manager",
   ]
 }
 

@@ -113,7 +113,7 @@ generated_file("zxcrypt_config.txt") {
 }
 
 component_manager_label =
-    "//garnet/bin/sys/component_manager:component_manager.bootfs"
+    "//src/sys/component_manager:component_manager.bootfs"
 component_manager_target_dir =
     get_label_info(component_manager_label, "target_out_dir")
 component_manager_target_name = get_label_info(component_manager_label, "name")

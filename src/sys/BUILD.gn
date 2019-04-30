@@ -5,6 +5,7 @@
 group("sys") {
   testonly = true
   deps = [
+    "component_manager",
     "component_test_runner",
   ]
 }
