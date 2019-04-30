@@ -285,12 +285,12 @@ zx_status_t sys_task_suspend(zx_handle_t handle, user_out_handle* token) {
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<SuspendTokenDispatcher> suspend_token;
+    KernelHandle<SuspendTokenDispatcher> new_token;
     zx_rights_t rights;
-    status = SuspendTokenDispatcher::Create(ktl::move(task), &suspend_token, &rights);
+    status = SuspendTokenDispatcher::Create(ktl::move(task), &new_token, &rights);
 
     if (status == ZX_OK)
-        status = token->make(ktl::move(suspend_token), rights);
+        status = token->make(ktl::move(new_token), rights);
 
     return status;
 }

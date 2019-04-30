@@ -11,6 +11,7 @@
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 #include <sys/types.h>
 
@@ -25,7 +26,7 @@ public:
     //   ZX_ERR_WRONG_TYPE if |task| is not a supported type
     //   ZX_ERR_NOT_SUPPORTED if |task| is trying to suspend itself
     static zx_status_t Create(fbl::RefPtr<Dispatcher> task,
-                              fbl::RefPtr<SuspendTokenDispatcher>* dispatcher,
+                              KernelHandle<SuspendTokenDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~SuspendTokenDispatcher() final;
@@ -33,8 +34,9 @@ public:
     void on_zero_handles() final;
 
 private:
-    explicit SuspendTokenDispatcher(fbl::RefPtr<Dispatcher> task);
+    SuspendTokenDispatcher();
+
     // A lock annotation is unnecessary because the only time |task_| is used is on_zero_handles()
-    // and the constructor, and the object can only get zero handles once.
+    // and Create(), and the object can only get zero handles once.
     fbl::RefPtr<Dispatcher> task_;
 };

@@ -779,6 +779,24 @@ static bool TestSuspendSelf() {
     END_TEST;
 }
 
+static bool TestSuspendAfterDeath() {
+    BEGIN_TEST;
+
+    zxr_thread_t thread;
+    zx_handle_t thread_h;
+    ASSERT_TRUE(start_thread(threads_test_infinite_sleep_fn, nullptr, &thread, &thread_h));
+    ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    EXPECT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_ERR_BAD_STATE);
+    EXPECT_EQ(suspend_token, ZX_HANDLE_INVALID);
+
+    EXPECT_EQ(zx_handle_close(suspend_token), ZX_OK);
+    EXPECT_EQ(zx_handle_close(thread_h), ZX_OK);
+
+    END_TEST;
+}
+
 // This tests for a bug in which killing a suspended thread causes the
 // thread to be resumed and execute more instructions in userland.
 static bool TestKillSuspendedThread() {
@@ -1685,6 +1703,7 @@ RUN_TEST(TestSuspendPortCall)
 RUN_TEST(TestSuspendStopsThread)
 RUN_TEST(TestSuspendMultiple)
 RUN_TEST(TestSuspendSelf)
+RUN_TEST(TestSuspendAfterDeath)
 RUN_TEST(TestKillSuspendedThread)
 RUN_TEST(TestStartSuspendedThread)
 RUN_TEST(TestStartSuspendedAndResumedThread)
