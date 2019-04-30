@@ -68,6 +68,9 @@ public:
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
     static uint64_t MinimumMappableAddress();
+
+    // Returns the length of the region where memory can be mapped.
+    static uint64_t MappableAddressRegionLength();
 };
 
 } // namespace magma

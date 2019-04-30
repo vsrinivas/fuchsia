@@ -381,6 +381,13 @@ public:
             }
         }
     }
+
+    static void CheckAddressRegionSize()
+    {
+        // For now all platforms are 64-bit and have 48-bit usermode virtual addresses.
+        EXPECT_EQ((1ul << 48), magma::PlatformBuffer::MinimumMappableAddress() +
+                                   magma::PlatformBuffer::MappableAddressRegionLength());
+    }
 };
 
 TEST(PlatformBuffer, Basic)
@@ -428,3 +435,5 @@ TEST(PlatformBuffer, CleanCacheMapped)
 }
 
 TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
+
+TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegionSize(); }

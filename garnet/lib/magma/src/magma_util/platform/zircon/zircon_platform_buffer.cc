@@ -35,6 +35,14 @@ uint64_t PlatformBuffer::MinimumMappableAddress()
     return root_info.base;
 }
 
+// static
+uint64_t PlatformBuffer::MappableAddressRegionLength()
+{
+    zx_info_vmar_t root_info;
+    zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &root_info, sizeof(root_info), nullptr, nullptr);
+    return root_info.len;
+}
+
 bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
                                            std::unique_ptr<Mapping>* mapping_out)
 {
