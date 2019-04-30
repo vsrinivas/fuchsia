@@ -5,7 +5,6 @@
 library fuchsia.wlan.tap;
 
 using fuchsia.wlan.device;
-using fuchsia.wlan.mlme;
 using fuchsia.wlan.common;
 using zx;
 

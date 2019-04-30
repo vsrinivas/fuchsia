@@ -1,5 +1,5 @@
 {
   "fidl/fuchsia.bluetooth.le/central.fidl": "bc165e74bf81c5a9decdd55548d8b2e8",
   "fidl/fuchsia.bluetooth.le/peripheral.fidl": "5d91f3cb9e915fd36db0ac92a54579a7",
-  "fidl/fuchsia.bluetooth.le/types.fidl": "265802ef28a7322c3fd6800af897b70c"
+  "fidl/fuchsia.bluetooth.le/types.fidl": "9dfd7e2e483c7e587e89976dd6f5f7f5"
 }

@@ -6,7 +6,6 @@ library fuchsia.sys2;
 
 using fuchsia.data;
 using fuchsia.io;
-using zx;
 
 // An interface for running components.
 //

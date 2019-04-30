@@ -4,8 +4,6 @@
 
 library fuchsia.sysmem;
 
-using zx;
-
 // Allocates system memory buffers.
 //
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".

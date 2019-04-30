@@ -4,8 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.mem;
-
 struct Proposal {
     // Identifies a proposal, namespaced internally to the proposing component and
     // proposal channel (Query or Next/Interruption).

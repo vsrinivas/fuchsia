@@ -4,8 +4,6 @@
 
 library fuchsia.accessibility;
 
-using fuchsia.ui.gfx;
-
 enum SettingsManagerStatus {
     OK = 0;
     ERROR = 1;

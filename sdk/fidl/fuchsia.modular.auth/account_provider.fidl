@@ -4,8 +4,6 @@
 
 library fuchsia.modular.auth;
 
-using fuchsia.ui.viewsv1token;
-
 // Authentication errors returned by AccountProvider. It contains error status
 // code along with a detailed error message.
 struct AuthErr {

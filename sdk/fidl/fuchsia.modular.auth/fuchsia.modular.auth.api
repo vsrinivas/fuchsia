@@ -1,4 +1,4 @@
 {
   "fidl/fuchsia.modular.auth/account/account.fidl": "8ef0ae939788e0f6ef74825e977650f6",
-  "fidl/fuchsia.modular.auth/account_provider.fidl": "86f40713ebae0218425ce6238ea49902"
+  "fidl/fuchsia.modular.auth/account_provider.fidl": "0dc921321de275906362ca5f0b3d2b59"
 }

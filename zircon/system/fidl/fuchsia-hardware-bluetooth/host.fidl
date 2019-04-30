@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 library fuchsia.hardware.bluetooth;
-using zx;
 
 [Layout = "Simple"]
 protocol Host {

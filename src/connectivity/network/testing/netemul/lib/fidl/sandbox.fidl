@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 library fuchsia.netemul.sandbox;
+
 using fuchsia.netemul.environment;
 using fuchsia.netemul.network;
 using fuchsia.netemul.sync;
-using fuchsia.sys;
 
 /// Every connection to |Sandbox| represents a self-contained
 /// context where ManagedEnvironments can be created. The

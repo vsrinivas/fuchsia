@@ -5,7 +5,6 @@
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth;
-using fuchsia.bluetooth.gatt;
 
 struct ServiceDataEntry {
     string uuid;

@@ -4,8 +4,6 @@
 
 library fuchsia.sys2;
 
-using zx;
-
 // A component is a unit of executable software.
 //
 // This object provides the component's declaration, access to its package's

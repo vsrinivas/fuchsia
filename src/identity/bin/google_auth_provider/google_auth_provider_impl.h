@@ -12,6 +12,7 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/auth/testing/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/callback/cancellable.h>

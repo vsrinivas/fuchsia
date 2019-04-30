@@ -5,7 +5,6 @@
 library fuchsia.ui.viewsv1;
 
 using fuchsia.sys;
-using fuchsia.ui.viewsv1token;
 
 // A view is a graphical user interface component which is responsible
 // for drawing and supporting user interactions in the area of the screen

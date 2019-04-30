@@ -4,8 +4,6 @@
 
 library fuchsia.media.sessions;
 
-using zx;
-
 /// `Publisher` publishes media sessions. This allows priviledged processes to
 /// send media controls to the media session and observe changes in its
 /// playback state.

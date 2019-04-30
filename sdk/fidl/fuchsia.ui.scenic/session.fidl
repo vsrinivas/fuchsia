@@ -5,7 +5,6 @@
 library fuchsia.ui.scenic;
 
 using fuchsia.images;
-using fuchsia.ui.gfx;
 
 // Client use Sessions to interact with a Scenic instance by enqueuing commands
 // that create or modify resources.

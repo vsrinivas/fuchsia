@@ -3,8 +3,8 @@
   "fidl/fuchsia.ui.viewsv1/view_manager.fidl": "29c663bfc2a6d899dd689294df131432",
   "fidl/fuchsia.ui.viewsv1/view_properties.fidl": "1d7ab5621bf135075279113cad3feba9",
   "fidl/fuchsia.ui.viewsv1/view_provider.fidl": "8d4832f34b877218b368cba39a644c2b",
-  "fidl/fuchsia.ui.viewsv1/view_snapshot.fidl": "8fb458e6a6722abb66f37cfda174f8e7",
+  "fidl/fuchsia.ui.viewsv1/view_snapshot.fidl": "2da50e137e7acb9e11a93b4472092331",
   "fidl/fuchsia.ui.viewsv1/view_tree_token.fidl": "657596ac1f44a82cb3f70bc735ccac09",
   "fidl/fuchsia.ui.viewsv1/view_trees.fidl": "d2012b50429523d6eb6ad3abc21bca2d",
-  "fidl/fuchsia.ui.viewsv1/views.fidl": "cdf7f574e8e9b77e8672d027071f4e1d"
+  "fidl/fuchsia.ui.viewsv1/views.fidl": "431365690b5d7b68ff0314ae584b7b02"
 }

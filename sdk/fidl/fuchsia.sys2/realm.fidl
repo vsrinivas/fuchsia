@@ -5,7 +5,6 @@
 library fuchsia.sys2;
 
 using fuchsia.io;
-using zx;
 
 // An interface used by a component instance to manage its own realm,
 // such as for binding to its children.

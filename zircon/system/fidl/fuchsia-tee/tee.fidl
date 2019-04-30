@@ -4,8 +4,6 @@
 
 library fuchsia.tee;
 
-using zx;
-
 // Trusted Execution Environment (TEE) Interface
 
 // UUID identifiers are used to identify the TEE Operating System and individual Trusted

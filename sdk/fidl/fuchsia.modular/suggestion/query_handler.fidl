@@ -4,8 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.media;
-
 struct QueryResponse {
     vector<Proposal> proposals;
 };

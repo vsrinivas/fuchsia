@@ -4,8 +4,6 @@
 
 library fuchsia.bluetooth.avrcp;
 
-using fuchsia.bluetooth;
-
 // Types are intented match how they are defined in the BT AVRCP 1.6.2 spec
 // and the 1394-TA AV\C Panel specification.
 // Deviations are called out in comments.

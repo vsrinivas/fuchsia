@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 library fuchsia.hardware.clock;
-using zx;
 
 const uint32 NAME_LEN = 30;
 

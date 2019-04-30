@@ -2,5 +2,5 @@
   "fidl/fuchsia.ui.scenic/commands.fidl": "6710eee1f3c859bdeb5fd4279bbdd48f",
   "fidl/fuchsia.ui.scenic/events.fidl": "0b2de80e3dfc14c02961196c6827f0d2",
   "fidl/fuchsia.ui.scenic/scenic.fidl": "a02fbcb8be1b00d385c9bebb1c3c43ee",
-  "fidl/fuchsia.ui.scenic/session.fidl": "8b639668afb95f72ea20abc0c2f8bf41"
+  "fidl/fuchsia.ui.scenic/session.fidl": "3a27072402b2201c558c8b86ec9566c3"
 }

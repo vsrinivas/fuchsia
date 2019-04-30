@@ -4,7 +4,6 @@
 
 library fuchsia.ui.viewsv1;
 
-using fuchsia.ui.viewsv1token;
 using fuchsia.mem;
 
 // Defines an interface to take view snapshots.

@@ -4,7 +4,6 @@
 
 library fuchsia.net.policy;
 
-using fuchsia.net;
 using fuchsia.net.stack;
 using fuchsia.hardware.ethernet;
 using zx;

@@ -4,7 +4,6 @@
 
 library fuchsia.pkg;
 
-using fuchsia.io;
 using zx;
 
 /// Manages package repositories.
