@@ -246,6 +246,12 @@ pub(crate) struct Icmpv4ParameterProblem {
      * the message_body field in IcmpPacket */
 }
 
+impl Icmpv4ParameterProblem {
+    pub(crate) fn new(pointer: u8) -> Icmpv4ParameterProblem {
+        Icmpv4ParameterProblem { pointer, _unused: [0; 3] }
+    }
+}
+
 impl_icmp_message!(
     Ipv4,
     Icmpv4ParameterProblem,

@@ -204,6 +204,10 @@ impl Icmpv6ParameterProblem {
         NetworkEndian::write_u32(&mut buf[..], pointer);
         Icmpv6ParameterProblem { pointer: buf }
     }
+
+    pub(crate) fn pointer(&self) -> u32 {
+        NetworkEndian::read_u32(&self.pointer)
+    }
 }
 
 impl_icmp_message!(

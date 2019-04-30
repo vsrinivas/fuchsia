@@ -7,6 +7,7 @@
 use failure::Fail;
 
 use crate::ip::Ip;
+use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.
 pub(crate) type Result<T> = std::result::Result<T, NetstackError>;
@@ -49,26 +50,30 @@ pub enum ParseError {
 
 /// Error type for IP packet parsing.
 #[derive(Fail, Debug, PartialEq)]
-pub enum IpParseError<I: Ip> {
+pub(crate) enum IpParseError<I: Ip> {
     #[fail(display = "Parsing Error")]
     Parse { error: ParseError },
     /// For errors where an ICMP Parameter Problem error needs to be
     /// sent to the source of a packet.
     ///
-    /// `code` will be the ICMP type specific (in this case the type
-    /// will be a Parameter Problem) value that provides more
-    /// granular information about the Parameter Problem encountered.
-    /// `pointer` is the offset of the erroneous value within an IP packet,
-    /// calculated from the beginning of the IP packet. Note, for ICMP(v4),
-    /// the pointer field within the ICMP response is only an 8 bit value as
-    /// the IP header can only be at max 60 bytes, but the pointer field in an
-    /// ICMPv6 response is a 32 bit value since an IPv6 header may be much
-    /// larger due to potential extension headers. Because of this, we make
-    /// `pointer` a `u32` and simply cast it to a `u8` for ICMP(v4).
     /// `src_ip` and `dst_ip` are the source and destination IP addresses of the
-    /// original packet.
+    /// original packet. If `must_send_icmp` is `true`, the RFC for either IPv4 or
+    /// IPv6 specifies that an ICMP Parameter Problem MUST be sent back to the
+    /// source; otherwise, we can choose to not send the response. `header_len`
+    /// is the length of the header that we know about up to the point of the
+    /// parameter problem error. `code` is the ICMP (ICMPv4 or ICMPv6) specific
+    /// parameter problem code that provides more granular information about the
+    /// parameter problem encountered. `pointer` is the offset of the erroneous
+    /// value within an IP packet, calculated from the beginning of the IP packet.
     #[fail(display = "Parameter Problem")]
-    ParameterProblem { src_ip: I::Addr, dst_ip: I::Addr, code: u8, pointer: u32 },
+    ParameterProblem {
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        code: <I as IcmpIpTypes>::ParameterProblemCode,
+        pointer: <I as IcmpIpTypes>::ParameterProblemPointer,
+        must_send_icmp: bool,
+        header_len: usize,
+    },
 }
 
 impl<I: Ip> From<ParseError> for IpParseError<I> {

@@ -88,6 +88,43 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
     })
 }
 
+/// An extension trait adding ICMP-related associated types to `Ipv4` and `Ipv6`.
+///
+/// This trait is kept seperate from `IcmpIpExt` to not require a type parameter
+/// that implements `ByteSlice`.
+pub(crate) trait IcmpIpTypes: Ip {
+    /// The type of an ICMP parameter problem code.
+    ///
+    /// For `Ipv4`, this is `Icmpv4ParameterProblemCode`, and for `Ipv6` this
+    /// is `Icmpv6ParameterProblemCode`.
+    type ParameterProblemCode: PartialEq + Send + Sync + Debug;
+
+    /// The type of an ICMP parameter problem pointer.
+    ///
+    /// For `Ipv4`, this is `u8`, and for `Ipv6` this is `u32`.
+    type ParameterProblemPointer: PartialEq + Send + Sync + Debug;
+}
+
+// A default implementation for any I: Ip. This is to convince the Rust compiler
+// that, given an I: Ip, it's guaranteed to implement IcmpIpTypes. We humans know
+// that Ipv4 and Ipv6 are the only types implementing Ip and so, since we
+// implement IcmpIpTypes for both of these types, this is fine. The compiler isn't
+// so smart. This implementation should never actually be used.
+impl<I: Ip> IcmpIpTypes for I {
+    default type ParameterProblemCode = Never;
+    default type ParameterProblemPointer = Never;
+}
+
+impl IcmpIpTypes for Ipv4 {
+    type ParameterProblemCode = Icmpv4ParameterProblemCode;
+    type ParameterProblemPointer = u8;
+}
+
+impl IcmpIpTypes for Ipv6 {
+    type ParameterProblemCode = Icmpv6ParameterProblemCode;
+    type ParameterProblemPointer = u32;
+}
+
 /// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
 pub(crate) trait IcmpIpExt<B: ByteSlice>: Ip {
     /// The type of ICMP messages.

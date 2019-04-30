@@ -16,11 +16,11 @@ use crate::ip::{
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpMessageType, IcmpPacketBuilder,
-    IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType,
-    Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType,
-    Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode,
-    Icmpv6TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpIpTypes, IcmpMessageType,
+    IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode,
+    Icmpv4MessageType, Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode,
+    Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet,
+    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -114,6 +114,67 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
     }
 }
 
+/// Send an ICMP message in response to receiving a packet with a parameter
+/// problem.
+///
+/// `send_icmp_parameter_problem` sends the appropriate ICMP or ICMPv6
+/// message in response to receiving an IP packet from `src_ip` to `dst_ip`
+/// with a parameter problem.
+///
+/// `original_packet` contains the contents of the entire original packet -
+/// including all IP headers. `header_len` is the length of either the IPv4
+/// header or all IPv6 headers (including extension headers) *before* the
+/// payload with the problematic Next Header type. In other words, in an IPv6
+/// packet with a single header with a Next Header type of TCP, its `header_len`
+/// would be the length of the single header (40 bytes). `code` is the
+/// parameter problem code as defined by ICMPv4 (for IPv4 packets), or ICMPv6
+/// (for IPv6 packets). `pointer` is the index to the problematic location in
+/// the original IP packet.
+#[specialize_ip_address]
+pub(crate) fn send_icmp_parameter_problem<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    frame_dst: FrameDestination,
+    src_ip: A,
+    dst_ip: A,
+    code: <A::Version as IcmpIpTypes>::ParameterProblemCode,
+    pointer: <A::Version as IcmpIpTypes>::ParameterProblemPointer,
+    original_packet: B,
+    header_len: usize,
+) {
+    increment_counter!(ctx, "send_icmp_parameter_problem");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip) {
+        return;
+    }
+
+    #[ipv4addr]
+    send_icmpv4_parameter_problem(
+        ctx,
+        device,
+        src_ip,
+        dst_ip,
+        code,
+        Icmpv4ParameterProblem::new(pointer),
+        original_packet,
+        header_len,
+    );
+
+    #[ipv6addr]
+    send_icmpv6_parameter_problem(
+        ctx,
+        device,
+        src_ip,
+        dst_ip,
+        code,
+        Icmpv6ParameterProblem::new(pointer),
+        original_packet,
+        header_len,
+    );
+}
+
 /// Send an ICMP message in response to receiving a packet destined for an
 /// unsupported IPv4 protocol or IPv6 next header.
 ///
@@ -164,40 +225,31 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
     );
 
     #[ipv6addr]
-    {
-        // Per RFC 4443, body contains as much of the original body as
-        // possible without exceeding IPv6 minimum MTU.
-        let mut original_packet = original_packet;
-        original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
-        // TODO(joshlf): Do something if send_icmp_response returns an error?
-        send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
-            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
-                Ipv6,
-                &[u8],
-                _,
-            >::new(
-                local_ip,
-                src_ip,
-                Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                // Per RFC 4443, the pointer refers to the first byte of the
-                // packet whose Next Header field was unrecognized. It is
-                // measured as an offset from the beginning of the first IPv6
-                // header. E.g., a pointer of 40 (the length of a single IPv6
-                // header) would indicate that the Next Header field from that
-                // header - and hence of the first encapsulated packet - was
-                // unrecognized.
-                //
-                // NOTE: Since header_len is a usize, this could theoretically
-                // be a lossy conversion. However, all that means in practice is
-                // that, if a remote host somehow managed to get us to process a
-                // frame with a 4GB IP header and send an ICMP response, the
-                // pointer value would be wrong. It's not worth wasting special
-                // logic to avoid generating a malformed packet in a case that
-                // will almost certainly never happen.
-                Icmpv6ParameterProblem::new(header_len as u32),
-            ))
-        });
-    }
+    send_icmpv6_parameter_problem(
+        ctx,
+        device,
+        src_ip,
+        dst_ip,
+        Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+        // Per RFC 4443, the pointer refers to the first byte of the
+        // packet whose Next Header field was unrecognized. It is
+        // measured as an offset from the beginning of the first IPv6
+        // header. E.g., a pointer of 40 (the length of a single IPv6
+        // header) would indicate that the Next Header field from that
+        // header - and hence of the first encapsulated packet - was
+        // unrecognized.
+        //
+        // NOTE: Since header_len is a usize, this could theoretically
+        // be a lossy conversion. However, all that means in practice is
+        // that, if a remote host somehow managed to get us to process a
+        // frame with a 4GB IP header and send an ICMP response, the
+        // pointer value would be wrong. It's not worth wasting special
+        // logic to avoid generating a malformed packet in a case that
+        // will almost certainly never happen.
+        Icmpv6ParameterProblem::new(header_len as u32),
+        original_packet,
+        header_len,
+    );
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -431,6 +483,54 @@ pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
                 IcmpUnusedCode,
                 Icmpv6PacketTooBig::new(mtu),
             ),
+        )
+    });
+}
+
+fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+    code: Icmpv4ParameterProblemCode,
+    parameter_problem: Icmpv4ParameterProblem,
+    original_packet: B,
+    header_len: usize,
+) {
+    increment_counter!(ctx, "send_icmpv4_parameter_problem");
+
+    // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
+    // body.
+    let mut original_packet = original_packet;
+    original_packet.shrink_back_to(header_len + 64);
+    // TODO(joshlf): Do something if send_icmp_response returns an error?
+    send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
+        BufferSerializer::new_vec(original_packet).encapsulate(
+            IcmpPacketBuilder::<Ipv4, &[u8], _>::new(local_ip, src_ip, code, parameter_problem),
+        )
+    });
+}
+
+fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
+    code: Icmpv6ParameterProblemCode,
+    parameter_problem: Icmpv6ParameterProblem,
+    original_packet: B,
+    header_len: usize,
+) {
+    increment_counter!(ctx, "send_icmpv6_parameter_problem");
+
+    // Per RFC 4443, body contains as much of the original body as
+    // possible without exceeding IPv6 minimum MTU.
+    let mut original_packet = original_packet;
+    original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
+    // TODO(joshlf): Do something if send_icmp_response returns an error?
+    send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
+        BufferSerializer::new_vec(original_packet).encapsulate(
+            IcmpPacketBuilder::<Ipv6, &[u8], _>::new(local_ip, src_ip, code, parameter_problem),
         )
     });
 }

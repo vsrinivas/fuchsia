@@ -25,7 +25,7 @@ use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
-use crate::error::NotFoundError;
+use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::{Context, EventDispatcher};
 
@@ -203,12 +203,63 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     mut buffer: B,
 ) {
     trace!("receive_ip_packet({})", device);
-    let mut packet = if let Ok(packet) = buffer.parse_mut::<<I as IpExt<_>>::Packet>() {
-        packet
-    } else {
-        // TODO(joshlf): Do something with ICMP here?
+
+    // Snapshot of `buffer`'s current state to revert to if parsing fails.
+    // TODO(ghanan): Remove manual restoration of `buffer`'s state once
+    //               the packet crate guarantees that if parsing fails,
+    //               the buffer's state is left as it was before parsing.
+    let p_len = buffer.prefix_len();
+    let s_len = buffer.suffix_len();
+
+    let result = buffer.parse_mut::<<I as IpExt<_>>::Packet>();
+
+    if result.is_err() {
+        let err = result.unwrap_err();
+
+        // Revert `buffer` to it's original state.
+        let n_p_len = buffer.prefix_len();
+        let n_s_len = buffer.suffix_len();
+
+        if p_len > n_p_len {
+            buffer.grow_front(p_len - n_p_len);
+        }
+
+        if s_len > n_s_len {
+            buffer.grow_back(s_len - n_s_len);
+        }
+
+        match err {
+            // Conditionally send an ICMP response if we encountered a parameter
+            // problem error when parsing an IP packet. Note, we do not always send
+            // back an ICMP response as it can be used as an attack vector for DDoS
+            // attacks. We only send back an ICMP response if the RFC requires
+            // that we MUST send one, as noted by `must_send_icmp`.
+            IpParseError::ParameterProblem {
+                src_ip,
+                dst_ip,
+                code,
+                pointer,
+                must_send_icmp,
+                header_len,
+            } => {
+                if must_send_icmp {
+                    icmp::send_icmp_parameter_problem(
+                        ctx, device, frame_dst, src_ip, dst_ip, code, pointer, buffer, header_len,
+                    );
+                }
+            }
+            // TODO(joshlf): Do something with ICMP here?
+            _ => {}
+        }
+
         return;
-    };
+    }
+
+    // This will never panic because we check if `result` was an error earlier and return
+    // before reaching here. That is, it is guaranteed that when we reach here, `result`
+    // is not an error.
+    let mut packet = result.unwrap();
+
     trace!("receive_ip_packet: parsed packet: {:?}", packet);
 
     // TODO(ghanan): For IPv4 packets, act upon options and for IPv6 packets,
@@ -688,4 +739,122 @@ where
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use byteorder::{ByteOrder, NetworkEndian};
+    use packet::{Buf, ParseBuffer};
+
+    use crate::device::FrameDestination;
+    use crate::testutil::*;
+    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::icmp::{IcmpIpExt, IcmpParseArgs, Icmpv6Packet, Icmpv6ParameterProblemCode};
+    use crate::DeviceId;
+
+    //
+    // Some helper functions
+    //
+
+    /// Get the counter value for a `key`.
+    fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str) -> usize {
+        *ctx.state.test_counters.get(key)
+    }
+
+    #[test]
+    fn test_ipv6_icmp_parameter_problem_non_must() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+
+        // Test parsing an IPv6 packet with invalid next header value which
+        // we SHOULD send an ICMP response for (but we don't since its not a
+        // MUST).
+        #[rustfmt::skip]
+        let bytes: &mut [u8] = &mut [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Body
+            1, 2, 3, 4, 5,
+        ][..];
+        bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
+        let payload_len = (bytes.len() - 40) as u16;
+        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        bytes[6] = 255; // Invalid Next Header
+        bytes[7] = 64;
+        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
+        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        let mut buf = Buf::new(bytes, ..);
+
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+
+        assert_eq!(get_counter_val(&mut ctx, "send_icmp_parameter_problem"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+    }
+
+    #[test]
+    fn test_ipv6_icmp_parameter_problem_must() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+
+        // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
+        // response (invalid routing type for a routing extension header).
+        #[rustfmt::skip]
+        let bytes: &mut [u8] = &mut [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Routing Extension Header
+            IpProto::Tcp.into(),         // Next Header
+            4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            255,                                // Routing Type (Invalid)
+            1,                                  // Segments Left
+            0, 0, 0, 0,                         // Reserved
+            // Addresses for Routing Header w/ Type 0
+            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+
+            // Body
+            1, 2, 3, 4, 5,
+        ][..];
+        bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
+        let payload_len = (bytes.len() - 40) as u16;
+        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        bytes[6] = Ipv6ExtHdrType::Routing.into();
+        bytes[7] = 64;
+        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
+        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        let mut buf = Buf::new(bytes, ..);
+
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+
+        // Check the ICMP that bob attempted to send to alice
+        let device_frames = ctx.dispatcher.frames_sent().clone();
+        assert_eq!(device_frames.len(), 1);
+        assert_eq!(device_frames[0].0, device);
+        let mut buffer = Buf::new(device_frames[0].1.as_slice(), ..);
+        let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
+        let packet = buffer.parse::<<Ipv6 as IpExt<&[u8]>>::Packet>().unwrap();
+        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
+        assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip);
+        assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip);
+        assert_eq!(proto, IpProto::Icmpv6);
+        let icmp = buffer
+            .parse_with::<_, <Ipv6 as IcmpIpExt<&[u8]>>::Packet>(IcmpParseArgs::new(src_ip, dst_ip))
+            .unwrap();
+        if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
+            assert_eq!(icmp.code(), Icmpv6ParameterProblemCode::ErroneousHeaderField);
+            assert_eq!(icmp.message().pointer(), 42);
+        } else {
+            panic!("Expected ICMPv6 Parameter Problem: {:?}", icmp);
+        }
+    }
 }
