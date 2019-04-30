@@ -33,7 +33,7 @@ static inline void trim(std::string& s) {
 
 bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) {
     TestLibrary library("json.fidl", raw_source_code);
-    EXPECT_TRUE(library.Compile());
+    ASSERT_TRUE(library.Compile());
 
     // actual
     auto actual = library.GenerateJSON();
@@ -1472,6 +1472,408 @@ struct DocCommentWithQuotes {};
     END_TEST;
 }
 
+bool json_generator_constants() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library values;
+
+const uint8 UINT8 = 0b100;
+const uint16 UINT16 = 0b100;
+const uint32 UINT32 = 0b100;
+const uint64 UINT64 = 0b100;
+const int8 INT8 = 0b100;
+const int16 INT16 = 0b100;
+const int32 INT32 = 0b100;
+const int64 INT64 = 0b100;
+const float32 FLOAT32 = 3.14159;
+const float64 FLOAT64 = 3.14159;
+const bool BOOL = true;
+const string STRING = "string";
+
+enum Enum {
+  E = 0b10101010;
+};
+
+bits Bits {
+  B = 0x8;
+};
+
+struct Struct {
+  int64 field = 007;
+};
+
+)FIDL",
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "values",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "values/Bits",
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "members": [
+        {
+          "name": "B",
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "0x8"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "values/UINT8",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint8"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/UINT16",
+      "location": {
+        "filename": "json.fidl",
+        "line": 5,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/UINT32",
+      "location": {
+        "filename": "json.fidl",
+        "line": 6,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/UINT64",
+      "location": {
+        "filename": "json.fidl",
+        "line": 7,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/INT8",
+      "location": {
+        "filename": "json.fidl",
+        "line": 8,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int8"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/INT16",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int16"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/INT32",
+      "location": {
+        "filename": "json.fidl",
+        "line": 10,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/INT64",
+      "location": {
+        "filename": "json.fidl",
+        "line": 11,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0b100"
+        }
+      }
+    },
+    {
+      "name": "values/FLOAT32",
+      "location": {
+        "filename": "json.fidl",
+        "line": 12,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "3.14159"
+        }
+      }
+    },
+    {
+      "name": "values/FLOAT64",
+      "location": {
+        "filename": "json.fidl",
+        "line": 13,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "3.14159"
+        }
+      }
+    },
+    {
+      "name": "values/BOOL",
+      "location": {
+        "filename": "json.fidl",
+        "line": 14,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "bool"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "true"
+        }
+      }
+    },
+    {
+      "name": "values/STRING",
+      "location": {
+        "filename": "json.fidl",
+        "line": 15,
+        "column": 14
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "string",
+          "value": "string"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "values/Enum",
+      "location": {
+        "filename": "json.fidl",
+        "line": 17,
+        "column": 6
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "E",
+          "location": {
+            "filename": "json.fidl",
+            "line": 18,
+            "column": 3
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "0b10101010"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "interface_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "values/Struct",
+      "location": {
+        "filename": "json.fidl",
+        "line": 25,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "field",
+          "location": {
+            "filename": "json.fidl",
+            "line": 26,
+            "column": 9
+          },
+          "maybe_default_value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "007"
+            }
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "values/UINT8",
+    "values/UINT64",
+    "values/UINT32",
+    "values/UINT16",
+    "values/Struct",
+    "values/STRING",
+    "values/INT8",
+    "values/INT64",
+    "values/INT32",
+    "values/INT16",
+    "values/FLOAT64",
+    "values/FLOAT32",
+    "values/Enum",
+    "values/Bits",
+    "values/BOOL"
+  ],
+  "declarations": {
+    "values/Bits": "bits",
+    "values/UINT8": "const",
+    "values/UINT16": "const",
+    "values/UINT32": "const",
+    "values/UINT64": "const",
+    "values/INT8": "const",
+    "values/INT16": "const",
+    "values/INT32": "const",
+    "values/INT64": "const",
+    "values/FLOAT32": "const",
+    "values/FLOAT64": "const",
+    "values/BOOL": "const",
+    "values/STRING": "const",
+    "values/Enum": "enum",
+    "values/Struct": "struct"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests)
@@ -1486,4 +1888,5 @@ RUN_TEST(json_generator_test_error)
 RUN_TEST(json_generator_test_byte_and_bytes)
 RUN_TEST(json_generator_test_bits)
 RUN_TEST(json_generator_check_escaping)
+RUN_TEST(json_generator_constants)
 END_TEST_CASE(json_generator_tests)
