@@ -109,12 +109,12 @@ TEST(ProcessWatchpoint, InstallAndRemove) {
   auto watchpoint = std::make_unique<Watchpoint>(&process_delegate);
 
   // Insert the watchpoint for all threads.
-  debug_ipc::WatchpointSettings settings = {};
+  debug_ipc::BreakpointSettings settings = {};
   settings.id = 0x1;
-  settings.locations.push_back({kProcessId1, kThreadId11, kAddressRange1});
-  settings.locations.push_back({kProcessId1, kThreadId13, kAddressRange1});
+  settings.locations.push_back({kProcessId1, kThreadId11, 0, kAddressRange1});
+  settings.locations.push_back({kProcessId1, kThreadId13, 0, kAddressRange1});
   // All of the process 2 threads.
-  settings.locations.push_back({kProcessId2, 0, kAddressRange2});
+  settings.locations.push_back({kProcessId2, 0, 0, kAddressRange2});
 
   zx_status_t res = watchpoint->SetSettings(settings);
   ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got: "

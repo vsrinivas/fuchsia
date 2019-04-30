@@ -388,6 +388,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   pr_settings.process_koid = 1234;
   pr_settings.thread_koid = 14612;
   pr_settings.address = 0x723456234;
+  pr_settings.address_range = {0x1234, 0x5678};
 
   AddOrChangeBreakpointRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
@@ -404,6 +405,10 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
             second.breakpoint.locations[0].thread_koid);
   EXPECT_EQ(initial.breakpoint.locations[0].address,
             second.breakpoint.locations[0].address);
+  EXPECT_EQ(initial.breakpoint.locations[0].address_range.begin,
+            second.breakpoint.locations[0].address_range.begin);
+  EXPECT_EQ(initial.breakpoint.locations[0].address_range.end,
+            second.breakpoint.locations[0].address_range.end);
 }
 
 TEST(Protocol, AddOrChangeBreakpointReply) {

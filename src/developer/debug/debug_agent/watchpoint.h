@@ -38,7 +38,7 @@ class Watchpoint {
 
   uint32_t id() const { return settings_.id; }
 
-  zx_status_t SetSettings(const debug_ipc::WatchpointSettings& settings);
+  zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
 
   // Returns the list of threads that this Watchpoint spans for a process.
   // Returns false if the watchpoint doesn't span the process.
@@ -58,7 +58,7 @@ class Watchpoint {
   };
 
   ProcessDelegate* delegate_ = nullptr;  // Not-owning.
-  debug_ipc::WatchpointSettings settings_ = {};
+  debug_ipc::BreakpointSettings settings_ = {};
 
   debug_ipc::BreakpointStats stats_;
 

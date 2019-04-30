@@ -227,7 +227,6 @@ struct AddOrChangeBreakpointRequest {
 
   // Only one of these should be valid at a time.
   BreakpointSettings breakpoint;
-  WatchpointSettings watchpoint;
 };
 struct AddOrChangeBreakpointReply {
   // A variety of race conditions could cause a breakpoint modification or

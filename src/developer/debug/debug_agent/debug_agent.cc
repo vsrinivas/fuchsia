@@ -467,7 +467,7 @@ void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
 void DebugAgent::SetupWatchpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-  auto id = request.watchpoint.id;
+  auto id = request.breakpoint.id;
 
   auto wp_it = watchpoints_.find(id);
   if (wp_it == watchpoints_.end()) {
@@ -476,7 +476,7 @@ void DebugAgent::SetupWatchpoint(
                          std::forward_as_tuple(this))
                 .first;
   }
-  reply->status = wp_it->second.SetSettings(request.watchpoint);
+  reply->status = wp_it->second.SetSettings(request.breakpoint);
 }
 
 void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

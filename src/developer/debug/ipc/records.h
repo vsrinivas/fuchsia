@@ -128,6 +128,11 @@ struct MemoryBlock {
   std::vector<uint8_t> data;
 };
 
+struct AddressRange {
+  uint64_t begin = 0;
+  uint64_t end = 0;  // Non-inclusive.
+};
+
 struct ProcessBreakpointSettings {
   // Required to be nonzero.
   uint64_t process_koid = 0;
@@ -138,6 +143,9 @@ struct ProcessBreakpointSettings {
 
   // Address to break at.
   uint64_t address = 0;
+
+  // Range is used for watchpoints.
+  AddressRange address_range = {};
 };
 
 // What threads to stop when the breakpoint is hit.
@@ -186,40 +194,6 @@ struct BreakpointStats {
   // Whenever a client gets a breakpoint hit with this flag set, it should
   // clear the local state associated with the breakpoint.
   bool should_delete = false;
-};
-
-// Watchpoints -----------------------------------------------------------------
-
-struct AddressRange {
-  uint64_t begin = 0;
-  uint64_t end = 0;  // Non-inclusive.
-};
-
-struct ProcessWatchpointSetings {
-  // Must be non-zero.
-  uint64_t process_koid = 0;
-
-  // Zero indicates this is a process-wide breakpoint. Otherwise, this
-  // indicates the thread to break.
-  uint64_t thread_koid = 0;
-
-  AddressRange range = {};
-};
-
-// TODO(donosoc): This settings is not exhaustive, but it's enough to get the
-//                plumbing (get it?) going.
-struct WatchpointSettings {
-  // Assigned by the client. Analogous to BreakpointSettings::breakpoint_id.
-  uint32_t id = 0;
-
-  // When set, the watchpoint will automatically be removed as soon as it is
-  // hit.
-  bool one_shot = false;
-
-  // What should stop when the watchpoint is hit.
-  Stop stop = Stop::kAll;
-
-  std::vector<ProcessWatchpointSetings> locations;
 };
 
 // Information on one loaded module.

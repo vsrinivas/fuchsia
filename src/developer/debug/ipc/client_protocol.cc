@@ -124,6 +124,8 @@ void Serialize(const ProcessBreakpointSettings& settings,
   writer->WriteUint64(settings.process_koid);
   writer->WriteUint64(settings.thread_koid);
   writer->WriteUint64(settings.address);
+  writer->WriteUint64(settings.address_range.begin);
+  writer->WriteUint64(settings.address_range.end);
 }
 
 void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {

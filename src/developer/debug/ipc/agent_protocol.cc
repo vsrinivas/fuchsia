@@ -13,11 +13,19 @@ namespace debug_ipc {
 // Record deserializers --------------------------------------------------------
 
 bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
-  if (!reader->ReadUint64(&settings->process_koid))
+  if (!reader->ReadUint64(&settings->process_koid) ||
+      !reader->ReadUint64(&settings->thread_koid) ||
+      !reader->ReadUint64(&settings->address)) {
     return false;
-  if (!reader->ReadUint64(&settings->thread_koid))
+  }
+
+  uint64_t begin, end;
+  if (!reader->ReadUint64(&begin) || !reader->ReadUint64(&end))
     return false;
-  return reader->ReadUint64(&settings->address);
+  settings->address_range.begin = begin;
+  settings->address_range.end = end;
+
+  return true;
 }
 
 bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {

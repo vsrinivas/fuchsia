@@ -165,16 +165,16 @@ GetLaunchRequest(const WatchpointStreamBackend& backend, std::string exe) {
 std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
 GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address) {
   // We add a breakpoint in that address.
-  debug_ipc::ProcessWatchpointSetings location = {};
+  debug_ipc::ProcessBreakpointSettings location = {};
   location.process_koid = backend.process_koid();
   location.thread_koid = backend.thread_koid();
-  location.range = {address, address};
+  location.address_range = {address, address};
 
   debug_ipc::AddOrChangeBreakpointRequest watchpoint_request = {};
   watchpoint_request.breakpoint_type = BreakpointType::kWatchpoint;
-  watchpoint_request.watchpoint.id = kWatchpointId;
-  watchpoint_request.watchpoint.one_shot = true;
-  watchpoint_request.watchpoint.locations.push_back(location);
+  watchpoint_request.breakpoint.id = kWatchpointId;
+  watchpoint_request.breakpoint.one_shot = true;
+  watchpoint_request.breakpoint.locations.push_back(location);
 
   return {watchpoint_request, {}};
 }

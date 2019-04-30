@@ -18,7 +18,7 @@ Watchpoint::~Watchpoint() {
 }
 
 zx_status_t Watchpoint::SetSettings(
-    const debug_ipc::WatchpointSettings& settings) {
+    const debug_ipc::BreakpointSettings& settings) {
   zx_status_t result = ZX_OK;
   settings_ = settings;
   stats_.id = settings_.id;
@@ -26,7 +26,7 @@ zx_status_t Watchpoint::SetSettings(
   // The updated set of locations.
   std::set<WatchpointInstallation> updated_locations;
   for (const auto& cur : settings.locations) {
-    WatchpointInstallation installation = {cur.process_koid, cur.range};
+    WatchpointInstallation installation = {cur.process_koid, cur.address_range};
     updated_locations.insert(std::move(installation));
   }
 
