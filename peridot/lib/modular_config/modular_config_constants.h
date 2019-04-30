@@ -11,14 +11,12 @@ constexpr char kBasemgrConfigName[] = "basemgr";
 constexpr char kSessionmgrConfigName[] = "sessionmgr";
 constexpr char kSessionmgrUrl[] =
     "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
-
-constexpr char kDefaultConfigDir[] = "/config";
-constexpr char kOverriddenConfigDir[] = "/config_override";
-
-// This file path is rooted at either |kDefaultConfigDir| or
-// |kOverriddenConfigDir|
-constexpr char kStartupConfigFilePath[] = "data/startup.config";
-
+constexpr char kStartupConfigPath[] = "/config/data/startup.config";
+constexpr char kStartupConfigDirPath[] = "/config/data";
+constexpr char kOverridenStartupConfigPath[] =
+    "/config_override/data/startup.config";
+constexpr char kOverridenConfigDirPath[] = "/config_override/data";
+constexpr char kStartupConfigFileName[] = "startup.config";
 constexpr char kTrue[] = "true";
 
 // Presentation constants
@@ -67,11 +65,10 @@ inline constexpr char kDefaultSessionShellUrl[] =
 constexpr char kDefaultStoryShellUrl[] =
     "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx";
 constexpr char kBaseShell[] = "base_shell";
-constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
-constexpr char kName[] = "name";
-constexpr char kUrl[] = "url";
 constexpr char kSessionShells[] = "session_shells";
 constexpr char kStoryShellUrl[] = "story_shell_url";
+constexpr char kUrl[] = "url";
+constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
 
 // Various config constants that will be deprecated in favor for the new names.
 constexpr char kBaseShellArgs[] = "base_shell_args";

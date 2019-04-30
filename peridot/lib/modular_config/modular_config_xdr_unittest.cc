@@ -36,12 +36,10 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
     },
     "session_shells":[
       {
-        "name":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+        "url":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
         "display_usage":"unknown",
         "screen_height":0.0,
-        "screen_width":0.0,
-        "url":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
-        "args":[]
+        "screen_width":0.0
       }
     ],
     "story_shell_url":"fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"})";

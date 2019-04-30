@@ -12,7 +12,10 @@ namespace {
 void XdrBaseShellConfig(
     XdrContext* const xdr,
     fuchsia::modular::session::BaseShellConfig* const data) {
-  bool has_url = data->mutable_app_config()->has_url();
+  bool has_url = false;
+  if (data->has_app_config()) {
+    has_url = data->app_config().has_url();
+  }
   xdr->FieldWithDefault(modular_config::kUrl,
                         data->mutable_app_config()->mutable_url(), has_url,
                         std::string(modular_config::kDefaultBaseShellUrl));
@@ -61,20 +64,26 @@ std::string GetDisplayUsageAsString(fuchsia::ui::policy::DisplayUsage usage) {
 void XdrSessionShellMapEntry(
     XdrContext* const xdr,
     fuchsia::modular::session::SessionShellMapEntry* const data) {
-  // The default name is empty.
   bool has_name = data->has_name();
-  xdr->FieldWithDefault(modular_config::kName, data->mutable_name(), has_name,
-                        std::string());
+  xdr->FieldWithDefault(modular_config::kUrl, data->mutable_name(), has_name,
+                        std::string(modular_config::kDefaultSessionShellUrl));
+  data->mutable_config()->mutable_app_config()->set_url(data->name());
+  data->mutable_config()->mutable_app_config()->set_args(
+      std::vector<std::string>());
 
-  auto* config = data->mutable_config();
+  bool has_display_usage = false;
+  bool has_screen_height = false;
+  bool has_screen_width = false;
+  if (data->has_config()) {
+    has_display_usage = data->config().has_display_usage();
+    has_screen_height = data->config().has_screen_height();
+    has_screen_width = data->config().has_screen_width();
+  }
 
-  bool has_display_usage = config->has_display_usage();
-  bool has_screen_height = config->has_screen_height();
-  bool has_screen_width = config->has_screen_width();
-
-  std::string display_usage_str =
-      has_display_usage ? GetDisplayUsageAsString(config->display_usage())
-                        : modular_config::kUnknown;
+  std::string display_usage_str = modular_config::kUnknown;
+  if (has_display_usage) {
+    display_usage_str = GetDisplayUsageAsString(data->config().display_usage());
+  }
 
   // We need to manually parse any field in JSON that is a represented as a fidl
   // enum because XDR expects a number, rather than a string, for enums.
@@ -88,25 +97,15 @@ void XdrSessionShellMapEntry(
   // This is only used when reading. We want to set the value read into
   // |display_usage| into |data|.
   auto display_usage_fidl = GetDisplayUsageFromString(display_usage);
-  config->set_display_usage(display_usage_fidl);
+  data->mutable_config()->set_display_usage(display_usage_fidl);
 
   xdr->FieldWithDefault(modular_config::kScreenHeight,
-                        config->mutable_screen_height(), has_screen_height,
-                        0.f);
+                        data->mutable_config()->mutable_screen_height(),
+                        has_screen_height, static_cast<float>(0));
 
   xdr->FieldWithDefault(modular_config::kScreenWidth,
-                        config->mutable_screen_width(), has_screen_width, 0.f);
-
-  // AppConfig
-  bool has_url = config->mutable_app_config()->has_url();
-  xdr->FieldWithDefault(modular_config::kUrl,
-                        config->mutable_app_config()->mutable_url(), has_url,
-                        std::string(modular_config::kDefaultSessionShellUrl));
-
-  bool has_args = config->mutable_app_config()->has_args();
-  xdr->FieldWithDefault(modular_config::kArgs,
-                        config->mutable_app_config()->mutable_args(), has_args,
-                        std::vector<std::string>());
+                        data->mutable_config()->mutable_screen_width(),
+                        has_screen_width, static_cast<float>(0));
 }
 
 void XdrComponentArgs(XdrContext* const xdr,
