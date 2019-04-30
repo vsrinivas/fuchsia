@@ -127,7 +127,7 @@ fi
 BOOT_SHIM="${BUILD_DIR}/${BOARD}-boot-shim.bin"
 
 # zircon ZBI image with prepended boot shim
-SHIMMED_ZIRCON_BOOTIMAGE="${BUILD_DIR}/${BOARD}-zircon.shim"
+SHIMMED_ZIRCON_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.shim"
 
 # Final packaged Android style boot.img
 if [[ -z "${BOOT_IMG}" ]]; then
@@ -147,7 +147,7 @@ fi
 
 # Append extra command line items
 if [[ -n "${CMDLINE}" ]]; then
-    CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
+    CMDLINE_FILE="${ZIRCON_BOOTIMAGE}-cmdline.txt"
     CMDLINE_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.cmdline"
 
     echo ${CMDLINE} > "${CMDLINE_FILE}"
@@ -161,10 +161,10 @@ cat "${BOOT_SHIM}" "${CMDLINE_BOOTIMAGE}" > "${SHIMMED_ZIRCON_BOOTIMAGE}"
 
 # Optionally compress the shimmed image
 if [[ ${USE_GZIP} == true ]]; then
-    COMPRESSED_BOOTIMAGE="${BUILD_DIR}/${BOARD}-zircon.shim.gz"
+    COMPRESSED_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.gz"
     gzip -c "${SHIMMED_ZIRCON_BOOTIMAGE}" > "${COMPRESSED_BOOTIMAGE}"
 elif [[ ${USE_LZ4} == true ]]; then
-    COMPRESSED_BOOTIMAGE="${BUILD_DIR}/${BOARD}-zircon.shim.lz4"
+    COMPRESSED_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.lz4"
     lz4 -c "${SHIMMED_ZIRCON_BOOTIMAGE}" > "${COMPRESSED_BOOTIMAGE}"
 else
     COMPRESSED_BOOTIMAGE="${SHIMMED_ZIRCON_BOOTIMAGE}"
