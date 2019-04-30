@@ -23,6 +23,7 @@
 #include <zircon/device/vfs.h>
 
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -583,10 +584,16 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
     memcpy(drv_libname, driver_data, driver_count);
     drv_libname[driver_count] = 0;
 
+    // TODO(DNO-492): additional logging for debugging what looks like a
+    // deadlock.  Remove once bug is resolved.
+    printf("DeviceControllerBind running: %s\n", drv_libname);
     // TODO(ZX-3431): We ignore the status from device_bind() for
     // bug-compatibility reasons.  Once this bug is resolved, we can return the
     // actual status.
     __UNUSED zx_status_t status = device_bind(conn->dev, drv_libname);
+    // TODO(DNO-492): additional logging for debugging what looks like a
+    // deadlock.  Remove once bug is resolved.
+    printf("DeviceControllerBind finished: %s %s\n", drv_libname, zx_status_get_string(status));
     return fuchsia_device_ControllerBind_reply(txn, ZX_OK);
 }
 

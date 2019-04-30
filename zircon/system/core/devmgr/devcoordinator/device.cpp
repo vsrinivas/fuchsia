@@ -536,7 +536,9 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
         log(ERROR, "devcoordinator: rpc: bind-device '%s' forbidden in suspend\n", dev->name().data());
         return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
-    log(RPC_IN, "devcoordinator: rpc: bind-device '%s'\n", dev->name().data());
+    // Made this log at ERROR instead of RPC_IN to help debug DNO-492; we should
+    // take it back down when done with that bug.
+    log(ERROR, "devcoordinator: rpc: bind-device '%s'\n", dev->name().data());
     zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
     return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, status);
 }
