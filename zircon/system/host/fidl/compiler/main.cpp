@@ -382,9 +382,11 @@ int compile(fidl::ErrorReporter* error_reporter,
         Fail("No library was produced.\n");
     }
     auto unused_libraries_names = all_libraries.Unused(final_library);
-    // Because the sources of library zx are unconditionally included, we need
-    // to check that there are more than one unused libraries.
-    if (unused_libraries_names.size() > 1) {
+    // Because the sources of library zx are unconditionally included, we filter
+    // out this library here. We can remove this logic when zx is used in source
+    // like other libraries.
+    unused_libraries_names.erase(std::vector<std::string_view>{"zx"});
+    if (unused_libraries_names.size() != 0) {
         std::string message = "Unused libraries provided via --files: ";
         bool first = true;
         for (const auto& name : unused_libraries_names) {
