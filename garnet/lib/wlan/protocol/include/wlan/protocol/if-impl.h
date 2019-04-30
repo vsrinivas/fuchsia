@@ -526,7 +526,8 @@ typedef struct wlanif_impl_ifc {
 
 typedef struct wlanif_impl_protocol_ops {
     // Lifecycle operations
-    zx_status_t (*start)(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie);
+    zx_status_t (*start)(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                         void* cookie);
     void (*stop)(void* ctx);
 
     // State operation

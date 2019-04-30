@@ -143,8 +143,9 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
         return DEV(ctx)->WlanmacQuery(options, info);
     },
-    .start = [](void* ctx, wlanmac_ifc_t* info, void* cookie) -> zx_status_t {
-        return DEV(ctx)->WlanmacStart(info, cookie);
+    .start = [](void* ctx, wlanmac_ifc_t* info, zx_handle_t* out_sme_channel, void* cookie)
+            -> zx_status_t {
+        return DEV(ctx)->WlanmacStart(info, out_sme_channel, cookie);
     },
     .stop = [](void* ctx) { DEV(ctx)->WlanmacStop(); },
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
@@ -3640,7 +3641,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     return status;
 }
 
-zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
+zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 

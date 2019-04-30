@@ -268,7 +268,7 @@ typedef struct wlanmac_protocol_ops {
 
     // Start wlanmac running with ifc_virt
     // Callbacks on ifc may be invoked from now until stop() is called
-    zx_status_t (*start)(void* ctx, wlanmac_ifc_t* ifc, void* cookie);
+    zx_status_t (*start)(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie);
 
     // Shut down a running wlanmac
     // Safe to call if the wlanmac is already stopped.

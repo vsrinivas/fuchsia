@@ -4444,7 +4444,8 @@ static zx_status_t ath10k_set_antenna(struct ieee80211_hw* hw, uint32_t tx_ant, 
 enum { IEEE80211_AC_VO, IEEE80211_AC_VI, IEEE80211_AC_BE, IEEE80211_AC_BK };
 static int ath10k_conf_tx(struct ath10k* ar, uint16_t ac, struct wmi_wmm_params_arg* params);
 
-zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
+zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                         void* cookie) {
     zx_status_t ret = ZX_OK;
 
     mtx_lock(&ar->conf_mutex);

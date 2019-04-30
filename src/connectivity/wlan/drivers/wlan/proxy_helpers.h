@@ -22,8 +22,9 @@ class WlanmacProxy {
     return proto_.ops->query(proto_.ctx, options, info);
   }
 
-  zx_status_t Start(wlanmac_ifc_t* ifc, void* cookie) {
-    return proto_.ops->start(proto_.ctx, ifc, cookie);
+  zx_status_t Start(wlanmac_ifc_t* ifc, zx_handle_t* sme_channel, 
+          void* cookie) {
+    return proto_.ops->start(proto_.ctx, ifc, sme_channel, cookie);
   }
 
   void Stop() { proto_.ops->stop(proto_.ctx); }

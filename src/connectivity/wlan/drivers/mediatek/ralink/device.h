@@ -90,7 +90,7 @@ class Device {
 
     // ddk wlanmac_protocol_ops methods
     zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
-    zx_status_t WlanmacStart(wlanmac_ifc_t* ifc, void* cookie);
+    zx_status_t WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie);
     void WlanmacStop();
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);

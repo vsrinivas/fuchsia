@@ -3025,9 +3025,10 @@ static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t*
     return ZX_OK;
 }
 
-static zx_status_t ath10k_pci_start(void* ctx, wlanmac_ifc_t* ifc, void* cookie) {
+static zx_status_t ath10k_pci_start(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                                    void* cookie) {
     struct ath10k* ar = ctx;
-    return ath10k_start(ar, ifc, cookie);
+    return ath10k_start(ar, ifc, out_sme_channel, cookie);
 }
 
 static void ath10k_pci_stop(void* ctx) {

@@ -147,7 +147,8 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
-  status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, this);
+  zx_handle_t sme_channel = ZX_HANDLE_INVALID;
+  status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, &sme_channel, this);
   if (status != ZX_OK) {
     errorf("failed to start wlanmac device: %s\n",
            zx_status_get_string(status));
@@ -195,6 +196,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   if (wlanmac_info_.ifc_info.driver_features &
       WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+    ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
     infof("iface supports SME channel; not adding wlanif device\n");
     status = AddEthDevice(parent_);
     if (status != ZX_OK) {

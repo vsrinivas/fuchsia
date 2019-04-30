@@ -88,7 +88,8 @@ int ath10k_mac_register(struct ath10k* ar);
 void ath10k_mac_unregister(struct ath10k* ar);
 #endif  // NEEDS PORTING
 struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id);
-zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie);
+zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
+                         void* cookie);
 zx_status_t ath10k_mac_hw_scan(struct ath10k* ar, const wlan_hw_scan_config_t* scan_config);
 void __ath10k_scan_finish(struct ath10k* ar);
 void ath10k_scan_finish(struct ath10k* ar);

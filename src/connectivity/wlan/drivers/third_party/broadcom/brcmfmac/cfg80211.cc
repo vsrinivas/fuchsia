@@ -2629,7 +2629,8 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) 
     }
 }
 
-static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
+static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
+        void* cookie) {
     struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
     brcmf_dbg(TRACE, "Enter");

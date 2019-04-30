@@ -49,7 +49,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacStart(void* ctx, wlanmac_ifc_t* ifc, void* cookie) {
+  static zx_status_t WlanmacStart(void* ctx, wlanmac_ifc_t* ifc,
+                                  zx_handle_t* out_sme_channel, void* cookie) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     {
       std::lock_guard<std::mutex> guard(self.lock_);
