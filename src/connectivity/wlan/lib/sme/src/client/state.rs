@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
-use wlan_common::RadioConfig;
+use wlan_common::{format::MacFmt, RadioConfig};
 use wlan_inspect::{inspect_log, log::InspectBytes};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
@@ -263,6 +263,8 @@ impl State {
                         let eapol_pdu = &ind.data[..];
                         inspect_log!(context.inspect.rsn_events, {
                             rx_eapol_frame: InspectBytes(&eapol_pdu),
+                            foreign_bssid: ind.src_addr.to_mac_str(),
+                            current_bssid: bss.bssid.to_mac_str(),
                             status: "rejected (foreign BSS)",
                         });
                         return State::Associated { bss, last_rssi, link_state, radio_cfg };
@@ -524,11 +526,11 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     };
     format!(
         "ConnectCmd {{ \
-         bssid: {bssid:2x?}, ssid: {ssid:?}, cap: {cap:?}, basic_rate_set: {basic_rate_set:?}, \
+         bssid: {bssid}, ssid: {ssid:?}, cap: {cap:?}, basic_rate_set: {basic_rate_set:?}, \
          op_rate_set: {op_rate_set:?}, protected: {protected:?}, chan: {chan:?}, \
          rcpi: {rcpi:?}, rsni: {rsni:?}, rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
-        bssid = bss.bssid,
+        bssid = bss.bssid.to_mac_str(),
         ssid = ssid,
         cap = bss.cap,
         basic_rate_set = bss.basic_rate_set,
