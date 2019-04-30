@@ -7,6 +7,7 @@ mod fidl_helpers;
 mod ime_service;
 mod index_convert;
 mod legacy_ime;
+mod multiplex;
 
 use failure::{Error, ResultExt};
 use fuchsia_component::server::ServiceFs;
