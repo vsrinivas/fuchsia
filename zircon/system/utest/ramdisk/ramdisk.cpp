@@ -969,65 +969,6 @@ bool RamdiskTestFifoMultipleVmoMultithreaded(void) {
     END_TEST;
 }
 
-bool RamdiskTestFifoUncleanShutdown(void) {
-    BEGIN_TEST;
-    // Set up the ramdisk
-    const size_t kBlockSize = PAGE_SIZE;
-    fbl::unique_ptr<RamdiskTest> ramdisk;
-    ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
-
-    // Create a connection to the ramdisk
-    fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
-    zx::unowned_channel channel(ramdisk_connection.borrow_channel());
-    zx_status_t status;
-    zx::fifo fifo;
-    ASSERT_EQ(fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
-                                                  fifo.reset_and_get_address()), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-
-    zx::fifo bad_fifo;
-    ASSERT_EQ(fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
-                                                  bad_fifo.reset_and_get_address()), ZX_OK);
-    ASSERT_EQ(status, ZX_ERR_ALREADY_BOUND);
-
-    groupid_t group = 0;
-
-    // Create multiple VMOs
-    fbl::Array<TestVmoObject> objs(new TestVmoObject[10](), 10);
-    for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(create_vmo_helper(ramdisk->block_fd(), &objs[i], kBlockSize));
-    }
-
-    // Now that we've set up the connection for a few VMOs, create and shut down
-    // the client.
-    fifo.reset();
-
-    // Give the block server a moment to realize our side of the fifo has been closed
-    usleep(10000);
-
-    // The block server should still be functioning. We should be able to re-bind to it
-    ASSERT_EQ(fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
-                                                  fifo.reset_and_get_address()), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
-
-    for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(create_vmo_helper(ramdisk->block_fd(), &objs[i], kBlockSize));
-    }
-    for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(write_striped_vmo_helper(&client, &objs[i], i, objs.size(), group, kBlockSize));
-    }
-    for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(read_striped_vmo_helper(&client, &objs[i], i, objs.size(), group, kBlockSize));
-    }
-    for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(close_vmo_helper(&client, &objs[i], group));
-    }
-
-    END_TEST;
-}
-
 bool RamdiskTestFifoLargeOpsCount(void) {
     BEGIN_TEST;
     // Set up the ramdisk
@@ -1692,7 +1633,6 @@ RUN_TEST_SMALL(RamdiskTestFifoNoGroup)
 RUN_TEST_SMALL(RamdiskTestFifoMultipleVmo)
 RUN_TEST_SMALL(RamdiskTestFifoMultipleVmoMultithreaded)
 // TODO(smklein): Test ops across different vmos
-RUN_TEST_SMALL(RamdiskTestFifoUncleanShutdown)
 RUN_TEST_SMALL(RamdiskTestFifoLargeOpsCount)
 RUN_TEST_SMALL(RamdiskTestFifoLargeOpsCountShutdown)
 RUN_TEST_SMALL(RamdiskTestFifoIntermediateOpFailure)
