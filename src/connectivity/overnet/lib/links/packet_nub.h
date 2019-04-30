@@ -5,6 +5,7 @@
 #pragma once
 
 #include <random>
+
 #include "src/connectivity/overnet/lib/environment/timer.h"
 #include "src/connectivity/overnet/lib/labels/node_id.h"
 #include "src/connectivity/overnet/lib/links/packet_link.h"
@@ -148,7 +149,7 @@ class PacketNub {
             OVERNET_TRACE(INFO)
                 << "CallMeMaybe received from a smaller numbered node id";
           } else {
-            StartHello(src, NodeId(node_id));
+            StartHello(src, NodeId(node_id), ResendBehavior::kNever);
           }
           return;
         case op_state(PacketOp::Hello, LinkState::Initial):
@@ -199,7 +200,7 @@ class PacketNub {
         // initiate the connection.
         StartAnnouncing(peer, node);
       } else {
-        StartHello(peer, node);
+        StartHello(peer, node, ResendBehavior::kResendable);
       }
     }
   }
@@ -294,9 +295,15 @@ class PacketNub {
 
   Link* link_for(Address address) { return &links_[address]; }
 
+  enum class ResendBehavior {
+    kNever,
+    kResendable,
+  };
+
   template <class F>
   void StartSimpleState(Address address, Optional<NodeId> node, LinkState state,
-                        size_t packet_size, F packet_writer) {
+                        ResendBehavior resend, size_t packet_size,
+                        F packet_writer) {
     Link* link = link_for(address);
     const Optional<int> ticks_or_nothing =
         link->SetStateAndMaybeNode(state, node);
@@ -306,17 +313,26 @@ class PacketNub {
     }
     const int ticks = *ticks_or_nothing;
     SendTo(address, Slice::WithInitializer(packet_size, packet_writer));
-    link->next_timeout.Reset(
-        timer_, BackoffForTicks(kAnnounceResendMillis, ticks),
-        StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
-          if (status.is_error())
-            return;
-          StartSimpleState(address, node, state, packet_size, packet_writer);
-        }));
+    switch (resend) {
+      case ResendBehavior::kResendable:
+        link->next_timeout.Reset(
+            timer_, BackoffForTicks(kAnnounceResendMillis, ticks),
+            StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
+              if (status.is_error())
+                return;
+              StartSimpleState(address, node, state, resend, packet_size,
+                               packet_writer);
+            }));
+        break;
+      case ResendBehavior::kNever:
+        link->next_timeout.Reset();
+        break;
+    }
   }
 
   void StartAnnouncing(Address address, NodeId node) {
-    StartSimpleState(address, node, LinkState::Announcing, kCallMeMaybeSize,
+    StartSimpleState(address, node, LinkState::Announcing,
+                     ResendBehavior::kResendable, kCallMeMaybeSize,
                      [local_node = local_node_](uint8_t* p) {
                        memset(p, 0, kCallMeMaybeSize);
                        *p++ = static_cast<uint8_t>(PacketOp::CallMeMaybe);
@@ -324,8 +340,8 @@ class PacketNub {
                      });
   }
 
-  void StartHello(Address address, NodeId node) {
-    StartSimpleState(address, node, LinkState::SayingHello, kHelloSize,
+  void StartHello(Address address, NodeId node, ResendBehavior resend) {
+    StartSimpleState(address, node, LinkState::SayingHello, resend, kHelloSize,
                      [local_node = local_node_](uint8_t* p) {
                        memset(p, 0, kHelloSize);
                        *p++ = static_cast<uint8_t>(PacketOp::Hello);
@@ -334,14 +350,14 @@ class PacketNub {
   }
 
   void StartHelloAck(Address address, NodeId node) {
-    StartSimpleState(address, node, LinkState::AckingHello, 1, [](uint8_t* p) {
-      *p = static_cast<uint8_t>(PacketOp::HelloAck);
-    });
+    StartSimpleState(
+        address, node, LinkState::AckingHello, ResendBehavior::kNever, 1,
+        [](uint8_t* p) { *p = static_cast<uint8_t>(PacketOp::HelloAck); });
   }
 
   void StartSemiConnected(Address address) {
     StartSimpleState(
-        address, Nothing, LinkState::SemiConnected, 1,
+        address, Nothing, LinkState::SemiConnected, ResendBehavior::kNever, 1,
         [](uint8_t* p) { *p = static_cast<uint8_t>(PacketOp::Connected); });
   }
 

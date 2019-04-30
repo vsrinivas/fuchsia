@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include "src/connectivity/overnet/lib/links/packet_nub.h"
+#include <map>
+#include <set>
 
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
+#include "src/connectivity/overnet/lib/links/packet_nub.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
 
 namespace overnet {
@@ -35,7 +37,7 @@ class PacketNubFuzzer {
 
    private:
     // Map of address to a queue of packet sizes the sender is allowed.
-    std::map<uint64_t, std::queue<uint64_t>> budget_;
+    std::map<uint64_t, std::multiset<uint64_t>> budget_;
   };
   Budget budget_;
 

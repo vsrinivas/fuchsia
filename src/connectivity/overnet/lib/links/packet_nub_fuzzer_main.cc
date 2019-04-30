@@ -27,10 +27,14 @@ class InputStream {
 
   Slice NextSlice() {
     auto len = NextByte();
+    auto pad = NextByte();
     return Slice::WithInitializerAndBorders(
-        len, Border::None(), [this, len](uint8_t* p) {
-          for (uint8_t i = 0; i < len; i++) {
+        len + pad, Border::None(), [this, len, pad](uint8_t* p) {
+          for (uint64_t i = 0; i < len; i++) {
             *p++ = NextByte();
+          }
+          for (uint64_t i = 0; i < pad; i++) {
+            *p++ = 0;
           }
         });
   }

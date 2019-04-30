@@ -7,6 +7,7 @@
 #include <deque>
 #include <map>
 #include <queue>
+
 #include "src/connectivity/overnet/lib/environment/timer.h"
 #include "src/connectivity/overnet/lib/environment/trace.h"
 #include "src/connectivity/overnet/lib/labels/seq_num.h"
@@ -353,11 +354,17 @@ class PacketProtocol {
     void SetTip(uint64_t seq_idx, TimeStamp received);
 
    private:
-    void EnsureValidReceivedPacket(uint64_t seq_idx, TimeStamp received) {
+    [[nodiscard]] bool EnsureValidReceivedPacket(uint64_t seq_idx,
+                                                 TimeStamp received) {
+      constexpr uint64_t kMaxSkip = 65536;
+      if (seq_idx > received_tip_ && seq_idx - received_tip_ > kMaxSkip) {
+        return false;
+      }
       while (received_tip_ + received_packets_.size() <= seq_idx) {
         received_packets_.emplace_back(
             ReceivedPacket{ReceiveState::UNKNOWN, received});
       }
+      return true;
     }
     std::string ReceivedPacketSummary() const;
 

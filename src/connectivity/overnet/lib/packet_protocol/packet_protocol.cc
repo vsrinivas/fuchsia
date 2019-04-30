@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
+
 #include <iostream>
 
 namespace overnet {
@@ -422,7 +423,9 @@ PacketProtocol::AckUrgency PacketProtocol::ReceivedQueue::Received(
     return AckUrgency::NOT_REQUIRED;
   }
 
-  EnsureValidReceivedPacket(seq_idx, received);
+  if (!EnsureValidReceivedPacket(seq_idx, received)) {
+    return AckUrgency::NOT_REQUIRED;
+  }
 
   auto* received_packet = &received_packets_[seq_idx - received_tip_];
   if (received_packet->state != ReceiveState::UNKNOWN) {
@@ -737,7 +740,9 @@ void PacketProtocol::ReceivedQueue::SetTip(uint64_t seq_idx,
   if (tip_idx <= received_tip_) {
     return;
   }
-  EnsureValidReceivedPacket(tip_idx, received);
+  if (!EnsureValidReceivedPacket(tip_idx, received)) {
+    abort();
+  }
   received_packets_.erase(
       received_packets_.begin(),
       received_packets_.begin() + (tip_idx - received_tip_));
