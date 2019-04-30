@@ -4,7 +4,6 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "garnet/lib/system_monitor/dockyard/test_sample_generator.h"
-
 #include "gtest/gtest.h"
 
 namespace dockyard {
@@ -541,6 +540,45 @@ TEST_F(SystemMonitorDockyardTest, RandomSamples) {
   EXPECT_EQ(29ULL, response_.data_sets[0][19]);
   EXPECT_EQ(29ULL, response_.data_sets[0][29]);
   EXPECT_EQ(99ULL, response_.data_sets[0][39]);
+}
+
+TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
+  // The timestamps in this fake sample stream increase by 10 in each successive
+  // Sample. The time data on the second entry of each Sample should increase by
+  // 0..10 in each successive sample. A value that is lower than the prior entry
+  // has a negative slope. E.g. the change from 10ULL to 7ULL is a downward
+  // trend (with a negative slope).
+  dockyard_.AddSamples(dockyard_.GetDockyardId("data"), {{100ULL, 5ULL},
+                                                         {110ULL, 10ULL},
+                                                         {120ULL, 7ULL},
+                                                         {130ULL, 15ULL},
+                                                         {140ULL, 16ULL},
+                                                         {150ULL, 25ULL}});
+
+  // Add pending request.
+  StreamSetsRequest request;
+  request.start_time_ns = 100;
+  request.end_time_ns = 160;
+  request.flags = StreamSetsRequest::SLOPE;
+  request.sample_count = 6;
+  request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("data"));
+  dockyard_.GetStreamSets(&request);
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+  ASSERT_EQ(1UL, response_.data_sets.size());
+  ASSERT_EQ(request.sample_count, response_.data_sets[0].size());
+  // Check the samples themselves.
+  EXPECT_EQ(500000ULL, response_.data_sets[0][0]);
+  EXPECT_EQ(500000ULL, response_.data_sets[0][1]);
+  // The Dockyard will return a level slope rather than a negative slope. The
+  // result on the next line would be a negative value if negative slopes were
+  // reported.
+  EXPECT_EQ(0ULL, response_.data_sets[0][2]);
+  EXPECT_EQ(500000ULL, response_.data_sets[0][3]);
+  EXPECT_EQ(100000ULL, response_.data_sets[0][4]);
+  EXPECT_EQ(900000ULL, response_.data_sets[0][5]);
 }
 
 }  // namespace
