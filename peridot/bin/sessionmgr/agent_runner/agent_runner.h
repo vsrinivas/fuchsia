@@ -5,11 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_H_
 #define PERIDOT_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_H_
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <string>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
@@ -20,6 +15,11 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <src/lib/fxl/macros.h>
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
 
@@ -64,6 +64,10 @@ class AgentRunner : fuchsia::modular::AgentProvider,
                       fidl::InterfaceRequest<fuchsia::modular::AgentController>
                           agent_controller_request);
 
+  // Supports implementation of ComponentContext/ConnectToAgentService().
+  void ConnectToAgentService(const std::string& requestor_url,
+                             fuchsia::modular::AgentServiceRequest request);
+
   // Connects to an agent (and starts it up if it doesn't exist) through its
   // |fuchsia::modular::EntityProvider| service.
   void ConnectToEntityProvider(
@@ -78,11 +82,12 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // the moment we delete |AgentContextImpl|.
   void RemoveAgent(std::string agent_url);
 
-  // fuchsia::modular::Agent at |agent_url| is run (if not already running) and
-  // fuchsia::modular::Agent.RunTask() is called with |task_id| as the agent
-  // specified identifier for the task when a trigger condition specified in
-  // |task_info| is satisfied. The trigger condition is also replicated to the
-  // ledger and the task my get scheduled on other user devices too.
+  // fuchsia::modular::Agent at |agent_url| is run (if not already running)
+  // and fuchsia::modular::Agent.RunTask() is called with |task_id| as the
+  // agent specified identifier for the task when a trigger condition
+  // specified in |task_info| is satisfied. The trigger condition is also
+  // replicated to the ledger and the task my get scheduled on other user
+  // devices too.
   void ScheduleTask(const std::string& agent_url,
                     fuchsia::modular::TaskInfo task_info);
 
@@ -91,9 +96,9 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
-  // Schedules the agent to start running if it isn't already running (e.g., it
-  // could be not running or in the middle of terminating). Once the agent is in
-  // a running state, calls |done|.
+  // Schedules the agent to start running if it isn't already running (e.g.,
+  // it could be not running or in the middle of terminating). Once the agent
+  // is in a running state, calls |done|.
   void EnsureAgentIsRunning(const std::string& agent_url,
                             fit::function<void()> done);
 
@@ -103,8 +108,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // Will also start and initialize the agent as a consequence.
   void ForwardConnectionsToAgent(const std::string& agent_url);
 
-  // Schedules a task that triggers when a new message is available on a message
-  // queue.
+  // Schedules a task that triggers when a new message is available on a
+  // message queue.
   //
   // |agent_url| The URL of the agent creating the trigger. Only the message
   // queue owner can schedule a task with a new message trigger, and thus this
@@ -124,8 +129,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
                                         const std::string& task_id,
                                         const std::string& queue_token);
 
-  // Deletes the task scheduled for |agent_url| and |task_id|, regardless of the
-  // task type.
+  // Deletes the task scheduled for |agent_url| and |task_id|, regardless of
+  // the task type.
   void DeleteMessageQueueTask(const std::string& agent_url,
                               const std::string& task_id);
 
@@ -160,8 +165,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   std::map<std::string, std::map<std::string, uint32_t>> running_alarms_;
 
   // agent URL -> pending agent connections
-  // This map holds connections to an agent that we hold onto while the existing
-  // agent is in a terminating state.
+  // This map holds connections to an agent that we hold onto while the
+  // existing agent is in a terminating state.
   struct PendingAgentConnectionEntry {
     const std::string requestor_url;
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
@@ -186,7 +191,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
 
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
-  // terminating state, we pend those requests here until the agent terminates.
+  // terminating state, we pend those requests here until the agent
+  // terminates.
   std::map<std::string, std::vector<fit::function<void()>>>
       run_agent_callbacks_;
 

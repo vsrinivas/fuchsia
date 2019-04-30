@@ -22,6 +22,20 @@ protocol ComponentContext {
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
 
+    // Connects to an agent that provides the given |request.service_name|, and
+    // then connects the given |request.channel| to that service.
+    // |request.agent_controller| must be kept alive until the service is no
+    // longer required.
+    //
+    // If an error is encountered, the |request.channel| will be closed with
+    // a status code, such as:
+    //   * ZX_ERR_NOT_FOUND -- if a |request.handler| agent URL is not
+    //     specified, and an agent for the |request.service_name| is not found
+    //   * ZX_ERR_PEER_CLOSED -- if |request.service_name| is not available from
+    //     the agent (either specified or discovered)
+    [Transitional]
+    ConnectToAgentService(AgentServiceRequest request);
+
     // Used to create or delete a message queue or retrieve an existing queue
     // identified by |name|. |name| is local to the calling component instance.
     ObtainMessageQueue(string name, request<MessageQueue> queue);
@@ -54,6 +68,23 @@ protocol ComponentContext {
     // most meant for a component to identify itself automatically when publishing
     // metrics.
     GetPackageName() -> (string package_name);
+};
+
+// Used by ComponentContext.ConnectToAgentService
+table AgentServiceRequest {
+    // The name of the requested service.
+    1: string service_name;
+
+    // The channel that will be used to communicate with the requested service.
+    2: handle<channel> channel;
+
+    // The component URL of the Agent that is to provide the specified service.
+    // If no handler is specified, the framework will perform resolution to
+    // find an appropriate handler.
+    3: fuchsia.sys.component_url handler;
+
+    // The AgentController that keeps the agent alive.
+    4: request<AgentController> agent_controller;
 };
 
 // Used by ComponentContext.CreateEntityWithData().

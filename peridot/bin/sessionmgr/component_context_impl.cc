@@ -4,9 +4,9 @@
 
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 
-#include <utility>
-
 #include <src/lib/fxl/logging.h>
+
+#include <utility>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -57,6 +57,12 @@ void ComponentContextImpl::ConnectToAgent(
   agent_runner_->ConnectToAgent(component_instance_id_, url,
                                 std::move(incoming_services_request),
                                 std::move(agent_controller_request));
+}
+
+void ComponentContextImpl::ConnectToAgentService(
+    fuchsia::modular::AgentServiceRequest request) {
+  agent_runner_->ConnectToAgentService(component_instance_id_,
+                                       std::move(request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(

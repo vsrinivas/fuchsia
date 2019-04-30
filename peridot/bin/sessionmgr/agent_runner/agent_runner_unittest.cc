@@ -4,8 +4,6 @@
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 
-#include <memory>
-
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -14,7 +12,9 @@
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <src/lib/fxl/macros.h>
-#include "src/lib/files/scoped_temp_dir.h"
+#include <zircon/status.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
@@ -24,6 +24,7 @@
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace modular {
 namespace testing {
@@ -35,6 +36,12 @@ class AgentRunnerTest : public TestWithLedger {
  public:
   AgentRunnerTest() = default;
 
+  std::unique_ptr<AgentRunner> MakeAgentRunner() {
+    return std::make_unique<AgentRunner>(
+        &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
+        token_manager_.get(), nullptr, entity_provider_runner_.get());
+  }
+
   void SetUp() override {
     TestWithLedger::SetUp();
 
@@ -43,9 +50,6 @@ class AgentRunnerTest : public TestWithLedger {
     entity_provider_runner_ = std::make_unique<EntityProviderRunner>(nullptr);
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
-    agent_runner_ = std::make_unique<AgentRunner>(
-        &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
-        token_manager_.get(), nullptr, entity_provider_runner_.get());
   }
 
   void TearDown() override {
@@ -59,7 +63,12 @@ class AgentRunnerTest : public TestWithLedger {
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
-  AgentRunner* agent_runner() { return agent_runner_.get(); }
+  AgentRunner* agent_runner() {
+    if (agent_runner_ == nullptr) {
+      agent_runner_ = MakeAgentRunner();
+    }
+    return agent_runner_.get();
+  }
   FakeLauncher* launcher() { return &launcher_; }
 
  private:
@@ -126,6 +135,8 @@ class MyDummyAgent : fuchsia::modular::Agent,
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
+
+}  // namespace
 
 // Test that connecting to an agent will start it up.
 // Then there should be an fuchsia::modular::Agent.Connect().
@@ -206,6 +217,105 @@ TEST_F(AgentRunnerTest, AgentController) {
   EXPECT_FALSE(agent_controller.is_bound());
 }
 
-}  // namespace
+TEST_F(AgentRunnerTest, NoServiceNameInAgentServiceRequest) {
+  std::unique_ptr<MyDummyAgent> dummy_agent;
+  constexpr char kMyAgentUrl[] = "file:///my_agent";
+  launcher()->RegisterComponent(
+      kMyAgentUrl,
+      [&dummy_agent](
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        dummy_agent = std::make_unique<MyDummyAgent>(
+            std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  bool clipboard_error = false;
+
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  fuchsia::modular::ClipboardPtr clipboard;
+  clipboard.set_error_handler([&clipboard_error](zx_status_t status) {
+    FXL_LOG(ERROR) << "Error with clipboard service. Status: "
+                   << zx_status_get_string(status);
+    if (ZX_ERR_NOT_FOUND) {
+      clipboard_error = true;
+    }
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+  });
+  fuchsia::modular::AgentServiceRequest agent_service_request;
+  // agent_service_request.set_service_name(clipboard->Name_);
+  agent_service_request.set_channel(clipboard.NewRequest().TakeChannel());
+  agent_service_request.set_agent_controller(agent_controller.NewRequest());
+  agent_runner()->ConnectToAgentService("requestor_url",
+                                        std::move(agent_service_request));
+
+  bool agent_controller_error = false;
+
+  agent_controller.set_error_handler(
+      [&agent_controller_error, &agent_controller](zx_status_t status) {
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+        agent_controller_error = true;
+        agent_controller.Unbind();
+      });
+
+  RunLoopWithTimeoutOrUntil([&clipboard_error, &agent_controller_error] {
+    return clipboard_error || agent_controller_error;
+  });
+
+  EXPECT_TRUE(clipboard_error);
+  EXPECT_TRUE(agent_controller_error);
+
+  EXPECT_EQ(dummy_agent, nullptr);
+}
+
+TEST_F(AgentRunnerTest, NoChannelInAgentServiceRequest) {
+  std::unique_ptr<MyDummyAgent> dummy_agent;
+  constexpr char kMyAgentUrl[] = "file:///my_agent";
+  launcher()->RegisterComponent(
+      kMyAgentUrl,
+      [&dummy_agent](
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        dummy_agent = std::make_unique<MyDummyAgent>(
+            std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  bool clipboard_error = false;
+
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  fuchsia::modular::ClipboardPtr clipboard;
+  clipboard.set_error_handler([&clipboard_error](zx_status_t status) {
+    FXL_LOG(ERROR) << "Error with clipboard service. Status: "
+                   << zx_status_get_string(status);
+    if (ZX_ERR_NOT_FOUND) {
+      clipboard_error = true;
+    }
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+  });
+  fuchsia::modular::AgentServiceRequest agent_service_request;
+  agent_service_request.set_service_name(clipboard->Name_);
+  // agent_service_request.set_channel(clipboard.NewRequest().TakeChannel());
+  agent_service_request.set_agent_controller(agent_controller.NewRequest());
+  agent_runner()->ConnectToAgentService("requestor_url",
+                                        std::move(agent_service_request));
+
+  bool agent_controller_error = false;
+
+  agent_controller.set_error_handler(
+      [&agent_controller_error, &agent_controller](zx_status_t status) {
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+        agent_controller_error = true;
+        agent_controller.Unbind();
+      });
+
+  RunLoopWithTimeoutOrUntil([&clipboard_error, &agent_controller_error] {
+    return clipboard_error || agent_controller_error;
+  });
+
+  EXPECT_FALSE(clipboard_error);
+  EXPECT_TRUE(agent_controller_error);
+
+  EXPECT_EQ(dummy_agent, nullptr);
+}
+
 }  // namespace testing
 }  // namespace modular

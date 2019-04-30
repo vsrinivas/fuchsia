@@ -4,13 +4,14 @@
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <lib/fidl/epitaph.h>
+#include <lib/fsl/vmo/strings.h>
+
 #include <map>
 #include <set>
 #include <utility>
-
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_context_impl.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
@@ -171,6 +172,34 @@ void AgentRunner::ConnectToAgent(
   });
 }
 
+void AgentRunner::ConnectToAgentService(
+    const std::string& requestor_url,
+    fuchsia::modular::AgentServiceRequest request) {
+  // Drop all new requests if AgentRunner is terminating.
+  if (*terminating_) {
+    return;
+  }
+
+  if (!request.has_service_name()) {
+    FXL_LOG(ERROR) << "Missing required service_name in AgentServiceRequest";
+    return;
+  }
+
+  if (!request.has_channel()) {
+    FXL_LOG(ERROR) << "Missing required channel in AgentServiceRequest";
+    return;
+  }
+
+  if (request.has_handler()) {
+    // TODO(MF-368): Connect to GIVEN agent and its service (TBD)
+    FXL_LOG(FATAL) << "Not implemented.";
+  } else {
+    // TODO(MF-368): Lookup agent for given service_name, then connect to agent,
+    // then service
+    FXL_LOG(FATAL) << "Not implemented.";
+  }
+}
+
 void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
@@ -247,9 +276,9 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
   }
 
   if (task_info.persistent) {
-    // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()| after
-    // this trigger information has been added to the ledger via a ledger page
-    // watching mechanism.
+    // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()|
+    // after this trigger information has been added to the ledger via a
+    // ledger page watching mechanism.
     agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
   } else {
     AddedTask(MakeTriggerKey(agent_url, data.task_id), data);
@@ -363,8 +392,8 @@ void AgentRunner::ScheduleMessageQueueDeletionTask(
   message_queue_manager_->RegisterDeletionWatcher(
       kAgentComponentNamespace, agent_url, queue_token,
       [this, agent_url, task_id, terminating = terminating_] {
-        // If agent runner is terminating or has already terminated, do not run
-        // any new tasks.
+        // If agent runner is terminating or has already terminated, do not
+        // run any new tasks.
         if (*terminating) {
           return;
         }
@@ -403,8 +432,8 @@ void AgentRunner::ScheduleMessageQueueNewMessageTask(
   message_queue_manager_->RegisterMessageWatcher(
       kAgentComponentNamespace, agent_url, queue_name,
       [this, agent_url, task_id, terminating] {
-        // If agent runner is terminating or has already terminated, do not run
-        // any new tasks.
+        // If agent runner is terminating or has already terminated, do not
+        // run any new tasks.
         if (*terminating) {
           return;
         }

@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_COMPONENT_CONTEXT_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_COMPONENT_CONTEXT_IMPL_H_
 
-#include <string>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/macros.h>
+
+#include <string>
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
@@ -66,6 +66,10 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
                           incoming_services_request,
                       fidl::InterfaceRequest<fuchsia::modular::AgentController>
                           agent_controller_request) override;
+
+  // |fuchsia::modular::ComponentContext|
+  void ConnectToAgentService(
+      fuchsia::modular::AgentServiceRequest request) override;
 
   // |fuchsia::modular::ComponentContext|
   void ObtainMessageQueue(
