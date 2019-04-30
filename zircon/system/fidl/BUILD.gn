@@ -36,6 +36,7 @@ group("fidl") {
     "fuchsia-hardware-input",
     "fuchsia-hardware-intel-hda",
     "fuchsia-hardware-light",
+    "fuchsia-hardware-mediacodec",
     "fuchsia-hardware-nand",
     "fuchsia-hardware-power",
     "fuchsia-hardware-pty",

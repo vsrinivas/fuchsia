@@ -16,7 +16,6 @@
 #include <lib/zx/channel.h>
 #include <memory.h>
 #include <stdint.h>
-#include <zircon/device/media-codec.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 

@@ -6,14 +6,13 @@
 
 #include "codec_factory_impl.h"
 
+#include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fsl/io/device_watcher.h>
 #include <lib/svc/cpp/services.h>
 #include <trace-provider/provider.h>
-#include <zircon/device/media-codec.h>
 #include <zircon/status.h>
-
-#include <fcntl.h>
 
 namespace codec_factory {
 
@@ -101,31 +100,37 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         FXL_LOG(INFO) << "DeviceWatcher callback got filename: " << filename;
 
         std::string device_path = std::string(kDeviceClass) + "/" + filename;
+        zx::channel device_channel, device_remote;
+        zx_status_t status = zx::channel::create(0, &device_channel,
+                                                 &device_remote);
+        if (status != ZX_OK) {
+          FXL_LOG(INFO) << "Failed to create channel - status: " << status;
+          return;
+        }
+        zx::channel client_factory_channel, client_factory_remote;
+        status = zx::channel::create(0, &client_factory_channel, &client_factory_remote);
+        if (status != ZX_OK) {
+          FXL_LOG(INFO) << "Failed to create channel - status: " << status;
+          return;
+        }
 
-        int fd = ::openat(dir_fd, filename.c_str(), O_RDONLY);
-        if (fd < 0) {
-          // This is ok (locally here) if the device (filename) really did go
-          // away in the meantime.
-          int snap_errno = errno;
-          FXL_LOG(INFO) << "Failed to open device by filename - resulting fd: "
-                        << fd << " errno: " << snap_errno
+        status = fdio_service_connect(device_path.c_str(), device_remote.release());
+        if (status != ZX_OK) {
+          FXL_LOG(INFO) << "Failed to connect to device by filename -"
+                        << " status: " << status
                         << " device_path: " << device_path;
           return;
         }
 
-        zx::channel client_factory_channel;
-        ssize_t res = ioctl_media_codec_get_codec_factory_channel(
-            fd, client_factory_channel.reset_and_get_address());
-        ::close(fd);
-
-        if (res != sizeof(client_factory_channel)) {
-          // This could be ok (locally here) if the device's devhost exited
-          // already or similar.
-          FXL_LOG(INFO) << "Failed to obtain channel - res: " << res
+        fuchsia::hardware::mediacodec::DevicePtr device_interface;
+        status = device_interface.Bind(std::move(device_channel));
+        if (status != ZX_OK) {
+          FXL_LOG(INFO) << "Failed to bind to interface -"
+                        << " status: " << status
                         << " device_path: " << device_path;
-          // ignore/skip the driver that failed the ioctl
           return;
         }
+        device_interface->GetCodecFactory(std::move(client_factory_remote));
 
         // From here on in the current lambda, we're doing stuff that can't fail
         // here locally (at least, not without exiting the whole process).  The

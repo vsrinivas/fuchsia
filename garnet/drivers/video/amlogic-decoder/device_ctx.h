@@ -30,6 +30,8 @@ class DeviceCtx {
 
   AmlogicVideo* video() { return video_.get(); }
 
+  void GetCodecFactory(zx::channel request);
+
   DeviceFidl* device_fidl() { return device_fidl_.get(); }
 
   CodecAdmissionControl* codec_admission_control() {

@@ -19,19 +19,18 @@ class DeviceFidl {
   explicit DeviceFidl(DeviceCtx* device);
   ~DeviceFidl();
 
-  // The one IOCTL supported by the driver is to create a CodecFactory channel
-  // and return the client endpoint.  This method creates that CodecFactory,
-  // associates it with this DeviceCtx, and sets *client_endpoint to the client
-  // endpoint.  The LocalCodecFactory instance is destructed if the channel
+  // The one FIDL method supported by the driver is to connect a CodecFactory
+  // request channel to a server.  This method associates that request with
+  // this DeviceCtx.  The LocalCodecFactory instance is destructed if the channel
   // closes or if DeviceCtx is destructed.
   //
-  // This method runs on the same thread as the driver's IOCTL handler - the
+  // This method runs on the same thread as the driver's message() handler - the
   // lifetime of the channel is entirely under the control of the driver while
   // this method is running.  The shared_fidl_thread() is used for handling the
   // server end of the channel - nothing related to the channel created by this
   // method runs on shared_fidl_thread() until the caller closes client_endpoint
   // or hands client_endpoint to a client.
-  void CreateChannelBoundCodecFactory(zx::channel* client_endpoint);
+  void ConnectChannelBoundCodecFactory(zx::channel request);
 
   // When the LocalCodecFactory creates a CodecImpl to serve a Codec channel
   // associated with this DeviceCtx, it gets handed off to DeviceCtx for

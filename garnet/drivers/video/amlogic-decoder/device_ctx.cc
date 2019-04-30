@@ -7,45 +7,28 @@
 #include "amlogic-video.h"
 #include "macros.h"
 
-#include <zircon/device/media-codec.h>
+#include <fuchsia/hardware/mediacodec/c/fidl.h>
 
 namespace {
 
-// TODO(dustingreen): Flip the direction to accept a server channel and serve
-// that channel, instead of creating a client endpoint and returning the client
-// end.  Also switch to DDK FIDL with one "Connect" message.
-static zx_status_t amlogic_video_ioctl(void* ctx, uint32_t op,
-                                       const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len,
-                                       size_t* out_actual) {
-  // The only IOCTL we support is get channel.
-  if (op != MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
+  .GetCodecFactory = [](void* ctx, zx_handle_t handle) {
+    zx::channel request(handle);
+    reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(std::move(request));
+    return ZX_OK;
+  },
+};
 
-  if ((out_buf == nullptr) || (out_actual == nullptr) ||
-      (out_len != sizeof(zx_handle_t))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  DeviceCtx* device = reinterpret_cast<DeviceCtx*>(ctx);
-
-  zx::channel codec_factory_client_endpoint;
-  device->device_fidl()->CreateChannelBoundCodecFactory(
-      &codec_factory_client_endpoint);
-
-  *(reinterpret_cast<zx_handle_t*>(out_buf)) =
-      codec_factory_client_endpoint.release();
-  *out_actual = sizeof(zx_handle_t);
-
-  return ZX_OK;
+static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
 }
 
 static zx_protocol_device_t amlogic_video_device_ops = {
-    DEVICE_OPS_VERSION, .ioctl = amlogic_video_ioctl,
-    // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
-    // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
-    // ~AmlogicVideo doesn't run yet.
+  DEVICE_OPS_VERSION,
+  .message = amlogic_video_message,
+  // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
+  // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
+  // ~AmlogicVideo doesn't run yet.
 };
 
 }  // namespace
@@ -107,4 +90,8 @@ zx_status_t DeviceCtx::Bind(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   return ZX_OK;
+}
+
+void DeviceCtx::GetCodecFactory(zx::channel request) {
+  device_fidl()->ConnectChannelBoundCodecFactory(std::move(request));
 }

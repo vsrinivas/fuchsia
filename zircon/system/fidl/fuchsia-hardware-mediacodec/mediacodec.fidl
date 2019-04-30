@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.mediacodec;
+
+[Layout = "Simple"]
+protocol Device {
+    /// This method connects the caller with a fuchsia.mediacodec.CodecFactory.
+    /// Ideally, we wouldn't have the intermediary, but it is necessary with the current
+    /// DDK APIs.
+    GetCodecFactory(handle<channel> request);
+};

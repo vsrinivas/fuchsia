@@ -20,20 +20,13 @@ DeviceFidl::~DeviceFidl() {
   // The DeviceCtx should have already moved over to the shared_fidl_thread()
   // for this (if ~DeviceCtx implemented), else it's not safe to ~fidl::Binding.
   //
-  // Also, DeviceFidl::CreateChannelBoundCodecFactory() relies on ability to
+  // Also, DeviceFidl::ConnectChannelBoundCodecFactory() relies on ability to
   // post work which will run on shared_fidl_thread() before ~DeviceFidl()
   // runs on shared_fidl_thread().
   ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
-void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
-  zx::channel local_client_endpoint;
-  zx::channel local_server_endpoint;
-  zx_status_t create_status =
-      zx::channel::create(0, &local_client_endpoint, &local_server_endpoint);
-  if (create_status != ZX_OK) {
-    device_->driver()->FatalError("zx::channel::create() failed");
-  }
+void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
   std::unique_ptr<LocalCodecFactory> factory =
       std::make_unique<LocalCodecFactory>(device_);
   factory->SetErrorHandler([this, raw_factory_ptr = factory.get()] {
@@ -50,8 +43,7 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
   // taking a dependency on Bind() working from a different thread (both in
   // Bind() and in DeviceFidl code).
   device_->driver()->PostToSharedFidl([this, factory = std::move(factory),
-                                       server_endpoint = std::move(
-                                           local_server_endpoint)]() mutable {
+                                       server_endpoint = std::move(request)]() mutable {
     ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     LocalCodecFactory* raw_factory_ptr = factory.get();
     auto insert_result =
@@ -60,7 +52,6 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
     ZX_DEBUG_ASSERT(insert_result.second);
     insert_result.first->second->Bind(std::move(server_endpoint));
   });
-  *client_endpoint = std::move(local_client_endpoint);
 }
 
 void DeviceFidl::BindCodecImpl(std::unique_ptr<CodecImpl> codec) {
