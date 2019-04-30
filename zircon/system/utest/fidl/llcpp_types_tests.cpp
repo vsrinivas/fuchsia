@@ -98,10 +98,10 @@ bool EncodedMessageTest() {
 
     {
         fidl::EncodedMessage<NonnullableChannelMessage> encoded_message;
-        encoded_message.Initialize([&buf, &channel_1](fidl::BytePart& msg_bytes,
-                                                      fidl::HandlePart& msg_handles) {
-            msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-            zx_handle_t* handle = msg_handles.data();
+        encoded_message.Initialize([&buf, &channel_1](fidl::BytePart* out_msg_bytes,
+                                                      fidl::HandlePart* msg_handles) {
+            *out_msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
+            zx_handle_t* handle = msg_handles->data();
 
             // Unsafely open a channel, which should be closed automatically by encoded_message
             {
@@ -111,7 +111,7 @@ bool EncodedMessageTest() {
                 channel_1 = std::move(out1);
             }
 
-            msg_handles.set_actual(1);
+            msg_handles->set_actual(1);
         });
 
         EXPECT_TRUE(HelperExpectPeerValid(channel_1));
@@ -170,10 +170,10 @@ bool RoundTripTest() {
     zx_handle_t unsafe_handle_backup;
 
     encoded_message->Initialize([&buf, &channel_1, &unsafe_handle_backup](
-                                    fidl::BytePart& msg_bytes,
-                                    fidl::HandlePart& msg_handles) {
-        msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-        zx_handle_t* handle = msg_handles.data();
+                                    fidl::BytePart* out_msg_bytes,
+                                    fidl::HandlePart* msg_handles) {
+        *out_msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
+        zx_handle_t* handle = msg_handles->data();
 
         // Unsafely open a channel, which should be closed automatically by encoded_message
         {
@@ -184,7 +184,7 @@ bool RoundTripTest() {
             channel_1 = std::move(out1);
         }
 
-        msg_handles.set_actual(1);
+        msg_handles->set_actual(1);
     });
 
     uint8_t golden_encoded[] = {

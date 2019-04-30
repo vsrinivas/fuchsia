@@ -145,16 +145,16 @@ public:
     // Clears the contents of the EncodedMessage then invokes Callback
     // to initialize the EncodedMessage in-place then returns the callback's result.
     //
-    // |callback| is a callable object whose arguments are (BytePart&, HandlePart&).
+    // |callback| is a callable object whose arguments are (BytePart*, HandlePart*).
     template <typename Callback>
     decltype(auto) Initialize(Callback callback) {
-        struct GoldenCallback { void operator()(BytePart&, HandlePart&) {} };
+        struct GoldenCallback { void operator()(BytePart*, HandlePart*) {} };
         static_assert(
             internal::SameArguments<Callback, GoldenCallback>,
-            "Callback signature must be: T(BytePart&, HandlePart&).");
+            "Callback signature must be: T(BytePart*, HandlePart*).");
         bytes_ = BytePart();
         CloseHandles();
-        return callback(bytes_, handles_);
+        return callback(&bytes_, &handles_);
     }
 
 private:

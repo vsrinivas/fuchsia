@@ -60,22 +60,24 @@ class EchoClientApp {
                               zx::time::infinite(), nullptr) == ZX_OK);
     ::fidl::EncodedMessage<Echo::EchoEventResponse> encoded_msg;
     encoded_msg.Initialize(
-        [&](::fidl::BytePart& bytes, ::fidl::HandlePart& handles) {
-          bytes = std::move(response_buffer);
+        [&](::fidl::BytePart* out_bytes, ::fidl::HandlePart* handles) {
+          *out_bytes = std::move(response_buffer);
           uint32_t actual_bytes = 0;
           uint32_t actual_handles = 0;
-          ZX_ASSERT(client_end_->read(0, bytes.data(), handles.data(),
-                                      bytes.capacity(), handles.capacity(),
+          ZX_ASSERT(client_end_->read(0, out_bytes->data(), handles->data(),
+                                      out_bytes->capacity(),
+                                      handles->capacity(),
                                       &actual_bytes, &actual_handles) == ZX_OK);
           // TODO(FIDL-350): Hard-coding the event ordinal due to no event
           // support in llcpp; refactor once that lands.
           constexpr uint32_t kEchoStructEventOrdinal = 849359397u;
           ZX_ASSERT(actual_bytes > sizeof(fidl_message_header_t));
           ZX_ASSERT(
-              reinterpret_cast<fidl_message_header_t*>(bytes.data())->ordinal ==
+              reinterpret_cast<fidl_message_header_t*>(
+                  out_bytes->data())->ordinal ==
               kEchoStructEventOrdinal);
-          bytes.set_actual(actual_bytes);
-          handles.set_actual(actual_handles);
+          out_bytes->set_actual(actual_bytes);
+          handles->set_actual(actual_handles);
         });
     // Decode the event
     return ::fidl::Decode(std::move(encoded_msg));
