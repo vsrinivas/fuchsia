@@ -68,9 +68,10 @@ static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
 static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
     if (config.u.ids.bustype == 0x06
         && config.u.ids.vendor == 0x00
-        && config.u.ids.product == 0x00
-        && config.u.ids.version == 0x01) {
-        return true;
+        && config.u.ids.product == 0x00) {
+        if (config.u.ids.version == 0x01 || config.u.ids.version == 0x00) {
+            return true;
+        }
     }
     return false;
 }
