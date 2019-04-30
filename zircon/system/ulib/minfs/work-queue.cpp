@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "data-assigner.h"
+#include "work-queue.h"
 #include "minfs-private.h"
 
 namespace minfs {
 
-DataBlockAssigner::~DataBlockAssigner() {
+WorkQueue::~WorkQueue() {
     if (thrd_) {
         {
             fbl::AutoLock lock(&lock_);
@@ -23,9 +23,8 @@ DataBlockAssigner::~DataBlockAssigner() {
     ZX_DEBUG_ASSERT(IsEmpty());
 }
 
-zx_status_t DataBlockAssigner::Create(TransactionalFs* minfs,
-                                      fbl::unique_ptr<DataBlockAssigner>* out) {
-    fbl::unique_ptr<DataBlockAssigner> processor(new DataBlockAssigner(minfs));
+zx_status_t WorkQueue::Create(TransactionalFs* minfs, fbl::unique_ptr<WorkQueue>* out) {
+    fbl::unique_ptr<WorkQueue> processor(new WorkQueue(minfs));
 
     processor->thrd_ = std::make_optional<thrd_t>();
 
@@ -38,18 +37,18 @@ zx_status_t DataBlockAssigner::Create(TransactionalFs* minfs,
     return ZX_OK;
 }
 
-void DataBlockAssigner::EnqueueCallback(TaskCallback task) {
+void WorkQueue::EnqueueCallback(TaskCallback task) {
     fbl::AutoLock lock(&lock_);
     ReserveTask(std::move(task));
     data_cvar_.Signal();
 }
 
-bool DataBlockAssigner::TasksWaiting() const {
+bool WorkQueue::TasksWaiting() const {
     fbl::AutoLock lock(&lock_);
     return waiting_ > 0;
 }
 
-void DataBlockAssigner::ProcessNext() {
+void WorkQueue::ProcessNext() {
     ZX_DEBUG_ASSERT(!IsEmpty());
     std::optional<TaskCallback> task;
     task_queue_[start_].swap(task);
@@ -69,7 +68,7 @@ void DataBlockAssigner::ProcessNext() {
     count_--;
 }
 
-void DataBlockAssigner::ReserveTask(TaskCallback task) {
+void WorkQueue::ReserveTask(TaskCallback task) {
     EnsureQueueSpace();
     ZX_DEBUG_ASSERT(count_ < kMaxQueued);
     count_++;
@@ -79,11 +78,11 @@ void DataBlockAssigner::ReserveTask(TaskCallback task) {
     ZX_DEBUG_ASSERT(task_queue_[task_index].has_value());
 }
 
-bool DataBlockAssigner::IsEmpty() const {
+bool WorkQueue::IsEmpty() const {
     return count_ == 0;
 }
 
-void DataBlockAssigner::EnsureQueueSpace() {
+void WorkQueue::EnsureQueueSpace() {
     ZX_DEBUG_ASSERT(count_ <= kMaxQueued);
     while (count_ == kMaxQueued) {
         waiting_++;
@@ -93,7 +92,7 @@ void DataBlockAssigner::EnsureQueueSpace() {
     ZX_DEBUG_ASSERT(count_ < kMaxQueued);
 }
 
-void DataBlockAssigner::ProcessLoop() {
+void WorkQueue::ProcessLoop() {
     fbl::AutoLock lock(&lock_);
     while (true) {
         while (!IsEmpty()) {
@@ -113,8 +112,8 @@ void DataBlockAssigner::ProcessLoop() {
     }
 }
 
-int DataBlockAssigner::DataThread(void* arg) {
-    DataBlockAssigner* assigner = reinterpret_cast<DataBlockAssigner*>(arg);
+int WorkQueue::DataThread(void* arg) {
+    WorkQueue* assigner = static_cast<WorkQueue*>(arg);
     assigner->ProcessLoop();
     return 0;
 }

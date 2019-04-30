@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Tests DataBlockAssigner behavior.
+// Tests WorkQueue behavior.
 
 #include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
@@ -12,7 +12,7 @@
 namespace minfs {
 namespace {
 
-// Mock Minfs class to be used in DataBlockAssigner tests.
+// Mock Minfs class to be used in WorkQueue tests.
 class MockMinfs : public TransactionalFs {
 public:
     MockMinfs() = default;
@@ -82,7 +82,7 @@ private:
     fbl::ConditionVariable pause_cvar_;
 };
 
-// Mock Vnode class to be used in DataBlockAssigner tests.
+// Mock Vnode class to be used in WorkQueue tests.
 class MockVnode : public fbl::RefCounted<MockVnode> {
 public:
     MockVnode(MockMinfs* minfs) : minfs_(minfs) {}
@@ -108,10 +108,10 @@ private:
 
 class DataAssignerTest {
 public:
-    // Creates a new DataAssignerTest with valid MockMinfs and DataBlockAssigner.
+    // Creates a new DataAssignerTest with valid MockMinfs and WorkQueue.
     static zx_status_t Create(fbl::unique_ptr<DataAssignerTest>* out) {
         fbl::unique_ptr<DataAssignerTest> test(new DataAssignerTest());
-        zx_status_t status = DataBlockAssigner::Create(&test->minfs_, &test->assigner_);
+        zx_status_t status = WorkQueue::Create(&test->minfs_, &test->assigner_);
         if (status != ZX_OK) {
             return status;
         }
@@ -192,7 +192,7 @@ private:
     DataAssignerTest() {}
 
     MockMinfs minfs_;
-    fbl::unique_ptr<DataBlockAssigner> assigner_;
+    fbl::unique_ptr<WorkQueue> assigner_;
 };
 
 // Simple test which enqueues and processes a data block allocation for a single vnode.

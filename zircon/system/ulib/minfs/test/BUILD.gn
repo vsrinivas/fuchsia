@@ -5,15 +5,15 @@
 group("test") {
   testonly = true
   deps = [
-    ":minfs-data-assigner-unit",
     ":minfs-format-unit",
+    ":minfs-work-queue-unit",
   ]
 }
 
-test("minfs-data-assigner-unit") {
+test("minfs-work-queue-unit") {
   test_group = "fs"
   sources = [
-    "data-assigner-test.cpp",
+    "work-queue-test.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",

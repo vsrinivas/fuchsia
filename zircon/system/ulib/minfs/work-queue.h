@@ -28,18 +28,16 @@ using TaskCallback = fbl::Function<void(TransactionalFs* minfs)>;
 // A generic, circular buffer of tasks.
 //
 // This class is not assignable, copyable, or moveable.
-//
-// TODO: Rename. The interface has nothing to do with "data blocks" or "assignment".
-class DataBlockAssigner {
+class WorkQueue {
 public:
-    static zx_status_t Create(TransactionalFs* minfs, fbl::unique_ptr<DataBlockAssigner>* out);
+    static zx_status_t Create(TransactionalFs* minfs, fbl::unique_ptr<WorkQueue>* out);
 
-    DataBlockAssigner() = default;
-    DataBlockAssigner(const DataBlockAssigner&) = delete;
-    DataBlockAssigner(DataBlockAssigner&&) = delete;
-    DataBlockAssigner& operator=(const DataBlockAssigner&) = delete;
-    DataBlockAssigner& operator=(DataBlockAssigner&&) = delete;
-    ~DataBlockAssigner();
+    WorkQueue() = default;
+    WorkQueue(const WorkQueue&) = delete;
+    WorkQueue(WorkQueue&&) = delete;
+    WorkQueue& operator=(const WorkQueue&) = delete;
+    WorkQueue& operator=(WorkQueue&&) = delete;
+    ~WorkQueue();
 
     // Enqueue a unit of work to be processed by in a background thread.
     //
@@ -50,7 +48,7 @@ public:
     bool TasksWaiting() const;
 
 private:
-    DataBlockAssigner(TransactionalFs* minfs) : minfs_(minfs) {}
+    WorkQueue(TransactionalFs* minfs) : minfs_(minfs) {}
 
     bool IsEmpty() const __TA_REQUIRES(lock_);
 

@@ -143,9 +143,9 @@ private:
     // Once an element is marked for allocation or swap, the reserved_ count is updated accordingly.
     // Remaining reserved blocks will be committed by the end of each Vnode operation,
     // with the exception of copy-on-write data blocks.
-    // These will be committed asynchronously via the DataBlockAssigner thread.
+    // These will be committed asynchronously via the WorkQueue thread.
     // This means that at the time of reservation if |reserved_| > 0, all reserved blocks must
-    // belong to vnodes which are already enqueued in the DataBlockAssigner thread.
+    // belong to vnodes which are already enqueued in the WorkQueue thread.
     size_t reserved_ FS_TA_GUARDED(lock_);
 
     // Index of the first free element in the map.

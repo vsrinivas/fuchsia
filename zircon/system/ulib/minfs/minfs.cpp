@@ -903,7 +903,7 @@ zx_status_t Minfs::InitializeWriteback() {
         return status;
     }
 
-    if ((status = DataBlockAssigner::Create(this, &assigner_)) != ZX_OK) {
+    if ((status = WorkQueue::Create(this, &assigner_)) != ZX_OK) {
         return status;
     }
 

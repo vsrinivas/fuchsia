@@ -12,8 +12,6 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
-#include "data-assigner.h"
-#include "vnode-allocation.h"
 #include <fbl/auto_lock.h>
 #include <fs/managed-vfs.h>
 #include <fs/remote.h>
@@ -26,6 +24,7 @@
 #include <minfs/metrics.h>
 #include <minfs/writeback-async.h>
 #endif
+
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
@@ -45,6 +44,11 @@
 #include <minfs/superblock.h>
 #include <minfs/transaction-limits.h>
 #include <minfs/writeback.h>
+
+#ifdef __Fuchsia__
+#include "vnode-allocation.h"
+#include "work-queue.h"
+#endif
 
 #include "allocator/allocator.h"
 #include "allocator/inode-manager.h"
@@ -398,7 +402,7 @@ private:
     fbl::Closure on_unmount_{};
     MinfsMetrics metrics_ = {};
     fbl::unique_ptr<WritebackQueue> writeback_;
-    fbl::unique_ptr<DataBlockAssigner> assigner_;
+    fbl::unique_ptr<WorkQueue> assigner_;
     uint64_t fs_id_ = 0;
 #else
     // Store start block + length for all extents. These may differ from info block for
