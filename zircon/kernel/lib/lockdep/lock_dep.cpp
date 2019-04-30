@@ -134,7 +134,7 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry,
     const uint64_t user_pid = current_thread->user_pid;
     const uint64_t user_tid = current_thread->user_tid;
 
-    printf("\nZIRCON KERNEL PANIC\n");
+    printf("\nZIRCON KERNEL OOPS\n");
     printf("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64 " (%s:%s):\n",
            current_thread, user_pid, user_tid, owner_name, current_thread->name);
     printf("Reason: %s\n", ToString(result));

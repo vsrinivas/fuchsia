@@ -23,12 +23,12 @@ handled by [kernel/BUILD.gn](../kernel/BUILD.gn).
 You can set this variable in your GN invocation like this:
 
 ```
-gn gen build-zircon --args='enable_lock_dep = true'
+fx set <your build options> --args 'zircon_extra_args = { enable_lock_dep = true }'
 ```
 
 When the lock validator is enabled a set of global lock-free, wait-free data
 structures are generated to track the relationships between the instrumented
-locks; the acquire/release operations of the locks are augmented to update
+locks. The acquire/release operations of the locks are augmented to update
 these data structures.
 
 ## Lock Instrumentation
@@ -359,43 +359,31 @@ When a violation is detected at the point of lock acquisition the validator
 produces a message like the following in the kernel log:
 
 ```
-[00000.817] 04704.04716> ZIRCON KERNEL PANIC
-[00000.817] 04704.04716> Lock validation failed for thread 0xffffff800a5ffa98 pid 4704 tid 4716 (thermd:initial-thread):
-[00000.817] 04704.04716> Reason: Out Of Order
-[00000.817] 04704.04716> Bad lock: name=lockdep::LockClass<SoloDispatcher<PortDispatcher>, fbl::Mutex, 362, (lockdep::LockFlags)0> order=0
-[00000.817] 04704.04716> Conflict: name=lockdep::LockClass<VmObject, fbl::Mutex, 249, (lockdep::LockFlags)0> order=0
-[00000.817] 04704.04716> caller=0xffffffff00190837 frame=0xffffff98717f0970
-[00000.817] 04704.04716> BUILDID git-ce892d1b03c1a56799fb604d1d6303bb7b16e75a
-[00000.817] 04704.04716> dso: id=3ebe31f2ce250453f1210662d6f9d16e2595b9b8 base=0xffffffff00100000 name=zircon.elf
-[00000.817] 04704.04716> bt#00: 0xffffffff00190837
-[00000.817] 04704.04716> bt#01: 0xffffffff00163883
-[00000.817] 04704.04716> bt#02: 0xffffffff00165e58
-[00000.817] 04704.04716> bt#03: 0xffffffff0022a1d8
-[00000.817] 04704.04716> bt#04: 0xffffffff0022b759
-[00000.817] 04704.04716> bt#05: 0xffffffff00229eca
-[00000.817] 04704.04716> bt#06: 0xffffffff0022b759
-[00000.817] 04704.04716> bt#07: 0xffffffff00222787
-[00000.817] 04704.04716> bt#08: 0xffffffff00211f0c
-[00000.817] 04704.04716> bt#09: 0xffffffff0021d9d3
-[00000.817] 04704.04716> bt#10: 0xffffffff0019a059
-[00000.817] 04704.04716> bt#11: 0xffffffff0019ab8b
-[00000.817] 04704.04716> bt#12: 0xffffffff001a9448
-[00000.817] 04704.04716> bt#13: 0xffffffff0013f503
-[00000.817] 04704.04716> bt#14: 0xffffffff001af8be
-[00000.817] 04704.04716> bt#15: 0xffffffff001995e3
-[00000.817] 04704.04716> bt#16: end
-[00000.817] 04704.04716>
+[00002.668] 01032:01039> ZIRCON KERNEL OOPS
+[00002.668] 01032:01039> Lock validation failed for thread 0xffff000001e53598 pid 1032 tid 1039 (userboot:userboot):
+[00002.668] 01032:01039> Reason: Out Of Order
+[00002.668] 01032:01039> Bad lock: name=lockdep::LockClass<SoloDispatcher<ThreadDispatcher, 316111>, Mutex, 282, (lockdep::LockFlags)0> order=0
+[00002.668] 01032:01039> Conflict: name=lockdep::LockClass<SoloDispatcher<ProcessDispatcher, 447439>, Mutex, 282, (lockdep::LockFlags)0> order=0
+[00002.668] 01032:01039> {{{module:0:kernel:elf:0bf16acb54de1ceef7ffb6ee4449c6aafc0ab392}}}
+[00002.668] 01032:01039> {{{mmap:0xffffffff10000000:0x1ae1f0:load:0:rx:0xffffffff00000000}}}
+[00002.668] 01032:01039> {{{mmap:0xffffffff101af000:0x49000:load:0:r:0xffffffff001af000}}}
+[00002.668] 01032:01039> {{{mmap:0xffffffff101f8000:0x1dc8:load:0:rw:0xffffffff001f8000}}}
+[00002.668] 01032:01039> {{{mmap:0xffffffff10200000:0x76000:load:0:rw:0xffffffff00200000}}}
+[00002.668] 01032:01039> {{{bt:0:0xffffffff10088574}}}
+[00002.668] 01032:01039> {{{bt:1:0xffffffff1008f324}}}
+[00002.668] 01032:01039> {{{bt:2:0xffffffff10162860}}}
+[00002.668] 01032:01039> {{{bt:3:0xffffffff101711e0}}}
+[00002.668] 01032:01039> {{{bt:4:0xffffffff100edae0}}}
 ```
 
-Although this is reported as a panic (required wording for `fx symbolize` to
-recognize the kernel stack trace) the error is informational and non-fatal. The
-first line identifies the thread and process where the kernel lock violation
-occurred. The next line identifies the type of violation. The next two lines
-identify which locks were found to be inconsistent with previous observations;
-the "Bad lock" is the lock that is about to be acquired, while "Conflict" is
-a lock that is already held by the current context and is the point of
-inconsistency with the lock that is about to be acquired. All of the lines
-following this are part of the stack trace leading up to the bad lock.
+The error is informational and non-fatal. The first line identifies the thread
+and process where the kernel lock violation occurred. The next line identifies
+the type of violation. The next two lines identify which locks were found to be
+inconsistent with previous observations: the "Bad lock" is the lock that is
+about to be acquired, while "Conflict" is a lock that is already held by the
+current context and is the point of inconsistency with the lock that is about to
+be acquired. All of the lines following this are part of the stack trace leading
+up to the bad lock.
 
 ### Multi-Lock Cycles
 
