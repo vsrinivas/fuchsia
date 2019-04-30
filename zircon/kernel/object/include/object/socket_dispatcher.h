@@ -34,8 +34,8 @@ public:
         kPeek
     };
 
-    static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
-                              fbl::RefPtr<Dispatcher>* dispatcher1, zx_rights_t* rights);
+    static zx_status_t Create(uint32_t flags, KernelHandle<SocketDispatcher>* handle0,
+                              KernelHandle<SocketDispatcher>* handle1, zx_rights_t* rights);
 
     ~SocketDispatcher() final;
 
