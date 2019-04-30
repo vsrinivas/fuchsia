@@ -32,9 +32,7 @@ struct TypeConverter<fuchsia::modular::AppConfig,
     fuchsia::modular::AppConfig app_config;
     app_config.url = config.url().c_str();
 
-    if (config.args().empty()) {
-      app_config.args = fidl::VectorPtr<std::string>();
-    } else {
+    if (config.has_args()) {
       app_config.args = fidl::To<fidl::VectorPtr<std::string>>(config.args());
     }
 
