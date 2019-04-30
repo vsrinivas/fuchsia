@@ -16,6 +16,7 @@ use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info};
 
+mod configuration;
 mod http_request;
 mod install_plan;
 
@@ -101,6 +102,11 @@ fn main() -> Result<(), Error> {
 
     executor.run_singlethreaded(
         async {
+            let apps = configuration::get_apps();
+            info!("Omaha apps: {:?}", apps);
+            let config = configuration::get_config();
+            info!("Update config: {:?}", config);
+
             let mut fs = ServiceFs::new_local();
             fs.dir("public")
                 .add_fidl_service(IncomingServices::Manager)

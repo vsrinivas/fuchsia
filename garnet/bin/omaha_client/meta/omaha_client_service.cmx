@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "build-info",
             "root-ssl-certificates"
         ],
         "services": [
