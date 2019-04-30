@@ -135,6 +135,8 @@ using SourceTestTypes = ::testing::Types<SourceTestFidl, SourceTestVmo>;
 TYPED_TEST_SUITE(SourceTest, SourceTestTypes);
 
 TYPED_TEST(SourceTest, MakeDefault) {
+  // TODO(FLK-186): Reenable this test.
+  GTEST_SKIP();
   auto result = this->MakeFromPath(this->RootPath);
   ASSERT_TRUE(result.is_ok());
   auto source = result.take_value();
@@ -142,6 +144,8 @@ TYPED_TEST(SourceTest, MakeDefault) {
 }
 
 TYPED_TEST(SourceTest, MakeDepth0) {
+  // TODO(FLK-186): Reenable this test.
+  GTEST_SKIP();
   auto result = this->MakeFromPath(this->RootPath, 0);
   ASSERT_TRUE(result.is_ok());
 
@@ -151,6 +155,8 @@ TYPED_TEST(SourceTest, MakeDepth0) {
 }
 
 TYPED_TEST(SourceTest, MakeDepth1) {
+  // TODO(FLK-186): Reenable this test.
+  GTEST_SKIP();
   auto result = this->MakeFromPath(this->RootPath, 1);
   ASSERT_TRUE(result.is_ok());
 
@@ -161,6 +167,8 @@ TYPED_TEST(SourceTest, MakeDepth1) {
 }
 
 TYPED_TEST(SourceTest, MakeWithPath) {
+  // TODO(FLK-186): Reenable this test.
+  GTEST_SKIP();
   auto result = this->MakeFromPath(fxl::Concatenate({this->RootPath, "#test"}));
   ASSERT_TRUE(result.is_ok());
 
@@ -171,6 +179,8 @@ TYPED_TEST(SourceTest, MakeWithPath) {
 }
 
 TYPED_TEST(SourceTest, MakeError) {
+  // TODO(FLK-186): Reenable this test.
+  GTEST_SKIP();
   auto result = this->MakeFromPath(this->RootPath);
   ASSERT_TRUE(result.is_ok());
   result = this->MakeFromPath(
