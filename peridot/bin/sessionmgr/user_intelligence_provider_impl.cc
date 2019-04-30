@@ -18,8 +18,6 @@ namespace modular {
 
 namespace {
 
-constexpr char kUsageLogUrl[] =
-    "fuchsia-pkg://fuchsia.com/usage_log#meta/usage_log.cmx";
 constexpr char kKronkUrl[] = "kronk";
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit =
     {3, zx::sec(45)};
@@ -266,21 +264,6 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
           fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request) {
         suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
-
-  if (url == kUsageLogUrl) {
-    service_names.push_back(fuchsia::modular::ContextDebug::Name_);
-    agent_host->AddService<fuchsia::modular::ContextDebug>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) {
-          context_engine_->GetContextDebug(std::move(request));
-        });
-
-    service_names.push_back(fuchsia::modular::SuggestionDebug::Name_);
-    agent_host->AddService<fuchsia::modular::SuggestionDebug>(
-        [this](
-            fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
-          suggestion_services_.ConnectToService(std::move(request));
-        });
-  }
 
   if (session_agents_.find(url) != session_agents_.end()) {
     // All services added below should be exclusive to session agents.
