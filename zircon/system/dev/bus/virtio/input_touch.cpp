@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "input.h"
+#include "input_touch.h"
 
 #include <ddk/debug.h>
+#include <ddk/protocol/hidbus.h>
 #include <fbl/algorithm.h>
-#include <virtio/input.h>
-#include <zircon/status.h>
 
 #include "trace.h"
 

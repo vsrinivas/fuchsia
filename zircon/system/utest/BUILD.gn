@@ -173,6 +173,7 @@ if (current_cpu != "") {
       "vdso",
       "vdso-base",
       "vdso-variant",
+      "virtio",
       "virtual_camera",
       "vmo",
       "zbi",

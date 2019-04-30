@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 #pragma once
 
-#include <stdlib.h>
+#include <virtio/input.h>
+#include <zircon/types.h>
 
 namespace virtio {
 

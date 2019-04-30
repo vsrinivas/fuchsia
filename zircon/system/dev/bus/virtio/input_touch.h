@@ -7,7 +7,6 @@
 
 #include <hid/paradise.h>
 
-
 namespace virtio {
 
 // The HidTouch class translates virtio touchscreen events into HID touchscreen
