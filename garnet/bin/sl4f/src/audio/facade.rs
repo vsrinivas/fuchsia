@@ -131,17 +131,25 @@ impl OutputWorker {
             if (ring_position as u64) < self.next_read {
                 // Wrap-around case, read through the end.
                 let mut data = vec![0u8; (self.work_space - self.next_read) as usize];
+                let overwrite1 = vec![1u8; (self.work_space - self.next_read) as usize];
                 vmo.read(&mut data, self.next_read)?;
+                vmo.write(&overwrite1, self.next_read)?;
                 self.extracted_data.append(&mut data);
 
                 // Read remaining data.
                 let mut data = vec![0u8; ring_position as usize];
+                let overwrite2 = vec![1u8; ring_position as usize];
                 vmo.read(&mut data, 0)?;
+                vmo.write(&overwrite2, 0)?;
+
                 self.extracted_data.append(&mut data);
             } else {
                 // Normal case, just read all the bytes.
                 let mut data = vec![0u8; ((ring_position as u64) - self.next_read) as usize];
+                let overwrite = vec![1u8; ((ring_position as u64) - self.next_read) as usize];
                 vmo.read(&mut data, self.next_read)?;
+                vmo.write(&overwrite, self.next_read)?;
+
                 self.extracted_data.append(&mut data);
             }
         }
