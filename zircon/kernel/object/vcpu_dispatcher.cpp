@@ -19,7 +19,7 @@ KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create")
 KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy")
 
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
-                                   fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
+                                   KernelHandle<VcpuDispatcher>* handle, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
 
     ktl::unique_ptr<Vcpu> vcpu;
@@ -28,12 +28,13 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
         return status;
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, ktl::move(vcpu));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) VcpuDispatcher(guest_dispatcher,
+                                                                   ktl::move(vcpu))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <zircon/rights.h>
 
 class GuestDispatcher;
@@ -18,7 +19,7 @@ typedef struct zx_port_packet zx_port_packet_t;
 class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VCPU_RIGHTS> {
 public:
     static zx_status_t Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
-                              fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
+                              KernelHandle<VcpuDispatcher>* handle, zx_rights_t* rights);
     ~VcpuDispatcher();
 
     zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_VCPU; }

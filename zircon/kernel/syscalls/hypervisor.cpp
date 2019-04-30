@@ -75,13 +75,13 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<VcpuDispatcher> handle;
     zx_rights_t rights;
-    status = VcpuDispatcher::Create(guest, entry, &dispatcher, &rights);
+    status = VcpuDispatcher::Create(guest, entry, &handle, &rights);
     if (status != ZX_OK)
         return status;
 
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_vcpu_resume
