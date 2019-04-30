@@ -1157,6 +1157,24 @@ bool Libraries::Lookup(const std::vector<std::string_view>& library_name,
     return true;
 }
 
+std::set<std::vector<std::string_view>> Libraries::Unused(const Library* target_library) const {
+    std::set<std::vector<std::string_view>> unused;
+    for (auto& name_library : all_libraries_)
+        unused.insert(name_library.first);
+    unused.erase(target_library->name());
+    std::set<const Library*> worklist = {target_library};
+    while (worklist.size() != 0) {
+        auto it = worklist.begin();
+        auto next = *it;
+        worklist.erase(it);
+        for (const auto dependency : next->dependencies()) {
+            unused.erase(dependency->name());
+            worklist.insert(dependency);
+        }
+    }
+    return unused;
+}
+
 size_t EditDistance(const std::string& sequence1, const std::string& sequence2) {
     size_t s1_length = sequence1.length();
     size_t s2_length = sequence2.length();

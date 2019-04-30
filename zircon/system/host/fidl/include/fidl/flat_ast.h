@@ -1061,6 +1061,8 @@ public:
     const AttributeSchema* RetrieveAttributeSchema(ErrorReporter* error_reporter,
                                                    const raw::Attribute& attribute) const;
 
+    std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
+
 private:
     std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
     std::map<std::string, AttributeSchema> attribute_schemas_;

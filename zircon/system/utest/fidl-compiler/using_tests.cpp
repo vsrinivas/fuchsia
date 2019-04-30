@@ -6,6 +6,7 @@
 
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
+#include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 
@@ -237,6 +238,25 @@ struct Foo {
     END_TEST;
 }
 
+bool invalid_too_many_provided_libraries() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+
+    TestLibrary dependency("notused.fidl", "library not.used;", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", "library example;", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    auto unused = shared.all_libraries.Unused(library.library());
+    ASSERT_EQ(1, unused.size());
+    ASSERT_STR_EQ("not.used", fidl::NameLibrary(*unused.begin()).c_str());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(using_tests)
@@ -248,4 +268,5 @@ RUN_TEST(invalid_missing_using)
 RUN_TEST(invalid_unknown_using)
 RUN_TEST(invalid_duplicate_using)
 RUN_TEST(invalid_unused_using)
+RUN_TEST(invalid_too_many_provided_libraries)
 END_TEST_CASE(using_tests)

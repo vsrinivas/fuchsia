@@ -378,8 +378,28 @@ int compile(fidl::ErrorReporter* error_reporter,
                  fidl::NameLibrary(name).data());
         }
     }
-    if (final_library == nullptr) {
+    if (!final_library) {
         Fail("No library was produced.\n");
+    }
+    auto unused_libraries_names = all_libraries.Unused(final_library);
+    // Because the sources of library zx are unconditionally included, we need
+    // to check that there are more than one unused libraries.
+    if (unused_libraries_names.size() > 1) {
+        std::string message = "Unused libraries provided via --files: ";
+        bool first = true;
+        for (const auto& name : unused_libraries_names) {
+            if (first) {
+                first = false;
+            } else {
+                message.append(", ");
+            }
+            message.append(fidl::NameLibrary(name));
+        }
+        error_reporter->ReportWarning(nullptr /* location */, message);
+        // TODO(FIDL-600): Turn this into an actual failure, once all builds
+        // have been cleaned up.
+        // message.append("\n");
+        // Fail(message.data());
     }
 
     // Verify that the produced library's name matches the expected name.
