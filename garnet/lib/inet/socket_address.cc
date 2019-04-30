@@ -4,9 +4,9 @@
 
 #include "garnet/lib/inet/socket_address.h"
 
-#include <sstream>
-
 #include <endian.h>
+
+#include <sstream>
 
 namespace inet {
 
@@ -108,6 +108,12 @@ SocketAddress::SocketAddress(const sockaddr_storage& addr) {
 SocketAddress::SocketAddress(const fuchsia::netstack::SocketAddress* addr)
     : SocketAddress(IpAddress(&addr->addr), IpPort::From_uint16_t(addr->port)) {
   FXL_DCHECK(addr != nullptr);
+}
+
+SocketAddress::SocketAddress(const fuchsia::net::Endpoint* endpoint)
+    : SocketAddress(IpAddress(&endpoint->addr),
+                    IpPort::From_uint16_t(endpoint->port)) {
+  FXL_DCHECK(endpoint != nullptr);
 }
 
 std::string SocketAddress::ToString() const {

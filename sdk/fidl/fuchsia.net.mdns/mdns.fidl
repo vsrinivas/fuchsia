@@ -119,9 +119,9 @@ struct ServiceInstance {
     /// The name of the service instance.
     instance_name instance;
 
-    /// Endpoint addresses for the service. If two addresses are supplied, one
-    /// will be a V4 address and the other will be a V6 address.
-    vector<fuchsia.net.Endpoint>:2 addresses;
+    /// Endpoints for the service. If two endpoints are supplied, one will be a
+    /// V4 and the other will be a V6.
+    vector<fuchsia.net.Endpoint>:2 endpoints;
 
     /// Text strings describing the instance.
     vector<txt_string> text;

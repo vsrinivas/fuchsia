@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
 #define GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
 
-#include <fuchsia/mdns/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -30,7 +30,7 @@
 namespace netconnector {
 
 class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
-                         public fuchsia::mdns::ServiceSubscriber {
+                         public fuchsia::net::mdns::ServiceSubscriber {
  public:
   NetConnectorImpl(NetConnectorParams* params, fit::closure quit_callback);
 
@@ -81,15 +81,15 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
 
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
-  // fuchsia::mdns::ServiceSubscriber implementation.
-  void InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
-                          InstanceDiscoveredCallback callback) override;
+  // fuchsia::net::mdns::ServiceSubscriber implementation.
+  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
+                            OnInstanceDiscoveredCallback callback) override;
 
-  void InstanceChanged(fuchsia::mdns::ServiceInstance instance,
-                       InstanceChangedCallback callback) override;
+  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance instance,
+                         OnInstanceChangedCallback callback) override;
 
-  void InstanceLost(std::string service_name, std::string instance_name,
-                    InstanceLostCallback callback) override;
+  void OnInstanceLost(std::string service_name, std::string instance_name,
+                      OnInstanceLostCallback callback) override;
 
   NetConnectorParams* params_;
   fit::closure quit_callback_;
@@ -106,8 +106,8 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
   std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
       service_agents_;
 
-  fuchsia::mdns::ControllerPtr mdns_controller_;
-  fidl::Binding<fuchsia::mdns::ServiceSubscriber> mdns_subscriber_binding_;
+  fuchsia::net::mdns::SubscriberPtr mdns_subscriber_;
+  fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> mdns_subscriber_binding_;
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 

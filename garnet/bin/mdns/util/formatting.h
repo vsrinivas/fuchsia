@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_MDNS_UTIL_FORMATTING_H_
 #define GARNET_BIN_MDNS_UTIL_FORMATTING_H_
 
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
+
 #include <iomanip>
 #include <iostream>
-
-#include <fuchsia/mdns/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 
 #include "lib/fostr/indent.h"
 
@@ -30,9 +30,14 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::mdns::ServiceInstance& value);
+                         const fuchsia::net::mdns::ServiceInstance& value);
 std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::netstack::SocketAddress& value);
+                         const fuchsia::net::Ipv4Address& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::net::Ipv6Address& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::net::IpAddress& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Endpoint& value);
 
 }  // namespace mdns
 

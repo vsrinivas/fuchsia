@@ -334,6 +334,18 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
   }
 }
 
+IpAddress::IpAddress(const fuchsia::net::Ipv4Address* addr) {
+  FXL_DCHECK(addr != nullptr);
+  family_ = AF_INET;
+  memcpy(&v4_, addr->addr.data(), 4);
+}
+
+IpAddress::IpAddress(const fuchsia::net::Ipv6Address* addr) {
+  FXL_DCHECK(addr != nullptr);
+  family_ = AF_INET6;
+  memcpy(&v6_, addr->addr.data(), 16);
+}
+
 IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
   FXL_DCHECK(addr != nullptr);
   switch (addr->Which()) {

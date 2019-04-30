@@ -45,8 +45,6 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
     // Start the listener.
     fuchsia::netconnector::NetConnectorSyncPtr net_connector;
     component_context_->svc()->Connect(net_connector.NewRequest());
-    fuchsia::mdns::ControllerPtr mdns_service =
-        component_context_->svc()->Connect<fuchsia::mdns::Controller>();
 
     if (params_->show_devices()) {
       uint64_t version;
@@ -106,12 +104,13 @@ void NetConnectorImpl::StartListener() {
     AddServiceAgent(ServiceAgent::Create(std::move(fd), this));
   });
 
-  mdns_controller_ =
-      component_context_->svc()->Connect<fuchsia::mdns::Controller>();
+  mdns_subscriber_ =
+      component_context_->svc()->Connect<fuchsia::net::mdns::Subscriber>();
 
   host_name_ = GetHostName();
 
-  fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
+  fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber>
+      subscriber_handle;
 
   mdns_subscriber_binding_.Bind(subscriber_handle.NewRequest());
   mdns_subscriber_binding_.set_error_handler([this](zx_status_t status) {
@@ -119,7 +118,7 @@ void NetConnectorImpl::StartListener() {
     mdns_subscriber_binding_.Unbind();
   });
 
-  mdns_controller_->SubscribeToService(kFuchsiaServiceName,
+  mdns_subscriber_->SubscribeToService(kFuchsiaServiceName,
                                        std::move(subscriber_handle));
 }
 
@@ -189,39 +188,31 @@ void NetConnectorImpl::AddServiceAgent(
   service_agents_.emplace(raw_ptr, std::move(service_agent));
 }
 
-void NetConnectorImpl::InstanceDiscovered(
-    fuchsia::mdns::ServiceInstance instance,
-    InstanceDiscoveredCallback callback) {
-  if (instance.v4_address) {
-    std::cerr << "netconnector: Device '" << instance.instance_name
-              << "' discovered at address "
-              << inet::SocketAddress(instance.v4_address.get()) << "\n";
-    params_->RegisterDevice(instance.instance_name,
-                            inet::IpAddress(&instance.v4_address->addr));
-  } else {
-    FXL_DCHECK(instance.v6_address);
-    std::cerr << "netconnector: Device '" << instance.instance_name
-              << "' discovered at address "
-              << inet::SocketAddress(instance.v6_address.get()) << "\n";
-    params_->RegisterDevice(instance.instance_name,
-                            inet::IpAddress(&instance.v6_address->addr));
-  }
+void NetConnectorImpl::OnInstanceDiscovered(
+    fuchsia::net::mdns::ServiceInstance instance,
+    OnInstanceDiscoveredCallback callback) {
+  FXL_DCHECK(!instance.endpoints.empty());
+  std::cerr << "netconnector: Device '" << instance.instance
+            << "' discovered at address "
+            << inet::IpAddress(&instance.endpoints[0].addr) << "\n";
+  params_->RegisterDevice(instance.instance,
+                          inet::IpAddress(&instance.endpoints[0].addr));
 
   device_names_publisher_.SendUpdates();
 
   callback();
 }
 
-void NetConnectorImpl::InstanceChanged(fuchsia::mdns::ServiceInstance instance,
-                                       InstanceChangedCallback callback) {
+void NetConnectorImpl::OnInstanceChanged(
+    fuchsia::net::mdns::ServiceInstance instance,
+    OnInstanceChangedCallback callback) {
   callback();
 }
 
-void NetConnectorImpl::InstanceLost(std::string service_name,
-                                    std::string instance_name,
-                                    InstanceLostCallback callback) {
-  std::cerr << "netconnector: Device '" << instance_name << "' lost\n";
-  params_->UnregisterDevice(instance_name);
+void NetConnectorImpl::OnInstanceLost(std::string service, std::string instance,
+                                      OnInstanceLostCallback callback) {
+  std::cerr << "netconnector: Device '" << instance << "' lost\n";
+  params_->UnregisterDevice(instance);
   device_names_publisher_.SendUpdates();
   callback();
 }

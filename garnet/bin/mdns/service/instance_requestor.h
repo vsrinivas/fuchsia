@@ -47,6 +47,8 @@ class InstanceRequestor : public MdnsAgent {
     std::string target_;
     inet::IpPort port_;
     std::vector<std::string> text_;
+    uint16_t srv_priority_ = 0;
+    uint16_t srv_weight_ = 0;
     bool new_ = true;
     bool dirty_ = true;
   };

@@ -482,15 +482,18 @@ void Mdns::PostTask() {
 
 // static
 std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
-    inet::IpPort port, const std::vector<std::string>& text) {
+    inet::IpPort port, const std::vector<std::string>& text,
+    uint16_t srv_priority, uint16_t srv_weight) {
   auto publication = std::make_unique<Publication>();
   publication->port_ = port;
   publication->text_ = text;
+  publication->srv_priority_ = srv_priority;
+  publication->srv_weight_ = srv_weight;
   return publication;
 }
 
 std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() {
-  auto result = Create(port_, text_);
+  auto result = Create(port_, text_, srv_priority_, srv_weight_);
   result->ptr_ttl_seconds_ = ptr_ttl_seconds_;
   result->srv_ttl_seconds_ = srv_ttl_seconds_;
   result->txt_ttl_seconds_ = txt_ttl_seconds_;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MDNS_TOOL_MDNS_PARAMS_H_
-#define GARNET_BIN_MDNS_TOOL_MDNS_PARAMS_H_
+#ifndef GARNET_BIN_MDNS_UTIL_MDNS_PARAMS_H_
+#define GARNET_BIN_MDNS_UTIL_MDNS_PARAMS_H_
 
 #include <string>
 
@@ -15,12 +15,8 @@ namespace mdns {
 class MdnsParams {
  public:
   enum class CommandVerb {
-    kVerbose,
-    kQuiet,
     kResolve,
     kSubscribe,
-    kPublish,
-    kUnpublish,
     kRespond,
   };
 
@@ -60,4 +56,4 @@ class MdnsParams {
 
 }  // namespace mdns
 
-#endif  // GARNET_BIN_MDNS_TOOL_MDNS_PARAMS_H_
+#endif  // GARNET_BIN_MDNS_UTIL_MDNS_PARAMS_H_

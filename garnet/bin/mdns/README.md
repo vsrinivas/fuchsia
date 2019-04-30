@@ -1,6 +1,6 @@
 # mDNS Service and Utility
 
-This directory contains the implementation of the fuchsia.mdns service and
+This directory contains the implementation of the fuchsia.net.mdns service and
 mdns-util, a developer utility for issuing mDNS-related commands from a console.
 
 ## Service

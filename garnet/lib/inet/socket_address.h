@@ -5,16 +5,16 @@
 #ifndef GARNET_LIB_INET_SOCKET_ADDRESS_H_
 #define GARNET_LIB_INET_SOCKET_ADDRESS_H_
 
-#include <ostream>
-
 #include <arpa/inet.h>
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <sys/socket.h>
+
+#include <ostream>
 
 #include "garnet/lib/inet/ip_address.h"
 #include "garnet/lib/inet/ip_port.h"
 #include "src/lib/fxl/logging.h"
-
-#include <fuchsia/netstack/cpp/fidl.h>
 
 namespace inet {
 
@@ -54,8 +54,11 @@ class SocketAddress {
   // Creates a socket address from an sockaddr_storage struct.
   explicit SocketAddress(const sockaddr_storage& addr);
 
-  // Creates a socket address from a SocketAddress struct.
+  // Creates a socket address from a fuchsia.netstack SocketAddress struct.
   explicit SocketAddress(const fuchsia::netstack::SocketAddress* addr);
+
+  // Creates a socket address from a fuchsia.net Endpoint struct.
+  explicit SocketAddress(const fuchsia::net::Endpoint* endpoint);
 
   bool is_valid() const { return family() != AF_UNSPEC; }
 

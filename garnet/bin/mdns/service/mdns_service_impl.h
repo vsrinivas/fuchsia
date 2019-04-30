@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 
-#include <fuchsia/mdns/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -19,41 +19,37 @@
 
 namespace mdns {
 
-class MdnsServiceImpl : public fuchsia::mdns::Controller {
+class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
+                        public fuchsia::net::mdns::Subscriber,
+                        public fuchsia::net::mdns::Publisher {
  public:
   MdnsServiceImpl(sys::ComponentContext* component_context);
 
   ~MdnsServiceImpl() override;
 
-  // Controller implementation.
+  // fuchsia::net::mdns::Resolver implementation.
   void ResolveHostName(std::string host_name, int64_t timeout_ns,
                        ResolveHostNameCallback callback) override;
 
+  // fuchsia::net::mdns::Subscriber implementation.
   void SubscribeToService(
-      std::string service_name,
-      fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber)
+      std::string service,
+      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber)
       override;
 
+  // fuchsia::net::mdns::Publisher implementation.
   void PublishServiceInstance(
-      std::string service_name, std::string instance_name, bool perform_probe,
-      fidl::InterfaceHandle<fuchsia::mdns::Responder> responder_handle,
+      std::string service, std::string instance, bool perform_probe,
+      fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder>
+          responder_handle,
       PublishServiceInstanceCallback callback) override;
-
-  void DEPRECATEDPublishServiceInstance(
-      std::string service_name, std::string instance_name, uint16_t port,
-      std::vector<std::string> text, bool perform_probe,
-      PublishServiceInstanceCallback callback) override;
-
-  void DEPRECATEDUnpublishServiceInstance(std::string service_name,
-                                          std::string instance_name) override;
-
-  void DEPRECATEDSetVerbose(bool value) override;
 
  private:
   class Subscriber : public Mdns::Subscriber {
    public:
-    Subscriber(fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> handle,
-               fit::closure deleter);
+    Subscriber(
+        fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle,
+        fit::closure deleter);
 
     ~Subscriber() override;
 
@@ -62,13 +58,16 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
                             const std::string& instance,
                             const inet::SocketAddress& v4_address,
                             const inet::SocketAddress& v6_address,
-                            const std::vector<std::string>& text) override;
+                            const std::vector<std::string>& text,
+                            uint16_t srv_priority,
+                            uint16_t srv_weight) override;
 
     void InstanceChanged(const std::string& service,
                          const std::string& instance,
                          const inet::SocketAddress& v4_address,
                          const inet::SocketAddress& v6_address,
-                         const std::vector<std::string>& text) override;
+                         const std::vector<std::string>& text,
+                         uint16_t srv_priority, uint16_t srv_weight) override;
 
     void InstanceLost(const std::string& service,
                       const std::string& instance) override;
@@ -84,7 +83,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
 
     struct Entry {
       EntryType type;
-      fuchsia::mdns::ServiceInstance service_instance;
+      fuchsia::net::mdns::ServiceInstance service_instance;
     };
 
     // Sends the entry at the head of the queue, if there is one and if
@@ -94,7 +93,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
     // Decrements |pipeline_depth_| and calls |MaybeSendNextEntry|.
     void ReplyReceived();
 
-    fuchsia::mdns::ServiceSubscriberPtr client_;
+    fuchsia::net::mdns::ServiceSubscriberPtr client_;
     std::queue<Entry> entries_;
     size_t pipeline_depth_ = 0;
 
@@ -132,7 +131,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Publisher for AddResponder.
   class ResponderPublisher : public Mdns::Publisher {
    public:
-    ResponderPublisher(fuchsia::mdns::ResponderPtr responder,
+    ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
                        PublishServiceInstanceCallback callback,
                        fit::closure deleter);
 
@@ -143,7 +142,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
                         fit::function<void(std::unique_ptr<Mdns::Publication>)>
                             callback) override;
 
-    fuchsia::mdns::ResponderPtr responder_;
+    fuchsia::net::mdns::PublicationResponderPtr responder_;
     PublishServiceInstanceCallback callback_;
 
     // Disallow copy, assign and move.
@@ -153,11 +152,49 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
     ResponderPublisher& operator=(ResponderPublisher&&) = delete;
   };
 
+  // Like |fidl::BindingSet| but with the ability to pend requests until ready.
+  template <typename TProtocol>
+  class BindingSet {
+   public:
+    BindingSet(TProtocol* impl, const std::string& label)
+        : impl_(impl), label_(label) {
+      FXL_DCHECK(impl_);
+      bindings_.set_empty_set_handler(
+          [this]() { FXL_LOG(INFO) << "BindingSet " << label_ << ": empty"; });
+    }
+
+    void OnBindRequest(fidl::InterfaceRequest<TProtocol> request) {
+      FXL_DCHECK(request);
+      if (ready_) {
+        FXL_LOG(INFO) << "BindingSet " << label_ << ": OnBindRequest, binding";
+        bindings_.AddBinding(impl_, std::move(request));
+      } else {
+        FXL_LOG(INFO) << "BindingSet " << label_ << ": OnBindRequest, pending";
+        pending_requests_.push_back(std::move(request));
+      }
+    }
+
+    void OnReady() {
+      FXL_LOG(INFO) << "BindingSet " << label_ << ": OnReady";
+      ready_ = true;
+      for (auto& request : pending_requests_) {
+        FXL_LOG(INFO) << "BindingSet " << label_ << ": OnReady, binding";
+        bindings_.AddBinding(impl_, std::move(request));
+      }
+
+      pending_requests_.clear();
+    }
+
+   private:
+    TProtocol* impl_;
+    std::string label_;
+    bool ready_ = false;
+    std::vector<fidl::InterfaceRequest<TProtocol>> pending_requests_;
+    fidl::BindingSet<TProtocol> bindings_;
+  };
+
   // Starts the service.
   void Start();
-
-  // Handles a bind request.
-  void OnBindRequest(fidl::InterfaceRequest<fuchsia::mdns::Controller> request);
 
   // Handles the ready callback from |mdns_|.
   void OnReady();
@@ -172,9 +209,9 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   sys::ComponentContext* component_context_;
   Config config_;
   bool ready_ = false;
-  std::vector<fidl::InterfaceRequest<fuchsia::mdns::Controller>>
-      pending_binding_requests_;
-  fidl::BindingSet<fuchsia::mdns::Controller> bindings_;
+  BindingSet<fuchsia::net::mdns::Resolver> resolver_bindings_;
+  BindingSet<fuchsia::net::mdns::Subscriber> subscriber_bindings_;
+  BindingSet<fuchsia::net::mdns::Publisher> publisher_bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;
   std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;

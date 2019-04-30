@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MDNS_UTIL_MDNS_IMPL_H_
 #define GARNET_BIN_MDNS_UTIL_MDNS_IMPL_H_
 
-#include <fuchsia/mdns/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
@@ -15,8 +15,8 @@
 
 namespace mdns {
 
-class MdnsImpl : public fuchsia::mdns::Responder,
-                 public fuchsia::mdns::ServiceSubscriber {
+class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
+                 public fuchsia::net::mdns::ServiceSubscriber {
  public:
   MdnsImpl(sys::ComponentContext* component_context, MdnsParams* params,
            fit::closure quit_callback);
@@ -32,38 +32,40 @@ class MdnsImpl : public fuchsia::mdns::Responder,
 
   void Subscribe(const std::string& service_name);
 
-  void Publish(const std::string& service_name,
-               const std::string& instance_name, uint16_t port,
-               const std::vector<std::string>& text);
-
-  void Unpublish(const std::string& service_name,
-                 const std::string& instance_name);
-
   void Respond(const std::string& service_name,
                const std::string& instance_name, uint16_t port,
                const std::vector<std::string>& announce,
                const std::vector<std::string>& text);
 
-  void UpdateStatus(fuchsia::mdns::Result result);
+  void EnsureResolver();
 
-  // fuchsia::mdns::Responder implementation.
-  void GetPublication(bool query, fidl::StringPtr subtype,
-                      GetPublicationCallback callback) override;
+  void EnsureSubscriber();
 
-  // fuchsia::mdns::ServiceSubscriber implementation.
-  void InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
-                          InstanceDiscoveredCallback callback) override;
+  void EnsurePublisher();
 
-  void InstanceChanged(fuchsia::mdns::ServiceInstance instance,
-                       InstanceChangedCallback callback) override;
+  void Quit();
 
-  void InstanceLost(std::string service_name, std::string instance_name,
-                    InstanceLostCallback callback) override;
+  // fuchsia::net::mdns::PublicationResponder implementation.
+  void OnPublication(bool query, fidl::StringPtr subtype,
+                     OnPublicationCallback callback) override;
 
+  // fuchsia::net::mdns::ServiceSubscriber implementation.
+  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
+                            OnInstanceDiscoveredCallback callback) override;
+
+  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance instance,
+                         OnInstanceChangedCallback callback) override;
+
+  void OnInstanceLost(std::string service_name, std::string instance_name,
+                      OnInstanceLostCallback callback) override;
+
+  sys::ComponentContext* component_context_;
   fit::closure quit_callback_;
-  fuchsia::mdns::ControllerPtr controller_;
-  fidl::Binding<fuchsia::mdns::Responder> responder_binding_;
-  fidl::Binding<fuchsia::mdns::ServiceSubscriber> subscriber_binding_;
+  fuchsia::net::mdns::ResolverPtr resolver_;
+  fuchsia::net::mdns::SubscriberPtr subscriber_;
+  fuchsia::net::mdns::PublisherPtr publisher_;
+  fidl::Binding<fuchsia::net::mdns::PublicationResponder> responder_binding_;
+  fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> subscriber_binding_;
   fsl::FDWaiter fd_waiter_;
 
   uint16_t publication_port_;

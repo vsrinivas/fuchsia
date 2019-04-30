@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.mdns.MdnsService",
-            "fuchsia.mdns.Controller",
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
             "fuchsia.net.SocketProvider"
         ]
     }

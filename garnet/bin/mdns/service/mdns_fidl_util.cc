@@ -14,24 +14,24 @@ namespace mdns {
 const std::string MdnsFidlUtil::kFuchsiaServiceName = "_fuchsia._tcp.";
 
 // static
-fuchsia::mdns::ServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
-    const std::string& service_name, const std::string& instance_name,
+fuchsia::net::mdns::ServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
+    const std::string& service, const std::string& instance,
     const inet::SocketAddress& v4_address,
     const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
-  fuchsia::mdns::ServiceInstancePtr service_instance =
-      fuchsia::mdns::ServiceInstance::New();
+  fuchsia::net::mdns::ServiceInstancePtr service_instance =
+      fuchsia::net::mdns::ServiceInstance::New();
 
-  service_instance->service_name = service_name;
-  service_instance->instance_name = instance_name;
+  service_instance->service = service;
+  service_instance->instance = instance;
   service_instance->text = fidl::To<fidl::VectorPtr<std::string>>(text);
 
   if (v4_address.is_valid()) {
-    service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
+    service_instance->endpoints.push_back(CreateEndpointV4(v4_address));
   }
 
   if (v6_address.is_valid()) {
-    service_instance->v6_address = CreateSocketAddressIPv6(v6_address);
+    service_instance->endpoints.push_back(CreateEndpointV6(v6_address));
   }
 
   return service_instance;
@@ -39,97 +39,73 @@ fuchsia::mdns::ServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 
 // static
 void MdnsFidlUtil::UpdateServiceInstance(
-    const fuchsia::mdns::ServiceInstancePtr& service_instance,
+    const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
     const inet::SocketAddress& v4_address,
     const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   service_instance->text = fidl::To<fidl::VectorPtr<std::string>>(text);
 
+  service_instance->endpoints.clear();
+
   if (v4_address.is_valid()) {
-    service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
-  } else {
-    service_instance->v4_address.reset();
+    service_instance->endpoints.push_back(CreateEndpointV4(v4_address));
   }
 
   if (v6_address.is_valid()) {
-    service_instance->v6_address = CreateSocketAddressIPv6(v6_address);
-  } else {
-    service_instance->v6_address.reset();
+    service_instance->endpoints.push_back(CreateEndpointV6(v6_address));
   }
 }
 
 // static
-fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
+fuchsia::net::Ipv4Address MdnsFidlUtil::CreateIpv4Address(
     const inet::IpAddress& ip_address) {
-  if (!ip_address) {
-    return nullptr;
-  }
-
+  FXL_DCHECK(ip_address);
   FXL_DCHECK(ip_address.is_v4());
 
-  fuchsia::net::Ipv4Address ipv4;
-  FXL_DCHECK(ipv4.addr.size() == ip_address.byte_count());
-  std::memcpy(ipv4.addr.data(), ip_address.as_bytes(), ipv4.addr.size());
+  fuchsia::net::Ipv4Address addr;
+  FXL_DCHECK(addr.addr.size() == ip_address.byte_count());
+  std::memcpy(addr.addr.data(), ip_address.as_bytes(), addr.addr.size());
 
-  fuchsia::netstack::SocketAddressPtr result =
-      fuchsia::netstack::SocketAddress::New();
-  result->addr.set_ipv4(ipv4);
-
-  return result;
+  return addr;
 }
 
 // static
-fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
+fuchsia::net::Ipv6Address MdnsFidlUtil::CreateIpv6Address(
     const inet::IpAddress& ip_address) {
-  if (!ip_address) {
-    return nullptr;
-  }
-
+  FXL_DCHECK(ip_address);
   FXL_DCHECK(ip_address.is_v6());
 
-  fuchsia::net::Ipv6Address ipv6;
-  FXL_DCHECK(ipv6.addr.size() == ip_address.byte_count());
-  std::memcpy(ipv6.addr.data(), ip_address.as_bytes(), ipv6.addr.size());
+  fuchsia::net::Ipv6Address addr;
+  FXL_DCHECK(addr.addr.size() == ip_address.byte_count());
+  std::memcpy(addr.addr.data(), ip_address.as_bytes(), addr.addr.size());
 
-  fuchsia::netstack::SocketAddressPtr result =
-      fuchsia::netstack::SocketAddress::New();
-  result->addr.set_ipv6(ipv6);
-
-  return result;
+  return addr;
 }
 
 // static
-fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
+fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV4(
     const inet::SocketAddress& socket_address) {
-  if (!socket_address) {
-    return nullptr;
-  }
-
+  FXL_DCHECK(socket_address);
   FXL_DCHECK(socket_address.is_v4());
 
-  fuchsia::netstack::SocketAddressPtr result =
-      CreateSocketAddressIPv4(socket_address.address());
+  fuchsia::net::Endpoint endpoint;
+  endpoint.addr.set_ipv4(CreateIpv4Address(socket_address.address()));
+  endpoint.port = socket_address.port().as_uint16_t();
 
-  result->port = socket_address.port().as_uint16_t();
-
-  return result;
+  return endpoint;
 }
 
 // static
-fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
+fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV6(
     const inet::SocketAddress& socket_address) {
-  if (!socket_address) {
-    return nullptr;
-  }
-
+  FXL_DCHECK(socket_address);
   FXL_DCHECK(socket_address.is_v6());
 
-  fuchsia::netstack::SocketAddressPtr result =
-      CreateSocketAddressIPv6(socket_address.address());
+  fuchsia::net::Endpoint endpoint;
+  endpoint.addr.set_ipv6(CreateIpv6Address(socket_address.address()));
+  endpoint.port = socket_address.port().as_uint16_t();
 
-  result->port = socket_address.port().as_uint16_t();
-
-  return result;
+  return endpoint;
 }
 
 // static
@@ -160,14 +136,16 @@ inet::IpAddress MdnsFidlUtil::IpAddressFrom(
 
 // static
 std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
-    const fuchsia::mdns::PublicationPtr& publication_ptr) {
+    const fuchsia::net::mdns::PublicationPtr& publication_ptr) {
   if (!publication_ptr) {
     return nullptr;
   }
 
   auto publication = Mdns::Publication::Create(
       inet::IpPort::From_uint16_t(publication_ptr->port),
-      fidl::To<std::vector<std::string>>(publication_ptr->text));
+      fidl::To<std::vector<std::string>>(publication_ptr->text),
+      publication_ptr->srv_priority, publication_ptr->srv_weight);
+
   publication->ptr_ttl_seconds_ =
       zx::duration(publication_ptr->ptr_ttl).to_secs();
   publication->srv_ttl_seconds_ =

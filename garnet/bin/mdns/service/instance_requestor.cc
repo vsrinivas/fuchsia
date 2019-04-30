@@ -120,7 +120,8 @@ void InstanceRequestor::EndOfMessage() {
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
             inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-            instance_info.text_);
+            instance_info.text_, instance_info.srv_priority_,
+            instance_info.srv_weight_);
       }
     } else {
       for (auto subscriber : subscribers_) {
@@ -128,7 +129,8 @@ void InstanceRequestor::EndOfMessage() {
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
             inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-            instance_info.text_);
+            instance_info.text_, instance_info.srv_priority_,
+            instance_info.srv_weight_);
       }
     }
 
@@ -174,7 +176,8 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
         service_name_, instance_info.instance_name_,
         inet::SocketAddress(target_info.v4_address_, instance_info.port_),
         inet::SocketAddress(target_info.v6_address_, instance_info.port_),
-        instance_info.text_);
+        instance_info.text_, instance_info.srv_priority_,
+        instance_info.srv_weight_);
   }
 }
 
@@ -237,6 +240,16 @@ void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource,
         target_infos_by_full_name_.end()) {
       target_infos_by_full_name_.emplace(instance_info->target_, TargetInfo{});
     }
+  }
+
+  if (instance_info->srv_priority_ != resource.srv_.priority_) {
+    instance_info->srv_priority_ = resource.srv_.priority_;
+    instance_info->dirty_ = true;
+  }
+
+  if (instance_info->srv_weight_ != resource.srv_.weight_) {
+    instance_info->srv_weight_ = resource.srv_.weight_;
+    instance_info->dirty_ = true;
   }
 
   if (instance_info->port_ != resource.srv_.port_) {

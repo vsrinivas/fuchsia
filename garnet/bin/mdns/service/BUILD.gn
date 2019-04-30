@@ -104,12 +104,12 @@ source_set("source_set") {
     "//garnet/public/lib/json",
     "//garnet/public/lib/rapidjson_utils",
     "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.mdns",
-    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/fit",
   ]
 

@@ -5,9 +5,9 @@
 #include "src/connectivity/overnet/overnetstack/mdns.h"
 
 #include <fbl/ref_counted.h>
-#include <fuchsia/mdns/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
 
-#include "garnet/public/lib/fostr/fidl/fuchsia/mdns/formatting.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "src/connectivity/overnet/lib/labels/node_id.h"
 #include "src/connectivity/overnet/overnetstack/fuchsia_port.h"
 
@@ -15,26 +15,38 @@ namespace overnetstack {
 
 static const char* kServiceName = "_temp_overnet._udp.";
 
-static fuchsia::mdns::ControllerPtr Connect(
+static fuchsia::net::mdns::SubscriberPtr ConnectToSubscriber(
     sys::ComponentContext* component_context, const char* why) {
-  auto svc = component_context->svc()->Connect<fuchsia::mdns::Controller>();
+  auto svc =
+      component_context->svc()->Connect<fuchsia::net::mdns::Subscriber>();
   svc.set_error_handler([why](zx_status_t status) {
-    OVERNET_TRACE(ERROR) << why
-                         << " mdns failure: " << zx_status_get_string(status);
+    OVERNET_TRACE(ERROR) << why << " mdns subscriber failure: "
+                         << zx_status_get_string(status);
+  });
+  return svc;
+}
+
+static fuchsia::net::mdns::PublisherPtr ConnectToPublisher(
+    sys::ComponentContext* component_context, const char* why) {
+  auto svc = component_context->svc()->Connect<fuchsia::net::mdns::Publisher>();
+  svc.set_error_handler([why](zx_status_t status) {
+    OVERNET_TRACE(ERROR) << why << " mdns publisher failure: "
+                         << zx_status_get_string(status);
   });
   return svc;
 }
 
 class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
-                             public fuchsia::mdns::ServiceSubscriber {
+                             public fuchsia::net::mdns::ServiceSubscriber {
  public:
   Impl(UdpNub* nub) : nub_(nub), subscriber_binding_(this) {}
 
   void Begin(sys::ComponentContext* component_context) {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
-    auto svc = Connect(component_context, "Introducer");
-    fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
+    auto svc = ConnectToSubscriber(component_context, "Introducer");
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber>
+        subscriber_handle;
 
     subscriber_binding_.Bind(subscriber_handle.NewRequest());
     subscriber_binding_.set_error_handler([this](zx_status_t status) {
@@ -48,21 +60,20 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
  private:
   struct ServiceInstance {
     ServiceInstance(std::vector<std::string> t,
-                    std::vector<fuchsia::netstack::SocketAddress> a)
-        : text(std::move(t)), addresses(std::move(a)) {}
+                    std::vector<fuchsia::net::Endpoint> e)
+        : text(std::move(t)), endpoints(std::move(e)) {}
     std::vector<std::string> text;
-    std::vector<fuchsia::netstack::SocketAddress> addresses;
+    std::vector<fuchsia::net::Endpoint> endpoints;
   };
   using ServiceMap = std::map<overnet::NodeId, ServiceInstance>;
 
-  void HandleDiscoverOrUpdate(const fuchsia::mdns::ServiceInstance& svc,
+  void HandleDiscoverOrUpdate(const fuchsia::net::mdns::ServiceInstance& svc,
                               bool update) {
-    if (svc.service_name != kServiceName) {
-      std::cout << "Unexpected service name (ignored): " << svc.service_name
-                << "\n";
+    if (svc.service != kServiceName) {
+      std::cout << "Unexpected service name (ignored): " << svc.service << "\n";
       return;
     }
-    auto parsed_instance_name = overnet::NodeId::FromString(svc.instance_name);
+    auto parsed_instance_name = overnet::NodeId::FromString(svc.instance);
     if (parsed_instance_name.is_error()) {
       std::cout << "Failed to parse instance name: "
                 << parsed_instance_name.AsStatus() << "\n";
@@ -80,46 +91,37 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
       }
       return;
     }
-    std::vector<fuchsia::netstack::SocketAddress> addresses;
-    if (svc.v4_address) {
-      addresses.emplace_back();
-      auto result =
-          overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
+
+    std::vector<fuchsia::net::Endpoint> endpoints;
+    for (auto& endpoint : svc.endpoints) {
+      endpoints.emplace_back();
+      auto result = overnet::Status::FromZx(endpoint.Clone(&endpoints.back()));
       if (result.is_error()) {
-        std::cout << "Failed to clone v4_address: " << result << "\n";
-        addresses.pop_back();
+        std::cout << "Failed to clone address: " << result << "\n";
+        endpoints.pop_back();
       }
     }
-    if (svc.v6_address) {
-      addresses.emplace_back();
-      auto result =
-          overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
-      if (result.is_error()) {
-        std::cout << "Failed to clone v6_address: " << result << "\n";
-        addresses.pop_back();
-      }
-    }
+
     std::vector<std::string> text;
     for (const auto& line : svc.text) {
       text.push_back(line);
     }
 
     if (it == service_map_.end()) {
-      NewConnection(instance_id, addresses);
+      NewConnection(instance_id, endpoints);
       service_map_.emplace(
           std::piecewise_construct, std::forward_as_tuple(instance_id),
-          std::forward_as_tuple(std::move(text), std::move(addresses)));
-    } else if (it->second.addresses != addresses) {
-      NewConnection(instance_id, addresses);
-      it->second.addresses = std::move(addresses);
+          std::forward_as_tuple(std::move(text), std::move(endpoints)));
+    } else if (it->second.endpoints != endpoints) {
+      NewConnection(instance_id, endpoints);
+      it->second.endpoints = std::move(endpoints);
     }
   }
 
-  void NewConnection(
-      overnet::NodeId node_id,
-      const std::vector<fuchsia::netstack::SocketAddress>& addresses) {
-    for (const auto& addr : addresses) {
-      auto status = ToUdpAddr(addr).Then(
+  void NewConnection(overnet::NodeId node_id,
+                     const std::vector<fuchsia::net::Endpoint>& endpoints) {
+    for (const auto& endpoint : endpoints) {
+      auto status = ToUdpAddr(endpoint).Then(
           [node_id, nub = nub_](const overnet::IpAddr& addr) {
             std::cerr << "Initiating connection to: " << node_id << " at "
                       << addr << "\n";
@@ -133,8 +135,8 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
   }
 
   static overnet::StatusOr<overnet::IpAddr> ToUdpAddr(
-      const fuchsia::netstack::SocketAddress& sock_addr) {
-    const fuchsia::net::IpAddress& net_addr = sock_addr.addr;
+      const fuchsia::net::Endpoint& endpoint) {
+    const fuchsia::net::IpAddress& net_addr = endpoint.addr;
     overnet::IpAddr udp_addr;
     memset(&udp_addr, 0, sizeof(udp_addr));
     switch (net_addr.Which()) {
@@ -147,7 +149,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
                                  "bad ipv4 address");
         }
         udp_addr.ipv4.sin_family = AF_INET;
-        udp_addr.ipv4.sin_port = htons(sock_addr.port);
+        udp_addr.ipv4.sin_port = htons(endpoint.port);
         memcpy(&udp_addr.ipv4.sin_addr, net_addr.ipv4().addr.data(),
                sizeof(udp_addr.ipv4.sin_addr));
         return udp_addr;
@@ -157,7 +159,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
                                  "bad ipv6 address");
         }
         udp_addr.ipv6.sin6_family = AF_INET6;
-        udp_addr.ipv6.sin6_port = htons(sock_addr.port);
+        udp_addr.ipv6.sin6_port = htons(endpoint.port);
         memcpy(&udp_addr.ipv6.sin6_addr, net_addr.ipv6().addr.data(),
                sizeof(udp_addr.ipv6.sin6_addr));
         return udp_addr;
@@ -166,26 +168,26 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
                            "bad address family");
   }
 
-  // fuchsia::mdns::ServiceSubscriber implementation.
-  void InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
-                          InstanceDiscoveredCallback callback) {
+  // fuchsia::net::mdns::ServiceSubscriber implementation.
+  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
+                            OnInstanceDiscoveredCallback callback) {
     HandleDiscoverOrUpdate(instance, false);
     callback();
   }
 
-  void InstanceChanged(fuchsia::mdns::ServiceInstance instance,
-                       InstanceChangedCallback callback) {
+  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance instance,
+                         OnInstanceChangedCallback callback) {
     HandleDiscoverOrUpdate(instance, true);
     callback();
   }
 
-  void InstanceLost(std::string service_name, std::string instance_name,
-                    InstanceLostCallback callback) {
+  void OnInstanceLost(std::string service, std::string instance,
+                      OnInstanceLostCallback callback) {
     callback();
   }
 
   UdpNub* const nub_;
-  fidl::Binding<fuchsia::mdns::ServiceSubscriber> subscriber_binding_;
+  fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> subscriber_binding_;
   ServiceMap service_map_;
 };
 
@@ -201,36 +203,45 @@ overnet::Status MdnsIntroducer::Start() {
 
 MdnsIntroducer::~MdnsIntroducer() {}
 
-class MdnsAdvertisement::Impl : public fuchsia::mdns::Responder {
+class MdnsAdvertisement::Impl
+    : public fuchsia::net::mdns::PublicationResponder {
  public:
   Impl(sys::ComponentContext* component_context, UdpNub* nub)
-      : controller_(Connect(component_context, "Advertisement")),
+      : publisher_(ConnectToPublisher(component_context, "Advertisement")),
         node_id_(nub->node_id()),
         binding_(this),
         port_(nub->port()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
-    controller_->PublishServiceInstance(
+    publisher_->PublishServiceInstance(
         kServiceName, node_id_.ToString(), true, binding_.NewBinding(),
-        [node_id = node_id_, port = port_](fuchsia::mdns::Result result) {
-          std::cout << "Advertising " << node_id << " on port " << port
-                    << " via mdns gets: " << result << "\n";
+        [node_id = node_id_, port = port_](
+            fuchsia::net::mdns::Publisher_PublishServiceInstance_Result
+                result) {
+          if (result.is_err()) {
+            std::cout << "Advertising " << node_id << " on port " << port
+                      << " via mdns gets: " << result.err() << "\n";
+          } else {
+            std::cout << "Advertising " << node_id << " on port " << port
+                      << " via mdns succeeded\n";
+          }
         });
   }
   ~Impl() = default;
 
  private:
-  // fuchsia::mdns::Responder implementation.
-  void GetPublication(bool query, fidl::StringPtr subtype,
-                      GetPublicationCallback callback) {
-    callback(subtype->empty() ? std::make_unique<fuchsia::mdns::Publication>(
-                                    fuchsia::mdns::Publication{.port = port_})
-                              : nullptr);
+  // fuchsia::net::mdns::PublicationResponder implementation.
+  void OnPublication(bool query, fidl::StringPtr subtype,
+                     OnPublicationCallback callback) {
+    callback(subtype->empty()
+                 ? std::make_unique<fuchsia::net::mdns::Publication>(
+                       fuchsia::net::mdns::Publication{.port = port_})
+                 : nullptr);
   }
 
-  const fuchsia::mdns::ControllerPtr controller_;
+  const fuchsia::net::mdns::PublisherPtr publisher_;
   const overnet::NodeId node_id_;
-  fidl::Binding<fuchsia::mdns::Responder> binding_;
+  fidl::Binding<fuchsia::net::mdns::PublicationResponder> binding_;
   const uint16_t port_;
 };
 

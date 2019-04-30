@@ -28,8 +28,6 @@ static const std::string kUdpSuffix = "._udp.";
 // TODO(dalesat): Remove publish/unpublish commands.
 MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
   std::vector<Command> commands{
-      {"verbose", CommandVerb::kVerbose, 0, nullptr},
-      {"quiet", CommandVerb::kQuiet, 0, nullptr},
       {"resolve", CommandVerb::kResolve, 1,
        [this](const std::vector<std::string>& args) {
          return ParseHostName(args[1], &host_name_);
@@ -37,25 +35,6 @@ MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
       {"subscribe", CommandVerb::kSubscribe, 1,
        [this](const std::vector<std::string>& args) {
          return ParseServiceName(args[1], &service_name_);
-       }},
-      {"publish", CommandVerb::kPublish, 3,
-       [this](const std::vector<std::string>& args) {
-         if (!ParseServiceName(args[1], &service_name_) ||
-             !ParseInstanceName(args[2], &instance_name_)) {
-           return false;
-         }
-
-         if (!Parse(args[3], &port_)) {
-           std::cout << "'" << args[3] << "' is not a valid port\n\n";
-           return false;
-         }
-
-         return true;
-       }},
-      {"unpublish", CommandVerb::kUnpublish, 2,
-       [this](const std::vector<std::string>& args) {
-         return ParseServiceName(args[1], &service_name_) &&
-                ParseInstanceName(args[2], &instance_name_);
        }},
       {"respond", CommandVerb::kRespond, 3,
        [this](const std::vector<std::string>& args) {
@@ -139,8 +118,6 @@ void MdnsParams::Usage() {
   std::cout << "    resolve <host_name>\n";
   std::cout << "    subscribe <service_name>\n";
   std::cout << "    respond <service_name> <instance_name> <port>\n";
-  std::cout << "    verbose (requires enable_mdns_trace gn arg)\n";
-  std::cout << "    quiet (requires enable_mdns_trace gn arg)\n";
   std::cout << "options:\n";
   std::cout << "    --timeout=<seconds>       # applies to resolve\n";
   std::cout << "    --text=<text,...>         # applies to respond\n";

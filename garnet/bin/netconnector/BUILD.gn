@@ -36,7 +36,7 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.mdns",
+    "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.netconnector",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",

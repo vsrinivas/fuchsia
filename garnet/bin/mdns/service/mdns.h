@@ -36,12 +36,15 @@ class Mdns : public MdnsAgent::Host {
   struct Publication {
     static std::unique_ptr<Publication> Create(
         inet::IpPort port,
-        const std::vector<std::string>& text = std::vector<std::string>());
+        const std::vector<std::string>& text = std::vector<std::string>(),
+        uint16_t srv_priority = 0, uint16_t srv_weight = 0);
 
     std::unique_ptr<Publication> Clone();
 
     inet::IpPort port_;
     std::vector<std::string> text_;
+    uint16_t srv_priority_ = 0;
+    uint16_t srv_weight_ = 0;
     uint32_t ptr_ttl_seconds_ = 4500;  // default 75 minutes
     uint32_t srv_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t txt_ttl_seconds_ = 4500;  // default 75 minutes
@@ -61,14 +64,18 @@ class Mdns : public MdnsAgent::Host {
                                     const std::string& instance,
                                     const inet::SocketAddress& v4_address,
                                     const inet::SocketAddress& v6_address,
-                                    const std::vector<std::string>& text) = 0;
+                                    const std::vector<std::string>& text,
+                                    uint16_t srv_priority,
+                                    uint16_t srv_weight) = 0;
 
     // Called when a previously discovered instance changes addresses or text.
     virtual void InstanceChanged(const std::string& service,
                                  const std::string& instance,
                                  const inet::SocketAddress& v4_address,
                                  const inet::SocketAddress& v6_address,
-                                 const std::vector<std::string>& text) = 0;
+                                 const std::vector<std::string>& text,
+                                 uint16_t srv_priority,
+                                 uint16_t srv_weight) = 0;
 
     // Called when an instance is lost.
     virtual void InstanceLost(const std::string& service,

@@ -52,10 +52,10 @@ executable("bin") {
 
   deps = [
     ":overnet_fuchsia_compatibility",
-    "//garnet/public/lib/fostr/fidl/fuchsia.mdns",
+    "//garnet/public/lib/fostr/fidl/fuchsia.net.mdns",
     "//garnet/public/lib/fostr/fidl/fuchsia.overnet.omdp",
     "//garnet/public/lib/fsl",
-    "//sdk/fidl/fuchsia.mdns",
+    "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.overnet",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

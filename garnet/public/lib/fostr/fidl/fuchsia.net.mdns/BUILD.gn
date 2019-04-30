@@ -4,10 +4,10 @@
 
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
-fostr_fidl("fuchsia.mdns") {
-  fidl_target = "//sdk/fidl/fuchsia.mdns"
+fostr_fidl("fuchsia.net.mdns") {
+  fidl_target = "//sdk/fidl/fuchsia.net.mdns"
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.netstack",
+    "//garnet/public/lib/fostr/fidl/fuchsia.net",
   ]
 }
