@@ -16,3 +16,16 @@ cache_package_labels += [
 ]
 
 universe_package_labels += [ "//bundles:tools" ]
+
+# TODO(IN-1097): Support a package server rather than building these
+#                into the image via preinstall+monolith.
+cache_package_labels += [
+  "//garnet/packages/tools:sl4f",
+]
+
+# E2E Product Tests. They don't produce fuchsia packages, but host executables,
+# and must just be included somewhere in the build configuration of the product.
+universe_package_labels += [
+  "//src/end_to_end_tests/screen_is_not_black:test",
+]
+

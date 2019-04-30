@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+dart_test("screen_is_not_black_test") {
+  sources = [
+    "screen_is_not_black_test.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/matcher",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  _untagged_envs = [nuc_env, astro_env]
+  environments = []
+  foreach(env, _untagged_envs) {
+    if (!defined(env.tags)) {
+      env.tags = []
+    }
+    env.tags += ["e2e-terminal"]
+    environments += [env]
+  }
+}
+
+group("test") {
+  testonly = true
+
+  deps = [
+    ":screen_is_not_black_test($host_toolchain)",
+  ]
+}
