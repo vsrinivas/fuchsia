@@ -485,7 +485,7 @@ declare_args() {
   # `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
   bootfs_extra = []
 
-  # List of kernel images to include in the update (OTA) package.
+  # (deprecated) List of kernel images to include in the update (OTA) package.
   # If no list is provided, all built kernels are included. The names in the
   # list are strings that must match the filename to be included in the update
   # package.
@@ -640,7 +640,9 @@ images += [
       ":fuchsia",
     ]
     sdk = "fuchsia.zbi"
-    updater = "zbi"
+    if (!use_vboot && custom_signing_script == "") {
+      updater = "zbi"
+    }
     if (!use_vboot) {
       installer = "fuchsia.zbi"
     }
@@ -1056,7 +1058,9 @@ if (target_cpu != "arm64" && !use_vboot) {
       }
       installer = "fuchsia.esp.blk"
       sdk = "local.esp.blk"
-      updater = "bootloader"
+      if (!use_vboot && custom_signing_script == "") {
+        updater = "bootloader"
+      }
       public = [
         "IMAGE_ESP_RAW",
       ]
@@ -1351,33 +1355,16 @@ action("update.manifest") {
 
   foreach(image, images) {
     if (defined(image.updater)) {
-      if (update_kernels == []) {
-        update_manifest += [
-          {
-            target = image.updater
-            forward_variables_from(image,
-                                   [
-                                     "deps",
-                                     "sources",
-                                   ])
-          },
-        ]
-      } else {
-        foreach(kernel, update_kernels) {
-          if (image.updater == kernel) {
-            update_manifest += [
-              {
-                target = image.updater
-                forward_variables_from(image,
-                                       [
-                                         "deps",
-                                         "sources",
-                                       ])
-              },
-            ]
-          }
-        }
-      }
+      update_manifest += [
+        {
+          target = image.updater
+          forward_variables_from(image,
+                                  [
+                                    "deps",
+                                    "sources",
+                                  ])
+        },
+      ]
     }
   }
 
