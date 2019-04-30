@@ -523,7 +523,7 @@ func (f *Source) MerkleFor(name, version string) (string, int64, error) {
 	m, err := f.tufClient.Targets()
 
 	if err != nil {
-		return "", 0, fmt.Errorf("tuf_source: error reading TUF tarets: %s", err)
+		return "", 0, fmt.Errorf("tuf_source: error reading TUF targets: %s", err)
 	}
 
 	if version == "" {
