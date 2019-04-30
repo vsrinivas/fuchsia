@@ -238,27 +238,6 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
     return ZX_OK;
 }
 
-static zx_status_t source_handle_checks_locked(const Handle* handle, const Dispatcher* channel) {
-    if (!handle)
-        return ZX_ERR_BAD_HANDLE;
-    if (!handle->HasRights(ZX_RIGHT_TRANSFER))
-        return ZX_ERR_ACCESS_DENIED;
-    if (handle->dispatcher().get() == channel)
-        return ZX_ERR_NOT_SUPPORTED;
-    return ZX_OK;
-}
-
-static zx_status_t get_handle_for_message_locked(
-    ProcessDispatcher* process, const Dispatcher* channel,
-    zx_handle_t handle_val, Handle** raw_handle) TA_REQ(process->handle_table_lock()) {
-    HandleOwner handle = process->RemoveHandleLocked(handle_val);
-    auto status = source_handle_checks_locked(handle.get(), channel);
-    if (status != ZX_OK)
-        return status;
-
-    *raw_handle = handle.release();
-    return ZX_OK;
-}
 
 // Consumes all handles whether it succeeds or not.
 template <typename UserHandles>
@@ -269,8 +248,7 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
     DEBUG_ASSERT(num_handles <= kMaxMessageHandles); // This must be checked before calling.
 
     typename UserHandles::ValueType handles[kMaxMessageHandles] = {};
-
-    zx_status_t status = get_user_handles(user_handles, 0, num_handles, handles);
+    zx_status_t status = user_handles.copy_array_from_user(handles, num_handles);
     if (status != ZX_OK)
         return status;
 
@@ -320,16 +298,14 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
         return status;
     }
 
-    // msg_put_handles() always consumes all handles (or there are zero handles,
-    // and so there's nothing to be done).
-    cleanup.cancel();
-
     if (num_handles > 0u) {
         status = msg_put_handles(up, msg.get(), user_handles, num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
         if (status != ZX_OK)
             return status;
     }
+
+    cleanup.cancel();
 
     status = channel->Write(up->get_koid(), ktl::move(msg));
     if (status != ZX_OK)
@@ -356,8 +332,14 @@ zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
                                   user_in_ptr<const void> user_bytes, uint32_t num_bytes,
                                   user_inout_ptr<zx_handle_disposition_t> user_handles,
                                   uint32_t num_handles) {
-    // TODO(cpu): Implement.
-    return ZX_ERR_NOT_SUPPORTED;
+
+    LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
+        handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
+
+    // TODO(cpu):finish implementation of get_handle_for_message_locked() and
+    // get_user_handles_to_consume() for this syscall to work.
+    return channel_write(
+        handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
 }
 
 // zx_status_t zx_channel_call_noretry

@@ -505,6 +505,12 @@ void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
     handles_.push_front(handle.release());
 }
 
+HandleOwner ProcessDispatcher::RemoveHandleLocked(Handle* handle) {
+    handle->set_process_id(ZX_KOID_INVALID);
+    handles_.erase(*handle);
+    return HandleOwner(handle);
+}
+
 HandleOwner ProcessDispatcher::RemoveHandle(zx_handle_t handle_value) {
     Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
     return RemoveHandleLocked(handle_value);
@@ -514,11 +520,7 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(zx_handle_t handle_value) {
     auto handle = GetHandleLocked(handle_value);
     if (!handle)
         return nullptr;
-
-    handle->set_process_id(ZX_KOID_INVALID);
-    handles_.erase(*handle);
-
-    return HandleOwner(handle);
+    return RemoveHandleLocked(handle);
 }
 
 zx_status_t ProcessDispatcher::RemoveHandles(const zx_handle_t* handles, size_t num_handles) {

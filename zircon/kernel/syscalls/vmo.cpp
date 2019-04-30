@@ -299,8 +299,8 @@ zx_status_t sys_vmo_replace_as_executable(
     if (!source)
         return ZX_ERR_BAD_HANDLE;
 
-    auto handle_cleanup = fbl::MakeAutoCall([up, handle]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        up->RemoveHandleLocked(handle);
+    auto handle_cleanup = fbl::MakeAutoCall([up, source]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        up->RemoveHandleLocked(source);
     });
 
     if (vmex_status != ZX_OK)

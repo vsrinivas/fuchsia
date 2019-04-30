@@ -96,10 +96,11 @@ public:
     void AddHandle(HandleOwner handle);
     void AddHandleLocked(HandleOwner handle) TA_REQ(handle_table_lock_);
 
-    // Removes the Handle corresponding to |handle_value| from this process
-    // handle list.
-    HandleOwner RemoveHandle(zx_handle_t handle_value);
+    // Set of overloads that remove the |handle| or |handle_value| from this process
+    // handle list and returns ownership to the handle.
+    HandleOwner RemoveHandleLocked(Handle* handle) TA_REQ(handle_table_lock_);
     HandleOwner RemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
+    HandleOwner RemoveHandle(zx_handle_t handle_value);
 
     // Remove all of an array of |handles| from the process. Returns ZX_OK if all of the
     // handles were removed, and returns ZX_ERR_BAD_HANDLE if any were not.
