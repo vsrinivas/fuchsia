@@ -461,6 +461,9 @@ declare_args() {
             # TODO(TO-666): replace futiltiy & cgpt with 1p tools
             "//third_party/vboot_reference",
             "//garnet/tools/vboot_reference",
+
+            # TODO(INTK-998): update spirv-tools and glslang
+            "//third_party/shaderc/third_party/spirv-tools",
           ]
         },
         {
