@@ -351,8 +351,12 @@ struct DevhostRpcReadContext {
 static zx_status_t fidl_devcoord_connection_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                                            const char* path_data, size_t path_size,
                                                            zx_handle_t object) {
-    auto conn = static_cast<DeviceControllerConnection*>(ctx);
     zx::channel c(object);
+    if (path_size != 1 && path_data[0] != '.') {
+        log(ERROR, "devhost: Tried to open path '%.*s'\n", static_cast<int>(path_size), path_data);
+        return ZX_OK;
+    }
+    auto conn = static_cast<DeviceControllerConnection*>(ctx);
     return devhost_device_connect(conn->dev, flags, path_data, path_size, std::move(c));
 }
 

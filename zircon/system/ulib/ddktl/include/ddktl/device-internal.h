@@ -171,19 +171,6 @@ constexpr void CheckOpenable() {
                   "'zx_status_t DdkOpen(zx_device_t**, uint32_t)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_open_at, DdkOpenAt);
-
-template <typename D>
-constexpr void CheckOpenAtable() {
-    static_assert(has_ddk_open_at<D>::value,
-                  "OpenAtable classes must implement DdkOpenAt");
-    static_assert(
-        std::is_same<decltype(&D::DdkOpenAt),
-                     zx_status_t (D::*)(zx_device_t**, const char*, uint32_t)>::value,
-        "DdkOpenAt must be a public non-static member function with signature "
-        "'zx_status_t DdkOpenAt(zx_device_t**, const char*, uint32_t)'.");
-}
-
 DECLARE_HAS_MEMBER_FN(has_ddk_close, DdkClose);
 
 template <typename D>

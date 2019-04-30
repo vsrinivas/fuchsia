@@ -66,10 +66,6 @@ static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) {
     return ZX_OK;
 }
 
-static zx_status_t default_open_at(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t default_close(void* ctx, uint32_t flags) {
     return ZX_OK;
 }
@@ -118,7 +114,6 @@ static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
 zx_protocol_device_t device_default_ops = []() {
     zx_protocol_device_t ops = {};
     ops.open = default_open;
-    ops.open_at = default_open_at;
     ops.close = default_close;
     ops.unbind = default_unbind;
     ops.release = default_release;
@@ -142,9 +137,6 @@ static zx_protocol_device_t device_invalid_ops = []() {
     zx_protocol_device_t ops = {};
     ops.open =
         +[](void* ctx, zx_device_t**, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
-    ops.open_at = +[](void* ctx, zx_device_t**, const char*, uint32_t) -> zx_status_t {
-        device_invalid_fatal(ctx);
-    };
     ops.close = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
     ops.unbind = +[](void* ctx) { device_invalid_fatal(ctx); };
     ops.release = +[](void* ctx) { device_invalid_fatal(ctx); };
@@ -528,9 +520,8 @@ zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
     return ZX_OK;
 }
 
-zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
-                                   fbl::RefPtr<zx_device_t>* out, const char* path,
-                                   uint32_t flags) REQ_DM_LOCK {
+zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                                uint32_t flags) REQ_DM_LOCK {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev.get(), dev->name);
         return ZX_ERR_BAD_STATE;
@@ -540,11 +531,7 @@ zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
     zx_device_t* opened_dev = nullptr;
     {
         ApiAutoRelock relock;
-        if (path) {
-            r = dev->OpenAtOp(&opened_dev, path, flags);
-        } else {
-            r = dev->OpenOp(&opened_dev, flags);
-        }
+        r = dev->OpenOp(&opened_dev, flags);
     }
     if (r < 0) {
         new_ref.reset();

@@ -39,10 +39,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
         return Dispatch(ops->open, ZX_OK, dev_out, flags);
     }
 
-    zx_status_t OpenAtOp(zx_device_t** dev_out, const char* path, uint32_t flags) {
-        return Dispatch(ops->open_at, ZX_ERR_NOT_SUPPORTED, dev_out, path, flags);
-    }
-
     zx_status_t CloseOp(uint32_t flags) {
         return Dispatch(ops->close, ZX_OK, flags);
     }
@@ -209,8 +205,8 @@ private:
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
-zx_status_t device_open_at(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
-                           const char* path, uint32_t flags);
+zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                        uint32_t flags);
 // Note that device_close() is intended to consume a reference (logically, the
-// one created by device_open_at).
+// one created by device_open).
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags);

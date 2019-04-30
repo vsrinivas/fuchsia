@@ -38,10 +38,6 @@
 // | ddk::Openable        | zx_status_t DdkOpen(zx_device_t** dev_out,         |
 // |                      |                     uint32_t flags)                |
 // |                      |                                                    |
-// | ddk::OpenAtable      | zx_status_t DdkOpenAt(zx_device_t** dev_out,       |
-// |                      |                       const char* path,            |
-// |                      |                       uint32_t flags)              |
-// |                      |                                                    |
 // | ddk::Closable        | zx_status_t DdkClose(uint32_t flags)               |
 // |                      |                                                    |
 // | ddk::Unbindable      | void DdkUnbind()                                   |
@@ -154,21 +150,6 @@ protected:
 private:
     static zx_status_t Open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
         return static_cast<D*>(ctx)->DdkOpen(dev_out, flags);
-    }
-};
-
-template <typename D>
-class OpenAtable : public base_mixin {
-protected:
-    static constexpr void InitOp(zx_protocol_device_t* proto) {
-        internal::CheckOpenAtable<D>();
-        proto->open_at = OpenAt;
-    }
-
-private:
-    static zx_status_t OpenAt(void* ctx, zx_device_t** dev_out, const char* path,
-                              uint32_t flags) {
-        return static_cast<D*>(ctx)->DdkOpenAt(dev_out, path, flags);
     }
 };
 
@@ -444,7 +425,6 @@ template <class D>
 using FullDevice = Device<D,
                           GetProtocolable,
                           Openable,
-                          OpenAtable,
                           Closable,
                           Unbindable,
                           Readable,

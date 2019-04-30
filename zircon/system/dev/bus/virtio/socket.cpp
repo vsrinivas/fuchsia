@@ -108,7 +108,6 @@ static zx_protocol_device_t kDeviceOps = {
     DEVICE_OPS_VERSION,
     nullptr, // get_protocol
     nullptr, // open
-    nullptr, // openat
     nullptr, // close
     virtio_net_unbind,
     virtio_net_release,

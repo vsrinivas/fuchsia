@@ -39,7 +39,6 @@ public:
     void DdkRelease();
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags);
     zx_status_t DdkClose(uint32_t flags);
     void DdkUnbind();
     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
@@ -221,17 +220,6 @@ zx_status_t MockDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
 zx_status_t MockDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = OpenHook(controller_, ConstructHookInvocation(), flags, &actions);
-    ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(controller_, true, this, zxdev());
-    status = ProcessActions(std::move(actions), &ctx);
-    ZX_ASSERT(status == ZX_OK);
-    return ctx.hook_status;
-}
-
-zx_status_t MockDevice::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
-    fbl::Array<const fuchsia_device_mock_Action> actions;
-    zx_status_t status = OpenAtHook(controller_, ConstructHookInvocation(), fbl::StringPiece(path),
-                                    flags, &actions);
     ZX_ASSERT(status == ZX_OK);
     ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);

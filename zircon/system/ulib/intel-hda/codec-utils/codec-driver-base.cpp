@@ -38,7 +38,6 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
-    .open_at      = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
     .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },

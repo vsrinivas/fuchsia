@@ -103,7 +103,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     if (dev && client_remote.is_valid()) {
-        // This needs to be called outside the ApiAutoLock, as device_open_at will be called
+        // This needs to be called outside the ApiAutoLock, as device_open will be called
         devhost_device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                                std::move(client_remote));
 
@@ -221,14 +221,13 @@ zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
     return devhost_device_unbind(dev);
 }
 
-zx_status_t device_open_at(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
-                           const char* path, uint32_t flags) {
+zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                        uint32_t flags) {
     ApiAutoLock lock;
-    return devhost_device_open_at(dev, out, path, flags);
+    return devhost_device_open(dev, out, flags);
 }
 
-// This function is intended to consume the reference produced by
-// device_open_at()
+// This function is intended to consume the reference produced by device_open()
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
     ApiAutoLock lock;
     return devhost_device_close(std::move(dev), flags);

@@ -716,7 +716,6 @@ static zx_protocol_device_t main_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = display_get_protocol,
     .open = nullptr,
-    .open_at = nullptr,
     .close = nullptr,
     .unbind = display_unbind,
     .release =  display_release,

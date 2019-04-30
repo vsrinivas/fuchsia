@@ -34,25 +34,12 @@ A child created for return as an instance **must** be created with the
 zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 ```
 
-## open_at
-DEPRECATED: See ZX-3277.
-The open_at hook is called in the event that the open path to the device
-contains segments after the device name itself.  For example, if a device
-exists as `/dev/misc/foo` and an attempt is made to `open("/dev/misc/foo/bar",...)`,
-the open_at hook would be invoked with a *path* of `"bar"`.
-
-The default open_at implementation returns **ZX_ERR_NOT_SUPPORTED**
-
-```
-zx_status_t (*open_at)(void* ctx, zx_device_t** dev_out, const char* path, uint32_t flags);
-```
-
 ## close
-The close hook is called when a connection to a device is closed.  These
-calls will balance the calls to open or open_at.
+The close hook is called when a connection to a device is closed. These
+calls will balance the calls to open.
 
-**Note:** If open or open_at return a **device instance**, the balancing close
-hook that is called is the close hook on the **instance**, not the parent.
+**Note:** If open returns a **device instance**, the balancing close hook
+that is called is the close hook on the **instance**, not the parent.
 
 The default close implementation returns **ZX_OK**.
 ```
@@ -62,7 +49,7 @@ zx_status_t (*close)(void* ctx, uint32_t flags);
 ## unbind
 The unbind hook is called when the parent of this device is being removed (due
 to hot unplug, fatal error, etc).  At the point unbind is called, it is not
-possible for further open or open_at calls to occur, but io operations, etc
+possible for further open calls to occur, but io operations, etc
 may continue until those client connections are closed.
 
 The driver should avoid further method calls to its parent device or any
@@ -197,11 +184,11 @@ zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 
 #### Device State Bits
 ```
-#define DEV_STATE_READABLE DEVICE_SIGNAL_READABLE
-#define DEV_STATE_WRITABLE DEVICE_SIGNAL_WRITABLE
-#define DEV_STATE_ERROR DEVICE_SIGNAL_ERROR
-#define DEV_STATE_HANGUP DEVICE_SIGNAL_HANGUP
-#define DEV_STATE_OOB DEVICE_SIGNAL_OOB
+#define DEV_STATE_READABLE ZX_USER_SIGNAL_0
+#define DEV_STATE_WRITABLE ZX_USER_SIGNAL_2
+#define DEV_STATE_ERROR    ZX_USER_SIGNAL_3
+#define DEV_STATE_HANGUP   ZX_USER_SIGNAL_4
+#define DEV_STATE_OOB      ZX_USER_SIGNAL_1
 ```
 
 #### device_state_set

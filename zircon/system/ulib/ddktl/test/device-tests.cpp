@@ -41,12 +41,6 @@ zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(OpenAtable)
-zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
-    return ZX_OK;
-}
-END_SUCCESS_CASE
-
 BEGIN_SUCCESS_CASE(Closable)
 zx_status_t DdkClose(uint32_t flags) {
     return ZX_OK;
@@ -136,11 +130,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         return ZX_OK;
     }
 
-    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
-        open_at_called = true;
-        return ZX_OK;
-    }
-
     zx_status_t DdkClose(uint32_t flags) {
         close_called = true;
         return ZX_OK;
@@ -192,7 +181,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
 
     bool get_protocol_called = false;
     bool open_called = false;
-    bool open_at_called = false;
     bool close_called = false;
     bool unbind_called = false;
     bool release_called = false;
@@ -218,7 +206,6 @@ static bool test_dispatch() {
     auto ops = dev->GetDeviceOps();
     EXPECT_EQ(ZX_OK, ops->get_protocol(ctx, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->open(ctx, nullptr, 0), "");
-    EXPECT_EQ(ZX_OK, ops->open_at(ctx, nullptr, "", 0), "");
     EXPECT_EQ(ZX_OK, ops->close(ctx, 0), "");
     ops->unbind(ctx);
     ops->release(ctx);
@@ -232,7 +219,6 @@ static bool test_dispatch() {
 
     EXPECT_TRUE(dev->get_protocol_called, "");
     EXPECT_TRUE(dev->open_called, "");
-    EXPECT_TRUE(dev->open_at_called, "");
     EXPECT_TRUE(dev->close_called, "");
     EXPECT_TRUE(dev->unbind_called, "");
     EXPECT_TRUE(dev->release_called, "");
@@ -337,7 +323,6 @@ BEGIN_TEST_CASE(ddktl_device)
 RUN_NAMED_TEST("No mixins", do_test<TestNone>);
 RUN_NAMED_TEST("ddk::GetProtocolable", do_test<TestGetProtocolable>);
 RUN_NAMED_TEST("ddk::Openable", do_test<TestOpenable>);
-RUN_NAMED_TEST("ddk::OpenAtable", do_test<TestOpenAtable>);
 RUN_NAMED_TEST("ddk::Closable", do_test<TestClosable>);
 RUN_NAMED_TEST("ddk::Unbindable", do_test<TestUnbindable>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
@@ -353,7 +338,6 @@ RUN_NAMED_TEST("Method dispatch test", test_dispatch);
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_NAMED_TEST("FailNoDdkGetProtocol", do_test<TestNotGetProtocolable>);
 RUN_NAMED_TEST("FailNoDdkOpen", do_test<TestNotOpenable>);
-RUN_NAMED_TEST("FailNoDdkOpenAt", do_test<TestNotOpenAtable>);
 RUN_NAMED_TEST("FailNoDdkClose", do_test<TestNotClosable>);
 RUN_NAMED_TEST("FailNoDdkUnbind", do_test<TestNotUnbindable>);
 RUN_NAMED_TEST("FailNoDdkRelease", do_test<TestNotReleasable>);

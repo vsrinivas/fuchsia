@@ -47,7 +47,6 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
         return DEV(ctx)->DeviceGetProtocol(proto_id, protocol);
     },
     .open         = nullptr,
-    .open_at      = nullptr,
     .close        = nullptr,
     .unbind       = [](void* ctx) { DEV(ctx)->DeviceShutdown(); },
     .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
@@ -341,7 +340,6 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
-    .open_at      = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
     .release      = [](void* ctx) { DEV(ctx)->RootDeviceRelease(); },

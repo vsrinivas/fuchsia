@@ -110,7 +110,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     newconn->flags = flags;
 
     fbl::RefPtr<zx_device_t> new_dev;
-    r = device_open_at(dev, &new_dev, path, flags);
+    r = device_open(dev, &new_dev, flags);
     if (r != ZX_OK) {
         fprintf(stderr, "devhost_get_handles(%p:%s) open path='%s', r=%d\n", dev.get(), dev->name,
                 path ? path : "", r);

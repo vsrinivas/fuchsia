@@ -97,7 +97,6 @@ pub struct zx_protocol_device_t {
 
     pub get_protocol: Option<unsafe extern "C" fn (ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t>,
     pub open: Option<unsafe extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, flags: u32) -> sys::zx_status_t>,
-    pub open_at: Option<unsafe extern "C" fn (ctx: *mut u8, dev_out: *mut *mut zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t>,
     pub close: Option<unsafe extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
     pub unbind: Option<unsafe extern "C" fn (ctx: *mut u8)>,
     pub release: Option<unsafe extern "C" fn (ctx: *mut u8)>,
@@ -116,7 +115,6 @@ pub const DEFAULT_PROTOCOL_DEVICE: zx_protocol_device_t = zx_protocol_device_t {
     __version: DEVICE_OPS_VERSION,
     get_protocol: None,
     open: None,
-    open_at: None,
     close: None,
     unbind: None,
     release: None,

@@ -180,10 +180,6 @@ pub trait DeviceOps {
         Ok(None)
     }
 
-    fn open_at(&mut self, _path: &str, _flags: u32) -> Result<Option<Device>, Status> {
-        Err(Status::NOT_SUPPORTED)
-    }
-
     fn close(&mut self, _flags: u32) -> Status {
         Status::OK
     }
@@ -254,13 +250,6 @@ fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut sys::zx_d
 unsafe extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, flags: u32) -> zsys::zx_status_t {
     let context = ctx_borrow_mut_device_and_ops(ctx);
     let ret = context.ops.open(flags);
-    open_result(ret, dev_out)
-}
-
-unsafe extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut sys::zx_device_t, path: *const c_char, flags: u32) -> zsys::zx_status_t {
-    let context = ctx_borrow_mut_device_and_ops(ctx);
-    let path = CStr::from_ptr(path).to_str().unwrap();
-    let ret = context.ops.open_at(path, flags);
     open_result(ret, dev_out)
 }
 
@@ -339,7 +328,6 @@ unsafe extern fn ddk_resume(ctx: *mut u8, flags: u32) -> zsys::zx_status_t {
 static mut DEVICE_OPS: sys::zx_protocol_device_t = sys::zx_protocol_device_t {
     get_protocol: Some(ddk_get_protocol),
     open: Some(ddk_open),
-    open_at: Some(ddk_open_at),
     close: Some(ddk_close),
     unbind: Some(ddk_unbind),
     release: Some(ddk_release),

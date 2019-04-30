@@ -95,7 +95,7 @@ We saw these in the `/dev/misc/demo-fifo` handler above.
 
 @@@ Notes only @@@
 
-This section is great for things like open_at(), talking about buffer management,
+This section is great for things like talking about buffer management,
 threading, best practices, advanced options for device_add(), and so on.
 I think it can be somewhere between the man page ("printf is used to print a string
 and takes the following parameters") and an application note &mdash; I want to see
