@@ -186,7 +186,7 @@ can be edited via the web UI.
 
 ## Changes that span repositories
 
-See [Changes that span repositories](development/workflows/multilayer_changes.md).
+See [Changes that span repositories](docs/development/workflows/multilayer_changes.md).
 
 ## Resolving merge conflicts
 
