@@ -16,6 +16,7 @@ test("fbl") {
     "intrusive_hash_table_sll_tests.cpp",
     "intrusive_singly_linked_list_tests.cpp",
     "intrusive_wavl_tree_tests.cpp",
+    "macro_tests.cpp",
     "recycler_tests.cpp",
     "ref_ptr_tests.cpp",
     "string_buffer_tests.cpp",

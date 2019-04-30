@@ -81,4 +81,22 @@ public:                                                                         
 template <typename T>                                                             \
 static inline constexpr bool trait_name ## _v = trait_name<T>::value
 
+// Similar to DECLARE_HAS_MEMBER_FN but for member types.
+//
+// Example:
+//
+// DECLARE_HAS_MEMBER_TYPE(has_value_type, ValueType);
+#define DECLARE_HAS_MEMBER_TYPE(trait_name, type_name)                            \
+template <typename T>                                                             \
+struct trait_name {                                                               \
+private:                                                                          \
+    template <typename C> static std::true_type test(typename C::type_name*);     \
+    template <typename C> static std::false_type test(...);                       \
+                                                                                  \
+public:                                                                           \
+    static constexpr bool value = decltype(test<T>(nullptr))::value;              \
+};                                                                                \
+template <typename T>                                                             \
+static inline constexpr bool trait_name ## _v = trait_name<T>::value
+
 #endif  // FBL_MACROS_H_
