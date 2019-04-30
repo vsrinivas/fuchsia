@@ -7,45 +7,51 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-#include <assert.h>
+#include <byteswap.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <pretty/hexdump.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <lib/sync/completion.h>
 #include <sys/param.h>
+
+#include <fbl/alloc_checker.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include "sata.h"
 
-#define sata_devinfo_u32(base, offs) (((uint32_t)(base)[(offs) + 1] << 16) | ((uint32_t)(base)[(offs)]))
-#define sata_devinfo_u64(base, offs) (((uint64_t)(base)[(offs) + 3] << 48) | ((uint64_t)(base)[(offs) + 2] << 32) | ((uint64_t)(base)[(offs) + 1] << 16) | ((uint32_t)(base)[(offs)]))
-
 #define SATA_FLAG_DMA   (1 << 0)
 #define SATA_FLAG_LBA48 (1 << 1)
 
-typedef struct sata_device {
-    zx_device_t* zxdev;
-    ahci_device_t* controller;
+struct sata_device_t {
+    zx_device_t* zxdev = nullptr;
+    ahci_device_t* controller = nullptr;
 
-    block_info_t info;
+    block_info_t info{};
 
-    int port;
-    int flags;
-    int max_cmd; // inclusive
-} sata_device_t;
+    uint32_t port = 0;
+    uint32_t flags = 0;
+    uint32_t max_cmd = 0; // inclusive
+};
+
+// Strings are byte-flipped in pairs.
+void string_fix(uint16_t* buf, size_t size) {
+    for (size_t i = 0; i < (size / 2); i++) {
+        buf[i] = bswap_16(buf[i]);
+    }
+}
 
 static void sata_device_identify_complete(void* cookie, zx_status_t status, block_op_t* op) {
     sata_txn_t* txn = containerof(op, sata_txn_t, bop);
     txn->status = status;
-    sync_completion_signal((sync_completion_t*)cookie);
+    sync_completion_signal(static_cast<sync_completion_t*>(cookie));
 }
 
-#define QEMU_MODEL_ID    "EQUMH RADDSI K" // "QEMU HARDDISK"
+#define QEMU_MODEL_ID    "QEMU HARDDISK"
 #define QEMU_SG_MAX      1024             // Linux kernel limit
 
 static bool model_id_is_qemu(char* model_id) {
@@ -55,15 +61,14 @@ static bool model_id_is_qemu(char* model_id) {
 static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* controller,
                                         const char* name) {
     // Set default devinfo
-    sata_devinfo_t di = {
-        .block_size = 512,
-        .max_cmd = 1,
-    };
+    sata_devinfo_t di;
+    di.block_size = 512;
+    di.max_cmd = 1;
     ahci_set_devinfo(controller, dev->port, &di);
 
     // send IDENTIFY DEVICE
-    zx_handle_t vmo;
-    zx_status_t status = zx_vmo_create(512, 0, &vmo);
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(512, 0, &vmo);
     if (status != ZX_OK) {
         zxlogf(TRACE, "sata: error %d allocating vmo\n", status);
         return status;
@@ -71,7 +76,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
 
     sync_completion_t completion;
     sata_txn_t txn = {};
-    txn.bop.rw.vmo = vmo;
+    txn.bop.rw.vmo = vmo.get();
     txn.bop.rw.length = 1;
     txn.bop.rw.offset_dev = 0;
     txn.bop.rw.offset_vmo = 0;
@@ -90,69 +95,74 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
 
     // parse results
     int flags = 0;
-    uint16_t devinfo[512 / sizeof(uint16_t)];
-    status = zx_vmo_read(vmo, devinfo, 0, sizeof(devinfo));
+    sata_devinfo_response_t devinfo;
+    status = vmo.read(&devinfo, 0, sizeof(devinfo));
     if (status != ZX_OK) {
         zxlogf(ERROR, "sata: error %d in vmo_read\n", status);
         return ZX_ERR_INTERNAL;
     }
-    zx_handle_close(vmo);
+    vmo.reset();
 
-    char str[41]; // model id is 40 chars
+    // Strings are 16-bit byte-flipped. Fix in place.
+    // Strings are NOT null-terminated.
+    string_fix(devinfo.serial.word, sizeof(devinfo.serial.word));
+    string_fix(devinfo.firmware_rev.word, sizeof(devinfo.firmware_rev.word));
+    string_fix(devinfo.model_id.word, sizeof(devinfo.model_id.word));
+
     zxlogf(INFO, "%s: dev info\n", name);
-    snprintf(str, SATA_DEVINFO_SERIAL_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_SERIAL));
-    zxlogf(INFO, "  serial=%s\n", str);
-    snprintf(str, SATA_DEVINFO_FW_REV_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_FW_REV));
-    zxlogf(INFO, "  firmware rev=%s\n", str);
-    snprintf(str, SATA_DEVINFO_MODEL_ID_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_MODEL_ID));
-    zxlogf(INFO, "  model id=%s\n", str);
+    zxlogf(INFO, "  serial=%.*s\n", SATA_DEVINFO_SERIAL_LEN, devinfo.serial.string);
+    zxlogf(INFO, "  firmware rev=%.*s\n", SATA_DEVINFO_FW_REV_LEN, devinfo.firmware_rev.string);
+    zxlogf(INFO, "  model id=%.*s\n", SATA_DEVINFO_MODEL_ID_LEN, devinfo.model_id.string);
 
-    bool is_qemu = model_id_is_qemu((char*)(devinfo + SATA_DEVINFO_MODEL_ID));
+    bool is_qemu = model_id_is_qemu(devinfo.model_id.string);
 
-    uint16_t major = *(devinfo + SATA_DEVINFO_MAJOR_VERS);
+    uint16_t major = devinfo.major_version;
     zxlogf(INFO, "  major=0x%x ", major);
     switch (32 - __builtin_clz(major) - 1) {
-        case 10:
-            zxlogf(INFO, "ACS3");
-            break;
-        case 9:
-            zxlogf(INFO, "ACS2");
-            break;
-        case 8:
-            zxlogf(INFO, "ATA8-ACS");
-            break;
-        case 7:
-        case 6:
-        case 5:
-            zxlogf(INFO, "ATA/ATAPI");
-            break;
-        default:
-            zxlogf(INFO, "Obsolete");
-            break;
+    case 11:
+        zxlogf(INFO, "ACS4");
+        break;
+    case 10:
+        zxlogf(INFO, "ACS3");
+        break;
+    case 9:
+        zxlogf(INFO, "ACS2");
+        break;
+    case 8:
+        zxlogf(INFO, "ATA8-ACS");
+        break;
+    case 7:
+    case 6:
+    case 5:
+        zxlogf(INFO, "ATA/ATAPI");
+        break;
+    default:
+        zxlogf(INFO, "Obsolete");
+        break;
     }
 
-    uint16_t cap = *(devinfo + SATA_DEVINFO_CAP);
+    uint16_t cap = devinfo.capabilities_1;
     if (cap & (1 << 8)) {
         zxlogf(INFO, " DMA");
         flags |= SATA_FLAG_DMA;
     } else {
         zxlogf(INFO, " PIO");
     }
-    dev->max_cmd = *(devinfo + SATA_DEVINFO_QUEUE_DEPTH);
-    zxlogf(INFO, " %d commands\n", dev->max_cmd + 1);
+    dev->max_cmd = devinfo.queue_depth;
+    zxlogf(INFO, " %u commands\n", dev->max_cmd + 1);
 
     uint32_t block_size = 512; // default
     uint64_t block_count = 0;
     if (cap & (1 << 9)) {
-        if ((*(devinfo + SATA_DEVINFO_SECTOR_SIZE) & 0xd000) == 0x5000) {
-            block_size = 2 * sata_devinfo_u32(devinfo, SATA_DEVINFO_LOGICAL_SECTOR_SIZE);
+        if ((devinfo.sector_size & 0xd000) == 0x5000) {
+            block_size = 2 * devinfo.logical_sector_size;
         }
-        if (*(devinfo + SATA_DEVINFO_CMD_SET_2) & (1 << 10)) {
+        if (devinfo.command_set1_1 & (1 << 10)) {
             flags |= SATA_FLAG_LBA48;
-            block_count = sata_devinfo_u64(devinfo, SATA_DEVINFO_LBA_CAPACITY_2);
+            block_count = devinfo.lba_capacity2;
             zxlogf(INFO, "  LBA48");
         } else {
-            block_count = sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY);
+            block_count = devinfo.lba_capacity;
             zxlogf(INFO, "  LBA");
         }
         zxlogf(INFO, " %" PRIu64 " sectors,  sector size=%u\n", block_count, block_size);
@@ -189,7 +199,7 @@ static zx_off_t sata_getsize(void* ctx) {
 
 static void sata_release(void* ctx) {
     sata_device_t* device = static_cast<sata_device_t*>(ctx);
-    free(device);
+    delete device;
 }
 
 static zx_protocol_device_t sata_device_proto = []() {
@@ -249,24 +259,23 @@ static block_impl_protocol_ops_t sata_block_proto = {
     .queue = sata_queue,
 };
 
-zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port) {
+zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, uint32_t port) {
     // initialize the device
-    sata_device_t* device = static_cast<sata_device_t*>(calloc(1, sizeof(sata_device_t)));
-    if (!device) {
+    fbl::AllocChecker ac;
+    std::unique_ptr<sata_device_t> device(new (&ac) sata_device_t);
+    if (!ac.check()) {
         zxlogf(ERROR, "sata: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
     device->controller = controller;
-
     device->port = port;
 
     char name[8];
-    snprintf(name, sizeof(name), "sata%d", port);
+    snprintf(name, sizeof(name), "sata%u", port);
 
     // send device identify
-    zx_status_t status = sata_device_identify(device, controller, name);
+    zx_status_t status = sata_device_identify(device.get(), controller, name);
     if (status < 0) {
-        free(device);
         return status;
     }
 
@@ -274,16 +283,15 @@ zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port) 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = name;
-    args.ctx = device;
+    args.ctx = device.get();
     args.ops = &sata_device_proto;
     args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
     args.proto_ops = &sata_block_proto;
 
     status = device_add(parent, &args, &device->zxdev);
     if (status < 0) {
-        free(device);
         return status;
     }
-
+    device.release(); // Device has been retained by device_add().
     return ZX_OK;
 }

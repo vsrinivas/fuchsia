@@ -18,7 +18,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/assert.h>
-#include <pretty/hexdump.h>
 #include <lib/sync/completion.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -49,7 +48,7 @@ static inline uint32_t lo32(uint64_t val) { return static_cast<uint32_t>(val); }
 
 //clang-format on
 
-typedef struct ahci_port {
+struct ahci_port_t {
     int nr; // 0-based
     int flags;
 
@@ -69,9 +68,9 @@ typedef struct ahci_port {
     uint32_t completed; // bitmask of completed commands
     sata_txn_t* commands[AHCI_MAX_COMMANDS]; // commands in flight
     sata_txn_t* sync;   // FLUSH command in flight
-} ahci_port_t;
+};
 
-struct ahci_device {
+struct ahci_device_t {
     zx_device_t* zxdev = nullptr;
 
     ahci_hba_t* regs = nullptr;

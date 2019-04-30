@@ -3,6 +3,32 @@
 # found in the LICENSE file.
 
 driver("ahci") {
+  deps = [
+    ":shared",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":ahci-unittest",
+  ]
+}
+
+test("ahci-unittest") {
+  output_name = "ahci-unittest"
+  sources = [
+    "test/main.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/zxtest",
+    ":shared",
+  ]
+}
+
+source_set("shared") {
+  visibility = [ "./*" ]
   sources = [
     "ahci.cpp",
     "sata.cpp",
@@ -11,9 +37,10 @@ driver("ahci") {
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
 }

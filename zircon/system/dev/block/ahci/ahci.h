@@ -65,6 +65,8 @@ static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD m
 #define AHCI_PORT_SCTL_DET_MASK    0xf
 #define AHCI_PORT_SCTL_DET_INIT    1
 
+struct ahci_device_t;
+
 typedef struct {
     uint32_t clb;           // command list base address 1024-byte aligned
     uint32_t clbu;          // command list base address upper 32 bits
