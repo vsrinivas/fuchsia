@@ -10,6 +10,7 @@ group("src") {
     "connectivity",
     "developer",
     "identity",
+    "graphics",
     "ledger",
     "lib",
     "media",
