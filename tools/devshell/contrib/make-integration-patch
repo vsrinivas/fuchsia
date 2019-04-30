@@ -1,0 +1,116 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Creates a CL in an integration repository suitable for testing other CLs
+### using the global integration commit queue.
+
+## usage: fx make-integration-cl
+##
+## The command prints instructions and prompts the user for input. Once
+## all input has been collected, it creates a patches.json file in
+## integration/, creates a changelist and pushes it to Gerrit.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+function print-instructions {
+  echo "INSTRUCTIONS:"
+  echo
+  echo "For each change you wish to test with global integration:"
+  echo "  1) Navigate to the change in Gerrit's web UI"
+  echo "  2) Click on Download Patch (in the menu at the top right)"
+  echo "  3) Copy any of the download options"
+  echo "  4) Paste it here followed by a newline"
+  echo
+  echo "When all changes have been added, type ^D"
+  echo
+  echo "... GO!"
+  echo
+}
+
+function print-after-instructions {
+  echo
+  echo "The URL for your change is above. You can now navigate there and"
+  echo "CQ+1 (dry run) the CL to test global integration with your patches."
+}
+
+function abort-if-unclean {
+  local dir="$1"
+  if ! git -C "${dir}" status --porcelain; then
+    echo "ERROR: git repo at ${dir} must be clean." > /dev/stderr
+    exit 1
+  fi
+}
+
+function write-patches-json {
+  local file="$1/patches.json"
+  local contents="$2"
+
+  echo "$contents" > $file
+}
+
+function prompt-or-exit {
+  local prompt="$1"
+  read -p "${prompt} [yN] " -n 1 -r yesno
+  echo
+  if [[ ! $yesno =~ ^[Yy]$ ]]; then
+    exit 0
+  fi
+}
+
+function create-git-commit-and-upload {
+  local dir="$1"
+  git -C $dir add -A
+  git -C $dir commit -m "DO NOT SUBMIT - testing unsubmitted changes in GI"
+  git -C $dir push origin HEAD:refs/for/master
+  return $?
+}
+
+function main {
+  local integration_dir="${FUCHSIA_DIR}/integration"
+
+  abort-if-unclean $integration_dir
+  print-instructions
+
+  patches=$(
+    local line host project ref first=true
+    while read line; do
+      local url=$(echo "$line" | cut -d " " -f 3 | sed 's/"//g')
+      host=$(echo "$url" | cut -d / -f 3)
+      project=$(echo "$url" | cut -d / -f 4)
+      ref=$(echo "$line" | cut -d " " -f 4)
+
+      if [ $first = false ]; then
+        printf ',\n'
+      fi
+      first=false
+      printf '  {\n    "ref": "%s",\n    "host": "%s",\n    "project": "%s"\n  }' "$ref" "$host" "$project"
+    done < /dev/stdin
+  )
+
+  local patch_file_contents=$(printf '[\n%s\n]' "$patches")
+
+  echo
+  echo "I'm about to write ${integration_dir}/patches.json with the following contents"
+  echo "and then upload the patch file to Gerrit:"
+  echo
+  echo "$patch_file_contents"
+  echo
+
+  prompt-or-exit "Do you want to continue?"
+  write-patches-json "$integration_dir" "$patch_file_contents"
+  if create-git-commit-and-upload "$integration_dir"; then
+    print-after-instructions
+  else
+    echo
+    echo "ERROR: could not push your patch change to Gerrit. See details above."
+    echo "Once you have resolve the error, you can push the change to Gerrit "
+    echo "manually by invoking: "
+    echo
+    echo "git -C integration push origin HEAD:refs/for/master"
+  fi
+}
+
+main "$@"
