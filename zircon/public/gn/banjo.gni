@@ -27,14 +27,6 @@ import("$zx/public/gn/fidl/fidlc.gni")
 #     Required: $public_deps list from banjo_library() after canonicalization.
 #     Type: list(label_no_toolchain)
 #
-#   banjo_name
-#     Required: The Banjo library name (with dots).
-#     Type: string
-#
-#   banjo_path
-#     Required: $banjo_name with each `.` replaced by a `/`.
-#     Type: string
-#
 #   visibility, testonly
 #     Optional: Forwarded from banjo_library().
 #
@@ -93,8 +85,17 @@ template("banjo_library") {
 
   banjo_target = target_name
 
-  banjo_path = string_replace(banjo_target, ".", "/")
-  banjo_name = string_replace(banjo_path, "ddk/protocol/", "")
+  # Whitelist a set of prefixes that do not need the banjo_dummy() target.
+  # These are (for now):
+  # * "ddk.protocol.*"
+  # * "ddk.hw.*"
+  target_type = "banjo"
+  if (string_replace("//${banjo_target}", "//ddk.protocol.", "") ==
+      "//${banjo_target}" &&
+      string_replace("//${banjo_target}", "//ddk.hw.", "") ==
+      "//${banjo_target}") {
+    target_type = "banjo_dummy"
+  }
 
   # Collect the dependencies on other Banjo libraries, and canonicalize them.
   banjo_library_deps = []
@@ -143,15 +144,7 @@ template("banjo_library") {
           {
             import = "//build/banjo/banjo.gni"
             target_name = banjo_target
-
-            # The ddk.protocol. prefix is magic: without it, you're a
-            # banjo_dummy() target; with it, you're a banjo() target.
-            if (string_replace(banjo_target, "ddk.protocol.", "") ==
-                banjo_target) {
-              target_type = "banjo_dummy"
-            } else {
-              target_type = "banjo"
-            }
+            target_type = target_type
 
             # These all become the parameters to banjo() or banjo_dummy().
             name = banjo_target
@@ -228,6 +221,7 @@ template("banjo_library") {
       import = gen.import
       target = gen.target
       args = {
+        target_type = target_type
         forward_variables_from(invoker,
                                [
                                  "visibility",
@@ -237,11 +231,6 @@ template("banjo_library") {
         # The bindings-library template can map these to corresponding
         # bindings-library targets.
         banjo_deps = banjo_library_deps
-
-        # Provide these for convenience.  They're derived from target_name
-        # but every generator will be doing it the same way.
-        banjo_name = banjo_name
-        banjo_path = banjo_path
       }
     }
   }

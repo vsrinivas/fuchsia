@@ -21,26 +21,31 @@ banjo_support_templates = [
 # This is never used directly, but only indirectly by banjo_library().
 # See there for details.
 template("banjo_cpp_library") {
-  not_needed([ "target_name" ])
   not_needed(invoker, "*")
 
   banjo_target = target_name
+
+  # The dots in the Banjo library namespace are resolved to directories.
+  banjo_c_library_path = string_replace(banjo_target, ".", "/")
   library_target = "$banjo_target.cpp"
   gen_target = "_banjo_cpp_library.generate.$library_target"
   gen_dir = get_label_info(":$gen_target($default_toolchain)",
                            "target_gen_dir") + "/$library_target"
 
+  # The C++ DDK lives at "ddktl/" so replace any "ddk" path prefix.
+  banjo_library_path =
+      string_replace("//${banjo_c_library_path}", "//ddk/", "ddktl/")
   gen_backends = [
     {
       backend = "cpp"
       sources = [
-        "$gen_dir/include/ddktl/protocol/${invoker.banjo_name}.h",
+        "$gen_dir/include/${banjo_library_path}.h",
       ]
     },
     {
       backend = "cpp_i"
       sources = [
-        "$gen_dir/include/ddktl/protocol/${invoker.banjo_name}-internal.h",
+        "$gen_dir/include/${banjo_library_path}-internal.h",
       ]
     },
   ]
@@ -74,7 +79,11 @@ template("banjo_cpp_library") {
         ":$library_target.static",
       ]
       forward_variables_from(invoker, [ "testonly" ])
-      include_dirs = [ "$gen_dir/include" ]
+
+      # Skip adding generated headers if this is a dummy target.
+      if (invoker.target_type != "banjo_dummy") {
+        include_dirs = [ "$gen_dir/include" ]
+      }
     }
 
     library(library_target) {

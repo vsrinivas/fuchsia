@@ -21,15 +21,17 @@ banjo_support_templates = [
 # This is never used directly, but only indirectly by banjo_library().
 # See there for details.
 template("banjo_c_library") {
-  not_needed([ "target_name" ])
   not_needed(invoker, "*")
 
   banjo_target = target_name
+
+  # The dots in the Banjo library namespace are resolved to directories.
+  banjo_library_path = string_replace(banjo_target, ".", "/")
   library_target = "$banjo_target.c"
   gen_target = "_banjo_c_library.generate.$library_target"
   gen_dir = get_label_info(":$gen_target($default_toolchain)",
                            "target_gen_dir") + "/$library_target"
-  gen_sources = [ "$gen_dir/include/ddk/protocol/${invoker.banjo_name}.h" ]
+  gen_sources = [ "$gen_dir/include/${banjo_library_path}.h" ]
 
   fidlc(gen_target) {
     visibility = [ ":*" ]
@@ -56,7 +58,11 @@ template("banjo_c_library") {
         ":$library_target.static",
       ]
       forward_variables_from(invoker, [ "testonly" ])
-      include_dirs = [ "$gen_dir/include" ]
+
+      # Skip adding generated headers if this is a dummy target.
+      if (invoker.target_type != "banjo_dummy") {
+        include_dirs = [ "$gen_dir/include" ]
+      }
     }
 
     library(library_target) {
