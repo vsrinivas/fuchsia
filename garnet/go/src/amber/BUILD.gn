@@ -9,6 +9,7 @@ import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
+import("//build/package/component.gni")
 import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
@@ -77,27 +78,16 @@ package("pkgfs") {
   ]
 }
 
-package("amber") {
-  deprecated_misc_storage = "//build"
-
-  extra = [ manifest_file ]
-
+fuchsia_component("amberd") {
   deps = [
     ":cobalt_sw_delivery_registry",
-    ":install-disk-image.manifest",
     "//garnet/go/src/grand_unified_binary",
   ]
 
-  binaries = [
-    {
-      name = "amber"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "system_updater"
-      source = "grand_unified_binary"
-    },
-  ]
+  manifest = rebase_path("meta/amber.cmx")
+
+  binary_dest = "bin/amber"
+  binary = "grand_unified_binary"
 
   resources = [
     {
@@ -110,28 +100,68 @@ package("amber") {
               "/cobalt_sw_delivery_registry.pb")
       dest = "cobalt_config.pb"
     },
+  ]
+}
+
+fuchsia_component("system_updater") {
+  deps = [
+    ":cobalt_sw_delivery_registry",
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  manifest = rebase_path(
+          "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
+
+  binary_dest = "bin/system_updater"
+  binary = "grand_unified_binary"
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(":cobalt_sw_delivery_registry", "target_gen_dir") +
+              "/cobalt_sw_delivery_registry.pb")
+      dest = "cobalt_config.pb"
+    },
     {
       path = rebase_path("system_updater/images")
       dest = "images"
     },
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/amber.cmx")
-      dest = "amber.cmx"
-    },
-    {
-      path = rebase_path(
-              "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
-      dest = "system_updater.cmx"
-    },
+package("amber") {
+  deprecated_misc_storage = "//build"
+
+  extra = [ manifest_file ]
+
+  deps = [
+    ":install-disk-image.manifest",
   ]
+
+  components = [
+    ":amberd",
+    ":system_updater",
+  ]
+}
+
+fuchsia_component("amberctl") {
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  manifest = rebase_path("meta/amberctl.cmx")
+
+  binary_dest = "bin/amberctl"
+  binary = "grand_unified_binary"
 }
 
 package("amber_tools") {
   deps = [
     "//garnet/go/src/grand_unified_binary",
+  ]
+
+  components = [
+    ":amberctl",
   ]
 
   binaries = [

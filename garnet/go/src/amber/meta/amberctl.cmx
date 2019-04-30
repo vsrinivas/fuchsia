@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/amberctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.pkg.PackageResolver"
+        ]
+    }
+}
