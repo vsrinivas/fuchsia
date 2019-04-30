@@ -208,15 +208,14 @@ mod tests {
     use super::*;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
     use failure::Error;
-    use fidl::endpoints::{RequestStream, ServerEnd};
-    use fidl_fuchsia_amber::{ControlRequest, ControlRequestStream};
+    use fidl::endpoints::{self, ServerEnd};
+    use fidl_fuchsia_amber::ControlRequest;
     use fidl_fuchsia_io::DirectoryProxy;
-    use fidl_fuchsia_pkg::{
-        self, PackageCacheProxy, PackageCacheRequest, PackageCacheRequestStream, UpdatePolicy,
-    };
+    use fidl_fuchsia_pkg::{self, PackageCacheProxy, PackageCacheRequest, UpdatePolicy};
     use files_async;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{Channel, Peered, Signals, Status};
+    use std::cell::RefCell;
     use std::collections::HashMap;
     use std::fs::{self, File};
     use std::io;
@@ -263,121 +262,80 @@ mod tests {
             MockAmber { packages: package_map, pkgfs, channels: vec![] }
         }
 
-        async fn run(&mut self, chan: fasync::Channel) -> Result<(), Error> {
-            let mut stream = ControlRequestStream::from_channel(chan);
-            while let Some(event) = await!(stream.try_next())? {
-                match event {
-                    ControlRequest::GetUpdateComplete { name, version, merkle, responder } => {
-                        self.get_update_complete(name, version, merkle, responder)
-                            .expect("GetUpdateComplete failed");
-                    }
-                    _ => {}
-                }
-            }
+        fn get_update_complete(&mut self, req: ControlRequest) -> Result<(), Error> {
+            match req {
+                ControlRequest::GetUpdateComplete { name, version, responder, .. } => {
+                    let (s, c) = Channel::create().unwrap();
+                    let mut handles = vec![];
+                    let variant = version.unwrap_or_else(|| "0".to_string());
+                    if let Some(package) = self.packages.get(&(name, variant)) {
+                        match package.kind {
+                            PackageKind::Ok => {
+                                // Create blob dir with a single file.
+                                let blob_path = self.pkgfs.path().join(&package.merkle);
+                                if let Err(e) = fs::create_dir(&blob_path) {
+                                    if e.kind() != io::ErrorKind::AlreadyExists {
+                                        return Err(e.into());
+                                    }
+                                }
+                                let blob_file = blob_path.join(format!("{}_file", package.merkle));
+                                fs::write(&blob_file, "hello")?;
 
-            Ok(())
-        }
-
-        fn get_update_complete(
-            &mut self,
-            name: String,
-            variant: Option<String>,
-            _merkle: Option<String>,
-            responder: fidl_fuchsia_amber::ControlGetUpdateCompleteResponder,
-        ) -> Result<(), Error> {
-            let (s, c) = Channel::create()?;
-            let mut handles = vec![];
-
-            let variant = variant.unwrap_or_else(|| "0".to_string());
-
-            if let Some(package) = self.packages.get(&(name, variant)) {
-                match package.kind {
-                    PackageKind::Ok => {
-                        // Create blob dir with a single file.
-                        let blob_path = self.pkgfs.path().join(&package.merkle);
-
-                        if let Err(e) = fs::create_dir(&blob_path) {
-                            if e.kind() != io::ErrorKind::AlreadyExists {
-                                return Err(e.into());
+                                s.write(package.merkle.as_bytes(), &mut handles)?;
+                            }
+                            PackageKind::Error(ref msg) => {
+                                // Package not found, signal error.
+                                s.signal_peer(Signals::NONE, Signals::USER_0)?;
+                                s.write(msg.as_bytes(), &mut handles)?;
                             }
                         }
-
-                        let blob_file = blob_path.join(format!("{}_file", package.merkle));
-                        fs::write(&blob_file, "hello")?;
-
-                        s.write(package.merkle.as_bytes(), &mut handles)?;
-                    }
-                    PackageKind::Error(ref msg) => {
+                    } else {
                         // Package not found, signal error.
                         s.signal_peer(Signals::NONE, Signals::USER_0)?;
-                        s.write(msg.as_bytes(), &mut handles)?;
+                        s.write("merkle not found for package ".as_bytes(), &mut handles)?;
                     }
+                    self.channels.push(s);
+                    responder.send(c).expect("failed to send response");
                 }
-            } else {
-                // Package not found, signal error.
-                s.signal_peer(Signals::NONE, Signals::USER_0)?;
-                s.write("merkle not found for package ".as_bytes(), &mut handles)?;
-            };
-
-            self.channels.push(s);
-            responder.send(c)?;
+                _ => {}
+            }
             Ok(())
         }
     }
 
     struct MockPackageCache {
-        pkgfs: Rc<TempDir>,
+        pkgfs: DirectoryProxy,
     }
 
     impl MockPackageCache {
-        fn new(pkgfs: Rc<TempDir>) -> MockPackageCache {
-            MockPackageCache { pkgfs }
-        }
-
-        async fn run(&self, chan: fasync::Channel) -> Result<(), Error> {
-            let mut stream = PackageCacheRequestStream::from_channel(chan);
-            let f = File::open(self.pkgfs.path())?;
+        fn new(pkgfs: Rc<TempDir>) -> Result<MockPackageCache, Error> {
+            let f = File::open(pkgfs.path())?;
             let pkgfs =
                 DirectoryProxy::new(fasync::Channel::from_channel(fdio::clone_channel(&f)?)?);
-            while let Some(event) = await!(stream.try_next())? {
-                match event {
-                    PackageCacheRequest::Open {
-                        meta_far_blob_id,
-                        selectors: _selectors,
-                        dir,
-                        responder,
-                    } => {
-                        // Forward the directory handle to the corresponding blob directory in
-                        // pkgfs.
-                        let status = match await!(self.open(&pkgfs, meta_far_blob_id, dir)) {
-                            Ok(()) => Status::OK,
-                            Err(e) => {
-                                eprintln!("Cache lookup failed: {}", e);
-                                Status::INTERNAL
-                            }
-                        };
-                        responder.send(status.into_raw())?;
-                    }
-                    _ => {}
-                }
-            }
-            Ok(())
+            Ok(MockPackageCache { pkgfs })
         }
 
-        async fn open<'a>(
-            &'a self,
-            pkgfs: &'a DirectoryProxy,
-            meta_far_blob_id: fidl_fuchsia_pkg::BlobId,
-            dir: ServerEnd<DirectoryMarker>,
-        ) -> Result<(), Error> {
+        fn open(&self, req: PackageCacheRequest) {
             // Forward request to pkgfs directory.
             // FIXME: this is a bit of a hack but there isn't a formal way to convert a Directory
             // request into a Node request.
-            let node_request = ServerEnd::new(dir.into_channel());
-            let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-            let merkle = BlobId::from(meta_far_blob_id.merkle_root).to_string();
-            pkgfs.open(flags, 0, &merkle, node_request)?;
-            Ok(())
+            match req {
+                PackageCacheRequest::Open { meta_far_blob_id, dir, responder, .. } => {
+                    let node_request = ServerEnd::new(dir.into_channel());
+                    let flags =
+                        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
+                    let merkle = BlobId::from(meta_far_blob_id.merkle_root).to_string();
+                    let status = match self.pkgfs.open(flags, 0, &merkle, node_request) {
+                        Ok(()) => Status::OK,
+                        Err(e) => {
+                            eprintln!("Cache lookup failed: {}", e);
+                            Status::INTERNAL
+                        }
+                    };
+                    responder.send(status.into_raw()).expect("failed to send response");
+                }
+                _ => {}
+            }
         }
     }
 
@@ -391,39 +349,28 @@ mod tests {
     impl ResolveTest {
         fn new(
             rewrite_manager: Arc<RwLock<RewriteManager>>,
-            amber_chan: Channel,
-            cache_chan: Channel,
+            packages: Vec<Package>,
         ) -> ResolveTest {
-            let amber_proxy = AmberProxy::new(fasync::Channel::from_channel(amber_chan).unwrap());
-            let cache_proxy =
-                PackageCacheProxy::new(fasync::Channel::from_channel(cache_chan).unwrap());
-
             let pkgfs = Rc::new(TempDir::new().expect("failed to create tmp dir"));
-
+            let amber = Rc::new(RefCell::new(MockAmber::new(packages, pkgfs.clone())));
+            let amber_proxy: AmberProxy = endpoints::spawn_local_stream_handler(move |req| {
+                let amber = amber.clone();
+                async move {
+                    amber.borrow_mut().get_update_complete(req).expect("amber failed");
+                }
+            })
+            .expect("failed to spawn handler");
+            let cache =
+                Rc::new(MockPackageCache::new(pkgfs.clone()).expect("failed to create cache"));
+            let cache_proxy: PackageCacheProxy =
+                endpoints::spawn_local_stream_handler(move |req| {
+                    let cache = cache.clone();
+                    async move {
+                        cache.open(req);
+                    }
+                })
+                .expect("failed to spawn handler");
             ResolveTest { rewrite_manager, amber_proxy, cache_proxy, pkgfs }
-        }
-
-        fn start_services(&self, amber_s: Channel, cache_s: Channel, packages: Vec<Package>) {
-            {
-                let pkgfs = self.pkgfs.clone();
-                fasync::spawn_local(
-                    async move {
-                        let mut amber = MockAmber::new(packages, pkgfs);
-                        await!(amber.run(fasync::Channel::from_channel(amber_s).unwrap()))
-                            .expect("amber failed");
-                    },
-                );
-            }
-            {
-                let pkgfs = self.pkgfs.clone();
-                fasync::spawn_local(
-                    async move {
-                        let cache = MockPackageCache::new(pkgfs);
-                        await!(cache.run(fasync::Channel::from_channel(cache_s).unwrap()))
-                            .expect("package cache failed");
-                    },
-                );
-            }
         }
 
         fn check_dir(&self, dir_path: &Path, want_files: &Vec<String>) {
@@ -519,16 +466,13 @@ mod tests {
         let rewrite_manager = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
         ));
-        let (amber_c, amber_s) = Channel::create().unwrap();
-        let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
             Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
             Package::new("baz", "stable", &gen_merkle('c'), PackageKind::Ok),
             Package::new("buz", "0", &gen_merkle('c'), PackageKind::Ok),
         ];
-        test.start_services(amber_s, cache_s, packages);
+        let test = ResolveTest::new(rewrite_manager, packages);
 
         // Name
         await!(test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))));
@@ -553,16 +497,11 @@ mod tests {
         let rewrite_manager = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
         ));
-        let (amber_c, amber_s) = Channel::create().unwrap();
-        let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
-
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
             Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
         ];
-
-        test.start_services(amber_s, cache_s, packages);
+        let test = ResolveTest::new(rewrite_manager, packages);
 
         // Package name
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')]),));
@@ -582,9 +521,6 @@ mod tests {
         let rewrite_manager = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
         ));
-        let (amber_c, amber_s) = Channel::create().unwrap();
-        let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
         let packages = vec![
             Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
             Package::new(
@@ -594,8 +530,7 @@ mod tests {
                 PackageKind::Error("not found in 1 active sources. last error: ".to_string()),
             ),
         ];
-
-        test.start_services(amber_s, cache_s, packages);
+        let test = ResolveTest::new(rewrite_manager, packages);
 
         // Missing package
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)));
@@ -625,16 +560,11 @@ mod tests {
         let rewrite_manager = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().static_rules(rules).build(),
         ));
-        let (amber_c, amber_s) = Channel::create().unwrap();
-        let (cache_c, cache_s) = Channel::create().unwrap();
-        let test = ResolveTest::new(rewrite_manager, amber_c, cache_c);
-
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
             Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
         ];
-
-        test.start_services(amber_s, cache_s, packages);
+        let test = ResolveTest::new(rewrite_manager, packages);
 
         await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
