@@ -7,6 +7,7 @@ driver("mt8167-i2c") {
     "mt8167-i2c.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.i2cimpl",
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -20,5 +21,34 @@ driver("mt8167-i2c") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("mt8167-i2c-test") {
+  output_name = "mt8167-i2c-test"
+  sources = [
+    "mt8167-i2c.cpp",
+    "mt8167-i2c-test.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mock-gpio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }

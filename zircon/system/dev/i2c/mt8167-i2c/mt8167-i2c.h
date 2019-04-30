@@ -5,11 +5,13 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
+#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2cimpl.h>
 
+#include <fbl/array.h>
 #include <fbl/vector.h>
 
+#include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
@@ -30,6 +32,7 @@ class Mt8167I2c : public DeviceType,
 public:
     explicit Mt8167I2c(zx_device_t* parent)
         : DeviceType(parent) {}
+    virtual ~Mt8167I2c() = default;
     zx_status_t Bind();
     zx_status_t Init();
     static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -40,7 +43,15 @@ public:
     uint32_t I2cImplGetBusCount();
     zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
     zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate);
-    zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
+    virtual zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
+
+    // Visible for testing.
+    zx_status_t DoDummyTransactions();
+
+protected:
+    virtual zx_status_t GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios);
+
+    uint32_t bus_count_;
 
 private:
     struct Key {
@@ -57,11 +68,11 @@ private:
     void Reset(uint32_t id);
     void ShutDown();
 
-    uint32_t bus_count_;
     std::optional<XoRegs> xo_regs_;
     fbl::Vector<Key> keys_;
     zx::port irq_port_;
     thrd_t irq_thread_;
+    bool bind_finished_ = false;
 };
 
 } // namespace mt8167_i2c

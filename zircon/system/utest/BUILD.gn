@@ -29,6 +29,7 @@ if (current_cpu != "") {
       "$zx/system/dev/bus/virtio:virtio-test",
       "$zx/system/dev/gpio/mt-8167:mtk-gpio",
       "$zx/system/dev/gpio/qcom-gpio:qcom-gpio-test",
+      "$zx/system/dev/i2c/mt8167-i2c:mt8167-i2c-test",
       "$zx/system/dev/input/bma253:bma253-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
       "$zx/system/dev/lib/usb:usb-wrapper-test",

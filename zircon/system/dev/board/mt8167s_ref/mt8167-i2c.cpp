@@ -7,7 +7,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 
@@ -18,24 +17,14 @@
 namespace board_mt8167 {
 
 zx_status_t Mt8167::I2cInit() {
-    gpio_impl_protocol_t gpio_impl;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    constexpr uint32_t gpios[] = {
-        58, // SDA0_0
-        59, // SCL0_0
-        52, // SDA1_0
-        53, // SCL1_0
-        60, // SDA2_0
-        61, // SCL2_0
+    constexpr pbus_gpio_t i2c_gpios[] = {
+        { 58 }, // SDA0_0
+        { 59 }, // SCL0_0
+        { 52 }, // SDA1_0
+        { 53 }, // SCL1_0
+        { 60 }, // SDA2_0
+        { 61 }, // SCL2_0
     };
-    for (uint32_t i = 0; i < countof(gpios); ++i) {
-        gpio_impl_set_alt_function(&gpio_impl, gpios[i], 1); // 1 == SDA/SCL pinmux setting.
-    }
 
     constexpr pbus_mmio_t i2c_mmios[] = {
         {
@@ -146,13 +135,15 @@ zx_status_t Mt8167::I2cInit() {
     i2c_dev.mmio_count = countof(i2c_mmios);
     i2c_dev.irq_list = i2c_irqs;
     i2c_dev.irq_count = countof(i2c_irqs);
+    i2c_dev.gpio_list = i2c_gpios;
+    i2c_dev.gpio_count = countof(i2c_gpios);
 
     if (board_info_.vid == PDEV_VID_GOOGLE || board_info_.pid == PDEV_PID_CLEO) {
         i2c_dev.metadata_list = cleo_i2c_metadata;
         i2c_dev.metadata_count = countof(cleo_i2c_metadata);
     }
 
-    status = pbus_.DeviceAdd(&i2c_dev);
+    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
