@@ -52,6 +52,10 @@ public:
     // total length of all the data provided.
     void GetMetadataInfo(int* num_calls, size_t* length);
 
+    // Sets data returned by DeviceGetMetadata(). If used, the provided
+    // pointer must remain valid until the call to DeviceGetMetadata().
+    void SetMetadata(const void* data, size_t data_length);
+
     // Sets an optional list of protocols that the ddk should return for the
     // parent device.
     void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
@@ -71,6 +75,10 @@ public:
     // Internal fake implementation of ddk functionality.
     virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
                                           size_t length);
+
+    // Internal fake implementation of ddk functionality.
+    virtual zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data,
+                                          size_t length, size_t* actual);
 
     // Internal fake implementation of ddk functionality.
     virtual void DeviceMakeVisible(zx_device_t* dev);
@@ -97,6 +105,11 @@ protected:
     int add_metadata_calls_ = 0;
     size_t metadata_length_ = 0;
     const void* metadata_ = nullptr;
+
+    int get_metadata_calls_ = 0;
+    size_t get_metadata_length_ = 0;
+    const void* get_metadata_ = nullptr;
+
     zx_off_t size_ = 0;
 
     fbl::Array<ProtocolEntry> protocols_;

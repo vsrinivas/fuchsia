@@ -495,8 +495,6 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
     if (!page0) {
         ecc_pagesize = AmlGetEccPageSize(controller_params_.bch_mode);
         ecc_pages = writesize_ / ecc_pagesize;
-        if (IsPage0NandPage(nand_page))
-            return ZX_ERR_IO;
     } else
         ecc_pages = 1;
     // Send the page address into the controller.
@@ -523,7 +521,7 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
     status = AmlQueueRB();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: AmlQueueRB failed %d\n", __func__, status);
-        return ZX_ERR_IO;
+        return ZX_ERR_INTERNAL;
     }
     status = AmlCheckECCPages(ecc_pages);
     if (status != ZX_OK) {
@@ -565,8 +563,6 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
     if (!page0) {
         ecc_pagesize = AmlGetEccPageSize(controller_params_.bch_mode);
         ecc_pages = writesize_ / ecc_pagesize;
-        if (IsPage0NandPage(nand_page))
-            return ZX_ERR_IO;
     } else
         ecc_pages = 1;
     if (data != nullptr) {

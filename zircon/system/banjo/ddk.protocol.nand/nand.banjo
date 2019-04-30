@@ -115,6 +115,7 @@ protocol Nand {
 
     /// Submits an IO request for processing. Success or failure will be reported
     /// via the callback. The callback may be called before the Queue() method returns.
+    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     [Async]
     Queue(NandOperation? op) -> (zx.status status, NandOperation? op);
 

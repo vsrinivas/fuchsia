@@ -5,31 +5,34 @@
 driver("skip-block") {
   sources = [
     "binding.c",
-    "skip-block.cpp",
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.badblock",
-    "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/dev/lib/operation",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
 source_set("common") {
   sources = [
     "logical-to-physical-map.cpp",
+    "skip-block.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+  public_deps = [
+    "$zx/system/dev/lib/operation",
+    "$zx/system/banjo/ddk.protocol.badblock",
+    "$zx/system/banjo/ddk.protocol.nand",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
   ]
 }
@@ -37,16 +40,19 @@ source_set("common") {
 test("skip-block-test") {
   output_name = "skip-block-test"
   sources = [
+    "test/skip-block-test.cpp",
     "test/logical-to-physical-map-test.cpp",
   ]
   include_dirs = [ "." ]
   deps = [
     ":common",
+    "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

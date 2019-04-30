@@ -50,6 +50,11 @@ void Bind::SetSize(zx_off_t size) {
     size_ = size;
 }
 
+void Bind::SetMetadata(const void* data, size_t data_length) {
+    get_metadata_ = data;
+    get_metadata_length_ = data_length;
+}
+
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
                             device_add_args_t* args, zx_device_t** out) {
     if (parent != kFakeParent) {
@@ -84,6 +89,20 @@ zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const vo
         metadata_length_ += length;
     }
     add_metadata_calls_++;
+    return ZX_OK;
+}
+
+zx_status_t Bind::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
+                                    size_t* actual) {
+    if (get_metadata_ == nullptr) {
+        return ZX_ERR_BAD_STATE;
+    }
+    *actual = get_metadata_length_;
+    if (buflen < get_metadata_length_) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(buf, get_metadata_, get_metadata_length_);
+    get_metadata_calls_++;
     return ZX_OK;
 }
 
@@ -176,6 +195,14 @@ zx_off_t device_get_size(zx_device_t* device) {
         return 0;
     }
     return fake_ddk::Bind::Instance()->DeviceGetSize(device);
+}
+
+zx_status_t device_get_metadata(zx_device_t* device, uint32_t type, void* buf, size_t buflen,
+                                size_t* actual) {
+    if (!fake_ddk::Bind::Instance()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return fake_ddk::Bind::Instance()->DeviceGetMetadata(device, type, buf, buflen, actual);
 }
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}

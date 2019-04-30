@@ -14,9 +14,11 @@ protocol RawNand {
                                        uint32 ecc_correct);
 
     /// Write one nand page with hwecc.
+    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
 
     /// Erase nand block.
+    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     EraseBlock(uint32 nandpage) -> (zx.status s);
 
     GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);

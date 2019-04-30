@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 
-#include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/nand.h>
@@ -50,8 +49,8 @@ public:
 
     // skip-block fidl implementation.
     zx_status_t GetPartitionInfo(PartitionInfo* info);
-    zx_status_t Read(const ReadWriteOperation& info);
-    zx_status_t Write(const ReadWriteOperation& info, bool* bad_block_grown);
+    zx_status_t Read(const ReadWriteOperation& op);
+    zx_status_t Write(const ReadWriteOperation& op, bool* bad_block_grown);
 
 private:
     explicit SkipBlockDevice(zx_device_t* parent, ddk::NandProtocolClient nand,

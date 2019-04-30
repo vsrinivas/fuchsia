@@ -73,7 +73,7 @@ void WriteCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
 
     if (status != ZX_OK || ctx->current_block + 1 == ctx->op.block + ctx->op.block_count) {
         ctx->status = status;
-        ctx->mark_bad = status != ZX_OK;
+        ctx->mark_bad = (status == ZX_ERR_IO);
         sync_completion_signal(ctx->completion_event);
         return;
     }
@@ -101,7 +101,7 @@ void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
 
     if (status != ZX_OK) {
         ctx->status = status;
-        ctx->mark_bad = true;
+        ctx->mark_bad = (status == ZX_ERR_IO);
         sync_completion_signal(ctx->completion_event);
         return;
     }
@@ -205,6 +205,7 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
     }
     const size_t bad_block_list_len = bad_block_count;
     fbl::unique_ptr<uint32_t[]> bad_block_list(new uint32_t[bad_block_count]);
+    memset(bad_block_list.get(), 0, sizeof(uint32_t) * bad_block_count);
     status = bad_block_.GetBadBlockList(bad_block_list.get(), bad_block_list_len, &bad_block_count);
     if (status != ZX_OK) {
         return status;
@@ -223,7 +224,7 @@ zx_status_t SkipBlockDevice::Bind() {
 
     if (sizeof(nand_operation_t) > parent_op_size_) {
         zxlogf(ERROR, "skip-block: parent op size, %zu, is smaller than minimum op size: %zu\n",
-               sizeof(nand_operation_t), parent_op_size_);
+               parent_op_size_, sizeof(nand_operation_t));
         return ZX_ERR_INTERNAL;
     }
 
