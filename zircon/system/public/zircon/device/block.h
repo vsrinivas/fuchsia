@@ -37,23 +37,6 @@
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
-// Extend a virtual partition.
-#define IOCTL_BLOCK_FVM_EXTEND \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 12)
-// Shink a virtual partition. Returns "success" if ANY slices are
-// freed, even if part of the requested range contains unallocated slices.
-#define IOCTL_BLOCK_FVM_SHRINK \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
-// Given a handle to a partition, destroy it.
-#define IOCTL_BLOCK_FVM_DESTROY_PARTITION \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 14)
-// Returns the total number of vslices and slice size for an FVM partition
-#define IOCTL_BLOCK_FVM_QUERY \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 15)
-// Given a number of initial vslices, returns the number of contiguous allocated
-// (or unallocated) vslices starting from each vslice.
-#define IOCTL_BLOCK_FVM_VSLICE_QUERY \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 16)
 // Prints stats about the block device to the provided buffer and optionally
 // clears the counters
 #define IOCTL_BLOCK_GET_STATS \
@@ -137,45 +120,10 @@ typedef struct {
     size_t length;
 } extend_request_t;
 
-// ssize_t ioctl_block_fvm_extend(int fd, const extend_request_t* request);
-IOCTL_WRAPPER_IN(ioctl_block_fvm_extend, IOCTL_BLOCK_FVM_EXTEND, extend_request_t)
-
-// ssize_t ioctl_block_fvm_shrink(int fd, const extend_request_t* request);
-IOCTL_WRAPPER_IN(ioctl_block_fvm_shrink, IOCTL_BLOCK_FVM_SHRINK, extend_request_t)
-
-// ssize_t ioctl_block_fvm_destroy_partition(int fd);
-IOCTL_WRAPPER(ioctl_block_fvm_destroy_partition, IOCTL_BLOCK_FVM_DESTROY_PARTITION)
-
-typedef struct {
-    bool allocated; // true if vslices are allocated, false otherwise
-    size_t count;   // number of contiguous vslices
-} vslice_range_t;
-
 typedef struct {
     size_t count;                                 // number of elements in vslice_start
     size_t vslice_start[MAX_FVM_VSLICE_REQUESTS]; // vslices to query from
 } query_request_t;
-
-typedef struct {
-    size_t count;                                         // number of elements in vslice_range
-    vslice_range_t vslice_range[MAX_FVM_VSLICE_REQUESTS]; // number of contiguous vslices
-                                                          // that are allocated (or unallocated)
-} query_response_t;
-
-typedef struct {
-    size_t slice_size;             // Size of a single slice, in bytes.
-    size_t vslice_count;           // Number of addressable slices.
-    size_t pslice_total_count;     // Total number of allocatable slices.
-    size_t pslice_allocated_count; // Total number of currently allocated slices.
-} fvm_info_t;
-
-// ssize_t ioctl_block_fvm_query(int fd, fvm_info_t* info);
-IOCTL_WRAPPER_OUT(ioctl_block_fvm_query, IOCTL_BLOCK_FVM_QUERY, fvm_info_t)
-
-// ssize_t ioctl_block_fvm_vslice_query(int fd, query_request_t* request,
-//                                      query_response_t* response);
-IOCTL_WRAPPER_INOUT(ioctl_block_fvm_vslice_query, IOCTL_BLOCK_FVM_VSLICE_QUERY,
-                    query_request_t, query_response_t)
 
 // ssize_t ioctl_block_get_stats(int fd, bool clear, block_stats_t* out)
 IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_stats_t)
