@@ -11,18 +11,22 @@ import (
 	"path/filepath"
 	"regexp"
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	"amber/daemon"
 	"amber/metrics"
+	"amber/source"
 	"amber/sys_update"
 
 	"fidl/fuchsia/amber"
+	"fidl/fuchsia/pkg"
 )
 
 type ControlServer struct {
 	*amber.ControlTransitionalBase
 	daemon    *daemon.Daemon
 	sysUpdate *sys_update.SystemUpdateMonitor
+	openRepos amber.OpenedRepositoryService
 }
 
 var _ = amber.Control((*ControlServer)(nil))
@@ -173,4 +177,47 @@ func (c *ControlServer) Login(srcId string) (*amber.DeviceCode, error) {
 
 func (c *ControlServer) Gc() error {
 	return c.daemon.GC()
+}
+
+type repoHandler struct {
+	config pkg.RepositoryConfig
+	repo   source.Repository
+}
+
+func (h *repoHandler) GetUpdateComplete(name string, variant *string, merkle *string, result amber.FetchResultInterfaceRequest) error {
+	_, _ = variant, merkle
+	log.Printf("getting update for %s from %s", name, h.config.RepoUrl)
+	resultChannel := fidl.InterfaceRequest(result).Channel
+	resultProxy := (*amber.FetchResultEventProxy)(&fidl.ChannelProxy{Channel: resultChannel})
+	defer resultProxy.Close()
+
+	err := resultProxy.OnError((int32)(zx.ErrNotSupported), "Not implemented")
+	if err != nil {
+		// Ignore errors here, it just means whoever asked for this has gone away already.
+		log.Printf("can't report status for update of %s; caller didn't care enough to stick around.", name)
+	}
+	return nil
+}
+
+func (h *repoHandler) Close() error {
+	// Not implemented
+	return nil
+}
+
+var _ amber.OpenedRepository = (*repoHandler)(nil)
+
+func (c *ControlServer) OpenRepository(config pkg.RepositoryConfig, repo amber.OpenedRepositoryInterfaceRequest) (int32, error) {
+	log.Printf("opening repository: %q", config.RepoUrl)
+	opened, err := source.OpenRepository(&config)
+	if err != nil {
+		log.Printf("error opening repository %q: %v", config.RepoUrl, err)
+		repo.Close()
+		return (int32)(zx.ErrInternal), nil
+	}
+	handler := &repoHandler{config, opened}
+	c.openRepos.Add(handler, (fidl.InterfaceRequest(repo)).Channel, func(err error) {
+		log.Printf("closing repository: %s", config.RepoUrl)
+		handler.Close()
+	})
+	return (int32)(zx.ErrOk), nil
 }

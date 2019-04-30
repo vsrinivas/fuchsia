@@ -194,7 +194,6 @@ protocol Control {
     // Packages in the opened repository can be accessed via
     // OpenedRepository.GetUpdateComplete, but will not appear in calls to
     // the global GetUpdateComplete, above.
-    [Transitional = "PKG-661"]
     OpenRepository(fuchsia.pkg.RepositoryConfig config, request<OpenedRepository> repo) -> (zx.status result);
 };
 

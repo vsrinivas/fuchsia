@@ -6,6 +6,7 @@ package daemon
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,9 @@ import (
 	"testing"
 
 	"fidl/fuchsia/amber"
+	"fidl/fuchsia/pkg"
+
+	"amber/source"
 
 	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/repo"
@@ -260,6 +264,99 @@ func TestDaemon(t *testing.T) {
 	panicerr(err)
 	if got, want := string(c), "first blob"; got != want {
 		t.Errorf("getblob: got %q, want %q", got, want)
+	}
+}
+
+func TestOpenRepository(t *testing.T) {
+	store, err := ioutil.TempDir("", "amber-test-store")
+	panicerr(err)
+	defer os.RemoveAll(store)
+
+	// TODO(raggi): make this a real package instead, but that's a lot more setup
+	pkgContent := "very fake package"
+	pkgBlob, err := makeBlob(store, pkgContent)
+	panicerr(err)
+	root1, err := makeBlob(store, "first blob")
+	panicerr(err)
+
+	repoDir, err := ioutil.TempDir("", "amber-test-repo")
+	panicerr(err)
+	defer os.RemoveAll(repoDir)
+
+	// initialize the repo, adding the staged target
+	repo, err := repo.New(repoDir)
+	panicerr(err)
+	panicerr(repo.Init())
+	panicerr(repo.GenKeys())
+
+	mf, err := os.Open(store + "/" + pkgBlob)
+	panicerr(err)
+	defer mf.Close()
+	panicerr(repo.AddPackage("foo/0", mf))
+
+	for _, blob := range []string{pkgBlob, root1} {
+		b, err := os.Open(store + "/" + blob)
+		panicerr(err)
+		_, _, err = repo.AddBlob(blob, b)
+		b.Close()
+		panicerr(err)
+	}
+
+	panicerr(repo.CommitUpdates(false))
+
+	keys, err := repo.RootKeys()
+	panicerr(err)
+	rootKey := keys[0]
+
+	server := httptest.NewServer(http.FileServer(http.Dir(repoDir + "/repository")))
+
+	// XXX(raggi): cleanup disabled because networking bug!
+	// defer server.Close()
+	// // so that the httptest server can close:
+	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
+
+	keyConfig := &pkg.RepositoryKeyConfig{}
+	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
+
+	r, err := source.OpenRepository(&pkg.RepositoryConfig{
+		RepoUrl:        "fuchsia-pkg://testing",
+		RepoUrlPresent: true,
+		Mirrors: []pkg.MirrorConfig{
+			{
+				MirrorUrl:        server.URL,
+				MirrorUrlPresent: true,
+			},
+		},
+		MirrorsPresent: true,
+		// TODO(raggi): fix keyconfig
+		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
+		RootKeysPresent: true,
+	})
+	panicerr(err)
+
+	err = r.Update()
+	panicerr(err)
+
+	c, err := ioutil.ReadFile(r.LocalStoreDir() + "/tuf.json")
+	panicerr(err)
+
+	// Quick parse TUF store JSON to look at the signature on root.json
+	type keyMeta struct {
+		Keyid string
+	}
+	type rootMeta struct {
+		Signatures []keyMeta
+	}
+	type tuf struct {
+		Root rootMeta `json:"root.json"`
+	}
+
+	var meta tuf
+	err = json.Unmarshal(c, &meta)
+	panicerr(err)
+
+	if rootKey.ID() != meta.Root.Signatures[0].Keyid {
+		t.Fatalf("wrong signature in root.json; want key %s, got %s", rootKey.ID(), meta.Root.Signatures[0].Keyid)
 	}
 }
 
