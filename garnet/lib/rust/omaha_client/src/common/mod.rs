@@ -6,7 +6,9 @@
 //! library.  Many of these don't belong to a specific sub-module.
 
 use crate::protocol::request::InstallSource;
+use itertools::Itertools;
 use std::fmt;
+use std::str::FromStr;
 use std::time::SystemTime;
 
 /// Omaha has historically supported multiple methods of counting devices.  Currently, the
@@ -21,14 +23,14 @@ pub enum UserCounting {
     ),
 }
 
-/// Omaha only supports versions in the form of A.B.C.D.  This is a utility wrapper around that form
-/// of version.
-#[derive(Clone)]
-pub struct Version(pub [u32; 4]);
+/// Omaha only supports versions in the form of A.B.C.D, A.B.C, A.B or A.  This is a utility
+/// wrapper around that form of version.
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Version(pub Vec<u32>);
 
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}.{}.{}.{}", self.0[0], self.0[1], self.0[2], self.0[3])
+        write!(f, "{}", self.0.iter().format("."))
     }
 }
 
@@ -38,6 +40,46 @@ impl fmt::Debug for Version {
         fmt::Display::fmt(self, f)
     }
 }
+
+#[derive(Debug, failure::Fail)]
+struct TooManyNumbersError;
+
+impl fmt::Display for TooManyNumbersError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("Too many numbers in version, the maximum is 4.")
+    }
+}
+
+impl FromStr for Version {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let nums = s.split('.').map(|s| s.parse::<u32>()).collect::<Result<Vec<u32>, _>>()?;
+        if nums.len() > 4 {
+            return Err(TooManyNumbersError.into());
+        }
+        Ok(Version(nums))
+    }
+}
+
+impl From<Vec<u32>> for Version {
+    fn from(v: Vec<u32>) -> Self {
+        Version(v)
+    }
+}
+
+macro_rules! impl_from {
+    ($($t:ty),+) => {
+        $(
+            impl From<$t> for Version {
+                fn from(v: $t) -> Self {
+                    Version(v.to_vec())
+                }
+            }
+        )+
+    }
+}
+impl_from!(&[u32], [u32; 1], [u32; 2], [u32; 3], [u32; 4]);
 
 /// The App struct holds information about an application to perform an update check for.
 #[derive(Clone, Debug)]
@@ -102,19 +144,49 @@ mod tests {
 
     #[test]
     pub fn test_version_display() {
-        let version = Version([1, 2, 3, 4]);
+        let version = Version::from([1, 2, 3, 4]);
         assert_eq!("1.2.3.4", version.to_string());
 
-        let version = Version([0, 6, 4, 7]);
+        let version = Version::from([0, 6, 4, 7]);
         assert_eq!("0.6.4.7", version.to_string());
     }
 
     #[test]
     pub fn test_version_debug() {
-        let version = Version([1, 2, 3, 4]);
+        let version = Version::from([1, 2, 3, 4]);
         assert_eq!("1.2.3.4", format!("{:?}", version));
 
-        let version = Version([0, 6, 4, 7]);
+        let version = Version::from([0, 6, 4, 7]);
         assert_eq!("0.6.4.7", format!("{:?}", version));
+    }
+
+    #[test]
+    pub fn test_version_parse() {
+        let version = Version::from([1, 2, 3, 4]);
+        assert_eq!("1.2.3.4".parse::<Version>().unwrap(), version);
+
+        let version = Version::from([6, 4, 7]);
+        assert_eq!("6.4.7".parse::<Version>().unwrap(), version);
+
+        let version = Version::from([999]);
+        assert_eq!("999".parse::<Version>().unwrap(), version);
+    }
+
+    #[test]
+    pub fn test_version_parse_error() {
+        assert!("1.2.3.4.5".parse::<Version>().is_err());
+        assert!("1.2.".parse::<Version>().is_err());
+        assert!(".1.2".parse::<Version>().is_err());
+        assert!("-1".parse::<Version>().is_err());
+        assert!("abc".parse::<Version>().is_err());
+        assert!(".".parse::<Version>().is_err());
+        assert!("".parse::<Version>().is_err());
+        assert!("999999999999999999999999".parse::<Version>().is_err());
+    }
+
+    #[test]
+    pub fn test_version_compare() {
+        assert!(Version::from([1, 2, 3, 4]) < Version::from([2, 0, 3]));
+        assert!(Version::from([1, 2, 3]) < Version::from([1, 2, 3, 4]));
     }
 }

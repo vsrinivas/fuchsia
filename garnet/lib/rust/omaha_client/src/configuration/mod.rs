@@ -38,7 +38,7 @@ pub mod test_support {
     /// Handy generator for an updater configuration.  Used to reduce test boilerplate.
     pub fn config_generator() -> Config {
         Config {
-            updater: Updater { name: "updater".to_string(), version: Version([1, 2, 3, 4]) },
+            updater: Updater { name: "updater".to_string(), version: Version::from([1, 2, 3, 4]) },
             os: OS {
                 platform: "platform".to_string(),
                 version: "0.1.2.3".to_string(),

@@ -307,7 +307,11 @@ mod tests {
             &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
         )
         .add_update_check(
-            &App { id: "app id".to_string(), version: Version([5, 6, 7, 8]), fingerprint: None },
+            &App {
+                id: "app id".to_string(),
+                version: Version::from([5, 6, 7, 8]),
+                fingerprint: None,
+            },
             &Some(Cohort::new("some-channel")),
         )
         .build_intermediate();
@@ -357,7 +361,11 @@ mod tests {
             &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
         )
         .add_update_check(
-            &App { id: "app id".to_string(), version: Version([5, 6, 7, 8]), fingerprint: None },
+            &App {
+                id: "app id".to_string(),
+                version: Version::from([5, 6, 7, 8]),
+                fingerprint: None,
+            },
             &Some(Cohort::new("some-channel")),
         )
         .build()
@@ -427,7 +435,7 @@ mod tests {
         .add_ping(
             &App {
                 id: "ping app id".to_string(),
-                version: Version([6, 7, 8, 9]),
+                version: Version::from([6, 7, 8, 9]),
                 fingerprint: None,
             },
             &Some(Cohort::new("ping-channel")),
@@ -468,7 +476,7 @@ mod tests {
         .add_event(
             &App {
                 id: "event app id".to_string(),
-                version: Version([6, 7, 8, 9]),
+                version: Version::from([6, 7, 8, 9]),
                 fingerprint: None,
             },
             &Some(Cohort::new("event-channel")),
@@ -502,7 +510,7 @@ mod tests {
         // Setup the first app and its cohort
         let app_1 = App {
             id: "event app id".to_string(),
-            version: Version([6, 7, 8, 9]),
+            version: Version::from([6, 7, 8, 9]),
             fingerprint: None,
         };
         let app_1_cohort = Some(Cohort::new("event-channel"));
@@ -567,7 +575,7 @@ mod tests {
         // Setup the first app and its cohort
         let app_1 = App {
             id: "first app id".to_string(),
-            version: Version([1, 2, 3, 4]),
+            version: Version::from([1, 2, 3, 4]),
             fingerprint: None,
         };
         let app_1_cohort = Some(Cohort::new("some-channel"));
@@ -575,7 +583,7 @@ mod tests {
         // Setup the second app and its cohort
         let app_2 = App {
             id: "second app id".to_string(),
-            version: Version([5, 6, 7, 8]),
+            version: Version::from([5, 6, 7, 8]),
             fingerprint: None,
         };
         let app_2_cohort = Some(Cohort::new("some-channel"));
@@ -627,7 +635,7 @@ mod tests {
         // Setup the first app and its cohort
         let app_1 = App {
             id: "first app id".to_string(),
-            version: Version([1, 2, 3, 4]),
+            version: Version::from([1, 2, 3, 4]),
             fingerprint: None,
         };
         let app_1_cohort = Some(Cohort::new("some-channel"));
@@ -635,7 +643,7 @@ mod tests {
         // Setup the second app and its cohort
         let app_2 = App {
             id: "second app id".to_string(),
-            version: Version([5, 6, 7, 8]),
+            version: Version::from([5, 6, 7, 8]),
             fingerprint: None,
         };
         let app_2_cohort = Some(Cohort::new("some-channel"));
@@ -686,7 +694,7 @@ mod tests {
         // Setup the first app and its cohort
         let app_1 = App {
             id: "first app id".to_string(),
-            version: Version([1, 2, 3, 4]),
+            version: Version::from([1, 2, 3, 4]),
             fingerprint: None,
         };
         let app_1_cohort = Some(Cohort::new("some-channel"));
@@ -694,7 +702,7 @@ mod tests {
         // Setup the second app and its cohort
         let app_2 = App {
             id: "second app id".to_string(),
-            version: Version([5, 6, 7, 8]),
+            version: Version::from([5, 6, 7, 8]),
             fingerprint: None,
         };
         let app_2_cohort = Some(Cohort::new("some-channel"));
@@ -750,7 +758,7 @@ mod tests {
         // Setup the first app and its cohort
         let app_1 = App {
             id: "first app id".to_string(),
-            version: Version([1, 2, 3, 4]),
+            version: Version::from([1, 2, 3, 4]),
             fingerprint: None,
         };
         let app_1_cohort = Some(Cohort::new("some-channel"));
@@ -758,7 +766,7 @@ mod tests {
         // Setup the second app and its cohort
         let app_2 = App {
             id: "second app id".to_string(),
-            version: Version([5, 6, 7, 8]),
+            version: Version::from([5, 6, 7, 8]),
             fingerprint: None,
         };
         let app_2_cohort = Some(Cohort::new("some-channel"));
