@@ -15,9 +15,6 @@
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.wlan.service.Wlan"
-        ],
-        "system": [
-            "data/sysui"
         ]
     }
 }

@@ -12,9 +12,6 @@
             "fuchsia.testing.runner.TestRunnerStore",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic"
-        ],
-        "system": [
-            "data/sysui"
         ]
     }
 }
