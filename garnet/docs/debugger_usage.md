@@ -3,7 +3,6 @@
 This is the command usage guide for zxdb. Please see also:
 
   * The [setup and troubleshooting guide](debugger.md).
-  * The [zxdb codelab](http://go.corp.google.com/zxdb-codelab) (Googlers only).
 
 ## Quick start
 
