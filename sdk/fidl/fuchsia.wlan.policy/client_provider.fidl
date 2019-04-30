@@ -1,0 +1,244 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.policy;
+
+using fuchsia.wlan.common;
+using zx;
+
+/// The ClientProvider API provides a mechanism for wlan control and is intended
+/// to be called by applications or entities representing the user (ex, Settings).
+/// This API is not intended to be called by other applications to change wlan
+/// state without explicit user control.
+///
+/// The second aim of this API design is to eliminate the "last-caller wins"
+/// paradigm by limiting the number of controlling applications.  A single caller
+/// at a time is permitted to make API calls that impact wlan state.
+[Discoverable]
+protocol ClientProvider {
+    /// Control channel used by a single caller to trigger wlan client mode state
+    /// changes.  The caller also provides a channel to receive wlan updates.
+    /// Only one caller can have the control channel open at a time.  Attempts to
+    /// register as a controller while there is an active control registration
+    /// will result in the new caller's provided channel being closed.
+    GetController(request<ClientController> requests, ClientStateUpdates updates);
+};
+
+/// The ClientListener API provides a mechanism for callers to receive state change
+/// updates about wlan operation.
+[Discoverable]
+protocol ClientListener {
+    /// Registration for callers to receive wlan client mode state updates.
+    GetListener(ClientStateUpdates updates);
+};
+
+/// ClientControllers allow the caller to trigger wlan state changes.  This includes
+/// whether connections will be attempted, scan triggers and saved network
+/// configuration changes.
+///
+/// Individual calls provided by the API are triggered after registering with
+/// the wlan ClientProvider via the OpenControlChannel call.
+protocol ClientController {
+    /// Enables wlan to initiate connections to networks (either autoconnect to
+    /// saved networks or act on incoming calls triggering connections).  Depending
+    /// on the underlying capabilities of the device, this call may impact other
+    /// device operation (for example, acting as an access point).
+    StartClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
+
+    /// Disables connections to wlan networks and tears down any existing connections.
+    StopClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
+
+    /// Triggers a network scan.  Note, even in normal operation, some scan requests
+    /// may be rejected due to timing with connection establishment or other critical
+    /// connection maintenance.  If the scan is cancelled or errors, the caller is
+    /// notified via a status update in the ScanResultIterator.
+    ScanForNetworks(request<ScanResultIterator> iterator);
+
+    /// Saves a network and any credential information needed to connect.  Multiple
+    /// entries for the same NetworkIdentifier can exist if the credentials are
+    /// different.  If a caller attempts to save a NetworkConfig with the same
+    /// NetworkIdentifier and same Credentials as a previously saved network
+    /// the method will effectively be a no-op.
+    SaveNetwork(NetworkConfig config) -> () error NetworkConfigChangeError;
+
+    /// Removes a saved network configuration, if one exists.  This method will
+    /// automatically trigger a disconnection if the NetworkConfig was used to
+    /// establish the connection.
+    RemoveNetwork(NetworkConfig config) -> () error NetworkConfigChangeError;
+
+    /// Retrieve the currently saved networks using the provided iterator.
+    GetSavedNetworks(request<NetworkConfigIterator> iterator);
+
+    /// Request to attempt a connection to the specified network.  The target of the
+    /// connect call must already be a saved network.  This call is not a
+    /// blocking call for the duration of the connection attempt.  If the call cannot
+    /// be immediately attempted, a failure status will be returned.  If the connection
+    /// request will be attempted, an acknowledgment status will be returned.  Updates
+    /// to the connection status are disseminated via the ClientStateUpdates protocol.
+    /// If the connect attempt fails, the service will fall back to default behavior
+    /// with scanning and connecting via network selection.
+    Connect(NetworkIdentifier id) -> (fuchsia.wlan.common.RequestStatus status);
+};
+
+/// Iterator used to send back scan results to the caller.  The corresponding channel
+/// will be closed after the scan is complete and results are returned or fails due
+/// to an error.
+protocol ScanResultIterator {
+    /// Allows caller to request the next set of scan results.  When all scan results
+    /// have been handled, GetNext will return an empty vector and the channel will
+    /// be closed.  If an error is encountered during the scan, it will be returned
+    /// after all scan results have been retrieved.
+    GetNext() -> (vector<ScanResult> scan_results) error ScanErrorCode;
+};
+
+/// Wlan scan error codes.
+enum ScanErrorCode {
+    /// Unexpected scan error without a specific cause.
+    GENERAL_ERROR = 1;
+    /// Scan was cancelled and stopped.  This can happen due to operating state changes,
+    /// higher priority operations or conflicting requests.
+    CANCELLED = 2;
+};
+
+
+/// Information from an observed wlan network.  This includes the
+/// network name, security type, detected access point information and network
+/// compatibility information.
+table ScanResult {
+    /// Network properties used to distinguish between networks and to group
+    /// individual APs.
+    1: NetworkIdentifier id;
+
+    /// Individual access points offering the specified network.
+    2: vector<Bss> entries;
+
+    /// Indication if the detected network is supported by the implementation.
+    3: Compatibility compatibility;
+};
+
+/// Information for a particular ScanResult entry.
+table Bss {
+    /// MAC address for the AP interface.
+    1: array<uint8>:6 bssid;
+
+    /// Calculated received signal strength for the beacon/probe response.
+    2: int8 rssi;
+
+    /// Operating frequency for this network (in MHz).
+    3: int32 frequency;
+
+    /// Realtime timestamp for this scan result entry.
+    4: zx.time timestamp_nanos;
+};
+
+/// Iterator used by callers to retrieve saved netowrk information.
+protocol NetworkConfigIterator {
+
+    /// Method allowing the next block of saved networks to be handled.
+    GetNext() -> (vector<NetworkConfig> configs);
+};
+
+/// Wlan status changes for client connections and the associated network state.
+/// These updates contain information about whether or not the device will attempt
+/// to connect to networks, saved network configuration change information,
+/// individual connection state information by NetworkIdentifier and connection
+/// attempt information.  The connection and network related calls are based on
+/// NetworkIdentifier to allow multiple simultaneous connections on supporting
+/// devices.
+protocol ClientStateUpdates {
+
+    /// Updates registered listeners with the current summary of wlan client state.
+    /// This will be called when there is any change to the state and the
+    /// registered listeners are responsible for deciding what information has
+    /// changed (since this is dependent on when they last acknowledged the update).
+    OnClientStateUpdate(ClientStateSummary summary) -> ();
+};
+
+/// Information about the current client state for the device.  This includes if the
+/// device will attempt to connect to access points (when applicable), any existing
+/// connections and active connection attempts and their outcomes.
+table ClientStateSummary {
+    /// State indicating whether wlan will attempt to connect to networks or not.
+    1: WlanClientState state;
+
+    /// Active connections, connection attempts or failed connections.
+    2: vector<NetworkState> networks;
+};
+
+/// Information about current network connections and attempts.
+table NetworkState {
+    /// Network id for the current connection (or attempt).
+    1: NetworkIdentifier id;
+
+    /// Current state for the connection.
+    2: ConnectionState state;
+
+    /// Extra information for debugging or Settings display
+    3: DisconnectStatus status;
+};
+
+/// Wlan operating state for client connections
+enum WlanClientState {
+    CONNECTIONS_DISABLED = 1;
+    CONNECTIONS_ENABLED = 2;
+};
+
+/// High level compatibility for the scan result.  Not all network security protocols
+/// are supported.  New protocols may be detected before they are connectable
+/// and deprecated protocols may explicitly be unsupported due to security and
+/// privacy concerns.
+enum Compatibility {
+    /// Denotes that the network is supported and connections can be attempted (given
+    /// appropriate credentials when required).
+    SUPPORTED = 1;
+
+    /// The network uses a deprecated security protocol and is explicitly not supported.
+    DISALLOWED_INSECURE = 2;
+
+    /// The network uses a currently unsupported security protocol.
+    DISALLOWED_NOT_SUPPORTED = 3;
+};
+
+/// Potential error cases for saving and removing network configurations.  This is
+/// intentionally sparse and will be expanded as use cases develop.
+enum NetworkConfigChangeError {
+    GENERAL_ERROR = 1;
+};
+
+/// Connection states used to update registered wlan observers.
+enum ConnectionState {
+    /// The connection attempt was terminated due to an error.
+    FAILED = 1;
+
+    /// The network is disconnected.
+    DISCONNECTED = 2;
+
+    /// The device is attempting a connection to a network.
+    CONNECTING = 3;
+
+    /// The connection is now established.  Note: This does not make any guarantees
+    /// about higher level network reachability.
+    CONNECTED = 4;
+};
+
+/// Disconnect and connection attempt failure status codes
+enum DisconnectStatus {
+    /// The requested connection attempt failed due to timeout.
+    TIMED_OUT = 1;
+
+    /// The requested connection attempt failed due to suspected credential failure.
+    CREDENTIALS_FAILED = 2;
+
+    /// The existing connection was explicitly disconnected by an action of wlan
+    /// service on this device.  This can be the result of wlan connections being
+    /// disabled, network configuration being removed or a connection attempt to a
+    /// different network (as examples).
+    CONNECTION_STOPPED = 3;
+
+    /// The existing connection failed unexpectedly in a way that is not an
+    /// explicitly triggered disconnect by the device (or user).  Examples
+    /// of unexpected disconnections include: an underlying error (driver,
+    /// firmware, etc.), beacon loss, access point failure.
+    CONNECTION_FAILED = 4;
+};
