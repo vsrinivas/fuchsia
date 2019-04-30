@@ -341,6 +341,9 @@ static inline void write_msr(uint32_t msr_id, uint64_t msr_write_val) {
 // a non-Ok status if the write failed because we received a #GP fault.
 zx_status_t write_msr_safe(uint32_t msr_id, uint64_t val);
 
+// Write value |val| into MSR |msr_id| on cpu |cpu|.
+void write_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id, uint64_t val);
+
 static inline bool x86_is_paging_enabled(void) {
     if (x86_get_cr0() & X86_CR0_PG)
         return true;

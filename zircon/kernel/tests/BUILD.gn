@@ -28,6 +28,7 @@ source_set("tests") {
     "thread_tests.cpp",
     "timer_tests.cpp",
     "uart_tests.cpp",
+    "x64_platform_tests.cpp",
   ]
   deps = [
     "$zx/kernel/lib/console",

@@ -53,3 +53,24 @@ uint64_t read_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id) {
                  reinterpret_cast<void*>(&context));
     return context.val;
 }
+
+struct write_msr_context {
+    uint32_t msr;
+    uint64_t val;
+};
+
+static void write_msr_on_cpu_task(void* raw_context) {
+    auto* const context = reinterpret_cast<struct write_msr_context*>(raw_context);
+    write_msr(context->msr, context->val);
+}
+
+void write_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id, uint64_t val) {
+    struct write_msr_context context = {};
+    cpu_mask_t mask = {};
+
+    context.msr = msr_id;
+    context.val = val;
+    mask |= cpu_num_to_mask(cpu);
+    mp_sync_exec(MP_IPI_TARGET_MASK, mask, write_msr_on_cpu_task,
+                 reinterpret_cast<void*>(&context));
+}
