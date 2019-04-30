@@ -427,6 +427,7 @@ group("all") {
     "//garnet/packages/tests:zircon",
     "//garnet/packages/tests:zxdb",
     "//src/connectivity/dhcp:dhcp_tests",
+    "//src/sys/locate:locate_integration_test",
   ]
 }
 

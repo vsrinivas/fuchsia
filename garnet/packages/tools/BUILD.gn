@@ -46,8 +46,8 @@ group("fidl_tools") {
   testonly = true
   public_deps = [
     "//garnet/go/src/fidl",
-    "//tools/fidlgen_llcpp_zircon",
     "//garnet/packages/tools:gidl",
+    "//tools/fidlgen_llcpp_zircon",
   ]
 }
 
@@ -75,6 +75,7 @@ group("all") {
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:zxdb",
     "//src/connectivity/wlan:tools",
+    "//src/sys/locate",
   ]
 }
 
