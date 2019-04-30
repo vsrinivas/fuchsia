@@ -26,6 +26,14 @@ golib("golang.org/x/oauth2") {
 golib("golang.org/x/sys") {
 }
 
+go_library("gopkg.in/check.v1") {
+  name = "gopkg.in/check.v1"
+  source_dir = "//third_party/golibs/github.com/go-check/check"
+  deps = [
+    ":github.com/kr/pretty",
+  ]
+}
+
 golib("github.com/dustin/go-humanize") {
 }
 golib("github.com/flynn/go-docopt") {
@@ -69,6 +77,13 @@ golib("github.com/google/subcommands") {
 golib("github.com/google/uuid") {
 }
 golib("github.com/kr/fs") {
+}
+golib("github.com/kr/pretty") {
+  deps = [
+    ":github.com/kr/text",
+  ]
+}
+golib("github.com/kr/text") {
 }
 golib("github.com/pkg/errors") {
 }

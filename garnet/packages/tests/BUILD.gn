@@ -352,6 +352,7 @@ group("all") {
     "//garnet/packages/tests:go_merkle_tests",
     "//garnet/packages/tests:go_stdlib_tests",
     "//garnet/packages/tests:go_thinfs_tests",
+    "//garnet/packages/tests:go_tuf",
     "//garnet/packages/tests:guest",
     "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
@@ -1007,6 +1008,14 @@ group("amber") {
     "//garnet/go/src/amber:test_config",
     "//garnet/go/src/amber/system_updater:system_updater_tests",
     "//garnet/packages/prod:amber",
+  ]
+}
+
+group("go_tuf") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/go-tuf:go_tuf_host_tests($host_toolchain)",
+    "//garnet/go/src/go-tuf:go_tuf_tests",
   ]
 }
 
