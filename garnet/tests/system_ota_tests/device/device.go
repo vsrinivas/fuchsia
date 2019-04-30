@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/system_ota_tests/amber"
+	"fuchsia.googlesource.com/system_ota_tests/packages"
 	"fuchsia.googlesource.com/system_ota_tests/sshclient"
 
 	"golang.org/x/crypto/ssh"
@@ -169,16 +169,10 @@ func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
 	return false
 }
 
-// RegisterAmberSource adds the repository as a source inside the device's amber.
-func (c *Client) RegisterAmberSource(repoDir string, localHostname string, port int) error {
-	log.Printf("registering update source: %s", repoDir)
-
-	configURL, configHash, err := amber.WriteConfig(repoDir, localHostname, port)
-	if err != nil {
-		return err
-	}
-
-	cmd := fmt.Sprintf("amberctl add_src -f %s -h %s", configURL, configHash)
+// RegisterPackageRepository adds the repository as a repository inside the device.
+func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
+	log.Printf("registering package repository: %s", repo.Dir)
+	cmd := fmt.Sprintf("amberctl add_src -f %s -h %s", repo.URL, repo.Hash)
 	return c.Run(cmd, os.Stdout, os.Stderr)
 }
 

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/system_ota_tests/build"
+	"fuchsia.googlesource.com/system_ota_tests/artifacts"
 	"fuchsia.googlesource.com/system_ota_tests/device"
 	"fuchsia.googlesource.com/system_ota_tests/util"
 )
@@ -29,7 +29,7 @@ type Config struct {
 	ArtifactsPath  string
 	BuilderName    string
 	buildID        string
-	archive        *build.Archive
+	archive        *artifacts.Archive
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
@@ -80,10 +80,10 @@ func (c *Config) NewDeviceClient() (*device.Client, error) {
 	return device.NewClient(deviceHostname, c.SshKeyFile)
 }
 
-func (c *Config) BuildArchive() *build.Archive {
+func (c *Config) BuildArchive() *artifacts.Archive {
 	if c.archive == nil {
 		// Connect to the build archive service.
-		c.archive = build.NewArchive(c.LkgbPath, c.ArtifactsPath, c.OutputDir)
+		c.archive = artifacts.NewArchive(c.LkgbPath, c.ArtifactsPath, c.OutputDir)
 	}
 
 	return c.archive
