@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 #include <trace/event.h>
 
 #include <string>
@@ -31,6 +32,7 @@ namespace ledger {
 
 LedgerManager::LedgerManager(
     Environment* environment, std::string ledger_name,
+    inspect::Object inspect_object,
     std::unique_ptr<encryption::EncryptionService> encryption_service,
     std::unique_ptr<storage::LedgerStorage> storage,
     std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -43,6 +45,7 @@ LedgerManager::LedgerManager(
       ledger_impl_(environment_, this),
       merge_manager_(environment_),
       page_usage_listener_(page_usage_listener),
+      inspect_object_(std::move(inspect_object)),
       weak_factory_(this) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });

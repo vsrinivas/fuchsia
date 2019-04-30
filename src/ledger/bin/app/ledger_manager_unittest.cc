@@ -10,6 +10,7 @@
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 #include <zircon/syscalls.h>
 
 #include <cstdint>
@@ -34,6 +35,8 @@
 
 namespace ledger {
 namespace {
+
+constexpr char kLedgerName[] = "ledger_under_test";
 
 class DelayingCallbacksManager {
  public:
@@ -232,7 +235,7 @@ class LedgerManagerTest : public TestWithEnvironment {
     sync_ptr = sync.get();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, "test_ledger",
+        &environment_, kLedgerName, inspect::Object(),
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
         std::move(storage), std::move(sync), disk_cleanup_manager_.get());
     ResetLedgerPtr();

@@ -9,6 +9,7 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 
 #include <functional>
 #include <map>
@@ -45,6 +46,7 @@ class LedgerManager : public LedgerImpl::Delegate {
  public:
   LedgerManager(
       Environment* environment, std::string ledger_name,
+      inspect::Object inspect_object,
       std::unique_ptr<encryption::EncryptionService> encryption_service,
       std::unique_ptr<storage::LedgerStorage> storage,
       std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -171,6 +173,10 @@ class LedgerManager : public LedgerImpl::Delegate {
   // |tracked_pages_| counts the number of active page-tracking operations. The
   // manager is not empty until all operations have completed.
   uint64_t tracked_pages_ = 0;
+
+  // The static Inspect object maintaining in Inspect a representation of this
+  // LedgerManager.
+  inspect::Object inspect_object_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<LedgerManager> weak_factory_;

@@ -147,6 +147,7 @@ storage::Status LedgerRepositoryImpl::GetLedgerManager(
   auto result = ledger_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(name_as_string),
       std::forward_as_tuple(environment_, name_as_string,
+                            ledgers_inspect_object_.CreateChild(name_as_string),
                             std::move(encryption_service),
                             std::move(ledger_storage), std::move(ledger_sync),
                             page_usage_listener_));

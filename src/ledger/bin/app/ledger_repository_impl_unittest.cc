@@ -16,7 +16,10 @@
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 
+#include <vector>
+
 #include "gtest/gtest.h"
+#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
@@ -36,9 +39,31 @@ constexpr char kObjectsName[] = "test objects";
 
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::MetricList;
+using ::inspect::testing::NameMatches;
 using ::inspect::testing::NodeMatches;
 using ::inspect::testing::UIntMetricIs;
+using ::testing::AllOf;
 using ::testing::Contains;
+using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
+using ::testing::IsEmpty;
+
+// Constructs a Matcher to be matched against a top-level Inspect object (the
+// Inspect object to which the LedgerRepositoryImpl under test attaches a child)
+// that validates that the matched object has a hierarchy with a node for the
+// LedgerRepositoryImpl under test, a node named |kLedgersInspectPathComponent|
+// under that, and a node for each of the given |ledger_names| under that.
+::testing::Matcher<const inspect::ObjectHierarchy&> HierarchyMatcher(
+    const std::vector<std::string> ledger_names) {
+  auto ledger_expectations =
+      std::vector<::testing::Matcher<const inspect::ObjectHierarchy&>>();
+  for (const std::string& ledger_name : ledger_names) {
+    ledger_expectations.push_back(NodeMatches(NameMatches(ledger_name)));
+  }
+  return ChildrenMatch(ElementsAre(ChildrenMatch(ElementsAre(
+      AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent)),
+            ChildrenMatch(ElementsAreArray(ledger_expectations)))))));
+}
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
@@ -122,6 +147,37 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   EXPECT_THAT(second_hierarchy,
               ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 2UL)))))));
+}
+
+TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
+  std::string first_ledger_name = "first_ledger";
+  std::string second_ledger_name = "second_ledger";
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // When nothing has requested a ledger, check that the Inspect hierarchy is as
+  // expected with no nodes representing ledgers.
+  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
+
+  // When one ledger has been created in the repository, check that the Inspect
+  // hierarchy is as expected with a node for that one ledger.
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
+                                   first_ledger_ptr.NewRequest());
+  RunLoopUntilIdle();
+  auto first_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(first_hierarchy, HierarchyMatcher({first_ledger_name}));
+
+  // When two ledgers have been created in the repository, check that the
+  // Inspect hierarchy is as expected with nodes for both ledgers.
+  ledger::LedgerPtr second_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
+                                   second_ledger_ptr.NewRequest());
+  RunLoopUntilIdle();
+  auto second_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(second_hierarchy,
+              HierarchyMatcher({first_ledger_name, second_ledger_name}));
 }
 
 }  // namespace
