@@ -57,12 +57,12 @@ class ComponentContextProvider {
   //
   // ```
   // fidl::BindingSet<fuchsia::foo::Controller> bindings;
-  // context()->service_directory_provider()->AddService(bindings.GetHandler(this));
-  // auto services = context()->service_directory_provider();
+  // context_provider->service_directory_provider()->AddService(bindings.GetHandler(this));
+  // auto context = context_provider->context();
   // ...
   // ...
   // ...
-  // services->Connect(...);
+  // context->svc()->Connect(...);
   // ```
   const std::shared_ptr<ServiceDirectoryProvider>& service_directory_provider()
       const {
