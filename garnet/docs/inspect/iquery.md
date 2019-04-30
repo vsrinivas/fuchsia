@@ -15,21 +15,24 @@ iquery [MODE] [--recursive] [--format=<FORMAT>]
 
 # DESCRIPTION
 
-`iquery` is a utility program for inspecting component objects exposed over the [Inspect API](inspect.md). It accepts a list of paths to process, and how they are processed depends on the `MODE` setting and options.
+`iquery` is a utility program for inspecting component nodes exposed over the
+[Inspect API](gsw-inspect.md).
+It accepts a list of paths to process, and how
+they are processed depends on the `MODE` setting and options.
 
 # MODES
 
 `MODE=(--cat|--ls|--find)`
 
 ## `--cat`
-> DEFAULT. Treat each `PATH` as an object directory to open, and print
-> the properties and metrics for those objects.
+> DEFAULT. Treat each `PATH` as a node directory to open, and print
+> the properties and metrics for those nodes.
 
 ## `--ls`
-> Treat each `PATH` as an object directory, and list the children for those objects.
+> Treat each `PATH` as a node directory, and list the children for those nodes.
 
 ## `--find`
-> Recursively find all object directories under the filesystem paths
+> Recursively find all node directories under the filesystem paths
 > passed in, and output the relative path one per line.
 
 # OPTIONS
@@ -37,7 +40,7 @@ iquery [MODE] [--recursive] [--format=<FORMAT>]
 ## `--recursive`
 > Continue to step down the hierarchy of elements. Mode dependent.
 ```
-cat: If false, will print the top level object only. True will output the complete object hierarchy.
+cat: If false, will print the top level node only. True will output the complete node hierarchy.
 Example:
 $ find .
 a/
@@ -58,8 +61,8 @@ a:
     b_key = b_value
     b_key2 = 44.2
 
-find: If false, it will descent each branch until it finds a valid object.
-      True will output the complete tree, including nested objects.
+find: If false, it will descend into each branch until it finds a valid node.
+      True will output the complete tree, including nested nodes.
 
 Example:
 $ find .
@@ -87,7 +90,7 @@ Current supported formatters:
 ```
 
 ## `--full_paths`
-> Rename each object to have its own relative path.
+> Rename each node to have its own relative path.
 ```
 $ iquery a a/b
 a:
@@ -98,7 +101,7 @@ a/b:
 ```
 
 ## `--absolute_paths`
-> Rename each object to have its own absolute path from the root.
+> Rename each node to have its own absolute path from the root.
 ```
 $ cd /hub/c/
 $ iquery a a/b

@@ -22,17 +22,17 @@ string-valued **Properties** and numeric **Metrics**.
 
 ![Figure: A tree of **Nodes**s](tree.png)
 
-## Node 
+## Node
 
 A node is an exported entity within a component that may have 0 or
 more children. Each node has a name, and each child of a node
 must have a unique name among the children.
 
-![Figure: An **Node**](object.png)
+![Figure: An **Node**](node.png)
 
 ## Property
 
-Objects may have any number of properties. A property has a key and a
+Nodes may have any number of properties. A property has a key and a
 value which are both strings.
 
 ## Metric
@@ -58,10 +58,10 @@ Components by default obtain a reference to their `out/` directory in
 their hub.
 
 *Top-level* nodes are exposed as VmoFiles in the Hub ending in the extension `.inspect`.
-It is customary for components to expose their primary or root tree as 
+It is customary for components to expose their primary or root tree as
 `out/objects/root.inspect`.
 
-For the deprecated FIDL interface, a component exposes its root tree as a 
+For the deprecated FIDL interface, a component exposes its root tree as a
 `fuchsia.inspect.Inspect` service file at `out/objects`. Both FIDL and VMO
 reading are currently supported by the `iquery` tool.
 
@@ -74,7 +74,7 @@ about the component to the hub. For instance, appmgr exposes
 Class `Inspector` is the main entrypoint into using the Inspect API.
 Method `CreateTree` returns a new `Tree` object that wraps a VMO.
 
-Each `Tree` has a root `Object` (`Node`) that can be obtained with `GetRoot`.
+Each `Tree` has a root `Node` that can be obtained with `GetRoot`.
 
 New children can be created underneath the root node, and each node may
 contain any number of metrics and properties. Creation methods return
@@ -87,18 +87,21 @@ The C++ interface supports wrapping the deprecated FIDL interface using
 a compatibility mode.
 
 Instead of using `CreateTree` and `Inspector`, you may instead construct
-an object directly with a name to retrieve an exposable object using FIDL.
+a node directly with a name to retrieve an exposable node using FIDL.
 
 # Deprecated C++ Interface
 
-This interface supports exposing objects using the fuchsia.inspect.Inspect
+This interface supports exposing nodes using the fuchsia.inspect.Inspect
 FIDL interface. The main feature this supports over the VMO solution is
 dynamic children and values, though these features are planned for VMO.
 
+> Since this interface is deprecated, you will see the term "object"
+> instead of "node".
+
 ## [Object Wrapper](/garnet/public/lib/inspect/deprecated/expose.h)
 
-Class `Object` is the implementation of an object in C++. It implements
-the `Vnode` and `Inspect` interfaces to expose the object through the
+Class `Object` is the implementation of a node in C++. It implements
+the `Vnode` and `Inspect` interfaces to expose the node through the
 filesystem and raw FIDL protocols respectively.
 
 Helper classes `Property` and `Metric` wrap the functionality of dealing
@@ -112,7 +115,7 @@ on-demand through callbacks.
 Properties and metrics utilizing a callback will *only* get their value
 by callback until they are set to an explicit value.
 
-The set of children for an object is the union of its explicitly set
+The set of children for a node is the union of its explicitly set
 children and on-demand children provided by callback.
 
 ### Arithmetic
@@ -124,23 +127,23 @@ the type of the metric, and arithmetic operations do not modify this type.
 
 Class `ObjectDir` is a lightweight wrapper around a refcounted pointer
 to an `Object`. `ObjectDirs` are safe to copy, and provide a stable
-reference to a single object.
+reference to a single node.
 
-`ObjectDir` simplifies traversing a tree of objects by name and setting
-properties/metrics on those objects with a STL-style wrapper.
+`ObjectDir` simplifies traversing a tree of nodes by name and setting
+properties/metrics on those nodes with an STL-style wrapper.
 
 ## [ExposedObject](/garnet/public/lib/inspect/deprecated/exposed_object.h)
 
 Class `ExposedObject` is a base class simplifying management of complex
-persistent hierarchies of objects. It is the recommended implementation
-point for exposing objects from your components.
+persistent hierarchies of nodes. It is the recommended implementation
+point for exposing nodes from your components.
 
-An `ExposedObject` is not an object itself, rather it contains a reference
-to the object itself as well as a reference to the (optional) parent for
-the object. On destruction, the `ExposedObject` automatically removes
+An `ExposedObject` is not a node itself, rather it contains a reference
+to the node itself as well as a reference to the (optional) parent for
+the node. On destruction, the `ExposedObject` automatically removes
 itself from its parent without invalidating underlying references to
-the object. This enables developers to expose complex, rapidly changing
-hierarchies of objects without worrying about object lifetime.
+the node. This enables developers to expose complex, rapidly changing
+hierarchies of nodes without worrying about node lifetime.
 
 # Userspace Tools
 

@@ -88,18 +88,18 @@ First, let's look at the internal organization of the data from `example.cc`
 [E10]   // Vector of |Employee|s reporting to this |Employee|.
 [E11]   std::vector<std::unique_ptr<Employee>> reports_;
 [E12]
-[E13]   // Object under which this |Employee| can expose inspect information.
-[E14]   inspect::Object object_;
+[E13]   // Node under which this |Employee| can expose inspect information.
+[E14]   inspect::Node node_;
 [E15]
 [E16]   // Properties for name and email.
 [E17]   inspect::StringProperty name_property_;
 [E18]   inspect::StringProperty email_property_;
 [E19]
-[E20]   // Object under which this |Employee| nests |Task|s.
-[E21]   inspect::Object task_object_;
+[E20]   // Node under which this |Employee| nests |Task|s.
+[E21]   inspect::Node task_node_;
 [E22]
-[E23]   // Object under which this |Employee| nests reporting |Employee|s.
-[E24]   inspect::Object report_object_;
+[E23]   // Node under which this |Employee| nests reporting |Employee|s.
+[E24]   inspect::Node report_node_;
 [E25]
 [E26]   // Container for various computed "Lazy" metrics we wish to expose.
 [E27]   std::vector<inspect::LazyMetric> lazy_metrics_;
@@ -120,14 +120,14 @@ the part on the right contains the "native database" members, and consists of:
   (`vector<std::unique_ptr<Employee>>`).
 
 The part on the left consists of the Inspect members:
-* `object_` (`[E14]` &mdash; binding for the Inspect framework (`inspect::Object`),
+* `node_` (`[E14]` &mdash; binding for the Inspect framework (`inspect::Node`),
 * `name_property_` (`[E17]`) &mdash; the employee's name as an inspect "string"
   property (`inspect::StringProperty`),
 * `email_property_` (`[E18]`) &mdash; the employee's email (`inspect::StringProperty`),
-* `task_object_` (`[E21]`) &mdash; Inspect framework binding to subordinate tasks
-  (`inspect::Object`),
-* `report_object_` (`[E24]`) &mdash; Inspect framework binding to subordinate
-  reports (`inspect::Object`), and
+* `task_node_` (`[E21]`) &mdash; Inspect framework binding to subordinate tasks
+  (`inspect::Node`),
+* `report_node_` (`[E24]`) &mdash; Inspect framework binding to subordinate
+  reports (`inspect::Node`), and
 * `lazy_metrics_` (`[E27]`) &mdash; information about the employee's metrics
  (`vector<inspect::LazyMetric>`).
 
@@ -135,8 +135,8 @@ We'll forgo discussing the "native database" part of the implementation in depth
 
 > It's important to keep in mind that we have two hierarchies of employee and task
 > information: one is maintained by the "native database" part (via the `vector`s of
-> `Employee`s and `Task`s), and the other is maintained by the Inspect objects
-> (`object_`, `task_object_`, and `report_object_`).
+> `Employee`s and `Task`s), and the other is maintained by the Inspect nodes
+> (`node_`, `task_node_`, and `report_node_`).
 >
 > Philosophically, we *want* to keep the two representations distinct &mdash; what gets
 > presented to the Inspect interface may not necessarily map one-to-one with the internal
@@ -149,13 +149,13 @@ In our example, we use the following Inspect types:
 
 Type                      | Use
 --------------------------|-----------------------------------
-`inspect::Object`         | An object under which properties, metrics, and other objects may be nested
+`inspect::Node`           | A node under which properties, metrics, and other nodes may be nested
 `inspect::StringProperty` | Property with value given by a string
 `inspect::LazyMetric`     | A named metric, with the value determined by evaluating a callback
 
-### Creating the root object
+### Creating the root node
 
-The root object is where the data set for Inspect begins.
+The root node is where the data set for Inspect begins.
 There's a little bit of housekeeping in **main()** that gets that going:
 
 ```c++
@@ -165,8 +165,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
 
-  // Create a root object from the context's object_dir.
-  inspect::Object root_object(*context->outgoing().object_dir());
+  // Create a root node from the context's object_dir.
+  inspect::Node root_node(*context->outgoing().object_dir());
 ```
 
 The `async::Loop` object creates the event loop for the component.
@@ -174,15 +174,15 @@ Event loops are responsible for serving interfaces exposed by this component, in
 
 Calling **component::StartupContext::CreateFromStartupInfo()** provides a
 common set of interfaces to the environment this component is running in.
-One of these interfaces is for Inspection, and the root object of this
+One of these interfaces is for Inspection, and the root node of this
 interface is obtained by wrapping the outgoing **object_dir()**.
 
-Once the `root_object` is created, we add some named metric counters to it:
+Once the `root_node` is created, we add some named metric counters to it:
 
 ```c++
   // Create global metrics and globally publish pointers to them.
-  auto employee_count = root_object.CreateUIntMetric("employee_count", 0);
-  auto task_count = root_object.CreateUIntMetric("task_count", 0);
+  auto employee_count = root_node.CreateUIntMetric("employee_count", 0);
+  auto task_count = root_node.CreateUIntMetric("task_count", 0);
   auto cleanup = SetGlobals(&employee_count, &task_count);
 ```
 
@@ -192,37 +192,37 @@ And now we can populate the hierarchy.
 We'll start with the CEO:
 
 ```c++
-  // Create a CEO |Employee| nested underneath the |root_object|.
-  // The name "reporting_tree" will appear as a child of the root object.
-  Employee ceo("CEO", "ceo@example.com", root_object.CreateChild("reporting_tree"));
+  // Create a CEO |Employee| nested underneath the |root_node|.
+  // The name "reporting_tree" will appear as a child of the root node.
+  Employee ceo("CEO", "ceo@example.com", root_node.CreateChild("reporting_tree"));
 ```
 
-The `ceo` object is the root of both our native database and the parallel Inspect
-hierarchy (at `root_object`).
+The `ceo` node is the root of both our native database and the parallel Inspect
+hierarchy (at `root_node`).
 The `Employee` constructor (starting at line `[M06]`, below) shows us how that's done:
 
 ```c++
 [M01] class Employee {
 [M02]  public:
 [M03]   // Create a new |Employee|.
-[M04]   // Note that the constructor takes an |inspect::Object| that we may use to
-[M05]   // expose our own metrics, properties, and children Objects.
-[M06]   Employee(std::string name, std::string email, inspect::Object object)
+[M04]   // Note that the constructor takes an |inspect::Node| that we may use to
+[M05]   // expose our own metrics, properties, and children nodes.
+[M06]   Employee(std::string name, std::string email, inspect::Node node)
 [M07]       : name_(std::move(name)),
 [M08]         email_(std::move(email)),
-[M09]         object_(std::move(object)) {
+[M09]         node_(std::move(node)) {
 [M10]     // Increment the global employee count.
 [M11]     CountEmployees(1);
 [M12]
 [M13]     // Create an |inspect::StringProperty| for the name and email of this
 [M14]     // employee.
-[M15]     name_property_ = object_.CreateStringProperty("name", name_);
-[M16]     email_property_ = object_.CreateStringProperty("email", email_);
-[M17]     // |Task| objects are nested under another child object, called "tasks".
-[M18]     task_object_ = object_.CreateChild("tasks");
+[M15]     name_property_ = node_.CreateStringProperty("name", name_);
+[M16]     email_property_ = node_.CreateStringProperty("email", email_);
+[M17]     // |Task| nodes are nested under another child node, called "tasks".
+[M18]     task_node_ = node_.CreateChild("tasks");
 [M19]     // Each |Employee| reporting to this |Employee|  are nested under another
-[M20]     // child object, called "reports".
-[M21]     report_object_ = object_.CreateChild("reports");
+[M20]     // child node, called "reports".
+[M21]     report_node_ = node_.CreateChild("reports");
 ...
 ```
 
@@ -232,12 +232,12 @@ Argument | Meaning
 ---------|--------
 `name`   | The name of the employee ("CEO")
 `email`  | The employee's email address ("ceo@example.com")
-`object` | The Inspect object associated with this node
+`node`   | The Inspect object associated with this node
 
-The `object` that we passed was generated by calling
-`root_object.CreateChild("reporting_tree")`.
-This creates a child object, "reporting_tree", and it's this child
-object that is now associated with the CEO's node.
+The `node` that we passed was generated by calling
+`root_node.CreateChild("reporting_tree")`.
+This creates a child node, "reporting_tree", and it's this child
+node that is now associated with the CEO's node.
 
 This is what we've built so far (omitting the native database part):
 
@@ -276,18 +276,18 @@ a name and an email, and adds them to both hierarchies:
 [A06]     return reports_
 [A07]         .emplace_back(std::make_unique<Employee>(
 [A08]             std::move(name), std::string(email),
-[A09]             // Note: We need to pass an Object linked under this Object into the
+[A09]             // Note: We need to pass a Node linked under this Node into the
 [A10]             // new child. We use the |email| directly, since elsewhere we
 [A11]             // guarantee everyone's emails are unique.
-[A12]             report_object_.CreateChild(std::move(email))))
+[A12]             report_node_.CreateChild(std::move(email))))
 [A13]         .get();
 [A14]   }
 ```
 
-We call **emplace_back()** to take the newly created `Employee` object (constructed on `[A07]`)
+We call **emplace_back()** to take the newly created `Employee` node (constructed on `[A07]`)
 and add it to the end of the native database vector `reports_`.
 We called the Inspect function **CreateChild()** to create a new child node, which is stored
-by the constructor (via `object_(std::move(object))` on line `[M09]` in the `Employee`
+by the constructor (via `node_(std::move(node))` on line `[M09]` in the `Employee`
 constructor code from the previous sample.)
 
 ### Chaining
@@ -337,10 +337,10 @@ that is, it adds a child node via **CreateChild()** (line `[T25]` below):
 [T19]       return tasks_
 [T20]           .emplace_back(std::make_unique<Task>(
 [T21]               std::move(bug_number), std::move(name),
-[T22]               // Note: We need to pass an Object linked under this Object into
+[T22]               // Note: We need to pass a Node linked under this Node into
 [T23]               // the new child. We use |inspect::UniqueName| to assign a
 [T24]               // globally unique suffix to the child's name.
-[T25]               task_object_.CreateChild(inspect::UniqueName("task-"))))
+[T25]               task_node_.CreateChild(inspect::UniqueName("task-"))))
 [T26]           .get();
 [T27]     } else {
 [T28]       // ... otherwise, recursively add the |Task| to the least loaded report.
@@ -359,8 +359,8 @@ and "task_count" (as unsigned integers) to the root node:
 
 ```c++
   // Create global metrics and globally publish pointers to them.
-  auto employee_count = root_object.CreateUIntMetric("employee_count", 0);
-  auto task_count = root_object.CreateUIntMetric("task_count", 0);
+  auto employee_count = root_node.CreateUIntMetric("employee_count", 0);
+  auto task_count = root_node.CreateUIntMetric("task_count", 0);
   auto cleanup = SetGlobals(&employee_count, &task_count);
 ```
 
@@ -398,7 +398,7 @@ binding a lambda function (lines `[P08` .. `P13]` below) via the Inspect functio
 [P04]    // Create an |inspect::LazyMetric| for this |Employee|'s personal
 [P05]    // performance. The "personal_performance" of an |Employee| is the average
 [P06]    // completion of their |Task|s.
-[P07]    lazy_metrics_.emplace_back(object_.CreateLazyMetric(
+[P07]    lazy_metrics_.emplace_back(node_.CreateLazyMetric(
 [P08]        "personal_performance", [this](component::Metric* out) {
 [P09]          // Callbacks have an "out" parameter that is set to the desired value.
 [P10]          // In this case, set it to the double value of our
@@ -407,7 +407,7 @@ binding a lambda function (lines `[P08` .. `P13]` below) via the Inspect functio
 [P13]        }));
 ```
 
-The lambda function gets passed the object (via `this`) and is expected to return
+The lambda function gets passed the node (via `this`) and is expected to return
 the value through the `out` pointer.
 The actual computation is handled by a native database **CalculateCompletion()** function,
 which returns a `double`.
@@ -425,7 +425,7 @@ To compute the report performance, similar code is used:
 [R04]    // Create an |inspect::LazyMetric| for the performance of this
 [R05]    // |Employee|'s reports. The "report" performance of an |Employee| is the
 [R06]    // average completion of all |Task|s assigned to their direct reports.
-[R07]    lazy_metrics_.emplace_back(object_.CreateLazyMetric(
+[R07]    lazy_metrics_.emplace_back(node_.CreateLazyMetric(
 [R08]        "report_performance", [this](component::Metric* out) {
 [R09]          // Add together the performance for each report, and set the result in
 [R10]          // the out parameter.
@@ -467,12 +467,13 @@ The output has been shortened for the example.
 
 The last two lines shown, containing `libinspect_example_component.cmx`,
 correspond to our employee database example.
-The `8123` is the process ID of the employee database, and there are two object paths:
+The `8123` is the process ID of the employee database, and there are two paths
+containing nodes:
 
 Path             | Meaning
 -----------------|-------------------------------------------
-`out/objects`    | our exposed Inspect data objects
-`system_objects` | system objects
+`out/objects`    | our exposed Inspect data nodes
+`system_objects` | system nodes
 
 The `system_objects` entry is populated by `appmgr` and includes
 information about the process itself (open handles, memory information,
@@ -481,7 +482,7 @@ CPU registers, shared objects, and so on) &mdash; so we'll skip that one.
 The `out/objects` tree is the information exposed by the component itself
 (which is the tree from our example above).
 
-To view the employee database's exposed objects, you can run `iquery` with the
+To view the employee database's exposed nodes, you can run `iquery` with the
 `--recursive` command line option:
 
 ```
@@ -545,7 +546,7 @@ for topics you may wish to learn about (or revisit).
 
 ## I'm modifying an existing component...
 
-> Show how to add inspection into an existing component, and properly pipe through the needed objects.
+> Show how to add inspection into an existing component, and properly pipe through the needed nodes.
 
 # From the "Inspection Documentation Scope" document
 
@@ -605,14 +606,14 @@ From Chris:
     /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/out/objects
     /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/system_objects
 
-    There are two object trees exposed for the example. The system_objects tree
+    There are two node trees exposed for the example. The system_objects tree
     is populated by appmgr and includes data about the process itself (open
     handles, memory in use, stack dumps). The out/objects tree is the
     information exposed by the component itself (which is the tree we are
     describing in the example!).
 
     A comprehensive command to automatically find your component and output its
-    objects is:
+    nodes is:
 
     $ iquery --recursive `iquery --find /hub | grep libinspect_example_component.cmx
     | grep out/objects`
@@ -620,16 +621,16 @@ From Chris:
     This will find the component wherever it is and output its information.
 
 
-    From the host, fx debug-report finds all objects on the system and includes
+    From the host, fx debug-report finds all nodes on the system and includes
     it in a report:
 
     $ fx debug-report
-    $ fx debug-report -s   # include system objects with -s
+    $ fx debug-report -s   # include system nodes with -s
     $ fx debug-report -f json  # set format using -f
 -->
 
 <!-- cross references -->
-[iquery]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/inspect/iquery.md
-[inspect]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/inspect/README.md
-[zxdb]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/debugger.md
-[example.cc]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/inspect/integration/example.cc
+[iquery]: /garnet/docs/inspect/iquery.md
+[inspect]: /garnet/docs/inspect/README.md
+[zxdb]: /garnet/docs/debugger.md
+[example.cc]: /garnet/public/lib/inspect/integration/example.cc
