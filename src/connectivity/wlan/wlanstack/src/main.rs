@@ -37,7 +37,6 @@ use wlan_inspect;
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
 
-const COBALT_CONFIG_PATH: &'static str = "/pkg/data/wlan_metrics_registry.pb";
 const COBALT_BUFFER_SIZE: usize = 100;
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
@@ -59,8 +58,10 @@ async fn main() -> Result<(), Error> {
     let ifaces = Arc::new(ifaces);
 
     let phy_server = device::serve_phys(phys.clone()).map_ok(|x| match x {});
-    let (cobalt_sender, cobalt_reporter) =
-        fuchsia_cobalt::serve(COBALT_BUFFER_SIZE, COBALT_CONFIG_PATH);
+    let (cobalt_sender, cobalt_reporter) = fuchsia_cobalt::serve_with_project_name(
+        COBALT_BUFFER_SIZE,
+        wlan_metrics_registry::PROJECT_NAME,
+    );
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     // TODO(WLAN-927): Remove once drivers support SME channel.

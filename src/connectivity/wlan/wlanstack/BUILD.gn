@@ -18,9 +18,13 @@ group("wlanstack") {
 }
 
 metrics_registry("wlan_metrics_registry") {
-  # This ID must match the Cobalt config from
-  # //third_party/cobalt_config/projects.yaml
-  project_id = 106
+  # This must match the directory name /third_party/cobalt_config/fuchsia/connectivity_wlan
+  project_name = "connectivity_wlan"
+  generate_rust = true
+
+  # We don't need to include a copy of our projects's Cobalt registry in our package because we
+  # rely on it being packaged with Cobalt itself
+  generate_binarypb = false
 }
 
 rustc_binary("bin") {
@@ -31,6 +35,7 @@ rustc_binary("bin") {
   # with_lto = "fat"
 
   deps = [
+    ":wlan_metrics_registry_rustlib",
     "//garnet/lib/rust/fuchsia-wlan-dev",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
@@ -78,15 +83,6 @@ package("wlanstack2") {
     {
       path = rebase_path("meta/wlanstack2.cmx")
       dest = "wlanstack2.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info(":wlan_metrics_registry", "target_gen_dir") +
-              "/wlan_metrics_registry.pb")
-      dest = "wlan_metrics_registry.pb"
     },
   ]
 }

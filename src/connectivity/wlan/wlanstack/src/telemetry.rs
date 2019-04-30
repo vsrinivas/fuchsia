@@ -22,6 +22,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::ops::Sub;
 use std::sync::Arc;
+use wlan_metrics_registry as metrics;
 use wlan_sme::client::{ConnectFailure, ConnectResult, Standard};
 
 use crate::device::IfaceMap;
@@ -30,23 +31,6 @@ use fuchsia_cobalt::CobaltSender;
 type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 const REPORT_PERIOD_MINUTES: i64 = 1;
-
-// These IDs must match the Cobalt config from
-// //third_party/cobalt_config/fuchsia/wlan/config.yaml
-enum CobaltMetricId {
-    RsnaDelay = 2,
-    AssociationDelay = 3,
-    ScanDelay = 4,
-    DispatcherPacketCounter = 5,
-    ClientAssocDataRssi = 6,
-    ClientBeaconRssi = 7,
-    ConnectionDelay = 8,
-    RxTxFrameCount = 9,
-    RxTxFrameBytes = 10,
-    NeighborNetworks = 11,
-    WlanStandards = 12,
-    WlanChannels = 13,
-}
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
@@ -106,33 +90,31 @@ fn report_dispatcher_stats(
     current_stats: &fidl_stats::DispatcherStats,
     sender: &mut CobaltSender,
 ) {
-    // These indexes must match the Cobalt config from
-    // //third_party/cobalt_config/fuchsia/wlan/config.yaml
-    const DISPATCHER_IN_PACKET_COUNT_INDEX: u32 = 0;
-    const DISPATCHER_OUT_PACKET_COUNT_INDEX: u32 = 1;
-    const DISPATCHER_DROP_PACKET_COUNT_INDEX: u32 = 2;
-
     report_dispatcher_packets(
-        DISPATCHER_IN_PACKET_COUNT_INDEX,
+        metrics::DispatcherPacketCountsMetricDimensionPacketType::In,
         get_diff(last_stats.any_packet.in_.count, current_stats.any_packet.in_.count),
         sender,
     );
     report_dispatcher_packets(
-        DISPATCHER_OUT_PACKET_COUNT_INDEX,
+        metrics::DispatcherPacketCountsMetricDimensionPacketType::Out,
         get_diff(last_stats.any_packet.out.count, current_stats.any_packet.out.count),
         sender,
     );
     report_dispatcher_packets(
-        DISPATCHER_DROP_PACKET_COUNT_INDEX,
+        metrics::DispatcherPacketCountsMetricDimensionPacketType::Dropped,
         get_diff(last_stats.any_packet.drop.count, current_stats.any_packet.drop.count),
         sender,
     );
 }
 
-fn report_dispatcher_packets(packet_type_index: u32, packet_count: u64, sender: &mut CobaltSender) {
+fn report_dispatcher_packets(
+    packet_type: metrics::DispatcherPacketCountsMetricDimensionPacketType,
+    packet_count: u64,
+    sender: &mut CobaltSender,
+) {
     sender.log_event_count(
-        CobaltMetricId::DispatcherPacketCounter as u32,
-        packet_type_index,
+        metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
+        packet_type as u32,
         packet_count as i64,
     );
 }
@@ -159,13 +141,13 @@ fn report_client_mlme_stats(
     sender: &mut CobaltSender,
 ) {
     report_rssi_stats(
-        CobaltMetricId::ClientAssocDataRssi as u32,
+        metrics::CLIENT_ASSOC_RSSI_METRIC_ID,
         &last_stats.assoc_data_rssi,
         &current_stats.assoc_data_rssi,
         sender,
     );
     report_rssi_stats(
-        CobaltMetricId::ClientBeaconRssi as u32,
+        metrics::CLIENT_BEACON_RSSI_METRIC_ID,
         &last_stats.beacon_rssi,
         &current_stats.beacon_rssi,
         sender,
@@ -179,33 +161,25 @@ fn report_client_mlme_rx_tx_frames(
     current_stats: &fidl_stats::ClientMlmeStats,
     sender: &mut CobaltSender,
 ) {
-    // These indexes must match the Cobalt config from
-    // //third_party/cobalt_config/fuchsia/wlan/config.yaml
-    const CLIENT_MLME_RX_FRAME_COUNT_INDEX: u32 = 0;
-    const CLIENT_MLME_TX_FRAME_COUNT_INDEX: u32 = 1;
     sender.log_event_count(
-        CobaltMetricId::RxTxFrameCount as u32,
-        CLIENT_MLME_RX_FRAME_COUNT_INDEX,
+        metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
+        metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Rx as u32,
         get_diff(last_stats.rx_frame.in_.count, current_stats.rx_frame.in_.count) as i64,
     );
     sender.log_event_count(
-        CobaltMetricId::RxTxFrameCount as u32,
-        CLIENT_MLME_TX_FRAME_COUNT_INDEX,
+        metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
+        metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Tx as u32,
         get_diff(last_stats.tx_frame.out.count, current_stats.tx_frame.out.count) as i64,
     );
 
-    // These indexes must match the Cobalt config from
-    // //third_party/cobalt_config/fuchsia/wlan/config.yaml
-    const CLIENT_MLME_RX_FRAME_BYTES_INDEX: u32 = 0;
-    const CLIENT_MLME_TX_FRAME_BYTES_INDEX: u32 = 1;
     sender.log_event_count(
-        CobaltMetricId::RxTxFrameBytes as u32,
-        CLIENT_MLME_RX_FRAME_BYTES_INDEX,
+        metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
+        metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Rx as u32,
         get_diff(last_stats.rx_frame.in_bytes.count, current_stats.rx_frame.in_bytes.count) as i64,
     );
     sender.log_event_count(
-        CobaltMetricId::RxTxFrameBytes as u32,
-        CLIENT_MLME_TX_FRAME_BYTES_INDEX,
+        metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
+        metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Tx as u32,
         get_diff(last_stats.tx_frame.out_bytes.count, current_stats.tx_frame.out_bytes.count)
             as i64,
     );
@@ -253,7 +227,7 @@ pub fn report_scan_delay(
     scan_finished_time: zx::Time,
 ) {
     let delay_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::ScanDelay as u32, 0, delay_micros);
+    sender.log_elapsed_time(metrics::SCAN_DELAY_METRIC_ID, (), delay_micros);
 }
 
 pub fn report_connection_delay(
@@ -263,18 +237,20 @@ pub fn report_connection_delay(
     result: &ConnectResult,
     failure: &Option<ConnectFailure>,
 ) {
+    use wlan_metrics_registry::ConnectionDelayMetricDimensionConnectionResult::{Fail, Success};
+
     let delay_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
-    let cobalt_index = match (result, failure) {
-        (ConnectResult::Success, None) => Some(ConnectionResultLabel::SuccessId),
+    let connection_result_cobalt = match (result, failure) {
+        (ConnectResult::Success, None) => Some(Success),
         (ConnectResult::Success, Some(_)) => None,
         (_, Some(failure)) => convert_connect_failure(failure),
-        (_, None) => Some(ConnectionResultLabel::FailId),
+        (_, None) => Some(Fail),
     };
 
-    if let Some(cobalt_index) = cobalt_index {
+    if let Some(connection_result_cobalt) = connection_result_cobalt {
         sender.log_elapsed_time(
-            CobaltMetricId::ConnectionDelay as u32,
-            cobalt_index as u32,
+            metrics::CONNECTION_DELAY_METRIC_ID,
+            connection_result_cobalt as u32,
             delay_micros,
         );
     }
@@ -286,7 +262,7 @@ pub fn report_assoc_success_delay(
     assoc_finished_time: zx::Time,
 ) {
     let delay_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::AssociationDelay as u32, 0, delay_micros);
+    sender.log_elapsed_time(metrics::ASSOCIATION_DELAY_METRIC_ID, 0, delay_micros);
 }
 
 pub fn report_rsna_established_delay(
@@ -295,7 +271,7 @@ pub fn report_rsna_established_delay(
     rsna_finished_time: zx::Time,
 ) {
     let delay_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
-    sender.log_elapsed_time(CobaltMetricId::RsnaDelay as u32, 0, delay_micros);
+    sender.log_elapsed_time(metrics::RSNA_DELAY_METRIC_ID, 0, delay_micros);
 }
 
 pub fn report_neighbor_networks_count(
@@ -303,16 +279,14 @@ pub fn report_neighbor_networks_count(
     bss_count: usize,
     ess_count: usize,
 ) {
-    const BSS_COUNT_INDEX: u32 = 0;
-    const ESS_COUNT_INDEX: u32 = 1;
     sender.log_event_count(
-        CobaltMetricId::NeighborNetworks as u32,
-        BSS_COUNT_INDEX,
+        metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
+        metrics::NeighborNetworksCountMetricDimensionNetworkType::Bss as u32,
         bss_count as i64,
     );
     sender.log_event_count(
-        CobaltMetricId::NeighborNetworks as u32,
-        ESS_COUNT_INDEX,
+        metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
+        metrics::NeighborNetworksCountMetricDimensionNetworkType::Ess as u32,
         ess_count as i64,
     );
 }
@@ -321,107 +295,80 @@ pub fn report_standards(
     sender: &mut CobaltSender,
     mut num_bss_by_standard: HashMap<Standard, usize>,
 ) {
+    use metrics::NeighborNetworksWlanStandardsCountMetricDimensionWlanStandardType as StandardLabel;
     const ALL_STANDARDS: [(Standard, StandardLabel); 5] = [
-        (Standard::B, StandardLabel::B),
-        (Standard::G, StandardLabel::G),
-        (Standard::A, StandardLabel::A),
-        (Standard::N, StandardLabel::N),
-        (Standard::Ac, StandardLabel::Ac),
+        (Standard::B, StandardLabel::_802_11b),
+        (Standard::G, StandardLabel::_802_11g),
+        (Standard::A, StandardLabel::_802_11a),
+        (Standard::N, StandardLabel::_802_11n),
+        (Standard::Ac, StandardLabel::_802_11ac),
     ];
     ALL_STANDARDS.into_iter().for_each(|(standard, label)| {
         let count = match num_bss_by_standard.entry(standard.clone()) {
             Entry::Vacant(_) => 0 as i64,
             Entry::Occupied(e) => *e.get() as i64,
         };
-        sender.log_event_count(CobaltMetricId::WlanStandards as u32, label.clone() as u32, count)
+        sender.log_event_count(
+            metrics::NEIGHBOR_NETWORKS_WLAN_STANDARDS_COUNT_METRIC_ID,
+            label.clone() as u32,
+            count,
+        )
     });
 }
 
 pub fn report_channels(sender: &mut CobaltSender, num_bss_by_channel: HashMap<u8, usize>) {
     num_bss_by_channel.into_iter().for_each(|(channel, count)| {
-        sender.log_event_count(CobaltMetricId::WlanChannels as u32, channel as u32, count as i64);
+        sender.log_event_count(
+            metrics::NEIGHBOR_NETWORKS_PRIMARY_CHANNELS_COUNT_METRIC_ID,
+            channel as u32,
+            count as i64,
+        );
     });
 }
 
-#[derive(Clone, Debug)]
-enum StandardLabel {
-    B = 0,
-    G = 1,
-    A = 2,
-    N = 3,
-    Ac = 4,
-}
-
-#[derive(Debug)]
-enum ConnectionResultLabel {
-    SuccessId = 0,
-    FailId = 1,
-    NoMatchingBssFoundId = 2,
-    JoinFailureTimeoutId = 1000,
-    AuthRefusedId = 2000,
-    AuthAntiCloggingTokenRequiredId = 2001,
-    AuthFiniteCyclicGroupNotSupportedId = 2002,
-    AuthRejectedId = 2003,
-    AuthFailureTimeoutId = 2004,
-    AssocRefusedReasonUnspecifiedId = 3000,
-    AssocRefusedNotAuthenticatedId = 3001,
-    AssocRefusedCapabilitiesMismatchId = 3002,
-    AssocRefusedExternalReasonId = 3003,
-    AssocRefusedApOutOfMemoryId = 3004,
-    AssocRefusedBasicRatesMismatchId = 3005,
-    AssocRejectedEmergencyServicesNotSupportedId = 3006,
-    AssocRefusedTemporarilyId = 3007,
-    ScanNotSupportedId = 4000,
-    ScanInvalidArgsId = 4001,
-    ScanInternalErrorId = 4002,
-    RsnaTimeout = 5000,
-}
-
-fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLabel> {
-    use crate::telemetry::ConnectionResultLabel::*;
-    use fidl_fuchsia_wlan_mlme::AssociateResultCodes::*;
-    use fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::*;
-    use fidl_fuchsia_wlan_mlme::JoinResultCodes::*;
-    use fidl_fuchsia_wlan_mlme::ScanResultCodes::*;
+fn convert_connect_failure(
+    result: &ConnectFailure,
+) -> Option<metrics::ConnectionDelayMetricDimensionConnectionResult> {
+    use wlan_metrics_registry::ConnectionDelayMetricDimensionConnectionResult::*;
 
     let result = match result {
-        ConnectFailure::NoMatchingBssFound => NoMatchingBssFoundId,
+        ConnectFailure::NoMatchingBssFound => NoMatchingBssFound,
         ConnectFailure::ScanFailure(scan_failure) => match scan_failure {
-            ScanResultCodes::Success => {
-                return None;
-            }
-            NotSupported => ScanNotSupportedId,
-            InvalidArgs => ScanInvalidArgsId,
-            InternalError => ScanInternalErrorId,
+            ScanResultCodes::Success => return None,
+            ScanResultCodes::NotSupported => ScanNotSupported,
+            ScanResultCodes::InvalidArgs => ScanInvalidArgs,
+            ScanResultCodes::InternalError => ScanInternalError,
         },
         ConnectFailure::JoinFailure(join_failure) => match join_failure {
-            JoinResultCodes::Success => {
-                return None;
-            }
-            JoinFailureTimeout => JoinFailureTimeoutId,
+            JoinResultCodes::Success => return None,
+            JoinResultCodes::JoinFailureTimeout => JoinFailureTimeout,
         },
         ConnectFailure::AuthenticationFailure(auth_failure) => match auth_failure {
-            AuthenticateResultCodes::Success => {
-                return None;
+            AuthenticateResultCodes::Success => return None,
+            AuthenticateResultCodes::Refused => AuthenticationRefused,
+            AuthenticateResultCodes::AntiCloggingTokenRequired => {
+                AuthenticationAntiCloggingTokenRequired
             }
-            Refused => AuthRefusedId,
-            AntiCloggingTokenRequired => AuthAntiCloggingTokenRequiredId,
-            FiniteCyclicGroupNotSupported => AuthFiniteCyclicGroupNotSupportedId,
-            AuthenticationRejected => AuthRejectedId,
-            AuthFailureTimeout => AuthFailureTimeoutId,
+            AuthenticateResultCodes::FiniteCyclicGroupNotSupported => {
+                AuthenticationFiniteCyclicGroupNotSupported
+            }
+            AuthenticateResultCodes::AuthenticationRejected => AuthenticationRejected,
+            AuthenticateResultCodes::AuthFailureTimeout => AuthenticationFailureTimeout,
         },
         ConnectFailure::AssociationFailure(assoc_failure) => match assoc_failure {
-            AssociateResultCodes::Success => {
-                return None;
+            AssociateResultCodes::Success => return None,
+            AssociateResultCodes::RefusedReasonUnspecified => AssociationRefusedReasonUnspecified,
+            AssociateResultCodes::RefusedNotAuthenticated => AssociationRefusedNotAuthenticated,
+            AssociateResultCodes::RefusedCapabilitiesMismatch => {
+                AssociationRefusedCapabilitiesMismatch
             }
-            RefusedReasonUnspecified => AssocRefusedReasonUnspecifiedId,
-            RefusedNotAuthenticated => AssocRefusedNotAuthenticatedId,
-            RefusedCapabilitiesMismatch => AssocRefusedCapabilitiesMismatchId,
-            RefusedExternalReason => AssocRefusedExternalReasonId,
-            RefusedApOutOfMemory => AssocRefusedApOutOfMemoryId,
-            RefusedBasicRatesMismatch => AssocRefusedBasicRatesMismatchId,
-            RejectedEmergencyServicesNotSupported => AssocRejectedEmergencyServicesNotSupportedId,
-            RefusedTemporarily => AssocRefusedTemporarilyId,
+            AssociateResultCodes::RefusedExternalReason => AssociationRefusedExternalReason,
+            AssociateResultCodes::RefusedApOutOfMemory => AssociationRefusedApOutOfMemory,
+            AssociateResultCodes::RefusedBasicRatesMismatch => AssociationRefusedBasicRatesMismatch,
+            AssociateResultCodes::RejectedEmergencyServicesNotSupported => {
+                AssociationRejectedEmergencyServicesNotSupported
+            }
+            AssociateResultCodes::RefusedTemporarily => AssociationRefusedTemporarily,
         },
         ConnectFailure::RsnaTimeout => RsnaTimeout,
     };
@@ -437,5 +384,198 @@ where
         current_stat - last_stat
     } else {
         Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::device::{self, IfaceDevice};
+    use crate::mlme_query_proxy::MlmeQueryProxy;
+    use crate::stats_scheduler::{self, StatsRequest};
+
+    use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload};
+    use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
+    use fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter};
+    use futures::channel::mpsc;
+    use pin_utils::pin_mut;
+
+    const IFACE_ID: u16 = 1;
+
+    #[test]
+    fn test_report_telemetry_periodically() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+
+        let (ifaces_map, stats_requests) = fake_iface_map();
+        let (cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+
+        let telemetry_fut = report_telemetry_periodically(Arc::new(ifaces_map), cobalt_sender);
+        pin_mut!(telemetry_fut);
+
+        // Schedule the first stats request
+        let _ = exec.run_until_stalled(&mut telemetry_fut);
+        assert!(exec.wake_next_timer().is_some());
+        let _ = exec.run_until_stalled(&mut telemetry_fut);
+
+        // Provide stats response
+        let mut nth_req = 0;
+        let mut stats_server = stats_requests.for_each(move |req| {
+            nth_req += 1;
+            future::ready(req.reply(fake_iface_stats(nth_req)))
+        });
+        let _ = exec.run_until_stalled(&mut stats_server);
+
+        // TODO(WLAN-1113): For some reason, telemetry skips logging the first stats response
+        // Schedule the next stats request
+        let _ = exec.run_until_stalled(&mut telemetry_fut);
+        assert!(exec.wake_next_timer().is_some());
+        let _ = exec.run_until_stalled(&mut telemetry_fut);
+
+        // Provide stats response
+        let _ = exec.run_until_stalled(&mut stats_server);
+
+        // Verify that stats are sent to Cobalt
+        let _ = exec.run_until_stalled(&mut telemetry_fut);
+        let mut expected_metrics = vec![
+            CobaltEvent {
+                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
+                event_codes: vec![0], // in
+                component: None,
+                payload: event_count(1),
+            },
+            CobaltEvent {
+                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
+                event_codes: vec![1], // out
+                component: None,
+                payload: event_count(2),
+            },
+            CobaltEvent {
+                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
+                event_codes: vec![2], // dropped
+                component: None,
+                payload: event_count(3),
+            },
+            CobaltEvent {
+                metric_id: metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
+                event_codes: vec![0], // rx
+                component: None,
+                payload: event_count(1),
+            },
+            CobaltEvent {
+                metric_id: metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
+                event_codes: vec![1], // tx
+                component: None,
+                payload: event_count(2),
+            },
+            CobaltEvent {
+                metric_id: metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
+                event_codes: vec![0], // rx
+                component: None,
+                payload: event_count(4),
+            },
+            CobaltEvent {
+                metric_id: metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
+                event_codes: vec![1], // tx
+                component: None,
+                payload: event_count(5),
+            },
+            CobaltEvent {
+                metric_id: metrics::CLIENT_ASSOC_RSSI_METRIC_ID,
+                event_codes: vec![0],
+                component: None,
+                payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 128, count: 1 }]),
+            },
+            CobaltEvent {
+                metric_id: metrics::CLIENT_BEACON_RSSI_METRIC_ID,
+                event_codes: vec![0],
+                component: None,
+                payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 128, count: 1 }]),
+            },
+        ];
+        while let Ok(Some(event)) = cobalt_receiver.try_next() {
+            let index = expected_metrics.iter().position(|e| *e == event);
+            assert!(index.is_some(), "unexpected event: {:?}", event);
+            expected_metrics.remove(index.unwrap());
+        }
+        assert!(expected_metrics.is_empty(), "some metrics not logged: {:?}", expected_metrics);
+    }
+
+    fn event_count(count: i64) -> EventPayload {
+        EventPayload::EventCount(CountEvent { period_duration_micros: 0, count })
+    }
+
+    fn fake_iface_stats(nth_req: u64) -> IfaceStats {
+        IfaceStats {
+            dispatcher_stats: DispatcherStats {
+                any_packet: fake_packet_counter(nth_req),
+                mgmt_frame: fake_packet_counter(nth_req),
+                ctrl_frame: fake_packet_counter(nth_req),
+                data_frame: fake_packet_counter(nth_req),
+            },
+            mlme_stats: Some(Box::new(ClientMlmeStats(fidl_stats::ClientMlmeStats {
+                svc_msg: fake_packet_counter(nth_req),
+                data_frame: fake_packet_counter(nth_req),
+                mgmt_frame: fake_packet_counter(nth_req),
+                tx_frame: fake_packet_counter(nth_req),
+                rx_frame: fake_packet_counter(nth_req),
+                assoc_data_rssi: fake_rssi(nth_req),
+                beacon_rssi: fake_rssi(nth_req),
+            }))),
+        }
+    }
+
+    fn fake_packet_counter(nth_req: u64) -> PacketCounter {
+        PacketCounter {
+            in_: Counter { count: 1 * nth_req, name: "in".to_string() },
+            out: Counter { count: 2 * nth_req, name: "out".to_string() },
+            drop: Counter { count: 3 * nth_req, name: "drop".to_string() },
+            in_bytes: Counter { count: 4 * nth_req, name: "in_bytes".to_string() },
+            out_bytes: Counter { count: 5 * nth_req, name: "out_bytes".to_string() },
+            drop_bytes: Counter { count: 6 * nth_req, name: "drop_bytes".to_string() },
+        }
+    }
+
+    fn fake_rssi(nth_req: u64) -> fidl_stats::RssiStats {
+        fidl_stats::RssiStats { hist: vec![nth_req] }
+    }
+
+    fn fake_iface_map() -> (IfaceMap, impl Stream<Item = StatsRequest>) {
+        let (ifaces_map, _watcher) = IfaceMap::new();
+        let (iface_device, stats_requests) = fake_iface_device();
+        ifaces_map.insert(IFACE_ID, iface_device);
+        (ifaces_map, stats_requests)
+    }
+
+    fn fake_iface_device() -> (IfaceDevice, impl Stream<Item = StatsRequest>) {
+        let (sme_sender, _sme_receiver) = mpsc::unbounded();
+        let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
+        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let mlme_query = MlmeQueryProxy::new(proxy);
+        let device_info = fake_device_info();
+        let iface_device = IfaceDevice {
+            sme_server: device::SmeServer::Client(sme_sender),
+            stats_sched,
+            device: None,
+            mlme_query,
+            device_info,
+        };
+        (iface_device, stats_requests)
+    }
+
+    fn fake_device_info() -> fidl_mlme::DeviceInfo {
+        fidl_mlme::DeviceInfo {
+            role: fidl_mlme::MacRole::Client,
+            bands: vec![],
+            mac_addr: [0xAC; 6],
+            driver_features: vec![],
+        }
+    }
+
+    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const BUFFER_SIZE: usize = 100;
+        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
+        (CobaltSender::new(sender), receiver)
     }
 }
