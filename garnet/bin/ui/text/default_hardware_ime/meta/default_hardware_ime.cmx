@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/default-hardware-ime"
+        "data": "data/default_hardware_ime"
     },
     "sandbox": {
         "services": [

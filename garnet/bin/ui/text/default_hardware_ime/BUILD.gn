@@ -4,9 +4,11 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
-  name = "default-hardware-ime"
+  name = "default_hardware_ime"
+  with_unit_tests = true
   edition = "2018"
   deps = [
     "//garnet/lib/ui/text/common:text_common",
@@ -24,11 +26,11 @@ rustc_binary("bin") {
   ]
 }
 
-package("default-hardware-ime") {
+package("default_hardware_ime") {
   meta = [
     {
-      path = rebase_path("meta/default-hardware-ime.cmx")
-      dest = "default-hardware-ime.cmx"
+      path = rebase_path("meta/default_hardware_ime.cmx")
+      dest = "default_hardware_ime.cmx"
     },
   ]
 
@@ -44,4 +46,25 @@ package("default-hardware-ime") {
   ]
 
   binary = "default_hardware_ime"
+}
+
+test_package("default_hardware_ime_tests") {
+  resources = [
+    {
+      path = rebase_path("assets/us.json")
+      dest = "us.json"
+    },
+  ]
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "default_hardware_ime_bin_test"
+      dest = "default_hardware_ime_unittests"
+      environments = basic_envs
+    },
+  ]
 }

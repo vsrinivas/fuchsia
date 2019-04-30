@@ -5,7 +5,7 @@
 group("text") {
   testonly = true
   deps = [
-    "default-hardware-ime",
+    "default_hardware_ime",
     "test_suite",
   ]
 }

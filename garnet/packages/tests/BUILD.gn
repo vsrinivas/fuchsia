@@ -109,6 +109,8 @@ group("scenic") {
     "//garnet/bin/ui/benchmarks/transparency_benchmark",
     "//garnet/bin/ui/tests/performance:scenic_benchmarks",
     "//garnet/bin/ui/tests/performance:vulkan_is_supported",
+    "//garnet/bin/ui/text/default_hardware_ime:default_hardware_ime",
+    "//garnet/bin/ui/text/default_hardware_ime:default_hardware_ime_tests",
     "//garnet/bin/ui/text/test_suite:text_test_suite",
     "//garnet/bin/ui/text/test_suite:text_test_suite_tests",
     "//garnet/lib/ui/gfx/tests:mock_pose_buffer_provider",
