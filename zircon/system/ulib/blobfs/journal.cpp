@@ -13,6 +13,43 @@
 
 namespace blobfs {
 
+namespace {
+void DumpJournalInfo(const JournalInfo& info, FILE* out) {
+    if (out == nullptr) {
+        return;
+    }
+
+    fprintf(out,
+            "JournalInfo.magic: %" PRIu64 "\n"
+            "JournalInfo.start_block: %" PRIu64 "\n"
+            "JournalInfo.num_blocks: %" PRIu64 "\n"
+            "JournalInfo.timestamp: %" PRIu64 "\n"
+            "JournalInfo.checksum: %" PRIu32 "\n",
+            info.magic, info.start_block, info.num_blocks, info.timestamp, info.checksum);
+}
+
+void DumpHeaderBlock(const HeaderBlock& header, FILE* out, bool print_target_blocks = false) {
+    fprintf(out,
+            "HeaderBlock.magic: %" PRIu64 "\n"
+            "HeaderBlock.timestamp: %" PRIu64 "\n"
+            "HeaderBlock.reserved: %" PRIu64 "\n"
+            "HeaderBlock.num_blocks: %" PRIu64 "\n",
+            header.magic, header.timestamp, header.reserved, header.num_blocks);
+
+    // Valid or not, we print all the target_block. This may be noisy so
+    // printing target_blocks is disabled by default.
+    if (!print_target_blocks) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < kMaxEntryDataBlocks; i++) {
+        fprintf(out, "HeaderBlock.target_block[%" PRIu32 "]: %" PRIu64 "\n", i,
+                header.target_blocks[i]);
+    }
+}
+
+} // namespace
+
 // TODO(ZX-2415): Add tracing/metrics collection to journal related operations.
 
 // Thread which asynchronously processes journal entries.
@@ -109,6 +146,7 @@ zx_status_t Journal::Load() {
     // Verify the journal magic matches.
     if (info->magic != kJournalMagic) {
         FS_TRACE_ERROR("Journal info bad magic\n");
+        DumpJournalInfo(*info, stderr);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -122,6 +160,7 @@ zx_status_t Journal::Load() {
 
         if (old_checksum != info->checksum) {
             FS_TRACE_ERROR("Journal info checksum corrupt\n");
+            DumpJournalInfo(*info, stderr);
             return ZX_ERR_BAD_STATE;
         }
     }
@@ -451,6 +490,7 @@ bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, 
 
     if (commit->timestamp != header->timestamp) {
         FS_TRACE_ERROR("Journal Replay Error: commit timestamp does not match expected\n");
+        DumpHeaderBlock(*header, stderr);
         return false;
     }
 
@@ -461,6 +501,7 @@ bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, 
     // in the commit block does not match what we expect, this is an error.
     if (commit->checksum != checksum) {
         FS_TRACE_ERROR("Journal Replay Error: commit checksum does not match expected\n");
+        DumpHeaderBlock(*header, stderr);
         return false;
     }
 

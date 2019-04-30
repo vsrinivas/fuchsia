@@ -33,6 +33,40 @@ using digest::MerkleTree;
 
 namespace blobfs {
 
+namespace {
+// Dumps the content of superblock to |out|. Does nothing if |out| is nullptr.
+void DumpSuperblock(const Superblock& info, FILE* out) {
+    if (out == nullptr) {
+        return;
+    }
+
+    fprintf(out,
+            "info.magic0: %" PRIu64 "\n"
+            "info.magic1: %" PRIu64 "\n"
+            "info.version: %" PRIu32 "\n"
+            "info.flags: %" PRIu32 "\n"
+            "info.block_size: %" PRIu32 "\n"
+            "info.data_block_count: %" PRIu64 "\n"
+            "info.journal_block_count: %" PRIu64 "\n"
+            "info.inode_count: %" PRIu64 "\n"
+            "info.alloc_block_count: %" PRIu64 "\n"
+            "info.alloc_inode_count: %" PRIu64 "\n"
+            "info.blob_header_next: %" PRIu64 "\n"
+            "info.slice_size: %" PRIu64 "\n"
+            "info.vslice_count: %" PRIu64 "\n"
+            "info.abm_slices: %" PRIu32 "\n"
+            "info.ino_slices: %" PRIu32 "\n"
+            "info.dat_slices: %" PRIu32 "\n"
+            "info.journal_slices: %" PRIu32 "\n",
+            info.magic0, info.magic1, info.version, info.flags, info.block_size,
+            info.data_block_count, info.journal_block_count, info.inode_count,
+            info.alloc_block_count, info.alloc_inode_count, info.blob_header_next, info.slice_size,
+            info.vslice_count, info.abm_slices, info.ino_slices, info.dat_slices,
+            info.journal_slices);
+}
+
+} // namespace
+
 // Number of blocks reserved for the Merkle Tree
 uint32_t MerkleTreeBlocks(const Inode& blobNode) {
     uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
@@ -51,15 +85,18 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     if (info->version != kBlobfsVersion) {
         FS_TRACE_ERROR("blobfs: FS Version: %08x. Driver version: %08x\n", info->version,
                        kBlobfsVersion);
+        DumpSuperblock(*info, stderr);
         return ZX_ERR_INVALID_ARGS;
     }
     if (info->block_size != kBlobfsBlockSize) {
         FS_TRACE_ERROR("blobfs: bsz %u unsupported\n", info->block_size);
+        DumpSuperblock(*info, stderr);
         return ZX_ERR_INVALID_ARGS;
     }
     if ((info->flags & kBlobFlagFVM) == 0) {
         if (TotalBlocks(*info) > max) {
             FS_TRACE_ERROR("blobfs: too large for device\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         }
     } else {
@@ -69,9 +106,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
         size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
         if (abm_blocks_needed > abm_blocks_allocated) {
             FS_TRACE_ERROR("blobfs: Not enough slices for block bitmap\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
             FS_TRACE_ERROR("blobfs: Block bitmap collides into node map\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -79,9 +118,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
         size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
         if (ino_blocks_needed > ino_blocks_allocated) {
             FS_TRACE_ERROR("blobfs: Not enough slices for node map\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
             FS_TRACE_ERROR("blobfs: Node bitmap collides into data blocks\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -89,18 +130,22 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
         size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
         if (dat_blocks_needed < kStartBlockMinimum) {
             FS_TRACE_ERROR("blobfs: Partition too small; no space left for data blocks\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_needed > dat_blocks_allocated) {
             FS_TRACE_ERROR("blobfs: Not enough slices for data blocks\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + DataStartBlock(*info) >
                    std::numeric_limits<uint32_t>::max()) {
             FS_TRACE_ERROR("blobfs: Data blocks overflow uint32\n");
+            DumpSuperblock(*info, stderr);
             return ZX_ERR_INVALID_ARGS;
         }
     }
     if (info->blob_header_next != 0) {
         FS_TRACE_ERROR("blobfs: linked blob headers not yet supported\n");
+        DumpSuperblock(*info, stderr);
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
