@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher"
         ]

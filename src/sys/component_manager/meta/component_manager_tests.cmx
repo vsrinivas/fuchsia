@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.logger.LogSink",
             "fidl.examples.echo.Echo"
         ],
         "features": [ "system-temp" ]
