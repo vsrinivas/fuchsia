@@ -29,16 +29,17 @@ function HELP {
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-GN_SWITCHES=(--export-compile-commands)
+GN_SWITCHES=()
 GN_ARGS=()
 NINJA_ARGS=()
 VARIANT=gcc
 BUILDDIR=
 BUILDDIR_SUFFIX=
+ARCH=
 
 while getopts a:ACdhj:lLo:PqrtvX FLAG; do
     case $FLAG in
-        a) NINJA_ARGS+=("$OPTARG") ;;
+        a) NINJA_ARGS+=("$OPTARG") ARCH="$OPTARG" ;;
         A) VARIANT=asan ;;
         C) VARIANT=clang ;;
         d) VARIANT=noopt ;;
@@ -61,6 +62,12 @@ done
 shift $((OPTIND-1))
 
 set -e
+
+if [[ -z "$ARCH" ]]; then
+    GN_SWITCHES+=(--export-compile-commands)
+else
+    GN_SWITCHES+=(--export-compile-commands="$ARCH")
+fi
 
 if [[ -z "$BUILDDIR" ]]; then
     BUILDDIR="build-$VARIANT$BUILDDIR_SUFFIX"

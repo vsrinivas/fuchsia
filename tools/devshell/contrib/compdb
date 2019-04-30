@@ -12,21 +12,12 @@ fx-config-read
 
 main () {
     if [ $# -gt 0 ]; then
-        echo "Script to generate compile_commands.json files"
-        echo "Automatically generates compile_commands.json for Zircon and Fuchsia"
-        echo "and concatenates the two compile_commands.json"
+        echo "Script to generate compile_commands.json file"
+        echo "Concatenates the Fuchsia and Zircon compile_commands.json into one"
         echo "Usage: fx compdb"
         echo
         exit
     fi
-
-    cd ${FUCHSIA_DIR}/zircon
-    "${FUCHSIA_DIR}/buildtools/gn" gen "${ZIRCON_BUILDROOT}" --export-compile-commands
-    cd ..
-
-    "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}" --export-compile-commands
-
-    #concatenate the two files together by making a tmp file and then removing it when done
 
     rm -f "${FUCHSIA_DIR}/compile_commands.json"
     ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILDROOT}/compile_commands.json \

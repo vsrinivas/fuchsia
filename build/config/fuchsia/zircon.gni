@@ -81,6 +81,7 @@ if (current_toolchain == default_toolchain) {
             "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
             "# zircon_args = { ... } to replace the defaults above.$0x0a" +
             "forward_variables_from($zircon_args, \"*\")",
+        "--export-compile-commands=default",
         rebase_path(zircon_root_build_dir, root_build_dir),
       ])
 
