@@ -21,6 +21,7 @@ group("carnelian") {
   public_deps = [
     "//garnet/packages/prod:scenic",
     "//garnet/public/rust/carnelian:button_rs",
+    "//garnet/public/rust/carnelian:drawing_rs",
     "//garnet/public/rust/carnelian:embedding_rs",
     "//garnet/public/rust/carnelian:perf_test_01_rs",
     "//garnet/public/rust/carnelian:perf_test_02_rs",

@@ -306,6 +306,7 @@ group("all") {
     "//garnet/packages/tests:boringssl",
     "//garnet/packages/tests:broadcom",
     "//garnet/packages/tests:camera_client",
+    "//garnet/packages/tests:carnelian",
     "//garnet/packages/tests:chrealm",
     "//garnet/packages/tests:cmc",
     "//garnet/packages/tests:cmx",
@@ -1274,5 +1275,12 @@ group("unicode_utils") {
   testonly = true
   public_deps = [
     "//garnet/lib/rust/intl/unicode_utils/char_collection:char_collection_tests",
+  ]
+}
+
+group("carnelian") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/rust/carnelian:carnelian_tests",
   ]
 }

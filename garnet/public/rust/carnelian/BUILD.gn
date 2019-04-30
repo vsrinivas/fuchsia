@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("carnelian") {
   name = "carnelian"
+  with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
   deps = [
@@ -16,6 +17,7 @@ rustc_library("carnelian") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
@@ -148,6 +150,19 @@ rustc_binary("perf_test_04") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+rustc_binary("drawing") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/drawing.rs"
+  deps = [
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-framebuffer",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
@@ -289,6 +304,41 @@ package("perf_test_04_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "perf_test_04_rs.cmx"
+    },
+  ]
+}
+
+
+package("drawing_rs") {
+  deps = [
+    ":drawing",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "rust_crates/drawing"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "drawing_rs.cmx"
+    },
+  ]
+}
+
+package("carnelian_tests") {
+  testonly = true
+  deps = [
+    ":carnelian",
+  ]
+
+  tests = [
+    {
+      name = "carnelian_lib_test"
+      environments = basic_envs
     },
   ]
 }
