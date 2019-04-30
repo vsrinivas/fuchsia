@@ -1071,22 +1071,39 @@ public:
     // Register a dependency to a library. The newly recorded dependent library
     // will be referenced by its name, and may also be optionally be referenced
     // by an alias.
-    bool Register(std::string_view filename, Library* dep_library,
+    bool Register(const SourceLocation& location, std::string_view filename, Library* dep_library,
                   const std::unique_ptr<raw::Identifier>& maybe_alias);
 
-    // Lookup a dependent library by |filename| and |name|.
-    bool Lookup(std::string_view filename, const std::vector<std::string_view>& name,
-                Library** out_library);
+    // Looks up a dependent library by |filename| and |name|, and marks it as
+    // used.
+    bool LookupAndUse(std::string_view filename, const std::vector<std::string_view>& name,
+                      Library** out_library);
+
+    // VerifyAllDependenciesWereUsed verifies that all regisered dependencies
+    // were used, i.e. at least one lookup was made to retrieve them.
+    // Reports errors directly, and returns true if one error or more was
+    // reported.
+    bool VerifyAllDependenciesWereUsed(const Library& for_library, ErrorReporter* error_reporter);
 
     const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
 private:
-    bool InsertByName(std::string_view filename, const std::vector<std::string_view>& name,
-                      Library* library);
+    struct LibraryRef {
+        LibraryRef(const SourceLocation location, Library* library) :
+            location_(location), library_(library) {}
 
-    using ByName = std::map<std::vector<std::string_view>, Library*>;
+        const SourceLocation location_;
+        Library* library_;
+        bool used_ = false;
+    };
+
+    bool InsertByName(std::string_view filename,
+                      const std::vector<std::string_view>& name, LibraryRef* ref);
+
+    using ByName = std::map<std::vector<std::string_view>, LibraryRef*>;
     using ByFilename = std::map<std::string, std::unique_ptr<ByName>>;
 
+    std::vector<std::unique_ptr<LibraryRef>> refs_;
     ByFilename dependencies_;
     std::set<Library*> dependencies_aggregate_;
 };

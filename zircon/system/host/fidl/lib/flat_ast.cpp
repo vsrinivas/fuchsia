@@ -1210,16 +1210,20 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
     return nullptr;
 }
 
-bool Dependencies::Register(std::string_view filename, Library* dep_library,
+bool Dependencies::Register(const SourceLocation& location,
+                            std::string_view filename, Library* dep_library,
                             const std::unique_ptr<raw::Identifier>& maybe_alias) {
+    refs_.push_back(std::make_unique<LibraryRef>(location, dep_library));
+    auto ref = refs_.back().get();
+
     auto library_name = dep_library->name();
-    if (!InsertByName(filename, library_name, dep_library)) {
+    if (!InsertByName(filename, library_name, ref)) {
         return false;
     }
 
     if (maybe_alias) {
         std::vector<std::string_view> alias_name = {maybe_alias->location().data()};
-        if (!InsertByName(filename, alias_name, dep_library)) {
+        if (!InsertByName(filename, alias_name, ref)) {
             return false;
         }
     }
@@ -1229,8 +1233,8 @@ bool Dependencies::Register(std::string_view filename, Library* dep_library,
     return true;
 }
 
-bool Dependencies::InsertByName(std::string_view filename, const std::vector<std::string_view>& name,
-                                Library* library) {
+bool Dependencies::InsertByName(std::string_view filename,
+                                const std::vector<std::string_view>& name, LibraryRef* ref) {
     auto iter = dependencies_.find(std::string(filename));
     if (iter == dependencies_.end()) {
         dependencies_.emplace(filename, std::make_unique<ByName>());
@@ -1239,12 +1243,13 @@ bool Dependencies::InsertByName(std::string_view filename, const std::vector<std
     iter = dependencies_.find(std::string(filename));
     assert(iter != dependencies_.end());
 
-    auto insert = iter->second->emplace(name, library);
+    auto insert = iter->second->emplace(name, ref);
     return insert.second;
 }
 
-bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
-                          Library** out_library) {
+bool Dependencies::LookupAndUse(std::string_view filename,
+                                const std::vector<std::string_view>& name,
+                                Library** out_library) {
     auto iter1 = dependencies_.find(std::string(filename));
     if (iter1 == dependencies_.end()) {
         return false;
@@ -1255,8 +1260,36 @@ bool Dependencies::Lookup(std::string_view filename, const std::vector<std::stri
         return false;
     }
 
-    *out_library = iter2->second;
+    auto ref = iter2->second;
+    ref->used_ = true;
+    *out_library = ref->library_;
     return true;
+}
+
+bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
+                                                 ErrorReporter* error_reporter) {
+    auto checkpoint = error_reporter->Checkpoint();
+    for (auto by_name_iter = dependencies_.begin();
+         by_name_iter != dependencies_.end();
+         by_name_iter++) {
+        const auto& by_name = *by_name_iter->second;
+        for (const auto& name_to_ref : by_name) {
+            const auto& ref = name_to_ref.second;
+            if (ref->used_)
+                continue;
+            std::string message = "Library ";
+            message.append(NameLibrary(for_library.name()));
+            message.append(" imports ");
+            message.append(NameLibrary(ref->library_->name()));
+            message.append(" but does not use it. Either use ");
+            message.append(NameLibrary(ref->library_->name()));
+            message.append(", or remove import.");
+            // TODO(FIDL-600): Turn this into an error in a few weeks, likely
+            // on 5/15/2019.
+            error_reporter->ReportWarning(ref->location_, message);
+        }
+    }
+    return checkpoint.NoNewErrors();
 }
 
 // Consuming the AST is primarily concerned with walking the tree and
@@ -1345,7 +1378,7 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
 
     auto filename = location.source_file().filename();
     Library* dep_library = nullptr;
-    if (!dependencies_.Lookup(filename, library_name, &dep_library)) {
+    if (!dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
         std::string message("Unknown dependent library ");
         message += NameLibrary(library_name);
         message += ". Did you require it with `using`?";
@@ -1501,7 +1534,8 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     }
 
     auto filename = using_directive->location().source_file().filename();
-    if (!dependencies_.Register(filename, dep_library, using_directive->maybe_alias)) {
+    if (!dependencies_.Register(using_directive->location(), filename, dep_library,
+                                using_directive->maybe_alias)) {
         std::string message("Library ");
         message += NameLibrary(library_name);
         message += " already imported. Did you require it twice?";
@@ -3147,6 +3181,9 @@ bool Library::Compile() {
         if (!VerifyDeclAttributes(decl))
             return false;
     }
+
+    if (!dependencies_.VerifyAllDependenciesWereUsed(*this, error_reporter_))
+        return false;
 
     return error_reporter_->errors().size() == 0;
 }

@@ -295,15 +295,21 @@ bool warn_on_type_alias_before_imports() {
     SharedAmongstLibraries shared;
     TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
+
+struct Something {};
 )FIDL", &shared);
     ASSERT_TRUE(dependency.Compile());
 
-    TestLibrary library(R"FIDL(
+    TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using foo = int16;
 using dependent;
-)FIDL");
+
+struct UseDependent {
+    dependent.Something field;
+};
+)FIDL", &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     ASSERT_TRUE(library.Compile());
 

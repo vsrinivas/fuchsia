@@ -43,7 +43,7 @@ struct Foo {
     END_TEST;
 }
 
-bool valid_using_with_as() {
+bool valid_using_with_as_refs_through_both() {
     BEGIN_TEST;
 
     SharedAmongstLibraries shared;
@@ -65,6 +65,66 @@ using dependent as the_alias;
 struct Foo {
     dependent.Bar dep1;
     the_alias.Bar dep2;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
+bool valid_using_with_as_ref_only_through_fqn() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Bar {
+    int8 s;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependent as the_alias;
+
+struct Foo {
+    dependent.Bar dep1;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
+bool valid_using_with_as_ref_only_through_alias() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Bar {
+    int8 s;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependent as the_alias;
+
+struct Foo {
+    the_alias.Bar dep1;
 };
 
 )FIDL", &shared);
@@ -145,12 +205,47 @@ using dependent; // duplicated
     END_TEST;
 }
 
+bool invalid_unused_using() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+)FIDL", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependent;
+
+struct Foo {
+    int64 does_not;
+    int32 use_dependent;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    const auto& warnings = library.warnings();
+    ASSERT_EQ(1, warnings.size());
+    ASSERT_STR_STR(warnings[0].c_str(),
+        "Library example imports dependent but does not use it. Either use dependent, or remove import.");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(using_tests)
 RUN_TEST(valid_using)
-RUN_TEST(valid_using_with_as)
+RUN_TEST(valid_using_with_as_refs_through_both)
+RUN_TEST(valid_using_with_as_ref_only_through_fqn)
+RUN_TEST(valid_using_with_as_ref_only_through_alias)
 RUN_TEST(invalid_missing_using)
 RUN_TEST(invalid_unknown_using)
 RUN_TEST(invalid_duplicate_using)
+RUN_TEST(invalid_unused_using)
 END_TEST_CASE(using_tests)
