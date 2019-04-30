@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":disk-inspector-unit",
+  ]
+}
+
+test("disk-inspector-unit") {
+  sources = [
+    "basic-types-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}
