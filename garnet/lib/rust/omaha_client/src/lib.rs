@@ -13,4 +13,4 @@ pub mod http_request;
 pub mod install_plan;
 pub mod policy;
 pub mod protocol;
-pub mod requests;
+pub mod request_builder;

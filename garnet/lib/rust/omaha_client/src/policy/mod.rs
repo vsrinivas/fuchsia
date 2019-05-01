@@ -5,7 +5,7 @@
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     install_plan::InstallPlan,
-    requests::RequestParams,
+    request_builder::RequestParams,
 };
 use std::time::SystemTime;
 

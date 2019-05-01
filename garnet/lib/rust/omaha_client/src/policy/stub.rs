@@ -6,7 +6,7 @@ use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     install_plan::InstallPlan,
     policy::{CheckDecision, Policy, PolicyData, UpdateDecision},
-    requests::RequestParams,
+    request_builder::RequestParams,
 };
 
 /// A stub policy implementation that allows everything immediately.
