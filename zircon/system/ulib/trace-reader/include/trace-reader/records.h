@@ -74,6 +74,8 @@ class ArgumentValue final {
 public:
     static ArgumentValue MakeNull() { return ArgumentValue(); }
 
+    static ArgumentValue MakeBool(bool value) { return ArgumentValue(value); }
+
     static ArgumentValue MakeInt32(int32_t value) { return ArgumentValue(value); }
 
     static ArgumentValue MakeUint32(uint32_t value) {
@@ -111,6 +113,11 @@ public:
     }
 
     ArgumentType type() const { return type_; }
+
+    uint32_t GetBool() const {
+        ZX_DEBUG_ASSERT(type_ == ArgumentType::kBool);
+        return bool_;
+    }
 
     int32_t GetInt32() const {
         ZX_DEBUG_ASSERT(type_ == ArgumentType::kInt32);
@@ -161,6 +168,9 @@ private:
     ArgumentValue()
         : type_(ArgumentType::kNull) {}
 
+    explicit ArgumentValue(bool b)
+        : type_(ArgumentType::kBool), bool_(b) {}
+
     explicit ArgumentValue(int32_t int32)
         : type_(ArgumentType::kInt32), int32_(int32) {}
 
@@ -192,6 +202,7 @@ private:
 
     ArgumentType type_;
     union {
+        bool bool_;
         int32_t int32_;
         uint32_t uint32_;
         int64_t int64_;

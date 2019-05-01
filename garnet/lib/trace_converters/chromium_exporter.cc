@@ -295,6 +295,10 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
     writer_.StartObject();
     for (const auto& arg : event.arguments) {
       switch (arg.value().type()) {
+        case trace::ArgumentType::kBool:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Bool(arg.value().GetBool());
+          break;
         case trace::ArgumentType::kInt32:
           writer_.Key(arg.name().data(), arg.name().size());
           writer_.Int(arg.value().GetInt32());

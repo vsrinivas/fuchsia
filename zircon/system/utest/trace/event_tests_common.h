@@ -496,14 +496,13 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
     END_TRACE_TEST;
 }
 
-// TODO(ZX-1033): Define a boolean argument type in the wire format.
 static bool test_bool_arguments(void) {
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
 
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT32(true));
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_UINT32(false));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_BOOL(true));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_BOOL(false));
 
 #ifdef __cplusplus
     TRACE_DURATION_BEGIN("+enabled", "name", "key", true);
@@ -517,12 +516,12 @@ KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>
 Thread(index: 1, <>)\n\
 String(index: 3, \"name\")\n\
 String(index: 4, \"key\")\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(1)})\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(0)})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: bool(true)})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: bool(false)})\n\
 ",
                    "\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(1)})\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: uint32(0)})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: bool(true)})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: bool(false)})\n\
 ");
 
     END_TRACE_TEST;

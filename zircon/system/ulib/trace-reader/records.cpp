@@ -127,6 +127,7 @@ void ArgumentValue::Destroy() {
         string_.~String();
         break;
     case ArgumentType::kNull:
+    case ArgumentType::kBool:
     case ArgumentType::kInt32:
     case ArgumentType::kUint32:
     case ArgumentType::kInt64:
@@ -144,17 +145,20 @@ void ArgumentValue::MoveFrom(ArgumentValue&& other) {
     switch (type_) {
     case ArgumentType::kNull:
         break;
+    case ArgumentType::kBool:
+        bool_ = other.bool_;
+        break;
     case ArgumentType::kInt32:
         int32_ = other.int32_;
         break;
     case ArgumentType::kUint32:
-        int32_ = other.uint32_;
+        uint32_ = other.uint32_;
         break;
     case ArgumentType::kInt64:
         int64_ = other.int64_;
         break;
     case ArgumentType::kUint64:
-        int64_ = other.uint64_;
+        uint64_ = other.uint64_;
         break;
     case ArgumentType::kDouble:
         double_ = other.double_;
@@ -176,6 +180,8 @@ fbl::String ArgumentValue::ToString() const {
     switch (type_) {
     case ArgumentType::kNull:
         return "null";
+    case ArgumentType::kBool:
+        return fbl::StringPrintf("bool(%s)", bool_ ? "true" : "false");
     case ArgumentType::kInt32:
         return fbl::StringPrintf("int32(%" PRId32 ")", int32_);
     case ArgumentType::kUint32:

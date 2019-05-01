@@ -231,6 +231,7 @@ the table below as "req'd" in the "C++" column).
 Macro             |  C++  | Description
 ------------------|-------|--------------------------------------------------------------
 TA_NULL           |       | a null value.
+TA_BOOL           |       | a boolean value.
 TA_INT32          |       | a signed 32-bit integer value.
 TA_UINT32         |       | an unsigned 32-bit integer value.
 TA_INT64          |       | a signed 64-bit integer value.

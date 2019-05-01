@@ -239,6 +239,8 @@ size_t SizeOfEncodedArgValue(const trace_arg_value_t* arg_value) {
     switch (arg_value->type) {
     case TRACE_ARG_NULL:
         return 0u;
+    case TRACE_ARG_BOOL:
+        return 0u; // stored inline
     case TRACE_ARG_INT32:
         return 0u; // stored inline
     case TRACE_ARG_UINT32:
@@ -344,6 +346,10 @@ public:
         switch (arg->value.type) {
         case TRACE_ARG_NULL:
             WriteArgumentHeaderAndName(ArgumentType::kNull, &arg->name_ref, 0u, 0u);
+            break;
+        case TRACE_ARG_BOOL:
+            WriteArgumentHeaderAndName(ArgumentType::kBool, &arg->name_ref, 0u,
+                                       BoolArgumentFields::Value::Make(arg->value.bool_value));
             break;
         case TRACE_ARG_INT32:
             WriteArgumentHeaderAndName(ArgumentType::kInt32, &arg->name_ref, 0u,

@@ -101,6 +101,9 @@ __END_CDECLS
 namespace trace {
 namespace internal {
 
+template <typename T>
+struct is_bool : public std::is_same<std::remove_cv_t<T>, bool> {};
+
 // Helps construct trace argument values using SFINAE to coerce types.
 template <typename T, typename Enable = void>
 struct ArgumentValueMaker;
@@ -122,6 +125,15 @@ struct ArgumentValueMaker<decltype(nullptr)> {
 template <typename T>
 struct ArgumentValueMaker<
     T,
+    typename std::enable_if<is_bool<T>::value>::type> {
+    static trace_arg_value_t Make(bool value) {
+        return trace_make_bool_arg_value(value);
+    }
+};
+
+template <typename T>
+struct ArgumentValueMaker<
+    T,
     typename std::enable_if<std::is_signed<T>::value &&
                             std::is_integral<T>::value &&
                             (sizeof(T) <= sizeof(int32_t))>::type> {
@@ -133,7 +145,8 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T,
-    typename std::enable_if<std::is_unsigned<T>::value &&
+    typename std::enable_if<!is_bool<T>::value &&
+                            std::is_unsigned<T>::value &&
                             (sizeof(T) <= sizeof(uint32_t))>::type> {
     static trace_arg_value_t Make(uint32_t value) {
         return trace_make_uint32_arg_value(value);

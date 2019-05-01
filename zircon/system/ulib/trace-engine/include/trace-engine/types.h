@@ -11,6 +11,7 @@
 #ifndef TRACE_ENGINE_TYPES_H_
 #define TRACE_ENGINE_TYPES_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -226,6 +227,7 @@ typedef enum {
     TRACE_ARG_STRING = 6,
     TRACE_ARG_POINTER = 7,
     TRACE_ARG_KOID = 8,
+    TRACE_ARG_BOOL = 9,
 } trace_arg_type_t;
 
 // A typed argument value.
@@ -240,6 +242,7 @@ typedef struct {
         trace_string_ref_t string_value_ref;
         uintptr_t pointer_value;
         zx_koid_t koid_value;
+        bool bool_value;
         uintptr_t reserved_for_future_expansion[2];
     };
 } trace_arg_value_t;
@@ -303,6 +306,13 @@ static inline trace_arg_value_t trace_make_pointer_arg_value(uintptr_t value) {
 static inline trace_arg_value_t trace_make_koid_arg_value(zx_koid_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_KOID,
                                    {.koid_value = value}};
+    return arg_value;
+}
+
+// Makes a boolean argument value.
+static inline trace_arg_value_t trace_make_bool_arg_value(bool value) {
+    trace_arg_value_t arg_value = {.type = TRACE_ARG_BOOL,
+                                   {.bool_value = value}};
     return arg_value;
 }
 
@@ -397,6 +407,7 @@ enum class ArgumentType {
     kString = TRACE_ARG_STRING,
     kPointer = TRACE_ARG_POINTER,
     kKoid = TRACE_ARG_KOID,
+    kBool = TRACE_ARG_BOOL,
 };
 
 // EventType enumerates all known trace event types.

@@ -480,6 +480,12 @@ bool TraceReader::ReadArguments(Chunk& record,
                                               ArgumentValue::MakeNull()});
             break;
         }
+        case ArgumentType::kBool: {
+            auto value = BoolArgumentFields::Value::Get<bool>(header);
+            out_arguments->push_back(Argument{std::move(name),
+                                              ArgumentValue::MakeBool(value)});
+            break;
+        }
         case ArgumentType::kInt32: {
             auto value = Int32ArgumentFields::Value::Get<int32_t>(header);
             out_arguments->push_back(Argument{std::move(name),

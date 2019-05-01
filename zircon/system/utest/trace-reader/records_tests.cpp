@@ -87,6 +87,30 @@ bool argument_value_test() {
 
     EXPECT_STR_EQ("null", av.ToString().c_str());
 
+    // bool
+
+    av = trace::ArgumentValue::MakeBool(false);
+    EXPECT_EQ(trace::ArgumentType::kBool, av.type());
+    EXPECT_FALSE(av.GetBool());
+    EXPECT_STR_EQ("bool(false)", av.ToString().c_str());
+
+    av = trace::ArgumentValue::MakeBool(true);
+    EXPECT_EQ(trace::ArgumentType::kBool, av.type());
+    EXPECT_TRUE(av.GetBool());
+    EXPECT_STR_EQ("bool(true)", av.ToString().c_str());
+
+    {
+        trace::ArgumentValue m(std::move(av));
+        EXPECT_EQ(trace::ArgumentType::kNull, av.type());
+        EXPECT_EQ(trace::ArgumentType::kBool, m.type());
+        EXPECT_TRUE(m.GetBool());
+
+        av = std::move(m);
+        EXPECT_EQ(trace::ArgumentType::kNull, m.type());
+        EXPECT_EQ(trace::ArgumentType::kBool, av.type());
+        EXPECT_TRUE(av.GetBool());
+    }
+
     // int32
 
     av = trace::ArgumentValue::MakeInt32(INT32_MIN);

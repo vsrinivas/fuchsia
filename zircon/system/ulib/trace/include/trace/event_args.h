@@ -22,6 +22,7 @@
 // type information, with the exception of |TA_CHAR_ARRAY| and |TA_KOID|.
 //
 // Use |TA_NULL| for null values.
+// Use |TA_BOOL| for boolean values.
 // Use |TA_INT32| for signed 32-bit integer values.
 // Use |TA_UINT32| for unsigned 32-bit integer values.
 // Use |TA_INT64| for signed 64-bit integer values.
@@ -43,6 +44,7 @@
 //     zx_koid_t koid = ...;
 //
 //     TRACE_DURATION("category", "name", "arg", TA_NULL());
+//     TRACE_DURATION("category", "name", "arg", TA_BOOL(true));
 //     TRACE_DURATION("category", "name", "arg", TA_INT32(-10));
 //     TRACE_DURATION("category", "name", "arg", TA_UINT32(10));
 //     TRACE_DURATION("category", "name", "arg", TA_INT64(-10));
@@ -79,6 +81,7 @@
 //     TRACE_DURATION("category", "name", "arg", TA_KOID(koid));
 //
 #define TA_NULL() (trace_make_null_arg_value())
+#define TA_BOOL(bool_value) (trace_make_bool_arg_value(bool_value))
 #define TA_INT32(int32_value) (trace_make_int32_arg_value(int32_value))
 #define TA_UINT32(uint32_value) (trace_make_uint32_arg_value(uint32_value))
 #define TA_INT64(int64_value) (trace_make_int64_arg_value(int64_value))
@@ -103,9 +106,9 @@
 //   arg1_name_literal, arg1_value, arg2_name_literal, arg2_value, ...
 //   Argument names must be C string literals, i.e., "foo".
 //   For C, argument values must use the TA_*() macros to construct the value.
-//   E.g., |TA_NULL()|, |TA_INT32()|, |TA_UINT32()|, etc.
+//   E.g., |TA_NULL()|, |TA_BOOL()|, |TA_INT32()|, |TA_UINT32()|, etc.
 //   For C++, one can either use the TA_*() macros or for several types the
-//   compiler can infer the type: nullptr, int32_t, uint32_t, int64_t,
+//   compiler can infer the type: nullptr, bool, int32_t, uint32_t, int64_t,
 //   uint64_t, enum, double, const char[] array, const char*.
 //
 // Example:

@@ -62,6 +62,10 @@ struct ArgumentFields {
     using NameRef = Field<16, 31>;
 };
 
+struct BoolArgumentFields : ArgumentFields {
+    using Value = Field<32, 32>;
+};
+
 struct Int32ArgumentFields : ArgumentFields {
     using Value = Field<32, 63>;
 };
