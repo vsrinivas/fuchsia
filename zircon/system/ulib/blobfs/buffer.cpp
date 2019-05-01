@@ -23,7 +23,7 @@ zx_status_t Buffer::Create(TransactionManager* blobfs, size_t blocks, const char
                            fbl::unique_ptr<Buffer>* out) {
 
     fzl::OwnedVmoMapper mapper;
-    zx_status_t status = mapper.CreateAndMap(blocks * kBlobfsBlockSize, "blob-writeback");
+    zx_status_t status = mapper.CreateAndMap(blocks * kBlobfsBlockSize, label);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Buffer: Failed to create vmo\n");
         return status;
