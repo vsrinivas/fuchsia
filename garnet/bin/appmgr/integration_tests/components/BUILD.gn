@@ -9,18 +9,19 @@ import("//build/testing/environments.gni")
 group("components") {
   testonly = true
   deps = [
-    ":bin",
-    ":bin2",
-    ":components_binary_argv_test",
     ":components_binary_test",
+    ":components_binary_tests",
+    ":echo1",
+    ":echo2",
+    ":getenv",
   ]
 }
 
-executable("bin") {
-  output_name = "components_test_app"
+executable("echo1") {
+  output_name = "components_test_echo1"
 
   sources = [
-    "program.cc",
+    "echo.cc",
   ]
 
   public_deps = [
@@ -28,11 +29,11 @@ executable("bin") {
   ]
 }
 
-executable("bin2") {
-  output_name = "components_test_app2"
+executable("echo2") {
+  output_name = "components_test_echo2"
 
   sources = [
-    "program.cc",
+    "echo.cc",
   ]
 
   public_deps = [
@@ -40,11 +41,23 @@ executable("bin2") {
   ]
 }
 
-executable("components_binary_argv_test") {
+executable("getenv") {
+  output_name = "components_test_getenv"
+
+  sources = [
+    "getenv.cc",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+executable("components_binary_test") {
   testonly = true
 
   sources = [
-    "components_binary_argv_test.cc",
+    "components_binary_test.cc",
   ]
 
   deps = [
@@ -54,38 +67,51 @@ executable("components_binary_argv_test") {
   ]
 }
 
-test_package("components_binary_test") {
+test_package("components_binary_tests") {
   deps = [
-    ":bin",
-    ":bin2",
-    ":components_binary_argv_test",
+    ":components_binary_test",
+    ":echo1",
+    ":echo2",
+    ":getenv",
   ]
 
   binaries = [
     {
-      name = "components_test_app"
-      dest = "app"
+      name = "components_test_echo1"
+      dest = "echo1"
     },
     {
-      name = "components_test_app2"
-      dest = "app2"
+      name = "components_test_echo2"
+      dest = "echo2"
+    },
+    {
+      name = "components_test_getenv"
+      dest = "getenv"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/program1.cmx")
-      dest = "program1.cmx"
+      path = rebase_path("meta/echo1.cmx")
+      dest = "echo1.cmx"
     },
     {
-      path = rebase_path("meta/program2.cmx")
-      dest = "program2.cmx"
+      path = rebase_path("meta/echo2.cmx")
+      dest = "echo2.cmx"
+    },
+    {
+      path = rebase_path("meta/getenv1.cmx")
+      dest = "getenv1.cmx"
+    },
+    {
+      path = rebase_path("meta/getenv2.cmx")
+      dest = "getenv2.cmx"
     },
   ]
 
   tests = [
     {
-      name = "components_binary_argv_test"
+      name = "components_binary_test"
       environments = basic_envs
     },
   ]

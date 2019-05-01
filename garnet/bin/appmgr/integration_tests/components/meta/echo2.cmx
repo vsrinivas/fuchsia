@@ -3,6 +3,6 @@
         "args": [
             "helloworld"
         ],
-        "binary": "bin/app2"
+        "binary": "bin/echo2"
     }
 }

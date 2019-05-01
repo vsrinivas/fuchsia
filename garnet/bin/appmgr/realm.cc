@@ -57,17 +57,6 @@ constexpr zx_status_t kComponentCreationFailed = -1;
 
 using fuchsia::sys::TerminationReason;
 
-std::vector<const char*> GetArgv(const std::string& argv0,
-                                 const fuchsia::sys::LaunchInfo& launch_info) {
-  std::vector<const char*> argv;
-  argv.reserve(launch_info.arguments->size() + 2);
-  argv.push_back(argv0.c_str());
-  for (const auto& argument : *launch_info.arguments)
-    argv.push_back(argument.c_str());
-  argv.push_back(nullptr);
-  return argv;
-}
-
 void PushHandle(uint32_t id, zx_handle_t handle,
                 std::vector<fdio_spawn_action_t>* actions) {
   actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
@@ -97,6 +86,7 @@ void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int target_fd,
 
 zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           const std::string& argv0,
+                          const std::vector<std::string>& env_vars,
                           fuchsia::sys::LaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
@@ -111,7 +101,20 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
     return zx::process();
 
   std::string label = Util::GetLabelFromURL(launch_info.url);
-  std::vector<const char*> argv = GetArgv(argv0, launch_info);
+  std::vector<const char*> argv;
+  argv.reserve(launch_info.arguments->size() + 2);
+  argv.push_back(argv0.c_str());
+  for (const auto& arg : *launch_info.arguments) {
+    argv.push_back(arg.c_str());
+  }
+  argv.push_back(nullptr);
+
+  std::vector<const char*> environ;
+  environ.reserve(env_vars.size() + 1);
+  for (const auto& env_var : env_vars) {
+    environ.push_back(env_var.c_str());
+  }
+  environ.push_back(nullptr);
 
   uint32_t flags = 0u;
 
@@ -149,9 +152,8 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-
   status = fdio_spawn_vmo(job.get(), flags, data.vmo().release(), argv.data(),
-                          nullptr, actions.size(), actions.data(),
+                          environ.data(), actions.size(), actions.data(),
                           process.reset_and_get_address(), err_msg);
 
   if (status != ZX_OK) {
@@ -620,10 +622,11 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   if (status != ZX_OK)
     return;
 
+  std::vector<std::string> env_vars;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = path;
   zx::process process =
-      CreateProcess(child_job, std::move(executable), path,
+      CreateProcess(child_job, std::move(executable), path, env_vars,
                     std::move(launch_info), zx::channel(), builder.Build());
 }
 
@@ -879,9 +882,9 @@ void Realm::CreateComponentFromPackage(
   if (runtime.IsNull()) {
     // Use the default runner: ELF binaries.
     CreateElfBinaryComponentFromPackage(
-        std::move(launch_info), app_data, app_argv0, std::move(loader_service),
-        builder.Build(), std::move(component_request), std::move(ns),
-        std::move(callback));
+        std::move(launch_info), app_data, app_argv0, program.env_vars(),
+        std::move(loader_service), builder.Build(),
+        std::move(component_request), std::move(ns), std::move(callback));
   } else {
     // Use other component runners.
     CreateRunnerComponentFromPackage(
@@ -893,9 +896,10 @@ void Realm::CreateComponentFromPackage(
 
 void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data,
-    const std::string& app_argv0, zx::channel loader_service,
-    fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    const std::string& app_argv0, const std::vector<std::string>& env_vars,
+    zx::channel loader_service, fdio_flat_namespace_t* flat,
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage",
                  "launch_info.url", launch_info.url);
 
@@ -908,7 +912,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
   const std::string url = launch_info.url;  // Keep a copy before moving it.
   auto channels = Util::BindDirectory(&launch_info);
   zx::process process =
-      CreateProcess(child_job, std::move(app_data), app_argv0,
+      CreateProcess(child_job, std::move(app_data), app_argv0, env_vars,
                     std::move(launch_info), std::move(loader_service), flat);
 
   if (process) {

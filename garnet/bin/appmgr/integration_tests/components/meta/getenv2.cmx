@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/getenv",
+        "args": [
+          "FOO",
+          "BAR"
+        ],
+        "env_vars": [
+          "FOO=bar",
+          "BAZ=bar"
+        ]
+    }
+}

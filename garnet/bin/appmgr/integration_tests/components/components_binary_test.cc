@@ -7,19 +7,16 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace component {
 namespace {
 
 using sys::testing::EnclosingEnvironment;
 
-constexpr char kTestComponent1[] =
-    "fuchsia-pkg://fuchsia.com/components_binary_test#meta/program1.cmx";
-constexpr char kTestComponent2[] =
-    "fuchsia-pkg://fuchsia.com/components_binary_test#meta/program2.cmx";
 constexpr char kRealm[] = "test";
 
-class ComponentsBinaryArgvTest : public sys::testing::TestWithEnvironment {
+class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
  protected:
   void OpenNewOutFile() {
     ASSERT_TRUE(tmp_dir_.NewTempFile(&out_file_));
@@ -47,6 +44,12 @@ class ComponentsBinaryArgvTest : public sys::testing::TestWithEnvironment {
     return launch_info;
   }
 
+  static std::string UrlFromCmx(const std::string& cmx) {
+    return fxl::StringPrintf(
+        "fuchsia-pkg://fuchsia.com/components_binary_tests#meta/%s",
+        cmx.c_str());
+  }
+
   void RunComponent(const std::string& url,
                     const std::vector<std::string>& args = {}) {
     fuchsia::sys::ComponentControllerPtr controller;
@@ -63,7 +66,7 @@ class ComponentsBinaryArgvTest : public sys::testing::TestWithEnvironment {
     EXPECT_EQ(0, return_code);
   }
 
-  ComponentsBinaryArgvTest() {
+  ComponentsBinaryTest() {
     OpenNewOutFile();
 
     environment_ = CreateNewEnclosingEnvironment(kRealm, CreateServices());
@@ -79,16 +82,28 @@ class ComponentsBinaryArgvTest : public sys::testing::TestWithEnvironment {
 // We therefore test that targeting a binary by a component manifest works, that
 // argv0 properly propagates the binary path, and that the args field in the
 // manifest is being properly passed through to the component.
-TEST_F(ComponentsBinaryArgvTest, Foo) {
-  RunComponent(kTestComponent1);
+TEST_F(ComponentsBinaryTest, EchoNoArgs) {
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo1.cmx"));
   std::string output = ReadOutFile();
-  ASSERT_EQ(output, "/pkg/bin/app\n");
+  ASSERT_EQ(output, "/pkg/bin/echo1\n");
 }
 
-TEST_F(ComponentsBinaryArgvTest, Bar) {
-  RunComponent(kTestComponent2);
+TEST_F(ComponentsBinaryTest, EchoHelloWorld) {
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo2.cmx"));
   std::string output = ReadOutFile();
-  ASSERT_EQ(output, "/pkg/bin/app2 helloworld\n");
+  ASSERT_EQ(output, "/pkg/bin/echo2 helloworld\n");
+}
+
+TEST_F(ComponentsBinaryTest, GetEnvMatched) {
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv1.cmx"));
+  std::string output = ReadOutFile();
+  ASSERT_EQ(output, "FOO=bar BAR=baz\n");
+}
+
+TEST_F(ComponentsBinaryTest, GetEnvMismatch) {
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv2.cmx"));
+  std::string output = ReadOutFile();
+  ASSERT_EQ(output, "FOO=bar BAR=NULL\n");
 }
 
 }  // namespace

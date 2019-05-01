@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/components_binary_argv_test"
+        "binary": "test/components_binary_test"
     },
     "sandbox": {
         "features": [

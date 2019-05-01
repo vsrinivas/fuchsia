@@ -315,7 +315,7 @@ group("all") {
     "//garnet/packages/tests:cobalt_client",
     "//garnet/packages/tests:component_cpp",
     "//garnet/packages/tests:component_index",
-    "//garnet/packages/tests:components_binary_test",
+    "//garnet/packages/tests:components_binary_tests",
     "//garnet/packages/tests:containers_cpp",
     "//garnet/packages/tests:cpuperf",
     "//garnet/packages/tests:crashpad",
@@ -970,10 +970,10 @@ group("json") {
   ]
 }
 
-group("components_binary_test") {
+group("components_binary_tests") {
   testonly = true
   public_deps = [
-    "//garnet/bin/appmgr/integration_tests/components:components_binary_test",
+    "//garnet/bin/appmgr/integration_tests/components:components_binary_tests",
   ]
 }
 
