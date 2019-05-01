@@ -7,6 +7,7 @@
 
 #include "aml.h"
 #include "commands.h"
+#include "ftl.h"
 #include "nand-broker.h"
 
 namespace {
@@ -31,13 +32,15 @@ Options:
   --erase (-e) --block xxx --count yyy: Erase yyy blocks starting at xxx.
   --check (-c) : Looks for read errors on the device.
   --save (-s) --block xxx --file path: Save the block xxx to path.
+  --wear : print wear counts.
   --file (-f) path:  Path to use when saving data.
   --absolute (-a) xxx : Use an absolute page number.
   --page (-p) xxx : Use the xxx page number (from within a block).
   --block (-b) xxx : Use the xxx block number (0-based).
   --count (-n) xxx : Limit the operation to xxx blocks.
                      Only supported with --check, --erase and --save.
-  --live-dangerously (-y) : Don't prompt for confirmation.
+  --no-ftl : Don't attempt to interpret FTL data.
+  --live-dangerously : Don't prompt for confirmation.
 )""";
 
 enum class Actions {
@@ -45,7 +48,8 @@ enum class Actions {
     kRead,
     kErase,
     kReadCheck,
-    kSave
+    kSave,
+    kWear
 };
 
 // Configuration info (what to do).
@@ -60,6 +64,7 @@ struct Config {
     int num_actions;
     bool info;
     bool skip_prompt;
+    bool ignore_ftl;
 };
 
 bool GetOptions(int argc, char** argv, Config* config) {
@@ -72,11 +77,13 @@ bool GetOptions(int argc, char** argv, Config* config) {
             {"erase", no_argument, nullptr, 'e'},
             {"check", no_argument, nullptr, 'c'},
             {"save", no_argument, nullptr, 's'},
+            {"wear", no_argument, nullptr, 'x'},
             {"file", required_argument, nullptr, 'f'},
             {"page", required_argument, nullptr, 'p'},
             {"block", required_argument, nullptr, 'b'},
             {"absolute", required_argument, nullptr, 'a'},
             {"count", required_argument, nullptr, 'n'},
+            {"no-ftl", no_argument, nullptr, 'z'},
             {"live-dangerously", no_argument, nullptr, 'y'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
@@ -113,6 +120,10 @@ bool GetOptions(int argc, char** argv, Config* config) {
             config->action = Actions::kSave;
             config->num_actions++;
             break;
+        case 'x':
+            config->action = Actions::kWear;
+            config->num_actions++;
+            break;
         case 'f':
             config->file = optarg;
             break;
@@ -127,6 +138,9 @@ bool GetOptions(int argc, char** argv, Config* config) {
             break;
         case 'n':
             config->count = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+            break;
+        case 'z':
+            config->ignore_ftl = true;
             break;
         case 'y':
             config->skip_prompt = true;
@@ -211,6 +225,10 @@ bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
 }
 
 bool ExecuteAction(const NandBroker& nand, const Config& config) {
+    if (!config.num_actions) {
+        return true;
+    }
+
     switch (config.action) {
         case Actions::kBbt :
             return FindBadBlocks(nand);
@@ -242,6 +260,9 @@ bool ExecuteAction(const NandBroker& nand, const Config& config) {
         case Actions::kSave :
             printf("Saving blocks...\n");
             return Save(nand, config.block_num, config.count, config.file);
+
+        case Actions::kWear :
+            return WearCounts(nand);
     }
     return false;
 }
@@ -265,17 +286,25 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    if (!ValidateOptionsWithNand(nand, config)) {
+        nand.ShowInfo();
+        return -1;
+    }
+
+    if (!config.ignore_ftl) {
+        nand.SetFtl(FtlInfo::Factory(&nand));
+    }
+
     if (config.info) {
         nand.ShowInfo();
         if (!nand.ReadPages(0, 1)) {
             return -1;
         }
         DumpPage0(nand.data());
-    }
 
-    if (!ValidateOptionsWithNand(nand, config)) {
-        nand.ShowInfo();
-        return -1;
+        if (nand.ftl()) {
+            nand.ftl()->DumpInfo();
+        }
     }
 
     return ExecuteAction(nand, config) ? 0 : -1;

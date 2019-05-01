@@ -112,10 +112,16 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
     size_t data_size = nand.Info().page_size * nand.Info().pages_per_block;
     for (uint32_t block = first_block; block < last_block; block++) {
         const uint32_t start = block * nand.Info().pages_per_block;
-        if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
+        if (nand.ftl() && nand.ftl()->IsBadBlock(block)) {
+            memset(nand.data(), 0xff,
+                   data_size + nand.Info().oob_size * nand.Info().pages_per_block);
+        } else if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
             printf("\nRead failed for block %u\n", block);
+            memset(nand.data(), 0xff,
+                   data_size + nand.Info().oob_size * nand.Info().pages_per_block);
             ReadBlockByPage(nand, block);
         }
+
         if (write(out.get(), nand.data(), data_size) != static_cast<ssize_t>(data_size)) {
             printf("\nFailed to write data for block %u\n", block);
             return false;
@@ -136,8 +142,10 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
 bool Erase(const NandBroker& nand, uint32_t first_block, uint32_t count) {
     uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
     for (uint32_t block = first_block; block < last_block; block++) {
-        // Ignore failures, move on to the next one.
-        nand.EraseBlock(block);
+        if (!nand.ftl() || !nand.ftl()->IsBadBlock(block)) {
+            // Ignore failures, move on to the next one.
+            nand.EraseBlock(block);
+        }
     }
     printf("\ndone\n");
     return true;

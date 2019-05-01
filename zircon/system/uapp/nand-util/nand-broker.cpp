@@ -74,6 +74,10 @@ bool NandBroker::Initialize()  {
     return true;
 }
 
+void NandBroker::SetFtl(std::unique_ptr<FtlInfo> ftl) {
+    ftl_ = std::move(ftl);
+}
+
 bool NandBroker::Query() {
     if (!caller_) {
         return false;

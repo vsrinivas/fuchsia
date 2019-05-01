@@ -46,6 +46,7 @@ if (current_cpu != "") {
       "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",
       "$zx/system/dev/usb/mt-musb-host:usb-transaction-test",
       "$zx/system/uapp/disk-pave:install-disk-image-test",
+      "$zx/system/uapp/nand-util:nand-util-test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/c:tests",

@@ -6,13 +6,12 @@ executable("nand-util") {
   sources = [
     "aml.cpp",
     "commands.cpp",
+    "ftl.cpp",
     "main.cpp",
-    "nand-broker.cpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
+    ":common",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-nand:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
@@ -21,5 +20,38 @@ executable("nand-util") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/cksum",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "ftl_internal.cpp",
+    "nand-broker.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zxcpp",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/fidl/fuchsia-nand:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+  ]
+}
+
+test("nand-util-test") {
+output_name = "nand-util-test"
+  sources = [
+    "test/ftl_internal_test.cpp",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }

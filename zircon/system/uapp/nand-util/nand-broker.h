@@ -4,10 +4,16 @@
 
 #pragma once
 
+#include <memory>
+
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/channel.h>
+
+#include "ftl.h"
+
+class FtlInfo;
 
 // Broker device wrapper.
 class NandBroker {
@@ -17,6 +23,9 @@ class NandBroker {
 
     // Returns true on success.
     bool Initialize();
+
+    void SetFtl(std::unique_ptr<FtlInfo> ftl);
+    const FtlInfo* ftl() const { return ftl_.get(); }
 
     // The internal buffer can store up to n pages at a time, where n happens to
     // be the number of pages on a block. Note that regardless of the number of
@@ -48,4 +57,5 @@ class NandBroker {
     zx::channel caller_;
     fuchsia_hardware_nand_Info info_ = {};
     fzl::OwnedVmoMapper mapping_;
+    std::unique_ptr<FtlInfo> ftl_;
 };
