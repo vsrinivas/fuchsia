@@ -20,12 +20,14 @@ constexpr uint32_t kDsiStartEn = 1;
 } // namespace
 
 zx_status_t MtDsiHost::Init(const ddk::DsiImplProtocolClient* dsi,
-                            const ddk::GpioProtocolClient* gpio) {
+                            const ddk::GpioProtocolClient* gpio,
+                            const ddk::PowerProtocolClient* power) {
     if (initialized_) {
         return ZX_OK;
     }
 
     dsiimpl_ = *dsi;
+    power_ = *power;
 
     // Map MIPI TX
     mmio_buffer_t mmio;
@@ -54,12 +56,6 @@ zx_status_t MtDsiHost::Init(const ddk::DsiImplProtocolClient* dsi,
     if (!ac.check()) {
         DISP_ERROR("Failed to create LCD object\n");
         return ZX_ERR_NO_MEMORY;
-    }
-
-    status = lcd_->Init();
-    if (status != ZX_OK) {
-        DISP_ERROR("Error during LCD Initialization! %d\n", status);
-        return status;
     }
 
     // MtDsiHost is ready to be used
@@ -375,9 +371,27 @@ void MtDsiHost::PowerOffMipiTx() {
 
 zx_status_t MtDsiHost::Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg) {
     ZX_DEBUG_ASSERT(initialized_);
-    //TODO(payamm): comment out for now since it causes unexpected behavior.
-    // PowerOffMipiTx();
+    if (IsHostOn()) {
+        if (dsiimpl_.is_valid()) {
+            dsiimpl_.PowerDown();
+        }
+        PowerOffMipiTx();
+    }
     syscfg->PowerDown(MODULE_DSI0);
+    lcd_->PowerOff();
+    if (power_.is_valid()) {
+        power_.DisablePowerDomain();
+    }
+    return ZX_OK;
+}
+
+zx_status_t MtDsiHost::PowerOn(fbl::unique_ptr<MtSysConfig>& syscfg) {
+    ZX_DEBUG_ASSERT(initialized_);
+    syscfg->PowerOn(MODULE_DSI0);
+    lcd_->PowerOn();
+    if (power_.is_valid()) {
+        power_.EnablePowerDomain();
+    }
     return ZX_OK;
 }
 

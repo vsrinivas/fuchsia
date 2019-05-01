@@ -27,6 +27,7 @@ enum {
     COMPONENT_GPIO,
     COMPONENT_SYSMEM,
     COMPONENT_DSI_IMPL, // DSI is optional
+    COMPONENT_POWER,
     COMPONENT_COUNT,
 };
 
@@ -466,7 +467,8 @@ zx_status_t Mt8167sDisplay::StartupDisplaySubsytem() {
     syscfg_->PowerOn(MODULE_GAMMA);
     syscfg_->PowerOn(MODULE_DITHER);
     syscfg_->PowerOn(MODULE_RDMA0);
-    syscfg_->PowerOn(MODULE_DSI0);
+
+    dsi_host_->PowerOn(syscfg_);
 
     return ZX_OK;
 }
@@ -491,7 +493,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    status = dsi_host_->Init(&dsiimpl_, &gpio_);
+    status = dsi_host_->Init(&dsiimpl_, &gpio_, &power_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not initialize DSI object\n");
         return status;
@@ -742,6 +744,14 @@ zx_status_t Mt8167sDisplay::Bind() {
         return status;
     }
     gpio_ = &gpio;
+
+    power_protocol_t power;
+    status = device_get_protocol(components[COMPONENT_POWER], ZX_PROTOCOL_POWER, &power);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get Display Power protocol\n");
+        return status;
+    }
+    power_ = &power;
 
     status = device_get_protocol(components[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
     if (status != ZX_OK) {

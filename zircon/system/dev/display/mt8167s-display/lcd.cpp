@@ -314,7 +314,6 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
 }
 
 zx_status_t Lcd::Disable() {
-    ZX_DEBUG_ASSERT(initialized_);
     if (!enabled_) {
         return ZX_OK;
     }
@@ -323,8 +322,25 @@ zx_status_t Lcd::Disable() {
     return LoadInitTable(lcd_shutdown_sequence, sizeof(lcd_shutdown_sequence));
 }
 
+void Lcd::PowerOn() {
+    if (gpio_.is_valid()) {
+        gpio_.ConfigOut(1);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+        gpio_.Write(0);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
+        gpio_.Write(1);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+    }
+}
+
+void Lcd::PowerOff() {
+    if (gpio_.is_valid()) {
+        gpio_.Write(0);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(120)));
+    }
+}
+
 zx_status_t Lcd::Enable() {
-    ZX_DEBUG_ASSERT(initialized_);
     if (enabled_) {
         return ZX_OK;
     }
@@ -363,28 +379,6 @@ zx_status_t Lcd::Enable() {
     }
 
     return status;
-}
-
-zx_status_t Lcd::Init() {
-    if (initialized_) {
-        return ZX_OK;
-    }
-
-    //TODO(payamm): For some reason on Cleo, toggling the LCD RST pin if LCD was already
-    // initialized will cause unexpectd behavior. For now, we can just not toggle the pin
-    // if it's already high (i.e. already initialized).
-    uint8_t val;
-    gpio_.Read(&val);
-    if (val == 0) {
-        gpio_.ConfigOut(1);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-        gpio_.Write(0);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-        gpio_.Write(1);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-    }
-    initialized_ = true;
-    return ZX_OK;
 }
 
 } // namespace mt8167s_display

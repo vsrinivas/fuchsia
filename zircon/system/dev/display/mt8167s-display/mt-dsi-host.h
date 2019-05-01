@@ -12,6 +12,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/power.h>
 #include <lib/mmio/mmio.h>
 #include <hwreg/mmio.h>
 #include <fbl/unique_ptr.h>
@@ -37,10 +38,38 @@ public:
         ZX_ASSERT(height_ < kMaxHeight);
         ZX_ASSERT(width_ < kMaxWidth);
     }
-    zx_status_t Init(const ddk::DsiImplProtocolClient* dsi, const ddk::GpioProtocolClient* gpio);
+
+    zx_status_t Init(const ddk::DsiImplProtocolClient* dsi,
+                     const ddk::GpioProtocolClient* gpio,
+                     const ddk::PowerProtocolClient* power);
+
+    // Used for Unit Testing
+    zx_status_t Init(fbl::unique_ptr<ddk::MmioBuffer> mmio,
+                     fbl::unique_ptr<Lcd> lcd,
+                     const ddk::DsiImplProtocolClient* dsi,
+                     const ddk::GpioProtocolClient* gpio,
+                     const ddk::PowerProtocolClient* power) {
+        mipi_tx_mmio_ = std::move(mmio);
+        lcd_ = std::move(lcd);
+        dsiimpl_ = *dsi;
+        power_ = *power;
+        initialized_ = true;
+        return ZX_OK;
+    }
+
     zx_status_t Config(const display_setting_t& disp_setting);
     zx_status_t Start();
     zx_status_t Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg);
+    zx_status_t PowerOn(fbl::unique_ptr<MtSysConfig>& syscfg);
+
+    bool IsHostOn() {
+        ZX_DEBUG_ASSERT(initialized_);
+        // PLL EN is the safest bit to read to see if the host is on or not. If Host is trully
+        // off, we cannot read any of the DSI IP registers. Furthermore, the DSI clock enable bit
+        // within the syscfg register always returns 0 regardless of whether it's really on or not
+        return (MipiTxPllCon0Reg::Get().ReadFrom(&(*mipi_tx_mmio_)).pll_en() == 1);
+    }
+
     void PrintRegisters();
 
 private:
@@ -50,11 +79,13 @@ private:
     const pdev_protocol_t pdev_;
     uint32_t height_; // display height
     uint32_t width_; // display width
+    uint8_t panel_type_;
     fbl::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
     zx::bti bti_;
     ddk::DsiImplProtocolClient dsiimpl_;
+    ddk::PowerProtocolClient power_;
     fbl::unique_ptr<Lcd> lcd_;
-    uint8_t panel_type_;
+
     bool initialized_ = false;
 };
 

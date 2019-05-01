@@ -6,6 +6,8 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <soc/mt8167/mt8167-hw.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/power.h>
 
 #include "mt8167.h"
 
@@ -33,6 +35,16 @@ zx_status_t Mt8167::PowerInit() {
             .length = MT8167_PMIC_WRAP_SIZE,
         }
     };
+    static const power_domain_t power_domains[] = {
+        { kVDLdoVGp2 }, // Display Panel
+    };
+    static const pbus_metadata_t power_metadata[] = {
+        {
+            .type = DEVICE_METADATA_POWER_DOMAINS,
+            .data_buffer = &power_domains,
+            .data_size = sizeof(power_domains),
+        },
+    };
 
     pbus_dev_t power_dev = {};
     power_dev.name = "power";
@@ -40,6 +52,8 @@ zx_status_t Mt8167::PowerInit() {
     power_dev.did = PDEV_DID_MEDIATEK_POWER;
     power_dev.mmio_list = power_mmios;
     power_dev.mmio_count = countof(power_mmios);
+    power_dev.metadata_list = power_metadata;
+    power_dev.metadata_count = countof(power_metadata);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
     if (status != ZX_OK) {

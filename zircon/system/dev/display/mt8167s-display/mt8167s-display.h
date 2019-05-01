@@ -17,6 +17,7 @@
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/power.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
@@ -154,6 +155,8 @@ private:
     ddk::DsiImplProtocolClient dsiimpl_;
 
     ddk::GpioProtocolClient gpio_;
+
+    ddk::PowerProtocolClient power_;
 
     // Objects
     fbl::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;

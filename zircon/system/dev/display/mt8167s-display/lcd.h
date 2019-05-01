@@ -22,6 +22,8 @@ public:
     zx_status_t Init();
     zx_status_t Enable();
     zx_status_t Disable();
+    void PowerOn();
+    void PowerOff();
 
 private:
     zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
@@ -30,7 +32,6 @@ private:
     const ddk::DsiImplProtocolClient            dsiimpl_;
     const ddk::GpioProtocolClient               gpio_;
     uint8_t                                     panel_type_;
-    bool                                        initialized_ = false;
     bool                                        enabled_ =false;
 };
 

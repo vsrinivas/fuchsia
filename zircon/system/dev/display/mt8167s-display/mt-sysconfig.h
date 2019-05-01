@@ -25,6 +25,13 @@ public:
 
     // Init
     zx_status_t Init(zx_device_t* parent);
+    zx_status_t Init(fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio,
+                     fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio) {
+        syscfg_mmio_ = std::move(syscfg_mmio);
+        mutex_mmio_ = std::move(mutex_mmio);
+        initialized_ = true;
+        return ZX_OK;
+    }
     zx_status_t PowerOn(SysConfigModule module);
     zx_status_t PowerDown(SysConfigModule module);
     // This functin will create a default path for the display subsystem

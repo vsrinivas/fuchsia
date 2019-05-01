@@ -146,6 +146,10 @@ static const zx_bind_inst_t lcd_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_LCD_RST),
 };
+static const zx_bind_inst_t power_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
+    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, kVDLdoVGp2),
+};
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -167,10 +171,15 @@ constexpr device_component_part_t dsi_impl_component[] = {
     { countof(root_match), root_match },
     { countof(dsi_impl_match), dsi_impl_match },
 };
+constexpr device_component_part_t power_component[] = {
+    { countof(root_match), root_match },
+    { countof(power_match), power_match },
+};
 constexpr device_component_t components[] = {
     { countof(lcd_gpio_component), lcd_gpio_component },
     { countof(sysmem_component), sysmem_component },
     { countof(dsi_impl_component), dsi_impl_component },
+    { countof(power_component), power_component },
 };
 
 } // namespace
@@ -206,6 +215,7 @@ zx_status_t Mt8167::DisplayInit() {
         gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
     }
 
+    // TODO(payamm): Cannot use POWER_PROTOCOL since it does not support voltage selection yet
     // Enable LCD voltage rails
     uint32_t kVpg2VoSel = 0;
     if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
@@ -217,8 +227,6 @@ zx_status_t Mt8167::DisplayInit() {
         ZX_DEBUG_ASSERT(false);
     }
     constexpr uint32_t kDigLdoCon29 = 0x0532;
-    constexpr uint32_t kDigLdoCon8 = 0x050C;
-    constexpr uint32_t kVpg2En = 0x8000; // 1 << 15;
 
     // Please do not use get_root_resource() in new code. See ZX-1497.
     zx::unowned_resource root_resource(get_root_resource());
@@ -238,8 +246,6 @@ zx_status_t Mt8167::DisplayInit() {
     auto pmic = WACS2_CMD::Get().ReadFrom(&(*pmic_mmio));
     // From the documentation "Wrapper access: Address[15:1]" hence the >> 1.
     pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon29 >> 1).set_WACS2_WDATA(kVpg2VoSel);
-    pmic.WriteTo(&(*pmic_mmio));
-    pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon8 >> 1).set_WACS2_WDATA(kVpg2En);
     pmic.WriteTo(&(*pmic_mmio));
 
     status = pbus_.DeviceAdd(&dsi_dev);

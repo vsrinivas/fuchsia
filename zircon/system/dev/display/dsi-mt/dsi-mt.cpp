@@ -67,7 +67,8 @@ zx_status_t DsiMt::DsiImplEnableBist(uint32_t pattern) {
     DsiImplSetMode(DSI_MODE_VIDEO);
     DSI_INFO("Enabling BIST\n");
     DsiBistPatternReg::Get().FromValue(pattern).WriteTo(&(*dsi_mmio_));
-    DsiBistConReg::Get().ReadFrom(&(*dsi_mmio_))
+    DsiBistConReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
         .set_sel_pat_mode(1)
         .WriteTo(&(*dsi_mmio_));
     StartDsi();
@@ -143,52 +144,60 @@ zx_status_t DsiMt::DsiImplConfig(const dsi_config_t* dsi_config) {
     }
 
     // enable highspeed mode in command mode
-    DsiPhyLcconReg::Get().ReadFrom(&(*dsi_mmio_))
-                         .set_lc_hstx_en(1)
-                         .WriteTo(&(*dsi_mmio_));
+    DsiPhyLcconReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_lc_hstx_en(1)
+        .WriteTo(&(*dsi_mmio_));
 
     // Setup TXRX Control as follows:
     // Set Virtual Channel to 0, disable end of transmission packet, disable null packet in bllp,
     // set max_return_size to zero, disable hs clock lane non-continuous mode and configures the
     // correct number of lanes.
-    DsiTxRxCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                         .set_vc_num(0)
-                         .set_hstx_dis_eot(0)
-                         .set_hstx_bllp_en(0)
-                         .set_hstx_cklp_en(0)
-                         .set_lane_num((1 << disp_setting.lane_num) - 1)
-                         .WriteTo(&(*dsi_mmio_));
+    DsiTxRxCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_vc_num(0)
+        .set_hstx_dis_eot(0)
+        .set_hstx_bllp_en(0)
+        .set_hstx_cklp_en(0)
+        .set_lane_num((1 << disp_setting.lane_num) - 1)
+        .WriteTo(&(*dsi_mmio_));
 
     // Set Read/Write memory continue command. This is used for Type-1 FrameBuffer Write
-    DsiMemContReg::Get().ReadFrom(&(*dsi_mmio_))
-                        .set_rwmem_cont(kWMemCommand)
-                        .WriteTo(&(*dsi_mmio_));
+    DsiMemContReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_rwmem_cont(kWMemCommand)
+        .WriteTo(&(*dsi_mmio_));
 
     // Set pixel stream type
     // TODO(payamm): Confirm width_ == h_active
     uint8_t bpp = (dsi_config->color_coding == COLOR_CODE_PACKED_16BIT_565)? 2 : 3;
-    DsiPsCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                       .set_ps_wc(disp_setting.h_active * bpp)
-                       .set_ps_sel(code)
-                       .WriteTo(&(*dsi_mmio_));
+    DsiPsCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_ps_wc(disp_setting.h_active * bpp)
+        .set_ps_sel(code)
+        .WriteTo(&(*dsi_mmio_));
 
     // Setup vertical parameters
-    DsiVsaNlReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_vsa(disp_setting.vsync_width)
-                      .WriteTo(&(*dsi_mmio_));
+    DsiVsaNlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_vsa(disp_setting.vsync_width)
+        .WriteTo(&(*dsi_mmio_));
 
-    DsiVbpNlReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_vbp(disp_setting.vsync_bp)
-                      .WriteTo(&(*dsi_mmio_));
+    DsiVbpNlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_vbp(disp_setting.vsync_bp)
+        .WriteTo(&(*dsi_mmio_));
 
-    DsiVfpNlReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_vfp(disp_setting.v_period - disp_setting.v_active -
-                               disp_setting.vsync_bp -disp_setting.vsync_width)
-                      .WriteTo(&(*dsi_mmio_));
+    DsiVfpNlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_vfp(disp_setting.v_period - disp_setting.v_active -
+                 disp_setting.vsync_bp -disp_setting.vsync_width)
+        .WriteTo(&(*dsi_mmio_));
 
-    DsiVactNlReg::Get().ReadFrom(&(*dsi_mmio_))
-                       .set_vact(disp_setting.v_active)
-                       .WriteTo(&(*dsi_mmio_));
+    DsiVactNlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_vact(disp_setting.v_active)
+        .WriteTo(&(*dsi_mmio_));
 
     // The subtractions at the end of the calculations below are slight adjustments
     // needed to leave some space for HS prep time due to non-continuous data lane transmission
@@ -209,28 +218,33 @@ zx_status_t DsiMt::DsiImplConfig(const dsi_config_t* dsi_config) {
 
     uint32_t h_fp_byte = ALIGN(h_fp * bpp - 12, 4);
 
-    DsiHsaWcReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_hsa(hsync_width_byte)
-                      .WriteTo(&(*dsi_mmio_));
-    DsiHbpWcReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_hbp(h_bp_byte)
-                      .WriteTo(&(*dsi_mmio_));
-    DsiHfpWcReg::Get().ReadFrom(&(*dsi_mmio_))
-                      .set_hfp(h_fp_byte)
-                      .WriteTo(&(*dsi_mmio_));
+    DsiHsaWcReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_hsa(hsync_width_byte)
+        .WriteTo(&(*dsi_mmio_));
+    DsiHbpWcReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_hbp(h_bp_byte)
+        .WriteTo(&(*dsi_mmio_));
+    DsiHfpWcReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_hfp(h_fp_byte)
+        .WriteTo(&(*dsi_mmio_));
 
     // Set horizontal blanking to 0 since we do not operate in burst mode
     // TODO(payamm): Revisit if Burst mode is added
-    DsiBllpWcReg::Get().ReadFrom(&(*dsi_mmio_))
-                       .set_bllp(0)
-                       .WriteTo(&(*dsi_mmio_));
+    DsiBllpWcReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_bllp(0)
+        .WriteTo(&(*dsi_mmio_));
 
     // Enable sending commands in video mode. We set this register up to only send commands
     // (i.e. short) during VFP period. (TODO: try to really understand this feature)
-    DsiVmCmdConReg::Get().ReadFrom(&(*dsi_mmio_))
-                         .set_ts_vfp_en(1)
-                         .set_vm_cmd_en(1)
-                         .WriteTo(&(*dsi_mmio_));
+    DsiVmCmdConReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_ts_vfp_en(1)
+        .set_vm_cmd_en(1)
+        .WriteTo(&(*dsi_mmio_));
     return ZX_OK;
 }
 
@@ -252,12 +266,13 @@ void DsiMt::DsiImplPhyPowerUp() {
     }
     uint32_t lpx = MAX(NsToCycle(kLpxParam), 1);
 
-    DsiPhyTimeCon0Reg::Get().ReadFrom(&(*dsi_mmio_))
-                            .set_hs_trail(hs_trail)
-                            .set_hs_zero(hs_zero)
-                            .set_hs_prep(hs_prep)
-                            .set_lpx(lpx)
-                            .WriteTo(&(*dsi_mmio_));
+    DsiPhyTimeCon0Reg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_hs_trail(hs_trail)
+        .set_hs_zero(hs_zero)
+        .set_hs_prep(hs_prep)
+        .set_lpx(lpx)
+        .WriteTo(&(*dsi_mmio_));
 
     // Configure TimeCon1 Register which includes hs_exit, ta_get, ta_sure and ta_go
     // hs_exit: time that the transmitter drives LP-11 following a HS burst
@@ -272,12 +287,13 @@ void DsiMt::DsiImplPhyPowerUp() {
     uint32_t ta_go = kTaGoMultiplier * lpx;
     uint32_t hs_exit = NsToCycle(kHsExitParam + kHsExitUiMultiplier * ui_);
 
-    DsiPhyTimeCon1Reg::Get().ReadFrom(&(*dsi_mmio_))
-                            .set_hs_exit(hs_exit)
-                            .set_ta_get(ta_get)
-                            .set_ta_sure(ta_sure)
-                            .set_ta_go(ta_go)
-                            .WriteTo(&(*dsi_mmio_));
+    DsiPhyTimeCon1Reg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_hs_exit(hs_exit)
+        .set_ta_get(ta_get)
+        .set_ta_sure(ta_sure)
+        .set_ta_go(ta_go)
+        .WriteTo(&(*dsi_mmio_));
 
     // Configure TimeCon2 Register which includes clk_trail, clk_zero and cont_det
     // clk_trail: Time that the transmitter drives the hs-0 state after the last payload clock bit
@@ -287,11 +303,12 @@ void DsiMt::DsiImplPhyPowerUp() {
     uint32_t clk_trail = NsToCycle(kClkTrailParam) + kTrailOffset;
     uint32_t clk_zero = NsToCycle(kClkZeroParam);
 
-    DsiPhyTimeCon2Reg::Get().ReadFrom(&(*dsi_mmio_))
-                            .set_clk_trail(clk_trail)
-                            .set_clk_zero(clk_zero)
-                            .set_cont_det(kContDet)
-                            .WriteTo(&(*dsi_mmio_));
+    DsiPhyTimeCon2Reg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_clk_trail(clk_trail)
+        .set_clk_zero(clk_zero)
+        .set_cont_det(kContDet)
+        .WriteTo(&(*dsi_mmio_));
 
     // Configure TimeCon3 Register which includes clk_exit, clk_post and clk_prep
     // clk_post: Time that the transmitter continues to send HS clock after the last associated
@@ -302,11 +319,12 @@ void DsiMt::DsiImplPhyPowerUp() {
     uint32_t clk_exit = kClkExitLpxMultiplier * lpx;
     uint32_t clk_post = NsToCycle(kClkPostParam + kClkPostUiMultiplier * ui_);
 
-    DsiPhyTimeCon3Reg::Get().ReadFrom(&(*dsi_mmio_))
-                            .set_clk_exit(clk_exit)
-                            .set_clk_post(clk_post)
-                            .set_clk_prep(clk_prep)
-                            .WriteTo(&(*dsi_mmio_));
+    DsiPhyTimeCon3Reg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_clk_exit(clk_exit)
+        .set_clk_post(clk_post)
+        .set_clk_prep(clk_prep)
+        .WriteTo(&(*dsi_mmio_));
 }
 
 // MT Command Queue looks something like this: <Data1><Data0><Data ID><Config>
@@ -360,23 +378,38 @@ void DsiMt::DsiImplSetMode(dsi_mode_t mode) {
         // return;
     }
 
-    DsiModeCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                         .set_mode_con(dsi_mode)
-                         .WriteTo(&(*dsi_mmio_));
+    DsiModeCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_mode_con(dsi_mode)
+        .WriteTo(&(*dsi_mmio_));
 }
 
 void DsiMt::DsiImplPowerUp() {
     //TODO(payamm): Should we toggle reset here before powering up?
-    DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                        .set_dsi_en(1)
-                        .WriteTo(&(*dsi_mmio_));
+    DsiComCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_dsi_en(1)
+        .WriteTo(&(*dsi_mmio_));
 }
 
 void DsiMt::DsiImplPowerDown() {
+    // Disable highspeed mode
+    DsiPhyLcconReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_lc_hstx_en(0)
+        .WriteTo(&(*dsi_mmio_));
+
+    // clear lane_num
+    DsiTxRxCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_lane_num(0)
+        .WriteTo(&(*dsi_mmio_));
+
     DsiImplReset();
-    DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                        .set_dsi_en(0)
-                        .WriteTo(&(*dsi_mmio_));
+    DsiComCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_dsi_en(0)
+        .WriteTo(&(*dsi_mmio_));
 }
 
 bool DsiMt::DsiImplIsPoweredUp() {
@@ -384,15 +417,17 @@ bool DsiMt::DsiImplIsPoweredUp() {
 }
 
 void DsiMt::DsiImplReset() {
-    DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                        .set_dsi_reset(1)
-                        .WriteTo(&(*dsi_mmio_));
+    DsiComCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_dsi_reset(1)
+        .WriteTo(&(*dsi_mmio_));
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
 
-    DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                        .set_dsi_reset(0)
-                        .WriteTo(&(*dsi_mmio_));
+    DsiComCtrlReg::Get()
+        .ReadFrom(&(*dsi_mmio_))
+        .set_dsi_reset(0)
+        .WriteTo(&(*dsi_mmio_));
 
 }
 
