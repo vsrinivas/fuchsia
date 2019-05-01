@@ -31,6 +31,18 @@
             "--verbose"
           ]
         },
+        "env_vars": {
+          "$id": "/properties/program/properties/env_vars",
+          "type": "array",
+          "title": "Environment variables to provide to an Elf binary",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [
+            "RUST_BACKTRACE=1"
+          ]
+        },
         "data": {
           "$id": "/properties/program/properties/data",
           "type": "string",
