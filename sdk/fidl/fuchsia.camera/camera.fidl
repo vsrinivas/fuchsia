@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This file is being deprecated - please do not rely on any of the structs or
+// protocols here moving forward.
+
 library fuchsia.camera;
 
 using fuchsia.sysmem;

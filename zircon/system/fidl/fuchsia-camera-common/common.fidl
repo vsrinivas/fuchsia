@@ -1,0 +1,71 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This FIDL file provides the common types and protocols shared between
+// fuchsia.hardware.camera from Zircon and fuchsia.camera from the SDK.
+// TODO(eweeks): Rename this library to fuchsia.camera
+
+library fuchsia.camera.common;
+using fuchsia.sysmem;
+
+/// Status to be set when a frame is signaled available.
+enum FrameStatus {
+    OK = 1;
+    /// An error occurred during the production of a frame.
+    /// No data will be available in the data buffer corresponding to this
+    /// notification.
+    ERROR_FRAME = 2;
+
+    /// No space was available in the data buffer, resulting in a dropped frame.
+    ERROR_BUFFER_FULL = 3;
+};
+
+/// Extra information associated with the frame.
+struct Metadata {
+    int64 timestamp;
+};
+
+/// Sent by the driver to the client when a frame is available for processing,
+/// or an error occurred.
+// TODO(eweeks): Replace struct with three parameter event.
+struct FrameAvailableEvent {
+    /// Non zero if an error occurred.
+    FrameStatus frame_status;
+
+    /// The index of the buffer in the buffer collection.
+    uint32 buffer_id;
+
+    /// Any associated metadata such as timestamp.
+    Metadata metadata;
+};
+
+/// The number of frames being produced every second.
+struct FrameRate {
+    /// The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
+    uint32 frames_per_sec_numerator;
+    uint32 frames_per_sec_denominator;
+};
+
+/// Video format includes the image format and frame rate of frames being produced.
+struct VideoFormat {
+    fuchsia.sysmem.ImageFormat format;
+    FrameRate rate;
+};
+
+/// Protocol shared between the driver and the consumer.
+[Layout = "Simple"]
+protocol Stream {
+    /// Starts the streaming of frames.
+    Start();
+
+    /// Stops the streaming of frames.
+    Stop();
+
+    /// Unlocks the specified frame, allowing the driver to reuse the memory.
+    ReleaseFrame(uint32 buffer_id);
+
+    /// Sent by the driver to the client when a frame is available for processing,
+    /// or an error occurred.
+    -> OnFrameAvailable(FrameAvailableEvent frame);
+};

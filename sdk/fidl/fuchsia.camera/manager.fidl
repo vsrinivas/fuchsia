@@ -4,11 +4,13 @@
 
 library fuchsia.camera;
 
+using fuchsia.camera.common;
 using fuchsia.sysmem;
 
 // A stream that the camera manager can provide.  Video streams reference a
 // a camera, but may have additional hardware and bandwidth restrictions
 // from and ISP or other processing units.
+// This is being deprecated - please use VideoStreamV2 (below).
 struct VideoStream {
     // The camera_id corresponds to the camera_id that is given in the DeviceInfo
     // received from GetDevices.
@@ -17,6 +19,22 @@ struct VideoStream {
     // set The frame rate, even when calling CreateStream.
     // When calling CreateStream, format.format should match buffer_info.format.
     VideoFormat format;
+};
+
+// Preferred version of stream.
+// A version of stream that relies on definition of VideoFormat coming out of
+// fuchsia.hardware.camera. Streams reference a camera, but may have additional
+// hardware and bandwidth restrictions from an ISP or other processing units.
+// New code should depend on this as the other version will be deprecated when
+// dependencies are removed.
+struct VideoStreamV2 {
+    // The camera_id corresponds to the camera_id that is given in DeviceInfo
+    // received from GetDevices.
+    uint64 camera_id;
+    // The requested video format. Note that this field is necessary to set the
+    // frame rate, even when calling CreateStream. When calling CreateStream
+    // format.format should match buffer_info.format.
+    fuchsia.camera.common.VideoFormat format;
 };
 
 // The Camera Manager grants access to individual or sets of cameras
@@ -39,7 +57,18 @@ protocol Manager {
     // Create a Stream with the specified access rights.  This may not succeed.
     // If it does succeed, the Stream will have the rights indicated.
     // |buffer_info| contains a set of buffers to be used with the Stream.
+    // This is being deprecated - please use CreateStreamV2.
     CreateStream(VideoStream request,
                  fuchsia.sysmem.BufferCollectionInfo buffer_info,
                  request<Stream> stream, handle<eventpair> client_token);
+
+    // Create a Stream with the specified access rights.  This may not succeed.
+    // If it does succeed, the Stream will have the rights indicated.
+    // |buffer_info| contains a set of buffers to be used with the Stream.
+    [Transitional="This is meant to replace CreateStream"]
+    CreateStreamV2(VideoStreamV2 request,
+                   fuchsia.sysmem.BufferCollectionInfo buffer_info,
+                   request<fuchsia.camera.common.Stream> stream,
+                   handle<eventpair> client_token);
+
 };
