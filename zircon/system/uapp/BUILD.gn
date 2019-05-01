@@ -29,7 +29,6 @@ group("uapp") {
     "fs-mkfs",
     "fs-mount",
     "fs-umount",
-    "fuzz",
     "fvm-check",
     "gfxfractal",
     "gfxtest",

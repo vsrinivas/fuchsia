@@ -70,7 +70,6 @@ group("ulib") {
     "fs-management",
     "fs-test-utils",
     "ftl",
-    "fuzz-utils",
     "fvm",
     "fzl",
     "gfx",

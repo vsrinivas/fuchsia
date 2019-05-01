@@ -116,7 +116,6 @@ if (current_cpu != "") {
       "fs-test-utils",
       "fs-vnode",
       "futex-ownership",
-      "fuzz-utils",
       "fvm",
       "fzl",
       "getentropy",
