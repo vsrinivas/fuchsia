@@ -366,6 +366,7 @@ group("all") {
     "//garnet/packages/tests:libc",
     "//garnet/packages/tests:libinet",
     "//garnet/packages/tests:libinspect_integration_tests",
+    "//garnet/packages/tests:linux_runner",
     "//garnet/packages/tests:log_listener",
     "//garnet/packages/tests:logger",
     "//garnet/packages/tests:magma",
@@ -1287,5 +1288,12 @@ group("carnelian") {
   testonly = true
   public_deps = [
     "//garnet/public/rust/carnelian:carnelian_tests",
+  ]
+}
+
+group("linux_runner") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/biscotti_guest/linux_runner:linux_runner_tests",
   ]
 }

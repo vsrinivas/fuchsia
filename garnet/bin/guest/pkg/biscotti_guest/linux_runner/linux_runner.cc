@@ -10,13 +10,18 @@
 
 namespace linux_runner {
 
+static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
+
 LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::Create()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 zx_status_t LinuxRunner::Init() {
   TRACE_DURATION("linux_runner", "LinuxRunner::Init");
-  return Guest::CreateAndStart(context_.get(), &guest_);
+  GuestConfig config{
+      .stateful_image_size = kStatefulImageSize,
+  };
+  return Guest::CreateAndStart(context_.get(), config, &guest_);
 }
 
 void LinuxRunner::StartComponent(

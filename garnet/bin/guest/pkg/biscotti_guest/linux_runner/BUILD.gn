@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 extras_image = "$target_out_dir/linux/extras.img"
@@ -44,6 +45,7 @@ source_set("lib") {
     "linux_runner.h",
     "log_collector.cc",
     "log_collector.h",
+    "ports.h",
   ]
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
@@ -130,7 +132,7 @@ package("linux_runner") {
 
   meta = [
     {
-      path = rebase_path("linux_runner.cmx")
+      path = rebase_path("meta/linux_runner.cmx")
       dest = "linux_runner.cmx"
     },
   ]
@@ -144,4 +146,34 @@ package("linux_runner") {
       },
     ]
   }
+}
+
+executable("linux_runner_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "guest_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/guest/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/memfs",
+  ]
+}
+
+test_package("linux_runner_tests") {
+  deps = [
+    ":linux_runner_unittests",
+  ]
+
+  tests = [
+    {
+      name = "linux_runner_unittests"
+      environments = basic_envs
+    },
+  ]
 }

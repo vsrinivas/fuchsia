@@ -41,6 +41,10 @@ struct AppLaunchRequest {
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request;
 };
 
+struct GuestConfig {
+  size_t stateful_image_size;
+};
+
 class Guest : public fuchsia::guest::HostVsockAcceptor,
               public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
@@ -48,10 +52,12 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(sys::ComponentContext* context,
+                                    GuestConfig config,
                                     std::unique_ptr<Guest>* guest);
 
-  Guest(sys::ComponentContext* context,
+  Guest(sys::ComponentContext* context, GuestConfig config,
         fuchsia::guest::EnvironmentControllerPtr env);
+  ~Guest();
 
   void Launch(AppLaunchRequest request);
 
@@ -136,6 +142,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
 
   async_dispatcher_t* async_;
   async::Executor executor_;
+  GuestConfig config_;
   std::unique_ptr<grpc::Server> grpc_server_;
   fuchsia::guest::HostVsockEndpointPtr socket_endpoint_;
   fidl::BindingSet<fuchsia::guest::HostVsockAcceptor> acceptor_bindings_;

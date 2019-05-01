@@ -21,6 +21,7 @@
 
 #include <memory>
 
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/ports.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
 namespace linux_runner {
@@ -28,12 +29,6 @@ namespace linux_runner {
 static constexpr const char* kLinuxEnvirionmentName = "biscotti";
 static constexpr const char* kLinuxGuestPackage =
     "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
-static constexpr uint32_t kStartupListenerPort = 7777;
-static constexpr uint32_t kTremplinListenerPort = 7778;
-static constexpr uint32_t kMaitredPort = 8888;
-static constexpr uint32_t kGarconPort = 8889;
-static constexpr uint32_t kTremplinPort = 8890;
-static constexpr uint32_t kLogCollectorPort = 9999;
 static constexpr const char* kContainerName = "stretch";
 static constexpr const char* kContainerImageAlias = "debian/stretch";
 static constexpr const char* kContainerImageServer =
@@ -42,11 +37,11 @@ static constexpr const char* kDefaultContainerUser = "machina";
 static constexpr const char* kLinuxUriScheme = "linux://";
 
 // Minfs max file size is currently just under 4GB.
-static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
 static constexpr const char* kExtrasImagePath = "/pkg/data/extras.img";
 
-static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
+static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition(
+    size_t image_size) {
   TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
   int fd = open(kStatefulImagePath, O_RDWR);
   if (fd < 0 && errno == ENOENT) {
@@ -55,7 +50,7 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
       FXL_LOG(ERROR) << "Failed to create stateful image: " << strerror(errno);
       return nullptr;
     }
-    if (ftruncate(fd, kStatefulImageSize) < 0) {
+    if (ftruncate(fd, image_size) < 0) {
       FXL_LOG(ERROR) << "Failed to truncate image: " << strerror(errno);
       return nullptr;
     }
@@ -89,9 +84,10 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetExtrasPartition() {
   return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
 }
 
-static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
+static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices(
+    size_t stateful_image_size) {
   TRACE_DURATION("linux_runner", "GetBlockDevices");
-  auto file_handle = GetOrCreateStatefulPartition();
+  auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FXL_CHECK(file_handle) << "Failed to open stateful file";
   fidl::VectorPtr<fuchsia::guest::BlockDevice> devices;
   devices.push_back({
@@ -135,28 +131,34 @@ static int convert_socket_to_fd(zx::socket socket) {
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
+                                  GuestConfig config,
                                   std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
-  FXL_LOG(INFO) << "Creating Guest Environment...";
   fuchsia::guest::EnvironmentManagerPtr guestmgr;
   context->svc()->Connect(guestmgr.NewRequest());
   fuchsia::guest::EnvironmentControllerPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
-  *guest =
-      std::make_unique<Guest>(context, std::move(guest_env));
+  *guest = std::make_unique<Guest>(context, config, std::move(guest_env));
   return ZX_OK;
 }
 
-Guest::Guest(sys::ComponentContext* context,
+Guest::Guest(sys::ComponentContext* context, GuestConfig config,
              fuchsia::guest::EnvironmentControllerPtr env)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
+      config_(config),
       guest_env_(std::move(env)),
       wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
-  async_ = async_get_default_dispatcher();
   executor_.schedule_task(Start());
+}
+
+Guest::~Guest() {
+  if (grpc_server_) {
+    grpc_server_->Shutdown();
+    grpc_server_->Wait();
+  }
 }
 
 fit::promise<> Guest::Start() {
@@ -224,7 +226,6 @@ class GrpcServerBuilder {
 fit::promise<std::unique_ptr<grpc::Server>, zx_status_t>
 Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
-  FXL_LOG(INFO) << "Starting GRPC server...";
   auto builder = std::make_unique<GrpcServerBuilder>(
       socket_endpoint_,
       [this]() { return acceptor_bindings_.AddBinding(this); });
@@ -271,7 +272,7 @@ void Guest::StartGuest() {
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--virtio-gpu=false");
   launch_info.args.push_back("--legacy-net=false");
-  launch_info.block_devices = GetBlockDevices();
+  launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
   launch_info.wayland_device = fuchsia::guest::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
 
