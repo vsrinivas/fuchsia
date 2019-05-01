@@ -16,6 +16,13 @@
 
 namespace fidl {
 
+namespace internal {
+
+// Predefined error messages in the binding
+constexpr char kErrorRequestBufferTooSmall[] = "request buffer too small";
+
+} // namespace internal
+
 // The request/response type of any FIDL method with zero in/out parameters.
 struct AnyZeroArgMessage final {
     FIDL_ALIGNDECL
@@ -32,6 +39,11 @@ struct IsFidlType<AnyZeroArgMessage> : public std::true_type {};
 template <>
 struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
 
+// Holds a |DecodedMessage| in addition to |status| and |error|.
+// This is typically the return type of fidl::Decode and FIDL methods which require
+// a decode step for the response.
+// If |status| is ZX_OK, |message| contains a valid decoded message of type FidlType.
+// Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
 struct DecodeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;
@@ -43,9 +55,16 @@ struct DecodeResult final {
     DecodeResult(zx_status_t status,
                  const char* error,
                  DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
-        : status(status), error(error), message(std::move(message)) {}
+        : status(status), error(error), message(std::move(message)) {
+        ZX_DEBUG_ASSERT(status != ZX_OK || this->message.is_valid());
+    }
 };
 
+// Holds a |EncodedMessage| in addition to |status| and |error|.
+// This is typically the return type of fidl::Encode and other FIDL methods which
+// have encoding as the last step.
+// If |status| is ZX_OK, |message| contains a valid encoded message of type FidlType.
+// Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
 struct EncodeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;
@@ -60,6 +79,11 @@ struct EncodeResult final {
         : status(status), error(error), message(std::move(message)) {}
 };
 
+// Holds a |DecodedMessage| in addition to |status| and |error|.
+// This is typically the return type of fidl::Linearize and other FIDL methods which
+// have linearization as the last step.
+// If |status| is ZX_OK, |message| contains a valid message in decoded form, of type FidlType.
+// Otherwise, |error| contains a human-readable string for debugging purposes.
 template <typename FidlType>
 struct LinearizeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;

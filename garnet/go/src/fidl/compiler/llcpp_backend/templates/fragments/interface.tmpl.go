@@ -133,7 +133,14 @@ class {{ .Name }} final {
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t {{ template "SyncRequestCallerAllocateMethodSignature" . }};
+    {{- if .HasResponse }}
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    {{- end }}
+    {{ if .HasResponse -}}
+    ::fidl::DecodeResult<{{ .Name }}Response>
+    {{- else -}}
+    zx_status_t
+    {{- end }} {{ template "SyncRequestCallerAllocateMethodSignature" . }};
 {{ "" }}
       {{- end }}
       {{- if or .Request .Response }}
@@ -168,7 +175,14 @@ class {{ .Name }} final {
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t {{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }};
+    {{- if .HasResponse }}
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    {{- end }}
+    static {{ if .HasResponse -}}
+    ::fidl::DecodeResult<{{ .Name }}Response>
+    {{- else -}}
+    zx_status_t
+    {{- end }} {{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }};
 {{ "" }}
       {{- end }}
       {{- if or .Request .Response }}

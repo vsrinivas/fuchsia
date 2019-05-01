@@ -946,7 +946,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Close(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -965,7 +966,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -983,7 +985,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SyncResponse> Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -1000,7 +1003,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -1019,7 +1023,8 @@ class Node final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1031,7 +1036,8 @@ class Node final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<IoctlResponse> Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -1101,7 +1107,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -1120,7 +1127,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -1138,7 +1146,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -1155,7 +1164,8 @@ class Node final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -1174,7 +1184,8 @@ class Node final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1186,7 +1197,8 @@ class Node final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -1733,7 +1745,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Close(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -1752,7 +1765,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -1770,7 +1784,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SyncResponse> Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -1787,7 +1802,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -1806,7 +1822,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -1818,7 +1835,8 @@ class File final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<IoctlResponse> Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -1830,7 +1848,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Read(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ReadResponse> Read(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -1845,7 +1864,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReadAt(::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ReadAtResponse> ReadAt(::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
@@ -1865,7 +1885,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Write(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WriteResponse> Write(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
@@ -1885,7 +1906,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t WriteAt(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WriteAtResponse> WriteAt(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
@@ -1905,7 +1927,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Seek(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SeekResponse> Seek(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
     // Moves the offset at which the next invocation of |Read()| or |Write()| will
     // occur.
@@ -1923,7 +1946,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Truncate(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<TruncateResponse> Truncate(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Shrinks the file size to 'length' bytes.
     //
@@ -1940,7 +1964,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetFlags(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetFlagsResponse> GetFlags(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
 
     // Acquires the Directory::Open rights and flags used to access this file.
     //
@@ -1961,7 +1986,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SetFlagsResponse> SetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -1981,7 +2007,8 @@ class File final {
     // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
     // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetBufferResponse> GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
@@ -2058,7 +2085,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -2077,7 +2105,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -2095,7 +2124,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -2112,7 +2142,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -2131,7 +2162,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -2143,7 +2175,8 @@ class File final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -2155,7 +2188,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -2170,7 +2204,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReadAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ReadAtResponse> ReadAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
 
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
@@ -2190,7 +2225,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
@@ -2210,7 +2246,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t WriteAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WriteAtResponse> WriteAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
@@ -2230,7 +2267,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SeekResponse> Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
     // Moves the offset at which the next invocation of |Read()| or |Write()| will
     // occur.
@@ -2248,7 +2286,8 @@ class File final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Truncate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<TruncateResponse> Truncate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Shrinks the file size to 'length' bytes.
     //
@@ -2265,7 +2304,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetFlagsResponse> GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_flags);
 
     // Acquires the Directory::Open rights and flags used to access this file.
     //
@@ -2286,7 +2326,8 @@ class File final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SetFlagsResponse> SetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -2306,7 +2347,8 @@ class File final {
     // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
     // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
@@ -2946,7 +2988,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Close(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -2965,7 +3008,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -2983,7 +3027,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SyncResponse> Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -3000,7 +3045,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -3019,7 +3065,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -3031,7 +3078,8 @@ class Directory final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<IoctlResponse> Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -3168,7 +3216,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<UnlinkResponse> Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Detaches an object from this directory object.
     //
@@ -3222,7 +3271,8 @@ class Directory final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReadDirents(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -3256,7 +3306,8 @@ class Directory final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Rewind(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<RewindResponse> Rewind(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Resets the directory seek offset.
     //
@@ -3275,7 +3326,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetToken(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetTokenResponse> GetToken(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -3303,7 +3355,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<RenameResponse> Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -3339,7 +3392,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<LinkResponse> Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -3391,7 +3445,8 @@ class Directory final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Watch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WatchResponse> Watch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -3477,7 +3532,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -3496,7 +3552,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -3514,7 +3571,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -3531,7 +3589,8 @@ class Directory final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -3550,7 +3609,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -3562,7 +3622,8 @@ class Directory final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -3699,7 +3760,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Detaches an object from this directory object.
     //
@@ -3753,7 +3815,8 @@ class Directory final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -3787,7 +3850,8 @@ class Directory final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<RewindResponse> Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Resets the directory seek offset.
     //
@@ -3806,7 +3870,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -3834,7 +3899,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -3870,7 +3936,8 @@ class Directory final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -3922,7 +3989,8 @@ class Directory final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -4650,7 +4718,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Close(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -4669,7 +4738,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -4687,7 +4757,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SyncResponse> Sync(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -4704,7 +4775,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -4723,7 +4795,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -4735,7 +4808,8 @@ class DirectoryAdmin final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<IoctlResponse> Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -4872,7 +4946,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<UnlinkResponse> Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Detaches an object from this directory object.
     //
@@ -4926,7 +5001,8 @@ class DirectoryAdmin final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReadDirents(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -4960,7 +5036,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Rewind(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<RewindResponse> Rewind(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Resets the directory seek offset.
     //
@@ -4979,7 +5056,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetToken(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetTokenResponse> GetToken(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -5007,7 +5085,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<RenameResponse> Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -5043,7 +5122,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<LinkResponse> Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -5095,7 +5175,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Watch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WatchResponse> Watch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -5128,7 +5209,8 @@ class DirectoryAdmin final {
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_REMOTE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Mount(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MountResponse> Mount(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
@@ -5144,7 +5226,8 @@ class DirectoryAdmin final {
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MountAndCreate(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
@@ -5158,7 +5241,8 @@ class DirectoryAdmin final {
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Unmount(::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<UnmountResponse> Unmount(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
@@ -5172,7 +5256,8 @@ class DirectoryAdmin final {
     // Detach a node which was previously attached to this directory
     // with Mount.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t UnmountNode(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
     // Detach a node which was previously attached to this directory
     // with Mount.
@@ -5182,7 +5267,8 @@ class DirectoryAdmin final {
 
     // Query the filesystem for filesystem-specific information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t QueryFilesystem(::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem(::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
 
     // Query the filesystem for filesystem-specific information.
     // Messages are encoded and decoded in-place.
@@ -5191,7 +5277,8 @@ class DirectoryAdmin final {
 
     // Acquire the path to the device backing this filesystem, if there is one.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetDevicePath(::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath(::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
 
     // Acquire the path to the device backing this filesystem, if there is one.
     // Messages are encoded and decoded in-place.
@@ -5261,7 +5348,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Terminates connection with object.
     //
@@ -5280,7 +5368,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
     // If the |Describe| operation fails, the connection is closed.
@@ -5298,7 +5387,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
@@ -5315,7 +5405,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Acquires information about the node.
     //
@@ -5334,7 +5425,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
     // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
@@ -5346,7 +5438,8 @@ class DirectoryAdmin final {
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
@@ -5483,7 +5576,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Detaches an object from this directory object.
     //
@@ -5537,7 +5631,8 @@ class DirectoryAdmin final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_dirents);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -5571,7 +5666,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<RewindResponse> Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Resets the directory seek offset.
     //
@@ -5590,7 +5686,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
@@ -5618,7 +5715,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -5654,7 +5752,8 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -5706,7 +5805,8 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -5739,7 +5839,8 @@ class DirectoryAdmin final {
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_REMOTE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Mount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MountResponse> Mount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
@@ -5755,7 +5856,8 @@ class DirectoryAdmin final {
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MountAndCreate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MountAndCreateResponse> MountAndCreate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
@@ -5769,7 +5871,8 @@ class DirectoryAdmin final {
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Unmount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<UnmountResponse> Unmount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
@@ -5783,7 +5886,8 @@ class DirectoryAdmin final {
     // Detach a node which was previously attached to this directory
     // with Mount.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t UnmountNode(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
     // Detach a node which was previously attached to this directory
     // with Mount.
@@ -5793,7 +5897,8 @@ class DirectoryAdmin final {
 
     // Query the filesystem for filesystem-specific information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t QueryFilesystem(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
 
     // Query the filesystem for filesystem-specific information.
     // Messages are encoded and decoded in-place.
@@ -5802,7 +5907,8 @@ class DirectoryAdmin final {
 
     // Acquire the path to the device backing this filesystem, if there is one.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetDevicePath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::StringView* out_path);
 
     // Acquire the path to the device backing this filesystem, if there is one.
     // Messages are encoded and decoded in-place.

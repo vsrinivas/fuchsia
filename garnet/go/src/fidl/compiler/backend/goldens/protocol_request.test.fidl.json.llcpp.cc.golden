@@ -55,11 +55,11 @@ zx_status_t Parent::Call::GetChild(zx::unowned_channel _client_end, ::zx::channe
   return ZX_OK;
 }
 
-zx_status_t Parent::SyncClient::GetChild(::fidl::BytePart _response_buffer, ::zx::channel* out_c) {
+::fidl::DecodeResult<Parent::GetChildResponse> Parent::SyncClient::GetChild(::fidl::BytePart _response_buffer, ::zx::channel* out_c) {
   return Parent::Call::GetChild(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_c);
 }
 
-zx_status_t Parent::Call::GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c) {
+::fidl::DecodeResult<Parent::GetChildResponse> Parent::Call::GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetChildRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetChildRequest*>(_request_buffer.data());
@@ -68,20 +68,20 @@ zx_status_t Parent::Call::GetChild(zx::unowned_channel _client_end, ::fidl::Byte
   ::fidl::DecodedMessage<GetChildRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
+    return ::fidl::DecodeResult<GetChildResponse>(_encode_request_result.status, _encode_request_result.error);
   }
   auto _call_result = ::fidl::Call<GetChildRequest, GetChildResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return _call_result.status;
+    return ::fidl::DecodeResult<GetChildResponse>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
+    return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
   *out_c = std::move(_response.c);
-  return ZX_OK;
+  return _decode_result;
 }
 
 ::fidl::DecodeResult<Parent::GetChildResponse> Parent::SyncClient::GetChild(::fidl::BytePart response_buffer) {
@@ -146,11 +146,11 @@ zx_status_t Parent::Call::GetChildRequest(zx::unowned_channel _client_end, ::zx:
   return ZX_OK;
 }
 
-zx_status_t Parent::SyncClient::GetChildRequest(::fidl::BytePart _response_buffer, ::zx::channel* out_r) {
+::fidl::DecodeResult<Parent::GetChildRequestResponse> Parent::SyncClient::GetChildRequest(::fidl::BytePart _response_buffer, ::zx::channel* out_r) {
   return Parent::Call::GetChildRequest(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_r);
 }
 
-zx_status_t Parent::Call::GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r) {
+::fidl::DecodeResult<Parent::GetChildRequestResponse> Parent::Call::GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetChildRequestRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetChildRequestRequest*>(_request_buffer.data());
@@ -159,20 +159,20 @@ zx_status_t Parent::Call::GetChildRequest(zx::unowned_channel _client_end, ::fid
   ::fidl::DecodedMessage<GetChildRequestRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
+    return ::fidl::DecodeResult<GetChildRequestResponse>(_encode_request_result.status, _encode_request_result.error);
   }
   auto _call_result = ::fidl::Call<GetChildRequestRequest, GetChildRequestResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return _call_result.status;
+    return ::fidl::DecodeResult<GetChildRequestResponse>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
+    return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
   *out_r = std::move(_response.r);
-  return ZX_OK;
+  return _decode_result;
 }
 
 ::fidl::DecodeResult<Parent::GetChildRequestResponse> Parent::SyncClient::GetChildRequest(::fidl::BytePart response_buffer) {

@@ -88,13 +88,13 @@ zx_status_t TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client
   return ZX_OK;
 }
 
-zx_status_t TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field) {
   return TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer), out_status, out_field);
 }
 
-zx_status_t TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field) {
   if (_request_buffer.capacity() < ConsumeSimpleStructRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+    return ::fidl::DecodeResult<ConsumeSimpleStructResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<ConsumeSimpleStructRequest*>(_request_buffer.data());
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
@@ -103,21 +103,21 @@ zx_status_t TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client
   ::fidl::DecodedMessage<ConsumeSimpleStructRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
+    return ::fidl::DecodeResult<ConsumeSimpleStructResponse>(_encode_request_result.status, _encode_request_result.error);
   }
   auto _call_result = ::fidl::Call<ConsumeSimpleStructRequest, ConsumeSimpleStructResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return _call_result.status;
+    return ::fidl::DecodeResult<ConsumeSimpleStructResponse>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
+    return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
   *out_status = std::move(_response.status);
   *out_field = std::move(_response.field);
-  return ZX_OK;
+  return _decode_result;
 }
 
 ::fidl::DecodeResult<TestInterface::ConsumeSimpleStructResponse> TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer) {
@@ -180,13 +180,13 @@ zx_status_t TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_
   return ZX_OK;
 }
 
-zx_status_t TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field) {
   return TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer), out_index, out_field);
 }
 
-zx_status_t TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field) {
+::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field) {
   if (_request_buffer.capacity() < ConsumeSimpleUnionRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+    return ::fidl::DecodeResult<ConsumeSimpleUnionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_request_buffer.data());
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
@@ -195,21 +195,21 @@ zx_status_t TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_
   ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
+    return ::fidl::DecodeResult<ConsumeSimpleUnionResponse>(_encode_request_result.status, _encode_request_result.error);
   }
   auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return _call_result.status;
+    return ::fidl::DecodeResult<ConsumeSimpleUnionResponse>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
+    return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
   *out_index = std::move(_response.index);
   *out_field = std::move(_response.field);
-  return ZX_OK;
+  return _decode_result;
 }
 
 ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer) {

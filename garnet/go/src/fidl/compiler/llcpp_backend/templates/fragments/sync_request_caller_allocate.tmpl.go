@@ -30,7 +30,11 @@ const SyncRequestCallerAllocate = `
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
-zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCallerAllocateMethodSignature" . }} {
+{{ if .HasResponse -}}
+  ::fidl::DecodeResult<{{ .LLProps.InterfaceName }}::{{ .Name }}Response>
+{{- else -}}
+  zx_status_t
+{{- end }} {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCallerAllocateMethodSignature" . }} {
   return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
     {{- if or .Request .Response }}, {{ end }}
     {{- if .Request -}}
@@ -47,13 +51,21 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodDefinition" }}
-zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }} {
+{{ if .HasResponse -}}
+  ::fidl::DecodeResult<{{ .LLProps.InterfaceName }}::{{ .Name }}Response>
+{{- else -}}
+  zx_status_t
+{{- end }} {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }} {
   {{- if not .Request }}
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   {{- else }}
   if (_request_buffer.capacity() < {{ .Name }}Request::PrimarySize) {
+    {{- if .HasResponse }}
+    return ::fidl::DecodeResult<{{ .Name }}Response>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
+    {{- else }}
     return ZX_ERR_BUFFER_TOO_SMALL;
+    {{- end }}
   }
   {{- end }}
   {{- if .LLProps.LinearizeRequest }}
@@ -67,7 +79,11 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   {{- if .LLProps.LinearizeRequest }}
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
+    {{- if .HasResponse }}
+    return ::fidl::DecodeResult<{{ .Name }}Response>(_linearize_result.status, _linearize_result.error);
+    {{- else }}
     return _linearize_result.status;
+    {{- end }}
   }
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request = std::move(_linearize_result.message);
   {{- else }}
@@ -76,7 +92,11 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   {{- end }}
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
+    {{- if .HasResponse }}
+    return ::fidl::DecodeResult<{{ .Name }}Response>(_encode_request_result.status, _encode_request_result.error);
+    {{- else }}
     return _encode_request_result.status;
+    {{- end }}
   }
   {{- if .HasResponse }}
     {{- if not .Response }}
@@ -87,17 +107,17 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return _call_result.status;
+    return ::fidl::DecodeResult<{{ .Name }}Response>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
+    return _decode_result;
   }
     {{- if .Response }}
   auto& _response = *_decode_result.message.message();
     {{- end }}
     {{- template "ReturnResponseStructMembers" .Response }}
-  return ZX_OK;
+  return _decode_result;
   {{- else }}
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
   {{- end }}

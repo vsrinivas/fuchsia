@@ -31,18 +31,12 @@ class EchoClientApp {
 
   ::fidl::DecodeResult<Echo::EchoStructResponse> EchoStruct(
       ::fidl::BytePart request_buffer, Struct value,
-      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer) {
-    Echo::EchoStructRequest request = {};
-    request.value = std::move(value);
-    request.forward_to_server = forward_to_server;
-    auto linearize_result =
-        ::fidl::Linearize(&request, std::move(request_buffer));
-    if (linearize_result.status != ZX_OK) {
-      return ::fidl::DecodeResult<Echo::EchoStructResponse>(
-          linearize_result.status, linearize_result.error);
-    }
-    return client_.EchoStruct(std::move(linearize_result.message),
-                              std::move(response_buffer));
+      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
+      Struct* out_value) {
+    return client_.EchoStruct(std::move(request_buffer),
+                              std::move(value), forward_to_server,
+                              std::move(response_buffer),
+                              out_value);
   }
 
   ::fidl::DecodeResult<Echo::EchoEventResponse> EchoStructNoRetVal(
@@ -127,16 +121,18 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(forward_to_server);
+      Struct out_value;
       auto result = app.EchoStruct(
           ::fidl::BytePart(&request_buffer[0],
                            static_cast<uint32_t>(request_buffer.size())),
           std::move(value), ::fidl::StringView{0, ""},
           ::fidl::BytePart(&response_buffer[0],
-                           static_cast<uint32_t>(response_buffer.size())));
+                           static_cast<uint32_t>(response_buffer.size())),
+          &out_value);
       ZX_ASSERT_MSG(result.status == ZX_OK,
                     "Forwarding failed: %s",
                     result.error);
-      completer.Reply(std::move(result.message.message()->value));
+      completer.Reply(std::move(out_value));
     }
   }
 

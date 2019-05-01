@@ -198,7 +198,8 @@ class TestInterface final {
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
@@ -210,7 +211,8 @@ class TestInterface final {
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Messages are encoded and decoded in-place.
@@ -231,7 +233,8 @@ class TestInterface final {
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
@@ -243,7 +246,8 @@ class TestInterface final {
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Messages are encoded and decoded in-place.

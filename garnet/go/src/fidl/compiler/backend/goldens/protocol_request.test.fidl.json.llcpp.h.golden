@@ -82,7 +82,8 @@ class Parent final {
     zx_status_t GetChild(::zx::channel* out_c);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetChild(::fidl::BytePart _response_buffer, ::zx::channel* out_c);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetChildResponse> GetChild(::fidl::BytePart _response_buffer, ::zx::channel* out_c);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetChildResponse> GetChild(::fidl::BytePart response_buffer);
@@ -90,7 +91,8 @@ class Parent final {
     zx_status_t GetChildRequest(::zx::channel* out_r);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetChildRequest(::fidl::BytePart _response_buffer, ::zx::channel* out_r);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(::fidl::BytePart response_buffer);
@@ -122,7 +124,8 @@ class Parent final {
     static zx_status_t GetChild(zx::unowned_channel _client_end, ::zx::channel* out_c);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetChildResponse> GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetChildResponse> GetChild(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -130,7 +133,8 @@ class Parent final {
     static zx_status_t GetChildRequest(zx::unowned_channel _client_end, ::zx::channel* out_r);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);

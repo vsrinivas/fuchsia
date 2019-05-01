@@ -51,14 +51,14 @@ int main(int argc, const char** argv) {
   std::vector<uint8_t> request_buffer(512);
   std::vector<uint8_t> response_buffer(512);
   fidl::StringView out_str = {};
-  zx_status_t status = client.EchoString(
+  auto result = client.EchoString(
       fidl::BytePart(&request_buffer[0], request_buffer.size()),
       fidl::StringView(msg.size(), &msg[0]),
       fidl::BytePart(&response_buffer[0], response_buffer.size()), &out_str);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to call server: " << status << " ("
-              << zx_status_get_string(status) << ")" << std::endl;
-    return status;
+  if (result.status != ZX_OK) {
+    std::cerr << "Failed to call server: " << result.status << " ("
+              << result.error << ")" << std::endl;
+    return result.status;
   }
 
   std::string reply_string(out_str.data(), out_str.size());

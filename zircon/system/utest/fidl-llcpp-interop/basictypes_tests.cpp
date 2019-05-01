@@ -336,12 +336,13 @@ bool SyncCallerAllocateCallStructTest() {
     // perform call
     FIDL_ALIGNDECL uint8_t request_buf[512] = {};
     FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-    zx_status_t status = test.ConsumeSimpleStruct(fidl::BytePart(request_buf, sizeof(request_buf)),
-                                                  std::move(simple_struct),
-                                                  fidl::BytePart(response_buf,
-                                                                 sizeof(response_buf)),
-                                                  &out_status, &out_field);
-    ASSERT_EQ(status, ZX_OK);
+    auto result = test.ConsumeSimpleStruct(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                           std::move(simple_struct),
+                                           fidl::BytePart(response_buf,
+                                                          sizeof(response_buf)),
+                                           &out_status, &out_field);
+    ASSERT_EQ(result.status, ZX_OK);
+    ASSERT_NULL(result.error, result.error);
     ASSERT_EQ(out_status, ZX_OK);
     ASSERT_EQ(out_field, 123);
 
@@ -398,11 +399,12 @@ bool SyncCallerAllocateCallUnionTest() {
     // perform call
     FIDL_ALIGNDECL uint8_t request_buf[512] = {};
     FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-    zx_status_t status = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
-                                                 std::move(simple_union),
-                                                 fidl::BytePart(response_buf, sizeof(response_buf)),
-                                                 &out_index, &out_field);
-    ASSERT_EQ(status, ZX_OK);
+    auto result = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                          std::move(simple_union),
+                                          fidl::BytePart(response_buf, sizeof(response_buf)),
+                                          &out_index, &out_field);
+    ASSERT_EQ(result.status, ZX_OK);
+    ASSERT_NULL(result.error, result.error);
     ASSERT_EQ(out_index, 1);
     ASSERT_EQ(out_field, 456);
 

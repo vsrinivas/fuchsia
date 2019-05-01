@@ -243,7 +243,8 @@ class KitchenSink final {
     zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -251,7 +252,8 @@ class KitchenSink final {
     zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -275,7 +277,8 @@ class KitchenSink final {
     static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -283,7 +286,8 @@ class KitchenSink final {
     static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -452,7 +456,8 @@ class ChannelProtocol final {
     zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -460,7 +465,8 @@ class ChannelProtocol final {
     zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -484,7 +490,8 @@ class ChannelProtocol final {
     static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -492,7 +499,8 @@ class ChannelProtocol final {
     static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -661,7 +669,8 @@ class SocketControlProtocol final {
     zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -669,7 +678,8 @@ class SocketControlProtocol final {
     zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -693,7 +703,8 @@ class SocketControlProtocol final {
     static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -701,7 +712,8 @@ class SocketControlProtocol final {
     static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -870,7 +882,8 @@ class OvernetInternalProtocol final {
     zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -878,7 +891,8 @@ class OvernetInternalProtocol final {
     zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -902,7 +916,8 @@ class OvernetInternalProtocol final {
     static zx_status_t MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer, int64_t* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
@@ -910,7 +925,8 @@ class OvernetInternalProtocol final {
     static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer, ::zx::socket* out_b);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
@@ -1083,7 +1099,8 @@ class WithAndWithoutRequestResponse final {
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t NoRequestWithResponse(::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::fidl::BytePart response_buffer);
@@ -1099,14 +1116,16 @@ class WithAndWithoutRequestResponse final {
     zx_status_t WithRequestEmptyResponse(::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WithRequestEmptyResponseResponse> WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     // Messages are encoded and decoded in-place.
     zx_status_t WithRequestEmptyResponse(::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t WithRequestWithResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
@@ -1125,7 +1144,8 @@ class WithAndWithoutRequestResponse final {
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -1141,14 +1161,16 @@ class WithAndWithoutRequestResponse final {
     static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse> WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     // Messages are encoded and decoded in-place.
     static zx_status_t WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
@@ -1387,7 +1409,8 @@ class WithErrorSyntax final {
     zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ErrorAsPrimitive(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(::fidl::BytePart response_buffer);
@@ -1395,7 +1418,8 @@ class WithErrorSyntax final {
     zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ErrorAsEnum(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(::fidl::BytePart response_buffer);
@@ -1411,7 +1435,8 @@ class WithErrorSyntax final {
     static zx_status_t ErrorAsPrimitive(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -1419,7 +1444,8 @@ class WithErrorSyntax final {
     static zx_status_t ErrorAsEnum(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsEnum_Result* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);

@@ -552,22 +552,23 @@ bool CallerAllocateCountNumDirectories() {
         int64_t num_dir;
         std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
         FIDL_ALIGNDECL uint8_t response_buf[128];
-        zx_status_t status = client.CountNumDirectories(fidl::BytePart(request_buf.get(),
-                                                                       ZX_CHANNEL_MAX_MSG_BYTES),
-                                                        fidl::VectorView<gen::DirEnt> {
-                                                            static_cast<uint64_t>(dirents.size()),
-                                                            dirents.data()
-                                                        },
-                                                        fidl::BytePart(response_buf,
-                                                                       sizeof(response_buf)),
-                                                        &num_dir);
+        auto result = client.CountNumDirectories(fidl::BytePart(request_buf.get(),
+                                                                ZX_CHANNEL_MAX_MSG_BYTES),
+                                                 fidl::VectorView<gen::DirEnt> {
+                                                     static_cast<uint64_t>(dirents.size()),
+                                                     dirents.data()
+                                                 },
+                                                 fidl::BytePart(response_buf,
+                                                                sizeof(response_buf)),
+                                                 &num_dir);
         int64_t expected_num_dir = 0;
         for (const auto& dirent : dirents) {
             if (dirent.is_dir) {
                 expected_num_dir++;
             }
         }
-        ASSERT_EQ(status, ZX_OK, seed_description);
+        ASSERT_EQ(result.status, ZX_OK, seed_description);
+        ASSERT_NULL(result.error, seed_description);
         ASSERT_EQ(expected_num_dir, num_dir, seed_description);
     }
     ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
@@ -591,9 +592,10 @@ bool CallerAllocateReadDir() {
     for (uint64_t iter = 0; iter < kNumIterations; iter++) {
         std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
         fidl::VectorView<gen::DirEnt> dirents;
-        ASSERT_EQ(client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES),
-                                 &dirents),
-                  ZX_OK);
+        auto result = client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES),
+                                     &dirents);
+        ASSERT_EQ(result.status, ZX_OK);
+        ASSERT_NULL(result.error, result.error);
         ASSERT_EQ(dirents.count(), golden_dirents.count());
         for (uint64_t i = 0; i < dirents.count(); i++) {
             auto actual = dirents[i];
@@ -677,9 +679,11 @@ bool CallerAllocateConsumeDirectories() {
 
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
     std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
-    ASSERT_EQ(client.ConsumeDirectories(fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES),
-                                        golden_dirents),
-              ZX_OK);
+    auto result = client.ConsumeDirectories(fidl::BytePart(request_buf.get(),
+                                                           ZX_CHANNEL_MAX_MSG_BYTES),
+                                            golden_dirents);
+    ASSERT_EQ(result.status, ZX_OK);
+    ASSERT_NULL(result.error, result.error);
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 
     END_TEST;

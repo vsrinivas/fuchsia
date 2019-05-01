@@ -133,7 +133,8 @@ class DirEntTestInterface final {
 
     // Iterate over the dirents and return the number of directories within them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CountNumDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
 
     // Iterate over the dirents and return the number of directories within them.
     // Messages are encoded and decoded in-place.
@@ -142,7 +143,8 @@ class DirEntTestInterface final {
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReadDir(::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ReadDirResponse> ReadDir(::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Messages are encoded and decoded in-place.
@@ -153,7 +155,8 @@ class DirEntTestInterface final {
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ConsumeDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Messages are encoded and decoded in-place.
@@ -186,7 +189,8 @@ class DirEntTestInterface final {
 
     // Iterate over the dirents and return the number of directories within them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
 
     // Iterate over the dirents and return the number of directories within them.
     // Messages are encoded and decoded in-place.
@@ -195,7 +199,8 @@ class DirEntTestInterface final {
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ReadDirResponse> ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Messages are encoded and decoded in-place.
@@ -206,7 +211,8 @@ class DirEntTestInterface final {
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Messages are encoded and decoded in-place.
