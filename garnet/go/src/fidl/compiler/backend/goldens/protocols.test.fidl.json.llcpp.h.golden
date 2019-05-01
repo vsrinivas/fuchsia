@@ -157,7 +157,7 @@ extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 class KitchenSink final {
  public:
 
-  struct MethodARequest {
+  struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -169,7 +169,7 @@ class KitchenSink final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct EventAResponse {
+  struct EventAResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -180,7 +180,7 @@ class KitchenSink final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBResponse {
+  struct MethodBResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t result;
@@ -190,7 +190,7 @@ class KitchenSink final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBRequest {
+  struct MethodBRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -203,7 +203,7 @@ class KitchenSink final {
     using ResponseType = MethodBResponse;
   };
 
-  struct MutateSocketResponse {
+  struct MutateSocketResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket b;
@@ -213,7 +213,7 @@ class KitchenSink final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MutateSocketRequest {
+  struct MutateSocketRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket a;
@@ -366,7 +366,7 @@ extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 class ChannelProtocol final {
  public:
 
-  struct MethodARequest {
+  struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -378,7 +378,7 @@ class ChannelProtocol final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct EventAResponse {
+  struct EventAResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -389,7 +389,7 @@ class ChannelProtocol final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBResponse {
+  struct MethodBResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t result;
@@ -399,7 +399,7 @@ class ChannelProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBRequest {
+  struct MethodBRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -412,7 +412,7 @@ class ChannelProtocol final {
     using ResponseType = MethodBResponse;
   };
 
-  struct MutateSocketResponse {
+  struct MutateSocketResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket b;
@@ -422,7 +422,7 @@ class ChannelProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MutateSocketRequest {
+  struct MutateSocketRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket a;
@@ -575,7 +575,7 @@ extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponse
 class SocketControlProtocol final {
  public:
 
-  struct MethodARequest {
+  struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -587,7 +587,7 @@ class SocketControlProtocol final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct EventAResponse {
+  struct EventAResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -598,7 +598,7 @@ class SocketControlProtocol final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBResponse {
+  struct MethodBResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t result;
@@ -608,7 +608,7 @@ class SocketControlProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBRequest {
+  struct MethodBRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -621,7 +621,7 @@ class SocketControlProtocol final {
     using ResponseType = MethodBResponse;
   };
 
-  struct MutateSocketResponse {
+  struct MutateSocketResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket b;
@@ -631,7 +631,7 @@ class SocketControlProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MutateSocketRequest {
+  struct MutateSocketRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket a;
@@ -784,7 +784,7 @@ extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRespon
 class OvernetInternalProtocol final {
  public:
 
-  struct MethodARequest {
+  struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -796,7 +796,7 @@ class OvernetInternalProtocol final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct EventAResponse {
+  struct EventAResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -807,7 +807,7 @@ class OvernetInternalProtocol final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBResponse {
+  struct MethodBResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t result;
@@ -817,7 +817,7 @@ class OvernetInternalProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MethodBRequest {
+  struct MethodBRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
@@ -830,7 +830,7 @@ class OvernetInternalProtocol final {
     using ResponseType = MethodBResponse;
   };
 
-  struct MutateSocketResponse {
+  struct MutateSocketResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket b;
@@ -840,7 +840,7 @@ class OvernetInternalProtocol final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MutateSocketRequest {
+  struct MutateSocketRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::socket a;
@@ -1002,7 +1002,7 @@ class WithAndWithoutRequestResponse final {
   using NoRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
   using NoRequestEmptyResponseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct NoRequestWithResponseResponse {
+  struct NoRequestWithResponseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
@@ -1014,7 +1014,7 @@ class WithAndWithoutRequestResponse final {
   };
   using NoRequestWithResponseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct WithRequestNoResponseRequest {
+  struct WithRequestNoResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
@@ -1026,7 +1026,7 @@ class WithAndWithoutRequestResponse final {
   };
 
   using WithRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
-  struct WithRequestEmptyResponseRequest {
+  struct WithRequestEmptyResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
@@ -1037,7 +1037,7 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t MaxOutOfLine = 4294967295;
   };
 
-  struct WithRequestWithResponseResponse {
+  struct WithRequestWithResponseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
@@ -1047,7 +1047,7 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
   };
-  struct WithRequestWithResponseRequest {
+  struct WithRequestWithResponseRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
@@ -1060,7 +1060,7 @@ class WithAndWithoutRequestResponse final {
   };
 
   using OnEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
-  struct OnWithResponseResponse {
+  struct OnWithResponseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
@@ -1353,7 +1353,7 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 class WithErrorSyntax final {
  public:
 
-  struct ErrorAsPrimitiveResponse {
+  struct ErrorAsPrimitiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     WithErrorSyntax_ErrorAsPrimitive_Result result;
@@ -1365,7 +1365,7 @@ class WithErrorSyntax final {
   };
   using ErrorAsPrimitiveRequest = ::fidl::AnyZeroArgMessage;
 
-  struct ErrorAsEnumResponse {
+  struct ErrorAsEnumResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     WithErrorSyntax_ErrorAsEnum_Result result;

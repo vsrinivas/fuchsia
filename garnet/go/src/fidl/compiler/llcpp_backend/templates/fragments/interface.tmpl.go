@@ -66,7 +66,7 @@ class {{ .Name }} final {
 
     {{- if .HasResponse }}
       {{- if .Response }}
-  struct {{ .Name }}Response {
+  struct {{ .Name }}Response final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
@@ -86,7 +86,7 @@ class {{ .Name }} final {
 
     {{- if .HasRequest }}
       {{- if .Request }}
-  struct {{ .Name }}Request {
+  struct {{ .Name }}Request final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;

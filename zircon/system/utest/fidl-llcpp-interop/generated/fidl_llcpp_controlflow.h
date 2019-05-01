@@ -28,7 +28,7 @@ class ControlFlow final {
 
   using NoReplyMustSendAccessDeniedEpitaphRequest = ::fidl::AnyZeroArgMessage;
 
-  struct MustSendAccessDeniedEpitaphResponse {
+  struct MustSendAccessDeniedEpitaphResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t reply;

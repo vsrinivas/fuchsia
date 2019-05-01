@@ -18,25 +18,9 @@ namespace test {
 namespace llcpp {
 namespace basictypes {
 
-struct SimpleStruct;
 struct SimpleUnion;
+struct SimpleStruct;
 class TestInterface;
-
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
-
-struct SimpleStruct {
-  static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleStructTable;
-  static constexpr uint32_t MaxNumHandles = 21;
-  static constexpr uint32_t PrimarySize = 88;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  int32_t field{};
-
-  ::zx::eventpair ep{};
-
-  ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr{};
-};
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleUnionTable;
 
@@ -132,13 +116,29 @@ struct SimpleUnion {
   };
 };
 
+extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
+
+struct SimpleStruct {
+  static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleStructTable;
+  static constexpr uint32_t MaxNumHandles = 21;
+  static constexpr uint32_t PrimarySize = 88;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  int32_t field{};
+
+  ::zx::eventpair ep{};
+
+  ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr{};
+};
+
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
 
 // Test interface implemented by both C and LLCPP
 class TestInterface final {
  public:
 
-  struct ConsumeSimpleStructResponse {
+  struct ConsumeSimpleStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
@@ -149,7 +149,7 @@ class TestInterface final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct ConsumeSimpleStructRequest {
+  struct ConsumeSimpleStructRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     SimpleStruct arg;
@@ -161,7 +161,7 @@ class TestInterface final {
     using ResponseType = ConsumeSimpleStructResponse;
   };
 
-  struct ConsumeSimpleUnionResponse {
+  struct ConsumeSimpleUnionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t index;
@@ -172,7 +172,7 @@ class TestInterface final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct ConsumeSimpleUnionRequest {
+  struct ConsumeSimpleUnionRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     SimpleUnion arg;
@@ -317,16 +317,16 @@ class TestInterface final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleUnion>);
+
+template <>
 struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleStruct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleStruct>);
 static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, field) == 0);
 static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, ep) == 4);
 static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, arr) == 8);
 static_assert(sizeof(::fidl::test::llcpp::basictypes::SimpleStruct) == ::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleUnion>);
 
 template <>
 struct IsFidlType<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};

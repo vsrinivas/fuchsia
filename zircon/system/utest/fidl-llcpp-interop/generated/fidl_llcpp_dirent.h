@@ -21,9 +21,9 @@ namespace dirent {
 struct DirEnt;
 class DirEntTestInterface;
 
-constexpr uint32_t SMALL_DIR_VECTOR_SIZE = 3;
-
 constexpr uint32_t TEST_MAX_PATH = 10;
+
+constexpr uint32_t SMALL_DIR_VECTOR_SIZE = 3;
 
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTable;
 
@@ -53,7 +53,7 @@ extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDir
 class DirEntTestInterface final {
  public:
 
-  struct CountNumDirectoriesResponse {
+  struct CountNumDirectoriesResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t num_dir;
@@ -63,7 +63,7 @@ class DirEntTestInterface final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct CountNumDirectoriesRequest {
+  struct CountNumDirectoriesRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<DirEnt> dirents;
@@ -75,7 +75,7 @@ class DirEntTestInterface final {
     using ResponseType = CountNumDirectoriesResponse;
   };
 
-  struct ReadDirResponse {
+  struct ReadDirResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<DirEnt> dirents;
@@ -88,7 +88,7 @@ class DirEntTestInterface final {
   using ReadDirRequest = ::fidl::AnyZeroArgMessage;
 
   using ConsumeDirectoriesResponse = ::fidl::AnyZeroArgMessage;
-  struct ConsumeDirectoriesRequest {
+  struct ConsumeDirectoriesRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<DirEnt> dirents;
@@ -99,7 +99,7 @@ class DirEntTestInterface final {
     static constexpr uint32_t MaxOutOfLine = 144;
   };
 
-  struct OnDirentsResponse {
+  struct OnDirentsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<DirEnt> dirents;
@@ -109,7 +109,7 @@ class DirEntTestInterface final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48000;
   };
-  struct OneWayDirentsRequest {
+  struct OneWayDirentsRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<DirEnt> dirents;

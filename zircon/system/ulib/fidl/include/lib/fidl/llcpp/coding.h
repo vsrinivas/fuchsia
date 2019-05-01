@@ -17,7 +17,7 @@
 namespace fidl {
 
 // The request/response type of any FIDL method with zero in/out parameters.
-struct AnyZeroArgMessage {
+struct AnyZeroArgMessage final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
 
@@ -33,7 +33,7 @@ template <>
 struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
 
 template <typename FidlType>
-struct DecodeResult {
+struct DecodeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;
     const char* error = nullptr;
     DecodedMessage<FidlType> message;
@@ -47,7 +47,7 @@ struct DecodeResult {
 };
 
 template <typename FidlType>
-struct EncodeResult {
+struct EncodeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;
     const char* error = nullptr;
     EncodedMessage<FidlType> message;
@@ -61,7 +61,7 @@ struct EncodeResult {
 };
 
 template <typename FidlType>
-struct LinearizeResult {
+struct LinearizeResult final {
     zx_status_t status = ZX_ERR_INTERNAL;
     const char* error = nullptr;
     DecodedMessage<FidlType> message;

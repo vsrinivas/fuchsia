@@ -26,7 +26,7 @@ extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 class Parent final {
  public:
 
-  struct GetChildResponse {
+  struct GetChildResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel c;
@@ -38,7 +38,7 @@ class Parent final {
   };
   using GetChildRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetChildRequestResponse {
+  struct GetChildRequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;
@@ -50,7 +50,7 @@ class Parent final {
   };
   using GetChildRequestRequest = ::fidl::AnyZeroArgMessage;
 
-  struct TakeChildRequest {
+  struct TakeChildRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel c;
@@ -61,7 +61,7 @@ class Parent final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct TakeChildRequestRequest {
+  struct TakeChildRequestRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel r;

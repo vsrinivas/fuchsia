@@ -163,7 +163,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 class DirectoryWatcher final {
  public:
 
-  struct OnEventRequest {
+  struct OnEventRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> events;
@@ -761,7 +761,7 @@ extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 class Node final {
  public:
 
-  struct CloneRequest {
+  struct CloneRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -773,7 +773,7 @@ class Node final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct CloseResponse {
+  struct CloseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -785,7 +785,7 @@ class Node final {
   };
   using CloseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct DescribeResponse {
+  struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     NodeInfo info;
@@ -797,7 +797,7 @@ class Node final {
   };
   using DescribeRequest = ::fidl::AnyZeroArgMessage;
 
-  struct OnOpenResponse {
+  struct OnOpenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -808,7 +808,7 @@ class Node final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
   };
-  struct SyncResponse {
+  struct SyncResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -820,7 +820,7 @@ class Node final {
   };
   using SyncRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetAttrResponse {
+  struct GetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -833,7 +833,7 @@ class Node final {
   };
   using GetAttrRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetAttrResponse {
+  struct SetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -843,7 +843,7 @@ class Node final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SetAttrRequest {
+  struct SetAttrRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -856,7 +856,7 @@ class Node final {
     using ResponseType = SetAttrResponse;
   };
 
-  struct IoctlResponse {
+  struct IoctlResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -868,7 +868,7 @@ class Node final {
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8200;
   };
-  struct IoctlRequest {
+  struct IoctlRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t opcode;
@@ -1350,7 +1350,7 @@ extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
 class File final {
  public:
 
-  struct CloneRequest {
+  struct CloneRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -1362,7 +1362,7 @@ class File final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct CloseResponse {
+  struct CloseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1374,7 +1374,7 @@ class File final {
   };
   using CloseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct DescribeResponse {
+  struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     NodeInfo info;
@@ -1386,7 +1386,7 @@ class File final {
   };
   using DescribeRequest = ::fidl::AnyZeroArgMessage;
 
-  struct OnOpenResponse {
+  struct OnOpenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1397,7 +1397,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
   };
-  struct SyncResponse {
+  struct SyncResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1409,7 +1409,7 @@ class File final {
   };
   using SyncRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetAttrResponse {
+  struct GetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1422,7 +1422,7 @@ class File final {
   };
   using GetAttrRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetAttrResponse {
+  struct SetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1432,7 +1432,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SetAttrRequest {
+  struct SetAttrRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -1445,7 +1445,7 @@ class File final {
     using ResponseType = SetAttrResponse;
   };
 
-  struct IoctlResponse {
+  struct IoctlResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1457,7 +1457,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8200;
   };
-  struct IoctlRequest {
+  struct IoctlRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t opcode;
@@ -1472,7 +1472,7 @@ class File final {
     using ResponseType = IoctlResponse;
   };
 
-  struct ReadResponse {
+  struct ReadResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1483,7 +1483,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
   };
-  struct ReadRequest {
+  struct ReadRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t count;
@@ -1495,7 +1495,7 @@ class File final {
     using ResponseType = ReadResponse;
   };
 
-  struct ReadAtResponse {
+  struct ReadAtResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1506,7 +1506,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
   };
-  struct ReadAtRequest {
+  struct ReadAtRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t count;
@@ -1519,7 +1519,7 @@ class File final {
     using ResponseType = ReadAtResponse;
   };
 
-  struct WriteResponse {
+  struct WriteResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1530,7 +1530,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct WriteRequest {
+  struct WriteRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> data;
@@ -1542,7 +1542,7 @@ class File final {
     using ResponseType = WriteResponse;
   };
 
-  struct WriteAtResponse {
+  struct WriteAtResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1553,7 +1553,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct WriteAtRequest {
+  struct WriteAtRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> data;
@@ -1566,7 +1566,7 @@ class File final {
     using ResponseType = WriteAtResponse;
   };
 
-  struct SeekResponse {
+  struct SeekResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1577,7 +1577,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SeekRequest {
+  struct SeekRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t offset;
@@ -1590,7 +1590,7 @@ class File final {
     using ResponseType = SeekResponse;
   };
 
-  struct TruncateResponse {
+  struct TruncateResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1600,7 +1600,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct TruncateRequest {
+  struct TruncateRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t length;
@@ -1612,7 +1612,7 @@ class File final {
     using ResponseType = TruncateResponse;
   };
 
-  struct GetFlagsResponse {
+  struct GetFlagsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1625,7 +1625,7 @@ class File final {
   };
   using GetFlagsRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetFlagsResponse {
+  struct SetFlagsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1635,7 +1635,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SetFlagsRequest {
+  struct SetFlagsRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -1647,7 +1647,7 @@ class File final {
     using ResponseType = SetFlagsResponse;
   };
 
-  struct GetBufferResponse {
+  struct GetBufferResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -1658,7 +1658,7 @@ class File final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
   };
-  struct GetBufferRequest {
+  struct GetBufferRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -2605,7 +2605,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryWatchRequestTable;
 class Directory final {
  public:
 
-  struct CloneRequest {
+  struct CloneRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -2617,7 +2617,7 @@ class Directory final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct CloseResponse {
+  struct CloseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2629,7 +2629,7 @@ class Directory final {
   };
   using CloseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct DescribeResponse {
+  struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     NodeInfo info;
@@ -2641,7 +2641,7 @@ class Directory final {
   };
   using DescribeRequest = ::fidl::AnyZeroArgMessage;
 
-  struct OnOpenResponse {
+  struct OnOpenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2652,7 +2652,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
   };
-  struct SyncResponse {
+  struct SyncResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2664,7 +2664,7 @@ class Directory final {
   };
   using SyncRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetAttrResponse {
+  struct GetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2677,7 +2677,7 @@ class Directory final {
   };
   using GetAttrRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetAttrResponse {
+  struct SetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2687,7 +2687,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SetAttrRequest {
+  struct SetAttrRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -2700,7 +2700,7 @@ class Directory final {
     using ResponseType = SetAttrResponse;
   };
 
-  struct IoctlResponse {
+  struct IoctlResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2712,7 +2712,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8200;
   };
-  struct IoctlRequest {
+  struct IoctlRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t opcode;
@@ -2727,7 +2727,7 @@ class Directory final {
     using ResponseType = IoctlResponse;
   };
 
-  struct OpenRequest {
+  struct OpenRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -2741,7 +2741,7 @@ class Directory final {
     static constexpr uint32_t MaxOutOfLine = 4096;
   };
 
-  struct UnlinkResponse {
+  struct UnlinkResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2751,7 +2751,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct UnlinkRequest {
+  struct UnlinkRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView path;
@@ -2763,7 +2763,7 @@ class Directory final {
     using ResponseType = UnlinkResponse;
   };
 
-  struct ReadDirentsResponse {
+  struct ReadDirentsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2774,7 +2774,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
   };
-  struct ReadDirentsRequest {
+  struct ReadDirentsRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
@@ -2786,7 +2786,7 @@ class Directory final {
     using ResponseType = ReadDirentsResponse;
   };
 
-  struct RewindResponse {
+  struct RewindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2798,7 +2798,7 @@ class Directory final {
   };
   using RewindRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetTokenResponse {
+  struct GetTokenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2811,7 +2811,7 @@ class Directory final {
   };
   using GetTokenRequest = ::fidl::AnyZeroArgMessage;
 
-  struct RenameResponse {
+  struct RenameResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2821,7 +2821,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct RenameRequest {
+  struct RenameRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView src;
@@ -2835,7 +2835,7 @@ class Directory final {
     using ResponseType = RenameResponse;
   };
 
-  struct LinkResponse {
+  struct LinkResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2845,7 +2845,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct LinkRequest {
+  struct LinkRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView src;
@@ -2859,7 +2859,7 @@ class Directory final {
     using ResponseType = LinkResponse;
   };
 
-  struct WatchResponse {
+  struct WatchResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -2869,7 +2869,7 @@ class Directory final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct WatchRequest {
+  struct WatchRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t mask;
@@ -4212,7 +4212,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable
 class DirectoryAdmin final {
  public:
 
-  struct CloneRequest {
+  struct CloneRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -4224,7 +4224,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
 
-  struct CloseResponse {
+  struct CloseResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4236,7 +4236,7 @@ class DirectoryAdmin final {
   };
   using CloseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct DescribeResponse {
+  struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     NodeInfo info;
@@ -4248,7 +4248,7 @@ class DirectoryAdmin final {
   };
   using DescribeRequest = ::fidl::AnyZeroArgMessage;
 
-  struct OnOpenResponse {
+  struct OnOpenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4259,7 +4259,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
   };
-  struct SyncResponse {
+  struct SyncResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4271,7 +4271,7 @@ class DirectoryAdmin final {
   };
   using SyncRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetAttrResponse {
+  struct GetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4284,7 +4284,7 @@ class DirectoryAdmin final {
   };
   using GetAttrRequest = ::fidl::AnyZeroArgMessage;
 
-  struct SetAttrResponse {
+  struct SetAttrResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4294,7 +4294,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct SetAttrRequest {
+  struct SetAttrRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -4307,7 +4307,7 @@ class DirectoryAdmin final {
     using ResponseType = SetAttrResponse;
   };
 
-  struct IoctlResponse {
+  struct IoctlResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4319,7 +4319,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8200;
   };
-  struct IoctlRequest {
+  struct IoctlRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t opcode;
@@ -4334,7 +4334,7 @@ class DirectoryAdmin final {
     using ResponseType = IoctlResponse;
   };
 
-  struct OpenRequest {
+  struct OpenRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
@@ -4348,7 +4348,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t MaxOutOfLine = 4096;
   };
 
-  struct UnlinkResponse {
+  struct UnlinkResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4358,7 +4358,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct UnlinkRequest {
+  struct UnlinkRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView path;
@@ -4370,7 +4370,7 @@ class DirectoryAdmin final {
     using ResponseType = UnlinkResponse;
   };
 
-  struct ReadDirentsResponse {
+  struct ReadDirentsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4381,7 +4381,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
   };
-  struct ReadDirentsRequest {
+  struct ReadDirentsRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
@@ -4393,7 +4393,7 @@ class DirectoryAdmin final {
     using ResponseType = ReadDirentsResponse;
   };
 
-  struct RewindResponse {
+  struct RewindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4405,7 +4405,7 @@ class DirectoryAdmin final {
   };
   using RewindRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetTokenResponse {
+  struct GetTokenResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4418,7 +4418,7 @@ class DirectoryAdmin final {
   };
   using GetTokenRequest = ::fidl::AnyZeroArgMessage;
 
-  struct RenameResponse {
+  struct RenameResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4428,7 +4428,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct RenameRequest {
+  struct RenameRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView src;
@@ -4442,7 +4442,7 @@ class DirectoryAdmin final {
     using ResponseType = RenameResponse;
   };
 
-  struct LinkResponse {
+  struct LinkResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4452,7 +4452,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct LinkRequest {
+  struct LinkRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView src;
@@ -4466,7 +4466,7 @@ class DirectoryAdmin final {
     using ResponseType = LinkResponse;
   };
 
-  struct WatchResponse {
+  struct WatchResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4476,7 +4476,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct WatchRequest {
+  struct WatchRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t mask;
@@ -4490,7 +4490,7 @@ class DirectoryAdmin final {
     using ResponseType = WatchResponse;
   };
 
-  struct MountResponse {
+  struct MountResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4500,7 +4500,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MountRequest {
+  struct MountRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel remote;
@@ -4512,7 +4512,7 @@ class DirectoryAdmin final {
     using ResponseType = MountResponse;
   };
 
-  struct MountAndCreateResponse {
+  struct MountAndCreateResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4522,7 +4522,7 @@ class DirectoryAdmin final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  struct MountAndCreateRequest {
+  struct MountAndCreateRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel remote;
@@ -4536,7 +4536,7 @@ class DirectoryAdmin final {
     using ResponseType = MountAndCreateResponse;
   };
 
-  struct UnmountResponse {
+  struct UnmountResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4548,7 +4548,7 @@ class DirectoryAdmin final {
   };
   using UnmountRequest = ::fidl::AnyZeroArgMessage;
 
-  struct UnmountNodeResponse {
+  struct UnmountNodeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4561,7 +4561,7 @@ class DirectoryAdmin final {
   };
   using UnmountNodeRequest = ::fidl::AnyZeroArgMessage;
 
-  struct QueryFilesystemResponse {
+  struct QueryFilesystemResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
@@ -4574,7 +4574,7 @@ class DirectoryAdmin final {
   };
   using QueryFilesystemRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetDevicePathResponse {
+  struct GetDevicePathResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
