@@ -6,7 +6,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
     fidl_fuchsia_test_echos::{
         EchoExposedByParentMarker,
@@ -14,31 +13,27 @@ use {
         EchoExposedByParentRequestStream,
         EchoHiddenByParentMarker,
     },
-    fuchsia_app::{
+    fuchsia_async as fasync,
+    fuchsia_component::{
         client::connect_to_service,
         fuchsia_single_component_package_url,
-        server::ServicesServer,
+        server::ServiceFs,
     },
-    fuchsia_async as fasync,
     futures::prelude::*,
 };
 
-fn spawn_echo_exposed_server(chan: fasync::Channel) {
-    let fut = EchoExposedByParentRequestStream::from_channel(chan)
+fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
+    stream
         .err_into::<failure::Error>()
         .try_for_each(async move |EchoExposedByParentRequest::Echo { value: _, responder }| {
             responder.send(42).context("sending response")?;
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error|
-             panic!("error running echo server: {:?}", e)
-        );
-
-    fasync::spawn(fut)
+        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
 }
 
-const CHILD_URL: &str = fuchsia_single_component_package_url!("fuchsia_app_test_inner_component");
-const ENV_NAME: &str = "fuchsia_app_inner_component_test_environment";
+const CHILD_URL: &str = fuchsia_single_component_package_url!("fuchsia_component_test_inner");
+const ENV_NAME: &str = "fuchsia_component_inner_test_environment";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -49,14 +44,17 @@ async fn main() -> Result<(), Error> {
     assert_eq!(2, await!(echo.echo(2))?);
 
     println!("connecting to {}", CHILD_URL);
-    let (server, _new_env_controller, child_app) = ServicesServer::new()
-        // expose only one of the echo services, and only ever return
-        // 42 from it.
-        .add_service((EchoExposedByParentMarker::NAME,
-                      spawn_echo_exposed_server))
+
+    // expose only one of the echo services, and only ever return
+    // 42 from it.
+    let mut fs = ServiceFs::new();
+    fs.add_fidl_service(|stream| stream);
+
+    let (_new_env_controller, child_app) = fs
         .launch_component_in_nested_environment(CHILD_URL.to_string(), None, ENV_NAME)?;
 
-    fasync::spawn(server.unwrap_or_else(|e| panic!("error providing services: {:?}", e)));
+    // spawn server to respond to child component requests
+    fasync::spawn(fs.for_each_concurrent(None, echo_exposed_server));
 
     let mut component_stream = child_app.controller().take_event_stream();
     match await!(component_stream.next())

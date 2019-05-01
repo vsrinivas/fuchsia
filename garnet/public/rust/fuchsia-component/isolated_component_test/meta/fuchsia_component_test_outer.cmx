@@ -1,6 +1,6 @@
 {
   "program": {
-    "binary": "test/fuchsia_app_test_outer_component"
+    "binary": "test/fuchsia_component_test_outer"
   },
   "sandbox": {
     "services": [

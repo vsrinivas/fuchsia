@@ -342,9 +342,9 @@ group("all") {
     "//garnet/packages/tests:fonts",
     "//garnet/packages/tests:fostr",
     "//garnet/packages/tests:fsl",
-    "//garnet/packages/tests:fuchsia_app_component_test",
-    "//garnet/packages/tests:fuchsia_app_test_inner_component",
-    "//garnet/packages/tests:fuchsia_app_test_middle_component",
+    "//garnet/packages/tests:fuchsia_component_test",
+    "//garnet/packages/tests:fuchsia_component_test_inner",
+    "//garnet/packages/tests:fuchsia_component_test_middle",
     "//garnet/packages/tests:fxl",
     "//garnet/packages/tests:gfxlatency",
     "//garnet/packages/tests:go_benchmarking_tests",
@@ -689,12 +689,12 @@ group("uuid") {
   ]
 }
 
-group("fuchsia_app_component_test") {
+group("fuchsia_component_test") {
   testonly = true
   public_deps = [
-    "//garnet/packages/tests:fuchsia_app_test_inner_component",
-    "//garnet/packages/tests:fuchsia_app_test_middle_component",
-    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_outer_component",
+    "//garnet/packages/tests:fuchsia_component_test_inner",
+    "//garnet/packages/tests:fuchsia_component_test_middle",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_outer",
   ]
 }
 
@@ -726,10 +726,10 @@ group("fidl_compatibility_test_server_rust") {
   ]
 }
 
-group("fuchsia_app_test_inner_component") {
+group("fuchsia_component_test_inner") {
   testonly = true
   public_deps = [
-    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_inner_component",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
   ]
 }
 
@@ -1207,10 +1207,10 @@ group("mediasession") {
   ]
 }
 
-group("fuchsia_app_test_middle_component") {
+group("fuchsia_component_test_middle") {
   testonly = true
   public_deps = [
-    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_middle_component",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
   ]
 }
 

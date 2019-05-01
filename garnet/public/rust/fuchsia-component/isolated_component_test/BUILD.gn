@@ -11,94 +11,94 @@ fidl("echos") {
   name = "fuchsia.test.echos"
 
   sources = [
-    "echos.fidl",
+    "echos.test.fidl",
   ]
 }
 
-rustc_binary("fuchsia_app_test_outer_component_bin") {
-  name = "fuchsia_app_test_outer_component"
+rustc_binary("fuchsia_component_test_outer_bin") {
+  name = "fuchsia_component_test_outer"
   edition = "2018"
   deps = [
     ":echos-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
-  source_root = "fuchsia_app_test_outer_component.rs"
+  source_root = "outer.rs"
 }
 
-test_package("fuchsia_app_test_outer_component") {
+test_package("fuchsia_component_test_outer") {
   deps = [
-    ":fuchsia_app_test_outer_component_bin",
+    ":fuchsia_component_test_outer_bin",
   ]
 
   tests = [
     {
-      name = "fuchsia_app_test_outer_component"
+      name = "fuchsia_component_test_outer"
       environments = basic_envs
     },
   ]
 }
 
-rustc_binary("fuchsia_app_test_middle_component_bin") {
-  name = "fuchsia_app_test_middle_component"
+rustc_binary("fuchsia_component_test_middle_bin") {
+  name = "fuchsia_component_test_middle"
   edition = "2018"
   deps = [
     ":echos-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
-  source_root = "fuchsia_app_test_middle_component.rs"
+  source_root = "middle.rs"
 }
 
-package("fuchsia_app_test_middle_component") {
+package("fuchsia_component_test_middle") {
   deps = [
-    ":fuchsia_app_test_middle_component_bin",
+    ":fuchsia_component_test_middle_bin",
   ]
 
-  binary = "fuchsia_app_test_middle_component"
+  binary = "fuchsia_component_test_middle"
 
   meta = [
     {
-      path = rebase_path("meta/fuchsia_app_test_middle_component.cmx")
-      dest = "fuchsia_app_test_middle_component.cmx"
+      path = rebase_path("meta/fuchsia_component_test_middle.cmx")
+      dest = "fuchsia_component_test_middle.cmx"
     },
   ]
 }
 
-rustc_binary("fuchsia_app_test_inner_component_bin") {
-  name = "fuchsia_app_test_inner_component"
+rustc_binary("fuchsia_component_test_inner_bin") {
+  name = "fuchsia_component_test_inner"
   edition = "2018"
   deps = [
     ":echos-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
   ]
-  source_root = "fuchsia_app_test_inner_component.rs"
+  source_root = "inner.rs"
 }
 
-package("fuchsia_app_test_inner_component") {
+package("fuchsia_component_test_inner") {
   deps = [
-    ":fuchsia_app_test_inner_component_bin",
+    ":fuchsia_component_test_inner_bin",
   ]
 
-  binary = "fuchsia_app_test_inner_component"
+  binary = "fuchsia_component_test_inner"
 
   meta = [
     {
-      path = rebase_path("meta/fuchsia_app_test_inner_component.cmx")
-      dest = "fuchsia_app_test_inner_component.cmx"
+      path = rebase_path("meta/fuchsia_component_test_inner.cmx")
+      dest = "fuchsia_component_test_inner.cmx"
     },
   ]
 }

@@ -1,7 +1,7 @@
 # Isolated Component Test
 
 This is a test of the `launch_component_in_nested_environment` function in
-`fuchsia_app`. Its goal is to ensure the following:
+`fuchsia_component`. Its goal is to ensure the following:
 
 * A nested environment is successfully created.
 * The `add_proxy_service` function successfully proxies a loader for the new
@@ -14,15 +14,15 @@ This is a test of the `launch_component_in_nested_environment` function in
 
 The test ensures this by running three separate components.
 
-* `fuchsia_app_test_outer_component` simulates the "outer world".
-  It runs `fuchsia_app_test_middle_component` in a nested environment containing
+* `fuchsia_component_test_outer_component` simulates the "outer world".
+  It runs `fuchsia_component_test_middle_component` in a nested environment containing
   `EchoExposedByParent` and `EchoHiddenByParent`, each of which echos a number
   and returns it to the client.
-* `fuchsia_app_test_middle_component` simulates a parent component attempting to
+* `fuchsia_component_test_middle_component` simulates a parent component attempting to
   create an isolated child. After confirming that it can successfully access
   `EchoExposedByParent` and `EchoHiddenByParent`, it launches
-  `fuchsia_app_test_inner_component` in a nested environment that only has
+  `fuchsia_component_test_inner_component` in a nested environment that only has
   access to `EchoExposedByParent`, which has been overridden to always return '42'.
-* `fuchsia_app_test_inner_componnent` simulates the isolated child component.
+* `fuchsia_component_test_inner_componnent` simulates the isolated child component.
   It confirms that it can't access `EchoHiddenByParent` and that
   `EchoExposedByParent` has been successfully overwritten, always returning '42'.
