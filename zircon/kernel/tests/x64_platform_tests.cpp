@@ -15,6 +15,7 @@
 
 static bool test_x64_msrs() {
     BEGIN_TEST;
+
 #if defined(__x86_64__)
 
     arch_disable_ints();
@@ -59,6 +60,17 @@ static bool test_x64_msrs() {
     END_TEST;
 }
 
+static bool test_x64_msrs_k_commands() {
+    BEGIN_TEST;
+
+#if defined(__x86_64__)
+    console_run_script_locked("cpu rdmsr 0 0x10");
+#endif
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
+UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");

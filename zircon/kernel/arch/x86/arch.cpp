@@ -224,6 +224,8 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s features\n", argv[0].str);
         printf("%s unplug <cpu_id>\n", argv[0].str);
         printf("%s hotplug <cpu_id>\n", argv[0].str);
+        printf("%s rdmsr <cpu_id> <msr_id>\n", argv[0].str);
+        printf("%s wdmsr <cpu_id> <msr_id> <value>\n", argv[0].str);
         return ZX_ERR_INTERNAL;
     }
 
@@ -243,6 +245,20 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
         }
         zx_status_t status = mp_hotplug_cpu((uint)argv[2].u);
         printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
+    } else if (!strcmp(argv[1].str, "rdmsr")) {
+        if (argc != 4) {
+           goto usage;
+        }
+
+        uint64_t val = read_msr_on_cpu((uint) argv[2].u, (uint) argv[3].u);
+        printf("CPU %lu RDMSR %lxh val %lxh\n", argv[2].u, argv[3].u, val);
+    } else if (!strcmp(argv[1].str, "wrmsr")) {
+        if (argc != 5) {
+           goto usage;
+        }
+
+        printf("CPU %lu WRMSR %lxh val %lxh\n", argv[2].u, argv[3].u, argv[4].u);
+        write_msr_on_cpu((uint) argv[2].u, (uint) argv[3].u, argv[4].u);
     } else {
         printf("unknown command\n");
         goto usage;
