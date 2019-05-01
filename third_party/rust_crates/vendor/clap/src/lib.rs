@@ -1,4 +1,4 @@
-// Copyright ⓒ 2015-2016 Kevin B. Knapp and [`clap-rs` contributors](https://github.com/kbknapp/clap-rs/blob/master/CONTRIBUTORS.md).
+// Copyright ⓒ 2015-2016 Kevin B. Knapp and [`clap-rs` contributors](https://github.com/clap-rs/clap/blob/master/CONTRIBUTORS.md).
 // Licensed under the MIT license
 // (see LICENSE or <http://opensource.org/licenses/MIT>) All files in the project carrying such
 // notice may not be copied, modified, or distributed except according to those terms.
@@ -29,8 +29,8 @@
 //!
 //! The following examples show a quick example of some of the very basic functionality of `clap`.
 //! For more advanced usage, such as requirements, conflicts, groups, multiple values and
-//! occurrences see the [documentation](https://docs.rs/clap/), [examples/](https://github.com/kbknapp/clap-rs/tree/master/examples) directory of
-//! this repository or the [video tutorials](https://www.youtube.com/playlist?list=PLza5oFLQGTl2Z5T8g1pRkIynR3E0_pc7U).
+//! occurrences see the [documentation](https://docs.rs/clap/), [examples/] directory of
+//! this repository or the [video tutorials].
 //!
 //! **NOTE:** All of these examples are functionally the same, but show different styles in which to
 //! use `clap`
@@ -266,7 +266,7 @@
 //!
 //! To try out the pre-built example, use the following steps:
 //!
-//! * Clone the repository `$ git clone https://github.com/kbknapp/clap-rs && cd clap-rs/tests`
+//! * Clone the repository `$ git clone https://github.com/clap-rs/clap && cd clap-rs/tests`
 //! * Compile the example `$ cargo build --release`
 //! * Run the help info `$ ./target/release/claptests --help`
 //! * Play with the arguments!
@@ -313,13 +313,13 @@
 //!
 //! ```toml
 //! [dependencies.clap]
-//! git = "https://github.com/kbknapp/clap-rs.git"
+//! git = "https://github.com/clap-rs/clap.git"
 //! ```
 //!
 //! Add `extern crate clap;` to your crate root.
 //!
 //! Define a list of valid arguments for your program (see the
-//! [documentation](https://docs.rs/clap/) or [examples/](examples) directory of this repo)
+//! [documentation](https://docs.rs/clap/) or [examples/] directory of this repo)
 //!
 //! Then run `cargo build` or `cargo update && cargo build` for your project.
 //!
@@ -366,17 +366,17 @@
 //!  * **Red** Color: **NOT** included by default (must use cargo `features` to enable)
 //!  * **Blue** Color: Dev dependency, only used while developing.
 //!
-//! ![clap dependencies](https://raw.githubusercontent.com/kbknapp/clap-rs/master/clap_dep_graph.png)
+//! ![clap dependencies](https://raw.githubusercontent.com/clap-rs/clap/master/clap_dep_graph.png)
 //!
 //! ### More Information
 //!
 //! You can find complete documentation on the [docs.rs](https://docs.rs/clap/) for this project.
 //!
-//! You can also find usage examples in the [examples/](https://github.com/kbknapp/clap-rs/tree/master/examples) directory of this repo.
+//! You can also find usage examples in the [examples/] directory of this repo.
 //!
 //! #### Video Tutorials
 //!
-//! There's also the video tutorial series [Argument Parsing with Rust v2](https://www.youtube.com/playlist?list=PLza5oFLQGTl2Z5T8g1pRkIynR3E0_pc7U).
+//! There's also the video tutorial series [Argument Parsing with Rust v2][video tutorials].
 //!
 //! These videos slowly trickle out as I finish them and currently a work in progress.
 //!
@@ -388,10 +388,10 @@
 //! appreciated!
 //!
 //! Another really great way to help is if you find an interesting, or helpful way in which to use
-//! `clap`. You can either add it to the [examples/](examples) directory, or file an issue and tell
+//! `clap`. You can either add it to the [examples/] directory, or file an issue and tell
 //! me. I'm all about giving credit where credit is due :)
 //!
-//! Please read [CONTRIBUTING.md](https://raw.githubusercontent.com/kbknapp/clap-rs/master/.github/CONTRIBUTING.md) before you start contributing.
+//! Please read [CONTRIBUTING.md](https://raw.githubusercontent.com/clap-rs/clap/master/.github/CONTRIBUTING.md) before you start contributing.
 //!
 //!
 //! ### Testing Code
@@ -509,11 +509,15 @@
 //!
 //! ## License
 //!
-//! `clap` is licensed under the MIT license. Please read the [LICENSE-MIT](LICENSE-MIT) file in
+//! `clap` is licensed under the MIT license. Please read the [LICENSE-MIT][license] file in
 //! this repository for more information.
+//!
+//! [examples/]: https://github.com/clap-rs/clap/tree/master/examples
+//! [video tutorials]: https://www.youtube.com/playlist?list=PLza5oFLQGTl2Z5T8g1pRkIynR3E0_pc7U
+//! [license]: https://raw.githubusercontent.com/clap-rs/clap/master/LICENSE-MIT
 
 #![crate_type = "lib"]
-#![doc(html_root_url = "https://docs.rs/clap/2.32.0")]
+#![doc(html_root_url = "https://docs.rs/clap/2.33.0")]
 #![deny(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
         unused_import_braces, unused_allocation)]
 // Lints we'd like to deny but are currently failing for upstream crates
@@ -567,7 +571,7 @@ mod completions;
 mod map;
 
 const INTERNAL_ERROR_MSG: &'static str = "Fatal internal error. Please consider filing a bug \
-                                          report at https://github.com/kbknapp/clap-rs/issues";
+                                          report at https://github.com/clap-rs/clap/issues";
 const INVALID_UTF8: &'static str = "unexpected invalid UTF-8 code point";
 
 #[cfg(unstable)]
