@@ -96,7 +96,8 @@ executable_package("embed_shell_test_parent_module") {
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

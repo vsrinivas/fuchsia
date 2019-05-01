@@ -5,9 +5,8 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -15,6 +14,8 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
+
+#include <string>
 
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -61,6 +62,13 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
           module_controller,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
+
+  // |fuchsia::modular::ModuleContext|
+  void EmbedModule2(std::string name, fuchsia::modular::Intent intent,
+                    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+                        module_controller,
+                    fuchsia::ui::views::ViewToken view_token,
+                    EmbedModule2Callback callback) override;
 
   // |fuchsia::modular::ModuleContext|
   void AddModuleToStory(

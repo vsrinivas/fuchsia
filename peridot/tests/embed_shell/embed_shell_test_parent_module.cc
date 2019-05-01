@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <iostream>
 
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
@@ -54,22 +55,25 @@ class TestModule {
   }
 
   void StartChildModule() {
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
     fuchsia::modular::Intent intent;
     intent.action = kChildModuleAction;
     intent.handler = kChildModuleUrl;
     FXL_LOG(INFO) << "Starting child module = " << intent.handler;
-    module_host_->module_context()->EmbedModule(
+    module_host_->module_context()->EmbedModule2(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
-        child_view_.NewRequest(),
+        std::move(view_token),
         [](const fuchsia::modular::StartModuleStatus status) {
           FXL_LOG(INFO) << "StartModuleStatus="
                         << static_cast<uint32_t>(status);
         });
+    view_holder_token_ = std::move(view_holder_token);
   }
 
   modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
-  fuchsia::ui::viewsv1token::ViewOwnerPtr child_view_;
+  fuchsia::ui::views::ViewHolderToken view_holder_token_;
 
   // We keep the view provider around so that story shell can hold a view for
   // us, but don't do anything with it.

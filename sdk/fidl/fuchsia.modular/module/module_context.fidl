@@ -4,6 +4,7 @@
 
 library fuchsia.modular;
 
+using fuchsia.ui.views;
 using fuchsia.ui.viewsv1token;
 using fuchsia.mem;
 
@@ -42,14 +43,21 @@ protocol ModuleContext {
                      SurfaceRelation? surface_relation)
         -> (StartModuleStatus status);
 
-    /// Like AddModuleToStory(), but requests a [view_owner] explicitly to embed
+    /// Like AddModuleToStory(), but passes a [view_token] explicitly to embed
     /// the view of the requested Module instance in the view of the requesting
     /// Module instance, instead of relying on the story shell for display. If a
     /// Module instance with the same [name] and [intent] is already running,
-    /// [view_owner] is closed.
+    /// [view_token] is destroyed.
+    [Transitional]
     EmbedModule(string name, Intent intent,
                 request<ModuleController> module_controller,
                 request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
+        -> (StartModuleStatus status);
+    // DEPRECATED, for transition purposes only.
+    [Transitional]
+    EmbedModule2(string name, Intent intent,
+                 request<ModuleController> module_controller,
+                 fuchsia.ui.views.ViewToken view_token)
         -> (StartModuleStatus status);
 
     /// DEPRECATED: no longer implemented.

@@ -5,7 +5,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -16,6 +15,7 @@
 #include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
+
 #include <array>
 #include <memory>
 
@@ -94,7 +94,7 @@ class RecipeApp : public modular::ViewApp {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = scenic::ToViewToken(std::move(view_token)),
         .incoming_services = std::move(incoming_services),
         .outgoing_services = std::move(outgoing_services),
         .startup_context = startup_context(),
@@ -115,33 +115,33 @@ class RecipeApp : public modular::ViewApp {
     if (module_) {
       module_->Stop([this, module_query] {
         module_.Unbind();
-        module_view_ =
-            fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>();
+        view_holder_token_.value.reset();
         StartModule(module_query);
       });
       return;
     }
 
     // This module is named after its URL.
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     fuchsia::modular::Intent intent;
     intent.handler = module_query;
-    module_context_->EmbedModule(
+    module_context_->EmbedModule2(
         module_query, std::move(intent), module_.NewRequest(),
-        module_view_.NewRequest(),
+        std::move(view_token),
         [](const fuchsia::modular::StartModuleStatus&) {});
+    view_holder_token_ = std::move(view_holder_token);
     SetChild();
   }
 
   void SetChild() {
-    if (view_ && module_view_) {
-      view_->SetChild(scenic::ToViewHolderToken(
-          zx::eventpair(module_view_.TakeChannel().release())));
+    if (view_ && view_holder_token_.value) {
+      view_->SetChild(std::move(view_holder_token_));
     }
   }
 
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ModuleControllerPtr module_;
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> module_view_;
+  fuchsia::ui::views::ViewHolderToken view_holder_token_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;

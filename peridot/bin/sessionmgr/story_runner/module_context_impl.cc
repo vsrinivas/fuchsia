@@ -4,11 +4,11 @@
 
 #include "peridot/bin/sessionmgr/story_runner/module_context_impl.h"
 
-#include <string>
-
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/strings/join_strings.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/strings/join_strings.h>
+
+#include <string>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
@@ -75,6 +75,17 @@ void ModuleContextImpl::EmbedModule(
         module_controller,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
+  EmbedModule2(
+      std::move(name), std::move(intent), std::move(module_controller),
+      scenic::ToViewToken(zx::eventpair(view_owner.TakeChannel().release())),
+      std::move(callback));
+}
+
+void ModuleContextImpl::EmbedModule2(
+    std::string name, fuchsia::modular::Intent intent,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+        module_controller,
+    fuchsia::ui::views::ViewToken view_token, EmbedModule2Callback callback) {
   AddModParams params;
   params.parent_mod_path = module_data_->module_path;
   params.mod_name = name;
@@ -83,8 +94,7 @@ void ModuleContextImpl::EmbedModule(
   params.surface_relation = nullptr;
   params.is_embedded = true;
   story_controller_impl_->EmbedModule(
-      std::move(params), std::move(module_controller),
-      scenic::ToViewToken(zx::eventpair(view_owner.TakeChannel().release())),
+      std::move(params), std::move(module_controller), std::move(view_token),
       std::move(callback));
 }
 

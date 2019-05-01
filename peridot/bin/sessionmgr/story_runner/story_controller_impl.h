@@ -11,12 +11,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <vector>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -29,6 +23,12 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
+
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
