@@ -71,6 +71,8 @@ class Marker {
   void AdvanceHandlesBy(size_t amount);
   void AdvanceHandlesTo(const zx_handle_t* pos);
 
+  std::string ToString() const;
+
  private:
   const uint8_t* byte_pos_;
   const zx_handle_t* handle_pos_;

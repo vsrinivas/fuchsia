@@ -91,6 +91,13 @@ bool Marker::is_valid() const {
          (end_byte_pos_ == nullptr || handle_pos_ <= end_handle_pos_);
 }
 
+std::string Marker::ToString() const {
+  std::ostringstream ss;
+  ss << "[" << (void*)byte_pos_ << "(" << (void*)end_byte_pos_ << "), "
+     << (void*)handle_pos_ << "(" << (void*)end_handle_pos_ << ")";
+  return ss.str();
+}
+
 namespace {
 
 ValueGeneratingCallback NullCallback() {
@@ -306,7 +313,6 @@ Marker PointerType::GetValueCallback(Marker marker, size_t length,
 
   // If the intptr is non-null, return a callback that will track an out of line
   // object of the wrapped type.
-  marker.AdvanceBytesBy(sizeof(data));
   callback = [target_type = target_type_](
                  ObjectTracker* tracker, Marker& marker,
                  rapidjson::Value& value,

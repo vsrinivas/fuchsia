@@ -508,6 +508,14 @@ TEST_WIRE_TO_JSON(
     R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
     GetStructUnionPtr("harpo", "chico"), 1);
 
+TEST_WIRE_TO_JSON(NullableUnionIntFirstInt, NullableUnionIntFirst,
+                  R"({"i" : "1", "isu":{"variant_i":"42"}})", 1,
+                  GetIntUnionPtr(42));
+TEST_WIRE_TO_JSON(
+    NullableUnionIntFirstStruct, NullableUnionIntFirst,
+    R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
+    1, GetStructUnionPtr("harpo", "chico"));
+
 namespace {
 
 test::fidlcat::examples::u8_u16_union GetUInt8Union(uint8_t i) {

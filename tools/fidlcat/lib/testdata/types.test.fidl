@@ -39,6 +39,7 @@ protocol this_is_an_interface {
 
     Union(int_struct_union isu, int32 i);
     NullableUnion(int_struct_union? isu, int32 i);
+    NullableUnionIntFirst(int32 i, int_struct_union? isu);
     ShortUnion(u8_u16_union u, int32 i);
 };
 
