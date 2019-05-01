@@ -4,7 +4,7 @@
   "fidl/fuchsia.modular/agent/agent_controller/agent_controller.fidl": "23c070c56bd4a64655803875317afe3e",
   "fidl/fuchsia.modular/agent/agent_provider.fidl": "a918ee8d69961add5622a8ac6ac1095b",
   "fidl/fuchsia.modular/basemgr/base_shell.fidl": "4fb7ede9a4d15caff177ddec606b8976",
-  "fidl/fuchsia.modular/basemgr/user_provider.fidl": "76b6c28d8077583d4caf03d642732b4d",
+  "fidl/fuchsia.modular/basemgr/user_provider.fidl": "57bb829cc755bc2e2557a8c82a969011",
   "fidl/fuchsia.modular/clipboard/clipboard.fidl": "f562cc1c6973f5f74647774b350d9303",
   "fidl/fuchsia.modular/component/component_context.fidl": "1d491934727326cf130de16e27477d02",
   "fidl/fuchsia.modular/component/message_queue.fidl": "4213c1e0dbdc33a28e1917164717dc3c",

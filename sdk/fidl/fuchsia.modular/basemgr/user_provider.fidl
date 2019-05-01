@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.modular.auth;
-using fuchsia.ui.gfx;
 using fuchsia.ui.viewsv1token;
 using fuchsia.sys;
 
