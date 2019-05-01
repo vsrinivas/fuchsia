@@ -80,6 +80,7 @@ fidl("fuchsia.modular") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//zircon/public/fidl/fuchsia-mem",
   ]

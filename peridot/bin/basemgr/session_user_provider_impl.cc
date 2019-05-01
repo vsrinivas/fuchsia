@@ -4,10 +4,10 @@
 
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
 #include <zircon/status.h>
+
+#include <utility>
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -156,6 +156,12 @@ void SessionUserProviderImpl::AddUser(
 }
 
 void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
+  Login2(fuchsia::modular::UserLoginParams2{
+      .account_id = std::move(params.account_id),
+  });
+}
+
+void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) {
   bool login_as_guest = params.account_id.is_null() || params.account_id == "";
   if (login_as_guest) {
     FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";

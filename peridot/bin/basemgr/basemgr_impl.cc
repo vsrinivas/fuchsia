@@ -382,9 +382,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
           if (account_ids.empty()) {
             StartBaseShell();
           } else {
-            fuchsia::modular::UserLoginParams params;
+            fuchsia::modular::UserLoginParams2 params;
             params.account_id = std::to_string(account_ids.at(0).id);
-            session_user_provider_impl_->Login(std::move(params));
+            session_user_provider_impl_->Login2(std::move(params));
           }
         });
   };
@@ -424,8 +424,8 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 }
 
 void BasemgrImpl::LoginAsGuest() {
-  fuchsia::modular::UserLoginParams params;
-  session_user_provider_impl_->Login(std::move(params));
+  fuchsia::modular::UserLoginParams2 params;
+  session_user_provider_impl_->Login2(std::move(params));
 }
 
 void BasemgrImpl::LogoutUsers(fit::function<void()> callback) {

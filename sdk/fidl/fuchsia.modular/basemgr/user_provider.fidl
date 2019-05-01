@@ -38,7 +38,11 @@ protocol UserProvider {
     // shell with all of the user's stories.
     // TODO(alhaad): In the future, we want to protect Login() with a password,
     // Android lock pattern, etc.
+    // DEPRECATED: For transitional purposes only.
+    [Transitional]
     Login(UserLoginParams user_login_params);
+    [Transitional]
+    Login2(UserLoginParams2 user_login_params);
 
     // List of all users who have authenticated to this device in the past.
     PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
@@ -50,8 +54,8 @@ struct UserLoginParams {
     // can be NULL which means logging-in in an incognito mode.
     string? account_id;
 
-    // |view_owner| is the view given to the |SessionShell| started for the newly
-    // logged-in user.
+    // |view_owner| is the view given to the |SessionShell| started for the
+    // newly logged-in user.
     request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
 
     // Services provided by the |BaseShell| that can be offered to the
@@ -64,12 +68,4 @@ struct UserLoginParams2 {
     // |account_id| is received from either AddUser() or PreviousUsers(). It
     // can be NULL which means logging-in in an incognito mode.
     string? account_id;
-
-    // |view_token| is the view given to the |SessionShell| started for the newly
-    // logged-in user.
-    fuchsia.ui.gfx.ExportToken view_token;
-
-    // Services provided by the |BaseShell| that can be offered to the
-    // |SessionShell| that is being logged into.
-    fuchsia.sys.ServiceProvider? services;
 };

@@ -62,6 +62,9 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login(fuchsia::modular::UserLoginParams params) override;
 
+  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
+  void Login2(fuchsia::modular::UserLoginParams2 params) override;
+
   void RemoveAllUsers(fit::function<void()> callback);
 
  private:

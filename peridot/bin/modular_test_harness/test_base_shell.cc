@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <src/lib/fxl/logging.h>
+
+#include <memory>
+#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -43,9 +43,7 @@ class TestBaseShellApp
           fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
-    view_owner_request_ =
-        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>(
-            zx::channel(view_token.release()));
+    view_token_.value = std::move(view_token);
 
     LoginIfReady();
   }
@@ -71,18 +69,16 @@ class TestBaseShellApp
 
   // We get here from both Initialize() or CreateView().
   void LoginIfReady() {
-    if (!user_provider_ || !view_owner_request_) {
+    if (!user_provider_ || !view_token_.value) {
       return;
     }
 
-    fuchsia::modular::UserLoginParams params;
+    fuchsia::modular::UserLoginParams2 params;
     params.account_id = "";  // incognito mode
-    params.view_owner = std::move(view_owner_request_);
-    user_provider_->Login(std::move(params));
+    user_provider_->Login2(std::move(params));
   }
 
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      view_owner_request_;
+  fuchsia::ui::views::ViewToken view_token_;
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
 };

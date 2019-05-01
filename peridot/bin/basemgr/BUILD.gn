@@ -164,7 +164,7 @@ executable_package("dev_base_shell") {
     "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -183,7 +183,7 @@ executable("auto_login_base_shell_bin") {
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -194,14 +194,16 @@ executable("auto_login_base_shell_test") {
 
   output_name = "auto_login_base_shell_test"
 
-  sources = ["auto_login_base_shell_test.cc"]
+  sources = [
+    "auto_login_base_shell_test.cc",
+  ]
 
   deps = [
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -241,7 +243,7 @@ package("auto_login_base_shell") {
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]

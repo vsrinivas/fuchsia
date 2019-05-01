@@ -33,8 +33,9 @@ executable("test_base_shell_bin") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.views",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
