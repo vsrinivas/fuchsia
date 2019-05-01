@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
     // Read configurations from file if no command line arguments are passed in.
     // This sets default values for any configurations that aren't specified in
     // the configuration file.
-    modular::ModularConfigReader config_reader;
+    auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
     config = config_reader.GetBasemgrConfig();
 
     config.mutable_sessionmgr()->set_url(modular_config::kSessionmgrUrl);

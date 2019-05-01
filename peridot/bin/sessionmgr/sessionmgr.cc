@@ -78,7 +78,7 @@ void OverrideConfigFromCommandLine(
 int main(int argc, const char** argv) {
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
-  modular::ModularConfigReader config_reader;
+  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
   fuchsia::modular::session::SessionmgrConfig config =
       config_reader.GetSessionmgrConfig();
 

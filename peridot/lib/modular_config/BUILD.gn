@@ -40,10 +40,12 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "modular_config_unittest.cc",
     "modular_config_xdr_unittest.cc",
   ]
 
   deps = [
+    ":modular_config",
     ":json_xdr",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
@@ -51,5 +53,6 @@ source_set("unittests") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

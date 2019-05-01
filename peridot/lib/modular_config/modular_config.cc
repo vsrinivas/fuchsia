@@ -4,96 +4,104 @@
 
 #include "peridot/lib/modular_config/modular_config.h"
 
+#include <fcntl.h>
+
 #include "lib/json/json_parser.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
 #include "peridot/lib/modular_config/modular_config_xdr.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 namespace modular {
-
-ModularConfigReader::ModularConfigReader() {}
-ModularConfigReader::~ModularConfigReader() {}
-
-fuchsia::modular::session::BasemgrConfig
-ModularConfigReader::GetBasemgrConfig() {
-  std::string config_path;
-  if (files::IsFile(modular_config::kOverridenStartupConfigPath)) {
-    config_path = modular_config::kOverridenStartupConfigPath;
-  } else {
-    config_path = modular_config::kStartupConfigPath;
-  }
-
-  // Get basemgr config section from file
-  auto basemgr_config_str =
-      GetConfigAsString(modular_config::kBasemgrConfigName, config_path);
-
-  // Parse with xdr
-  fuchsia::modular::session::BasemgrConfig basemgr_config;
-  if (!basemgr_config_str.empty() &&
-      !XdrRead(basemgr_config_str, &basemgr_config, XdrBasemgrConfig)) {
-    FXL_LOG(ERROR) << "Unable to parse startup.json";
-  }
-
-  return basemgr_config;
-}
-
-fuchsia::modular::session::SessionmgrConfig
-ModularConfigReader::GetSessionmgrConfig() {
-  // Get sessionmgr config section from file
-  auto sessionmgr_config_str =
-      GetConfigAsString(modular_config::kSessionmgrConfigName,
-                        modular_config::kOverridenStartupConfigPath);
-
-  // Parse with xdr
-  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
-  if (!XdrRead(sessionmgr_config_str, &sessionmgr_config,
-               XdrSessionmgrConfig)) {
-    FXL_LOG(ERROR) << "Unable to parse startup.json";
-  }
-
-  return sessionmgr_config;
-}
-
-fuchsia::modular::session::SessionmgrConfig
-ModularConfigReader::GetDefaultSessionmgrConfig() {
-  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
-  XdrRead("\"\"", &sessionmgr_config, XdrSessionmgrConfig);
-  return sessionmgr_config;
-}
-
-std::string ModularConfigReader::GetConfigAsString(
-    const std::string& config_name, std::string config_path) {
-  // Check that config file exists
-
-  if (!files::IsFile(config_path)) {
-    FXL_LOG(ERROR) << config_path << " does not exist.";
-    return "\"\"";
-  }
-
-  std::string json;
-  if (!files::ReadFileToString(config_path, &json)) {
-    FXL_LOG(ERROR) << "Unable to read " << config_path;
-    return "\"\"";
-  }
-
-  json::JSONParser json_parser;
-  auto startup_config = json_parser.ParseFromString(json, config_path);
-  if (json_parser.HasError()) {
-    FXL_LOG(ERROR) << "Error while parsing " << config_path
-                   << " to string. Error: " << json_parser.error_str();
-    return "\"\"";
-  }
-
-  // Get |config_name| section from file
-  auto config_json = startup_config.FindMember(config_name);
-  if (config_json == startup_config.MemberEnd()) {
-    // |config_name| was not found
-    FXL_LOG(ERROR) << config_name << " configurations were not found in "
-                   << config_path;
-    return "\"\"";
+namespace {
+std::string GetSectionAsString(const rapidjson::Document& doc,
+                               const std::string& section_name) {
+  auto config_json = doc.FindMember(section_name);
+  if (config_json == doc.MemberEnd()) {
+    // |section_name| was not found
+    FXL_LOG(ERROR) << section_name << " section was not found";
+    return "{}";
   }
 
   return modular::JsonValueToString(config_json->value);
+}
+
+std::string StripLeadingSlash(std::string str) {
+  if (str.find("/") == 0)
+    return str.substr(1);
+  return str;
+}
+
+}  // namespace
+
+ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
+  FXL_CHECK(dir_fd.get() >= 0);
+
+  // 1.  Figure out where the config file is.
+  std::string config_path =
+      files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
+                      modular_config::kStartupConfigFilePath);
+  if (!files::IsFileAt(dir_fd.get(), config_path)) {
+    config_path =
+        files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+                        modular_config::kStartupConfigFilePath);
+  }
+
+  // 2. Parse the JSON out of the config file.
+  json::JSONParser json_parser;
+  auto doc = json_parser.ParseFromFileAt(dir_fd.get(), config_path);
+
+  std::string basemgr_json;
+  std::string sessionmgr_json;
+  if (json_parser.HasError()) {
+    FXL_LOG(ERROR) << "Error while parsing " << config_path
+                   << " to string. Error: " << json_parser.error_str();
+    // Leave |basemgr_config_| and |sessionmgr_config_| empty-initialized.
+    basemgr_json = "{}";
+    sessionmgr_json = "{}";
+  } else {
+    // 3. Parse the `basemgr` and `sessionmgr` sections out of the config.
+    basemgr_json = GetSectionAsString(doc, modular_config::kBasemgrConfigName);
+    sessionmgr_json =
+        GetSectionAsString(doc, modular_config::kSessionmgrConfigName);
+  }
+
+  if (!XdrRead(basemgr_json, &basemgr_config_, XdrBasemgrConfig)) {
+    FXL_LOG(ERROR) << "Unable to parse 'basemgr' from " << config_path;
+  }
+  if (!XdrRead(sessionmgr_json, &sessionmgr_config_, XdrSessionmgrConfig)) {
+    FXL_LOG(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
+  }
+}
+
+// static
+ModularConfigReader ModularConfigReader::CreateFromNamespace() {
+  return ModularConfigReader(fxl::UniqueFD(open("/", O_RDONLY)));
+}
+
+ModularConfigReader::~ModularConfigReader() {}
+
+fuchsia::modular::session::BasemgrConfig ModularConfigReader::GetBasemgrConfig()
+    const {
+  fuchsia::modular::session::BasemgrConfig result;
+  basemgr_config_.Clone(&result);
+  return result;
+}
+
+fuchsia::modular::session::SessionmgrConfig
+ModularConfigReader::GetSessionmgrConfig() const {
+  fuchsia::modular::session::SessionmgrConfig result;
+  sessionmgr_config_.Clone(&result);
+  return result;
+}
+
+fuchsia::modular::session::SessionmgrConfig
+ModularConfigReader::GetDefaultSessionmgrConfig() const {
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
+  XdrRead("{}", &sessionmgr_config, XdrSessionmgrConfig);
+  return sessionmgr_config;
 }
 
 }  // namespace modular

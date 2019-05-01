@@ -16,7 +16,7 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
-#include "src/lib/files/file.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 
 namespace modular {
@@ -79,23 +79,20 @@ SessionContextImpl::SessionContextImpl(
 
 fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace() {
   // Determine where basemgr is reading configs from
-  std::string config_dir = "";
-  if (files::IsFile(modular_config::kOverridenStartupConfigPath)) {
-    config_dir = modular_config::kOverridenConfigDirPath;
-  } else if (files::IsFile(modular_config::kStartupConfigPath)) {
-    config_dir = modular_config::kStartupConfigDirPath;
+  std::string config_dir = modular_config::kOverriddenConfigDir;
+  if (!files::IsDirectory(config_dir)) {
+    config_dir = modular_config::kDefaultConfigDir;
+    if (!files::IsDirectory(config_dir)) {
+      return nullptr;
+    }
   }
-
-  // Clone basemgr's config directory if it exists
-  if (!config_dir.empty()) {
-    fxl::UniqueFD dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
-    auto flat_namespace = fuchsia::sys::FlatNamespace::New();
-    flat_namespace->paths.push_back(modular_config::kOverridenConfigDirPath);
-    flat_namespace->directories.push_back(
-        fsl::CloneChannelFromFileDescriptor(dir.get()));
-    return flat_namespace;
-  }
-  return nullptr;
+  // Clone basemgr's config directory.
+  fxl::UniqueFD dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
+  auto flat_namespace = fuchsia::sys::FlatNamespace::New();
+  flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
+  flat_namespace->directories.push_back(
+      fsl::CloneChannelFromFileDescriptor(dir.get()));
+  return flat_namespace;
 }
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base
