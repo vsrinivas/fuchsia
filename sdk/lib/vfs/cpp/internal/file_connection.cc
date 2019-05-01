@@ -18,6 +18,9 @@ FileConnection::~FileConnection() = default;
 
 zx_status_t FileConnection::BindInternal(zx::channel request,
                                          async_dispatcher_t* dispatcher) {
+  if (binding_.is_bound()) {
+    return ZX_ERR_BAD_STATE;
+  }
   zx_status_t status = binding_.Bind(std::move(request), dispatcher);
   if (status != ZX_OK) {
     return status;

@@ -57,6 +57,8 @@ class Connection {
   // will also send OnOpen event if |OPEN_FLAG_DESCRIBE| is present in |flags_|
   // and binding is successful.
   //
+  // Returns |ZX_ERR_BAD_STATE| if channel is already bound.
+  //
   // Typically called during connection setup.
   zx_status_t Bind(zx::channel request, async_dispatcher_t* dispatcher);
 
@@ -77,6 +79,8 @@ class Connection {
   // |dispatcher|. If |dispatcher| is |nullptr|, the implementation will call
   // |async_get_default_dispatcher| to obtain the default dispatcher for the
   // current thread.
+  //
+  // Should returns |ZX_ERR_BAD_STATE| if channel is already bound.
   virtual zx_status_t BindInternal(zx::channel request,
                                    async_dispatcher_t* dispatcher) = 0;
 

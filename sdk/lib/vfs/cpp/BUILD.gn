@@ -58,6 +58,7 @@ sdk_source_set("cpp") {
 
 test("vfs_cpp_unittests") {
   sources = [
+    "connection_unittest.cc",
     "file_unittest.cc",
     "lazy_dir_unittest.cc",
     "pseudo_dir_unittest.cc",
