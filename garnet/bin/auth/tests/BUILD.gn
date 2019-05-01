@@ -4,7 +4,7 @@
 
 group("tests") {
   testonly = true
-  deps = [
+  public_deps = [
     "account_manager_integration",
     "token_manager_integration",
   ]

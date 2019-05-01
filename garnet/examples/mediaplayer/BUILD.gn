@@ -17,7 +17,7 @@ package("mediaplayer_examples") {
       shell = true
     },
     {
-      name = "rust_crates/audio_player_rust"
+      name = "audio_player_rust"
       dest = "audio_player_rust"
       shell = true
     },

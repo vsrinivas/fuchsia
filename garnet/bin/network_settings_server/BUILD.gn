@@ -23,7 +23,7 @@ package("network_settings_server") {
     ":bin",
   ]
 
-  binary = "rust_crates/network_settings_server"
+  binary = "network_settings_server"
 
   resources = [
     {

@@ -39,7 +39,7 @@ package("overnet-interface-passing") {
     ":bin",
   ]
 
-  binary = "rust_crates/overnet_interface_passing"
+  binary = "overnet_interface_passing"
 
   meta = [
     {

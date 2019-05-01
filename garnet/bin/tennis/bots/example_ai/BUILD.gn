@@ -18,7 +18,7 @@ package("tennis_example_ai") {
     ":tennis_example_ai_bin",
   ]
 
-  binary = "rust_crates/tennis_example_ai"
+  binary = "tennis_example_ai"
 
   meta = [
     {

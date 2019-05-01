@@ -38,7 +38,7 @@ package("log_listener_shell") {
 
   binaries = [
     {
-      name = "rust_crates/log_listener"
+      name = "log_listener"
       dest = "log_listener"
       shell = true
     },
@@ -51,7 +51,7 @@ fuchsia_component("log_listener_component") {
     ":bin",
   ]
 
-  binary = "rust_crates/log_listener"
+  binary = "log_listener"
 }
 
 package("log_listener") {

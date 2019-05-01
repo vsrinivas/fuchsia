@@ -37,7 +37,7 @@ package("pkg_ctl") {
 
   binaries = [
     {
-      name = "rust_crates/pkgctl"
+      name = "pkgctl"
       dest = "pkgctl"
       shell = true
     },

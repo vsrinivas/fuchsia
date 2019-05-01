@@ -71,7 +71,7 @@ package("sl4f") {
     ":bin",
   ]
 
-  binary = "rust_crates/sl4f"
+  binary = "sl4f"
 }
 
 package("sl4f-tests") {

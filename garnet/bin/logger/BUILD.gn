@@ -33,7 +33,7 @@ fuchsia_component("logger_component") {
     ":bin",
   ]
 
-  binary = "rust_crates/logger"
+  binary = "logger"
 }
 
 package("logger") {

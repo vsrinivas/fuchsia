@@ -53,7 +53,7 @@ package("vsock_service") {
     ":bin",
   ]
 
-  binary = "rust_crates/vsock_service"
+  binary = "vsock_service"
 
   meta = [
     {

@@ -51,7 +51,7 @@ fuchsia_component("pkg_resolverd") {
   manifest = rebase_path("meta/pkg_resolver.cmx")
 
   binary_dest = "bin/pkg_resolver"
-  binary = "rust_crates/pkg_resolver"
+  binary = "pkg_resolver"
 }
 
 package("pkg_resolver") {

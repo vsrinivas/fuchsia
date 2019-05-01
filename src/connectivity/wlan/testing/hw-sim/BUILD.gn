@@ -42,7 +42,7 @@ package("wlan-hw-sim") {
     ":bin",
   ]
 
-  binary = "rust_crates/wlan_hw_sim"
+  binary = "wlan_hw_sim"
 
   meta = [
     {

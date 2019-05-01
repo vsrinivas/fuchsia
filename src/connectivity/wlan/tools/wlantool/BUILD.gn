@@ -46,7 +46,7 @@ package("wlantool2") {
 
   binaries = [
     {
-      name = "rust_crates/wlantool2"
+      name = "wlantool2"
       dest = "wlantool2"
       shell = true
     },

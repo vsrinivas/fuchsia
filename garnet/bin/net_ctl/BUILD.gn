@@ -28,7 +28,7 @@ package("net_ctl") {
   binaries = [
     {
       name = "net_ctl"
-      path = "rust_crates/net_ctl"
+      path = "net_ctl"
       shell = true
     },
   ]

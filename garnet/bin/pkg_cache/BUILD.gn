@@ -36,7 +36,7 @@ fuchsia_component("pkg_cached") {
   manifest = rebase_path("meta/pkg_cache.cmx")
 
   binary_dest = "bin/pkg_cache"
-  binary = "rust_crates/pkg_cache"
+  binary = "pkg_cache"
 }
 
 package("pkg_cache") {

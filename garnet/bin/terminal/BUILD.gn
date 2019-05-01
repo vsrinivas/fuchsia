@@ -48,7 +48,7 @@ package("terminal") {
     ":bin",
   ]
 
-  binary = "rust_crates/terminal"
+  binary = "terminal"
 }
 
 config_data("tiles_with_terminal_config") {

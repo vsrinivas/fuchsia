@@ -25,7 +25,7 @@ package("echo_client_rust") {
     ":echo_client_rust_bin",
   ]
 
-  binary = "rust_crates/echo_client_rust"
+  binary = "echo_client_rust"
 
   meta = [
     {

@@ -64,7 +64,7 @@ package("fuchsia_app_test_middle_component") {
     ":fuchsia_app_test_middle_component_bin",
   ]
 
-  binary = "rust_crates/fuchsia_app_test_middle_component"
+  binary = "fuchsia_app_test_middle_component"
 
   meta = [
     {
@@ -93,7 +93,7 @@ package("fuchsia_app_test_inner_component") {
     ":fuchsia_app_test_inner_component_bin",
   ]
 
-  binary = "rust_crates/fuchsia_app_test_inner_component"
+  binary = "fuchsia_app_test_inner_component"
 
   meta = [
     {

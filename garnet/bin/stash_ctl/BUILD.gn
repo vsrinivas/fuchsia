@@ -39,7 +39,7 @@ package("stash_ctl") {
   binaries = [
     {
       name = "stash_ctl"
-      path = "rust_crates/stash_ctl"
+      path = "stash_ctl"
       shell = true
     },
   ]

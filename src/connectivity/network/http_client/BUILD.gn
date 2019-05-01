@@ -45,7 +45,7 @@ package("http_client") {
   binaries = [
     {
       name = "http_client"
-      path = "rust_crates/http_client"
+      path = "http_client"
     },
   ]
 }

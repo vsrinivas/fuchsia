@@ -20,7 +20,7 @@ package("tee_manager") {
 
   binaries = [
     {
-      name = "rust_crates/tee_manager"
+      name = "tee_manager"
       dest = "tee_manager"
     },
   ]

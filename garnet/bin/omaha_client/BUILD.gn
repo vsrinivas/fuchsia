@@ -38,7 +38,7 @@ package("omaha_client") {
 
   binaries = [
     {
-      name = "rust_crates/omaha_client_service"
+      name = "omaha_client_service"
       dest = "omaha_client_service"
     },
   ]

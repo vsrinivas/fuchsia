@@ -25,7 +25,7 @@ package("tennis_service") {
     ":tennis_service_bin",
   ]
 
-  binary = "rust_crates/tennis_service"
+  binary = "tennis_service"
 
   meta = [
     {
@@ -59,7 +59,7 @@ package("tennis_viewer") {
     ":tennis_viewer_bin",
   ]
 
-  binary = "rust_crates/tennis_viewer"
+  binary = "tennis_viewer"
 
   meta = [
     {
@@ -94,7 +94,7 @@ package("tennis_rust5_ai") {
     ":tennis_rust5_ai_bin",
   ]
 
-  binary = "rust_crates/tennis_rust5_ai"
+  binary = "tennis_rust5_ai"
 
   meta = [
     {

@@ -39,7 +39,7 @@ package("ril-ctl") {
     {
       name = "ril_ctl"
       dest = "ril-ctl"
-      path = "rust_crates/ril_ctl"
+      path = "ril_ctl"
       shell = true
     },
   ]

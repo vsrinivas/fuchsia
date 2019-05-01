@@ -34,7 +34,7 @@ package("ril-qmi") {
     ":bin",
   ]
 
-  binary = "rust_crates/ril_qmi"
+  binary = "ril_qmi"
 
   meta = [
     {

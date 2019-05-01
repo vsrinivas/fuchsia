@@ -33,5 +33,5 @@ package("httpget_rust") {
     ":bin",
   ]
 
-  binary = "rust_crates/httpget_rust"
+  binary = "httpget_rust"
 }

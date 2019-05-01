@@ -20,7 +20,7 @@ package("example_http_server") {
     ":bin",
   ]
 
-  binary = "rust_crates/example_http_server"
+  binary = "example_http_server"
 
   resources = [
     {

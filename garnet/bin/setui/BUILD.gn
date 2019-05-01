@@ -44,7 +44,7 @@ package("setui_service") {
     ":bin",
   ]
 
-  binary = "rust_crates/setui_service"
+  binary = "setui_service"
 
   meta = [
     {

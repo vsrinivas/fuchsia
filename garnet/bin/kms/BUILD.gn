@@ -42,7 +42,7 @@ package("kms") {
     ":bin",
   ]
 
-  binary = "rust_crates/kms"
+  binary = "kms"
 
   meta = [
     {

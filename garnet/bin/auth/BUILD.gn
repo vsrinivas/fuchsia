@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 group("auth") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":account_handler",
     ":account_manager",
     ":auth_bin_tests",
@@ -18,10 +18,10 @@ group("auth") {
 
 package("token_manager_factory") {
   deps = [
-    "//garnet/bin/auth/token_manager_factory:token_manager_factory",
+    "//garnet/bin/auth/token_manager_factory",
   ]
 
-  binary = "rust_crates/token_manager_factory"
+  binary = "token_manager_factory"
 
   meta = [
     {
@@ -33,10 +33,10 @@ package("token_manager_factory") {
 
 package("account_manager") {
   deps = [
-    "//garnet/bin/auth/account_manager:account_manager",
+    "//garnet/bin/auth/account_manager",
   ]
 
-  binary = "rust_crates/account_manager"
+  binary = "account_manager"
 
   meta = [
     {
@@ -48,10 +48,10 @@ package("account_manager") {
 
 package("account_handler") {
   deps = [
-    "//garnet/bin/auth/account_handler:account_handler",
+    "//garnet/bin/auth/account_handler",
   ]
 
-  binary = "rust_crates/account_handler"
+  binary = "account_handler"
 
   meta = [
     {

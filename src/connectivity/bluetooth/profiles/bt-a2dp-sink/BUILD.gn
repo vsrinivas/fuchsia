@@ -53,7 +53,7 @@ package("bt-a2dp-sink") {
     ":bt_a2dp_sink_metrics",
   ]
 
-  binary = "rust_crates/bt_a2dp_sink"
+  binary = "bt_a2dp_sink"
 
   meta = [
     {

@@ -65,7 +65,7 @@ package("system_recovery") {
   binaries = [
     {
       name = "system_recovery"
-      path = "rust_crates/system_recovery"
+      path = "system_recovery"
     },
   ]
 }

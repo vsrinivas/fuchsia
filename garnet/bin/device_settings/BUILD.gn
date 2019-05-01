@@ -41,7 +41,7 @@ package("device_settings_manager") {
     ":bin",
   ]
 
-  binary = "rust_crates/device_settings_manager"
+  binary = "device_settings_manager"
 
   meta = [
     {

@@ -36,7 +36,7 @@ package("bt-init") {
     ":bin",
   ]
 
-  binary = "rust_crates/bt_init"
+  binary = "bt_init"
 
   meta = [
     {

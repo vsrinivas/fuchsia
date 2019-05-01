@@ -32,7 +32,7 @@ package("telephony") {
     ":bin",
   ]
 
-  binary = "rust_crates/telephony"
+  binary = "telephony"
 
   meta = [
     {

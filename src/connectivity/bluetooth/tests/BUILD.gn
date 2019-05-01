@@ -20,7 +20,7 @@ test_package("tests") {
       environments = basic_envs
     },
     {
-      name = "rust_crates/bt_integration_tests"
+      name = "bt_integration_tests"
       dest = "bt-integration-tests"
       environments = basic_envs
     },

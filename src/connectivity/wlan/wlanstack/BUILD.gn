@@ -77,7 +77,7 @@ package("wlanstack2") {
     ":wlan_metrics_registry",
   ]
 
-  binary = "rust_crates/wlanstack2"
+  binary = "wlanstack2"
 
   meta = [
     {

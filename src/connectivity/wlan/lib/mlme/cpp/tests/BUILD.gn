@@ -279,7 +279,7 @@ package("wlan_tests") {
 
   binaries = [
     {
-      name = "rust_crates/wlan_test_util"
+      name = "wlan_test_util"
       dest = "wlan-test-util"
     },
   ]

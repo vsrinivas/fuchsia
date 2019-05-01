@@ -34,7 +34,7 @@ package("stash") {
     ":bin",
   ]
 
-  binary = "rust_crates/stash"
+  binary = "stash"
 
   meta = [
     {

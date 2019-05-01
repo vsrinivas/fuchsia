@@ -53,7 +53,7 @@ package("wlancfg") {
 
   binaries = [
     {
-      path = "rust_crates/wlancfg"
+      path = "wlancfg"
       name = "wlancfg"
     },
   ]

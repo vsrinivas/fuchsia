@@ -27,7 +27,7 @@ package("omaha_client_ctl") {
   ]
   binaries = [
     {
-      name = "rust_crates/omaha_client_ctl_bin"
+      name = "omaha_client_ctl_bin"
       dest = "omaha_client_ctl"
       shell = true
     },

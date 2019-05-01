@@ -33,7 +33,7 @@ package("bt-snoop") {
     ":bin",
   ]
 
-  binary = "rust_crates/bt_snoop"
+  binary = "bt_snoop"
 
   meta = [
     {

@@ -16,7 +16,7 @@ package("tennis_manual_player") {
   deps = [
     ":tennis_manual_player_bin",
   ]
-  binary = "rust_crates/tennis_manual_player"
+  binary = "tennis_manual_player"
   meta = [
     {
       path = rebase_path("meta/tennis_manual_player.cmx")

@@ -135,7 +135,7 @@ package("fidl_compatibility_test_server_rust") {
 
   testonly = true
 
-  binary = "rust_crates/compatibility_test_server_rust"
+  binary = "compatibility_test_server_rust"
 }
 
 # The test binary that gets invoked by shell scripts.

@@ -51,7 +51,7 @@ package("netcfg") {
     ":bin",
   ]
 
-  binary = "rust_crates/netcfg"
+  binary = "netcfg"
 
   meta = [
     {

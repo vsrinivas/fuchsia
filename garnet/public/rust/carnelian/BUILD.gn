@@ -176,7 +176,7 @@ package("spinning_square_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/spinning_square_example"
+      source = "spinning_square_example"
     },
   ]
 
@@ -196,7 +196,7 @@ package("embedding_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/embedding_example"
+      source = "embedding_example"
     },
   ]
 
@@ -216,7 +216,7 @@ package("button_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/button_example"
+      source = "button_example"
     },
   ]
 
@@ -236,7 +236,7 @@ package("perf_test_01_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/perf_test_01"
+      source = "perf_test_01"
     },
   ]
 
@@ -256,7 +256,7 @@ package("perf_test_02_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/perf_test_02"
+      source = "perf_test_02"
     },
   ]
 
@@ -276,7 +276,7 @@ package("perf_test_03_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/perf_test_03"
+      source = "perf_test_03"
     },
   ]
 
@@ -296,7 +296,7 @@ package("perf_test_04_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/perf_test_04"
+      source = "perf_test_04"
     },
   ]
 
@@ -317,7 +317,7 @@ package("drawing_rs") {
   binaries = [
     {
       name = "app"
-      source = "rust_crates/drawing"
+      source = "drawing"
     },
   ]
 
