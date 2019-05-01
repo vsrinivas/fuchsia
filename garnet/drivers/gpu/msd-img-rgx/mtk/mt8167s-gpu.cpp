@@ -21,6 +21,7 @@
 #include <hw/reg.h>
 #include <lib/fidl-utils/bind.h>
 
+#include "img-sys-device.h"
 #include "magma_util/macros.h"
 #include "sys_driver/magma_driver.h"
 
@@ -65,7 +66,9 @@ class Mt8167sGpu;
 
 using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
 
-class Mt8167sGpu : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
+class Mt8167sGpu final : public DeviceType,
+                         public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
+                         public ImgSysDevice {
 public:
     Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -80,6 +83,10 @@ public:
     zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
     zx_status_t DumpState(uint32_t dump_type);
     zx_status_t Restart();
+
+    zx_status_t PowerUp() override;
+    zx_status_t PowerDown() override;
+    void* device() override { return parent(); }
 
 private:
     bool StartMagma() MAGMA_REQUIRES(magma_mutex_);
@@ -101,6 +108,8 @@ private:
     std::optional<ddk::MmioBuffer> power_gpu_buffer_; // SCPSYS MMIO
     std::optional<ddk::MmioBuffer> clock_gpu_buffer_; // XO MMIO
 
+    bool powered_up_ = false;
+
     std::mutex magma_mutex_;
     std::unique_ptr<MagmaDriver> magma_driver_ MAGMA_GUARDED(magma_mutex_);
     std::shared_ptr<MagmaSystemDevice> magma_system_device_ MAGMA_GUARDED(magma_mutex_);
@@ -114,7 +123,7 @@ Mt8167sGpu::~Mt8167sGpu()
 
 bool Mt8167sGpu::StartMagma()
 {
-    magma_system_device_ = magma_driver_->CreateDevice(parent());
+    magma_system_device_ = magma_driver_->CreateDevice(static_cast<ImgSysDevice*>(this));
     return !!magma_system_device_;
 }
 
@@ -260,6 +269,37 @@ static uint64_t ReadHW64(const ddk::MmioBuffer* buffer, uint32_t offset)
     return (static_cast<uint64_t>(buffer->Read32(offset + 4)) << 32) | buffer->Read32(offset);
 }
 
+zx_status_t Mt8167sGpu::PowerUp()
+{
+    if (powered_up_)
+        return ZX_OK;
+
+    // Power on in order.
+    zx_status_t status = PowerOnMfgAsync();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power on MFG ASYNC\n");
+        return status;
+    }
+    status = PowerOnMfg2d();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power on MFG 2D\n");
+        return status;
+    }
+    status = PowerOnMfg();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power on MFG\n");
+        return status;
+    }
+    zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n", ReadHW64(&real_gpu_buffer_.value(), 0x18));
+    zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
+           ReadHW64(&real_gpu_buffer_.value(), 0x20));
+    powered_up_ = true;
+
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sGpu::PowerDown() { return ZX_OK; }
+
 zx_status_t Mt8167sGpu::Bind()
 {
     pdev_protocol_t pdev_proto;
@@ -301,25 +341,11 @@ zx_status_t Mt8167sGpu::Bind()
         return status;
     }
 
-    // Power on in order.
-    status = PowerOnMfgAsync();
+    status = PowerUp();
     if (status != ZX_OK) {
-        GPU_ERROR("Failed to power on MFG ASYNC\n");
+        GPU_ERROR("PowerUp failed: %d\n", status);
         return status;
     }
-    status = PowerOnMfg2d();
-    if (status != ZX_OK) {
-        GPU_ERROR("Failed to power on MFG 2D\n");
-        return status;
-    }
-    status = PowerOnMfg();
-    if (status != ZX_OK) {
-        GPU_ERROR("Failed to power on MFG\n");
-        return status;
-    }
-    zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n", ReadHW64(&real_gpu_buffer_.value(), 0x18));
-    zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
-           ReadHW64(&real_gpu_buffer_.value(), 0x20));
 
     {
         std::lock_guard<std::mutex> lock(magma_mutex_);

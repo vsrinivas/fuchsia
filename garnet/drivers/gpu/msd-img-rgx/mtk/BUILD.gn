@@ -17,6 +17,7 @@ driver_module("msd_img_rgx_mtk") {
   }
 
   deps = [
+    "../include",
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
