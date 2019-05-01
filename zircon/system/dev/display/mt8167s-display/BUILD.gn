@@ -69,8 +69,8 @@ test("dsi-host") {
     "ovl.cpp",
   ]
   deps = [
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
     "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/zxtest",
     ":common",
