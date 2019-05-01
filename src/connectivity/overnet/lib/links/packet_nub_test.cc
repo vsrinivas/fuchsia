@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/links/packet_nub.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
@@ -164,7 +165,10 @@ TEST(PacketNub, ProcessHandshakeFromHello) {
               }));
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
-  EXPECT_CALL(nub, PublishMock(_));
+  std::shared_ptr<LinkPtr<>> link;
+  EXPECT_CALL(nub, PublishMock(_)).WillOnce(SaveArg<0>(&link));
+  EXPECT_CALL(nub,
+              SendTo(123, Slice::FromContainer({0} /* Connected packet */)));
   nub.Process(timer.Now(), 123,
               Slice::FromContainer({0}) /* Connected packet */);
 }

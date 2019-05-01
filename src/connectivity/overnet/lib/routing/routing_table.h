@@ -6,12 +6,15 @@
 
 #include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <fuchsia/overnet/protocol/cpp/overnet_internal.h>
+
 #include <condition_variable>
+#include <iostream>
 #include <mutex>
 #include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+
 #include "lib/fidl/cpp/clone.h"
 #include "src/connectivity/overnet/lib/environment/timer.h"
 #include "src/connectivity/overnet/lib/environment/trace.h"
@@ -20,8 +23,6 @@
 #include "src/connectivity/overnet/lib/vocabulary/internal_list.h"
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
-
-#include <iostream>
 
 namespace overnet {
 namespace routing_table_impl {
@@ -162,11 +163,16 @@ class RoutingTable {
 
   struct Link {
     Link(TimeStamp now, fuchsia::overnet::protocol::LinkStatus initial_status,
-         Node* to)
-        : status(std::move(initial_status)), last_updated(now), to_node(to) {}
+         Node* from, Node* to)
+        : status(std::move(initial_status)),
+          last_updated(now),
+          from_node(from),
+          to_node(to) {}
     fuchsia::overnet::protocol::LinkStatus status;
     TimeStamp last_updated;
     InternalListNode<Link> outgoing_link;
+    InternalListNode<Link> incoming_link;
+    Node* const from_node;
     Node* const to_node;
   };
 
@@ -176,6 +182,7 @@ class RoutingTable {
     fuchsia::overnet::protocol::NodeStatus status;
     TimeStamp last_updated;
     InternalList<Link, &Link::outgoing_link> outgoing_links;
+    InternalList<Link, &Link::incoming_link> incoming_links;
 
     // Path finding temporary state.
     uint64_t last_path_finding_run = 0;
@@ -187,7 +194,8 @@ class RoutingTable {
     InternalListNode<Node> path_finding_node;
   };
 
-  void RemoveOutgoingLinks(Node& node);
+  void RemoveOutgoingLinks(Node* node);
+  void RemoveIncomingLinks(Node* node);
 
   std::unordered_map<NodeId, Node> nodes_;
   std::unordered_map<routing_table_impl::FullLinkLabel, Link> links_;

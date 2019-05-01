@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/routing/routing_table.h"
+
 #include <iostream>
 #include <unordered_set>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 #include "src/connectivity/overnet/lib/protocol/varint.h"
 
@@ -37,7 +39,7 @@ RoutingTable::~RoutingTable() {
   }
 
   for (auto& n : nodes_) {
-    RemoveOutgoingLinks(n.second);
+    RemoveOutgoingLinks(&n.second);
   }
 }
 
@@ -156,9 +158,11 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
       it = links_
                .emplace(
                    std::piecewise_construct, std::forward_as_tuple(key),
-                   std::forward_as_tuple(now, fidl::Clone(m), &to_node->second))
+                   std::forward_as_tuple(now, fidl::Clone(m),
+                                         &from_node->second, &to_node->second))
                .first;
       from_node->second.outgoing_links.PushBack(&it->second);
+      to_node->second.incoming_links.PushBack(&it->second);
       OVERNET_TRACE(DEBUG) << "NEWLINK: " << m;
     } else if (m.version > it->second.status.version) {
       new_gossip_version = true;
@@ -180,7 +184,8 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
     for (auto it = nodes_.begin(); it != nodes_.end();) {
       if (it->first != root_node_ &&
           it->second.last_updated >= now + EntryExpiry()) {
-        RemoveOutgoingLinks(it->second);
+        RemoveOutgoingLinks(&it->second);
+        RemoveIncomingLinks(&it->second);
         it = nodes_.erase(it);
       } else {
         ++it;
@@ -210,8 +215,17 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
   }
 }
 
-void RoutingTable::RemoveOutgoingLinks(Node& node) {
-  while (Link* link = node.outgoing_links.PopFront()) {
+void RoutingTable::RemoveOutgoingLinks(Node* node) {
+  while (Link* link = node->outgoing_links.PopFront()) {
+    link->to_node->incoming_links.Remove(link);
+    links_.erase(FullLinkLabel{NodeId(link->status.from),
+                               NodeId(link->status.to), link->status.local_id});
+  }
+}
+
+void RoutingTable::RemoveIncomingLinks(Node* node) {
+  while (Link* link = node->incoming_links.PopFront()) {
+    link->from_node->outgoing_links.Remove(link);
     links_.erase(FullLinkLabel{NodeId(link->status.from),
                                NodeId(link->status.to), link->status.local_id});
   }

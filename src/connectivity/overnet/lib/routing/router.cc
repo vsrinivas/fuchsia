@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/routing/router.h"
+
 #include <iostream>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
 

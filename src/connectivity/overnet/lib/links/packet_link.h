@@ -5,6 +5,7 @@
 #pragma once
 
 #include <queue>
+
 #include "src/connectivity/overnet/lib/environment/trace.h"
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
@@ -21,6 +22,8 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   void Process(TimeStamp received, Slice packet);
   virtual void Emit(Slice packet) = 0;
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
+  // Mark this link as inoperable
+  virtual void Tombstone();
 
  private:
   void SchedulePacket();

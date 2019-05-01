@@ -176,3 +176,15 @@ fuzz_target("packet_nub_fuzzer") {
     ":packet_nub_fuzzer_lib",
   ]
 }
+
+fuzz_target("packet_nub_connection_fuzzer") {
+  testonly = true
+  sources = [
+    "packet_nub_connection_fuzzer.cc",
+  ]
+  deps = [
+    ":packet_nub",
+    "//src/connectivity/overnet/lib/testing:test_timer",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
+  ]
+}

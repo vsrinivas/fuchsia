@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/links/packet_link.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -44,8 +45,20 @@ void PacketLink::Forward(Message message) {
   }
 }
 
+void PacketLink::Tombstone() {
+  metrics_version_ = fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE;
+}
+
 fuchsia::overnet::protocol::LinkStatus PacketLink::GetLinkStatus() {
   ScopedModule<PacketLink> scoped_module(this);
+
+  if (metrics_version_ ==
+      fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
+    return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(),
+                                                  peer_.as_fidl(), label_,
+                                                  metrics_version_};
+  }
+
   // Advertise MSS as smaller than it is to account for some bugs that exist
   // right now.
   // TODO(ctiller): eliminate this - we should be precise.
