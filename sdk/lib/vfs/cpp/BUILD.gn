@@ -15,6 +15,8 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
   sources = [
+    "composed_service_dir.cc",
+    "composed_service_dir.h",
     "connection.cc",
     "connection.h",
     "directory.cc",
@@ -58,6 +60,7 @@ sdk_source_set("cpp") {
 
 test("vfs_cpp_unittests") {
   sources = [
+    "composed_service_dir_unittest.cc",
     "connection_unittest.cc",
     "file_unittest.cc",
     "lazy_dir_unittest.cc",
@@ -73,6 +76,7 @@ test("vfs_cpp_unittests") {
     "testing",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest_main",
   ]
 }

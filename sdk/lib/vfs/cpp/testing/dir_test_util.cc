@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 
 namespace vfs_tests {
@@ -15,6 +16,11 @@ Dirent Dirent::DirentForDirectory(const std::string& name) {
 
 Dirent Dirent::DirentForFile(const std::string& name) {
   return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_FILE, name);
+}
+
+Dirent Dirent::DirentForService(const std::string& name) {
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_SERVICE,
+                name);
 }
 
 std::string Dirent::String() {

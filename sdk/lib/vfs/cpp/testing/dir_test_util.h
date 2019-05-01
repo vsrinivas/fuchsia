@@ -20,6 +20,8 @@ class Dirent {
 
   static Dirent DirentForFile(const std::string& name);
 
+  static Dirent DirentForService(const std::string& name);
+
   std::string String();
 
   uint64_t ino() const { return ino_; }
@@ -58,8 +60,7 @@ class DirConnection : public gtest::RealLoopFixture {
                     zx_status_t expected_status = ZX_OK);
 
   template <typename T>
-  void AssertOpenPathImpl(std::string caller_file,
-                          int caller_line,
+  void AssertOpenPathImpl(std::string caller_file, int caller_line,
                           fuchsia::io::DirectorySyncPtr& dir_ptr,
                           const std::string& path,
                           ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
@@ -73,8 +74,8 @@ class DirConnection : public gtest::RealLoopFixture {
         [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> unused) {
           EXPECT_FALSE(on_open_called);  // should be called only once
           on_open_called = true;
-          EXPECT_EQ(expected_status, status) << "from file " << caller_file
-                                             << ", line " << caller_line;
+          EXPECT_EQ(expected_status, status)
+              << "from file " << caller_file << ", line " << caller_line;
         };
 
     ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
