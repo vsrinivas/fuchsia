@@ -24,6 +24,8 @@
 
 namespace {
 
+constexpr uint8_t kCccrVendorAddressMin = 0xf0;
+
 constexpr uint32_t kBcmManufacturerId = 0x02d0;
 
 uint32_t SdioReadTupleBody(const uint8_t* tuple_body, size_t start, size_t numbytes) {
@@ -628,6 +630,41 @@ int SdioControllerDevice::SdioIrqThread() {
     }
 
     return thrd_success;
+}
+
+zx_status_t SdioControllerDevice::SdioIoAbort(uint8_t fn_idx) {
+    if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return SdioDoRwByte(true, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, fn_idx, nullptr);
+}
+
+zx_status_t SdioControllerDevice::SdioIntrPending(uint8_t fn_idx, bool* out_pending) {
+    if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint8_t intr_byte;
+    zx_status_t st = SdioDoRwByte(false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0, &intr_byte);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdio_intr_pending: Failed reading intr pending reg. status: %d\n", st);
+        return st;
+    }
+
+    *out_pending = intr_byte & (1 << fn_idx);
+    return ZX_OK;
+}
+
+zx_status_t SdioControllerDevice::SdioDoVendorControlRwByte(bool write, uint8_t addr,
+                                                            uint8_t write_byte,
+                                                            uint8_t* out_read_byte) {
+    // The vendor area of the CCCR is 0xf0 - 0xff.
+    if (addr < kCccrVendorAddressMin) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    return SdioDoRwByte(write, 0, addr, write_byte, out_read_byte);
 }
 
 zx_status_t SdioControllerDevice::SdioReset() {

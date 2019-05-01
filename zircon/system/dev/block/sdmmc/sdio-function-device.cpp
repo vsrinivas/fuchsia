@@ -98,4 +98,18 @@ zx_status_t SdioFunctionDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt*
     return sdio_parent_->SdioGetInBandIntr(fn_idx, out_irq);
 }
 
+zx_status_t SdioFunctionDevice::SdioIoAbort(uint8_t fn_idx) {
+    return sdio_parent_->SdioIoAbort(fn_idx);
+}
+
+zx_status_t SdioFunctionDevice::SdioIntrPending(uint8_t fn_idx, bool* out_pending) {
+    return sdio_parent_->SdioIntrPending(fn_idx, out_pending);
+}
+
+zx_status_t SdioFunctionDevice::SdioDoVendorControlRwByte(bool write, uint8_t addr,
+                                                          uint8_t write_byte,
+                                                          uint8_t* out_read_byte) {
+    return sdio_parent_->SdioDoVendorControlRwByte(write, addr, write_byte, out_read_byte);
+}
+
 }  // namespace sdmmc

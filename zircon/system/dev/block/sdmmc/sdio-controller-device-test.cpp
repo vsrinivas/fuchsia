@@ -329,4 +329,41 @@ TEST(SdioControllerDeviceTest, DdkLifecycle) {
     EXPECT_EQ(ddk.total_children(), 4);
 }
 
+TEST(SdioControllerDeviceTest, SdioIntrPending) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        .ExpectCall({ZX_OK, 0b0011'0010}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0010'0010}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b1000'0000}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0000'0000}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0000'1110}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0000'1110}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0)
+        .ExpectCall({ZX_OK, 0b0000'1110}, false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0);
+
+    bool pending;
+
+    EXPECT_OK(dut.SdioIntrPending(4, &pending));
+    EXPECT_TRUE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(4, &pending));
+    EXPECT_FALSE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(7, &pending));
+    EXPECT_TRUE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(7, &pending));
+    EXPECT_FALSE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(1, &pending));
+    EXPECT_TRUE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(2, &pending));
+    EXPECT_TRUE(pending);
+
+    EXPECT_OK(dut.SdioIntrPending(3, &pending));
+    EXPECT_TRUE(pending);
+}
+
 }  // namespace sdmmc

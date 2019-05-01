@@ -168,6 +168,19 @@ public:
         return ZX_OK;
     }
 
+    zx_status_t SdioIoAbort(uint8_t fn_idx) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
+                                          uint8_t* out_read_byte) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
 private:
     struct SdioRwExpectation {
         uint8_t fn_idx;

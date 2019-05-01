@@ -81,4 +81,11 @@ protocol Sdio {
     DoRwTxn(uint8 fn_idx, SdioRwTxn? txn) -> (zx.status s);
     DoRwByte(bool write, uint8 fn_idx, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
     GetInBandIntr(uint8 fn_idx) -> (zx.status s, handle<interrupt> irq);
+    /// The following functions access the card common control registers (CCCR) on function 0.
+    /// Aborts an I/O operation occurring on the specified function.
+    IoAbort(uint8 fn_idx) -> (zx.status s);
+    /// Returns true if an interrupt is pending for function fn_idx, false otherwise.
+    IntrPending(uint8 fn_idx) -> (zx.status s, bool pending);
+    /// Reads or writes to a vendor CCCR register. addr must be in [0xF0, 0xFF].
+    DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
 };
