@@ -25,6 +25,7 @@ test_packages = [
   "build",
   "cmd/pm/genkey",
   "cmd/pm/publish",
+  "cmd/pm/serve",
   "keys",
   "repo",
 ]

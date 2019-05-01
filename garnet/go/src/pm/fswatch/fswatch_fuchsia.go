@@ -30,8 +30,7 @@ func NewWatcher() (*Watcher, error) {
 		times:  map[string]time.Time{},
 	}
 	go func() {
-		t := time.NewTicker(time.Second)
-		for range t.C {
+		for range time.NewTicker(time.Second).C {
 			w.mu.Lock()
 			paths := make([]string, 0, len(w.times))
 			for path := range w.times {

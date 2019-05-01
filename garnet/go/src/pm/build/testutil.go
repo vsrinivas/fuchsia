@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/pkg"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -22,7 +21,10 @@ var TestFiles = []string{"a", "b", "dir/c", "meta/test/t"}
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
 func TestPackage(cfg *Config) {
-	p := pkg.Package{Name: "testpackage", Version: "0"}
+	p, err := cfg.Package()
+	if err != nil {
+		panic(err)
+	}
 
 	pkgPath := filepath.Join(filepath.Dir(cfg.ManifestPath), "package")
 	if err := os.MkdirAll(filepath.Join(pkgPath, "meta"), os.ModePerm); err != nil {

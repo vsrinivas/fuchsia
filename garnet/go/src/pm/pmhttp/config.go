@@ -84,6 +84,7 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Value: k.Keyval.Public,
 		})
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cfg)
 }
 
