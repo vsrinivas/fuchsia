@@ -141,52 +141,6 @@ bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields,
   return true;
 }
 
-bool Hardcoded::ParseButtonsDescriptor(const hid::ReportField* fields,
-                                       size_t count) {
-  if (count == 0u)
-    return false;
-
-  decoder_.resize(3u);
-  uint8_t offset = 0;
-
-  if (fields[0].report_id != 0) {
-    // If exists, the first entry (8-bits) is always the report id and
-    // all items start after the first byte.
-    decoder_[0] = DataLocator{0u, 8u, fields[0].report_id};
-    offset = 8u;
-  }
-
-  // Needs to be kept in sync with HidButtons {}.
-  const uint16_t table[] = {
-      static_cast<uint16_t>(hid::usage::Consumer::kVolume),
-      static_cast<uint16_t>(hid::usage::Telephony::kPhoneMute),
-  };
-
-  uint32_t bit_count = 0;
-
-  // Traverse each input report field and see if there is a match in the table.
-  // If so place the location in |decoder_| array.
-  for (size_t ix = 0; ix != count; ix++) {
-    if (fields[ix].type != hid::kInput)
-      continue;
-
-    for (size_t iy = 0; iy != arraysize(table); iy++) {
-      if (fields[ix].attr.usage.usage == table[iy]) {
-        // Found a required usage.
-        decoder_[iy + 1] =
-            DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
-        break;
-      }
-    }
-
-    bit_count += fields[ix].attr.bit_sz;
-  }
-
-  // Here |decoder_| should look like this:
-  // [rept_id][volume][mic_mute]
-  return true;
-}
-
 bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields,
                                             size_t count) {
   if (count == 0u)
@@ -638,61 +592,6 @@ bool Hardcoded::ParseFt3x27TouchscreenReport(
                 << ") x=" << touch.x << ", y=" << touch.y;
   }
 
-  return true;
-}
-
-bool Hardcoded::ParseReport(const uint8_t* report, size_t len,
-                            HidButtons* data) {
-  auto cur = &decoder_[0];
-  if ((cur->match != 0) && (cur->count == 8u)) {
-    // The first byte is the report id.
-    if (report[0] != cur->match) {
-      // This is a normal condition. The device can generate reports
-      // for controls we don't yet handle.
-      *data = {};
-      return true;
-    }
-    ++cur;
-  }
-
-  // 2 bits, see zircon/system/ulib/hid's buttons.c and include/hid/buttons.h
-  if (cur->count != 2u) {
-    FXL_LOG(ERROR) << "Unexpected count in report from buttons:" << cur->count;
-    return false;
-  }
-  // TODO(SCN-843): We need to generalize these extraction functions, e.g. add
-  // extract_int8
-  data->volume = extract_uint8(report, cur->begin, 2u);
-  if (data->volume == 3) {  // 2 bits unsigned 3 is signed -1
-    data->volume = -1;
-  }
-  ++cur;
-
-  // 1 bit, see zircon/system/ulib/hid's buttons.c and include/hid/buttons.h
-  if (cur->count != 1u) {
-    FXL_LOG(ERROR) << "Unexpected count in report from buttons:" << cur->count;
-    return false;
-  }
-  data->mic_mute = extract_uint8(report, cur->begin, 1u);
-  return true;
-}
-
-bool Hardcoded::ParseButtonsReport(
-    const uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* buttons_report) {
-  HidButtons data;
-  if (!ParseReport(report, len, &data)) {
-    FXL_LOG(ERROR) << " failed reading from buttons";
-    return false;
-  }
-  buttons_report->media_buttons->volume = data.volume;
-  buttons_report->media_buttons->mic_mute = data.mic_mute;
-  buttons_report->event_time = InputEventTimestampNow();
-  buttons_report->trace_id = TRACE_NONCE();
-
-  FXL_VLOG(2) << name() << " parsed buttons: " << *buttons_report
-              << " volume: " << static_cast<int32_t>(data.volume)
-              << " mic mute: " << (data.mic_mute ? "yes" : "no");
   return true;
 }
 

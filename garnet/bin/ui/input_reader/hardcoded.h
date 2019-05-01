@@ -51,16 +51,9 @@ class Hardcoded {
     uint32_t hat_switch;
   };
 
-  struct HidButtons {
-    int8_t volume;
-    bool mic_mute;
-  };
-
   struct HidAmbientLightSimple {
     int16_t illuminance;
   };
-
-  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
 
   void ParseKeyboardReport(uint8_t* report, size_t len,
                            fuchsia::ui::input::InputReport* keyboard_report);
@@ -98,8 +91,6 @@ class Hardcoded {
       uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchpad_report);
   bool ParseParadiseTouchpadReportV2(
       uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchpad_report);
-  bool ParseButtonsReport(const uint8_t* report, size_t len,
-                          fuchsia::ui::input::InputReport* buttons_report);
   bool ParseParadiseSensorReport(
       uint8_t* report, size_t len, uint8_t* sensor_idx,
       fuchsia::ui::input::InputReport* sensor_report);
@@ -108,7 +99,6 @@ class Hardcoded {
       fuchsia::ui::input::InputReport* sensor_report);
   bool ParseReport(const uint8_t* report, size_t len,
                    HidGamepadSimple* gamepad);
-  bool ParseReport(const uint8_t* report, size_t len, HidButtons* data);
   bool ParseReport(const uint8_t* report, size_t len,
                    HidAmbientLightSimple* light);
 
@@ -161,7 +151,6 @@ class Hardcoded {
   fuchsia::ui::input::InputReportPtr touchscreen_report_;
   fuchsia::ui::input::InputReportPtr stylus_report_;
   fuchsia::ui::input::InputReportPtr sensor_report_;
-  fuchsia::ui::input::InputReportPtr buttons_report_;
 
   fuchsia::ui::input::InputDevicePtr input_device_;
 
