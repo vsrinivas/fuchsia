@@ -81,7 +81,7 @@ std::unique_ptr<rapidjson::PrettyWriter<OutputStream>> GetJsonWriter(
 // FormatFind ------------------------------------------------------------------
 
 std::string FormatFind(const Options& options,
-                       const std::vector<inspect::ObjectSource>& results) {
+                       const std::vector<inspect::Source>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
@@ -91,7 +91,7 @@ std::string FormatFind(const Options& options,
         [&](const std::vector<std::string>& path,
             const inspect::ObjectHierarchy& hierarchy) {
           writer->String(FormatPath(options.path_format,
-                                    entry_point.FormatRelativePath(path),
+                                    entry_point.GetLocation().NodePath(path),
                                     hierarchy.node().name()));
         });
   }
@@ -103,17 +103,17 @@ std::string FormatFind(const Options& options,
 // FormatLs --------------------------------------------------------------------
 
 std::string FormatLs(const Options& options,
-                     const std::vector<inspect::ObjectSource>& results) {
+                     const std::vector<inspect::Source>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
   writer->StartArray();
   for (const auto& entry_point : results) {
-    const auto& hierarchy = entry_point.GetRootHierarchy();
+    const auto& hierarchy = entry_point.GetHierarchy();
     for (const auto& child : hierarchy.children()) {
       writer->String(
           FormatPath(options.path_format,
-                     entry_point.FormatRelativePath({child.node().name()}),
+                     entry_point.GetLocation().NodePath({child.node().name()}),
                      child.node().name()));
     }
   }
@@ -127,7 +127,7 @@ std::string FormatLs(const Options& options,
 template <typename OutputStream>
 void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
                         const Options& options,
-                        const inspect::ObjectSource& entry_point,
+                        const inspect::Source& entry_point,
                         const inspect::ObjectHierarchy& root) {
   writer->StartObject();
 
@@ -169,7 +169,7 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
 }
 
 std::string FormatCat(const Options& options,
-                      const std::vector<inspect::ObjectSource>& results) {
+                      const std::vector<inspect::Source>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
@@ -179,13 +179,13 @@ std::string FormatCat(const Options& options,
     writer->String("path");
     // The "path" field always ignored the object's name in JSON output.
     writer->String(FormatPath(options.path_format,
-                              entry_point.FormatRelativePath(),
-                              entry_point.FormatRelativePath()));
+                              entry_point.GetLocation().NodePath(),
+                              entry_point.GetLocation().NodePath()));
     writer->String("contents");
     writer->StartObject();
-    writer->String(entry_point.GetRootHierarchy().node().name());
+    writer->String(entry_point.GetHierarchy().node().name());
     RecursiveFormatCat(writer.get(), options, entry_point,
-                       entry_point.GetRootHierarchy());
+                       entry_point.GetHierarchy());
     writer->EndObject();
     writer->EndObject();
   }
@@ -196,8 +196,8 @@ std::string FormatCat(const Options& options,
 
 }  // namespace
 
-std::string JsonFormatter::Format(
-    const Options& options, const std::vector<inspect::ObjectSource>& results) {
+std::string JsonFormatter::Format(const Options& options,
+                                  const std::vector<inspect::Source>& results) {
   switch (options.mode) {
     case Options::Mode::CAT:
       return FormatCat(options, results);

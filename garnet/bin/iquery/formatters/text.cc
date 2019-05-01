@@ -10,7 +10,6 @@
 #include <sstream>
 
 #include "garnet/bin/iquery/options.h"
-#include "garnet/public/lib/inspect/discovery/object_source.h"
 #include "lib/inspect/hierarchy.h"
 
 namespace iquery {
@@ -74,7 +73,7 @@ std::string FormatMetricValue(const inspect::hierarchy::Metric& metric) {
 // This version exists so we can pass in the indentation and path from the entry
 // point.
 std::string RecursiveFormatCat(const Options& options,
-                               const inspect::ObjectSource& entry_point,
+                               const inspect::Source& entry_point,
                                const inspect::ObjectHierarchy& root,
                                std::vector<std::string>* path) {
   // In each step of the indentation we output the path formatting. This is not
@@ -112,7 +111,8 @@ std::string RecursiveFormatCat(const Options& options,
   for (const auto& child : root.children()) {
     path->push_back(child.node().name());
     ss << Indent(indent)
-       << FormatPath(options.path_format, entry_point.FormatRelativePath(*path),
+       << FormatPath(options.path_format,
+                     entry_point.GetLocation().NodePath(*path),
                      child.node().name())
        << ":" << std::endl;
     ss << RecursiveFormatCat(options, entry_point, child, path);
@@ -123,14 +123,14 @@ std::string RecursiveFormatCat(const Options& options,
 }
 
 std::string FormatFind(const Options& options,
-                       const std::vector<inspect::ObjectSource>& results) {
+                       const std::vector<inspect::Source>& results) {
   std::stringstream ss;
   for (const auto& entry_point : results) {
     entry_point.VisitObjectsInHierarchy(
         [&](const std::vector<std::string>& path,
             const inspect::ObjectHierarchy& hierarchy) {
           ss << FormatPath(options.path_format,
-                           entry_point.FormatRelativePath(path),
+                           entry_point.GetLocation().NodePath(path),
                            hierarchy.node().name())
              << std::endl;
         });
@@ -139,14 +139,15 @@ std::string FormatFind(const Options& options,
 }
 
 std::string FormatLs(const Options& options,
-                     const std::vector<inspect::ObjectSource>& results) {
+                     const std::vector<inspect::Source>& results) {
   std::stringstream ss;
   for (const auto& entry_point : results) {
-    const auto& hierarchy = entry_point.GetRootHierarchy();
+    const auto& hierarchy = entry_point.GetHierarchy();
     for (const auto& child : hierarchy.children()) {
-      ss << FormatPath(options.path_format,
-                       entry_point.FormatRelativePath({child.node().name()}),
-                       child.node().name())
+      ss << FormatPath(
+                options.path_format,
+                entry_point.GetLocation().NodePath({child.node().name()}),
+                child.node().name())
          << std::endl;
     }
   }
@@ -154,11 +155,11 @@ std::string FormatLs(const Options& options,
 }
 
 std::string FormatCat(const Options& options,
-                      const std::vector<inspect::ObjectSource>& results) {
+                      const std::vector<inspect::Source>& results) {
   std::ostringstream ss;
   for (const auto& entry_point : results) {
-    const auto& hierarchy = entry_point.GetRootHierarchy();
-    ss << FormatPath(options.path_format, entry_point.FormatRelativePath(),
+    const auto& hierarchy = entry_point.GetHierarchy();
+    ss << FormatPath(options.path_format, entry_point.GetLocation().NodePath(),
                      hierarchy.node().name())
        << ":" << std::endl;
     std::vector<std::string> path_holder;
@@ -170,8 +171,8 @@ std::string FormatCat(const Options& options,
 
 }  // namespace
 
-std::string TextFormatter::Format(
-    const Options& options, const std::vector<inspect::ObjectSource>& results) {
+std::string TextFormatter::Format(const Options& options,
+                                  const std::vector<inspect::Source>& results) {
   switch (options.mode) {
     case Options::Mode::CAT:
       return FormatCat(options, results);

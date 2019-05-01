@@ -5,8 +5,11 @@
 #ifndef GARNET_BIN_IQUERY_FORMATTERS_TEXT_H_
 #define GARNET_BIN_IQUERY_FORMATTERS_TEXT_H_
 
+#include <lib/inspect/query/source.h>
+
 #include <string>
 #include <vector>
+
 #include "garnet/bin/iquery/formatter.h"
 
 namespace iquery {
@@ -14,7 +17,7 @@ namespace iquery {
 class TextFormatter : public Formatter {
  public:
   std::string Format(const Options&,
-                     const std::vector<inspect::ObjectSource>&) override;
+                     const std::vector<inspect::Source>&) override;
 };
 
 }  // namespace iquery

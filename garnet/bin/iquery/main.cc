@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/promise.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
+#include <unistd.h>
+
+#include <iostream>
 
 #include "garnet/bin/iquery/formatter.h"
 #include "garnet/bin/iquery/modes.h"
-#include "garnet/public/lib/inspect/discovery/object_source.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -40,7 +39,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  fit::promise<std::vector<inspect::ObjectSource>> results;
+  fit::promise<std::vector<inspect::Source>> results;
   // Dispatch to the correct mode.
   if (options.mode == iquery::Options::Mode::CAT) {
     results = iquery::RunCat(&options);
@@ -55,19 +54,18 @@ int main(int argc, const char** argv) {
 
   executor.schedule_task(
       results
-          .and_then(
-              [&options, &loop](std::vector<inspect::ObjectSource>& results) {
-                // Sort the hierarchies if requested.
-                if (options.sort) {
-                  for (auto& source : results) {
-                    source.SortHierarchy();
-                  }
-                }
-                // Formatter will handle the correct case according to the
-                // options values.
-                std::cout << options.formatter->Format(options, results);
-                loop.Quit();
-              })
+          .and_then([&options, &loop](std::vector<inspect::Source>& results) {
+            // Sort the hierarchies if requested.
+            if (options.sort) {
+              for (auto& source : results) {
+                source.SortHierarchy();
+              }
+            }
+            // Formatter will handle the correct case according to the
+            // options values.
+            std::cout << options.formatter->Format(options, results);
+            loop.Quit();
+          })
           .or_else([&loop] {
             FXL_LOG(ERROR) << "An error occurred";
             loop.Quit();
