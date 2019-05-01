@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -128,10 +129,10 @@ fdio_ops_t fdio_zxio_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
-    .ioctl = fdio_default_ioctl,
+    .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
-    .unwrap = fdio_zxio_unwrap,
+    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -224,11 +225,11 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
     size_t out_handle_actual;
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_NodeIoctl(h, op,
-                                          out_len, (zx_handle_t*) in_buf,
-                                          in_handle_count, in_buf,
+                                          out_len, static_cast<const zx_handle_t*>(in_buf),
+                                          in_handle_count, static_cast<const uint8_t*>(in_buf),
                                           in_len, &status, hbuf,
                                           out_handle_count, &out_handle_actual,
-                                          out_buf, out_len, out_actual)) != ZX_OK) {
+                                          static_cast<uint8_t*>(out_buf), out_len, out_actual)) != ZX_OK) {
         return io_status;
     }
 
@@ -313,8 +314,8 @@ static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, s
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     size_t actual = 0u;
     zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryReadDirents(rio->control, max, &status, ptr,
-                                                max, &actual);
+    io_status = fuchsia_io_DirectoryReadDirents(rio->control, max, &status,
+                                                static_cast<uint8_t*>(ptr), max, &actual);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -364,10 +365,10 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .close = fdio_zxio_close,
     .open = fdio_zxio_remote_open,
     .clone = fdio_zxio_clone,
-    .ioctl = fdio_zxio_remote_ioctl,
+    .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
-    .unwrap = fdio_zxio_unwrap,
+    .ioctl = fdio_zxio_remote_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_remote_get_vmo,
     .get_token = fdio_zxio_remote_get_token,
@@ -528,10 +529,10 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
-    .ioctl = fdio_default_ioctl,
+    .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
-    .unwrap = fdio_zxio_unwrap,
+    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_vmofile_get_vmo,
     .get_token = fdio_default_get_token,
@@ -591,7 +592,7 @@ static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
             available = INT_MAX;
         }
         int* actual = va_arg(va, int*);
-        *actual = available;
+        *actual = static_cast<int>(available);
         return ZX_OK;
     }
     default:
@@ -600,8 +601,8 @@ static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
 }
 
 static ssize_t fdio_zxio_pipe_recvfrom(fdio_t* io, void* data, size_t len, int flags,
-                                       struct sockaddr* restrict addr,
-                                       socklen_t* restrict addrlen) {
+                                       struct sockaddr* __restrict addr,
+                                       socklen_t* __restrict addrlen) {
     if (flags & ~MSG_DONTWAIT) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -676,10 +677,10 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
-    .ioctl = fdio_default_ioctl,
+    .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
-    .unwrap = fdio_zxio_unwrap,
+    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,

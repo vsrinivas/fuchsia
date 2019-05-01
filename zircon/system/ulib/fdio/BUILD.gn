@@ -36,7 +36,7 @@ library("fdio") {
     "unistd.c",
     "waitable.cpp",
     "watcher.cpp",
-    "zxio.c",
+    "zxio.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
