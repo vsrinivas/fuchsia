@@ -279,6 +279,20 @@ standard_variants += [
       ]
     }
   },
+  {
+    # Note there is no plain "sancov" variant because there is no
+    # standalone runtime for sancov.  The sancov runtime is included in all
+    # the other sanitizer runtimes.  Since ubsan is the lowest-impact
+    # sanitizer, ubsan-sancov stands in for "plain" sancov.
+    variant = {
+      name = "ubsan-sancov"
+      bases = [ "ubsan" ]
+
+      # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
+      configs = [ "$zx/public/gn/config/instrumentation:sancov" ]
+      tags = [ "sancov" ]
+    }
+  },
 ]
 
 # This list is appended to the $variants list for the build.  It provides

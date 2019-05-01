@@ -465,6 +465,9 @@ config("no_safestack") {
 
 config("no_sanitizers") {
   cflags = [ "-fno-sanitize=all" ]
+  if (!is_gcc) {
+    cflags += [ "-fsanitize-coverage=0" ]
+  }
   configs = [ ":no_stack_protector" ]
 }
 

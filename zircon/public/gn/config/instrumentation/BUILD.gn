@@ -103,11 +103,16 @@ clang_runtime_deps("ubsan_deps") {
   ]
 }
 
-config("sancov") {
-  compiler_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
-  asmflags = compiler_flags
-  cflags = compiler_flags
-  ldflags = compiler_flags
+# NOTE: Every variant that includes any sancov configs must have "sancov"
+# in tags.  See $zx/system/ulib/c/sanitizers.  To make it harder to fail
+# to do this, only define the configs in toolchains with the tag.
+if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
+  config("sancov") {
+    compiler_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
 }
 
 config("profile") {

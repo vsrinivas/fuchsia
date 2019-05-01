@@ -14,10 +14,21 @@ source_set("sanitizers") {
     "ubsan-stubs.cpp",
   ]
 
-  # There is no '#if __has_feature(coverage)', so this file has to be
-  # excluded from the build entirely when not in use.
-  sancov = [ "$zx/public/gn/config/sanitizers:sancov" ]
-  if (configs + sancov - sancov != configs) {
-    sources += [ "sancov-stubs.S" ]
+  # There is no '#if __has_feature(coverage)', so this has to be excluded
+  # from the build entirely when not in use.  Each variant that includes
+  # some -fsanitize-coverage=... switches in its configs must use the
+  # "sancov" tag so this code can detect it.
+  if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
+    deps += [ ":sancov-stubs" ]
   }
+}
+
+# This code is only needed when compiling for sancov, but the file itself
+# must be compiled without instrumentation of any kind.
+source_set("sancov-stubs") {
+  visibility = [ ":*" ]
+  sources = [
+    "sancov-stubs.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:no_sanitizers" ]
 }
