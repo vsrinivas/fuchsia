@@ -223,31 +223,34 @@ standard_sanitizer_variants = [
       ]
     }
   },
+  {
+    variant = {
+      name = "ubsan"
+      configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+      implicit_deps = [ "$zx/public/gn/config/instrumentation:ubsan_deps" ]
+      tags = [
+        "instrumented",
+        "useronly",
+      ]
+    }
+  },
+  {
+    variant = {
+      name = "asan-ubsan"
+      bases = [
+        "asan",
+        "ubsan",
+      ]
+      implicit_deps = [
+        {
+          # The asan runtime covers ubsan too, so the standalone ubsan
+          # runtime is not needed.
+          remove = [ "$zx/public/gn/config/instrumentation:ubsan_deps" ]
+        },
+      ]
+    }
+  },
 ]
-if (false) {
-  # TODO(ZX-3986): Add them back when they work.
-  standard_sanitizer_variants += [
-    {
-      variant = {
-        name = "ubsan"
-        configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
-        tags = [
-          "instrumented",
-          "useronly",
-        ]
-      }
-    },
-    {
-      variant = {
-        name = "asan-ubsan"
-        bases = [
-          "asan",
-          "ubsan",
-        ]
-      }
-    },
-  ]
-}
 standard_variants += standard_sanitizer_variants
 
 # These are additional standard variants that are not likely to

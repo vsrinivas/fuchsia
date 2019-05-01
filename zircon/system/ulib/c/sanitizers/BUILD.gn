@@ -11,6 +11,7 @@ source_set("sanitizers") {
     "asan-stubs.c",
     "hooks.c",
     "log.c",
+    "ubsan-stubs.cpp",
   ]
 
   # There is no '#if __has_feature(coverage)', so this file has to be
