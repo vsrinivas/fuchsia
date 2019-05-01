@@ -73,7 +73,9 @@ vk::AccessFlags GetAccessMask(vk::ImageLayout layout) {
 void SetImageLayoutOnCommandBuffer(vk::CommandBuffer command_buffer,
                                    vk::Image image, vk::ImageLayout layout,
                                    vk::ImageLayout old_layout) {
-  FXL_DCHECK(layout != old_layout);
+  if (layout == old_layout)
+    return;
+
   auto image_memory_barrier =
       vk::ImageMemoryBarrier()
           .setOldLayout(old_layout)
@@ -110,11 +112,11 @@ Swapchain::~Swapchain() {
   vk_instance_.destroy();
 }
 
-bool Swapchain::Initialize(zx::channel image_pipe_endpoint, uint32_t width,
-                           uint32_t height) {
-  if (GetPhysicalDevice() && CreateSurface(std::move(image_pipe_endpoint)) &&
-      CreateDeviceAndQueue() && InitializeSwapchain(width, height) &&
-      PrepareBuffers()) {
+bool Swapchain::Initialize(zx::channel image_pipe_endpoint,
+                           std::optional<vk::Extent2D> surface_size) {
+  if (GetPhysicalDevice() &&
+      CreateSurface(std::move(image_pipe_endpoint), surface_size) &&
+      CreateDeviceAndQueue() && InitializeSwapchain() && PrepareBuffers()) {
     AcquireNextImage();
     return true;
   }
@@ -125,6 +127,8 @@ uint32_t Swapchain::GetNumberOfSwapchainImages() {
   FXL_DCHECK(swapchain_image_resources_.size());
   return swapchain_image_resources_.size();
 }
+
+vk::Extent2D Swapchain::GetImageSize() { return max_image_extent_; }
 
 GrContext* Swapchain::GetGrContext() {
   FXL_DCHECK(swapchain_image_resources_.size());
@@ -162,10 +166,15 @@ Swapchain::SwapchainImageResources* Swapchain::GetCurrentImageResources() {
 bool Swapchain::GetPhysicalDevice() {
   // Add extensions necessary for fuchsia.
   std::vector<const char*> layer_names;
+#ifdef VKLATENCY_USE_FB
+  layer_names.push_back("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
+#else
   layer_names.push_back("VK_LAYER_FUCHSIA_imagepipe_swapchain");
+#endif  // VKLATENCY_USE_FB
 #ifndef NDEBUG
   layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
 #endif  // NDEBUG
+
   std::vector<const char*> extension_names;
   extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
   extension_names.push_back(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
@@ -204,11 +213,17 @@ bool Swapchain::GetPhysicalDevice() {
   return true;
 }
 
-bool Swapchain::CreateSurface(zx::channel image_pipe_endpoint) {
+bool Swapchain::CreateSurface(zx::channel image_pipe_endpoint,
+                              std::optional<vk::Extent2D> surface_size) {
   // Create surface.
+#ifdef VKLATENCY_USE_FB
+  auto surface_create_info = vk::ImagePipeSurfaceCreateInfoFUCHSIA();
+#else
   auto surface_create_info =
       vk::ImagePipeSurfaceCreateInfoFUCHSIA().setImagePipeHandle(
           image_pipe_endpoint.release());
+#endif  // VKLATENCY_USE_FB
+
   auto create_image_pipe_surface =
       vk_instance_.createImagePipeSurfaceFUCHSIA(surface_create_info, nullptr);
   if (create_image_pipe_surface.result != vk::Result::eSuccess) {
@@ -251,6 +266,19 @@ bool Swapchain::CreateSurface(zx::channel image_pipe_endpoint) {
     FXL_LOG(ERROR) << "failed to find supported format";
     return false;
   }
+
+  // Get surface capabilities for width and height.
+  if (surface_size.has_value()) {
+    max_image_extent_ = surface_size.value();
+  } else {
+    auto surface_caps = vk_physical_device_.getSurfaceCapabilitiesKHR(surface_);
+    if (surface_caps.result != vk::Result::eSuccess) {
+      FXL_LOG(ERROR) << "failed to get surface capabilities";
+      return false;
+    }
+    max_image_extent_ = surface_caps.value.maxImageExtent;
+  }
+
   return true;
 }
 
@@ -305,7 +333,7 @@ bool Swapchain::CreateDeviceAndQueue() {
   return true;
 }
 
-bool Swapchain::InitializeSwapchain(uint32_t width, uint32_t height) {
+bool Swapchain::InitializeSwapchain() {
   // Create swapchain.
   auto swapchain_ci =
       vk::SwapchainCreateInfoKHR()
@@ -316,7 +344,7 @@ bool Swapchain::InitializeSwapchain(uint32_t width, uint32_t height) {
           .setMinImageCount(desired_image_count_)
           .setImageFormat(format_)
           .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
-          .setImageExtent({width, height})
+          .setImageExtent(max_image_extent_)
           .setImageArrayLayers(1)
           .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
           .setImageSharingMode(vk::SharingMode::eExclusive)

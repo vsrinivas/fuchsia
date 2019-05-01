@@ -7,6 +7,7 @@
 
 #include <lib/zx/channel.h>
 
+#include <optional>
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
@@ -33,24 +34,27 @@ class Swapchain {
     vk::CommandBuffer post_raster_command_buffer;
   } SwapchainImageResources;
 
-  bool Initialize(zx::channel image_pipe_endpoint, uint32_t width,
-                  uint32_t height);
+  bool Initialize(zx::channel image_pipe_endpoint,
+                  std::optional<vk::Extent2D> surface_size);
   uint32_t GetNumberOfSwapchainImages();
+  vk::Extent2D GetImageSize();
   GrContext* GetGrContext();
   SwapchainImageResources* GetCurrentImageResources();
   void SwapImages();
 
  private:
   bool GetPhysicalDevice();
-  bool CreateSurface(zx::channel image_pipe_endpoint);
+  bool CreateSurface(zx::channel image_pipe_endpoint,
+                     std::optional<vk::Extent2D> surface_size);
   bool CreateDeviceAndQueue();
-  bool InitializeSwapchain(uint32_t width, uint32_t height);
+  bool InitializeSwapchain();
   bool PrepareBuffers();
   void AcquireNextImage();
 
   vk::Instance vk_instance_;
   vk::PhysicalDevice vk_physical_device_;
   vk::SurfaceKHR surface_;
+  vk::Extent2D max_image_extent_;
   vk::Device vk_device_;
   vk::Queue graphics_queue_;
   vk::CommandPool command_pool_;

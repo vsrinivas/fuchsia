@@ -16,7 +16,7 @@ namespace examples {
 
 class SkiaGpuPainter {
  public:
-  SkiaGpuPainter(Swapchain* swapchain, uint32_t width, uint32_t height);
+  SkiaGpuPainter(Swapchain* swapchain);
   ~SkiaGpuPainter();
 
   void OnInputEvent(fuchsia::ui::input::InputEvent event);
@@ -28,9 +28,6 @@ class SkiaGpuPainter {
   void SetImageLayout(Swapchain::SwapchainImageResources* image);
 
   Swapchain* const vk_swapchain_;
-  uint32_t width_;
-  uint32_t height_;
-
   typedef struct {
     sk_sp<SkSurface> sk_surface;
     std::vector<SkPath> complete_paths;

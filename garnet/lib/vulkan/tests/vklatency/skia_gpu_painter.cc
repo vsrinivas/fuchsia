@@ -10,9 +10,8 @@
 
 namespace examples {
 
-SkiaGpuPainter::SkiaGpuPainter(Swapchain* swapchain, uint32_t width,
-                               uint32_t height)
-    : vk_swapchain_(swapchain), width_(width), height_(height) {
+SkiaGpuPainter::SkiaGpuPainter(Swapchain* swapchain)
+    : vk_swapchain_(swapchain) {
   image_draw_resources_.resize(vk_swapchain_->GetNumberOfSwapchainImages());
 }
 
@@ -61,14 +60,16 @@ void SkiaGpuPainter::DrawImage() {
   PrepareSkSurface(image);
   auto& image_draw_resource = image_draw_resources_[image_index];
   SkCanvas* canvas = image_draw_resource.sk_surface->getCanvas();
+  canvas->save();
 
   SkPaint paint;
   paint.setColor(SK_ColorBLACK);
   paint.setAntiAlias(true);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(.4f);
-  for (auto& complete_path : image_draw_resource.complete_paths)
+  for (auto& complete_path : image_draw_resource.complete_paths) {
     canvas->drawPath(complete_path, paint);
+  }
   image_draw_resource.complete_paths.clear();
   for (auto& paths_in_progress : image_draw_resource.paths_in_progress) {
     canvas->drawPath(paths_in_progress.second, paint);
@@ -76,6 +77,7 @@ void SkiaGpuPainter::DrawImage() {
     paths_in_progress.second.getLastPt(&last_point);
     paths_in_progress.second = SkPath().moveTo(last_point);
   }
+  canvas->restore();
   canvas->flush();
 
   SetImageLayout(image);
@@ -98,7 +100,9 @@ void SkiaGpuPainter::PrepareSkSurface(
     vk_image_info.fImageTiling = VK_IMAGE_TILING_OPTIMAL;
     vk_image_info.fFormat = VK_FORMAT_B8G8R8A8_UNORM;
     vk_image_info.fLevelCount = 1;
-    GrBackendRenderTarget render_target(width_, height_, 0, 0, vk_image_info);
+    auto size = vk_swapchain_->GetImageSize();
+    GrBackendRenderTarget render_target(size.width, size.height, 0, 0,
+                                        vk_image_info);
     sk_surface = SkSurface::MakeFromBackendRenderTarget(
         vk_swapchain_->GetGrContext(), render_target, kTopLeft_GrSurfaceOrigin,
         kBGRA_8888_SkColorType, nullptr, &surface_props);

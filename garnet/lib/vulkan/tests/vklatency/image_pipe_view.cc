@@ -43,11 +43,11 @@ void ImagePipeView::Initialize() {
   canvas_node_.SetShape(canvas_shape);
   canvas_node_.SetTranslation(logical_size().x * 0.5, logical_size().y * 0.5,
                               0);
-  const bool rv = vk_swapchain_.Initialize(std::move(image_pipe_endpoint_),
-                                           logical_size().x, logical_size().y);
+  const bool rv = vk_swapchain_.Initialize(
+      std::move(image_pipe_endpoint_),
+      vk::Extent2D(logical_size().x, logical_size().y));
   FXL_CHECK(rv);
-  painter_ = std::make_unique<SkiaGpuPainter>(&vk_swapchain_, logical_size().x,
-                                              logical_size().y);
+  painter_ = std::make_unique<SkiaGpuPainter>(&vk_swapchain_);
 }
 
 void ImagePipeView::OnSceneInvalidated(
