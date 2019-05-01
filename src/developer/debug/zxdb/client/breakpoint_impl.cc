@@ -276,7 +276,23 @@ void BreakpointImpl::SendBackendAddOrChange(
       if (settings_.scope == BreakpointSettings::Scope::kThread)
         addition.thread_koid = settings_.scope_thread->GetKoid();
 
-      addition.address = pair.second.address();
+      switch (settings_.type) {
+        case debug_ipc::BreakpointType::kSoftware:
+        case debug_ipc::BreakpointType::kHardware:
+          addition.address = pair.second.address();
+          break;
+        // TODO(donosoc): This should receive a range within input location,
+        //                but x64 doesn't allow big ranges so this works as a
+        //                first pass.
+        case debug_ipc::BreakpointType::kWatchpoint: {
+          uint64_t address = pair.second.address();
+          addition.address_range = {address, address};
+          break;
+        }
+        case debug_ipc::BreakpointType::kLast:
+          FXL_NOTREACHED();
+          break;
+      }
       request.breakpoint.locations.push_back(addition);
     }
   }

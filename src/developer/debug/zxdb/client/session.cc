@@ -507,7 +507,6 @@ void Session::DispatchNotifyThreadStarting(
       case Process::StartType::kLaunch:
         resume_thread =
             !system_.settings().GetBool(ClientSettings::System::kPauseOnLaunch);
-        DEBUG_LOG(Process) << "Resuming thread: " << resume_thread;
         break;
       case Process::StartType::kAttach:
         resume_thread =
@@ -660,6 +659,8 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
                                    std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
 
+  DEBUG_LOG(Session) << "Got notification: "
+                     << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting notify;

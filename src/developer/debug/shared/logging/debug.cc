@@ -58,11 +58,14 @@ bool IsLogCategoryActive(LogCategory category) {
   return active_categories.count(category) > 0;
 }
 
+// The format is:
+// [<time>][<category>][<function>][<file:line>] <log msg>
 std::string LogPreamble(LogCategory category, const FileLineFunction& origin) {
   auto basename = files::GetBaseName(origin.file());
-  return fxl::StringPrintf("[%.3fs][%10s][%s:%d][%s]", SecondsSinceStart(),
-                           LogCategoryToString(category), basename.c_str(),
-                           origin.line(), origin.function().c_str());
+  return fxl::StringPrintf("[%.3fs][%10s][%s][%s:%d]", SecondsSinceStart(),
+                           LogCategoryToString(category),
+                           origin.function().c_str(), basename.c_str(),
+                           origin.line());
 }
 
 const char* LogCategoryToString(LogCategory category) {
@@ -83,6 +86,8 @@ const char* LogCategoryToString(LogCategory category) {
       return "Process";
     case LogCategory::kRemoteAPI:
       return "DebugAPI";
+    case LogCategory::kSession:
+      return "Session";
     case LogCategory::kSetting:
       return "Setting";
     case LogCategory::kTiming:

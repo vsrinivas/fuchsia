@@ -221,4 +221,39 @@ TEST_F(BreakpointImplTest, Address) {
   EXPECT_EQ(1u, out.breakpoint.locations.size());
 }
 
+TEST_F(BreakpointImplTest, Watchpoint) {
+  auto target_impls = session().system_impl().GetTargetImpls();
+  ASSERT_EQ(1u, target_impls.size());
+  TargetImpl* target = target_impls[0];
+  const uint64_t kProcessKoid = 6789;
+  target->CreateProcessForTesting(kProcessKoid, "test");
+
+  BreakpointImpl bp(&session(), false);
+
+  const uint64_t kAddress = 0x123456780;
+  BreakpointSettings in;
+  in.enabled = true;
+  in.type = debug_ipc::BreakpointType::kWatchpoint;
+  in.scope = BreakpointSettings::Scope::kTarget;
+  in.scope_target = target;
+  in.location.type = InputLocation::Type::kAddress;
+  in.location.address = kAddress;
+
+  Err err = SyncSetSettings(bp, in);
+  EXPECT_FALSE(err.has_error());
+
+  // Check the message was sent.
+  ASSERT_EQ(1u, sink().adds.size());
+  debug_ipc::AddOrChangeBreakpointRequest& out = sink().adds[0].first;
+  EXPECT_EQ(out.breakpoint_type, debug_ipc::BreakpointType::kWatchpoint);
+  EXPECT_FALSE(out.breakpoint.one_shot);
+  EXPECT_EQ(debug_ipc::Stop::kAll, out.breakpoint.stop);
+
+  ASSERT_EQ(1u, out.breakpoint.locations.size());
+  EXPECT_EQ(out.breakpoint.locations[0].address, 0u);
+  // For now, the debugger will send the same address as a range/begin.
+  EXPECT_EQ(out.breakpoint.locations[0].address_range.begin, kAddress);
+  EXPECT_EQ(out.breakpoint.locations[0].address_range.end, kAddress);
+}
+
 }  // namespace zxdb

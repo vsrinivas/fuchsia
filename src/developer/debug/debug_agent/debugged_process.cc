@@ -51,7 +51,7 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
 }
 
 // Meant to be used in debug logging.
-std::string ProcessPreamble(const DebuggedProcess* process) {
+std::string LogPreamble(const DebuggedProcess* process) {
   return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(),
                            process->name().c_str());
 }
@@ -292,6 +292,8 @@ void DebuggedProcess::SendModuleNotification(
   GetModulesForProcess(process_, dl_debug_addr_, &notify.modules);
   notify.stopped_thread_koids = std::move(paused_thread_koids);
 
+  DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
+
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyModules(notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
@@ -306,7 +308,7 @@ ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
 }
 
 ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
-  DEBUG_LOG(Process) << ProcessPreamble(this) << "WP address 0x" << std::hex
+  DEBUG_LOG(Process) << LogPreamble(this) << "WP address 0x" << std::hex
                      << address;
   auto it = watchpoints_.find(address);
   if (it == watchpoints_.end())
@@ -316,7 +318,7 @@ ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
 
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
                                                 uint64_t address) {
-  DEBUG_LOG(Process) << ProcessPreamble(this)
+  DEBUG_LOG(Process) << LogPreamble(this)
                      << "Setting breakpoint on 0x: " << std::hex << address;
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
@@ -355,7 +357,7 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(
   // We should not install the same watchpoint twice.
   FXL_DCHECK(watchpoints_.find(range.begin) == watchpoints_.end());
 
-  DEBUG_LOG(Process) << ProcessPreamble(this)
+  DEBUG_LOG(Process) << LogPreamble(this)
                      << "Registering watchpoint: " << wp->id() << " on [0x"
                      << std::hex << range.begin << ", 0x" << range.end << ").";
 
@@ -376,7 +378,7 @@ void DebuggedProcess::UnregisterWatchpoint(
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
-  DEBUG_LOG(Process) << ProcessPreamble(this) << "Terminating.";
+  DEBUG_LOG(Process) << LogPreamble(this) << "Terminating.";
   debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = process_koid;
 
@@ -524,28 +526,28 @@ zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
 void DebuggedProcess::OnStdout(bool close) {
   FXL_DCHECK(stdout_.valid());
   if (close) {
-    DEBUG_LOG(Process) << ProcessPreamble(this) << "stdout closed.";
+    DEBUG_LOG(Process) << LogPreamble(this) << "stdout closed.";
     stdout_.Reset();
     return;
   }
 
   auto data = ReadSocketInput(&stdout_);
   FXL_DCHECK(!data.empty());
-  DEBUG_LOG(Process) << ProcessPreamble(this) << "Got stdout: " << data.data();
+  DEBUG_LOG(Process) << LogPreamble(this) << "Got stdout: " << data.data();
   SendIO(debug_ipc::NotifyIO::Type::kStdout, std::move(data));
 }
 
 void DebuggedProcess::OnStderr(bool close) {
   FXL_DCHECK(stderr_.valid());
   if (close) {
-    DEBUG_LOG(Process) << ProcessPreamble(this) << "stderr closed.";
+    DEBUG_LOG(Process) << LogPreamble(this) << "stderr closed.";
     stderr_.Reset();
     return;
   }
 
   auto data = ReadSocketInput(&stderr_);
   FXL_DCHECK(!data.empty());
-  DEBUG_LOG(Process) << ProcessPreamble(this) << "Got stderr: " << data.data();
+  DEBUG_LOG(Process) << LogPreamble(this) << "Got stderr: " << data.data();
   SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
 }
 

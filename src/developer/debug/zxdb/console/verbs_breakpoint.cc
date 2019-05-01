@@ -124,6 +124,8 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
       break_type = debug_ipc::BreakpointType::kSoftware;
     } else if (type_str == "h" || type_str == "hardware") {
       break_type = debug_ipc::BreakpointType::kHardware;
+    } else if (type_str == "w" || type_str == "watchpoint") {
+      break_type = debug_ipc::BreakpointType::kWatchpoint;
     } else {
       return Err(
           fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
@@ -236,8 +238,8 @@ Options
       If "none" is specified, any threads hitting the breakpoint will
       immediately resume, but the hit count will continue to accumulate.
 
-  --type=[ (software|s) | (hardware|h) ]  (default: software)
-  -t [ (software|s) | (hardware|h) ]
+  --type=[ (software|s) | (hardware|h) | (watchpoint|w) ]  (default: software)
+  -t [ (software|s) | (hardware|h) | (watchpoint|w) ]
 
       Defines what kind of breakpoint to use. Hardware registers require support
       from the architecture and are limited in quantity. Keep this in mind when

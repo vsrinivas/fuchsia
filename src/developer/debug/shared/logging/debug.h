@@ -48,6 +48,9 @@ enum class LogCategory {
   // Log the received and sent remote API calls.
   kRemoteAPI,
 
+  // Associated with the zxdb client session.
+  kSession,
+
   // Associated with debugging the setting stores.
   kSetting,
 
