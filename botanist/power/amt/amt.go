@@ -71,7 +71,7 @@ func Reboot(host, username, password string) error {
 	}
 	// Generate MessageID
 	uuid := uuid.New()
-	payload := fmt.Sprintf(payloadTmpl, uri.String(), uuid, PowerStateMasterBusReset)
+	payload := fmt.Sprintf(payloadTmpl, uri.String(), uuid, PowerStatePowerCycleSoft)
 
 	t := digest.NewTransport(username, password)
 	req, err := http.NewRequest("POST", uri.String(), strings.NewReader(payload))
