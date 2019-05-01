@@ -76,7 +76,7 @@ zx_status_t NandDevice::MapVmos(const nand_operation_t& nand_op, fzl::VmoMapper*
                            nand_op.rw.length * nand_info_.page_size + page_offset_bytes,
                            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Cannot map data vmo\n");
+            zxlogf(ERROR, "nand: Cannot map data vmo: %s\n", zx_status_get_string(status));
             return status;
         }
         *vaddr_data = reinterpret_cast<uint8_t*>(data->start()) + page_offset_bytes;
@@ -93,7 +93,7 @@ zx_status_t NandDevice::MapVmos(const nand_operation_t& nand_op, fzl::VmoMapper*
                           nand_op.rw.length * nand_info_.oob_size + page_offset_bytes,
                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Cannot map oob vmo\n");
+            zxlogf(ERROR, "nand: Cannot map oob vmo: %s\n", zx_status_get_string(status));
             return status;
         }
         *vaddr_oob = reinterpret_cast<uint8_t*>(oob->start()) + page_offset_bytes;
