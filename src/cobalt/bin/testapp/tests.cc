@@ -510,16 +510,16 @@ bool TestLogEventCountWithAggregation(
   int expected_num_obs = kNumAggregatedObservations * (1 + backfill_days);
   for (uint32_t index : kConnectionAttemptsIndices) {
     for (std::string component : kConnectionAttemptsComponentNames) {
-      // Log a count depending on the index.
-      int64_t count = index * 5;
-      if (!logger->LogEventCount(metrics::kConnectionAttemptsMetricId, index,
-                                 component, count)) {
-        FXL_LOG(INFO) << "Failed to log event count for index " << index
-                      << " and component " << component << ".";
-        FXL_LOG(INFO) << "TestLogEventCountWithAggregation : FAIL";
-        return false;
-      }
-      if (count != 0) {
+      if (index != 0) {
+        // Log a count depending on the index.
+        int64_t count = index * 5;
+        if (!logger->LogEventCount(metrics::kConnectionAttemptsMetricId, index,
+                                   component, count)) {
+          FXL_LOG(INFO) << "Failed to log event count for index " << index
+                        << " and component " << component << ".";
+          FXL_LOG(INFO) << "TestLogEventCountWithAggregation : FAIL";
+          return false;
+        }
         expected_num_obs += kConnectionAttemptsNumWindowSizes;
       }
     }
@@ -548,15 +548,15 @@ bool TestLogElapsedTimeWithAggregation(
   for (uint32_t index : kStreamingTimeIndices) {
     for (std::string component : kStreamingTimeComponentNames) {
       // Log a duration depending on the index.
-      int64_t duration = index * 100;
-      if (!logger->LogElapsedTime(metrics::kStreamingTimeMetricId, index,
-                                  component, duration)) {
-        FXL_LOG(INFO) << "Failed to log elapsed time for index " << index
-                      << " and component " << component << ".";
-        FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
-        return false;
-      }
-      if (duration != 0) {
+      if (index != 0) {
+        int64_t duration = index * 100;
+        if (!logger->LogElapsedTime(metrics::kStreamingTimeMetricId, index,
+                                    component, duration)) {
+          FXL_LOG(INFO) << "Failed to log elapsed time for index " << index
+                        << " and component " << component << ".";
+          FXL_LOG(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
+          return false;
+        }
         expected_num_obs += kStreamingTimeNumWindowSizes;
       }
     }
