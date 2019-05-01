@@ -20,7 +20,8 @@ const char kTraceDurationArg[] = "--duration=1";
 // 60 seconds is typically the test timeout.
 const char kChildDurationArg[] = "60";
 
-TEST(DetachTest, SpawnedAppNotDetached) {
+// TODO(FLK-193): Disabled until fixed.
+TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
   zx::job job;
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
