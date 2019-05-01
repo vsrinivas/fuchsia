@@ -48,8 +48,6 @@ static const buttons_gpio_config_t gpios[] = {
     {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
     {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
 };
-
-static const buttons_reboot_config_t reboot = {3000, BUTTONS_ID_FDR};
 // clang-format on
 
 static const pbus_metadata_t available_buttons_metadata[] = {
@@ -62,11 +60,6 @@ static const pbus_metadata_t available_buttons_metadata[] = {
         .type = DEVICE_METADATA_BUTTONS_GPIOS,
         .data_buffer = &gpios,
         .data_size = sizeof(gpios),
-    },
-    {
-        .type = DEVICE_METADATA_BUTTONS_REBOOT,
-        .data_buffer = &reboot,
-        .data_size = sizeof(reboot),
     }
 };
 

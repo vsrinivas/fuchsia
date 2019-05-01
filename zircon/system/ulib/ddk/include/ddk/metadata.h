@@ -60,9 +60,6 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // list of buttons_gpio_config_t
 #define DEVICE_METADATA_BUTTONS_GPIOS             0x474E5442 // BTNG
 
-// a single buttons_reboot_config_t
-#define DEVICE_METADATA_BUTTONS_REBOOT            0x524E5442 // BTNR
-
 // list of char[ZX_MAX_NAME_LEN]
 #define DEVICE_METADATA_NAME                      0x454D414E // NAME
 
