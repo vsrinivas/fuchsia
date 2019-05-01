@@ -13,7 +13,6 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
@@ -26,11 +25,11 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/split_string.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -1299,14 +1298,13 @@ void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
 }
 
 void StoryControllerImpl::TakeAndLoadSnapshot(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
+    fuchsia::ui::views::ViewToken view_token,
     TakeAndLoadSnapshotCallback done) {
   // Currently we start a new snapshot view on every TakeAndLoadSnapshot
   // invocation. We can optimize later by connecting the snapshot loader on
   // start and re-using it for the lifetime of the story.
-  operation_queue_.Add(std::make_unique<StartSnapshotLoaderCall>(
-      this,
-      scenic::ToViewToken(zx::eventpair(request.TakeChannel().release()))));
+  operation_queue_.Add(
+      std::make_unique<StartSnapshotLoaderCall>(this, std::move(view_token)));
   operation_queue_.Add(
       std::make_unique<UpdateSnapshotCall>(this, std::move(done)));
 }

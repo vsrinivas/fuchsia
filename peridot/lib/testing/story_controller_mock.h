@@ -5,11 +5,12 @@
 #ifndef PERIDOT_LIB_TESTING_STORY_CONTROLLER_MOCK_H_
 #define PERIDOT_LIB_TESTING_STORY_CONTROLLER_MOCK_H_
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
+
+#include <string>
 
 namespace modular {
 
@@ -38,9 +39,8 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
-  void TakeAndLoadSnapshot(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
-      TakeAndLoadSnapshotCallback done) override {
+  void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
+                           TakeAndLoadSnapshotCallback done) override {
     FXL_NOTIMPLEMENTED();
   }
 

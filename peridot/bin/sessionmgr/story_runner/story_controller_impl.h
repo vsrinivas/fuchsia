@@ -21,7 +21,6 @@
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -200,9 +199,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void Stop(StopCallback done) override;
   void GetInfo(GetInfoCallback callback) override;
   void RequestStart() override;
-  void TakeAndLoadSnapshot(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request,
-      TakeAndLoadSnapshotCallback done) override;
+  void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
+                           TakeAndLoadSnapshotCallback done) override;
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
   void GetActiveModules(GetActiveModulesCallback callback) override;

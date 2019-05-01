@@ -4,7 +4,7 @@
 
 library fuchsia.modular;
 
-using fuchsia.ui.viewsv1token;
+using fuchsia.ui.views;
 
 // Used by the clients of StoryProvider (SessionShell) to interact with a single
 // story. Created by StoryProvider.
@@ -31,7 +31,7 @@ protocol StoryController {
     // |StoryController| and then loads the snapshot to the created view such that
     // it is rendered. The callback will be invoked once the view has been created
     // and the snapshot has been loaded.
-    TakeAndLoadSnapshot(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> ();
+    TakeAndLoadSnapshot(fuchsia.ui.views.ViewToken view_token) -> ();
 
     // Registers a watcher for changes of the story state.
     //
