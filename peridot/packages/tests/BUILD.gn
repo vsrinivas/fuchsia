@@ -94,6 +94,7 @@ group("modular_integration_tests") {
     "//peridot/tests/module_context:module_context_test_entity_module",
     "//peridot/tests/module_context:module_context_test_module",
     "//peridot/tests/module_context:module_context_test_session_shell",
+    "//peridot/tests/modular_login_tests:modular_login_tests",
     "//peridot/tests/parent_child:parent_child_test_child_module1",
     "//peridot/tests/parent_child:parent_child_test_child_module2",
     "//peridot/tests/parent_child:parent_child_test_parent_module",

@@ -85,6 +85,7 @@ source_set("test_harness_impl") {
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//zircon/public/lib/async-loop-cpp",

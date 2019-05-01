@@ -12,6 +12,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.ui.policy.Presenter",
+            "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.wlan.service.Wlan"

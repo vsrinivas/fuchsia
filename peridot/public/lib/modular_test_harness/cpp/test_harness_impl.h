@@ -9,6 +9,7 @@
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/sys/cpp/component_context.h>
