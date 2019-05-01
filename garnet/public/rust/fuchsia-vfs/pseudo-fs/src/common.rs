@@ -32,10 +32,9 @@ pub fn try_inherit_rights_for_clone(
     source_flags: u32,
     mut flags: u32
 ) -> Result<u32, Status> {
-    // TODO(ZX-3673): Start enforcing this check after soft transition.
-    // if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
-    //     return Err(Status::INVALID_ARGS);
-    // }
+    if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
+        return Err(Status::INVALID_ARGS);
+    }
     flags |= source_flags & (OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE);
     // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
     // as those from the originating connection.
@@ -44,10 +43,9 @@ pub fn try_inherit_rights_for_clone(
         flags |= source_flags & FS_RIGHTS;
         flags &= !CLONE_FLAG_SAME_RIGHTS
     }
-    // TODO(ZX-3673): Start enforcing this check after soft transition.
-    // if !stricter_or_same_rights(flags, source_flags) {
-    //     return Err(Status::ACCESS_DENIED);
-    // }
+    if !stricter_or_same_rights(flags, source_flags) {
+        return Err(Status::ACCESS_DENIED);
+    }
 
     Ok(flags)
 }

@@ -713,6 +713,31 @@ mod tests {
     }
 
     #[test]
+    fn clone_cannot_use_same_rights_flag_with_any_specific_right() {
+        use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
+
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |proxy| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let file = open_get_file_proxy_assert_ok!(&proxy, flags, "file");
+
+            assert_read!(file, "Content");
+            assert_close!(file);
+
+            clone_as_directory_assert_err!(
+                &proxy,
+                CLONE_FLAG_SAME_RIGHTS | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                Status::INVALID_ARGS
+            );
+
+            assert_close!(proxy);
+        });
+    }
+
+    #[test]
     fn one_file_open_existing() {
         let root = pseudo_directory! {
             "file" => read_only(|| Ok(b"Content".to_vec())),
