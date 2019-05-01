@@ -33,7 +33,6 @@ group("bin") {
     "ktrace_provider",
     "log_listener",
     "logger",
-    "mdns",
     "media",
     "memory_monitor",
     "net-cli",

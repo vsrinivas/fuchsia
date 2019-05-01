@@ -1507,7 +1507,7 @@ Enables the tracing feature of mdns, which can be turned on using
 
 **Current value (from the default):** `false`
 
-From //garnet/bin/mdns/service/BUILD.gn:15
+From //src/connectivity/network/mdns/service/BUILD.gn:15
 
 ### skia_enable_tools
 

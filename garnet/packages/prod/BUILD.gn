@@ -539,7 +539,7 @@ group("net_ctl") {
 group("mdns") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mdns/service:mdns",
+    "//src/connectivity/network/mdns/service:mdns",
   ]
 }
 
@@ -962,7 +962,7 @@ group("mediasession") {
 group("mdns-util") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mdns/util:mdns-util",
+    "//src/connectivity/network/mdns/util:mdns-util",
   ]
 }
 

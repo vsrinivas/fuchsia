@@ -736,9 +736,9 @@ group("fuchsia_component_test_inner") {
 group("mdns") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mdns/service:mdns_fuzzers",
-    "//garnet/bin/mdns/service:mdns_tests",
     "//garnet/packages/prod:run",
+    "//src/connectivity/network/mdns/service:mdns_fuzzers",
+    "//src/connectivity/network/mdns/service:mdns_tests",
   ]
 }
 

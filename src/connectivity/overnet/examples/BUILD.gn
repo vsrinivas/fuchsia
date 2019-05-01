@@ -48,20 +48,20 @@ test_package("overnet_examples_tests") {
     },
   ]
 
-# TODO(FLK-196) Re-enable when fixed.
+  # TODO(FLK-196) Re-enable when fixed.
   tests = [
-#    {
-#      name = "overnet_echo_test"
-#    },
-#    {
-#      name = "overnet_echo_test_mdns"
-#    },
-#    {
-#      name = "overnet_echo_test_omdp"
-#    },
-#    {
-#      name = "overnet_interface_passing_test"
-#    },
+    #    {
+    #      name = "overnet_echo_test"
+    #    },
+    #    {
+    #      name = "overnet_echo_test_mdns"
+    #    },
+    #    {
+    #      name = "overnet_echo_test_omdp"
+    #    },
+    #    {
+    #      name = "overnet_interface_passing_test"
+    #    },
   ]
 }
 
@@ -70,7 +70,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":overnet_examples_tests",
-    "//garnet/bin/mdns/service:mdns",
+    "//src/connectivity/network/mdns/service:mdns",
     "//src/connectivity/network/testing/netemul",
     "//src/connectivity/overnet/overnetstack",
   ]

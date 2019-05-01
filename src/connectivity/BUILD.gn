@@ -23,6 +23,7 @@ group("tests") {
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
     "//src/connectivity/bluetooth/tests",
     "//src/connectivity/network/http_client:tests",
+    "//src/connectivity/network/mdns/service:mdns_tests",
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/overnet/examples:tests",
     "//src/connectivity/overnet/lib:overnet_tests",
