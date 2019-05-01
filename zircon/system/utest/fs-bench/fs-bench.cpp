@@ -211,7 +211,6 @@ bool RunBenchmark(int argc, char** argv) {
         125,
         250,
         500,
-        1000,
     };
 
     PathWalkOp pw_op;
