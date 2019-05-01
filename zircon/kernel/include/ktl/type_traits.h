@@ -8,6 +8,9 @@
 
 namespace ktl {
 
+using std::enable_if;
+using std::enable_if_t;
+
 using std::is_const;
 using std::is_const_v;
 
