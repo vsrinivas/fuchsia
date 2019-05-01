@@ -102,12 +102,12 @@ static int checkdir(DIR* dir, int err) {
 
 // not supported by any filesystems yet
 __EXPORT
-int symlink(const char* existing, const char* new) {
+int symlink(const char* existing, const char* newpath) {
     errno = ENOSYS;
     return -1;
 }
 __EXPORT
-ssize_t readlink(const char* restrict path, char* restrict buf, size_t bufsize) {
+ssize_t readlink(const char* __restrict path, char* __restrict buf, size_t bufsize) {
     // EINVAL = not symlink
     return checkfile(path, EINVAL);
 }
@@ -204,17 +204,17 @@ int fchownat(int fd, const char* path, uid_t uid, gid_t gid, int flag) {
 }
 
 __EXPORT
-int linkat(int fd1, const char* existing, int fd2, const char* new, int flag) {
+int linkat(int fd1, const char* existing, int fd2, const char* newpath, int flag) {
     return check2fds(fd1, fd2, ENOSYS);
 }
 
 __EXPORT
-int symlinkat(const char* existing, int fd, const char* new) {
+int symlinkat(const char* existing, int fd, const char* newpath) {
     return checkfilefd(existing, fd, ENOSYS);
 }
 
 __EXPORT
-ssize_t readlinkat(int fd, const char* restrict path, char* restrict buf, size_t bufsize) {
+ssize_t readlinkat(int fd, const char* __restrict path, char* __restrict buf, size_t bufsize) {
     return checkfilefd(path, fd, ENOSYS);
 }
 

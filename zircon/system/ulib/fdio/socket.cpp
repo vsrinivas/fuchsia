@@ -22,12 +22,12 @@
 #include "unistd.h"
 
 static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
-    return (zxio_socket_t*)fdio_get_zxio(io);
+    return reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
 }
 
 static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
-                              struct sockaddr* restrict addr,
-                              socklen_t* restrict addrlen) {
+                              struct sockaddr* __restrict addr,
+                              socklen_t* __restrict addrlen) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t addr_actual = 0u;
     size_t actual = 0u;
@@ -35,9 +35,9 @@ static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
                                       &addr_actual, data, len, &actual);
     if (status == ZX_OK) {
         if (addrlen != NULL) {
-            *addrlen = addr_actual;
+            *addrlen = static_cast<socklen_t>(addr_actual);
         }
-        return (ssize_t)actual;
+        return static_cast<ssize_t>(actual);
     }
     return status;
 }
@@ -47,7 +47,7 @@ static ssize_t zxsio_sendto(fdio_t* io, const void* data, size_t len, int flags,
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendto(&sio->socket, addr, addrlen, data, len, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
@@ -64,7 +64,7 @@ static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
     zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags) {
@@ -86,7 +86,7 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendmsg(&sio->socket, msg, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
@@ -202,7 +202,7 @@ static ssize_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
             available = INT_MAX;
         }
         int* actual = va_arg(va, int*);
-        *actual = available;
+        *actual = static_cast<int>(available);
         return ZX_OK;
     }
     default:
@@ -218,7 +218,7 @@ static ssize_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
     zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int flags) {
@@ -236,7 +236,7 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     size_t actual = 0u;
     zx_status_t status = zxs_sendmsg(&sio->socket, msg, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
@@ -283,15 +283,16 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
     int16_t out_code;
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlIoctl(
-        sio->socket.socket, op, in_buf, in_len, &out_code, out_buf, out_len,
-        &actual);
+        sio->socket.socket, static_cast<uint16_t>(op),
+        static_cast<const uint8_t*>(in_buf), in_len, &out_code,
+        static_cast<uint8_t*>(out_buf), out_len, &actual);
     if (status != ZX_OK) {
         return status;
     }
     if (out_code) {
         return errno_to_fdio_status(out_code);
     }
-    return (ssize_t)actual;
+    return static_cast<ssize_t>(actual);
 }
 
 static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
@@ -318,10 +319,10 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .close = zxsio_close,
     .open = fdio_default_open,
     .clone = zxsio_clone,
-    .ioctl = zxsio_ioctl,
+    .unwrap = zxsio_unwrap,
     .wait_begin = zxsio_wait_begin_stream,
     .wait_end = zxsio_wait_end_stream,
-    .unwrap = zxsio_unwrap,
+    .ioctl = zxsio_ioctl,
     .posix_ioctl = zxsio_posix_ioctl_stream,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -346,10 +347,10 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .close = zxsio_close,
     .open = fdio_default_open,
     .clone = zxsio_clone,
-    .ioctl = zxsio_ioctl,
+    .unwrap = zxsio_unwrap,
     .wait_begin = zxsio_wait_begin_dgram,
     .wait_end = zxsio_wait_end_dgram,
-    .unwrap = zxsio_unwrap,
+    .ioctl = zxsio_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl, // not supported
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,

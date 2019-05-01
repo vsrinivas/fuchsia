@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdarg.h>
-#include <stdatomic.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -70,7 +66,7 @@ ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t o
     return ZX_ERR_WRONG_TYPE;
 }
 
-ssize_t fdio_default_recvfrom(fdio_t* io, void* data, size_t len, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+ssize_t fdio_default_recvfrom(fdio_t* io, void* data, size_t len, int flags, struct sockaddr* __restrict addr, socklen_t* __restrict addrlen) {
     return ZX_ERR_WRONG_TYPE;
 }
 

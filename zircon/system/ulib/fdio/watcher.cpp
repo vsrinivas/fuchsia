@@ -11,6 +11,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
@@ -23,45 +24,32 @@ typedef struct fdio_watcher {
 } fdio_watcher_t;
 
 static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
-    fdio_watcher_t* watcher;
-    if ((watcher = malloc(sizeof(fdio_watcher_t))) == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_handle_t client;
-    zx_status_t status, io_status;
-    if ((status = zx_channel_create(0, &client, &watcher->h)) != ZX_OK) {
-        goto fail_allocated;
+    zx::channel client, watcher;
+    zx_status_t status = zx::channel::create(0, &client, &watcher);
+    if (status != ZX_OK) {
+        return status;
     }
 
     fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
     zx_handle_t dir_channel = fdio_unsafe_borrow_channel(io);
     if (dir_channel == ZX_HANDLE_INVALID) {
         fdio_unsafe_release(io);
-        status = ZX_ERR_NOT_SUPPORTED;
-        goto fail_two_channels;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    io_status = fuchsia_io_DirectoryWatch(dir_channel, fuchsia_io_WATCH_MASK_ALL, 0,
-                                          client, &status);
+    zx_status_t io_status = fuchsia_io_DirectoryWatch(dir_channel, fuchsia_io_WATCH_MASK_ALL, 0,
+                                                      client.release(), &status);
     fdio_unsafe_release(io);
     if (io_status != ZX_OK) {
-        status = io_status;
-        goto fail_one_channel;
+        return io_status;
     } else if (status != ZX_OK) {
-        goto fail_one_channel;
+        return status;
     }
 
-    *out = watcher;
+    fdio_watcher_t* result = static_cast<fdio_watcher_t*>(malloc(sizeof(fdio_watcher_t)));
+    result->h = watcher.release();
+    *out = result;
     return ZX_OK;
-
-fail_two_channels:
-    zx_handle_close(client);
-fail_one_channel:
-    zx_handle_close(watcher->h);
-fail_allocated:
-    free(watcher);
-    return status;
 }
 
 // watcher process expects the msg buffer to be len + 1 in length

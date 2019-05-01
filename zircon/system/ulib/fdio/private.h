@@ -48,7 +48,6 @@ typedef struct fdio_ops {
     zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
     zx_status_t (*get_attr)(fdio_t* io, fuchsia_io_NodeAttributes* out);
     zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
-    zx_status_t (*sync)(fdio_t* io);
     zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
     zx_status_t (*rewind)(fdio_t* io);
     zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
