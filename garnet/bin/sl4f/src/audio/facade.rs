@@ -77,6 +77,9 @@ struct OutputWorker {
 
     // Offset into vmo where we'll start to read next, in bytes.
     next_read: u64,
+
+    // Offset into vmo where we'll finish reading next, in bytes.
+    next_read_end: u64,
 }
 
 impl OutputWorker {
@@ -114,6 +117,7 @@ impl OutputWorker {
 
         // Start reading from the beginning.
         self.next_read = 0;
+        self.next_read_end = 0;
 
         self.vmo = Some(ring_buffer);
         Ok(())
@@ -125,10 +129,10 @@ impl OutputWorker {
         _clock_time: i64,
         capturing: bool,
     ) -> Result<(), Error> {
-        if capturing {
+        if capturing && self.next_read != self.next_read_end {
             let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
 
-            if (ring_position as u64) < self.next_read {
+            if (self.next_read_end as u64) < self.next_read {
                 // Wrap-around case, read through the end.
                 let mut data = vec![0u8; (self.work_space - self.next_read) as usize];
                 let overwrite1 = vec![1u8; (self.work_space - self.next_read) as usize];
@@ -137,23 +141,25 @@ impl OutputWorker {
                 self.extracted_data.append(&mut data);
 
                 // Read remaining data.
-                let mut data = vec![0u8; ring_position as usize];
-                let overwrite2 = vec![1u8; ring_position as usize];
+                let mut data = vec![0u8; self.next_read_end as usize];
+                let overwrite2 = vec![1u8; self.next_read_end as usize];
                 vmo.read(&mut data, 0)?;
                 vmo.write(&overwrite2, 0)?;
 
                 self.extracted_data.append(&mut data);
             } else {
                 // Normal case, just read all the bytes.
-                let mut data = vec![0u8; ((ring_position as u64) - self.next_read) as usize];
-                let overwrite = vec![1u8; ((ring_position as u64) - self.next_read) as usize];
+                let mut data = vec![0u8; (self.next_read_end - self.next_read) as usize];
+                let overwrite = vec![1u8; (self.next_read_end - self.next_read) as usize];
                 vmo.read(&mut data, self.next_read)?;
                 vmo.write(&overwrite, self.next_read)?;
 
                 self.extracted_data.append(&mut data);
             }
         }
-        self.next_read = ring_position as u64;
+        // We always stay 1 notification behind to work around audio glitches.
+        self.next_read = self.next_read_end;
+        self.next_read_end = ring_position as u64;
         Ok(())
     }
 
