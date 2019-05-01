@@ -33,7 +33,6 @@ constexpr uint8_t kArbitraryVectorSize = 3;
 // This is used as a literal constant in compatibility_test_service.fidl.
 constexpr uint8_t kArbitraryConstant = 2;
 
-constexpr char kServersEnvVarName[] = "FIDL_COMPATIBILITY_TEST_SERVERS";
 constexpr char kUsage[] =
     ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
 
@@ -998,16 +997,6 @@ TEST(Compatibility, EchoStructNoRetval) {
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-
-  // TODO(ianloic): remove support for environment once Topaz has migrated to
-  // passing server names on the command-line.
-  const char* servers_from_env = getenv(kServersEnvVarName);
-  if (servers_from_env != nullptr) {
-    servers = fxl::SplitStringCopy(
-        fxl::StringView(servers_from_env, strlen(servers_from_env)), ",",
-        fxl::WhiteSpaceHandling::kTrimWhitespace,
-        fxl::SplitResult::kSplitWantNonEmpty);
-  }
 
   for (int i = 1; i < argc; i++) {
     servers.push_back(argv[i]);

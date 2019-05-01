@@ -3,10 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
-executable("fidl_compatibility_test") {
+executable("fidl_compatibility_test_executable") {
+  output_name = "fidl_compatibility_test"
+
   testonly = true
 
   sources = [
@@ -139,11 +142,12 @@ package("fidl_compatibility_test_server_rust") {
 }
 
 # The test binary that gets invoked by shell scripts.
+# TODO(ianloic): remove this after topaz move to components has passed GI
 package("fidl_compatibility_test_bin") {
   package_name = "fidl_compatibility_test_bin"
 
   deps = [
-    ":fidl_compatibility_test",
+    ":fidl_compatibility_test_executable",
   ]
 
   meta = [
@@ -155,24 +159,17 @@ package("fidl_compatibility_test_bin") {
 
   testonly = true
 
-  # Declare it as a binary so humans and automation don't try to run it
-  # directly as a test, which would fail.
   binary = "fidl_compatibility_test"
 }
 
-# Contains the shell script that runs the test binary.
-package("package") {
-  package_name = "fidl_compatibility_test"
-
+test_package("fidl_compatibility_test") {
   deps = [
-    ":run_fidl_compatibility_test_garnet_sh",
+    ":fidl_compatibility_test_executable",
   ]
-
-  testonly = true
 
   tests = [
     {
-      name = "run_fidl_compatibility_test_garnet.sh"
+      name = "fidl_compatibility_test"
       environments = basic_envs
     },
   ]

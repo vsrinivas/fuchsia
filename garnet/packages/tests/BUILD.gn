@@ -837,8 +837,7 @@ group("power_manager") {
 group("fidl_compatibility_test") {
   testonly = true
   public_deps = [
-    "//garnet/bin/fidl_compatibility_test:package",
-    "//garnet/packages/tests:fidl_compatibility_test_bin",
+    "//garnet/bin/fidl_compatibility_test",
     "//garnet/packages/tests:fidl_compatibility_test_server_cpp",
     "//garnet/packages/tests:fidl_compatibility_test_server_go",
     "//garnet/packages/tests:fidl_compatibility_test_server_llcpp",
