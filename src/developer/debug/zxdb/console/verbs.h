@@ -65,6 +65,7 @@ enum class Verb {
   kOpenDump,
   kPause,
   kPrint,
+  kPastBacktrace,
   kQuit,
   kQuitAgent,
   kRegs,

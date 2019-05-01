@@ -75,7 +75,9 @@ void FormatTableT(const std::vector<ColSpec>& spec,
 
   // Max widths of contents.
   for (const auto& row : rows) {
-    FXL_DCHECK(row.size() <= max.size()) << "Column spec size is too small.";
+    FXL_DCHECK(row.size() <= max.size())
+        << "Column spec size is too small (" << row.size() << " vs "
+        << max.size() << ").";
     for (size_t i = 0; i < row.size(); i++) {
       // Only count the ones that don't overflow (either because they span the
       // remaining columns, or because they're beyond max_width).

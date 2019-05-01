@@ -35,4 +35,9 @@ const char* Process::StartTypeToString(Process::StartType start_type) {
   return "";
 }
 
+BacktraceCache* Process::GetBacktraceCacheFromKoid(uint64_t) {
+  FXL_NOTREACHED() << "Implementations should derive this function if needed.";
+  return nullptr;
+}
+
 }  // namespace zxdb

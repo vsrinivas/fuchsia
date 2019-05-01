@@ -7,11 +7,13 @@
 #include <sstream>
 
 #include "src/developer/debug/shared/logging/block_timer.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system_impl.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/lib/fxl/logging.h"
@@ -26,6 +28,8 @@ TargetImpl::TargetImpl(SystemImpl* system)
       impl_weak_factory_(this) {
   settings_.set_fallback(&system_->settings());
   settings_.set_name("target");
+
+  settings_.AddObserver(ClientSettings::Target::kStoreBacktraces, this);
 }
 
 TargetImpl::~TargetImpl() {
@@ -47,8 +51,8 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid,
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
   state_ = State::kRunning;
-  process_ = std::make_unique<ProcessImpl>(this, koid, process_name,
-                                           Process::StartType::kAttach);
+  process_ = CreateProcessImpl(koid, process_name, Process::StartType::kAttach);
+
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get(), true);
@@ -60,8 +64,8 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid,
   FXL_DCHECK(!process_.get());
 
   state_ = State::kRunning;
-  process_ = std::make_unique<ProcessImpl>(this, koid, process_name,
-                                           Process::StartType::kComponent);
+  process_ = CreateProcessImpl(koid, process_name,
+                               Process::StartType::kComponent);
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get(), false);
@@ -237,6 +241,18 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
   }
 }
 
+void TargetImpl::OnSettingChanged(const SettingStore& store,
+                                  const std::string& setting_name) {
+  if (setting_name == ClientSettings::Target::kStoreBacktraces) {
+    bool should_store = store.GetBool(setting_name);
+    if (!process_)
+      return;
+    process_->ShouldStoreBacktraces(should_store);
+  } else {
+    FXL_LOG(WARNING) << "Target setting unhandled: " << setting_name;
+  }
+}
+
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
                                        uint64_t koid,
                                        debug_ipc::zx_status_t status,
@@ -264,8 +280,7 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
                                         ? Process::StartType::kAttach
                                         : Process::StartType::kLaunch;
     state_ = State::kRunning;
-    process_ =
-        std::make_unique<ProcessImpl>(this, koid, process_name, start_type);
+    process_ = CreateProcessImpl(koid, process_name, start_type);
   }
 
   if (callback)
@@ -309,6 +324,15 @@ void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason,
   }
 
   callback(GetWeakPtr(), issue_err);
+}
+
+std::unique_ptr<ProcessImpl> TargetImpl::CreateProcessImpl(
+    uint64_t koid, const std::string& name, Process::StartType start_type) {
+  auto process = std::make_unique<ProcessImpl>(this, koid, name,
+                                               Process::StartType::kAttach);
+  if (settings_.GetBool(ClientSettings::Target::kStoreBacktraces))
+    process->ShouldStoreBacktraces(true);
+  return process;
 }
 
 }  // namespace zxdb

@@ -11,18 +11,24 @@ namespace zxdb {
 
 // Schema Definition -----------------------------------------------------------
 
-static const char* kShowStdoutDescription =
+static const char kShowStdoutDescription[] =
     R"(  Whether this process should pipe its stdout/stderr to zxdb.
   If not set for a particular process, it will default to the system-wide
   setting.)";
+
+const char* ClientSettings::Target::kStoreBacktraces = "x-store-backtraces";
+static const char kStoreBacktracesDescription[] =
+    R"(  [EXPERIMENTAL] Store exceptional backtraces. Do not use.)";
 
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
-  schema->AddBool(ClientSettings::System::kShowStdout,
-                  kShowStdoutDescription, true);
+  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription,
+                  true);
+  schema->AddBool(ClientSettings::Target::kStoreBacktraces,
+                  kStoreBacktracesDescription, false);
 
   return schema;
 }

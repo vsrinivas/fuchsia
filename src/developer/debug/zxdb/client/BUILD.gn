@@ -10,6 +10,7 @@ static_library("client") {
 
   public = [
     "arch_info.h",
+    "backtrace_cache.h",
     "breakpoint.h",
     "breakpoint_location.h",
     "breakpoint_observer.h",
@@ -51,6 +52,7 @@ static_library("client") {
 
   sources = [
     "arch_info.cc",
+    "backtrace_cache.cc",
     "breakpoint.cc",
     "breakpoint_action.cc",
     "breakpoint_impl.cc",
@@ -181,6 +183,7 @@ copy("copy_test_data") {
 source_set("tests") {
   testonly = true
   sources = [
+    "backtrace_cache_unittest.cc",
     "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
     "finish_physical_frame_thread_controller_unittest.cc",
