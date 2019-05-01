@@ -436,6 +436,13 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
   void ConnectViewToStoryShell(FlowToken flow,
                                fidl::StringPtr anchor_surface_id) {
+    if (!view_owner_.is_bound()) {
+      FXL_LOG(WARNING)
+          << "The module view owner connection is not bound, so it "
+             "can't be sent to the story shell.";
+      return;
+    }
+
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
     fuchsia::modular::ViewConnection view_connection;
@@ -537,9 +544,9 @@ class StoryControllerImpl::StopCall : public Operation<> {
     // or it might keep the |Operation| alive longer than you might expect.
     story_controller_impl_->DetachView([cont = cont.share()] { cont(false); });
 
-    async::PostDelayedTask(
-        async_get_default_dispatcher(),
-        [cont = std::move(cont)] { cont(true); }, kBasicTimeout);
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [cont = std::move(cont)] { cont(true); },
+                           kBasicTimeout);
   }
 
   void StopStory() {
@@ -1222,6 +1229,13 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
     const auto anchor_surface_id =
         ModulePathToSurfaceID(anchor->module_data->module_path);
     if (!connected_views_.count(anchor_surface_id)) {
+      continue;
+    }
+
+    if (!kv.second.view_owner.is_bound()) {
+      FXL_LOG(WARNING)
+          << "The module view owner connection is not bound, so it "
+             "can't be sent to the story shell.";
       continue;
     }
 
