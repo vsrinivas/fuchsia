@@ -15,7 +15,7 @@
 
 namespace component {
 
-const char SchemeMap::kConfigDirPath[] = "/system/data/appmgr/scheme_map/";
+const char SchemeMap::kConfigDirPath[] = "/pkgfs/packages/config-data/0/data/appmgr/scheme_map/";
 
 bool SchemeMap::ParseFromDirectory(const std::string& path) {
   internal_map_.clear();
