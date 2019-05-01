@@ -431,7 +431,6 @@ protocol Directory {
     ///
     /// If an unknown value is sent for either flags or mode, the connection should
     /// be closed.
-    // TODO(smklein): Who uses mode? Can it be removed?
     ///
     /// OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
     /// which will be connected to the opened entity.
@@ -443,6 +442,7 @@ protocol Directory {
     ///
     /// The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     /// the OPEN_FLAG_NODE_REFERENCE flag.
+    // TODO(smklein): Who uses mode? Can it be removed?
     Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
 
     /// Detaches an object from this directory object.

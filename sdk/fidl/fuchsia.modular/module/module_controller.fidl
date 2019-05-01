@@ -19,7 +19,7 @@ protocol ModuleController {
     /// Requests the Module instance to stop. The running Module component's
     /// Lifecycle::Terminate() method is called, the instance is shut down and
     /// state within the framework is cleaned up.
-
+    ///
     /// The result callback is called once the Module's runtime has been torn down.
     Stop() -> ();
 

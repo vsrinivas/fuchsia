@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.pty;
-
-using zx;
-
 /// A PTY (pseudoterminal) emulates terminal devices, with a "server" side
 /// (which represents the keyboard+monitor side of the terminal and is obtained
 /// by opening /dev/misc/ptmx) and a number of "client" sides which are obtained
@@ -15,6 +11,9 @@ using zx;
 /// first Client PTY *must* be 0, and it is the only Client PTY that is allowed
 /// to create additional Client PTYs, receive Events, etc. It is the
 /// Controlling PTY.
+library fuchsia.hardware.pty;
+
+using zx;
 
 /// When Feature Raw is enabled, OOB Events like ^c, ^z, etc are not generated.
 /// Instead the character is read from the read() input path.

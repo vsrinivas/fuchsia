@@ -62,7 +62,7 @@ protocol Ledger {
     /// Retrieves the page with the given identifier, creating it if needed, and binds
     /// |page_request| to it. A |null| identifier can be passed to create a new page with a random
     /// unique identifier. It is allowed to connect to the same page concurrently multiple times.
-
+    ///
     /// Parameters:
     /// |id| the identifier of the page, or |null| to create a new page with a random identifier.
     GetPage(PageId? id, request<Page> page_request);

@@ -206,7 +206,7 @@ protocol Coordinator {
                        array<DeviceComponent>:COMPONENTS_MAX components, uint32 components_count,
                        uint32 coresident_device_index) -> (zx.status status);
 
-    /// Special commands for implementing the dmctl device.
+    // Special commands for implementing the dmctl device.
     // TODO(teisenbe): We should revisit how these are carried over.
 
     /// Execute the given string command.  This is mostly used for accessing debug

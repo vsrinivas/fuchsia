@@ -179,7 +179,7 @@ protocol Stack {
     /// Disable the packet filter on a specific interface.
     DisablePacketFilter(uint64 id) -> (Error? err);
 
-    /// Events
+    // Events
 
     /// A status change event is triggered whenever an interface's status changes.
     -> OnInterfaceStatusChange(InterfaceStatusChange info);

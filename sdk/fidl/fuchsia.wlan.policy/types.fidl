@@ -4,7 +4,7 @@
 
 library fuchsia.wlan.policy;
 
-/// Basic definitions for wlan APIs.
+// Basic definitions for wlan APIs.
 
 /// High level protection type for the network.  This does not convey all details needed
 /// for the mechanism of the connection, but is primarily used to map the target network

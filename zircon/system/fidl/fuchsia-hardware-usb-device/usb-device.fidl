@@ -1,4 +1,4 @@
-/// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -31,21 +31,21 @@ protocol Device {
                                                  vector<uint8>:MAX_CONFIG_DESC_SIZE desc);
 
     /// Fetches a string descriptor from the USB device.
-    //
+    ///
     /// desc_id          :   The ID of the string descriptor to fetch, or 0 to fetch
     ///                      the language table instead.
-    //
+    ///
     /// lang_id          :   The language ID of the string descriptor to fetch.
     ///                      If no matching language ID is present in the device's language
     ///                      ID table, the first entry of the language ID table will
     ///                      be substituted.
     /// actual_lang_id   :   The actual language ID of the string fetched, or 0 for
     ///                      the language ID table.
-    //
+    ///
     /// The worst case size for the payload of a language ID table should be 252
     /// bytes, meaning that a 256 byte buffer should always be enough to hold any
     /// language ID table.
-    //
+    ///
     /// The worst case size for a UTF-8 encoded string descriptor payload should be
     /// 378 bytes (126 UTF-16 code units with a worst case expansion factor of 3)
     GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s,

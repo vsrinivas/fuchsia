@@ -43,11 +43,11 @@ protocol Control {
     Disable() -> ();
 };
 
-///
-/// The Input and Output protocols closely correspond to the capabilities
-/// exposed by the Audio Driver Streaming Interface, fully documented at
-/// driver-interfaces/audio.md and declared at device/audio.h.
-///
+//
+// The Input and Output protocols closely correspond to the capabilities
+// exposed by the Audio Driver Streaming Interface, fully documented at
+// driver-interfaces/audio.md and declared at device/audio.h.
+//
 
 // fuchsia.virtualaudio.Input
 //

@@ -146,7 +146,7 @@ struct StreamPacket {
     uint64 stream_segment_id = 0;
 };
 
-/// `StreamPacket.flags` values.
+// `StreamPacket.flags` values.
 
 /// When used as a `StreamPacket.pts` value, indicates that the packet has no
 /// specific presentation timestamp. The effective presentation time of such a

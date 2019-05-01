@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// This protocol is sent on UDP packets to announce Overnet nodes to the world.
 library fuchsia.overnet.omdp;
 
-/// This protocol is sent on UDP packets to announce Overnet nodes to the world.
 
 /// A beacon announces one node to the world.
 struct Beacon {

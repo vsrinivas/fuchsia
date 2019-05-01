@@ -1,13 +1,13 @@
 {
   "fidl/fuchsia.media/audio.fidl": "6bc9c5c73834e13128f3609ad6489190",
-  "fidl/fuchsia.media/audio_capturer.fidl": "556d8d2860bcc8396640c538aeb7383d",
+  "fidl/fuchsia.media/audio_capturer.fidl": "b181e9bb9eb768223afde646fda290b2",
   "fidl/fuchsia.media/audio_core.fidl": "b3c30922993f49466aae354df94f0b41",
   "fidl/fuchsia.media/audio_device_enumerator.fidl": "2eaf18e9e2208832b2f97f4f61d2d89d",
-  "fidl/fuchsia.media/audio_renderer.fidl": "c36b624d329a6e80f3e9432794a038e9",
+  "fidl/fuchsia.media/audio_renderer.fidl": "ebf589eb1989d4b3cf8b31b70a1c3841",
   "fidl/fuchsia.media/metadata.fidl": "fb11fd050505ea7a8fc661754b044012",
-  "fidl/fuchsia.media/stream.fidl": "92dd4376d67914a882c7ae46874e6ca1",
+  "fidl/fuchsia.media/stream.fidl": "3448eded0321f9308535708fa2ed53a1",
   "fidl/fuchsia.media/stream_common.fidl": "766af335abfd6779bd1924fa75e15326",
   "fidl/fuchsia.media/stream_processor.fidl": "acdeae7ac1c16274eb87dc0d614324df",
-  "fidl/fuchsia.media/stream_type.fidl": "84bed4307c847efb75e47bf49131d323",
+  "fidl/fuchsia.media/stream_type.fidl": "51b26d41607bec6c23b7335de736c756",
   "fidl/fuchsia.media/timeline_function.fidl": "5ada023b93836a20fb45b278f3822ee4"
 }
