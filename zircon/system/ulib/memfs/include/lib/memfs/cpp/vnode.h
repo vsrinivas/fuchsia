@@ -167,6 +167,8 @@ private:
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
+    zx_status_t MakeLocalClone(bool executable);
 
     zx_handle_t vmo_;
     zx_off_t offset_;

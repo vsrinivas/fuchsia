@@ -55,6 +55,14 @@ bool test_vmofile_basic() {
                                        "greeting", 8, request.release()),
               ZX_OK);
 
+    zx_status_t status = ZX_OK;
+    fuchsia_mem_Buffer buffer = {};
+    ASSERT_EQ(fuchsia_io_FileGetBuffer(h.get(), fuchsia_io_VMO_FLAG_READ, &status, &buffer), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_NE(buffer.vmo, ZX_HANDLE_INVALID);
+    ASSERT_EQ(buffer.size, 13);
+    zx_handle_close(buffer.vmo);
+
     fuchsia_io_NodeInfo info = {};
     ASSERT_EQ(fuchsia_io_FileDescribe(h.get(), &info), ZX_OK);
     ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_vmofile);
@@ -62,7 +70,6 @@ bool test_vmofile_basic() {
     ASSERT_EQ(info.vmofile.length, 13u);
     zx_handle_close(info.vmofile.vmo);
 
-    zx_status_t status = ZX_OK;
     uint64_t seek = 0u;
     ASSERT_EQ(fuchsia_io_FileSeek(h.get(), 7u, fuchsia_io_SeekOrigin_START,
                                   &status, &seek),
