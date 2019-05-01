@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
 library("mini-process") {
   testonly = true
   shared = true
@@ -16,15 +18,34 @@ library("mini-process") {
   ]
 }
 
-source_set("subprocess") {
-  visibility = [ ":*" ]
-  testonly = true
-  sources = [
-    "subprocess.c",
-  ]
-  configs += [ "$zx/public/gn/config:no_sanitizers" ]
-  deps = [
-    ":headers",
-    "$zx/system/ulib/zircon",
-  ]
+# This code goes into the mini-process where it doesn't have any runtime
+# environment, so it must be compiled specially.
+if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
+    toolchain.tags) {
+  # Instrumented variants will just never work for this code.  So
+  # redirect to the default uninstrumented variant to compile this file.
+  environment_redirect("subprocess") {
+    visibility = [ ":*" ]
+    testonly = true
+    exclude_variant_tags = [ "instrumented" ]
+    deps = [
+      ":subprocess",
+    ]
+  }
+} else {
+  source_set("subprocess") {
+    visibility = [ ":*" ]
+    testonly = true
+    sources = [
+      "subprocess.c",
+    ]
+    deps = [
+      ":headers",
+      "$zx/system/ulib/zircon",
+    ]
+
+    # No real sanitizers should be enabled in this variant anyway.
+    # But this also disables SafeStack, which is on by default.
+    configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  }
 }
